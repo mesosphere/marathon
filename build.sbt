@@ -3,7 +3,6 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.ExecCmd
 import mesosphere.raml.RamlGeneratorPlugin
 import sbt.Tests.SubProcess
-import sbtrelease.ReleaseStateTransformations._
 
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
@@ -110,16 +109,6 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   ),
   cancelable in Global := true,
 
-  releaseProcess := Seq[ReleaseStep](
-    checkSnapshotDependencies,
-    inquireVersions,
-    runTest,
-    setReleaseVersion,
-    commitReleaseVersion,
-    tagRelease,
-    pushChanges
-  ),
-
   checkDoublePackage := {
     ((sources in Compile).value ++ (sources in Test).value).withFilter(_.toPath.endsWith(".scala")).foreach { file =>
       IO.reader(file) { reader =>
@@ -220,7 +209,9 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   // required for AJC compile time weaving
   javacOptions in Compile += "-g",
   javaOptions in run ++= (AspectjKeys.weaverOptions in Aspectj).value,
-  javaOptions in Test ++= (AspectjKeys.weaverOptions in Aspectj).value
+  javaOptions in Test ++= (AspectjKeys.weaverOptions in Aspectj).value,
+  // non-tagged builds use this. Should _always_ end in snapshot.
+  git.baseVersion := "1.5.0-SNAPSHOT"
 )
 
 val aopMerge: sbtassembly.MergeStrategy = new sbtassembly.MergeStrategy {
@@ -302,7 +293,7 @@ lazy val marathon = (project in file("."))
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
-    CopyPasteDetector, RamlGeneratorPlugin, DoublePackagePlugin)
+    CopyPasteDetector, RamlGeneratorPlugin, DoublePackagePlugin, GitVersioning)
   .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
