@@ -13,7 +13,7 @@ import shakedown
 from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     health_check, ip_of_mom, ip_other_than_mom, pin_to_host,
                     persistent_volume_app, python_http_app, readiness_and_health_app,
-                    restore_iptables, nginx_with_ssl_support, command_health_check)
+                    restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait)
 from datetime import timedelta
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_version_less_than, private_agents, required_private_agents,
@@ -603,6 +603,9 @@ def test_resident_health():
     tasks = client.get_tasks('/overlay-resident')
     assert len(tasks) == 1
 
+    client.remove_app(app_def['id'])
+    shakedown.deployment_wait()
+
 
 @private_agents(2)
 def test_pinned_task_scales_on_host_only():
@@ -844,10 +847,13 @@ def setup_module(module):
 
 
 def teardown_module(module):
+    # Remove everything from MoM
     with marathon_on_marathon():
-        client = marathon.create_client()
-        client.remove_group("/", True)
-        shakedown.deployment_wait()
+        delete_all_apps_wait()
+    # Uninstall MoM
+    shakedown.uninstall_package_and_wait('marathon')
+    # Remove everything from root marathon
+    delete_all_apps_wait()
 
 
 def app_docker(app_id=None):
