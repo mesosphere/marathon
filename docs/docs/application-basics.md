@@ -116,15 +116,15 @@ In the following example application definition, we will focus on a simple Docke
   "cmd": "python3 -m http.server 8080",
   "cpus": 0.5,
   "mem": 32.0,
+  "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "python:3",
-      "network": "BRIDGE",
-      "portMappings": [
-        { "containerPort": 8080, "hostPort": 0 }
-      ]
-    }
+      "image": "python:3"
+    },
+    "portMappings": [
+      { "containerPort": 8080, "hostPort": 0 }
+    ]
   }
 }
 ```
