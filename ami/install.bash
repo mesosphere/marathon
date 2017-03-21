@@ -29,10 +29,18 @@ apt-get install -y \
     git \
     php5-cli \
     php5-curl \
-    openjdk-8-jdk \
     sbt \
     docker-engine \
-    curl
+    curl \
+    build-essential \
+    rpm \
+    ruby \
+    ruby-dev
+
+apt install -t jessie-backports -y openjdk-8-jdk
+
+# Install fpm which is used for deb and rpm packaging.
+gem install fpm
 
 # Download (but don't install) Mesos and its dependencies.
 # The CI task will install Mesos later.
@@ -44,11 +52,14 @@ git clone https://github.com/phacility/libphutil.git /opt/arcanist/libphutil
 git clone https://github.com/phacility/arcanist.git /opt/arcanist/arcanist
 ln -sf /opt/arcanist/arcanist/bin/arc /usr/local/bin/
 
+# Add user to docker group
+gpasswd -a admin docker
+
 # Setup system
 systemctl enable docker
 update-ca-certificates -f
 update-java-alternatives -s java-1.8.0-openjdk-amd64
 
-echo '{"hosts": {"https://phabricator.mesosphere.com/api/": {"token": "api-65mxrkkdt75vzmd4lgcnyld6wotk"}}}' > /home/admin/.arcrc
+echo "{\"hosts\":{\"https://phabricator.mesosphere.com/api/\":{\"token\":\"$CONDUIT_TOKEN\"}}}" > /home/admin/.arcrc
 chown admin /home/admin/.arcrc
 curl -o /usr/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64
