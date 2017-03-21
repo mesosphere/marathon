@@ -307,10 +307,14 @@ object AppNormalization {
       state.UnreachableStrategy.default(hasPersistentVols).toRaml
     }
 
+    // requirePorts only applies for host-mode networking
+    val requirePorts = networks.find(_.mode != NetworkMode.Host).fold(app.requirePorts)(_ => false)
+
     app.copy(
       container = container,
       networks = networks,
-      unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable))
+      unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable)),
+      requirePorts = requirePorts
     )
   }
 

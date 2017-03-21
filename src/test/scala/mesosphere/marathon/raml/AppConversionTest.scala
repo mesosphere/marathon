@@ -27,7 +27,6 @@ class AppConversionTest extends UnitTest with ValidationClue {
       executor = "executor",
       constraints = Set(constraint),
       fetch = Seq(FetchUri("http://test.this")),
-      requirePorts = true,
       backoffStrategy = BackoffStrategy(),
       container = Some(state.Container.Docker(
         volumes = Seq(state.DockerVolume("/container", "/host", Mesos.Volume.Mode.RW)),
@@ -47,6 +46,7 @@ class AppConversionTest extends UnitTest with ValidationClue {
     id = PathId("/host-app"),
     networks = Seq(HostNetwork),
     cmd = Option("whatever"),
+    requirePorts = true,
     portDefinitions = state.PortDefinitions(1, 2, 3),
     unreachableStrategy = state.UnreachableDisabled
   )

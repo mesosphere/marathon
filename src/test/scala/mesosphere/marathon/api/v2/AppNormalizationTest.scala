@@ -353,6 +353,30 @@ class AppNormalizationTest extends UnitTest {
       }
     }
 
+    "normalize requirePorts depending on network type" when {
+
+      implicit val appNormalizer = Normalization[App] { app =>
+        AppNormalization(AppNormalization.Configure(None)).normalized(AppNormalization.forDeprecated.normalized(app))
+      }
+
+      "app w/ non-host networking discards requirePorts" in new Fixture {
+        val raw = legacyMesosApp.copy(requirePorts = true)
+        raw.normalize should be(normalizedMesosApp)
+      }
+
+      "app w/ host networking preserves requirePorts" in new Fixture {
+        val raw = App(
+          id = "/foo",
+          cmd = Option("sleep"),
+          networks = Apps.DefaultNetworks,
+          unreachableStrategy = Option(UnreachableEnabled.Default),
+          portDefinitions = Option(PortDefinitions(0)),
+          requirePorts = true
+        )
+        raw.normalize should be(raw)
+      }
+    }
+
     "preserve user intent w/ respect to opting into and out of default ports" when {
 
       implicit val appNormalizer = Normalization[App] { app =>
