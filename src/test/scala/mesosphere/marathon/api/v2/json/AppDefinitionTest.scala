@@ -368,6 +368,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     MarathonTestHelper.validateJsonSchema(app)
 
     app = correct.copy(
+      unreachableStrategy = UnreachableDisabled)
+
+    MarathonTestHelper.validateJsonSchema(app)
+
+    app = correct.copy(
       fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "d://\not-a-uri"))
     )
 
