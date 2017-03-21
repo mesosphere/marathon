@@ -63,3 +63,8 @@ update-java-alternatives -s java-1.8.0-openjdk-amd64
 echo "{\"hosts\":{\"https://phabricator.mesosphere.com/api/\":{\"token\":\"$CONDUIT_TOKEN\"}}}" > /home/admin/.arcrc
 chown admin /home/admin/.arcrc
 curl -o /usr/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64
+
+# Warmup ivy2 cache
+git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
+su - admin -c "cd /home/admin/marathon && sbt update"
+rm -rf /home/admin/marathon
