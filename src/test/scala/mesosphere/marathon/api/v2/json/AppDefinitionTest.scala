@@ -385,6 +385,11 @@ class AppDefinitionTest extends UnitTest with ValidationClue {
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(
+        unreachableStrategy = UnreachableDisabled)
+
+      MarathonTestHelper.validateJsonSchema(app)
+
+      app = correct.copy(
         fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "/root/file"))
       )
 
