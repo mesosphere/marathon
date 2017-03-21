@@ -98,7 +98,7 @@ class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with 
   }
 }
 
-@UnstableTest
+@IntegrationTest
 class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
   val zkTimeout = 2000L
