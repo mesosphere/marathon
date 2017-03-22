@@ -18,6 +18,7 @@ Bugfix release
 - Validation of application dependencies is too restrictive, loosed the requirements.
 - Retry failed integration tests once.
 - Fix stability in many integration tests.
+- [MARATHON-7133](https://jira.mesosphere.com/browse/MARATHON-7133) AppDefinition history is now properly loaded during boot
 
 ### Known issues
 
