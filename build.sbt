@@ -3,6 +3,7 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.ExecCmd
 import mesosphere.raml.RamlGeneratorPlugin
 import sbt.Tests.SubProcess
+import sbtrelease.ReleaseStateTransformations._
 
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
@@ -105,6 +106,15 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
+  releaseProcess := Seq[ReleaseStep](
+    checkSnapshotDependencies,
+    inquireVersions,
+    runTest,
+    setReleaseVersion,
+    commitReleaseVersion,
+    tagRelease,
+    pushChanges
+  ),
 
   publishTo := Some(s3resolver.value(
     "Mesosphere Public Repo (S3)",
@@ -160,9 +170,7 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   scapegoatVersion := "1.2.1",
 
   coverageMinimum := 67,
-  coverageFailOnMinimum := true,
-  // non-tagged builds use this. Should _always_ end in snapshot.
-  git.baseVersion := "1.4.0-SNAPSHOT"
+  coverageFailOnMinimum := true
 )
 
 // TODO: Move away from sbt-assembly, favoring sbt-native-packager
@@ -221,7 +229,7 @@ lazy val marathon = (project in file("."))
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
   .enablePlugins(BuildInfoPlugin, GitBranchPrompt,
-    JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin, GitVersioning)
+    JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin)
   .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
