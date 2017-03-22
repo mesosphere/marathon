@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-@IntegrationTest
+@SerialIntegrationTest
 class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
