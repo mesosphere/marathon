@@ -17,7 +17,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
-@IntegrationTest
+@SerialIntegrationTest
 class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   import Fixture._
