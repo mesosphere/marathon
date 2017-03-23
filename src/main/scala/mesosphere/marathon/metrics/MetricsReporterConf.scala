@@ -1,6 +1,6 @@
 package mesosphere.marathon.metrics
 
-import org.rogach.scallop.ScallopConf
+import org.rogach.scallop.{ ScallopConf, ScallopOption }
 
 trait MetricsReporterConf extends ScallopConf {
 
@@ -15,5 +15,7 @@ trait MetricsReporterConf extends ScallopConf {
     descr = "URL to dogstatsd agent. e.g. udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10",
     noshort = true
   )
+
+  def hostname: ScallopOption[String]
 }
 
