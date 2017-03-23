@@ -40,7 +40,12 @@ def stageWithCommitStatus(label, block) {
   stage(label) { withCommitStatus(label, block) }
 }
 
-node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
+node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
+    try {
+        stage("Kill junk processes") {
+            sh "ps aux | grep 'app_mock\\|mesos\\|java\\|USER' | grep -v slave.jar | grep -v grep | awk '{print \$2}' | grep -v PID | while read pid; do echo 'killing pid' \$pid; sudo kill -9 \$pid; done"
+        }
+
         stage("Checkout Repo") {
             checkout scm
             gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
@@ -85,7 +90,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
                 }
             }
           } finally {
-            junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
+            junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/**/*.xml'
             // scoverage does not allow the configuration of a different output
             // path: https://github.com/scoverage/sbt-scoverage/issues/211
             // The archive steps does not allow a different target path. So we
