@@ -2,12 +2,10 @@
 PREFIX := usr
 
 # Command to extract from X.X.X-rcX the version (X.X.X) and tag (rcX)
-EXTRACT_VER := perl -n -e\
-	'/"([0-9]+\.[0-9]+\.[0-9]+).*"/ && print $$1'
-EXTRACT_TAG := perl -n -e\
-	'/"[0-9]+\.[0-9]+\.[0-9]+-([A-Za-z0-9]+).*"/ && print $$1'
-PKG_VER ?= $(shell cd marathon && cat version.sbt | $(EXTRACT_VER))
-PKG_TAG ?= $(shell cd marathon && cat version.sbt | $(EXTRACT_TAG))
+EXTRACT_VER := cut -d \- -f 1
+EXTRACT_TAG := cut -d \- -f 2- | tr - _
+PKG_VER ?= $(shell cd marathon && sbt -Dsbt.log.noformat=true version | awk 'END {print $$2}' | $(EXTRACT_VER))
+PKG_TAG ?= $(shell cd marathon && sbt -Dsbt.log.noformat=true version | awk 'END {print $$2}' | $(EXTRACT_TAG))
 
 ifeq ($(strip $(PKG_TAG)),)
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S')
