@@ -1,0 +1,22 @@
+#!/bin/bash
+
+log() {
+  echo "$@" 1>&2
+}
+
+stuff_to_kill=$(ps aux | grep 'app_mock\|mesos\|java' | grep -v 'slave.jar\|grep')
+
+if [ -z "$stuff_to_kill" ]; then
+  echo "No junk processes detected" 1>&2
+  exit 0
+fi
+
+log "This requires root permissions. If you run this on a workstation it'll kill more than you expect." 1>&2
+log
+log "$stuff_to_kill"
+
+kill_command=$(echo "$stuff_to_kill" | awk '{print $2}' | xargs echo kill -9)
+
+log "Running $kill_command"
+log
+sudo $kill_command
