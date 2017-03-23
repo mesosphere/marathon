@@ -43,7 +43,7 @@ def stageWithCommitStatus(label, block) {
 node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
     try {
         stage("Kill junk processes") {
-            sh "ps aux | grep 'app_mock\\|mesos\\|java\\|USER' | grep -v slave.jar | grep -v grep | awk '{print \$2}' | grep -v PID | while read pid; do echo 'killing pid' \$pid; sudo kill -9 \$pid; done"
+            sh "bin/kill-stale-test-processes"
         }
 
         stage("Checkout Repo") {
