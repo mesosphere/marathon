@@ -44,7 +44,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       (1 to abdicationLoops).foreach { _ =>
         And("the leader abdicates")
-        server.restart()
+        server.restart().futureValue
         val tasksAfterFirstAbdication = f.waitForTasks(app.id.toPath, 1)
         Then("the already running task should not be killed")
         tasksBeforeAbdication should be(tasksAfterFirstAbdication)
