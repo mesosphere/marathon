@@ -1,4 +1,7 @@
-package mesosphere.marathon.plugin
+package mesosphere.marathon
+package plugin
+
+import scala.collection.immutable.Seq
 
 /**
   * A path based identifier.
@@ -10,7 +13,7 @@ trait PathId {
     * e.g.: rootGroup :: subGroup :: subSubGroup :: appId :: Nil
     * @return the list of path elements
     */
-  def path: List[String]
+  def path: Seq[String]
 
   /**
     * String representation of that path identifier

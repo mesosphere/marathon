@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.event
+package mesosphere.marathon
+package core.event
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
@@ -7,13 +8,13 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.impl.callback._
 import mesosphere.marathon.core.event.impl.stream._
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.storage.repository.EventSubscribersRepository
 import org.eclipse.jetty.servlets.EventSourceServlet
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
+import scala.util.control.NonFatal
 
 /**
   * Exposes everything necessary to provide an internal event stream, an HTTP events stream and HTTP event callbacks.
@@ -22,7 +23,6 @@ class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
     conf: EventConf,
-    metrics: Metrics,
     clock: Clock,
     eventSubscribersStore: EventSubscribersRepository,
     electionService: ElectionService,
@@ -32,7 +32,7 @@ class EventModule(
 
   private[this] lazy val statusUpdateActor: ActorRef =
     actorSystem.actorOf(Props(
-      new HttpEventActor(conf, subscribersKeeperActor, new HttpEventActor.HttpEventActorMetrics(metrics), clock))
+      new HttpEventActor(conf, subscribersKeeperActor, new HttpEventActor.HttpEventActorMetrics(), clock))
     )
 
   private[this] lazy val subscribersKeeperActor: ActorRef = {
@@ -45,7 +45,7 @@ class EventModule(
       urls foreach { url =>
         val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
         f.onFailure {
-          case th: Throwable =>
+          case NonFatal(th) =>
             log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
         }(ExecutionContext.global)
       }
@@ -59,6 +59,8 @@ class EventModule(
   lazy val httpCallbackSubscriptionService: HttpCallbackSubscriptionService = {
     if (conf.httpCallbacksEnabled) {
       log.info("Using HttpCallbackEventSubscriber for event notification")
+      log.warn("HttpCallbackEventSubscriber support is deprecated with Marathon 1.4 and will be removed in an " +
+        "upcoming version. Please use the event stream instead.")
       new ActorHttpCallbackSubscriptionService(subscribersKeeperActor, eventBus, conf)
     } else {
       log.info("Event notification disabled.")
@@ -76,7 +78,7 @@ class EventModule(
       Props(
         new HttpEventStreamActor(
           electionService,
-          new HttpEventStreamActorMetrics(metrics),
+          new HttpEventStreamActorMetrics(),
           handleStreamProps)
       ),
       "HttpEventStream"

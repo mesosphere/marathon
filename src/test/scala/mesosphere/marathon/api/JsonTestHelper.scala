@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import gnieh.diffson.playJson._
 import org.scalatest.{ Assertions, Matchers }
@@ -7,12 +8,13 @@ import play.api.libs.json.{ Format, JsArray, JsNull, JsObject, JsValue, Json, Wr
 import scala.collection.Map
 
 object JsonTestHelper extends Assertions with Matchers {
-  def assertSerializationRoundtripWorks[T](value: T)(implicit format: Format[T]): Unit = {
-    val json = Json.toJson(value)
-    val reread = Json.fromJson(json)
+  def assertSerializationRoundtripWorks[T](value: T, normalize: T => T = { t: T => t })(implicit format: Format[T]): Unit = {
+    val normed = normalize(value)
+    val json = Json.toJson(normed)
+    val reread = Json.fromJson[T](json)
     withClue(s"for json:\n${Json.prettyPrint(json)}\n") {
       reread should be ('success)
-      value should be (reread.get)
+      normed should be (normalize(reread.get))
     }
   }
 
@@ -30,9 +32,7 @@ object JsonTestHelper extends Assertions with Matchers {
         case (_, JsNull) => false
         case _ => true
       }
-      val filterSubValues = withoutNullValues.mapValues {
-        case v => removeNullFieldValues(v)
-      }
+      val filterSubValues = withoutNullValues.map { case (k, v) => k -> removeNullFieldValues(v) }
 
       JsObject(filterSubValues)
     case JsArray(v) =>
@@ -57,7 +57,7 @@ object JsonTestHelper extends Assertions with Matchers {
 
     def correspondsToJsonString(expected: String): Unit = {
       val diff = JsonDiff.diff(expected, actual, remember = false)
-      require(diff.ops.isEmpty, s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\n$diff")
+      require(diff.ops.isEmpty, s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\ndiff\n$diff")
     }
 
     def correspondsToJsonOf[T](expected: T)(implicit writes: Writes[T]): Unit = {

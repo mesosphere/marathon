@@ -1,29 +1,31 @@
-package mesosphere.marathon.integration.facades
+package mesosphere.marathon
+package integration.facades
 
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import mesosphere.UnitTest
 import play.api.libs.json.Json
 
-class MesosFormatsTest extends FunSuite with Matchers with GivenWhenThen {
+class MesosFormatsTest extends UnitTest {
   import MesosFacade._
   import MesosFormats._
 
-  test("parse sample") {
-    Given("a sample state.json")
-    val f = new Fixture
+  "MesosFormats" should {
+    "parse sample" in {
+      Given("a sample state.json")
+      val f = new Fixture
 
-    When("parsing it")
-    val status = Json.parse(f.sampleStatusJson).as[ITMesosState]
+      When("parsing it")
+      val status = Json.parse(f.sampleStatusJson).as[ITMesosState]
 
-    Then("we can extract some base info")
-    status.version should equal("0.28.0")
+      Then("we can extract some base info")
+      status.version should equal("0.28.0")
 
-    And("we have info about one agent")
-    status.agents should have size (1)
-    val agent = status.agents.head
+      And("we have info about one agent")
+      status.agents should have size 1
+      val agent = status.agents.head
 
-    And("resources of that agent are correct")
+      And("resources of that agent are correct")
 
-    /*
+      /*
       * "resources": {
           "cpus": 8.0,
           "disk": 52830.0,
@@ -31,43 +33,43 @@ class MesosFormatsTest extends FunSuite with Matchers with GivenWhenThen {
           "ports": "[31000-32000]"
         },
       */
-    agent.resources should equal(
-      ITResources(
-        "cpus" -> 8.0,
-        "disk" -> 52830.0,
-        "mem" -> 5078.0,
-        "ports" -> "[31000-32000]"
+      agent.resources should equal(
+        ITResources(
+          "cpus" -> 8.0,
+          "disk" -> 52830.0,
+          "mem" -> 5078.0,
+          "ports" -> "[31000-32000]"
+        )
       )
-    )
-    /* "used_resources": {
+      /* "used_resources": {
         "cpus": 1.0,
         "disk": 128.0,
         "mem": 128.0,
         "ports": "[31903-31903]"
       }, */
-    agent.usedResources should equal(
-      ITResources(
-        "cpus" -> 1.0,
-        "disk" -> 128.0,
-        "mem" -> 128.0,
-        "ports" -> "[31903-31903]"
+      agent.usedResources should equal(
+        ITResources(
+          "cpus" -> 1.0,
+          "disk" -> 128.0,
+          "mem" -> 128.0,
+          "ports" -> "[31903-31903]"
+        )
       )
-    )
-    /*
+      /*
       "offered_resources": {
         "cpus": 0.0,
         "disk": 0.0,
         "mem": 0.0
       },
      */
-    agent.offeredResources should equal(
-      ITResources(
-        "cpus" -> 0.0,
-        "disk" -> 0.0,
-        "mem" -> 0.0
+      agent.offeredResources should equal(
+        ITResources(
+          "cpus" -> 0.0,
+          "disk" -> 0.0,
+          "mem" -> 0.0
+        )
       )
-    )
-    /*
+      /*
       "reserved_resources": {
         "marathon": {
           "cpus": 1.1,
@@ -77,17 +79,17 @@ class MesosFormatsTest extends FunSuite with Matchers with GivenWhenThen {
         }
       },
      */
-    agent.reservedResourcesByRole should equal(
-      Map(
-        "marathon" -> ITResources(
-          "cpus" -> 1.1,
-          "disk" -> 138.0,
-          "mem" -> 144.0,
-          "ports" -> "[31903-31903]"
+      agent.reservedResourcesByRole should equal(
+        Map(
+          "marathon" -> ITResources(
+            "cpus" -> 1.1,
+            "disk" -> 138.0,
+            "mem" -> 144.0,
+            "ports" -> "[31903-31903]"
+          )
         )
       )
-    )
-    /*
+      /*
       "unreserved_resources": {
         "cpus": 6.9,
         "disk": 52692.0,
@@ -95,19 +97,19 @@ class MesosFormatsTest extends FunSuite with Matchers with GivenWhenThen {
         "ports": "[31000-31902, 31904-32000]"
       },
     */
-    agent.unreservedResources should equal(
-      ITResources(
-        "cpus" -> 6.9,
-        "disk" -> 52692.0,
-        "mem" -> 4934.0,
-        "ports" -> "[31000-31902, 31904-32000]"
+      agent.unreservedResources should equal(
+        ITResources(
+          "cpus" -> 6.9,
+          "disk" -> 52692.0,
+          "mem" -> 4934.0,
+          "ports" -> "[31000-31902, 31904-32000]"
+        )
       )
-    )
-  }
+    }
 
-  class Fixture {
-    val sampleStatusJson =
-      """
+    class Fixture {
+      val sampleStatusJson =
+        """
         |{
         |  "version": "0.28.0",
         |  "git_sha": "ab1ec6a0d9ed4ba7180f4576c1bb267e58f94e00",
@@ -394,5 +396,6 @@ class MesosFormatsTest extends FunSuite with Matchers with GivenWhenThen {
         |  ]
         |}
       """.stripMargin
+    }
   }
 }

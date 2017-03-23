@@ -16,14 +16,21 @@ USAGE
 }; function --help { -h ;}
 export LC_ALL=en_US.UTF-8
 
+jarID=1
 self="$(cd "$(dirname "$0")" && pwd -P)"/"$(basename "$0")"
-marathon_jar="$self"
+marathon_jar="/tmp/marathon-${jarID}.jar"
 conf_dir=/etc/marathon/conf
 conf_file=/etc/default/marathon
 
 function main {
   if [[ ${1:-} = --jar ]]
   then marathon_jar="$2" ; shift 2
+  else {
+    # extract this elsewhere to avoid incompat w/ zip64 and prepended shebang
+    match=$(grep --text --line-number '^PAYLOAD:$' "$self" | cut -d':' -f1)
+    offset=$((match+1))
+    tail -n +$offset $self >"$marathon_jar"
+  }
   fi
   load_options_and_log "$@"
 }
@@ -34,6 +41,31 @@ function element_in {
   return 1
 }
 
+function cmd_to_env() {
+  cmds=("$@")
+  tLen=${#cmds[@]}
+  # skip run_jar
+  for (( i=1; i<${tLen}; i+=2 ));
+  do
+   key=${cmds[$i]}
+   value="" # default if no value for key
+   if (( $i+1 < ${tLen} )); then
+     value=${cmds[$i+1]}
+   fi
+
+   if [[ "$value" == --* ]] ; then
+     export_env "$key" ""
+     i=$i-1
+   else
+     export_env "$key" "$value"
+   fi
+  done
+}
+
+function export_env() {
+  export MARATHON_CMD_$(echo "$1" | sed 's/^--//' | awk '{print toupper($0)}')="$2"
+}
+
 function load_options_and_log {
   # Call mesosphere-dnsconfig if present on the system to generate config files.
   [ -x /usr/bin/mesosphere-dnsconfig ] && mesosphere-dnsconfig -write -service=marathon
@@ -42,7 +74,7 @@ function load_options_and_log {
   # Launch main program with Syslog enabled.
   local cmd=( run_jar )
   # Load custom options
-  if [[ -d $conf_dir ]]
+  if [[ -d "$conf_dir" ]]
   then
     while read -u 9 -r -d '' path
     do
@@ -75,7 +107,6 @@ function load_options_and_log {
       cmd+=( --master "$(cat /etc/mesos/zk)" )
     fi
   fi
-  echo "${cmd[@]}"
 
   if [[ "${cmd[@]} $@" =~ .*--no[_-]logger.* ]]
   then
@@ -85,9 +116,11 @@ function load_options_and_log {
         clean_cmd+=( "${i}" )
       fi
     done
-    "${clean_cmd[@]}"
+    cmd_to_env "${clean_cmd[@]}"
+    run_jar
   else
-    logged marathon "${cmd[@]}" "$@"
+    cmd_to_env "${cmd[@]}"
+    logged marathon run_jar "$@"
   fi
 }
 
@@ -128,3 +161,5 @@ if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"
 then "$@"
 else main "$@"
 fi
+exit 1
+PAYLOAD:

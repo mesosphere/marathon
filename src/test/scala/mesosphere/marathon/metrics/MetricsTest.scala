@@ -1,30 +1,19 @@
-package mesosphere.marathon.metrics
+package mesosphere.marathon
+package metrics
 
-import java.util.concurrent.TimeUnit
-
-import com.codahale.metrics.{ ExponentiallyDecayingReservoir, MetricRegistry }
-import com.google.inject.{ Guice, AbstractModule }
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.metrics.Metrics._
-import org.aopalliance.intercept.{ MethodInvocation, MethodInterceptor }
-import org.mockito.ArgumentCaptor
-import org.mockito.Matchers._
-import org.mockito.Mockito._
-import org.scalatest.mockito.MockitoSugar
+import com.google.inject.{ AbstractModule, Guice }
+import mesosphere.UnitTest
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
 
 class FooBar {
   def dummy(): Unit = {}
 }
 
-class MetricsTest
-    extends MarathonSpec
-    with MockitoSugar {
-  private var metrics: Metrics = _
+class MetricsTest extends UnitTest {
 
   class TestModule extends AbstractModule {
-
     class DummyBehavior extends MethodInterceptor {
       override def invoke(invocation: MethodInvocation): AnyRef = {
         invocation.proceed()
@@ -40,66 +29,27 @@ class MetricsTest
     }
   }
 
-  before {
-    metrics = new Metrics(new MetricRegistry())
-  }
+  "Metrics" should {
+    "Metrics#className should strip 'EnhancerByGuice' from the metric names" in {
+      val instance = Guice.createInjector(new TestModule).getInstance(classOf[FooBar])
+      assert(instance.getClass.getName.contains("EnhancerByGuice"))
 
-  test("Metrics#className should strip 'EnhancerByGuice' from the metric names") {
-    val instance = Guice.createInjector(new TestModule).getInstance(classOf[FooBar])
-    assert(instance.getClass.getName.contains("EnhancerByGuice"))
+      assert(metrics.className(instance.getClass) == "mesosphere.marathon.metrics.FooBar")
+    }
 
-    assert(metrics.className(instance.getClass) == "mesosphere.marathon.metrics.FooBar")
-  }
+    "Metrics#name should replace $ with ." in {
+      val instance = new Serializable {}
+      assert(instance.getClass.getName.contains('$'))
 
-  test("Metrics caches the class names") {
-    val metricsSpy = spy(metrics)
+      assert(metrics.name(ServiceMetric, instance.getClass, "test$method") ==
+        s"${ServiceMetric.name}.mesosphere.marathon.metrics.MetricsTest.anonfun.1.anonfun.apply.mcV.sp.2.anon.1.test.method")
+    }
 
-    metricsSpy.name("prefix", classOf[FooBar], "method1")
-    metricsSpy.name("prefix", classOf[FooBar], "method2")
-    metricsSpy.name("prefix", classOf[MetricsTest], "method1")
+    "Metrics#name should use a dot to separate the class name and the method name" in {
+      val expectedName = "service.mesosphere.marathon.core.task.tracker.InstanceTracker.write-request-time"
+      val actualName = metrics.name(ServiceMetric, classOf[InstanceTracker], "write-request-time")
 
-    verify(metricsSpy, times(1)).stripGuiceMarksFromClassName(classOf[FooBar])
-    verify(metricsSpy, times(2)).stripGuiceMarksFromClassName(any())
-  }
-
-  test("Metrics#name should use a dot to separate the class name and the method name") {
-    val expectedName = "service.mesosphere.marathon.core.task.tracker.TaskTracker.write-request-time"
-    val actualName = metrics.name("service", classOf[TaskTracker], "write-request-time")
-
-    assert(expectedName.equals(actualName))
-  }
-
-  test("The Histogram wrapper should properly proxy updates") {
-    val origHistogram = new com.codahale.metrics.Histogram(new ExponentiallyDecayingReservoir())
-    val histogram = new Histogram(origHistogram)
-
-    histogram.update(10L)
-    histogram.update(1)
-
-    assert(origHistogram.getSnapshot.getMax == 10)
-    assert(origHistogram.getSnapshot.getMin == 1)
-  }
-
-  test("The Meter wrapper should properly proxy marks") {
-    val origMeter = new com.codahale.metrics.Meter
-    val meter = new Meter(origMeter)
-
-    meter.mark()
-    meter.mark(10)
-
-    assert(origMeter.getCount == 11)
-  }
-
-  test("The Timer wrapper should properly time method calls and proxy the updates") {
-    val origTimer = mock[com.codahale.metrics.Timer]
-    val timer = new Timer(origTimer)
-
-    timer {}
-
-    val durationCaptor = ArgumentCaptor.forClass(classOf[Long])
-
-    verify(origTimer).update(durationCaptor.capture(), org.mockito.Matchers.eq(TimeUnit.NANOSECONDS))
-
-    assert(durationCaptor.getValue > 0)
+      assert(expectedName.equals(actualName))
+    }
   }
 }

@@ -19,7 +19,6 @@
     "task_launch_timeout": 300000,
     "reconciliation_initial_delay": 15000,
     "reconciliation_interval": 300000,
-    "marathon_store_timeout": 2000,
     "mesos_user": "matthias",
     "leader_proxy_connection_timeout_ms": 5000,
     "leader_proxy_read_timeout_ms": 10000,

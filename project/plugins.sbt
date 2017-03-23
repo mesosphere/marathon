@@ -1,33 +1,32 @@
-resolvers += Resolver.typesafeRepo("releases")
-
-resolvers += "sonatype-releases" at "https://oss.sonatype.org/content/repositories/releases/"
+resolvers ++= Seq(
+  Resolver.typesafeRepo("releases"),
+  Resolver.sonatypeRepo("releases"),
+  Resolver.sonatypeRepo("snapshots"),
+  Classpaths.sbtPluginReleases,
+  "Era7 maven releases" at "http://releases.era7.com.s3.amazonaws.com"
+)
 
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.3")
-
-addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.3")
-
 addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.6.0")
-
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.6.1")
-
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.8.0")
-
-addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.8.0")
-
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
-
-// publishing
-
-resolvers += "Era7 maven releases" at "http://releases.era7.com.s3.amazonaws.com"
-
-addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.14.0")
-
-resolvers += Classpaths.sbtPluginReleases
-
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.3.5")
-
+addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.15.0")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.0")
 addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.1.0")
+addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.2.0")
+addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "1.0.0")
+addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.1.1")
+addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
+addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.15")
+addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.10.6")
 
-addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.1.10")
+libraryDependencies ++= Seq(
+  "org.raml" % "raml-parser-2" % "1.0.0",
+  "com.eed3si9n" %% "treehugger" % "0.4.1",
+  "org.slf4j" % "slf4j-nop" % "1.7.22"
+)
 
-addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "latest.release")
+sbtPlugin := true
+

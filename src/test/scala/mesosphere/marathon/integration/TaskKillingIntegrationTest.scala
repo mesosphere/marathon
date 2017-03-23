@@ -1,34 +1,33 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, SingleMarathonIntegrationTest }
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
+import mesosphere.marathon.state.PathId._
 
-class TaskKillingIntegrationTest extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
+@IntegrationTest
+class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+  override val marathonArgs: Map[String, String] = Map("enable_features" -> "task_killing")
 
-  override def extraMarathonParameters = List("--enable_features", "task_killing")
+  "TaskKilling" should {
+    "Killing a task publishes a TASK_KILLING event" in {
+      Given("a new app")
+      val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
 
-  test("Killing a task publishes a TASK_KILLING event") {
-    Given("a new app")
-    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+      When("The app is deployed")
+      val createResult = marathon.createAppV2(app)
 
-    When("The app is deployed")
-    val createResult = marathon.createAppV2(app)
+      Then("The app is created")
+      createResult.code should be (201) //Created
+      extractDeploymentIds(createResult) should have size 1
+      waitForDeployment(createResult)
+      waitForTasks(app.id.toPath, 1) //make sure, the app has really started
 
-    Then("The app is created")
-    createResult.code should be (201) //Created
-    extractDeploymentIds(createResult) should have size 1
-    waitForEvent("deployment_success")
-    waitForTasks(app.id, 1) //make sure, the app has really started
-
-    When("the task is killed")
-    val killResult = marathon.killAllTasksAndScale(app.id)
-    killResult.code should be (200) //OK
-    waitForStatusUpdates("TASK_KILLING")
+      When("the task is killed")
+      val killResult = marathon.killAllTasksAndScale(app.id.toPath)
+      killResult.code should be (200) //OK
+      waitForStatusUpdates("TASK_KILLING")
+    }
   }
-
 }

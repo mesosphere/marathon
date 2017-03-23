@@ -1,29 +1,32 @@
-package mesosphere.marathon.core.matcher.manager.impl
+package mesosphere.marathon
+package core.matcher.manager.impl
 
-import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonTestHelper
+import java.util.UUID
+
+import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.TaskOp
-import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
-import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
+import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.launcher.InstanceOp
+import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
+import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.marathon.test.MarathonShutdownHookSupport
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
-import org.scalatest.{ Matchers, BeforeAndAfter, FunSuite }
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
 import scala.util.Random
-import scala.collection.JavaConverters._
 
-class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with MarathonShutdownHookSupport with Matchers {
+class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
   // FIXME: Missing Tests
   // Adding matcher while matching offers
@@ -31,125 +34,29 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
   // Timeout for matching
   // Deal with randomness?
 
-  test("no registered matchers result in empty result") {
-    val offer: Offer = MarathonTestHelper.makeBasicOffer().build()
-    val matchedTasksFuture: Future[MatchedTaskOps] =
-      module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
-    val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.opsWithSource.isEmpty)
+  protected def makeOneCPUTask(taskId: Task.Id) = {
+    MarathonTestHelper.makeOneCPUTask(taskId).build()
   }
 
-  test("single offer is passed to matcher") {
-    val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
-
-    val task = makeOneCPUTask("task1")
-    val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
-    module.subOfferMatcherManager.setLaunchTokens(10)
-    module.subOfferMatcherManager.addSubscription(matcher)
-
-    val matchedTasksFuture: Future[MatchedTaskOps] =
-      module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
-    val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.offerId == offer.getId)
-    assert(matchedTasks.launchedTaskInfos == Seq(makeOneCPUTask("task1_1")))
-  }
-
-  test("deregistering only matcher works") {
-    val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
-
-    val task = makeOneCPUTask("task1")
-    val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
-    module.subOfferMatcherManager.setLaunchTokens(10)
-    module.subOfferMatcherManager.addSubscription(matcher)
-    module.subOfferMatcherManager.removeSubscription(matcher)
-
-    val matchedTasksFuture: Future[MatchedTaskOps] =
-      module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
-    val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.opsWithSource.isEmpty)
-  }
-
-  test("single offer is passed to multiple matchers") {
-    val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0).build()
-
-    module.subOfferMatcherManager.setLaunchTokens(10)
-
-    val task1: TaskInfo = makeOneCPUTask("task1")
-    module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-    val task2: TaskInfo = makeOneCPUTask("task2")
-    module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
-
-    val matchedTasksFuture: Future[MatchedTaskOps] =
-      module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
-    val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.launchedTaskInfos.toSet == Set(makeOneCPUTask("task1_1"), makeOneCPUTask("task2_1")))
-  }
-
-  for (launchTokens <- Seq(0, 1, 5)) {
-    test(s"launch as many tasks as there are launch tokens: $launchTokens") {
-      val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.3).build()
-
-      module.subOfferMatcherManager.setLaunchTokens(launchTokens)
-
-      val task1: TaskInfo = makeOneCPUTask("task1")
-      module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
-
-      val matchedTasksFuture: Future[MatchedTaskOps] =
-        module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
-      val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-      assert(matchedTasks.opsWithSource.size == launchTokens)
-    }
-  }
-
-  test("single offer is passed to multiple matchers repeatedly") {
-    val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 4.0).build()
-
-    module.subOfferMatcherManager.setLaunchTokens(10)
-
-    val task1: TaskInfo = makeOneCPUTask("task1")
-    module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-    val task2: TaskInfo = makeOneCPUTask("task2")
-    module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
-
-    val matchedTasksFuture: Future[MatchedTaskOps] =
-      module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
-    val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.launchedTaskInfos.toSet == Set(
-      makeOneCPUTask("task1_1"),
-      makeOneCPUTask("task1_2"),
-      makeOneCPUTask("task2_1"),
-      makeOneCPUTask("task2_2")
-    ))
-  }
-
-  test("ports of an offer should be displayed in a short notation if they exceed a certain quantity") {
-    //scalastyle:off magic.number
-    val offer: Offer = MarathonTestHelper.makeBasicOfferWithManyPortRanges(100).build()
-    //scalastyle:on magic.number
-    val resources = ResourceUtil.displayResources(offer.getResourcesList.asScala, 10)
-    resources should include("ports(*) 1->2,3->4,5->6,7->8,9->10,11->12,13->14,15->16,17->18,19->20 ... (90 more)")
-  }
-
-  def makeOneCPUTask(idBase: String) = {
-    MarathonTestHelper.makeOneCPUTask(idBase).build()
-  }
-
-  object f {
+  object F {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
+    val runSpecId = PathId("/test")
+    val instanceId = Instance.Id.forRunSpec(runSpecId)
+    val launch = new InstanceOpFactoryHelper(
+      Some("principal"),
+      Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral, _: Instance)
   }
 
-  private[this] var module: OfferMatcherManagerModule = _
-  private[this] var clock: Clock = _
-
-  before {
-    clock = Clock()
-    val random = Random
-    val actorSystem = AlwaysElectedLeadershipModule(shutdownHooks)
-    val config = new OfferMatcherManagerConfig {
+  class Fixture {
+    val clock: Clock = Clock()
+    val random: Random.type = Random
+    val leaderModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
+    val config: OfferMatcherManagerConfig = new OfferMatcherManagerConfig {
       verify()
     }
-    module = new OfferMatcherManagerModule(clock, random, new Metrics(new MetricRegistry), config, actorSystem)
+    val module: OfferMatcherManagerModule =
+      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule,
+        actorName = UUID.randomUUID().toString)
   }
 
   /**
@@ -157,37 +64,39 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     */
   private class ConstantOfferMatcher(tasks: Seq[TaskInfo]) extends OfferMatcher {
 
-    var results = Vector.empty[MatchedTaskOps]
+    var results = Vector.empty[MatchedInstanceOps]
     var processCycle = 0
-    def numberedTasks() = {
+    protected def numberedTasks() = {
       processCycle += 1
       tasks.map { task =>
         task
           .toBuilder
-          .setTaskId(task.getTaskId.toBuilder.setValue(task.getTaskId.getValue + "_" + processCycle))
+          .setTaskId(task.getTaskId.toBuilder.setValue(task.getTaskId.getValue + "-" + processCycle))
           .build()
       }
     }
 
-    protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks()
+    protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks() // linter:ignore:UnusedParameter
 
-    override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedTaskOps] = {
-      val opsWithSources = matchTasks(deadline, offer).map { task =>
-        val launch = f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, offer))
-        TaskOpWithSource(source, launch)
-      }
+    override def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
+      val opsWithSources = matchTasks(deadline, offer).map { taskInfo =>
+        val instance = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
+        val task: Task.LaunchedEphemeral = instance.appTask
+        val launch = F.launch(taskInfo, task.copy(taskId = Task.Id(taskInfo.getTaskId)), instance)
+        InstanceOpWithSource(Source, launch)
+      }(collection.breakOut)
 
-      val result = MatchedTaskOps(offer.getId, opsWithSources)
+      val result = MatchedInstanceOps(offer.getId, opsWithSources)
       results :+= result
       Future.successful(result)
     }
 
-    object source extends TaskOpSource {
-      var acceptedOps = Vector.empty[TaskOp]
-      var rejectedOps = Vector.empty[TaskOp]
+    object Source extends InstanceOpSource {
+      var acceptedOps = Vector.empty[InstanceOp]
+      var rejectedOps = Vector.empty[InstanceOp]
 
-      override def taskOpAccepted(taskOp: TaskOp): Unit = acceptedOps :+= taskOp
-      override def taskOpRejected(taskOp: TaskOp, reason: String): Unit = rejectedOps :+= taskOp
+      override def instanceOpAccepted(taskOp: InstanceOp): Unit = acceptedOps :+= taskOp
+      override def instanceOpRejected(taskOp: InstanceOp, reason: String): Unit = rejectedOps :+= taskOp
     }
   }
 
@@ -196,12 +105,10 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     * for the given tasks. It has no state and thus continues matching infinitely.
     */
   private class CPUOfferMatcher(tasks: Seq[TaskInfo]) extends ConstantOfferMatcher(tasks) {
-    import scala.collection.JavaConverters._
-
     val totalCpus: Double = {
       val cpuValues = for {
         task <- tasks
-        resource <- task.getResourcesList.asScala
+        resource <- task.getResourcesList
         if resource.getName == "cpus"
         cpuScalar <- Option(resource.getScalar)
         cpus = cpuScalar.getValue
@@ -211,12 +118,120 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
 
     override def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = {
       val cpusInOffer: Double =
-        offer.getResourcesList.asScala.find(_.getName == "cpus")
+        offer.getResourcesList.find(_.getName == "cpus")
           .flatMap(r => Option(r.getScalar))
           .map(_.getValue)
           .getOrElse(0)
 
       if (cpusInOffer >= totalCpus) numberedTasks() else Seq.empty
+    }
+  }
+
+  "OfferMatcherModule" should {
+    "no registered matchers result in empty result" in new Fixture {
+      val offer: Offer = MarathonTestHelper.makeBasicOffer().build()
+      val now = clock.now()
+      val matchedTasksFuture: Future[MatchedInstanceOps] =
+        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+      val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
+      assert(matchedTasks.opsWithSource.isEmpty)
+    }
+
+    "single offer is passed to matcher" in new Fixture {
+      val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
+
+      val task = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
+      module.subOfferMatcherManager.setLaunchTokens(10)
+      module.subOfferMatcherManager.addSubscription(matcher)
+
+      val now = clock.now()
+      val matchedTasksFuture: Future[MatchedInstanceOps] =
+        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+      val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
+      assert(matchedTasks.offerId == offer.getId)
+      assert(launchedTaskInfos(matchedTasks) == Seq(makeOneCPUTask(Task.Id(task.getTaskId.getValue + "-1"))))
+    }
+
+    "deregistering only matcher works" in new Fixture {
+      val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
+
+      val task = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
+      module.subOfferMatcherManager.setLaunchTokens(10)
+      module.subOfferMatcherManager.addSubscription(matcher)
+      module.subOfferMatcherManager.removeSubscription(matcher)
+
+      val now = clock.now()
+      val matchedTasksFuture: Future[MatchedInstanceOps] =
+        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+      val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
+      assert(matchedTasks.opsWithSource.isEmpty)
+    }
+
+    "single offer is passed to multiple matchers" in new Fixture {
+      val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0).build()
+
+      module.subOfferMatcherManager.setLaunchTokens(10)
+
+      val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
+      val task2: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
+
+      val now = clock.now()
+      val matchedTasksFuture: Future[MatchedInstanceOps] =
+        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+      val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
+      assert(launchedTaskInfos(matchedTasks).toSet == Set(
+        makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-1")),
+        makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-1")))
+      )
+    }
+
+    for (launchTokens <- Seq(0, 1, 5)) {
+      s"launch as many tasks as there are launch tokens: $launchTokens" in new Fixture {
+        val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.3).build()
+
+        module.subOfferMatcherManager.setLaunchTokens(launchTokens)
+
+        val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+        module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
+
+        val now = clock.now()
+        val matchedTasksFuture: Future[MatchedInstanceOps] =
+          module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+        val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
+        assert(matchedTasks.opsWithSource.size == launchTokens)
+      }
+    }
+
+    "single offer is passed to multiple matchers repeatedly" in new Fixture {
+      val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 4.0).build()
+
+      module.subOfferMatcherManager.setLaunchTokens(10)
+
+      val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
+      val task2: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
+
+      val now = clock.now()
+      val matchedTasksFuture: Future[MatchedInstanceOps] =
+        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+      val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
+      assert(launchedTaskInfos(matchedTasks).toSet == Set(
+        makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-1")),
+        makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-2")),
+        makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-1")),
+        makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-2"))
+      ))
+    }
+
+    "ports of an offer should be displayed in a short notation if they exceed a certain quantity" in new Fixture {
+      val offer: Offer = MarathonTestHelper.makeBasicOfferWithManyPortRanges(100).build()
+      val resources = ResourceUtil.displayResources(offer.getResourcesList.toSeq, 10)
+      resources should include("ports(*) 1->2,3->4,5->6,7->8,9->10,11->12,13->14,15->16,17->18,19->20 ... (90 more)")
     }
   }
 }

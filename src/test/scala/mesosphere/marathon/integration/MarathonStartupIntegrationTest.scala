@@ -1,29 +1,35 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
-import java.io.File
-
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.concurrent.TimeLimits
+import org.scalatest.time.{ Seconds, Span }
 
-class MarathonStartupIntegrationTest extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
-  test("Marathon should fail during start, if the HTTP port is already bound") {
-    Given(s"a Marathon process already running on port ${config.marathonBasePort}")
+@IntegrationTest
+class MarathonStartupIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with TimeLimits {
 
-    When("starting another Marathon process using an HTTP port that is already bound")
-    val cwd = new File(".")
-    val failingProcess = ProcessKeeper.startMarathon(
-      cwd,
-      env,
-      List("--http_port", config.marathonBasePort.toString, "--zk", config.zk, "--master", config.master),
-      startupLine = "Failed to start all services.",
-      processName = "marathonFail"
-    )
+  "Marathon" should {
+    "fail during start, if the HTTP port is already bound" in {
+      Given(s"a Marathon process already running on port ${marathonServer.httpPort}")
 
-    Then("the new process should fail and exit with an error code")
-    assert(failingProcess.exitValue() > 0)
+      When("starting another Marathon process using an HTTP port that is already bound")
+
+      val args = Map(
+        "http_port" -> marathonServer.httpPort.toString,
+        "zk_timeout" -> "2000"
+      )
+      val conflictingMarathon = LocalMarathon(true, s"$suiteName-conflict", marathonServer.masterUrl, marathonServer.zkUrl, args)
+
+      Then("The Marathon process should exit with code > 0")
+      try {
+        failAfter(Span(40, Seconds)) {
+          conflictingMarathon.exitValue().get should be > 0
+        }
+      } finally {
+        // Destroy process if it did not exit in time.
+        conflictingMarathon.stop()
+      }
+    }
   }
 }

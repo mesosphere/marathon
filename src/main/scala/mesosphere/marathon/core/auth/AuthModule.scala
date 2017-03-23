@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.auth
+package mesosphere.marathon
+package core.auth
 
 import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.auth.impl.AuthAllowEverything
@@ -11,7 +12,7 @@ class AuthModule(pluginManager: PluginManager) {
 
   private[this] def pluginOption[T](implicit ct: ClassTag[T]): Option[T] = {
     val plugins = pluginManager.plugins[T]
-    if (plugins.size > 1) throw new WrongConfigurationException(
+    if (plugins.size > 1) throw WrongConfigurationException(
       s"Only one plugin expected for ${ct.runtimeClass.getName}, but found: ${plugins.map(_.getClass.getName)}"
     )
     plugins.headOption

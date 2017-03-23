@@ -1,25 +1,24 @@
-package mesosphere.marathon.io
+package mesosphere.marathon
+package io
 
 import java.math.BigInteger
-import java.net.{ URLConnection, HttpURLConnection, URL }
+import java.net.{ HttpURLConnection, URL, URLConnection }
 import java.security.MessageDigest
-import scala.collection.JavaConverters._
-import scala.concurrent.Future
 
+import mesosphere.marathon.stream.Implicits._
 import org.apache.commons.io.FilenameUtils.getName
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 trait PathFun {
 
   private[this] def md = MessageDigest.getInstance("SHA-1")
 
   def mdHex(in: String): String = {
-    //scalastyle:off magic.number
     val ret = md
     ret.update(in.getBytes("UTF-8"), 0, in.length)
     new BigInteger(1, ret.digest()).toString(16)
-    //scalastyle:on
   }
 
   def fileName(url: URL): String = getName(url.getFile)
@@ -41,8 +40,9 @@ trait PathFun {
       case other: URLConnection => other
     }
     scala.concurrent.blocking(connection.getHeaderFields)
-      .asScala.toMap.map { case (key, list) => (key, list.asScala.toList) }
+      .map { case (key, list) => (key, list.toList) }(collection.breakOut)
   }
-
 }
+
+object PathFun extends PathFun
 

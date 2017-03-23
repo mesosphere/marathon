@@ -4,13 +4,16 @@
 # It will NOT reresolve all dependencies on every change (as opposed to Dockerfile)
 # but it ultimately results in a larger docker image.
 #
-FROM java:8-jdk
+FROM openjdk:8-jdk
 
+COPY ./project/Dependencies.scala /marathon/project/Dependencies.scala
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
-    echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian jessie-unstable main" | tee /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+    MESOS_VERSION=$(sed -n 's/^.*MesosDebian = "\(.*\)"/\1/p' </marathon/project/Dependencies.scala) && \
     apt-get update && \
-    apt-get install --no-install-recommends -y --force-yes mesos=1.0.0-2.0.89.debian81
+    apt-get install --no-install-recommends -y --force-yes mesos=$MESOS_VERSION
 
 # Install sbt manually
 COPY ./project/build.properties /marathon/project/build.properties

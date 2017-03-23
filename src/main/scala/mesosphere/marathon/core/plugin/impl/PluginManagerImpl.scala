@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.plugin.impl
+package mesosphere.marathon
+package core.plugin.impl
 
 import java.net.{ URL, URLClassLoader }
 import java.util.ServiceLoader
@@ -7,11 +8,10 @@ import mesosphere.marathon.core.plugin.impl.PluginManagerImpl._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions, PluginManager }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.plugin.plugin.PluginConfiguration
-import mesosphere.marathon.{ MarathonConf, WrongConfigurationException }
+import mesosphere.marathon.stream.Implicits._
 import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json.{ JsObject, JsString, Json }
 
-import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
 /**
@@ -31,6 +31,7 @@ private[plugin] class PluginManagerImpl(
   /**
     * Load plugin for a specific type.
     */
+  @SuppressWarnings(Array("AsInstanceOf", "OptionGet"))
   private[this] def load[T](implicit ct: ClassTag[T]): PluginHolder[T] = {
     log.info(s"Loading plugins implementing '${ct.runtimeClass.getName}' from these urls: [${urls.mkString(", ")}]")
     def configure(plugin: T, definition: PluginDefinition): T = plugin match {
@@ -41,13 +42,13 @@ private[plugin] class PluginManagerImpl(
       case _ => plugin
     }
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
-    val providers = serviceLoader.iterator().asScala.toSeq
-    val plugins = definitions.plugins.filter(_.plugin == ct.runtimeClass.getName).map { definition =>
+    val providers = serviceLoader.iterator().toSeq
+    val plugins = definitions.plugins.withFilter(_.plugin == ct.runtimeClass.getName).map { definition =>
       providers
         .find(_.getClass.getName == definition.implementation)
         .map(plugin => PluginReference(configure(plugin, definition), definition))
-        .getOrElse(throw new WrongConfigurationException(s"Plugin not found: $definition"))
-    }
+        .getOrElse(throw WrongConfigurationException(s"Plugin not found: $definition"))
+    }(collection.breakOut)
     log.info(s"Found ${plugins.size} plugins.")
     PluginHolder(ct, plugins)
   }
@@ -57,6 +58,7 @@ private[plugin] class PluginManagerImpl(
     * Each plugin is loaded once and gets cached.
     * @return the list of all service providers for the given type.
     */
+  @SuppressWarnings(Array("AsInstanceOf"))
   def plugins[T](implicit ct: ClassTag[T]): Seq[T] = synchronized {
     def loadAndAdd: PluginHolder[T] = {
       val pluginHolder: PluginHolder[T] = load[T]
@@ -78,10 +80,12 @@ object PluginManagerImpl {
   implicit val definitionFormat = Json.format[PluginDefinition]
 
   def parse(fileName: String): PluginDefinitions = {
-    val plugins = Json.parse(IO.readFile(fileName)).as[JsObject]
+    val plugins: Seq[PluginDefinition] = Json.parse(IO.readFile(fileName)).as[JsObject]
       .\("plugins").as[JsObject]
-      .fields.map { case (id, value) => JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))) }
-      .map(_.as[PluginDefinition])
+      .fields.map {
+        case (id, value) =>
+          JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))).as[PluginDefinition]
+      }(collection.breakOut)
     PluginDefinitions(plugins)
   }
 
@@ -92,7 +96,7 @@ object PluginManagerImpl {
     } yield {
       val sources = IO.listFiles(dirName)
       val descriptor = parse(confName)
-      new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL))
+      new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL)(collection.breakOut))
     }
 
     configuredPluginManager.get.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty))

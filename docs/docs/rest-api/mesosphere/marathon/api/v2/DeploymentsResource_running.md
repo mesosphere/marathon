@@ -61,60 +61,78 @@ Transfer-Encoding: chunked
         "totalSteps": 9,
         "id": "2e72dbf1-2b2a-4204-b628-e8bd160945dd", 
         "steps": [
-            [
-                {
-                    "action": "RestartApplication", 
-                    "app": "/test/service/srv1"
-                }
-            ], 
-            [
-                {
-                    "action": "RestartApplication", 
-                    "app": "/test/db/mongo1"
-                }
-            ], 
-            [
-                {
-                    "action": "RestartApplication", 
-                    "app": "/test/frontend/app1"
-                }
-            ], 
-            [
-                {
-                    "action": "KillAllOldTasksOf", 
-                    "app": "/test/frontend/app1"
-                }
-            ], 
-            [
-                {
-                    "action": "KillAllOldTasksOf", 
-                    "app": "/test/db/mongo1"
-                }
-            ], 
-            [
-                {
-                    "action": "KillAllOldTasksOf", 
-                    "app": "/test/service/srv1"
-                }
-            ], 
-            [
-                {
-                    "action": "ScaleApplication", 
-                    "app": "/test/service/srv1"
-                }
-            ], 
-            [
-                {
-                    "action": "ScaleApplication", 
-                    "app": "/test/db/mongo1"
-                }
-            ], 
-            [
-                {
-                    "action": "ScaleApplication", 
-                    "app": "/test/frontend/app1"
-                }
-            ]
+            {
+                "actions": [
+                    {
+                        "action": "RestartApplication", 
+                        "app": "/test/service/srv1"
+                    }
+                ]
+            },
+            {
+                "actions": [
+                    {
+                        "action": "RestartApplication", 
+                        "app": "/test/db/mongo1"
+                    }
+                ]
+            },
+            {
+                "actions": [
+                    {
+                        "action": "RestartApplication", 
+                        "app": "/test/frontend/app1"
+                    }
+                ]
+            },
+            {
+                "actions": [
+                    {
+                        "action": "KillAllOldTasksOf", 
+                        "app": "/test/frontend/app1"
+                    }
+                ]
+            },
+            {
+                "actions": [
+                    {
+                        "action": "KillAllOldTasksOf", 
+                        "app": "/test/db/mongo1"
+                    }
+                ]
+            },
+            {
+                "actions": [
+                    {
+                        "action": "KillAllOldTasksOf", 
+                        "app": "/test/service/srv1"
+                    }
+                ]
+            },
+            {
+                "actions": [
+                    {
+                        "action": "ScaleApplication", 
+                        "app": "/test/service/srv1"
+                    }
+                ]
+            },
+            {
+                "actions": [
+                    {
+                        "action": "ScaleApplication", 
+                        "app": "/test/db/mongo1"
+                    }
+                ]
+            },
+            {
+                "actions": [
+                    {
+                        "action": "ScaleApplication", 
+                        "app": "/test/frontend/app1"
+                    }
+                ]
+            }
         ], 
         "version": "2014-07-09T11:14:11.477Z"
     }

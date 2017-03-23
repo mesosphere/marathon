@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.bus
+package mesosphere.marathon
+package core.task.bus
 
 import mesosphere.marathon.core.task.bus.impl.{
   TaskStatusEmitterImpl,

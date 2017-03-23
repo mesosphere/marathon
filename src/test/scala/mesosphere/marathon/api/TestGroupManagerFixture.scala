@@ -1,55 +1,40 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Provider
 
 import akka.event.EventStream
-import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.group.{ GroupManager, GroupManagerModule }
-import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
+import mesosphere.AkkaUnitTestLike
+import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ AllConf, DeploymentService, MarathonSchedulerService }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.state.RootGroup
+import mesosphere.marathon.storage.repository.GroupRepository
+import mesosphere.marathon.test.Mockito
 
-class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
+import scala.concurrent.{ ExecutionContext, Future }
+
+class TestGroupManagerFixture(initialRoot: RootGroup = RootGroup.empty) extends Mockito with AkkaUnitTestLike {
   val service = mock[MarathonSchedulerService]
-  val appRepository = mock[AppRepository]
   val groupRepository = mock[GroupRepository]
   val eventBus = mock[EventStream]
   val provider = mock[StorageProvider]
 
-  val config = AllConf.withTestConfig("--zk_timeout", "1000")
-
-  val metricRegistry = new MetricRegistry()
-  val metrics = new Metrics(metricRegistry)
-  val capMetrics = new CapConcurrentExecutionsMetrics(metrics, classOf[GroupManager])
+  val config = AllConf.withTestConfig("--zk_timeout", "3000")
 
   val actorId = new AtomicInteger(0)
-  private[this] def serializeExecutions() = CapConcurrentExecutions(
-    capMetrics,
-    system,
-    s"serializeGroupUpdates${actorId.incrementAndGet()}",
-    maxConcurrent = 1,
-    maxQueued = 10
-  )
 
   val schedulerProvider = new Provider[DeploymentService] {
     override def get() = service
   }
 
+  groupRepository.root() returns Future.successful(initialRoot)
+
   private[this] val groupManagerModule = new GroupManagerModule(
     config = config,
-    AlwaysElectedLeadershipModule.forActorSystem(system),
-    serializeUpdates = serializeExecutions(),
     scheduler = schedulerProvider,
     groupRepo = groupRepository,
-    appRepo = appRepository,
-    storage = provider,
-    eventBus = eventBus,
-    metrics = metrics)
+    storage = provider)(ExecutionContext.global, eventBus)
 
   val groupManager = groupManagerModule.groupManager
 }

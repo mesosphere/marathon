@@ -1,17 +1,26 @@
-package mesosphere.marathon.core.event
+package mesosphere.marathon
+package core.event
 
-import mesosphere.marathon.core.task.Task
+import akka.event.EventStream
+import com.fasterxml.jackson.annotation.JsonIgnore
+import mesosphere.marathon.api.v2.json.Formats.eventToJson
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.update.InstanceChange
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
+import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
+import org.apache.mesos.{ Protos => Mesos }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
-
-//scalastyle:off number.of.types
 
 sealed trait MarathonEvent {
   val eventType: String
   val timestamp: String
+  @JsonIgnore
+  lazy val jsonString: String = Json.stringify(eventToJson(this))
 }
 
 // api
@@ -23,23 +32,46 @@ case class ApiPostEvent(
   eventType: String = "api_post_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
+case class PodEvent(
+    clientIp: String,
+    uri: String,
+    podEventType: PodEvent.Kind,
+    timestamp: String = Timestamp.now().toString) extends MarathonEvent {
+  override val eventType = podEventType.label
+}
+
+object PodEvent {
+  sealed trait Kind {
+    val label: String
+  }
+  case object Created extends Kind {
+    val label = "pod_created_event"
+  }
+  case object Updated extends Kind {
+    val label = "pod_updated_event"
+  }
+  case object Deleted extends Kind {
+    val label = "pod_deleted_event"
+  }
+}
+
 // scheduler messages
 sealed trait MarathonSchedulerEvent extends MarathonEvent
 
-final case class SchedulerRegisteredEvent(
+case class SchedulerRegisteredEvent(
   frameworkId: String,
   master: String,
   eventType: String = "scheduler_registered_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSchedulerEvent
 
-final case class SchedulerReregisteredEvent(
+case class SchedulerReregisteredEvent(
   master: String,
   eventType: String = "scheduler_reregistered_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSchedulerEvent
 
-final case class SchedulerDisconnectedEvent(
+case class SchedulerDisconnectedEvent(
   eventType: String = "scheduler_disconnected_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSchedulerEvent
@@ -94,7 +126,7 @@ case class RemoveHealthCheck(
 
 case class FailedHealthCheck(
   appId: PathId,
-  taskId: Task.Id,
+  instanceId: Instance.Id,
   healthCheck: HealthCheck,
   eventType: String = "failed_health_check_event",
   timestamp: String = Timestamp.now().toString)
@@ -102,21 +134,27 @@ case class FailedHealthCheck(
 
 case class HealthStatusChanged(
   appId: PathId,
-  taskId: Task.Id,
+  instanceId: Instance.Id,
   version: Timestamp,
   alive: Boolean,
   eventType: String = "health_status_changed_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonHealthCheckEvent
 
-case class UnhealthyTaskKillEvent(
+/**
+  * Event published when an instance is killed because it failed too many MarathonHealthChecks
+  * This will only be published for single container instances as we don't support Marathon
+  * health checks for pods.
+  */
+case class UnhealthyInstanceKillEvent(
   appId: PathId,
   taskId: Task.Id,
+  instanceId: Instance.Id,
   version: Timestamp,
   reason: String,
   host: String,
   slaveId: Option[String],
-  eventType: String = "unhealthy_task_kill_event",
+  eventType: String = "unhealthy_instance_kill_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 // upgrade messages
@@ -168,6 +206,7 @@ case class DeploymentStepFailure(
 
 // Mesos scheduler
 
+// TODO(jdef) rename this RunSpecTerminatedEvent since that's how it's actually used
 case class AppTerminatedEvent(
   appId: PathId,
   eventType: String = "app_terminated_event",
@@ -176,15 +215,50 @@ case class AppTerminatedEvent(
 case class MesosStatusUpdateEvent(
   slaveId: String,
   taskId: Task.Id,
-  taskStatus: String,
+  taskStatus: Mesos.TaskState,
   message: String,
   appId: PathId,
   host: String,
-  ipAddresses: Option[Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress]],
+  ipAddresses: Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress],
   ports: Seq[Int],
   version: String,
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+/** Event indicating a status change for a known instance */
+case class InstanceChanged(
+    id: Instance.Id,
+    runSpecVersion: Timestamp,
+    runSpecId: PathId,
+    condition: Condition,
+    instance: Instance) extends MarathonEvent {
+  override val eventType: String = "instance_changed_event"
+  override val timestamp: String = Timestamp.now().toString
+}
+object InstanceChanged {
+  def apply(instanceChange: InstanceChange): InstanceChanged = {
+    InstanceChanged(instanceChange.id, instanceChange.runSpecVersion,
+      instanceChange.runSpecId, instanceChange.condition, instanceChange.instance)
+  }
+}
+
+/** Event indicating an unknown instance is terminal */
+case class UnknownInstanceTerminated(
+    id: Instance.Id,
+    runSpecId: PathId,
+    condition: Condition) extends MarathonEvent {
+  override val eventType: String = "unknown_instance_terminated_event"
+  override val timestamp: String = Timestamp.now().toString
+}
+
+case class InstanceHealthChanged(
+    id: Instance.Id,
+    runSpecVersion: Timestamp,
+    runSpecId: PathId,
+    healthy: Option[Boolean]) extends MarathonEvent {
+  override val eventType: String = "instance_health_changed_event"
+  override val timestamp: String = Timestamp.now().toString
+}
 
 case class MesosFrameworkMessageEvent(
   executorId: String,
@@ -192,3 +266,8 @@ case class MesosFrameworkMessageEvent(
   message: Array[Byte],
   eventType: String = "framework_message_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+object Events {
+  def maybePost(event: MarathonEvent)(implicit eventBus: EventStream): Unit =
+    eventBus.publish(event)
+}

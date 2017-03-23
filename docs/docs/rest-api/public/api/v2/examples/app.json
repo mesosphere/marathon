@@ -96,7 +96,7 @@
       "ports": [
         {
           "number": 8080,
-          "name": "rest_endpoint",
+          "name": "rest-endpoint",
           "protocol": "tcp"
         }
       ]

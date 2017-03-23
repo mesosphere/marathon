@@ -1,12 +1,15 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import java.util.Date
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.integration.setup.ServiceMock._
 import org.eclipse.jetty.server.handler.AbstractHandler
 import org.eclipse.jetty.server.{ Request, Server }
 import play.api.libs.json._
+
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 
@@ -26,13 +29,22 @@ import scala.util.parsing.combinator.RegexParsers
   *
   * @param plan the plan to execute on
   */
-class ServiceMock(plan: Plan) extends AbstractHandler {
+class ServiceMock(plan: Plan) extends AbstractHandler with StrictLogging {
 
-  def start(port: Int) {
-    val server = new Server(port)
-    server.setHandler(this)
-    server.start()
-    server.join()
+  def start(port: Int): Unit = {
+    try {
+      val server = new Server(port)
+      server.setHandler(this)
+      server.start()
+      logger.info(s"ServiceMock: has taken the stage at port $port.")
+      server.join()
+      logger.info("ServiceMock: says goodbye")
+    } catch {
+      // exit process, if an exception is encountered
+      case ex: Throwable =>
+        logger.error("ServiceMock: failed. Exit.", ex)
+        sys.exit(1)
+    }
   }
 
   override def handle(
@@ -54,21 +66,21 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
         if (plan.isDone) ok(plan) else error(plan)
       case ("POST", "/v1/plan/continue") =>
         plan.next(withContinue = true)
-        ok(Json.obj("result" -> s"Received cmd: continue"))
+        ok(Json.obj("result" -> "Received cmd: continue"))
       case ("POST", "/v1/plan/interrupt") =>
         plan.allBlocks.dropWhile(b => b.isDone | b.isInProgress).headOption.foreach(_.decisionPoint = true)
-        ok(Json.obj("result" -> s"Received cmd: interrupt"))
+        ok(Json.obj("result" -> "Received cmd: interrupt"))
       case ("POST", "/v1/plan/restart") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
         if (plan.validPosition(pos)) {
           plan.allBlocks.dropWhile(_.name != pos.block_id).foreach(_.rollback())
-          ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
+          ok(Json.obj("result" -> "Rescheduled Tasks: []"))
         } else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/v1/plan/force_complete") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
         if (plan.validPosition(pos)) {
           plan.allBlocks.takeWhile(_.name != pos.block_id).foreach(_.doFinalize())
-          ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
+          ok(Json.obj("result" -> "Rescheduled Tasks: []"))
         } else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/admin/rollback") =>
         plan.rollback()
@@ -248,7 +260,7 @@ object ServiceMock {
     * Start a ServiceMock that listens on $PORT0 with plan defined by argv[0]
     * Usage: test:runMain mesosphere.marathon.integration.setup.ServiceMock phase(block1!,block2!,block3!)
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val port = sys.env.getOrElse("PORT0", "8080").toInt
     val plan = new PlanParser().parsePlan(args(0))
     plan.next(withContinue = false) //start plan

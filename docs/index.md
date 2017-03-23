@@ -1,31 +1,31 @@
 ---
-title: A container orchestration platform for Mesos and DCOS
+title: A container orchestration platform for Mesos and DC/OS
 ---
 
 <div class="jumbotron text-center">
   <h1>Marathon</h1>
   <p class="lead">
-    A container orchestration platform for Mesos and DCOS
+    A container orchestration platform for Mesos and DC/OS
   </p>
   <p>
-    <a href="http://downloads.mesosphere.com/marathon/v1.1.1/marathon-1.1.1.tgz"
+    <a href="http://downloads.mesosphere.com/marathon/v1.3.6/marathon-1.3.6.tgz"
         class="btn btn-lg btn-primary">
-      Download Marathon v1.1.1
+      Download Marathon v1.3.6
     </a>
   </p>
   <a class="btn btn-link"
-      href="http://downloads.mesosphere.com/marathon/v1.1.1/marathon-1.1.1.tgz.sha256">
-    v1.1.1 SHA-256 Checksum
+      href="http://downloads.mesosphere.com/marathon/v1.3.6/marathon-1.3.6.tgz.sha256">
+    v1.3.6 SHA-256 Checksum
   </a> &middot;
   <a class="btn btn-link"
-      href="https://github.com/mesosphere/marathon/releases/tag/v1.1.1">
-    v1.1.1 Release Notes
+      href="https://github.com/mesosphere/marathon/releases/tag/v1.3.6">
+    v1.3.6 Release Notes
   </a>
 </div>
 
 ## Overview
 
-Marathon is a production-grade container orchestration platform for Mesosphere's [Datacenter Operating System (DCOS)](https://mesosphere.com/product/) and [Apache Mesos](https://mesos.apache.org/).
+Marathon is a production-grade container orchestration platform for Mesosphere's [Datacenter Operating System (DC/OS)](https://dcos.io) and [Apache Mesos](https://mesos.apache.org/).
 
 ## Features
 
@@ -40,12 +40,12 @@ Marathon is a production-grade container orchestration platform for Mesosphere's
 - [Metrics](https://mesosphere.github.io/marathon/docs/metrics.html). Query them at /metrics in JSON format or push them to systems like graphite, statsd and Datadog.
 - [Complete REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for easy integration and scriptability.
 
-## DCOS features
+## DC/OS features
 
-Running on DCOS, Marathon gains the following additional features:
+Running on DC/OS, Marathon gains the following additional features:
 
 - Virtual IP routing. Allocate a dedicated, virtual address to your app. Your app is now reachable anywhere in the cluster, wherever it might be scheduled. Load balancing and rerouting around failures are done automatically.
-- Authorization (DCOS Enterprise Edition only). True multitenancy with each user or group having access to their own applications and groups.
+- Authorization (DC/OS Enterprise Edition only). True multitenancy with each user or group having access to their own applications and groups.
 
 ## Examples
 

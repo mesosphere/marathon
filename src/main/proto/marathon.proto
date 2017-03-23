@@ -35,6 +35,9 @@ message HealthCheckDefinition {
     TCP = 1;
     COMMAND = 2;
     HTTPS = 3;
+    MESOS_HTTP = 4;
+    MESOS_HTTPS = 5;
+    MESOS_TCP = 6;
   }
   required Protocol protocol = 1;
   optional uint32 portIndex = 2;
@@ -46,6 +49,9 @@ message HealthCheckDefinition {
   optional mesos.CommandInfo command = 8;
   optional bool ignoreHttp1xx = 9 [default = false];
   optional uint32 port = 10;
+  optional uint32 delaySeconds = 11 [default = 15];
+  // portName and portIndex are exclusive; both must not be set
+  optional string portName = 12;
 }
 
 message ReadinessCheckDefinition {
@@ -65,15 +71,30 @@ message ReadinessCheckDefinition {
   optional bool preserveLastResponse = 8;
 }
 
-message IpAddress {
+// deprecated, left here only to support migrations
+message ObsoleteIpAddress {
   repeated string groups = 1;
   repeated mesos.Label labels = 2;
-  optional DiscoveryInfo discoveryInfo = 3;
+  optional ObsoleteDiscoveryInfo discoveryInfo = 3;
   optional string networkName = 4;
 }
 
-message DiscoveryInfo {
+// deprecated, left here only to support migrations
+message ObsoleteDiscoveryInfo {
   repeated mesos.Port ports = 1;
+}
+
+message NetworkDefinition {
+  enum Mode {
+    UNKNOWN = 0; // so that we can distinguish between set/unset values
+    HOST = 1;
+    CONTAINER = 2;
+    BRIDGE = 3;
+  }
+
+  optional Mode mode = 1;
+  optional string name = 2; // for CONTAINER mode only
+  repeated mesos.Label labels = 3; // for CONTAINER, BRIDGE modes only
 }
 
 message ServiceDefinition {
@@ -101,13 +122,32 @@ message ServiceDefinition {
   optional ResourceRoles acceptedResourceRoles = 22;
   optional int64 last_scaling_at = 23;
   optional int64 last_config_change_at = 24;
-  optional IpAddress ipAddress = 25;
+  optional ObsoleteIpAddress OBSOLETE_ipAddress = 25; // deprecated since 1.5
   optional ResidencyDefinition residency = 26;
   repeated mesos.Port portDefinitions = 27;
   repeated ReadinessCheckDefinition readinessCheckDefinition = 28;
   repeated Secret secrets = 29;
   repeated EnvVarReference envVarReferences = 30;
   optional int64 taskKillGracePeriod = 31; // stored as Millis
+  optional UnreachableStrategy unreachableStrategy = 32;
+  optional KillSelection killSelection = 33 [ default = YoungestFirst ];
+  repeated NetworkDefinition networks = 34; // supersedes ObsoleteIpAddress
+}
+
+enum KillSelection {
+  YoungestFirst = 1;
+  OldestFirst = 2;
+}
+
+message UnreachableStrategy {
+  // UnreachableDisabled is represented by both of these fields missing
+  optional uint64 inactiveAfterSeconds = 1 [default = 900 ]; // 15 minutes
+  optional uint64 expungeAfterSeconds = 2 [default = 604800 ]; // 7 days
+}
+
+// we serialize PodDefinition and Instances as json, only required for legacy content
+message Json {
+  required string json = 1;
 }
 
 message ResourceRoles {
@@ -141,7 +181,7 @@ message MarathonTask {
     repeated string local_volume_ids = 1;
     required State state = 2;
   }
-  enum MarathonTaskStatus {
+  enum Condition {
     Invalid = 0;
     Reserved = 1;
     Created = 2;
@@ -161,18 +201,18 @@ message MarathonTask {
   }
 
   required string id = 1;
-  optional string host = 2;
+  optional string OBSOLETE_host = 2;
   repeated uint32 ports = 3;
-  repeated mesos.Attribute attributes = 4;
+  repeated mesos.Attribute OBSOLETE_attributes = 4;
   optional int64 staged_at = 5;
   optional int64 started_at = 6;
   repeated mesos.TaskStatus OBSOLETE_statuses = 7;
   optional string version = 8 [default = "1970-01-01T00:00:00.000Z"]; // since 0.7.0
   optional mesos.TaskStatus status = 9;
-  optional mesos.SlaveID slaveId = 10;
+  optional mesos.SlaveID OBSOLETE_slaveId = 10;
   repeated mesos.NetworkInfo OBSOLETE_networks = 11; // status already contained this, so this field was redundant
   optional Reservation reservation = 12; // since 0.16, a list of volumes can be associated with the task ID
-  optional MarathonTaskStatus marathonTaskStatus = 13;
+  optional Condition condition = 13;
 }
 
 message MarathonApp {
@@ -194,9 +234,11 @@ message ExtendedContainerInfo {
 
     required string image = 1;
 
-    optional mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];
+    // deprecated in favor of ServiceDefinition.networks since 1.5
+    optional mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];
 
-    message PortMapping {
+    // deprecated in favor of ExtendedContainerInfo.PortMapping,since 1.5
+    message ObsoleteDockerPortMapping {
       optional uint32 host_port = 1;
       required uint32 container_port = 2;
       optional string protocol = 3;
@@ -205,7 +247,8 @@ message ExtendedContainerInfo {
       optional uint32 service_port = 100 [default = 0];
     }
 
-    repeated PortMapping port_mappings = 3;
+    // deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+    repeated ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;
 
     optional bool privileged = 4 [default = false];
 
@@ -260,8 +303,18 @@ message ExtendedContainerInfo {
     optional bool force_pull_image = 4;
   }
 
+  message PortMapping {
+    optional uint32 host_port = 1;
+    required uint32 container_port = 2;
+    optional string protocol = 3;
+    optional string name = 4;
+    repeated mesos.Label labels = 5;
+    optional uint32 service_port = 6 [default = 0];
+  }
+
   required mesos.ContainerInfo.Type type = 1;
   repeated Volume volumes = 2;
+  repeated PortMapping port_mappings = 6; // since 1.5
 
   optional DockerInfo docker = 3;
   optional MesosDockerInfo mesosDocker = 4;
@@ -276,6 +329,9 @@ message Volume {
   // Defining properties of persistent volumes
   message PersistentVolumeInfo {
     required uint64 size = 1;
+    optional mesos.Resource.DiskInfo.Source.Type type = 2;
+    repeated Constraint constraints = 3;
+    optional uint64 maxSize = 4;
   }
 
   // Defining properties of external volumes
@@ -342,9 +398,11 @@ message GroupDefinition {
   required string version = 2;
   // legacy: new storage uses AppReferences
   repeated ServiceDefinition deprecated_apps = 3;
+  repeated Json deprecated_pods = 8;
   repeated GroupDefinition groups = 4;
   repeated string dependencies = 5;
   repeated AppReference apps = 6;
+  repeated AppReference pods = 7;
 }
 
 message DeploymentPlanDefinition {

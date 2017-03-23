@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.auth
+package mesosphere.marathon
+package plugin.auth
 
 import mesosphere.marathon.plugin.http.{ HttpRequest, HttpResponse }
 import mesosphere.marathon.plugin.plugin.Plugin
@@ -38,6 +39,6 @@ trait Authenticator extends Plugin {
     * @param request the related request.
     * @param response the response to customize.
     */
-  def handleNotAuthenticated(request: HttpRequest, response: HttpResponse)
+  def handleNotAuthenticated(request: HttpRequest, response: HttpResponse): Unit
 }
 

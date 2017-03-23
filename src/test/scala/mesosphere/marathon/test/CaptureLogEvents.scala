@@ -1,4 +1,5 @@
-package mesosphere.marathon.test
+package mesosphere.marathon
+package test
 
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -21,6 +22,12 @@ object CaptureLogEvents {
     private[this] def rootLogger: Logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger]
 
     def appendToRootLogger(): Unit = {
+      // Waiting for Logback to be ready.
+      // See https://gist.github.com/mbknor/34944ea4589a5fc6974c
+      // Should actually have been fixed with http://jira.qos.ch/browse/SLF4J-167
+      while (LoggerFactory.getILoggerFactory.isInstanceOf[org.slf4j.helpers.SubstituteLoggerFactory]) {
+        Thread.sleep(50)
+      }
       setContext(LoggerFactory.getILoggerFactory.asInstanceOf[Context])
       start()
       rootLogger.addAppender(this)

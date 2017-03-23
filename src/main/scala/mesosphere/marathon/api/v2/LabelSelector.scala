@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import mesosphere.marathon.core.appinfo.AppSelector
 import mesosphere.marathon.state.AppDefinition
@@ -45,7 +46,7 @@ class LabelSelectorParsers extends RegexParsers {
   def term: Parser[String] = """(\\.|[-A-Za-z0-9_.])+""".r ^^ { _.replaceAll("""\\(.)""", "$1") }
 
   def existenceSelector: Parser[LabelSelector] = term ^^ {
-    case existence: String => LabelSelector(existence, _ => true, List.empty)
+    existence: String => LabelSelector(existence, _ => true, List.empty)
   }
 
   def equalityOp: Parser[String] = """(==|!=)""".r
@@ -57,7 +58,7 @@ class LabelSelectorParsers extends RegexParsers {
   def set: Parser[List[String]] = "(" ~> repsep(term, ",") <~ ")"
   def setOp: Parser[String] = """(in|notin)""".r
   def setSelector: Parser[LabelSelector] = term ~ setOp ~ set ^^ {
-    case label ~ "in" ~ set => LabelSelector(label, set.contains, set)
+    case label ~ "in" ~ set => LabelSelector(label, set.contains(_), set)
     case label ~ "notin" ~ set => LabelSelector(label, !set.contains(_), set)
   }
 

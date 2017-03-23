@@ -1,13 +1,12 @@
-package mesosphere.marathon.core.storage.repository
+package mesosphere.marathon
+package core.storage.repository
 
-// scalastyle:off
 import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 
 import scala.concurrent.Future
-// scalastyle:on
 
 /** Repository that can store exactly one value of T */
 trait SingletonRepository[T] {
@@ -39,6 +38,7 @@ trait Repository[Id, T] extends ReadOnlyRepository[Id, T] {
 trait ReadOnlyVersionedRepository[Id, T] extends ReadOnlyRepository[Id, T] {
   def versions(id: Id): Source[OffsetDateTime, NotUsed]
   def getVersion(id: Id, version: OffsetDateTime): Future[Option[T]]
+  def getVersions(list: Seq[(Id, OffsetDateTime)]): Source[T, NotUsed]
 }
 
 /**

@@ -1,4 +1,5 @@
-package mesosphere.marathon.io
+package mesosphere.marathon
+package io
 
 import java.net.URL
 import java.util.UUID
@@ -34,7 +35,7 @@ final class CancelableDownload(val url: URL, val provider: StorageProvider, val 
     } else {
       log.info(s"Cancel download of $url. Remove temporary storage item $tempItem")
       tempItem.delete()
-      throw new CanceledActionException(s"Download of $path from $url has been canceled")
+      throw CanceledActionException(s"Download of $path from $url has been canceled")
     }
     this
   }(ThreadPoolContext.ioContext)

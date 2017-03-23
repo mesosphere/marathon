@@ -1,29 +1,25 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import java.util.Collections
 
-import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.{ TaskOp, TaskLauncher }
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
+import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.{ OfferID, Status }
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.slf4j.LoggerFactory
 
 private[launcher] class TaskLauncherImpl(
-    metrics: Metrics,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    clock: Clock) extends TaskLauncher {
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder) extends TaskLauncher {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  private[this] val usedOffersMeter = metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "usedOffers"))
-  private[this] val launchedTasksMeter = metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "launchedTasks"))
-  private[this] val declinedOffersMeter =
-    metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "declinedOffers"))
+  private[this] val usedOffersMeter = Metrics.minMaxCounter(ServiceMetric, getClass, "usedOffers")
+  private[this] val launchedTasksMeter = Metrics.minMaxCounter(ServiceMetric, getClass, "launchedTasks")
+  private[this] val declinedOffersMeter = Metrics.minMaxCounter(ServiceMetric, getClass, "declinedOffers")
 
-  override def acceptOffer(offerID: OfferID, taskOps: Seq[TaskOp]): Boolean = {
+  override def acceptOffer(offerID: OfferID, taskOps: Seq[InstanceOp]): Boolean = {
     val accepted = withDriver(s"launchTasks($offerID)") { driver =>
-      import scala.collection.JavaConverters._
 
       //We accept the offer, the rest of the offer is declined automatically with the given filter.
       //The filter duration is set to 0, so we get the same offer in the next allocator cycle.
@@ -32,15 +28,16 @@ private[launcher] class TaskLauncherImpl(
       if (log.isDebugEnabled) {
         log.debug(s"Operations on $offerID:\n${operations.mkString("\n")}")
       }
-      driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
+      driver.acceptOffers(Collections.singleton(offerID), operations, noFilter)
     }
     if (accepted) {
-      usedOffersMeter.mark()
+      usedOffersMeter.increment()
       val launchCount = taskOps.count {
-        case _: TaskOp.Launch => true
+        case _: InstanceOp.LaunchTask => true
+        case _: InstanceOp.LaunchTaskGroup => true
         case _ => false
       }
-      launchedTasksMeter.mark(launchCount)
+      launchedTasksMeter.increment(launchCount.toLong)
     }
     accepted
   }
@@ -53,7 +50,7 @@ private[launcher] class TaskLauncherImpl(
       _.declineOffer(offerID, filters)
     }
     if (declined) {
-      declinedOffersMeter.mark()
+      declinedOffersMeter.increment()
     }
   }
 

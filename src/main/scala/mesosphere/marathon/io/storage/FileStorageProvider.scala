@@ -1,4 +1,5 @@
-package mesosphere.marathon.io.storage
+package mesosphere.marathon
+package io.storage
 
 import java.io._
 
@@ -31,12 +32,12 @@ case class FileStorageItem(file: File, basePath: File, path: String, baseUrl: St
   def length: Long = file.length()
   def exists: Boolean = file.exists()
 
-  def delete() {
+  def delete(): Unit = {
     file.delete()
     cleanUpDir(file.getParentFile)
   }
 
-  private def cleanUpDir(dir: File) {
+  private def cleanUpDir(dir: File): Unit = {
     if (!dir.isFile && dir != basePath && dir.list().isEmpty) {
       dir.delete()
       cleanUpDir(dir.getParentFile)
@@ -56,6 +57,6 @@ class FileStorageProvider(val url: String, val basePath: File) extends StoragePr
     val file: File = new File(basePath, path)
     //make sure, no file from outside base path is created
     if (!file.getCanonicalPath.startsWith(basePath.getCanonicalPath)) throw new IOException("Access Denied")
-    new FileStorageItem(file, basePath, path, url)
+    FileStorageItem(file, basePath, path, url)
   }
 }

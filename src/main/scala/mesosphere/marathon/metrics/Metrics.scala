@@ -1,141 +1,188 @@
-package mesosphere.marathon.metrics
+package mesosphere.marathon
+package metrics
 
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
+import akka.Done
+import akka.actor.{ Actor, ActorRef, ActorRefFactory, Props }
+import akka.stream.scaladsl.Source
+import kamon.Kamon
+import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
+import kamon.metric.instrument.Histogram.DynamicRange
+import kamon.metric.instrument.{ CollectionContext, Time, UnitOfMeasurement }
+import kamon.metric.{ Entity, SubscriptionFilter, instrument }
+import kamon.util.{ MapMerge, MilliTimestamp }
 
-import com.codahale.metrics.{ Gauge, MetricRegistry }
-import com.google.inject.Inject
-import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.metrics.Metrics.{ Counter, Histogram, Meter, Timer }
-import org.aopalliance.intercept.MethodInvocation
-
-import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
-import scala.util.control.NonFatal
 
-/**
-  * Utils for timer metrics collection.
-  */
-class Metrics @Inject() (val registry: MetricRegistry) extends StrictLogging {
-  private[this] val classNameCache = TrieMap[Class[_], String]()
+trait Counter {
+  def increment(): Counter
+  def increment(times: Long): Counter
+}
 
-  def timed[T](name: String)(block: => T): T = {
-    val timer = registry.timer(name)
+trait Gauge {
+  def value(): Long
+  def increment(by: Long = 1): Gauge
+  def decrement(by: Long = 1): Gauge
+}
 
-    val startTime = System.nanoTime()
-    try {
-      block
-    } finally {
-      timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
-    }
-  }
+trait SettableGauge extends Gauge {
+  def setValue(value: Long): SettableGauge
+}
 
-  def counter(name: String): Counter = {
-    new Counter(registry.counter(name))
-  }
+trait Histogram {
+  def record(value: Long): Histogram
+  def record(value: Long, count: Long): Histogram
+}
 
-  def timer(name: String): Timer = {
-    new Timer(registry.timer(name))
-  }
+trait MinMaxCounter {
+  def increment(): MinMaxCounter
+  def increment(times: Long): MinMaxCounter
+  def decrement(): MinMaxCounter
+  def decrement(times: Long): MinMaxCounter
+  def refreshValues(): MinMaxCounter
+  def record(value: Long): MinMaxCounter
+  def record(value: Long, count: Long): MinMaxCounter
+}
 
-  def meter(name: String): Meter = {
-    new Meter(registry.meter(name))
-  }
+trait Timer {
+  def apply[T](f: => Future[T]): Future[T]
+  def forSource[T, M](f: => Source[T, M]): Source[T, M]
+  def blocking[T](f: => T): T
+  def update(value: Long): Timer
+  def update(duration: FiniteDuration): Timer
+}
 
-  def histogram(name: String): Histogram = {
-    new Histogram(registry.histogram(name))
-  }
-
-  @throws[IllegalArgumentException]("if this function is called multiple times for the same name.")
-  def gauge[G <: Gauge[_]](name: String, gauge: G): G = {
-    try {
-      registry.register(name, gauge)
-      gauge
-    } catch {
-      case _: IllegalArgumentException =>
-        logger.warn(s"$name already has a registered guage")
-        registry.getGauges.getOrDefault(name, gauge).asInstanceOf[G]
-    }
-  }
-
-  def name(prefix: String, clazz: Class[_], method: String): String = {
-    s"${prefix}.${className(clazz)}.${method}"
-  }
-
-  def name(prefix: String, in: MethodInvocation): String = {
-    name(prefix, in.getThis.getClass, in.getMethod.getName)
-  }
-
-  def className(clazz: Class[_]): String = {
-    classNameCache.getOrElseUpdate(clazz, stripGuiceMarksFromClassName(clazz))
-  }
-
-  private[metrics] def stripGuiceMarksFromClassName(clazz: Class[_]): String = {
-    val name = clazz.getName
-    if (name.contains("$EnhancerByGuice$")) clazz.getSuperclass.getName else name
-  }
+object AcceptAllFilter extends SubscriptionFilter {
+  override def accept(entity: Entity): Boolean = true
 }
 
 object Metrics {
-  class Counter(counter: com.codahale.metrics.Counter) {
-    def inc(): Unit = counter.inc()
-    def dec(): Unit = counter.dec()
+  implicit class KamonCounter(val counter: instrument.Counter) extends Counter {
+    override def increment(): KamonCounter = {
+      counter.increment()
+      this
+    }
+    override def increment(times: Long): KamonCounter = {
+      counter.increment(times)
+      this
+    }
   }
 
-  class Timer(private[metrics] val timer: com.codahale.metrics.Timer) {
-    def timeFuture[T](future: => Future[T]): Future[T] = {
-      val startTime = System.nanoTime()
-      val f =
-        try future
-        catch {
-          case NonFatal(e) =>
-            timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
-            throw e
-        }
-      import mesosphere.util.CallerThreadExecutionContext.callerThreadExecutionContext
-      f.onComplete {
-        case _ => timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
+  def counter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
+    tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown): Counter = {
+    Kamon.metrics.counter(name(prefix, `class`, metricName), tags, unit)
+  }
+
+  private implicit class KamonGauge(val gauge: instrument.Gauge) extends Gauge {
+    override def value(): Long = gauge.value()
+    override def increment(by: Long): this.type = {
+      gauge.increment(by)
+      this
+    }
+    override def decrement(by: Long): this.type = {
+      gauge.decrement(by)
+      this
+    }
+  }
+  def gauge(prefix: MetricPrefix, `class`: Class[_], metricName: String, currentValue: () => Long,
+    tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown): Gauge = {
+    Kamon.metrics.gauge(name(prefix, `class`, metricName), tags, unit)(currentValue)
+  }
+
+  def atomicGauge(prefix: MetricPrefix, `class`: Class[_], metricName: String,
+    tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown): SettableGauge = {
+    AtomicGauge(name(prefix, `class`, metricName), unit, tags)
+  }
+
+  implicit class KamonHistogram(val histogram: instrument.Histogram) extends Histogram {
+    override def record(value: Long): KamonHistogram = {
+      histogram.record(value)
+      this
+    }
+
+    override def record(value: Long, count: Long): KamonHistogram = {
+      histogram.record(value, count)
+      this
+    }
+  }
+
+  def histogram(prefix: MetricPrefix, `class`: Class[_], metricName: String,
+    tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown,
+    dynamicRange: DynamicRange): Histogram = {
+    Kamon.metrics.histogram(name(prefix, `class`, metricName), tags, unit, dynamicRange)
+  }
+
+  implicit class KamonMinMaxCounter(val counter: instrument.MinMaxCounter) extends MinMaxCounter {
+    override def increment(): KamonMinMaxCounter = {
+      counter.increment()
+      this
+    }
+
+    override def increment(times: Long): KamonMinMaxCounter = {
+      counter.increment(times)
+      this
+    }
+
+    override def decrement(): KamonMinMaxCounter = {
+      counter.decrement()
+      this
+    }
+
+    override def decrement(times: Long): KamonMinMaxCounter = {
+      counter.decrement(times)
+      this
+    }
+
+    override def refreshValues(): KamonMinMaxCounter = {
+      counter.refreshValues()
+      this
+    }
+
+    override def record(value: Long): KamonMinMaxCounter = {
+      counter.record(value)
+      this
+    }
+
+    override def record(value: Long, count: Long): KamonMinMaxCounter.this.type = {
+      counter.record(value, count)
+      this
+    }
+  }
+
+  def minMaxCounter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
+    tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown): MinMaxCounter = {
+    Kamon.metrics.minMaxCounter(name(prefix, `class`, metricName), tags, unit)
+  }
+
+  def timer(prefix: MetricPrefix, `class`: Class[_], metricName: String,
+    tags: Map[String, String] = Map.empty, unit: Time = Time.Nanoseconds): Timer = {
+    HistogramTimer(name(prefix, `class`, metricName), tags, unit)
+  }
+
+  def subscribe(actorRef: ActorRef, filter: SubscriptionFilter = AcceptAllFilter): Done = {
+    Kamon.metrics.subscribe(filter, actorRef)
+    Done
+  }
+
+  private[this] var metrics: TickMetricSnapshot = {
+    val now = MilliTimestamp.now
+    TickMetricSnapshot(now, now, Map.empty)
+  }
+
+  // returns the current snapshot. Doesn't collect until `start` is called
+  def snapshot(): TickMetricSnapshot = metrics
+
+  // Starts collecting snapshots.
+  def start(actorRefFactory: ActorRefFactory): Done = {
+    class SubscriberActor() extends Actor {
+      val collectionContext: CollectionContext = Kamon.metrics.buildDefaultCollectionContext
+      override def receive: Actor.Receive = {
+        case TickMetricSnapshot(_, to, tickMetrics) =>
+          val combined = MapMerge.Syntax(metrics.metrics).merge(tickMetrics, (l, r) => l.merge(r, collectionContext))
+          val combinedSnapshot = TickMetricSnapshot(metrics.from, to, combined)
+          metrics = combinedSnapshot
       }
-      f
     }
-
-    def apply[T](block: => T): T = {
-      val startTime = System.nanoTime()
-      try {
-        block
-      } finally {
-        timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
-      }
-    }
-
-    def update(duration: FiniteDuration): Unit = timer.update(duration.toMillis, TimeUnit.MILLISECONDS)
-    def invocationCount: Long = timer.getCount
-  }
-
-  class Histogram(histogram: com.codahale.metrics.Histogram) {
-    def update(value: Long): Unit = {
-      histogram.update(value)
-    }
-
-    def update(value: Int): Unit = {
-      histogram.update(value)
-    }
-  }
-
-  class Meter(meter: com.codahale.metrics.Meter) {
-    def mark(): Unit = meter.mark()
-    def mark(n: Long): Unit = meter.mark(n)
-    def mark(n: Int): Unit = meter.mark(n.toLong)
-  }
-
-  class AtomicIntGauge extends Gauge[Int] {
-    private[this] val value_ = new AtomicInteger(0)
-
-    def setValue(l: Int): Unit = value_.set(l)
-    override def getValue: Int = value_.get()
-
-    def increment(): Int = value_.incrementAndGet()
-    def decrement(): Int = value_.decrementAndGet()
+    subscribe(actorRefFactory.actorOf(Props(classOf[SubscriberActor])))
   }
 }

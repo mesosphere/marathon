@@ -1,12 +1,14 @@
-package mesosphere.marathon.core.storage.store
+package mesosphere.marathon
+package core.storage.store
 
 import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Sink, Source }
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.storage.backup.BackupItem
 
 import scala.concurrent.Future
 
@@ -123,6 +125,17 @@ trait PersistenceStore[K, Category, Serialized] {
     um: Unmarshaller[Serialized, V]): Future[Option[V]]
 
   /**
+    * Get the version of the data at the given id and version, if any, for the value type.
+    *
+    * @return A future representing the data at the given Id and version, if any exists.
+    *         If there is an underlying storage problem, the future should fail with
+    *         [[mesosphere.marathon.StoreCommandFailedException]]
+    */
+  def getVersions[Id, V](list: Seq[(Id, OffsetDateTime)])(implicit
+    ir: IdResolver[Id, V, Category, K],
+    um: Unmarshaller[Serialized, V]): Source[V, NotUsed]
+
+  /**
     * Store the new value at the given Id. If the value already exists, the existing value will be versioned
     *
     * @return A Future that will complete with the previous version of the value if it existed, or fail with
@@ -169,4 +182,21 @@ trait PersistenceStore[K, Category, Serialized] {
     *         will fail the future with [[mesosphere.marathon.StoreCommandFailedException]]
     */
   def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done]
+
+  /**
+    * Get a source of all items in the persistence store for a backup.
+    * A restore operation with all backup items has to yield the same state that exists in the store at time of calling backup.
+    * The BackupItem created by one storage implementation can only be read by the same storage implementation.
+    *
+    * @return List of all items in the store for backup.
+    */
+  def backup(): Source[BackupItem, NotUsed]
+
+  /**
+    * Restore a state from a previously created backup.
+    * The current state of the persistent store has to be cleaned before backup items can be restored!
+    * The sink needs to write all items for a complete backup.
+    * @return a sink that can be used to restore the complete state.
+    */
+  def restore(): Sink[BackupItem, Future[Done]]
 }

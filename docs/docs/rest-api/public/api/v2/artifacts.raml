@@ -6,12 +6,10 @@ post:
     The form parameter name has to be ```file```.
     The filename used in the artifact store, is the same as given by the form parameter.
     The response holds the URL of the artifact in the artifact store in the Location Header.
-  body:
-    multipart/form-data:
-      formParameters:
-        file:
-          description: The file to upload
-          type: file
+  queryParameters:
+    file:
+      description: The file to upload
+      type: file
   responses:
     201:
       description: The file has been created. No body is sent.
@@ -28,12 +26,10 @@ post:
       The form parameter name has to be ```file```.
       The path used to store the file is taken from the url path.
       The response holds the URL of the artifact in the artifact store in the Location Header.
-    body:
-      multipart/form-data:
-        formParameters:
-          file:
-            description: The file to upload
-            type: file
+    queryParameters:
+      file:
+        description: The file to upload
+        type: file
     responses:
       201:
         description: The file has been created. No body is sent.
@@ -48,12 +44,10 @@ post:
       The form parameter name has to be ```file```.
       The path used to store the file is taken from the url path.
       The response holds the URL of the artifact in the artifact store in the Location Header.
-    body:
-      multipart/form-data:
-        formParameters:
-          file:
-            description: The file to upload
-            type: file
+    queryParameters:
+      file:
+        description: The file to upload
+        type: file
     responses:
       201:
         description: The file has been created. No body is sent.

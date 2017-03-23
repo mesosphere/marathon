@@ -1,12 +1,11 @@
-package mesosphere.marathon.core.storage.store.impl
+package mesosphere.marathon
+package core.storage.store.impl
 
 import java.time.OffsetDateTime
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.impl.memory.{ InMemoryPersistenceStore, RamId }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStoreTest, TestClass1 }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 
 trait InMemoryTestClass1Serialization {
@@ -23,8 +22,6 @@ trait InMemoryTestClass1Serialization {
 
 class InMemoryPersistenceStoreTest extends AkkaUnitTest with PersistenceStoreTest
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
-
-  implicit val metrics = new Metrics(new MetricRegistry)
 
   behave like basicPersistenceStore("InMemoryPersistenceStore", new InMemoryPersistenceStore())
 }

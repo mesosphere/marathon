@@ -1,14 +1,19 @@
-package mesosphere.marathon.core.storage.store
+package mesosphere.marathon
+package core.storage.store
 
+import java.io.File
 import java.time.{ Clock, OffsetDateTime }
 
 import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{ FileIO, Keep, Sink }
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.storage.backup.impl.TarBackupFlow
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.test.SettableClock
+
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case class TestClass1(str: String, int: Int, version: OffsetDateTime)
@@ -119,6 +124,32 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         store.get("test", old.version).futureValue.value should equal(old)
         store.deleteAll("test").futureValue should be(Done)
         store.get("test").futureValue should be('empty)
+      }
+      "be able to backup and restore the state" in {
+        Given("A persistent store with some data")
+        val store = newStore
+        implicit val clock = new SettableClock()
+        val numEntries = 3
+        val content = 0.until(numEntries).map(num => TestClass1(s"name-$num", num))
+        Future.sequence(content.map(item => store.store(item.str, item))).futureValue
+        val file = File.createTempFile("marathon-zipfile", ".zip")
+        file.deleteOnExit()
+        val tarSink = TarBackupFlow.tar.toMat(FileIO.toPath(file.toPath))(Keep.right)
+
+        When("A backup is created")
+        store.backup().runWith(tarSink).futureValue
+
+        When("State is restored from the backup")
+        val tarSource = FileIO.fromPath(file.toPath).via(TarBackupFlow.untar)
+        tarSource.runWith(store.restore()).futureValue
+
+        Then("The state is restored completely")
+        val children = store.backup().runWith(stream.Sink.seq).futureValue
+        children.size should be >= numEntries
+        content.foreach { item =>
+          store.get(item.str).futureValue should be(defined)
+        }
+        file.delete()
       }
     }
   }

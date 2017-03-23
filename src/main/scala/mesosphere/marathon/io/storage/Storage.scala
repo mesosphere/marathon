@@ -1,4 +1,5 @@
-package mesosphere.marathon.io.storage
+package mesosphere.marathon
+package io.storage
 
 import java.io.{ File, FileInputStream, InputStream, OutputStream }
 import java.net.URI
@@ -99,6 +100,7 @@ object StorageProvider {
   val HDFS = "^(hdfs://[^/]+)(.*)$".r // hdfs://host:port/path
   val FILE = "^file://(.*)$".r // file:///local/artifact/path
 
+  @SuppressWarnings(Array("OptionGet"))
   def provider(config: MarathonConf, http: HttpConf): StorageProvider =
     config.artifactStore.get.getOrElse("") match {
       case HDFS(uri, base) =>

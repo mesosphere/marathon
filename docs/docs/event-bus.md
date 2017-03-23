@@ -4,7 +4,9 @@ title: Event Bus
 
 # Event Bus
 
-Marathon has an internal event bus that captures all API requests and scaling events. By subscribing to the event bus, you can be informed about every event instantly, without pulling. The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.
+Marathon has an internal event bus that captures all API requests and scaling events.
+By subscribing to the event bus, you can be informed about every event instantly, without pulling.
+The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.
 
 Events can be subscribed to by pluggable subscribers.
 
@@ -12,9 +14,10 @@ The event bus has two APIs:
 
 * The event stream. For more information, see the `/v2/events` entry in the [Marathon REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html).
 
-* The callback endpoint, which POSTs events in JSON format to one or more endpoints.
+* <span class="label label-default">Deprecated</span> The callback endpoint, which POSTs events in JSON format to one or more endpoints.
 
-We recommend using the event stream instead of the callback endpoint because:
+The HTTP callback endpoint support is deprecated with Marathon 1.4 and will be removed in an upcoming version.
+Please use the event stream instead of the callback endpoint because:
 
 * It is easier to set up.
 
@@ -25,6 +28,37 @@ We recommend using the event stream instead of the callback endpoint because:
 Other subscribers are easy to add. See the code in
 [marathon/event/http](https://github.com/mesosphere/marathon/tree/master/src/main/scala/mesosphere/marathon/event/http)
 for guidance.
+
+## Subscription to Events via The Event Stream
+
+This functionality is always enabled. Marathon implements
+[Server-Sent-Events (SSE)](https://en.wikipedia.org/wiki/Server-sent_events) standard.
+Events are published on `/v2/events` endpoint.
+Any SSE-compatible client can subscribe.
+Example subscription using `curl`:
+
+```bash
+$ curl -H "Accept: text/event-stream"  <MARATHON_HOST>:<MARATHON_PORT>/v2/events
+
+event: event_stream_attached
+data: {"remoteAddress":"127.0.0.1","eventType":"event_stream_attached","timestamp":"2017-02-18T19:12:00.102Z"}
+```
+
+### Filtering the Event Stream
+
+Starting from version [1.3.7](https://github.com/mesosphere/marathon/releases/tag/v1.3.7),
+Marathon supports filtering the event stream by event type.
+To filter by event type,
+specify a value for the `event_type` parameter in your `/v2/events` request.
+This could be done by adding interesting event type as value for `event_type`
+parameter to `/v2/events` request.
+
+The following example only subscribes to events involving a new client
+attaching to or detaching from the event stream.
+
+```bash
+curl -H "Accept: text/event-stream"  <MARATHON_HOST>:<MARATHON_PORT>/v2/events?event_type=event_stream_detached\&event_type=event_stream_attached
+```
 
 ## Subscription to Events via the Callback Endpoint
 
@@ -38,7 +72,7 @@ Both host1 and host2 will receive events.
 
 ## Event Types
 
-Below are example JSON bodies that are posted by Marathon.
+Below are example JSON bodies that are send by Marathon.
 
 ### API Request
 
@@ -104,6 +138,7 @@ The possible values for `taskStatus` are:
 - `TASK_RUNNING`
 - `TASK_FINISHED`
 - `TASK_FAILED`
+- `TASK_KILLING` (only when the `task_killing` feature is enabled)
 - `TASK_KILLED`
 - `TASK_LOST`
 
@@ -202,7 +237,7 @@ Fired when a new http callback subscriber is added or removed:
   "eventType": "health_status_changed_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
   "appId": "/my-app",
-  "taskId": "my-app_0-1396592784349",
+  "instanceId": "my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c",
   "version": "2014-04-04T06:26:23.051Z",
   "alive": true
 }

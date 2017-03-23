@@ -1,28 +1,27 @@
-package mesosphere.marathon.core.health
+package mesosphere.marathon
+package core.health
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.marathon.ZookeeperConf
+import akka.stream.Materializer
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.impl.MarathonHealthCheckManager
-import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
+import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 
 /**
   * Exposes everything related to a task health, including the health check manager.
   */
 class HealthModule(
     actorSystem: ActorSystem,
-    killService: TaskKillService,
+    killService: KillService,
     eventBus: EventStream,
-    taskTracker: TaskTracker,
-    appRepository: ReadOnlyAppRepository,
-    zkConf: ZookeeperConf) {
+    taskTracker: InstanceTracker,
+    groupManager: GroupManager)(implicit mat: Materializer) {
   lazy val healthCheckManager = new MarathonHealthCheckManager(
     actorSystem,
     killService,
     eventBus,
     taskTracker,
-    appRepository,
-    zkConf)
+    groupManager)
 }

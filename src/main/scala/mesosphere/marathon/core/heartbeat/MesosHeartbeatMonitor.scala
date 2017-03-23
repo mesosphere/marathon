@@ -1,15 +1,13 @@
-package mesosphere.marathon.core.heartbeat
+package mesosphere.marathon
+package core.heartbeat
 
-import java.util.UUID
+import java.util.{ Collections, UUID }
 import javax.inject.{ Inject, Named }
 
 import akka.actor.ActorRef
-import mesosphere.marathon.ModuleNames
-import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.apache.mesos.Protos._
+import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
-
-import scala.collection.JavaConverters._
 
 /**
   * @constructor create a mesos Scheduler decorator that intercepts callbacks from a mesos SchedulerDriver,
@@ -41,9 +39,16 @@ class MesosHeartbeatMonitor @Inject() (
     // the fake task ID and agent ID that we use will never actually exist in the cluster.
     // this is part of a short-term workaround: will no longer be needed once marathon is ported
     // to use the new mesos v1 http API.
-    private[this] val virtualHeartbeatTasks: java.util.Collection[TaskStatus] = Seq(fakeHeartbeatStatus).asJava
+    private[this] val virtualHeartbeatTasks = Collections.singletonList(fakeHeartbeatStatus)
 
-    override def onSkip(): Unit = {
+    override def onSkip(skipped: Int): Unit = {
+      // the first skip (skipped == 1) may be because there simply haven't been any offers or task status updates
+      // sent by the master within the heartbeat interval. that's completely normal, so we only log if skipped > 1
+      // because that means that we've prompted mesos via task reconciliation and it still hasn't responded in a
+      // timely manner.
+      if (skipped > 1) {
+        log.info(s"missed ${skipped - 1} expected heartbeat(s) from mesos master; possibly disconnected")
+      }
       log.debug("Prompting mesos for a heartbeat via explicit task reconciliation")
       driver.reconcileTasks(virtualHeartbeatTasks)
     }
@@ -91,7 +96,7 @@ class MesosHeartbeatMonitor @Inject() (
   }
 
   protected[marathon] def isFakeHeartbeatUpdate(status: TaskStatus): Boolean =
-    status.getState == TaskState.TASK_LOST &&
+    (status.getState == TaskState.TASK_LOST || status.getState == TaskState.TASK_UNKNOWN) &&
       status.hasSource && status.getSource == TaskStatus.Source.SOURCE_MASTER &&
       status.hasReason && status.getReason == TaskStatus.Reason.REASON_RECONCILIATION &&
       status.hasSlaveId && status.getSlaveId.getValue.startsWith(FAKE_AGENT_PREFIX) &&
@@ -147,7 +152,7 @@ object MesosHeartbeatMonitor {
   final val FAKE_AGENT_PREFIX = "fake-marathon-pacemaker-agent-"
 
   /** @return a uniquely identifying token for the current session */
-  def sessionOf(driver: SchedulerDriver): AnyRef =
+  def sessionOf(driver: SchedulerDriver): SchedulerDriver =
     // a new driver is instantiated for each session already so we can just use the driver instance
     // as the session token. it feels a bit hacky but does the job. would rather hack this in one place
     // vs everywhere else that wants the session token.

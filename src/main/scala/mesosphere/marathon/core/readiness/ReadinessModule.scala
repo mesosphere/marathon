@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.readiness
+package mesosphere.marathon
+package core.readiness
 
 import akka.actor.ActorSystem
 import mesosphere.marathon.core.readiness.impl.ReadinessCheckExecutorImpl

@@ -1,6 +1,8 @@
-package mesosphere.marathon.core
+package mesosphere.marathon
+package core
 
-/**
-  * This package contains infrastructure code that is generally useful.
-  */
-package object base
+import scala.language.implicitConversions
+
+package object base {
+  implicit def toRichRuntime(runtime: Runtime): RichRuntime = new RichRuntime(runtime)
+}

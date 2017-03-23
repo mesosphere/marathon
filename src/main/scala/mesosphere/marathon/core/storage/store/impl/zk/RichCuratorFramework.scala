@@ -1,15 +1,17 @@
-package mesosphere.marathon.core.storage.store.impl.zk
+package mesosphere.marathon
+package core.storage.store.impl.zk
 
 import akka.Done
 import akka.util.ByteString
+import mesosphere.marathon.stream.Implicits._
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pathable }
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ ACL, Stat }
+import scala.annotation.tailrec
+import mesosphere.marathon.core.base.LifecycleState
 
-import scala.collection.JavaConversions._
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
@@ -27,7 +29,14 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
     new RichCuratorFramework(client.usingNamespace(namespace))
   }
 
-  // scalastyle:off maxParameters
+  def close(): Unit = {
+    client.close()
+  }
+
+  def start(): Unit = {
+    client.start()
+  }
+
   def create(
     path: String,
     data: Option[ByteString] = None,
@@ -49,12 +58,9 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
       }
     }
 
-  // scalastyle:on
-
   def delete(
     path: String,
     version: Option[Int] = None,
-    quietly: Boolean = false,
     guaranteed: Boolean = false,
     deletingChildrenIfNeeded: Boolean = false): Future[String] =
     build(client.delete(), ZkFuture.delete) { builder =>
@@ -107,6 +113,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
       builder.forPath(path)
     }
 
+  @SuppressWarnings(Array("AsInstanceOf"))
   def setAcl(path: String, acls: Seq[ACL],
     version: Option[Int] = None): Future[Done] = {
     val builder = client.setACL()
@@ -132,6 +139,33 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
 
   override def toString: String =
     s"CuratorFramework(${client.getZookeeperClient.getCurrentConnectionString}/${client.getNamespace})"
+
+  /**
+    * Block the current thread until Zookeeper connection is established or until configured zookeeper connection
+    * timeout is surpassed . If Marathon is detected to be shutting down, then we abort immediately and throw an
+    * InterruptedException.
+    *
+    * @param lifecycleState reference to interface to query Marathon's lifecycle state
+    */
+  @SuppressWarnings(Array("CatchFatal"))
+  def blockUntilConnected(lifecycleState: LifecycleState): Unit = {
+    val timeoutAt: Long = System.currentTimeMillis() + client.getZookeeperClient.getConnectionTimeoutMs
+
+    @tailrec def poll(): Unit = {
+      if (System.currentTimeMillis > timeoutAt)
+        throw new InterruptedException("timed out while waiting for zookeeper connection")
+      else if (!lifecycleState.isRunning)
+        throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")
+      else try {
+        client.blockUntilConnected(1, java.util.concurrent.TimeUnit.SECONDS)
+      } catch {
+        case _: InterruptedException =>
+          poll()
+      }
+    }
+
+    poll()
+  }
 }
 
 object RichCuratorFramework {

@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import org.apache.mesos.{ Protos => mesos }
 import scala.collection.immutable.Seq
@@ -8,12 +9,12 @@ import scala.collection.immutable.Seq
   */
 case class FetchUri(
     uri: String,
-    extract: Boolean = true,
-    executable: Boolean = false,
-    cache: Boolean = false,
-    outputFile: Option[String] = None) {
+    extract: Boolean = FetchUri.defaultExtract,
+    executable: Boolean = FetchUri.defaultExecutable,
+    cache: Boolean = FetchUri.defaultCache,
+    outputFile: Option[String] = FetchUri.defaultOutputFile) {
 
-  def toProto(): mesos.CommandInfo.URI = {
+  def toProto: mesos.CommandInfo.URI = {
     val builder = mesos.CommandInfo.URI.newBuilder()
       .setValue(uri)
       .setExecutable(executable)
@@ -27,6 +28,11 @@ case class FetchUri(
 object FetchUri {
 
   val empty: Seq[FetchUri] = Seq.empty
+
+  val defaultExtract: Boolean = raml.Artifact.DefaultExtract
+  val defaultExecutable: Boolean = raml.Artifact.DefaultExecutable
+  val defaultCache: Boolean = raml.Artifact.DefaultCache
+  val defaultOutputFile: Option[String] = raml.Artifact.DefaultDestPath
 
   def fromProto(uri: mesos.CommandInfo.URI): FetchUri =
     FetchUri(

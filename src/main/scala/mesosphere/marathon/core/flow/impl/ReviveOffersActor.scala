@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.flow.impl
+package mesosphere.marathon
+package core.flow.impl
 
 import akka.actor.{ Cancellable, Actor, ActorLogging, Props }
 import akka.event.{ EventStream, LoggingReceive }
@@ -40,7 +41,7 @@ private[impl] class ReviveOffersActor(
   private[impl] var nextReviveCancellableOpt: Option[Cancellable] = None
 
   override def preStart(): Unit = {
-    subscription = offersWanted.map(OffersWanted(_)).subscribe(self ! _)
+    subscription = offersWanted.map(OffersWanted).subscribe(self ! _)
     marathonEventStream.subscribe(self, classOf[SchedulerRegisteredEvent])
     marathonEventStream.subscribe(self, classOf[SchedulerReregisteredEvent])
   }
@@ -133,7 +134,7 @@ private[impl] class ReviveOffersActor(
       }
 
     case ReviveOffersActor.TimedCheck =>
-      log.info(s"Received TimedCheck")
+      log.info("Received TimedCheck")
       if (revivesNeeded > 0) {
         reviveOffers()
       } else {

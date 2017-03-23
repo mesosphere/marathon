@@ -34,7 +34,7 @@ Marathon-lb is a Dockerized application that includes both HAProxy an applicatio
 
 When using marathon-lb, note that it is not necessary to set `requirePorts` to `true`, as described in the [ports documentation](ports.html).
 
-For more information, see the [Marathon-lb repository](https://github.com/mesosphere/marathon-lb) or refer to the [marathon-lb documentation on the Mesosphere site](https://docs.mesosphere.com/administration/service-discovery-with-marathon-lb/service-discovery-and-load-balancing-with-marathon-lb/).
+For more information, see the [Marathon-lb repository](https://github.com/mesosphere/marathon-lb) or refer to the [marathon-lb documentation on the Mesosphere site](https://dcos.io/docs/latest/usage/service-discovery/marathon-lb/).
 
 ## haproxy-marathon-bridge (DEPRECATED)
 

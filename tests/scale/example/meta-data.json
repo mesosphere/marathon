@@ -1,0 +1,1 @@
+{"marathon-version": "1.4.2-snapshot3", "marathon": "root", "master-count": 1, "resources": {"memory": 84126.0, "cpus": 24.0}, "dcos-version": "1.9-dev", "security": "permissive", "private-agents": 5}

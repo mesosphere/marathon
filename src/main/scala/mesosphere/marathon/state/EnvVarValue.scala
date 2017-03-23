@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
@@ -51,7 +52,7 @@ object EnvVarValue {
     }
   }
 
-  def envEntryValidator: Validator[Tuple2[String, EnvVarValue]] = validator[Tuple2[String, EnvVarValue]] { t =>
+  def envEntryValidator: Validator[(String, EnvVarValue)] = validator[(String, EnvVarValue)] { t =>
     t._1 as s"(${t._1})" is notEmpty
     t._2 as s"(${t._1})" is valid
   }
@@ -80,7 +81,7 @@ object EnvVarSecretRef {
   lazy val tupleValidator: Validator[(AppDefinition, String, EnvVarSecretRef)] = {
     val ifSecretIsDefined = isTrue[(AppDefinition, String, EnvVarSecretRef)](
       (t: (AppDefinition, String, EnvVarSecretRef)) => s"references an undefined secret named '${t._3.secret}'"
-    ) { (t: (AppDefinition, String, EnvVarSecretRef)) => t._1.secrets.keySet.exists(_ == t._3.secret) }
+    ) { (t: (AppDefinition, String, EnvVarSecretRef)) => t._1.secrets.keySet.contains(t._3.secret) }
 
     validator[(AppDefinition, String, EnvVarSecretRef)] { t =>
       t as s"env(${t._2})" is valid(ifSecretIsDefined)

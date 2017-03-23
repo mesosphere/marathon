@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.store.impl
+package mesosphere.marathon
+package core.storage.store.impl
 
 import org.apache.curator.framework.CuratorFramework
 

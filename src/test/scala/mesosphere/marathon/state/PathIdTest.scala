@@ -1,15 +1,15 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
+import mesosphere.UnitTest
 import mesosphere.marathon.state.PathId._
-import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
+import com.wix.accord.scalatest.ResultMatchers
 
 import scala.collection.SortedSet
 
-class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
-
-  describe("A PathId") {
-
-    it("can be parsed from string") {
+class PathIdTest extends UnitTest with ResultMatchers {
+  "A PathId" can {
+    "be parsed from string" in {
       Given("A base id")
       val path = PathId("/a/b/c/d")
 
@@ -20,7 +20,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       path should be(reference)
     }
 
-    it("can parse the empty list from empty root string") {
+    "parse the empty list from empty root string" in {
       When("The same path as list")
       val reference = PathId("/")
 
@@ -28,7 +28,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       PathId.empty should be(reference)
     }
 
-    it("can parse safePath from itself") {
+    "parse safePath from itself" in {
       When("The path is empty")
       PathId.fromSafePath(PathId.empty.safePath) should equal(PathId.empty)
 
@@ -37,7 +37,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       PathId.fromSafePath(reference.safePath) should equal(reference)
     }
 
-    it("can be written and parsed from string") {
+    "be written and parsed from string" in {
       Given("A base id")
       val path = PathId("a/b/c/d")
 
@@ -48,7 +48,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       path should be(reference)
     }
 
-    it("can compute the canonical path when path is relative") {
+    "compute the canonical path when path is relative" in {
       Given("A base id")
       val id = PathId("/a/b/c/d")
 
@@ -59,7 +59,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       path should be(PathId("/a/b/c/d/e/f"))
     }
 
-    it("can compute the canonical path when path is absolute") {
+    "compute the canonical path when path is absolute" in {
 
       When("a relative path is canonized")
       val path = PathId("test/../a/b/c/d/d/../e/f/g/./../").canonicalPath()
@@ -68,7 +68,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       path should be(PathId("/a/b/c/d/e/f"))
     }
 
-    it("can compute the restOf with respect to a given path") {
+    "compute the restOf with respect to a given path" in {
       Given("A base id")
       val id = PathId("a/b/c")
 
@@ -79,7 +79,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       path should be(PathId("d/e/f"))
     }
 
-    it("can append to a path") {
+    "append to a path" in {
       Given("A base id")
       val id = PathId("/a/b/c")
 
@@ -90,7 +90,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       path should be(PathId("/a/b/c/d/e/f"))
     }
 
-    it("can give the taskTrackerRef path") {
+    "give the taskTrackerRef path" in {
       Given("base id's")
       val id1 = PathId("/a/b/c")
       val id2 = PathId("/a")
@@ -107,7 +107,7 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       parent3 should be(PathId.empty)
     }
 
-    it("can convert to a hostname") {
+    "convert to a hostname" in {
       Given("base id's")
       val id1 = PathId("/a/b/c")
       val id2 = PathId("/a")
@@ -124,26 +124,27 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       host3 should be("")
     }
   }
+  "PathIds" should {
+    "handles root paths" in {
+      PathId("/").isRoot shouldBe true
+      PathId("").isRoot shouldBe true
+    }
 
-  it("handles root paths") {
-    PathId("/").isRoot shouldBe true
-    PathId("").isRoot shouldBe true
+    "match another PathId" in {
+      PathId("/a/b/c").includes(PathId("/a/b")) shouldBe true
+      PathId("/a/b/c").includes(PathId("/a/b/d")) shouldBe false
+      PathId("/a/b/c").includes(PathId("/a")) shouldBe true
+      PathId("/a/b/c").includes(PathId("/other")) shouldBe false
+    }
+
+    "give all parents as sequence" in {
+      val parents = PathId("/a/b/c/d").allParents
+      parents should be(Seq(PathId("/a/b/c"), PathId("/a/b"), PathId("/a"), PathId("/")))
+      parents should have size 4
+    }
   }
 
-  it("can match another PathId") {
-    PathId("/a/b/c").includes(PathId("/a/b")) shouldBe true
-    PathId("/a/b/c").includes(PathId("/a/b/d")) shouldBe false
-    PathId("/a/b/c").includes(PathId("/a")) shouldBe true
-    PathId("/a/b/c").includes(PathId("/other")) shouldBe false
-  }
-
-  it("can give all parents as sequence") {
-    val parents = PathId("/a/b/c/d").allParents
-    parents should be(Seq(PathId("/a/b/c"), PathId("/a/b"), PathId("/a"), PathId("/")))
-    parents should have size 4
-  }
-
-  describe("An ordered PathID collection") {
+  "An ordered PathID collection" should {
     val a = PathId("/a")
     val aa = a / "a"
     val ab = a / "b"
@@ -151,17 +152,37 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
     val b = PathId("/b")
     val c = PathId("/c")
 
-    it("can be sorted if all paths are on the same level") {
+    "be sorted if all paths are on the same level" in {
       SortedSet(a, b, a).toSeq should equal(Seq(a, b))
     }
 
-    it("can be sorted if with paths on different levels") {
+    "be sorted if with paths on different levels" in {
       SortedSet(a, b, aa, a).toSeq should equal(Seq(a, aa, b))
     }
 
-    it("can be sorted if it was reversed") {
+    "be sorted if it was reversed" in {
       SortedSet(c, b, a).toSeq should equal(Seq(a, b, c))
       SortedSet(ac, ab, aa).toSeq should equal(Seq(aa, ab, ac))
+    }
+  }
+
+  "The PathId validation" when {
+
+    "passed legal characters" should {
+      "be valid" in {
+        val path = PathId("/foobar-0")
+        val validation = PathId.pathIdValidator(path)
+        validation shouldBe aSuccess
+      }
+    }
+
+    "passed illegal characters" should {
+      "be invalid" in {
+        val path = PathId("/@§\'foobar-0")
+        val validation = PathId.pathIdValidator(path)
+        val expectedViolation = RuleViolationMatcher(value = "@§'foobar-0", constraint = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
+        validation should failWith(expectedViolation)
+      }
     }
   }
 }

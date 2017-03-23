@@ -1,10 +1,14 @@
-package mesosphere.marathon.storage.store
+package mesosphere.marathon
+package storage.store
 
 import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.Id
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
 import mesosphere.marathon.core.task.Task
@@ -15,10 +19,11 @@ import mesosphere.util.state.FrameworkId
 trait InMemoryStoreSerialization {
   implicit def marshaller[V]: Marshaller[V, Identity] = Marshaller.opaque { a: V => Identity(a) }
 
+  @SuppressWarnings(Array("AsInstanceOf"))
   implicit def unmarshaller[V]: Unmarshaller[Identity, V] =
     Unmarshaller.strict { a: Identity => a.value.asInstanceOf[V] }
 
-  private class InMemPathIdResolver[T](
+  class InMemPathIdResolver[T](
     val category: String,
     val hasVersions: Boolean,
     getVersion: T => OffsetDateTime)
@@ -33,6 +38,19 @@ trait InMemoryStoreSerialization {
 
   implicit def appDefResolver: IdResolver[PathId, AppDefinition, String, RamId] =
     new InMemPathIdResolver[AppDefinition]("app", true, _.version.toOffsetDateTime)
+
+  implicit val podDefResolver: IdResolver[PathId, PodDefinition, String, RamId] =
+    new InMemPathIdResolver[PodDefinition]("pod", true, _.version.toOffsetDateTime)
+
+  implicit val instanceResolver: IdResolver[Instance.Id, Instance, String, RamId] =
+    new IdResolver[Instance.Id, Instance, String, RamId] {
+      override def toStorageId(id: Id, version: Option[OffsetDateTime]): RamId =
+        RamId(category, id.idString, version)
+      override val category: String = "instance"
+      override def fromStorageId(key: RamId): Id = Instance.Id(key.id)
+      override val hasVersions: Boolean = false
+      override def version(v: Instance): OffsetDateTime = OffsetDateTime.MIN
+    }
 
   implicit val taskResolver: IdResolver[Task.Id, Task, String, RamId] =
     new IdResolver[Task.Id, Task, String, RamId] {

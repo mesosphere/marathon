@@ -1,96 +1,93 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
-import java.nio.file.{ Files, Path }
-import java.util.concurrent.Semaphore
-
-import com.twitter.zk.ZkClient
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework }
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
-import org.apache.commons.io.FileUtils
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
-import org.apache.zookeeper.ZooDefs.Ids
-import org.apache.zookeeper.server.{ ServerConfig, ZooKeeperServerMain }
+import org.apache.curator.test.InstanceSpec
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 
+import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.collection.mutable.ListBuffer
-import scala.util.Try
+
+import org.apache.curator.test.TestingServer
 
 /**
   * Runs ZooKeeper in memory at the given port.
   * The server can be started and stopped at will.
+  *
+  * We wrap ZookeeperServer to give it an interface more consistent with how we start mesos and forked marathon
   *
   * close() should be called when the server is no longer necessary (e.g. try-with-resources)
   *
   * @param autoStart Start zookeeper in the background
   * @param port The port to run ZK on
   */
-class ZookeeperServer(
+case class ZookeeperServer(
     autoStart: Boolean = true,
-    val port: Int = PortAllocator.ephemeralPort()) extends AutoCloseable {
-  private var closing = false
-  private val workDir: Path = Files.createTempDirectory("zk")
-  private val semaphore = new Semaphore(0)
+    val port: Int = PortAllocator.ephemeralPort()) extends AutoCloseable with StrictLogging {
+
+  private val maxClientConnections = 20
   private val config = {
-    val config = new ServerConfig
-    config.parse(Array(port.toString, workDir.toFile.getAbsolutePath))
-    config
+    new InstanceSpec(
+      null, // auto-create workdir
+      port,
+      -1, // random electionPort
+      -1, // random quorumPort
+      true, // deleteDataDirectoryOnClose = true
+      -1, // default serverId
+      -1, // default tickTime
+      maxClientConnections
+    )
   }
-  private val zk = new ZooKeeperServerMain with AutoCloseable {
-    def close(): Unit = super.shutdown()
-  }
-  private val thread = new Thread(new Runnable {
-    override def run(): Unit = {
-      while (!closing) {
-        zk.runFromConfig(config)
-        semaphore.acquire()
-      }
+  private var running = autoStart
+  private val zkServer = new TestingServer(config, autoStart)
+
+  def connectUri = zkServer.getConnectString
+  /**
+    * Starts or restarts the server. If the server is currently running it will be stopped
+    * and restarted. If it's not currently running then it will be started. If
+    * it has been closed (had close() called on it) then an exception will be
+    * thrown.
+    */
+  def start(): Unit = synchronized {
+    /* With Curator's TestingServer, if you call start() after stop() was called, then, sadly, nothing is done.
+     * However, restart works for both the first start and second start.
+     *
+     * We make the start method idempotent by only calling restart if the process isn't already running, matching the
+     * start/stop behavior of LocalMarathon.
+     */
+    if (!running) {
+      zkServer.restart()
+      running = true
     }
-  }, s"Zookeeper-$port")
-  private var started = false
-  if (autoStart) {
-    start()
   }
 
-  val connectUri = s"127.0.0.1:$port"
-
-  def start(): Unit = if (!started) {
-    if (thread.getState == Thread.State.NEW) {
-      thread.start()
+  /**
+    * Stop the server without deleting the temp directory
+    */
+  def stop(): Unit = synchronized {
+    if (running) {
+      zkServer.stop()
+      running = false
     }
-    started = true
-    semaphore.release()
   }
 
-  def stop(): Unit = if (started) {
-    zk.close()
-    started = false
-  }
-
-  override def close(): Unit = {
-    closing = true
-    Try(stop())
-    Try(FileUtils.deleteDirectory(workDir.toFile))
-    thread.interrupt()
-    thread.join()
-  }
-}
-
-object ZookeeperServer {
-  def apply(
-    autoStart: Boolean = true,
-    port: Int = PortAllocator.ephemeralPort()): ZookeeperServer =
-    new ZookeeperServer(autoStart, port)
+  /**
+    * Close the server and any open clients and delete the temp directory
+    */
+  def close(): Unit =
+    zkServer.close()
 }
 
 trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutures =>
   val zkServer = ZookeeperServer(autoStart = false)
-  private val clients = Lock(ListBuffer.empty[CuratorFramework])
-  private val twitterClients = Lock(ListBuffer.empty[ZkClient])
+  private val clients = Lock(mutable.Buffer.empty[CuratorFramework])
 
   def zkClient(retryPolicy: RetryPolicy = NoRetryPolicy, namespace: Option[String] = None): RichCuratorFramework = {
     zkServer.start()
@@ -105,20 +102,9 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
     actualClient
   }
 
-  def twitterZkClient(): ZkClient = {
-    zkServer.start()
-    import scala.collection.JavaConverters._
-    val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
-    implicit val timer = com.twitter.util.Timer.Nil
-
-    val client = ZkClient(zkServer.connectUri, timeout).withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
-    twitterClients(_ += client)
-    client
-  }
-
   abstract override def beforeAll(): Unit = {
-    zkServer.start()
     super.beforeAll()
+    zkServer.start()
   }
 
   abstract override def afterAll(): Unit = {
@@ -126,10 +112,7 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
       c.foreach(_.close())
       c.clear()
     }
-    twitterClients { c =>
-      c.foreach(_.release())
-      c.clear()
-    }
+
     zkServer.close()
     super.afterAll()
   }

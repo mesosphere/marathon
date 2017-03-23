@@ -1,4 +1,4 @@
-#### GET `/v2/apps/{appId}?embed=...`
+#### GET `/v2/apps/{appId}?embed={embed}`
 
 List the application with id `appId`.
 

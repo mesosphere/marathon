@@ -12,20 +12,22 @@
 # CI Builds should base their build off of this image which is tagged
 # carefully
 
-FROM java:8-jdk
+FROM openjdk:8-jdk
 
+COPY . /marathon
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
-    echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian jessie-unstable main" | tee /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+    MESOS_VERSION=$(sed -n 's/^.*MesosDebian = "\(.*\)"/\1/p' </marathon/project/Dependencies.scala) && \
     apt-get update && \
-    apt-get install --no-install-recommends -y --force-yes mesos=1.0.0-2.0.89.debian81 && \
+    apt-get install --no-install-recommends -y --force-yes mesos=$MESOS_VERSION && \
     curl -o /tmp/docker.tgz https://get.docker.com/builds/Linux/x86_64/docker-1.11.0.tgz && \
     cd /tmp && \
     tar zxf docker.tgz && \
     mv docker/docker /usr/bin/docker && \
     chmod +x /usr/bin/docker
 
-COPY . /marathon
 RUN rm -rf /marathon/project/project/target && \
     rm -rf /marathon/project/target && \
     eval $(sed s/sbt.version/SBT_VERSION/ < /marathon/project/build.properties) && \
@@ -36,7 +38,7 @@ RUN rm -rf /marathon/project/project/target && \
 
 RUN cd /marathon && \
     sbt -Dsbt.log.format=false update && \
-    rm -rf /marathon/*
+    (rm -rf /marathon || true)
 
 WORKDIR /marathon
 

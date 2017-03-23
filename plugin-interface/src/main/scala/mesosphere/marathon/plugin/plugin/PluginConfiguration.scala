@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.plugin
+package mesosphere.marathon
+package plugin.plugin
 
 import play.api.libs.json.JsObject
 

@@ -1,200 +1,179 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.net.URL
 
-import akka.actor.ActorSystem
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyFilter }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
+import mesosphere.util.PortAllocator
 import org.apache.commons.httpclient.HttpStatus
-import org.scalatest.BeforeAndAfter
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 /**
   * Tests forwarding requests.
   */
-class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndAfter {
-  // ports to bind to
-  private[this] val ports = 10000 to 20000
-
-  implicit var actorSystem: ActorSystem = _
-
-  before {
-    actorSystem = ActorSystem()
+@IntegrationTest
+@SerialIntegrationTest
+class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
+  def withForwarder[T](testCode: ForwarderService => T): T = {
+    val forwarder = new ForwarderService
+    try {
+      testCode(forwarder)
+    } finally {
+      forwarder.close()
+    }
   }
 
-  after {
-    Await.result(actorSystem.terminate(), Duration.Inf)
-    ProcessKeeper.shutdown()
-  }
+  "ForwardingToLeader" should {
+    "direct ping" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val appFacade = new AppMockFacade()
+      val result = appFacade.ping("localhost", port = helloPort).futureValue
+      assert(result.response.status.intValue == 200)
+      assert(result.asString == "pong\n")
+      assert(!result.response.headers.exists(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA))
+      assert(result.response.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
+      assert(
+        result.response.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
+          == s"http://localhost:$helloPort")
+    }
 
-  test("direct ping") {
-    ProcessKeeper.startService(ForwarderService.createHelloApp("--http_port", ports.head.toString))
-    val appFacade = new AppMockFacade()
-    val result = appFacade.ping("localhost", port = ports.head)
-    assert(result.originalResponse.status.intValue == 200)
-    assert(result.entityString == "pong\n")
-    assert(!result.originalResponse.headers.exists(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA))
-    assert(result.originalResponse.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
-    assert(
-      result.originalResponse.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
-        == s"http://localhost:${ports.head}")
-  }
+    "forwarding ping" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val forwardPort = forwarder.startForwarder(helloPort).futureValue(Timeout(30.seconds))
 
-  test("forwarding ping") {
-    // We cannot start two service in one process because of static variables in GuiceFilter
-    ForwarderService.startHelloAppProcess("--http_port", ports.head.toString)
-    ProcessKeeper.startService(ForwarderService.createForwarder(
-      forwardToPort = ports.head, "--http_port", ports(1).toString))
-    val appFacade = new AppMockFacade()
-    val result = appFacade.ping("localhost", port = ports(1))
-    assert(result.originalResponse.status.intValue == 200)
-    assert(result.entityString == "pong\n")
-    assert(result.originalResponse.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) == 1)
-    assert(
-      result.originalResponse.headers.find(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA).get.value
-        == s"1.1 localhost:${ports(1)}")
-    assert(result.originalResponse.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
-    assert(
-      result.originalResponse.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
-        == s"http://localhost:${ports.head}")
-  }
+      val appFacade = new AppMockFacade()
+      val result = appFacade.ping("localhost", port = forwardPort).futureValue
+      assert(result.response.status.intValue == 200)
+      assert(result.asString == "pong\n")
+      assert(result.response.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) == 1)
+      assert(
+        result.response.headers.find(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA).get.value
+          == s"1.1 localhost:$forwardPort")
+      assert(result.response.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
+      assert(
+        result.response.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
+          == s"http://localhost:$helloPort")
+    }
 
-  test("direct HTTPS ping") {
-    ProcessKeeper.startService(ForwarderService.createHelloApp(
-      "--disable_http",
-      "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
-      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-      "--https_address", "localhost",
-      "--https_port", ports.head.toString))
+    "direct HTTPS ping" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp("--https_port", Seq(
+        "--disable_http",
+        "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
+        "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+        "--https_address", "localhost")).futureValue(Timeout(30.seconds))
 
-    val pingURL = new URL(s"https://localhost:${ports.head}/ping")
-    val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.selfSignedSSLContext)
-    val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
-    val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
-    val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
-    assert(response == "pong\n")
-    assert(via == null)
-    assert(leader == s"https://localhost:${ports.head}")
-  }
+      val pingURL = new URL(s"https://localhost:$helloPort/ping")
+      val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.selfSignedSSLContext)
+      val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
+      val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
+      val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
+      assert(response == "pong\n")
+      assert(via == null)
+      assert(leader == s"https://localhost:$helloPort")
+    }
 
-  test("forwarding HTTPS ping with a self-signed cert") {
-    // We cannot start two service in one process because of static variables in GuiceFilter
-    ProcessKeeper.startService(ForwarderService.createHelloApp(
-      "--disable_http",
-      "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
-      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-      "--https_address", "localhost",
-      "--https_port", ports.head.toString))
+    "forwarding HTTPS ping with a self-signed cert" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp("--https_port", Seq(
+        "--disable_http",
+        "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
+        "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+        "--https_address", "localhost")).futureValue(Timeout(30.seconds))
 
-    ForwarderService.startForwarderProcess(
-      forwardToPort = ports.head,
-      trustStorePath = None,
-      "--disable_http",
-      "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
-      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-      "--https_address", "localhost",
-      "--https_port", ports(1).toString)
+      val forwardPort = forwarder.startForwarder(helloPort, "--https_port", args = Seq(
+        "--disable_http",
+        "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
+        "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+        "--https_address", "localhost")).futureValue(Timeout(30.seconds))
 
-    val pingURL = new URL(s"https://localhost:${ports(1)}/ping")
-    val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.selfSignedSSLContext)
-    val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
-    val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
-    val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
-    assert(response == "pong\n")
-    assert(via == s"1.1 localhost:${ports(1)}")
-    assert(leader == s"https://localhost:${ports.head}")
-  }
+      val pingURL = new URL(s"https://localhost:$forwardPort/ping")
+      val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.selfSignedSSLContext)
+      val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
+      val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
+      val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
+      assert(response == "pong\n")
+      assert(via == s"1.1 localhost:$forwardPort")
+      assert(leader == s"https://localhost:$helloPort")
+    }
 
-  test("forwarding HTTPS ping with a ca signed cert") {
-    // We cannot start two service in one process because of static variables in GuiceFilter
-    ProcessKeeper.startService(ForwarderService.createHelloApp(
-      "--disable_http",
-      "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
-      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-      "--https_address", "localhost",
-      "--https_port", ports.head.toString))
+    "forwarding HTTPS ping with a ca signed cert" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp("--https_port", Seq(
+        "--disable_http",
+        "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
+        "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+        "--https_address", "localhost")).futureValue(Timeout(30.seconds))
 
-    ForwarderService.startForwarderProcess(
-      forwardToPort = ports.head,
-      trustStorePath = Some(SSLContextTestUtil.caTrustStorePath),
-      "--disable_http",
-      "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
-      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-      "--https_address", "localhost",
-      "--https_port", ports(1).toString)
+      val forwardPort = forwarder.startForwarder(
+        helloPort,
+        "--https_port",
+        trustStorePath = Some(SSLContextTestUtil.caTrustStorePath),
+        args = Seq(
+          "--disable_http",
+          "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
+          "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+          "--https_address", "localhost")).futureValue(Timeout(30.seconds))
 
-    val pingURL = new URL(s"https://localhost:${ports(1)}/ping")
-    val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.caSignedSSLContext)
-    val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
-    val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
-    val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
-    assert(response == "pong\n")
-    assert(via == s"1.1 localhost:${ports(1)}")
-    assert(leader == s"https://localhost:${ports.head}")
-  }
+      val pingURL = new URL(s"https://localhost:$forwardPort/ping")
+      val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.caSignedSSLContext)
+      val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
+      val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
+      val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
+      assert(response == "pong\n")
+      assert(via == s"1.1 localhost:$forwardPort")
+      assert(leader == s"https://localhost:$helloPort")
+    }
 
-  test("direct 404") {
-    ProcessKeeper.startService(ForwarderService.createHelloApp("--http_port", ports.head.toString))
-    val appFacade = new AppMockFacade()
-    val result = appFacade.custom("/notfound")("localhost", port = ports.head)
-    assert(result.originalResponse.status.intValue == 404)
-  }
+    "direct 404" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val appFacade = new AppMockFacade()
+      val result = appFacade.custom("/notfound")("localhost", port = helloPort).futureValue
+      assert(result.response.status.intValue == 404)
+    }
 
-  test("forwarding 404") {
-    // We cannot start two service in one process because of static variables in GuiceFilter
-    ForwarderService.startHelloAppProcess("--http_port", ports.head.toString)
-    ProcessKeeper.startService(ForwarderService.createForwarder(forwardToPort = ports.head, "--http_port",
-      ports(1).toString))
-    val appFacade = new AppMockFacade()
-    val result = appFacade.custom("/notfound")("localhost", port = ports(1))
-    assert(result.originalResponse.status.intValue == 404)
-  }
+    "forwarding 404" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val forwardPort = forwarder.startForwarder(helloPort).futureValue(Timeout(30.seconds))
+      val appFacade = new AppMockFacade()
+      val result = appFacade.custom("/notfound")("localhost", port = forwardPort).futureValue
+      assert(result.response.status.intValue == 404)
+    }
 
-  test("direct internal server error") {
-    ProcessKeeper.startService(ForwarderService.createHelloApp("--http_port", ports.head.toString))
-    val appFacade = new AppMockFacade()
-    val result = appFacade.custom("/hello/crash")("localhost", port = ports.head)
-    assert(result.originalResponse.status.intValue == 500)
-    assert(result.entityString == "Error")
-  }
+    "direct internal server error" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val appFacade = new AppMockFacade()
+      val result = appFacade.custom("/hello/crash")("localhost", port = helloPort).futureValue
+      assert(result.response.status.intValue == 500)
+      assert(result.asString == "Error")
+    }
 
-  test("forwarding internal server error") {
-    // We cannot start two service in one process because of static variables in GuiceFilter
-    ForwarderService.startHelloAppProcess("--http_port", ports.head.toString)
-    ProcessKeeper.startService(ForwarderService.createForwarder(forwardToPort = ports.head, "--http_port",
-      ports(1).toString))
-    val appFacade = new AppMockFacade()
-    val result = appFacade.custom("/hello/crash")("localhost", port = ports(1))
-    assert(result.originalResponse.status.intValue == 500)
-    assert(result.entityString == "Error")
-  }
+    "forwarding internal server error" in withForwarder { forwarder =>
+      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val forwardPort = forwarder.startForwarder(helloPort).futureValue(Timeout(30.seconds))
+      val appFacade = new AppMockFacade()
+      val result = appFacade.custom("/hello/crash")("localhost", port = forwardPort).futureValue
+      assert(result.response.status.intValue == 500)
+      assert(result.asString == "Error")
+    }
 
-  test("forwarding connection failed") {
-    ProcessKeeper.startService(ForwarderService.createForwarder(
-      forwardToPort = ports.head, "--http_port", ports(1).toString))
-    val appFacade = new AppMockFacade()
-    val result = appFacade.ping("localhost", port = ports(1))
-    assert(result.originalResponse.status.intValue == HttpStatus.SC_BAD_GATEWAY)
-  }
+    "forwarding connection failed" in withForwarder { forwarder =>
+      val forwardPort = forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue(Timeout(30.seconds))
+      val appFacade = new AppMockFacade()
+      val result = appFacade.ping("localhost", port = forwardPort).futureValue
+      assert(result.response.status.intValue == HttpStatus.SC_BAD_GATEWAY)
+    }
 
-  test("forwarding loop") {
-    // We cannot start two service in one process because of static variables in GuiceFilter
-    ForwarderService.startForwarderProcess(
-      forwardToPort = ports(1),
-      trustStorePath = None,
-      "--http_port", ports.head.toString
-    )
+    "forwarding loop" in withForwarder { forwarder =>
+      val forwardPort1 = forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue(Timeout(30.seconds))
+      forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue(Timeout(30.seconds))
 
-    ProcessKeeper.startService(ForwarderService.createForwarder(
-      forwardToPort = ports.head,
-      "--http_port", ports(1).toString)
-    )
+      val appFacade = new AppMockFacade()
+      val result = appFacade.ping("localhost", port = forwardPort1).futureValue
+      assert(result.response.status.intValue == HttpStatus.SC_BAD_GATEWAY)
+    }
 
-    val appFacade = new AppMockFacade()
-    val result = appFacade.ping("localhost", port = ports(1))
-    assert(result.originalResponse.status.intValue == HttpStatus.SC_BAD_GATEWAY)
   }
 }

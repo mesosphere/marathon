@@ -83,6 +83,27 @@ _TODO_: Do we need a CLA?
 
 - Run all tests via the supplied `./bin/run-tests.sh` script (requires docker).
 
+## Test Guidelines
+
+### General guidelines
+
+- Tests should extend `mesosphere.UnitTest`
+- Tests should avoid testing more behavior than necessary; IE - don't test other libs or services if a mock/stub
+  suffices.
+
+### Fixtures
+
+Our testing guidelines regarding fixtures are as follows:
+
+- DO NOT use `var thing: Type = _` with `before` / `after`.
+- Fixture instantiation and tear down should be defined and handled in the same module.
+- When testing actor systems, we instantiate an actor system for the entire suite. It's acceptable to let the actors get
+  cleaned up when the suite finishes. Use either unique actor names or use the loan-fixtures technique to get a unique
+  `ActorRefFactory` per test.
+- When teardown-per-test is desired, use the
+  [loan-fixtures methods](http://www.scalatest.org/user_guide/sharing_fixtures#loanFixtureMethods). Otherwise, prefer
+  parameterized case classes or traits.
+
 ## Source Files
 
 - Public classes should be defined in a file of the same name, except for
@@ -93,14 +114,9 @@ _TODO_: Do we need a CLA?
 
 ### Style Checker
 
-Executing the `test` task in SBT also invokes the style checker
-([scalastyle](http://www.scalastyle.org/)).  Some basic style issues will
-cause the build to fail:
-
-- Public methods that lack an explicit return type annotation.
-- Source code lines that exceed 120 columns.
-
-Other potential problems are output as warnings.
+Executing the ``test`` task in SBT also invokes the style checker.
+Some basic style issues will cause the build to fail: While you should fix all of these, you can disable them
+if it is a false positive with `// linter:ignore Arg` as listed here: [Linter](https://github.com/HairyFotr/linter).
 
 ### Type Annotations
 

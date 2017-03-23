@@ -8,7 +8,6 @@ Here is an example of an application JSON which includes all fields.
 {
     "id": "/product/service/myApp",
     "cmd": "env && sleep 300",
-    "args": ["/bin/sh", "-c", "env && sleep 300"]
     "cpus": 1.5,
     "mem": 256.0,
     "portDefinitions": [
@@ -269,6 +268,8 @@ fine-grained configuration, you can use the `--resources` argument to specify re
 needs to be started with `--roles` followed by a comma-separated list of all roles you want to use across your cluster.
 See
 [the Mesos command line documentation](http://mesos.apache.org/documentation/latest/configuration/) for details.
+
+**Note:** Mesos does not currently support multiple roles for a framework, which means that you cannot deploy apps to more than one role. An interim solution is to create one Marathon per role.
 
 ##### labels (Object of String values)
 

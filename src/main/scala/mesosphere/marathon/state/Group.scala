@@ -1,256 +1,147 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
+
+import java.util.Objects
 
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.validation.AppValidation
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{ Group => IGroup }
-import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import org.jgrapht.DirectedGraph
-import org.jgrapht.alg.CycleDetector
-import org.jgrapht.graph._
 
-import scala.collection.JavaConversions._
+class Group(
+    val id: PathId,
+    val apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
+    val pods: Map[PathId, PodDefinition] = defaultPods,
+    val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
+    val dependencies: Set[PathId] = defaultDependencies,
+    val version: Timestamp = defaultVersion,
+    val transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition],
+    val transitivePodsById: Map[PathId, PodDefinition]) extends IGroup {
 
-case class Group(
-    id: PathId,
-    apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
-    groups: Set[Group] = defaultGroups,
-    dependencies: Set[PathId] = defaultDependencies,
-    version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] with IGroup {
+  def app(appId: PathId): Option[AppDefinition] = transitiveAppsById.get(appId)
+  def pod(podId: PathId): Option[PodDefinition] = transitivePodsById.get(podId)
 
-  override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
-  override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
-
-  override def toProto: GroupDefinition = {
-    import collection.JavaConverters._
-    GroupDefinition.newBuilder
-      .setId(id.toString)
-      .setVersion(version.toString)
-      .addAllDeprecatedApps(apps.values.map(_.toProto).asJava)
-      .addAllGroups(groups.map(_.toProto))
-      .addAllDependencies(dependencies.map(_.toString))
-      .build()
-  }
-
-  def findGroup(fn: Group => Boolean): Option[Group] = {
-    def in(groups: List[Group]): Option[Group] = groups match {
-      case head :: rest => if (fn(head)) Some(head) else in(rest).orElse(in(head.groups.toList))
-      case Nil => None
-    }
-    if (fn(this)) Some(this) else in(groups.toList)
-  }
-
-  def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.get(appId))
-
+  /**
+    * Find and return the child group for the given path. If no match is found, then returns None
+    */
   def group(gid: PathId): Option[Group] = {
-    if (id == gid) Some(this) else {
-      val restPath = gid.restOf(id)
-      groups.find(_.id.restOf(id).root == restPath.root).flatMap(_.group(gid))
-    }
-  }
-
-  def updateApp(path: PathId, fn: Option[AppDefinition] => AppDefinition, timestamp: Timestamp): Group = {
-    val groupId = path.parent
-    makeGroup(groupId).update(timestamp) { group =>
-      if (group.id == groupId) group.putApplication(fn(group.apps.get(path))) else group
-    }
-  }
-
-  def update(path: PathId, fn: Group => Group, timestamp: Timestamp): Group = {
-    makeGroup(path).update(timestamp) { group =>
-      if (group.id == path) fn(group) else group
-    }
-  }
-
-  def updateApps(timestamp: Timestamp = Timestamp.now())(fn: AppDefinition => AppDefinition): Group = {
-    update(timestamp) { group => group.copy(apps = group.apps.mapValues(fn)) }
-  }
-
-  def update(timestamp: Timestamp = Timestamp.now())(fn: Group => Group): Group = {
-    def in(groups: List[Group]): List[Group] = groups match {
-      case head :: rest => head.update(timestamp)(fn) :: in(rest)
-      case Nil => Nil
-    }
-    fn(this.copy(groups = in(groups.toList).toSet, version = timestamp))
-  }
-
-  def updateGroup(fn: Group => Option[Group]): Option[Group] = {
-    fn(this).map(_.copy(groups = groups.flatMap(_.updateGroup(fn))))
-  }
-
-  /** Removes the group with the given gid if it exists */
-  def remove(gid: PathId, timestamp: Timestamp = Timestamp.now()): Group = {
-    copy(groups = groups.filter(_.id != gid).map(_.remove(gid, timestamp)), version = timestamp)
-  }
-
-  /**
-    * Add the given app definition to this group replacing any previously existing app definition with the same ID.
-    *
-    * If a group exists with a conflicting ID which does not contain any app definition, replace that as well.
-    */
-  private def putApplication(appDef: AppDefinition): Group = {
-    copy(
-      // If there is a group with a conflicting id which contains no app definitions,
-      // replace it. Otherwise do not replace it. Validation will catch conflicting app/group IDs later.
-      groups = groups.filter { group => group.id != appDef.id || group.containsApps },
-      // replace potentially existing app definition
-      apps = apps + (appDef.id -> appDef)
-    )
-  }
-
-  /**
-    * Remove the app with the given id if it is a direct child of this group.
-    *
-    * Use together with [[mesosphere.marathon.state.Group!.update(timestamp*]].
-    */
-  def removeApplication(appId: PathId): Group = copy(apps = apps - appId)
-
-  def makeGroup(gid: PathId): Group = {
-    if (gid.isEmpty) this //group already exists
+    if (id == gid) Some(this)
     else {
-      val (change, remaining) = groups.partition(_.id.restOf(id).root == gid.root)
-      val toUpdate = change.headOption.getOrElse(Group.empty.copy(id = id.append(gid.rootPath)))
-      this.copy(groups = remaining + toUpdate.makeGroup(gid.child))
+      val immediateChild = gid.restOf(id).root
+      groupsById.find { case (_, group) => group.id.restOf(id).root == immediateChild }
+        .flatMap { case (_, group) => group.group(gid) }
     }
   }
 
-  lazy val transitiveAppsById: Map[PathId, AppDefinition] = this.apps ++ groups.flatMap(_.transitiveAppsById)
   lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
   lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
 
-  lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
+  lazy val transitiveRunSpecsById: Map[PathId, RunSpec] = transitiveAppsById ++ transitivePodsById
+  lazy val transitiveRunSpecs: Set[RunSpec] = transitiveRunSpecsById.values.toSet
 
-  lazy val transitiveAppGroups: Set[Group] = transitiveGroups.filter(_.apps.nonEmpty)
-
-  lazy val applicationDependencies: List[(AppDefinition, AppDefinition)] = {
-    var result = List.empty[(AppDefinition, AppDefinition)]
-    val allGroups = transitiveGroups
-
-    //group->group dependencies
-    for {
-      group <- allGroups
-      dependencyId <- group.dependencies
-      dependency <- allGroups.find(_.id == dependencyId)
-      app <- group.transitiveApps
-      dependentApp <- dependency.transitiveApps
-    } result ::= app -> dependentApp
-
-    //app->group/app dependencies
-    for {
-      group <- transitiveAppGroups
-      app <- group.apps.values
-      dependencyId <- app.dependencies
-      dependentApp = transitiveAppsById.get(dependencyId).map(a => Set(a))
-      dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveApps)
-      dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
-    } result ::= app -> dependent
-    result
-  }
-
-  lazy val dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
-    require(id.isRoot)
-    val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
-    for (app <- transitiveApps)
-      graph.addVertex(app)
-    for ((app, dependent) <- applicationDependencies)
-      graph.addEdge(app, dependent)
-    new UnmodifiableDirectedGraph(graph)
-  }
-
-  def appsWithNoDependencies: Set[AppDefinition] = {
-    val g = dependencyGraph
-    g.vertexSet.filter { v => g.outDegreeOf(v) == 0 }.toSet
-  }
-
-  def hasNonCyclicDependencies: Boolean = {
-    !new CycleDetector[AppDefinition, DefaultEdge](dependencyGraph).detectCycles()
+  lazy val transitiveGroupsById: Map[Group.GroupKey, Group] = {
+    Map(id -> this) ++ groupsById.values.flatMap(_.transitiveGroupsById)
   }
 
   /** @return true if and only if this group directly or indirectly contains app definitions. */
-  def containsApps: Boolean = apps.nonEmpty || groups.exists(_.containsApps)
+  def containsApps: Boolean = apps.nonEmpty || groupsById.exists { case (_, group) => group.containsApps }
 
-  def containsAppsOrGroups: Boolean = apps.nonEmpty || groups.nonEmpty
+  def containsPods: Boolean = pods.nonEmpty || groupsById.exists { case (_, group) => group.containsPods }
 
-  def withNormalizedVersion: Group = copy(version = Timestamp(0))
+  def containsAppsOrPodsOrGroups: Boolean = apps.nonEmpty || groupsById.nonEmpty || pods.nonEmpty
 
-  def withoutChildren: Group = copy(apps = Map.empty, groups = Set.empty)
-
-  /**
-    * Identify an other group as the same, if id and version is the same.
-    * Override the default equals implementation generated by scalac, which is very expensive.
-    */
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case that: Group => (that eq this) || (that.id == id && that.version == version)
-      case _ => false
-    }
+  override def equals(other: Any): Boolean = other match {
+    case that: Group =>
+      id == that.id &&
+        apps == that.apps &&
+        pods == that.pods &&
+        groupsById == that.groupsById &&
+        dependencies == that.dependencies &&
+        version == that.version
+    case _ => false
   }
 
-  /**
-    * Compute the hashCode of an app only by id.
-    * Override the default equals implementation generated by scalac, which is very expensive.
-    */
-  override def hashCode(): Int = id.hashCode()
+  override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
+
+  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version)"
 }
 
 object Group {
-  def empty: Group = Group(PathId(Nil))
-  def emptyWithId(id: PathId): Group = empty.copy(id = id)
+  type GroupKey = PathId
 
-  def fromProto(msg: GroupDefinition): Group = {
-    Group(
-      id = msg.getId.toPath,
-      apps = msg.getDeprecatedAppsList.map(AppDefinition.fromProto).map { app => app.id -> app }(collection.breakOut),
-      groups = msg.getGroupsList.map(fromProto).toSet,
-      dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
-      version = Timestamp(msg.getVersion)
-    )
-  }
+  def apply(
+    id: PathId,
+    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
+    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
+    dependencies: Set[PathId] = Group.defaultDependencies,
+    version: Timestamp = Group.defaultVersion,
+    transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition],
+    transitivePodsById: Map[PathId, PodDefinition]): Group =
+    new Group(id, apps, pods, groupsById, dependencies, version, transitiveAppsById, transitivePodsById)
+
+  def empty(id: PathId): Group =
+    Group(id = id, version = Timestamp(0), transitiveAppsById = Map.empty, transitivePodsById = Map.empty)
 
   def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
-  def defaultGroups: Set[Group] = Set.empty
+  val defaultPods = Map.empty[PathId, PodDefinition]
+  def defaultGroups: Map[Group.GroupKey, Group] = Map.empty
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validRootGroup(maxApps: Option[Int], enabledFeatures: Set[String]): Validator[Group] = {
-    case object doesNotExceedMaxApps extends Validator[Group] {
-      override def apply(group: Group): Result = {
-        maxApps.filter(group.transitiveAppsById.size > _).map { num =>
-          Failure(Set(RuleViolation(
-            group,
-            s"""This Marathon instance may only handle up to $num Apps!
-                |(Override with command line option --max_apps)""".stripMargin, None)))
-        } getOrElse Success
-      }
-    }
-
-    def validNestedGroup(base: PathId): Validator[Group] = validator[Group] { group =>
+  def validGroup(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
+    validator[Group] { group =>
       group.id is validPathWithBase(base)
       group.apps.values as "apps" is every(
         AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
+      group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
-      group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
-      group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
+      group is noPodsAndGroupsWithSameName
+      group.groupsById.values as "groups" is every(validGroup(group.id.canonicalPath(base), enabledFeatures))
     }
 
-    // We do not want a "/value" prefix, therefore we do not create nested validators with validator[Group]
-    // but chain the validators directly.
-    doesNotExceedMaxApps and
-      validNestedGroup(PathId.empty) and
-      ExternalVolumes.validRootGroup()
-  }
+  private def noAppsAndPodsWithSameId: Validator[Group] =
+    isTrue("Applications and Pods may not share the same id") { group =>
+      val podIds = group.transitivePodsById.keySet
+      val appIds = group.transitiveAppsById.keySet
+      appIds.intersect(podIds).isEmpty
+    }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
-    isTrue(s"Groups and Applications may not have the same identifier.") { group =>
-      val groupIds = group.groups.map(_.id)
+    isTrue("Groups and Applications may not have the same identifier.") { group =>
+      val groupIds = group.groupsById.keySet
       val clashingIds = groupIds.intersect(group.apps.keySet)
       clashingIds.isEmpty
     }
 
-  private def noCyclicDependencies: Validator[Group] =
-    isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
+  private def noPodsAndGroupsWithSameName: Validator[Group] =
+    isTrue("Groups and Pods may not have the same identifier.") { group =>
+      val groupIds = group.groupsById.keySet
+      val clashingIds = groupIds.intersect(group.pods.keySet)
+      clashingIds.isEmpty
+    }
 
+  def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
+
+  /** requires that apps are in canonical form */
+  def validNestedGroupUpdateWithBase(base: PathId): Validator[raml.GroupUpdate] =
+    validator[raml.GroupUpdate] { group =>
+      group is notNull
+
+      group.version is theOnlyDefinedOptionIn(group)
+      group.scaleBy is theOnlyDefinedOptionIn(group)
+
+      // this is funny: id is "optional" only because version and scaleBy can't be used in conjunction with other
+      // fields. it feels like we should make an exception for "id" and always require it for non-root groups.
+      group.id.map(_.toPath) as "id" is optional(valid)
+
+      group.apps is optional(every(
+        AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+      group.groups is optional(every(
+        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+    }
 }

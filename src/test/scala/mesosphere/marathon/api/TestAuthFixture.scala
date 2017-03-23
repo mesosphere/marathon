@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.util.Collections
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
@@ -9,7 +10,7 @@ import mesosphere.marathon.test.Mockito
 
 import scala.concurrent.Future
 
-class TestAuthFixture extends Mockito {
+class TestAuthFixture() extends Mockito {
 
   type Auth = Authenticator with Authorizer
 

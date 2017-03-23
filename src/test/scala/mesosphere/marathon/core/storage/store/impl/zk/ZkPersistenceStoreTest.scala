@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.store.impl.zk
+package mesosphere.marathon
+package core.storage.store.impl.zk
 
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
@@ -8,18 +9,11 @@ import java.util.UUID
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import com.codahale.metrics.MetricRegistry
-import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStoreTest, TestClass1 }
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
-import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKStore }
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.concurrent.duration._
-import scala.util.Random
 
 trait ZkTestClass1Serialization {
   implicit object ZkTestClass1Resolver extends IdResolver[String, TestClass1, String, ZkId] {
@@ -67,27 +61,9 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
   def defaultStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
     val client = zkClient(namespace = Some(root))
-    implicit val metrics = new Metrics(new MetricRegistry)
     new ZkPersistenceStore(client, Duration.Inf)
   }
 
   behave like basicPersistenceStore("ZookeeperPersistenceStore", defaultStore)
-
-  it should {
-    "be able to read the storage version from the old store format" in {
-      val root = UUID.randomUUID().toString
-      rootClient.create(s"/$root").futureValue(Timeout(5.seconds))
-      implicit val metrics = new Metrics(new MetricRegistry)
-      val newStore = new ZkPersistenceStore(rootClient.usingNamespace(root), Duration.Inf)
-      val twitterClient = twitterZkClient()
-      val legacyStore = new ZKStore(twitterClient, ZNode(twitterClient, s"/$root"), CompressionConf(true, 64 * 1024),
-        8, 1024)
-
-      val version = StorageVersions(Random.nextInt, Random.nextInt, Random.nextInt)
-      legacyStore.create(Migration.StorageVersionName, version.toByteArray).futureValue
-
-      newStore.storageVersion().futureValue.value should equal(version)
-    }
-  }
 }
 

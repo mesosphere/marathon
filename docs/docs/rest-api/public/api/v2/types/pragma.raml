@@ -1,0 +1,35 @@
+#%RAML 1.0 Library
+annotationTypes:
+  asUpdateType:
+    type: nil
+    description: |
+      Applies only to top-level object types (of type object). Instructs the RAML
+      generator that all fields of this type should be wrapped with Option.
+      DO NOT USE with generateUpdateType.
+  generateUpdateType:
+    type: string?
+    description: |
+      Applies only to top-level object types (of type object). Instructs the RAML
+      generator to build a sibling XyzUpdate type (where Xyz is the name of the
+      type to which this annoation is applied). If a value is provided here then
+      it is used as the name of the generated update-type (instead of XyzUpdate).
+  scalaType:
+    type: string
+    description: |
+      Applies to enum types. Overrides the default scala-type name generated
+      for the type to which it is applied.
+  forceOptional:
+    type: nil
+    description: |
+      Applies to all types. Instruct the RAML generator to force an optional type.
+      This can be usefull especially for containers, where the empty container is different than the unspecified container.
+  deprecated:
+    type: string?
+    description: |
+      The field is deprecated.
+  omitEmpty:
+    type: nil
+    description: |
+      Applies to field declarations. Do not emit anything for this field if it is empty.
+      Should not be used in combination with required fields, or else fields that provide
+      default values. Useful with collection or non-built-in field types.

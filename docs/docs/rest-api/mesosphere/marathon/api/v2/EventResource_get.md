@@ -8,11 +8,13 @@ To use this endpoint, the client has to accept the text/event-stream content typ
 Please note: a request to this endpoint will not be closed by the server.
 If an event happens on the server side, this event will be propagated to the client immediately.
 See [Server Sent Events](http://www.w3schools.com/html/html5_serversentevents.asp) for a more detailed explanation.
+To filter events add `event_type` query param with desired event type. You can specify multiple params to get more than
+one event type.
 
 **Request:**
 
 ```
-GET /v2/events HTTP/1.1
+GET /v2/events?event_type=event_stream_attached&event_type=event_stream_attached HTTP/1.1
 Accept: text/event-stream
 Accept-Encoding: gzip, deflate
 Host: localhost:8080

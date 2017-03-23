@@ -27,7 +27,9 @@ function runnable_jar {
        printf ' %s\n' "${jars[@]}" >&2
        exit 2 ;;
   esac
-  cat bin/marathon-framework "${jars[0]}" > "$target"
+  local jarID=$(shasum ${jars[0]} | cut -f1 -d' ' || echo 1)
+  cat bin/marathon-framework | sed -e 's/^jarID=.*$/jarID='"$jarID"'/' > "$target"
+  cat "${jars[0]}" >> "$target"
 }
 
 # Only works for me with these paths but can be modified for others.

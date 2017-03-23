@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.event.impl.callback
+package mesosphere.marathon
+package core.event.impl.callback
 
 import akka.actor.ActorRef
 import akka.event.EventStream
@@ -18,7 +19,7 @@ class ActorHttpCallbackSubscriptionService(
   implicit val timeout = conf.eventRequestTimeout
 
   override def handleSubscriptionEvent(event: MarathonSubscriptionEvent): Future[MarathonEvent] =
-    (subscribersKeeper ? event).map { msg =>
+    (subscribersKeeper ? event).map { _ =>
       // Subscribe and Unsubscribe event should be broadcast.
       eventBus.publish(event)
       event

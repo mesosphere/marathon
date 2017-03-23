@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.net.URI
 import javax.ws.rs.core.Response.Status
@@ -14,8 +15,7 @@ class ResponseFacade extends HttpResponse {
     builder.status(Status.TEMPORARY_REDIRECT).location(new URI(location))
   }
   override def cookie(name: String, value: String, maxAge: Int, secure: Boolean): Unit = {
-    //scalastyle:off null
-    builder.cookie(new NewCookie(name, value, null, null, null, maxAge.toInt, secure))
+    builder.cookie(new NewCookie(name, value, null, null, null, maxAge, secure))
   }
   override def body(mediaType: String, bytes: Array[Byte]): Unit = {
     builder.`type`(mediaType)

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.util.state.FrameworkId
@@ -20,9 +21,6 @@ object TaskLabels {
 
     maybeMatchingFrameworkId.flatMap(_ => maybeTaskId)
   }
-
-  def labelsForTask(frameworkId: FrameworkId, task: Task): ReservationLabels =
-    labelsForTask(frameworkId, task.taskId)
 
   def labelsForTask(frameworkId: FrameworkId, taskId: Task.Id): ReservationLabels =
     ReservationLabels(Map(

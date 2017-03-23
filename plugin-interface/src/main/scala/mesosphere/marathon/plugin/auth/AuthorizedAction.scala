@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.auth
+package mesosphere.marathon
+package plugin.auth
 
 import mesosphere.marathon.plugin.{ Group, RunSpec }
 
@@ -31,6 +32,8 @@ case object ViewGroup extends AuthorizedAction[Group]
 /**
   * The following object will be passed to the Authorizer when an action affects system resources
   */
-case object ViewResource extends AuthorizedAction[AuthorizedResource]
+case object CreateResource extends AuthorizedAction[AuthorizedResource]
 case object UpdateResource extends AuthorizedAction[AuthorizedResource]
+case object DeleteResource extends AuthorizedAction[AuthorizedResource]
+case object ViewResource extends AuthorizedAction[AuthorizedResource]
 

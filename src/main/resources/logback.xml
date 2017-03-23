@@ -4,7 +4,7 @@
     <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
     <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>[%date] %level %message \(%logger:%thread\)%n</pattern>
+            <pattern>[%date] %highlight(%-5level) %message \(%logger:%thread\)%n</pattern>
         </encoder>
     </appender>
     <appender name="async" class="ch.qos.logback.classic.AsyncAppender">
@@ -12,8 +12,7 @@
         <queueSize>1024</queueSize>
     </appender>
 
-    <!-- Don't log ZooKeeper AuthInfo from com.twitter.zk.NativeConnector -->
-    <logger name="native-zk-connector" level="WARN" />
+    <logger name="org.eclipse" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="async"/>

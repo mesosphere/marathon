@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.repository.impl
+package mesosphere.marathon
+package core.storage.repository.impl
 
 import java.time.OffsetDateTime
 
@@ -32,7 +33,7 @@ class PersistenceStoreRepository[Id, V, K, C, S](
   override def store(v: V): Future[Done] = persistenceStore.store(extractId(v), v)
 
   // Assume that the underlying store can limit its own concurrency.
-  override def all(): Source[V, NotUsed] = ids().mapAsync(Int.MaxValue)(get).filter(_.isDefined).map(_.get)
+  override def all(): Source[V, NotUsed] = ids().mapAsync(Int.MaxValue)(get).collect { case Some(x) => x }
 }
 
 /**
@@ -51,6 +52,9 @@ class PersistenceStoreVersionedRepository[Id, V, K, C, S](
   extractId) with VersionedRepository[Id, V] {
 
   override def versions(id: Id): Source[OffsetDateTime, NotUsed] = persistenceStore.versions(id)
+
+  override def getVersions(list: Seq[(Id, OffsetDateTime)]): Source[V, NotUsed] =
+    persistenceStore.getVersions(list)
 
   override def getVersion(id: Id, version: OffsetDateTime): Future[Option[V]] =
     persistenceStore.get(id, version)

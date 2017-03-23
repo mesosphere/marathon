@@ -1,48 +1,50 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
+import mesosphere.UnitTest
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
+import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.util.state.MesosLeaderInfo
-import org.scalatest.{ GivenWhenThen, Matchers }
 
-class InfoResourceTest extends MarathonSpec with Matchers with Mockito with GivenWhenThen {
+class InfoResourceTest extends UnitTest {
 
-  test("access without authentication is denied") {
-    Given("An unauthenticated request")
-    val f = new Fixture
-    val resource = f.infoResource()
-    f.auth.authenticated = false
+  "InfoResource" should {
+    "access without authentication is denied" in {
+      Given("An unauthenticated request")
+      val f = new Fixture
+      val resource = f.infoResource()
+      f.auth.authenticated = false
 
-    When("we try to fetch the info")
-    val index = resource.index(f.auth.request)
+      When("we try to fetch the info")
+      val index = resource.index(f.auth.request)
 
-    Then("we receive a NotAuthenticated response")
-    index.getStatus should be(f.auth.NotAuthenticatedStatus)
+      Then("we receive a NotAuthenticated response")
+      index.getStatus should be(f.auth.NotAuthenticatedStatus)
+    }
+
+    "access without authorization is denied" in {
+      Given("An unauthorized request")
+      val f = new Fixture
+      val resource = f.infoResource()
+      f.auth.authenticated = true
+      f.auth.authorized = false
+
+      When("we try to fetch the info")
+      val index = resource.index(f.auth.request)
+
+      Then("we receive a NotAuthenticated response")
+      index.getStatus should be(f.auth.UnauthorizedStatus)
+    }
   }
-
-  test("access without authorization is denied") {
-    Given("An unauthorized request")
-    val f = new Fixture
-    val resource = f.infoResource()
-    f.auth.authenticated = true
-    f.auth.authorized = false
-
-    When("we try to fetch the info")
-    val index = resource.index(f.auth.request)
-
-    Then("we receive a NotAuthenticated response")
-    index.getStatus should be(f.auth.UnauthorizedStatus)
-  }
-
   class Fixture {
-    val schedulerService = mock[MarathonSchedulerService]
     val leaderInfo = mock[MesosLeaderInfo]
     val electionService = mock[ElectionService]
     val auth = new TestAuthFixture
     val config = mock[MarathonConf with HttpConf]
-    def infoResource() = new InfoResource(schedulerService, leaderInfo, electionService, auth.auth, auth.auth, config)
+    val frameworkIdRepository = mock[FrameworkIdRepository]
+
+    def infoResource() = new InfoResource(leaderInfo, frameworkIdRepository, electionService, auth.auth, auth.auth, config)
   }
 }
