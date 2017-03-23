@@ -3,12 +3,15 @@ package core.storage.backup
 
 import akka.Done
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
+import ch.qos.logback.classic.{ Level, Logger }
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.storage.{ StorageConf, StorageModule }
 import org.rogach.scallop.ScallopConf
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future }
@@ -29,6 +32,7 @@ abstract class BackupRestoreAction extends StrictLogging {
   /**
     * Can either run a backup or restore operation.
     */
+  @SuppressWarnings(Array("AsInstanceOf"))
   def action(conf: BackupConfig, fn: PersistentStoreBackup => Future[Done]): Unit = {
     Kamon.start()
     implicit val system = ActorSystem("Backup")
@@ -41,10 +45,18 @@ abstract class BackupRestoreAction extends StrictLogging {
       Await.result(fn(backup), Duration.Inf)
       logger.info("Action complete.")
     } catch {
-      case NonFatal(ex) => logger.error(s"Error: ${ex.getMessage}", ex)
+      case NonFatal(ex) =>
+        logger.error(s"Error: ${ex.getMessage}", ex)
+        sys.exit(1) // signal a problem to the caller
     } finally {
+      Await.result(Http().shutdownAllConnectionPools(), Duration.Inf)
+      Kamon.shutdown()
+      // akka http has an issue tearing down the connection pool: https://github.com/akka/akka-http/issues/907
+      // We will hide the fail message from the user until this is fixed
+      LoggerFactory.getLogger("akka.actor.ActorSystemImpl").asInstanceOf[Logger].setLevel(Level.OFF)
       materializer.shutdown()
-      system.terminate()
+      Await.ready(system.terminate(), Duration.Inf)
+      sys.exit(0)
     }
   }
 }

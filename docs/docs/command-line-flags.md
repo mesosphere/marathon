@@ -174,7 +174,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Delay (in ms) after which a task is considered viable. If the task starts up correctly, but fails during this timeout, the application is backed off. 
 * <span class="label label-default">v1.5.0</span>`--backup_location` (Optional. Default: None):
     Create a backup before a migration is applied to the persistent store. 
-    This backup can be used to restore the state at this time. 
+    This backup can be used to restore the state at that time. 
+    Currently two providers are allowed: 
+    - File provider: file:///path/to/file
+    - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1 
     
 
 ## Tuning Flags for Offer Matching/Launching Tasks
