@@ -62,7 +62,8 @@ object Dependencies {
     Test.junit % "test",
     Test.scalacheck % "test",
     Test.wixAccordScalatest % "test",
-    Test.curatorTest % "test"
+    Test.curatorTest % "test",
+    Test.akkaSse % "test"
   ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
@@ -126,7 +127,7 @@ object Dependency {
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
-  val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.1"
+  val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.5"
   val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
@@ -191,5 +192,6 @@ object Dependency {
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
     val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
+    val akkaSse = "de.heikoseeberger" %% "akka-sse" % "2.0.0"
   }
 }

@@ -84,6 +84,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       And("Marathon is restarted by Systemd")
       // Simulate Systemd rebooting Marathon
       marathonServer.start()
+      waitForSSEConnect()
       eventually {
         marathonServer.isRunning should be(true)
       }

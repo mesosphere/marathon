@@ -3,9 +3,9 @@ package mesosphere.mesos.scale
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade}
+import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{App, AppUpdate}
+import mesosphere.marathon.raml.{ App, AppUpdate }
 import mesosphere.marathon.state.PathId
 import org.scalatest.concurrent.Eventually
 import org.slf4j.LoggerFactory
@@ -13,6 +13,7 @@ import play.api.libs.json._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
+import scala.concurrent.Future
 
 object SingleAppScalingTest {
   val metricsFile = "scaleUp20s-metrics"
@@ -32,6 +33,8 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
     "task_launch_confirm_timeout" -> "1000"),
     mainClass = "mesosphere.mesos.simulation.SimulateMesosMain")
 
+  override lazy val leadingMarathon = Future.successful(marathonServer)
+
   override lazy val marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
   override lazy val testBasePath: PathId = PathId.empty
   override lazy val marathon: MarathonFacade = new MarathonFacade(marathonUrl, testBasePath)
@@ -41,6 +44,9 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
   override def beforeAll(): Unit = {
     super.beforeAll()
     marathonServer.start().futureValue
+    val sseStream = startEventSubscriber()
+    system.registerOnTermination(sseStream.cancel())
+    waitForSSEConnect()
   }
 
   override def afterAll(): Unit = {
