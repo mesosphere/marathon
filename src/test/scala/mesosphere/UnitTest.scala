@@ -19,12 +19,6 @@ import org.scalatest.time.{ Seconds, Span }
 import scala.concurrent.ExecutionContextExecutor
 
 /**
-  * Tests which are still unreliable should be marked with this tag until
-  * they sufficiently pass on master. Prefer this over ignored.
-  */
-object Unstable extends Tag("mesosphere.marathon.UnstableTest")
-
-/**
   * All integration tests should be marked with this tag.
   * Integration tests need a special set up and can take a long time.
   * So it is not desirable, that these kind of tests run every time all the unit tests run.
