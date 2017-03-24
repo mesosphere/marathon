@@ -42,15 +42,14 @@ def stageWithCommitStatus(label, block) {
 
 node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
     try {
-        stage("Kill junk processes") {
-            sh "bin/kill-stale-test-processes"
-        }
-
         stage("Checkout Repo") {
             checkout scm
             gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
             shortCommit = gitCommit.take(8)
             currentBuild.displayName = "#${env.BUILD_NUMBER}: ${shortCommit}"
+        }
+        stage("Kill junk processes") {
+            sh "bin/kill-stale-test-processes"
         }
         stageWithCommitStatus("1. Compile") {
           try {
