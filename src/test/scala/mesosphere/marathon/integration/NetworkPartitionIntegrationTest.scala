@@ -82,6 +82,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest
     // Simulate Systemd rebooting Marathon
     marathonServer.start()
     eventually { marathonServer.isRunning should be(true) }
+    waitForSSEConnect()
 
     Then("The task reappears as running")
     waitForEventMatching("Task is declared running again") {

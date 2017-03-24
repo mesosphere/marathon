@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration.setup
 
+import akka.actor.Cancellable
 import java.io.File
 import java.nio.file.Files
 import java.util.UUID
@@ -13,13 +14,14 @@ import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, StatusCodes }
 import akka.http.scaladsl.unmarshalling.FromRequestUnmarshaller
 import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
+import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITConnected, ITEvent, ITSSEEvent, ITLeaderResult, MarathonFacade, MesosFacade }
 import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import mesosphere.marathon.test.ExitDisabledTest
@@ -31,7 +33,7 @@ import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.time.{ Milliseconds, Span }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.Json
 
 import scala.annotation.tailrec
 import scala.async.Async.{ async, await }
@@ -183,6 +185,7 @@ case class LocalMarathon(
 trait MarathonTest extends Suite with StrictLogging with ScalaFutures with BeforeAndAfterAll with Eventually {
   def marathonUrl: String
   def marathon: MarathonFacade
+  def leadingMarathon: Future[LocalMarathon]
   def mesos: MesosFacade
   val testBasePath: PathId
 
@@ -196,6 +199,9 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
   system.registerOnTermination(killAppProxies())
 
   case class CallbackEvent(eventType: String, info: Map[String, Any])
+  object CallbackEvent {
+    def apply(event: ITEvent): CallbackEvent = CallbackEvent(event.eventType, event.info)
+  }
 
   implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) {
     def taskStatus: String = event.info.get("taskStatus").map(_.toString).getOrElse("")
@@ -213,14 +219,14 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     }
   }
 
-  protected val events = new ConcurrentLinkedQueue[CallbackEvent]()
+  protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
   protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
 
   /**
     * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
     * We initialize it during the before hook and wait for Marathon to respond.
     */
-  protected[setup] lazy val callbackEndpoint = {
+  protected[setup] lazy val healthEndpoint = {
     val route = {
       import akka.http.scaladsl.server.Directives._
       val mapper = new ObjectMapper() with ScalaObjectMapper
@@ -234,16 +240,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
         }
       }
 
-      (post & entity(as[Map[String, Any]])) { event =>
-        val kind = event.get("eventType") match {
-          case Some(JsString(s)) => s
-          case Some(s) => s.toString
-          case None => "unknown"
-        }
-        logger.info(s"Received callback event: $kind with props $event")
-        events.add(CallbackEvent(kind, event))
-        complete(HttpResponse(status = StatusCodes.OK))
-      } ~ get {
+      get {
         path("health" / Segments) { uriPath =>
           import PathId._
           val (path, remaining) = uriPath.splitAt(uriPath.size - 2)
@@ -265,14 +262,12 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     }
     val port = PortAllocator.ephemeralPort()
     val server = Http().bindAndHandle(route, "localhost", port).futureValue
-    marathon.subscribe(s"http://localhost:$port")
-    logger.info(s"Listening for events on $port")
+    logger.info(s"Listening for health events on $port")
     server
   }
 
   abstract override def afterAll(): Unit = {
-    Try(marathon.unsubscribe(s"http://localhost:${callbackEndpoint.localAddress.getPort}"))
-    Try(callbackEndpoint.unbind().futureValue)
+    Try(healthEndpoint.unbind().futureValue)
     Try(killAppProxies())
     super.afterAll()
   }
@@ -305,7 +300,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
     val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
-      s"""$$PORT0 $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId""")
+      s"""$$PORT0 $appId $versionId http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$appId/$versionId""")
     AppDefinition(
       id = appId,
       cmd = cmd,
@@ -322,7 +317,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     val containerDir = "/opt/marathon"
 
     val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-      s"""$$PORT0 $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId""")
+      s"""$$PORT0 $appId $versionId http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$appId/$versionId""")
 
     AppDefinition(
       id = appId,
@@ -426,24 +421,72 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     }
   }
 
+  /**
+    * Consumes the next event from the events queue within deadline. Does not throw. Returns None if unable to return an
+    * event by that time.
+    *
+    * @param deadline The time after which to stop attempting to get an event and return None
+    */
+  private def nextEvent(deadline: Deadline): Option[ITSSEEvent] = try {
+    eventually(timeout(Span(deadline.timeLeft.toMillis, Milliseconds))) {
+      val r = Option(events.poll)
+      if (r.isEmpty)
+        throw new NoSuchElementException
+      r
+    }
+  } catch {
+    case _: NoSuchElementException =>
+      None
+    case _: org.scalatest.exceptions.TestFailedDueToTimeoutException =>
+      None
+  }
+
   def waitForEventMatching(
     description: String,
     maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(fn: CallbackEvent => Boolean): CallbackEvent = {
+    val deadline = maxWait.fromNow
     @tailrec
-    def matchingEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
-      val event = events.poll()
-      if (fn(event)) {
-        Some(event)
-      } else {
-        logger.info(s"Event $event did not match criteria skipping to next event")
-        matchingEvent
+    def iter(): CallbackEvent = {
+      nextEvent(deadline) match {
+        case Some(ITConnected) =>
+          throw new MarathonTest.UnexpectedConnect
+        case Some(event: ITEvent) =>
+          val cbEvent = CallbackEvent(event)
+          if (fn(cbEvent)) {
+            cbEvent
+          } else {
+            logger.info(s"Event $event did not match criteria skipping to next event")
+            iter()
+          }
+        case None =>
+          logger.info(s"No events matched <$description>")
+          throw new RuntimeException(s"No events matched <$description>")
       }
     }
+    iter()
+  }
 
-    eventually(timeout(Span(maxWait.toMillis, Milliseconds))) {
-      require(!events.isEmpty, s"No events matched <$description>")
-      matchingEvent.getOrElse(throw new RuntimeException("No matching events"))
+  /**
+    * Blocks until a single connected event is consumed. Discards any events up to that point.
+    *
+    * Not reasoning about SSE connection state will lead to flaky tests. If a master is killed, you should wait for the
+    * SSE stream to reconnect before doing anything else, or you could miss events.
+    */
+  def waitForSSEConnect(maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): Unit = {
+    @tailrec
+    val deadline = maxWait.fromNow
+    def iter(): Unit = {
+      nextEvent(deadline) match {
+        case Some(event: ITEvent) =>
+          logger.info(s"Event ${event} was not a connected event; skipping")
+          iter()
+        case Some(ITConnected) =>
+          logger.info("ITConnected event consumed")
+        case None =>
+          throw new RuntimeException("No connected events")
+      }
     }
+    iter()
   }
 
   /**
@@ -486,6 +529,76 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       Try(marathon.status(podId)).map(_.value).toOption.filter(_.status == PodState.Stable).get
     }
   }
+
+  /**
+    * Connects repeatedly to the Marathon SSE endpoint until cancelled.
+    * Yields each event in order.
+    */
+  def startEventSubscriber(): Cancellable = {
+    @volatile var cancelled = false
+    def iter(): Unit = {
+      import akka.stream.scaladsl.Source
+      logger.info("SSEStream: Connecting")
+      Source.fromFuture(leadingMarathon)
+        .mapAsync(1) { leader =>
+          async {
+            logger.info(s"SSEStream: Acquiring connection to ${leader.url}")
+            val stream = await(leader.client.events())
+            logger.info(s"SSEStream: Connection acquired to ${leader.url}")
+
+            /* A potentially impossible edge case exists in which we query the leader, and then before we get a connection
+             * to that instance, it restarts and is no longer a leader.
+             *
+             * By checking the leader again once obtaining a connection to the SSE event stream, we have conclusive proof
+             * that we are consuming from the current leader, and we keep our connected events as deterministic as
+             * possible. */
+            val leaderAfterConnection = await(leadingMarathon)
+            logger.info(s"SSEStream: ${leader.url} is the leader")
+            if (leader != leaderAfterConnection) {
+              stream.runWith(Sink.cancelled)
+              throw new RuntimeException("Leader status changed since first connecting to stream")
+            } else {
+              stream
+            }
+          }
+        }
+        .flatMapConcat { stream =>
+          // We prepend the ITConnected event here in order to avoid emitting an ITConnected event on failed connections
+          stream.prepend(Source.single(ITConnected))
+        }
+        .runForeach { e: ITSSEEvent =>
+          e match {
+            case ITConnected =>
+              logger.info(s"SSEStream: Connected")
+            case event: ITEvent =>
+              logger.info(s"SSEStream: Received callback event: ${event.eventType} with props ${event.info}")
+          }
+          events.offer(e)
+        }
+        .onComplete {
+          case result =>
+            if (!cancelled) {
+              logger.info(s"SSEStream: Leader event stream was closed reason: ${result}")
+              logger.info("Reconnecting")
+              scheduler.scheduleOnce(patienceConfig.interval) { iter() }
+            }
+        }
+    }
+    iter()
+    new Cancellable {
+      override def cancel(): Boolean = {
+        cancelled = true
+        true
+      }
+      override def isCancelled: Boolean = cancelled
+    }
+  }
+}
+
+object MarathonTest extends StrictLogging {
+  class UnexpectedConnect extends Exception("Received an unexpected SSE event stream Connection event. This is " +
+    "considered an exception because not thinking about re-connection events properly can lead to race conditions in " +
+    "the tests. You should call waitForSSEConnect() after killing a Marathon leader to ensure no events are dropped.")
 }
 
 /**
@@ -509,13 +622,24 @@ trait LocalMarathonTest
   lazy val marathon = marathonServer.client
   lazy val appMock: AppMockFacade = new AppMockFacade()
 
+  /**
+    * Return the current leading Marathon
+    * Expected to retry for a significant period of time until succeeds
+    */
+  override def leadingMarathon: Future[LocalMarathon] =
+    Future.successful(marathonServer)
+
+  @volatile private var sseStream: Option[Cancellable] = None
+
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
     marathonServer.start().futureValue(Timeout(90.seconds))
-    callbackEndpoint
+    sseStream = Some(startEventSubscriber())
+    waitForSSEConnect()
   }
 
   abstract override def afterAll(): Unit = {
+    sseStream.foreach(_.cancel)
     Try(marathonServer.close())
     super.afterAll()
   }
@@ -549,6 +673,16 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
       conf = marathonArgs)
   }
   lazy val marathonFacades = marathon +: additionalMarathons.map(_.client)
+  lazy val allMarathonServers = marathonServer +: additionalMarathons
+
+  override def leadingMarathon: Future[LocalMarathon] = {
+    val leader = Retry("querying leader", maxAttempts = 50, maxDelay = 1.second, maxDuration = patienceConfig.timeout) {
+      Future.firstCompletedOf(marathonFacades.map(_.leaderAsync()))
+    }
+    leader.map { leader =>
+      allMarathonServers.find { _.httpPort == leader.value.port }.head
+    }
+  }
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -561,6 +695,6 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
   }
 
   def nonLeader(leader: ITLeaderResult): MarathonFacade = {
-    marathonFacades.find(!_.url.contains(leader.port)).get
+    marathonFacades.find(!_.url.contains(leader.port.toString)).get
   }
 }

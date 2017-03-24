@@ -53,6 +53,8 @@ abstract class DeploymentLeaderAbdicationIntegrationTest extends LeaderIntegrati
 
     And("a new leader is elected")
     WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
+    waitForSSEConnect()
+
     marathonFacade = firstRunningProcess.client
 
     And("second updated task becomes healthy")
