@@ -42,6 +42,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       When("The service is upgraded")
       val oldTask = marathon.tasks(serviceDef.id.toPath).value.head
       val update = marathon.updateApp(serviceDef.id.toPath, AppUpdate(env = Some(raml.Environment(sys.env))), force = false)
+      update.success should be(true) withClue (update.entityString)
 
       And("The ServiceMock is up")
       val serviceFacade = ServiceMockFacade(marathon.tasks(serviceDef.id.toPath).value) { task =>

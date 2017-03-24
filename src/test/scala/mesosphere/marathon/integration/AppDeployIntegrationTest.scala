@@ -488,12 +488,12 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app with multiple tasks")
       val app = appProxy(appId(), "v1", instances = 2, healthCheck = None)
       val create = marathon.createAppV2(app)
-      create.code should be(201)
+      create.code should be(201) withClue s"Response is ${create.code}: ${create.entityString}"
       waitForDeployment(create)
 
       When("all task of an app are killed")
       val response = marathon.killAllTasks(PathId(app.id))
-      response.code should be(200) withClue s"Response: ${response.entityString}"
+      response.code should be(200) withClue s"Response code is ${response.code}: ${response.entityString}"
       waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
       waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 
@@ -505,7 +505,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app with multiple tasks")
       val app = appProxy(appId(), "v1", instances = 2, healthCheck = None)
       val create = marathon.createAppV2(app)
-      create.code should be(201)
+      create.code should be(201) withClue s"Response code is ${create.code}: ${create.entityString}"
       waitForDeployment(create)
       marathon.app(app.id.toPath).value.app.instances should be(2)
 
@@ -524,7 +524,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app with one task")
       val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
       val create = marathon.createAppV2(app)
-      create.code should be(201)
+      create.code should be(201) withClue s"Response code is ${create.code}: ${create.entityString}"
       waitForDeployment(create)
 
       When("the app is deleted")
@@ -545,7 +545,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val createdApp: RestResult[App] = marathon.createAppV2(app)
 
       Then("the app is created and a success event arrives eventually")
-      createdApp.code should be(201) // created
+      createdApp.code should be(201) withClue s"Response code is ${createdApp.code}: ${createdApp.entityString}" // created
 
       Then("we get various events until deployment success")
       val deploymentIds: Seq[String] = extractDeploymentIds(createdApp)
@@ -593,7 +593,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app = App(id.toString, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = None)
 
       val create = marathon.createAppV2(app)
-      create.code should be(201)
+      create.code should be(201) withClue s"Response code is ${create.code}: ${create.entityString}"
       // Created
       val deploymentId = extractDeploymentIds(create).head
 
@@ -619,7 +619,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app = App(id.toString, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = None)
 
       val create = marathon.createAppV2(app)
-      create.code should be(201)
+      create.code should be(201) withClue s"Response is ${create.code}: ${create.entityString}"
       // Created
       val deploymentId = extractDeploymentIds(create).head
 
@@ -655,7 +655,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) //Created
+      result.code should be(201) withClue s"Response is ${result.code}: ${result.entityString}" //Created
 
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
@@ -714,7 +714,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) //Created
+      result.code should be(201) withClue s"Response code is ${result.code}: ${result.entityString}" //Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
 

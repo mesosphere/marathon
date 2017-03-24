@@ -267,7 +267,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val deleteResult = marathon.deleteGroup(gid)
 
       Then("An error is indicated")
-      deleteResult.code should be (HttpStatus.SC_CONFLICT)
+      deleteResult.code should be(HttpStatus.SC_CONFLICT) withClue s"Response code is ${deleteResult.code}: ${deleteResult.entityString}"
       waitForEvent("group_change_failed")
 
       When("Delete is triggered with force, while the deployment is not completed")
@@ -290,7 +290,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.createGroup(group)
 
       Then("An unsuccessful response has been posted, with an error indicating cyclic dependencies")
-      result.success should be(false) withClue s"Response code is ${result.code}"
+      result.success should be(false) withClue s"Response code is ${result.code}: ${result.entityString}"
 
       val errors = (result.entityJson \ "details" \\ "errors").flatMap(_.as[Seq[String]])
       errors.find(_.contains("cyclic dependencies")) shouldBe defined withClue s"""errors "$errors" did not contain "cyclic dependencies" error."""

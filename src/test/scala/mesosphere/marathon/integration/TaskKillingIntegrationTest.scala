@@ -26,7 +26,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       When("the task is killed")
       val killResult = marathon.killAllTasksAndScale(app.id.toPath)
-      killResult.code should be (200) //OK
+      killResult.code should be (200) withClue (killResult.entityString) //OK
       waitForStatusUpdates("TASK_KILLING")
     }
   }
