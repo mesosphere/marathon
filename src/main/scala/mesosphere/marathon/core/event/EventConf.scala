@@ -3,7 +3,7 @@ package mesosphere.marathon.core.event
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import org.rogach.scallop.ScallopConf
+import org.rogach.scallop.{ ScallopConf, ScallopOption }
 import mesosphere.marathon.api.v2.Validation.urlIsValid
 
 import scala.concurrent.duration.FiniteDuration
@@ -55,6 +55,8 @@ trait EventConf extends ScallopConf {
   def slowConsumerDuration: FiniteDuration = httpEventCallbackSlowConsumerTimeout().millis
 
   def eventRequestTimeout: Timeout = Timeout(httpEventRequestTimeout(), TimeUnit.MILLISECONDS)
+
+  def hostname: ScallopOption[String]
 
   def zkTimeoutDuration: FiniteDuration
 }

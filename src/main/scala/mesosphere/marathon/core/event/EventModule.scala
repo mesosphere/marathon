@@ -38,13 +38,12 @@ class EventModule(
 
   private[this] lazy val subscribersKeeperActor: ActorRef = {
     implicit val timeout = conf.eventRequestTimeout
-    val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
 
     val actor = actorSystem.actorOf(Props(new SubscribersKeeperActor(eventSubscribersStore)))
     conf.httpEventEndpoints.get foreach { urls =>
       log.info(s"http_endpoints($urls) are specified at startup. Those will be added to subscribers list.")
       urls foreach { url =>
-        val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
+        val f = (actor ? Subscribe(conf.hostname(), url)).mapTo[MarathonSubscriptionEvent]
         f.onFailure {
           case NonFatal(th) =>
             log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")

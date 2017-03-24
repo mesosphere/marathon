@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.event
 
 import mesosphere.marathon.test.MarathonSpec
-import org.rogach.scallop.ScallopConf
+import org.rogach.scallop.{ ScallopConf, ScallopOption }
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -37,6 +37,12 @@ class EventConfTests extends MarathonSpec {
       verify()
 
       override def zkTimeoutDuration: FiniteDuration = ???
+
+      override def hostname: ScallopOption[String] = opt[String](
+        "hostname",
+        descr = "mock",
+        default = Some("localhost")
+      )
     }
   }
 }
