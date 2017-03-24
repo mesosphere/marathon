@@ -123,7 +123,7 @@ class MesosAppIntegrationTest
     val podId = testBasePath / "healthypod"
     val containerDir = "/opt/marathon"
     def appMockCommand(port: String) = s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-      s"""$port $podId v1 http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$podId/v1"""
+      s"""$port $podId v1 http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$podId/v1"""
 
     val pod = PodDefinition(
       id = podId,

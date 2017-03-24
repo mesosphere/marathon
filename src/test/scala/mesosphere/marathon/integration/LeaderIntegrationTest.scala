@@ -156,7 +156,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
   test("it survives a small reelection test") {
 
-    for (_ <- 1 to 15) {
+    for (_ <- 1 to 8) {
       Given("a leader")
       WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
 

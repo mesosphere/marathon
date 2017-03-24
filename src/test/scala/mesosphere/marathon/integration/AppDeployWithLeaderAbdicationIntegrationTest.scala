@@ -71,6 +71,7 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
 
     And("a new leader is elected")
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { secondary.leader().value != leader }
+    waitForSSEConnect()
 
     And("the updated task becomes healthy")
     // This would move the service mock from "InProgress" [HTTP 503] to "Complete" [HTTP 200]
