@@ -3,11 +3,13 @@ package api.validation
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.raml.Apps
 import mesosphere.marathon.state._
 
 class AppDefinitionSchedulerValidationTest extends UnitTest {
 
-  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
+  private lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
+
   class Fixture {
     def normalApp = AppDefinition(
       id = PathId("/test"),
@@ -24,9 +26,9 @@ class AppDefinitionSchedulerValidationTest extends UnitTest {
         instances = 1,
         upgradeStrategy = UpgradeStrategy(0, 0),
         labels = Map(
-          AppDefinition.Labels.DcosPackageFrameworkName -> frameworkName,
-          AppDefinition.Labels.DcosMigrationApiVersion -> migrationApiVersion,
-          AppDefinition.Labels.DcosMigrationApiPath -> migrationApiPath
+          Apps.LabelDcosPackageFrameworkName -> frameworkName,
+          Apps.LabelDcosMigrationApiVersion -> migrationApiVersion,
+          Apps.LabelDcosMigrationApiPath -> migrationApiPath
         )
       )
     }
@@ -51,21 +53,21 @@ class AppDefinitionSchedulerValidationTest extends UnitTest {
 
       When("the Migration API version is added")
       val step1 = normalApp.copy(labels = normalApp.labels + (
-        AppDefinition.Labels.DcosMigrationApiVersion -> "v1"
+        Apps.LabelDcosMigrationApiVersion -> "v1"
       ))
       Then("the app is not valid")
       validAppDefinition(step1).isSuccess shouldBe false
 
       When("the framework label is added")
       val step2 = normalApp.copy(labels = step1.labels + (
-        AppDefinition.Labels.DcosPackageFrameworkName -> "Framework-42"
+        Apps.LabelDcosPackageFrameworkName -> "Framework-42"
       ))
       Then("the app is not valid")
       validAppDefinition(step2).isSuccess shouldBe false
 
       When("the Migration API path is added")
       val step3 = normalApp.copy(labels = step2.labels + (
-        AppDefinition.Labels.DcosMigrationApiPath -> "/v1/plan"
+        Apps.LabelDcosMigrationApiPath -> "/v1/plan"
       ))
       Then("the app is valid")
       validAppDefinition(step3).isSuccess shouldBe true

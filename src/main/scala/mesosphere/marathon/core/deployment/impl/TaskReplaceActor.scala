@@ -205,7 +205,7 @@ object TaskReplaceActor {
 
     log.info(s"For minimumHealthCapacity ${runSpec.upgradeStrategy.minimumHealthCapacity} of ${runSpec.id.toString} leave " +
       s"$minHealthy instances running, maximum capacity $maxCapacity, killing $nrToKillImmediately of " +
-      s"$runningInstancesCount running instances immediately")
+      s"$runningInstancesCount running instances immediately. (RunSpec version ${runSpec.version})")
 
     assume(nrToKillImmediately >= 0, s"nrToKillImmediately must be >=0 but is $nrToKillImmediately")
     assume(maxCapacity > 0, s"maxCapacity must be >0 but is $maxCapacity")

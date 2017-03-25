@@ -19,15 +19,13 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
-import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
-import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
-import org.apache.mesos.Protos
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.time.{ Milliseconds, Span }
@@ -125,7 +123,7 @@ case class LocalMarathon(
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val memSettings = s"-Xmx${Runtime.getRuntime.maxMemory()}"
-    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, mainClass) ++ args
+    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
@@ -298,93 +296,64 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     def toTestPath: PathId = testBasePath.append(path)
   }
 
-  val appProxyMainInvocationImpl: String = {
-    val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
-    val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
-    val main = classOf[AppMock].getName
-    val id = UUID.randomUUID.toString
-    appProxyIds(_ += id)
-    s"""$javaExecutable -Xmx64m -DappProxyId=$id -DtestSuite=$suiteName -classpath $classPath $main"""
-  }
-
   def appProxyHealthCheck(
     gracePeriod: FiniteDuration = 3.seconds,
     interval: FiniteDuration = 1.second,
     maxConsecutiveFailures: Int = Int.MaxValue,
-    portIndex: Option[PortReference] = Some(PortReference.ByIndex(0))): MarathonHealthCheck =
-    MarathonHttpHealthCheck(gracePeriod = gracePeriod, interval = interval, maxConsecutiveFailures = maxConsecutiveFailures, portIndex = portIndex)
+    portIndex: Option[Int] = Some(0)): AppHealthCheck =
+    raml.AppHealthCheck(
+      gracePeriodSeconds = gracePeriod.toSeconds.toInt,
+      intervalSeconds = interval.toSeconds.toInt,
+      maxConsecutiveFailures = maxConsecutiveFailures,
+      portIndex = portIndex,
+      protocol = raml.AppHealthCheckProtocol.Http
+    )
 
-  def appProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[HealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): AppDefinition = {
+  def appProxy(appId: PathId, versionId: String, instances: Int,
+    healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
+    dependencies: Set[PathId] = Set.empty): App = {
 
-    val appProxyMainInvocation: String = {
-      val file = File.createTempFile("appProxy", ".sh")
-      file.deleteOnExit()
-
-      FileUtils.write(
-        file,
-        s"""#!/bin/sh
-           |set -x
-           |exec $appProxyMainInvocationImpl $$*""".stripMargin)
-      file.setExecutable(true)
-
-      file.getAbsolutePath
-    }
-    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxyMainInvocation """ +
+    val projectDir = sys.props.getOrElse("user.dir", ".")
+    val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
+    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
       s"""$$PORT0 $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId""")
 
-    AppDefinition(
-      id = appId,
+    App(
+      id = appId.toString,
       cmd = cmd,
       executor = "//cmd",
       instances = instances,
-      resources = Resources(cpus = 0.01, mem = 32.0),
+      cpus = 0.01, mem = 32.0,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies
+      dependencies = dependencies.map(_.toString)
     )
   }
 
-  private def appProxyMainInvocationExternal(targetDir: String): String = {
+  def dockerAppProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[AppHealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): App = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
-    val homeDir = sys.props.getOrElse("user.home", "~")
-    val classPath = sys.props.getOrElse("java.class.path", "target/classes")
-      .replaceAll(" ", "")
-      .replace(s"$projectDir/target", s"$targetDir/target")
-      .replace(s"$homeDir/.ivy2", s"$targetDir/.ivy2")
-      .replace(s"$homeDir/.sbt", s"$targetDir/.sbt")
-    val id = UUID.randomUUID.toString
-    appProxyIds(_ += id)
-    val main = classOf[AppMock].getName
-    s"""java -Xmx64m -DappProxyId=$id -DtestSuite=$suiteName -classpath $classPath $main"""
-  }
-
-  def appProxyCommand(appId: PathId, versionId: String, containerDir: String, port: String) = {
-    val appProxy = appProxyMainInvocationExternal(containerDir)
-    s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxy """ +
-      s"""$port $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId"""
-  }
-
-  def dockerAppProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[HealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): AppDefinition = {
-    val projectDir = sys.props.getOrElse("user.dir", ".")
-    val homeDir = sys.props.getOrElse("user.home", "~")
     val containerDir = "/opt/marathon"
 
-    val cmd = Some(appProxyCommand(appId, versionId, containerDir, "$PORT0"))
-    AppDefinition(
-      id = appId,
+    val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
+      s"""$$PORT0 $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId""")
+
+    App(
+      id = appId.toString,
       cmd = cmd,
-      container = Some(Container.Docker(
-        image = "openjdk:8-jre-alpine",
-        network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST),
+      container = Some(raml.Container(
+        `type` = raml.EngineType.Docker,
+        docker = Some(raml.DockerContainer(
+          image = "python:3.4.6-alpine",
+          network = Some(raml.DockerNetwork.Host)
+        )),
         volumes = collection.immutable.Seq(
-          new DockerVolume(hostPath = s"$homeDir/.ivy2", containerPath = s"$containerDir/.ivy2", mode = Protos.Volume.Mode.RO),
-          new DockerVolume(hostPath = s"$homeDir/.sbt", containerPath = s"$containerDir/.sbt", mode = Protos.Volume.Mode.RO),
-          new DockerVolume(hostPath = s"$projectDir/target", containerPath = s"$containerDir/target", mode = Protos.Volume.Mode.RO)
+          new AppVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,
-      resources = Resources(cpus = 0.5, mem = 128.0),
+      cpus = 0.5,
+      mem = 128,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies
+      dependencies = dependencies.map(_.toString)
     )
   }
 
@@ -406,7 +375,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       logger.info("Clean Marathon State")
       lazy val group = marathon.group(testBasePath).value
       lazy val deployments = marathon.listDeploymentsForBaseGroup().value
-      if (deployments.nonEmpty || group.transitiveRunSpecs.nonEmpty || group.transitiveGroupsById.nonEmpty) {
+      if (deployments.nonEmpty || group.apps.nonEmpty || group.pods.nonEmpty || group.groups.nonEmpty) {
         //do not fail here, since the require statements will ensure a correct setup and fail otherwise
         Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
       }
@@ -424,6 +393,8 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
 
       val apps = marathon.listAppsInBaseGroup
       require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+      val pods = marathon.listPodsInBaseGroup
+      require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
       val groups = marathon.listGroupsInBaseGroup
       require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
       events.clear()
@@ -595,7 +566,7 @@ trait MarathonSuite extends Suite with StrictLogging with ScalaFutures with Befo
 trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFutures
     with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
 
-  val marathonArgs = Map.empty[String, String]
+  def marathonArgs: Map[String, String] = Map.empty
 
   lazy val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
     zkUrl = s"zk://${zkServer.connectUri}/marathon",
@@ -622,7 +593,11 @@ trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFut
 /**
   * trait that has marathon, zk, and a mesos ready to go
   */
-trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
+trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
+  // disable failover timeout to assist with cleanup ops; terminated marathons are immediately removed from mesos's
+  // list of frameworks
+  override def marathonArgs: Map[String, String] = Map("failover_timeout" -> "0")
+}
 
 /**
   * Trait that has a Marathon cluster, zk, and Mesos via mesos-local ready to go.

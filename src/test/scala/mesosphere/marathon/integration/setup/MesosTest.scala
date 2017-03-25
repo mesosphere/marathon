@@ -138,9 +138,7 @@ case class MesosLocal(
 
   def clean(): Unit = {
     val client = new MesosFacade(masterUrl)
-    while (client.state.value.agents.exists(agent => !agent.usedResources.isEmpty || agent.reservedResourcesByRole.nonEmpty)) {
-      client.frameworkIds().value.foreach(client.terminate)
-    }
+    MesosTest.clean(client)
   }
 
   override def close(): Unit = {
@@ -187,8 +185,9 @@ case class MesosCluster(
   }
 
   def waitForLeader(): Future[String] = async {
+    val firstMaster = s"http://localhost:${masters.head.port}"
     val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDelay = waitForLeaderTimeout) {
-      Http().singleRequest(Get(s"http://localhost:${masters.head.port}/redirect")).map { result =>
+      Http().singleRequest(Get(firstMaster + "/redirect")).map { result =>
         if (result.status.isFailure()) {
           throw new Exception(s"Couldn't determine leader: $result")
         }
@@ -196,7 +195,17 @@ case class MesosCluster(
       }
     }
 
-    await(result).headers.find(_.lowercaseName() == "location").map(_.value()).get
+    def maybeFixURI(uri: String): String = {
+      // some versions of mesos issue redirects with broken Location headers; fix them here
+      if (uri.indexOf("//") == 0) {
+        "http:" + uri
+      } else {
+        uri
+      }
+    }
+
+    val location = await(result).headers.find(_.lowercaseName() == "location").map(_.value()).getOrElse(firstMaster)
+    maybeFixURI(location)
   }
 
   def stop(): Unit = {
@@ -300,9 +309,7 @@ case class MesosCluster(
 
   def clean(): Unit = {
     val client = new MesosFacade(Await.result(waitForLeader(), waitForLeaderTimeout))
-    while (client.state.value.agents.exists(agent => !agent.usedResources.isEmpty || agent.reservedResourcesByRole.nonEmpty)) {
-      client.frameworkIds().value.foreach(client.terminate)
-    }
+    MesosTest.clean(client)
   }
 
   override def close(): Unit = {
@@ -310,12 +317,34 @@ case class MesosCluster(
     agents.foreach(_.close())
     masters.foreach(_.close())
   }
+
 }
 
 trait MesosTest {
   def mesos: MesosFacade
   val mesosMasterUrl: String
   def cleanMesos(): Unit
+}
+
+object MesosTest {
+  def clean(client: MesosFacade, cleanTimeout: Duration = 30.seconds)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
+    def teardown: Future[Done] =
+      Retry("teardown marathon", maxDuration = cleanTimeout, minDelay = 0.25.second, maxDelay = 2.second) {
+        Future.fold(client.frameworkIds().value.map(client.teardown(_).map { response =>
+          val status = response.status.intValue
+          if (status == 200) Done
+          else throw new IllegalStateException(s"server returned status $status")
+        }))(Done) { (_, _) => Done }.map { _ =>
+          val agents = client.state.value.agents
+          agents.find(a => !a.usedResources.isEmpty || a.reservedResourcesByRole.nonEmpty).fold(Done) { agent =>
+            throw new IllegalStateException(
+              s"agent allocated on agent ${agent.id}: " +
+                s"used = ${agent.usedResources}, reserved = ${agent.reservedResourcesByRole}")
+          }
+        }
+      }
+    Await.result(teardown, Duration.Inf)
+  }
 }
 
 trait SimulatedMesosTest extends MesosTest {
@@ -377,7 +406,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
   lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
     autoStart = false, config = mesosConfig, mesosLeaderTimeout)
-  lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(s"http:${mesosCluster.waitForLeader().futureValue}"))
+  lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
 
   override def cleanMesos(): Unit = mesosCluster.clean()
 

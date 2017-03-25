@@ -93,7 +93,7 @@ class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with Im
       val f = new Fixture
       val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
       actor ! f.matchedA
-      actor ! f.noMatchA // linter:ignore
+      actor ! f.noMatchA // linter:ignore IdenticalStatements
       actor ! f.noMatchA
       actor ! f.matchedC
       eventually {

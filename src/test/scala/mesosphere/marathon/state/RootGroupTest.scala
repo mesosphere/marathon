@@ -118,7 +118,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       changed.transitiveAppsById.keys.map(_.toString) should be(Set("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
-      validate(changed)(RootGroup.valid(Set())) should be(Success)
+      validate(changed)(RootGroup.rootGroupValidator(Set())) should be(Success)
     }
 
     "cannot replace a group with apps by an app definition" in {
@@ -147,7 +147,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       changed.transitiveAppIds.map(_.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val result = validate(changed)(RootGroup.valid(Set()))
+      val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
         .message should be("Groups and Applications may not have the same identifier.")
@@ -180,7 +180,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       changed.transitivePodsById.keySet.map(_.toString) should be(Set("/some/nested/path2/pod"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val result = validate(changed)(RootGroup.valid(Set()))
+      val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
         .message should be("Groups and Applications may not have the same identifier.")
@@ -215,7 +215,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       changed.transitivePodsById.keySet.map(_.toString) should be(Set("/some/nested", "/some/nested/path2/pod"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val result = validate(changed)(RootGroup.valid(Set()))
+      val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
         .message should be("Groups and Pods may not have the same identifier.")
@@ -417,7 +417,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       ))
 
       When("group is validated")
-      val result = validate(rootGroup)(RootGroup.valid(Set()))
+      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
 
       Then("result should be a success")
       result.isSuccess should be(true)
@@ -431,7 +431,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       ))
 
       When("group is validated")
-      val invalidResult = validate(invalid)(RootGroup.valid(Set()))
+      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(Set()))
 
       Then("validation is not successful")
       invalidResult.isSuccess should be(false)
@@ -446,7 +446,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       ))
 
       When("group is validated")
-      val invalidResult = validate(invalid)(RootGroup.valid(Set()))
+      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(Set()))
 
       Then("validation is not successful")
       invalidResult.isSuccess should be(false)
@@ -458,7 +458,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val invalid = createRootGroup(apps = Map(app.id -> app))
 
       When("group is validated")
-      val invalidResult = validate(invalid)(RootGroup.valid(Set()))
+      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(Set()))
 
       Then("validation is not successful")
       invalidResult.isSuccess should be(false)
@@ -472,7 +472,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       ))
 
       When("group is validated")
-      val validResult = validate(valid)(RootGroup.valid(Set()))
+      val validResult = validate(valid)(RootGroup.rootGroupValidator(Set()))
 
       Then("validation is successful")
       validResult.isSuccess should be(true)

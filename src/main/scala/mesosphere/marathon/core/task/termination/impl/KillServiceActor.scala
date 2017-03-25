@@ -99,8 +99,9 @@ private[impl] class KillServiceActor(
   }
 
   def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
-    log.debug("Adding {} instances to queue; setting up child actor to track progress", instances.size)
-    promise.completeWith(watchForKilledInstances(instances.map(_.instanceId)))
+    val instanceIds = instances.map(_.instanceId)
+    log.debug("Adding instances {} to queue; setting up child actor to track progress", instanceIds)
+    promise.completeWith(watchForKilledInstances(instanceIds))
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
       val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
@@ -127,7 +128,7 @@ private[impl] class KillServiceActor(
     val killCount = config.killChunkSize - inFlight.size
     val toKillNow = instancesToKill.take(killCount)
 
-    log.info("processing {} kills", toKillNow.size)
+    log.info("processing {} kills for {}", toKillNow.size, toKillNow.keys: Any)
     toKillNow.foreach {
       case (instanceId, data) => processKill(data)
     }

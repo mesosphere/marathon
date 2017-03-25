@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration.facades
 
 import akka.actor.ActorSystem
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.integration.setup.RestResult
 import mesosphere.marathon.integration.setup.SprayHttpResponse._
 import spray.client.pipelining._
@@ -67,13 +68,14 @@ object MesosFacade {
 }
 
 class MesosFacade(url: String, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem)
-    extends PlayJsonSupport {
+    extends PlayJsonSupport with StrictLogging {
 
   import MesosFacade._
   import MesosFormats._
   import system.dispatcher
 
   def state: RestResult[ITMesosState] = {
+    logger.info(s"fetching state from $url")
     val pipeline = sendReceive ~> read[ITMesosState]
     result(pipeline(Get(s"$url/state.json")), waitTime)
   }

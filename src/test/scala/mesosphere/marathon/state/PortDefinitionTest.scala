@@ -18,10 +18,6 @@ class PortDefinitionTest extends UnitTest {
       validate(Fixture.validPortDefinition.copy(name = None)) should be(Success)
     }
 
-    "portDefinition with invalid name should be invalid" in {
-      validate(Fixture.validPortDefinition.copy(name = Some("!@?"))).isFailure should be(true)
-    }
-
     "portDefinition with invalid protocol is invalid" in {
       validate(Fixture.validPortDefinition.copy(protocol = "icmp")).isFailure should be(true)
     }

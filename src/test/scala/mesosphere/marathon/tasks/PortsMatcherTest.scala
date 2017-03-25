@@ -4,6 +4,7 @@ package tasks
 import java.util
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinitions, ResourceRole }
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
@@ -21,6 +22,7 @@ class PortsMatcherTest extends UnitTest {
   import mesosphere.mesos.protos.Implicits._
 
   val runSpecId = PathId("/test")
+  private val containerNetworking = Seq(ContainerNetwork("dcos"))
 
   "PortsMatcher" should {
     "get random ports from single range" in {
@@ -161,7 +163,7 @@ class PortsMatcherTest extends UnitTest {
         portMappings = Seq(
           new PortMapping(containerPort = 1, hostPort = Some(0))
         )
-      )))
+      )), networks = containerNetworking)
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = -1).build
       val matcher = PortsMatcher(app, offer)
@@ -174,7 +176,7 @@ class PortsMatcherTest extends UnitTest {
         portMappings = Seq(
           new PortMapping(containerPort = 1, hostPort = Some(0))
         )
-      )))
+      )), networks = containerNetworking)
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31000).build
       val matcher = PortsMatcher(app, offer)
@@ -188,7 +190,7 @@ class PortsMatcherTest extends UnitTest {
         portMappings = Seq(
           new PortMapping(containerPort = 1, hostPort = Some(0))
         )
-      )))
+      )), networks = containerNetworking)
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
       val rand = new Random(new util.Random(0))
@@ -219,7 +221,7 @@ class PortsMatcherTest extends UnitTest {
         portMappings = Seq(
           new PortMapping(containerPort = 1, hostPort = Some(8080))
         )
-      )))
+      )), networks = containerNetworking)
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
       val matcher = PortsMatcher(app, offer)
@@ -232,7 +234,7 @@ class PortsMatcherTest extends UnitTest {
         portMappings = Seq(
           new PortMapping(containerPort = 1, hostPort = Some(31200))
         )
-      )))
+      )), networks = containerNetworking)
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
       val matcher = PortsMatcher(app, offer)
@@ -246,7 +248,7 @@ class PortsMatcherTest extends UnitTest {
         portMappings = Seq(
           new PortMapping(containerPort = 1, hostPort = Some(31200))
         )
-      )))
+      )), networks = containerNetworking)
 
       val portsResource = RangesResource(
         Resource.PORTS,
@@ -266,7 +268,7 @@ class PortsMatcherTest extends UnitTest {
           new PortMapping(containerPort = 1, hostPort = Some(0)),
           new PortMapping(containerPort = 1, hostPort = Some(31000))
         )
-      )))
+      )), networks = containerNetworking)
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31001).build
       val matcher = PortsMatcher(app, offer)
@@ -281,7 +283,7 @@ class PortsMatcherTest extends UnitTest {
           new PortMapping(containerPort = 1, hostPort = Some(0)),
           new PortMapping(containerPort = 1, hostPort = Some(31000))
         )
-      )))
+      )), networks = containerNetworking)
 
       val portsResource = RangesResource(
         Resource.PORTS,

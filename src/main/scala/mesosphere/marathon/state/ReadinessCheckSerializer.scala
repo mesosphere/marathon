@@ -6,7 +6,7 @@ import mesosphere.marathon.stream.Implicits._
 
 import scala.concurrent.duration._
 
-private[state] object ReadinessCheckSerializer {
+object ReadinessCheckSerializer {
   def fromProto(proto: Protos.ReadinessCheckDefinition): ReadinessCheck = {
     def opt[T](
       hasValue: Protos.ReadinessCheckDefinition => Boolean,
@@ -26,7 +26,7 @@ private[state] object ReadinessCheckSerializer {
       httpStatusCodesForReady =
         opt(
           _.getHttpStatusCodeForReadyCount > 0,
-          _.getHttpStatusCodeForReadyList.map(_.intValue()).toSet
+          _.getHttpStatusCodeForReadyList.map(_.intValue()).to[Set]
         ).getOrElse(ReadinessCheck.DefaultHttpStatusCodesForReady),
       preserveLastResponse =
         opt(_.hasPreserveLastResponse, _.getPreserveLastResponse).getOrElse(ReadinessCheck.DefaultPreserveLastResponse)

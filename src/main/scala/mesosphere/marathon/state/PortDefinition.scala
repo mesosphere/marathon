@@ -15,13 +15,14 @@ case class PortDefinition(
 
 object PortDefinition {
   implicit val portDefinitionValidator = validator[PortDefinition] { portDefinition =>
-    portDefinition.protocol.split(',').toIterable is every(oneOf(DiscoveryInfo.Port.AllowedProtocols))
+    portDefinition.protocol.split(',').toIterable is every(oneOf(PortDefinitions.AllowedProtocols))
     portDefinition.port should be >= 0
-    portDefinition.name is optional(matchRegexFully(PortAssignment.PortNamePattern))
   }
 }
 
 object PortDefinitions {
+  val AllowedProtocols: Set[String] = Set("tcp", "udp")
+
   def apply(ports: Int*): Seq[PortDefinition] = {
     ports.map(PortDefinition.apply(_)).toIndexedSeq
   }

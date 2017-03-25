@@ -4,44 +4,49 @@ package api.v2.json
 import com.wix.accord._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.api.v2.Validation.validateOrThrow
+import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
+import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.state.Container._
-import mesosphere.marathon.state.DiscoveryInfo.Port
+import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, PortDefinition, PortDefinitions, Raml, SecretDef, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import play.api.data.validation.ValidationError
-import play.api.libs.json.{ JsError, JsPath, Json }
+import play.api.libs.json.{ JsError, Json }
+import org.apache.mesos.{ Protos => Mesos }
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
-import scala.util.Try
 
 class AppUpdateTest extends UnitTest {
 
-  import Formats._
-  import mesosphere.marathon.integration.setup.V2TestFormats._
+  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(Set("secrets"))
 
-  implicit val appUpdateValidator = AppUpdate.appUpdateValidator(Set())
   val runSpecId = PathId("/test")
 
+  /**
+    * @return an [[AppUpdate]] that's been normalized to canonical form
+    */
   private[this] def fromJsonString(json: String): AppUpdate = {
-    Json.fromJson[AppUpdate](Json.parse(json)).get
+    val update: AppUpdate = Json.fromJson[AppUpdate](Json.parse(json)).get
+    AppNormalization.forDeprecatedUpdates.normalized(validateOrThrow(update)(AppValidation.validateOldAppUpdateAPI))
   }
 
   def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
-    val violations = validate(update)
-    assert(violations.isFailure)
-    assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
+    val violations = Json.fromJson[AppUpdate](Json.toJson(update)) match {
+      case err: JsError => ValidationHelper.getAllRuleConstrains(err)
+      case obj => ValidationHelper.getAllRuleConstrains(validate(obj.get))
+    }
+    assert(violations.nonEmpty)
+    assert(violations.exists(v =>
       v.path.getOrElse(false) == path && v.message == template
-    ), s"expected path $path and message $template, but instead found" +
-      ValidationHelper.getAllRuleConstrains(violations))
+    ), s"expected path $path and message $template, but instead found" + violations)
   }
 
   def shouldNotViolate(update: AppUpdate, path: String, template: String): Unit = {
-    val violations = validate(update)
-    assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
+    val violations = Json.fromJson[AppUpdate](Json.toJson(update)) match {
+      case err: JsError => ValidationHelper.getAllRuleConstrains(err)
+      case obj => ValidationHelper.getAllRuleConstrains(validate(obj.get))
+    }
+    assert(!violations.exists(v =>
       v.path.getOrElse(false) == path && v.message == template))
   }
 
@@ -57,8 +62,8 @@ class AppUpdateTest extends UnitTest {
 
       shouldViolate(
         update.copy(portDefinitions = Some(Seq(
-          PortDefinition(port = 9000, name = Some("foo")),
-          PortDefinition(port = 9001, name = Some("foo"))))
+          PortDefinition(9000, name = Some("foo")),
+          PortDefinition(9001, name = Some("foo"))))
         ),
         "/portDefinitions",
         "Port names must be unique."
@@ -66,41 +71,41 @@ class AppUpdateTest extends UnitTest {
 
       shouldNotViolate(
         update.copy(portDefinitions = Some(Seq(
-          PortDefinition(port = 9000, name = Some("foo")),
-          PortDefinition(port = 9001, name = Some("bar"))))
+          PortDefinition(9000, name = Some("foo")),
+          PortDefinition(9001, name = Some("bar"))))
         ),
         "/portDefinitions",
         "Port names must be unique."
       )
 
-      shouldViolate(update.copy(mem = Some(-3.0)), "/mem", "got -3.0, expected 0.0 or more")
-      shouldViolate(update.copy(cpus = Some(-3.0)), "/cpus", "got -3.0, expected 0.0 or more")
-      shouldViolate(update.copy(disk = Some(-3.0)), "/disk", "got -3.0, expected 0.0 or more")
-      shouldViolate(update.copy(instances = Some(-3)), "/instances", "got -3, expected 0 or more")
+      shouldViolate(update.copy(mem = Some(-3.0)), "/mem", "error.min")
+      shouldViolate(update.copy(cpus = Some(-3.0)), "/cpus", "error.min")
+      shouldViolate(update.copy(disk = Some(-3.0)), "/disk", "error.min")
+      shouldViolate(update.copy(instances = Some(-3)), "/instances", "error.min")
     }
 
     "Validate secrets" in {
       val update = AppUpdate()
 
       shouldViolate(update.copy(secrets = Some(Map(
-        "a" -> Secret("")
-      ))), "/secrets(a)/source", "must not be empty")
+        "a" -> SecretDef("")
+      ))), "/secrets/a/source", "error.minLength")
 
       shouldViolate(update.copy(secrets = Some(Map(
-        "" -> Secret("a/b/c")
-      ))), "/secrets()", "must not be empty")
+        "" -> SecretDef("a/b/c")
+      ))), "/secrets()/", "must not be empty")
     }
 
     "SerializationRoundtrip for empty definition" in {
-      val update0 = AppUpdate(container = Some(Container.Mesos()))
+      val update0 = AppUpdate(container = Some(Container(EngineType.Mesos)))
       JsonTestHelper.assertSerializationRoundtripWorks(update0)
     }
 
     "SerializationRoundtrip for definition with simple AppC container" in {
-      val update0 = AppUpdate(container = Some(Container.MesosAppC(
+      val update0 = AppUpdate(container = Some(Container(EngineType.Mesos, appc = Some(AppCContainer(
         image = "anImage",
         labels = Map("key" -> "foo", "value" -> "bar")
-      )))
+      )))))
       JsonTestHelper.assertSerializationRoundtripWorks(update0)
     }
 
@@ -109,25 +114,29 @@ class AppUpdateTest extends UnitTest {
         cmd = Some("sleep 60"),
         args = None,
         user = Some("nobody"),
-        env = Some(EnvVarValue(Map("LANG" -> "en-US"))),
+        env = Some(Environment("LANG" -> "en-US")),
         instances = Some(16),
         cpus = Some(2.0),
         mem = Some(256.0),
         disk = Some(1024.0),
         executor = Some("/opt/executors/bin/some.executor"),
-        constraints = Some(Set()),
-        fetch = Some(Seq(FetchUri(uri = "http://dl.corp.org/prodX-1.2.3.tgz"))),
-        backoff = Some(2.seconds),
+        constraints = Some(Set.empty),
+        fetch = Some(Seq(Artifact(uri = "http://dl.corp.org/prodX-1.2.3.tgz"))),
+        backoffSeconds = Some(2),
         backoffFactor = Some(1.2),
-        maxLaunchDelay = Some(1.minutes),
-        container = Some(Docker(
-          volumes = Nil,
-          image = "docker:///group/image"
-        )),
-        healthChecks = Some(Set[HealthCheck]()),
-        taskKillGracePeriod = Some(2.seconds),
-        dependencies = Some(Set[PathId]()),
-        upgradeStrategy = Some(UpgradeStrategy.empty),
+        maxLaunchDelaySeconds = Some(60),
+        container = Some(Container(
+          EngineType.Docker,
+          docker = Some(DockerContainer(
+            image = "docker:///group/image"
+          )),
+          portMappings = Option(Seq(
+            ContainerPortMapping(containerPort = 80, name = Some("http"))
+          ))
+        )), healthChecks = Some(Set.empty),
+        taskKillGracePeriodSeconds = Some(2),
+        dependencies = Some(Set.empty),
+        upgradeStrategy = Some(UpgradeStrategy(1, 1)),
         labels = Some(
           Map(
             "one" -> "aaa",
@@ -135,17 +144,14 @@ class AppUpdateTest extends UnitTest {
             "three" -> "ccc"
           )
         ),
-        ipAddress = Some(IpAddress(
-          groups = Seq("a", "b", "c"),
+        networks = Some(Seq(Network(
+          mode = NetworkMode.Container,
           labels = Map(
             "foo" -> "bar",
             "baz" -> "buzz"
-          ),
-          discoveryInfo = DiscoveryInfo(
-            ports = Seq(Port(name = "http", number = 80, protocol = "tcp"))
-          )
-        )),
-        unreachableStrategy = Some(UnreachableEnabled(998.seconds, 999.seconds))
+
+          )))),
+        unreachableStrategy = Some(raml.UnreachableEnabled(998, 999))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(update1)
     }
@@ -221,40 +227,20 @@ class AppUpdateTest extends UnitTest {
       assert(readResult4 == update4)
     }
 
-    "'version' field can only be combined with 'id'" in {
-      assert(AppUpdate(version = Some(Timestamp.now())).onlyVersionOrIdSet)
-
-      assert(AppUpdate(id = Some("foo".toPath), version = Some(Timestamp.now())).onlyVersionOrIdSet)
-
-      intercept[IllegalArgumentException] {
-        AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
-      }
-    }
-
     "acceptedResourceRoles of update is only applied when != None" in {
       val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Set("a"))
 
-      val unchanged = AppUpdate().apply(app).copy(versionInfo = app.versionInfo)
+      val unchanged = Raml.fromRaml(Raml.fromRaml((AppUpdate(), app))).copy(versionInfo = app.versionInfo)
       assert(unchanged == app)
 
-      val changed = AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(versionInfo = app.versionInfo)
+      val changed = Raml.fromRaml(Raml.fromRaml((AppUpdate(acceptedResourceRoles = Some(Set("b"))), app))).copy(versionInfo = app.versionInfo)
       assert(changed == app.copy(acceptedResourceRoles = Set("b")))
     }
 
-    "AppUpdate does not change existing versionInfo" in {
-      val app = AppDefinition(
-        id = PathId("test"),
-        cmd = Some("sleep 1"),
-        versionInfo = VersionInfo.forNewConfig(Timestamp(1))
-      )
-
-      val updateCmd = AppUpdate(cmd = Some("sleep 2"))
-      assert(updateCmd(app).versionInfo == app.versionInfo)
-    }
-
     "AppUpdate with a version and other changes are not allowed" in {
-      val attempt = Try(AppUpdate(id = Some(PathId("/test")), cmd = Some("sleep 2"), version = Some(Timestamp(2))))
-      assert(attempt.failed.get.getMessage.contains("The 'version' field may only be combined with the 'id' field."))
+      val vfe = intercept[ValidationFailedException](validateOrThrow(
+        AppUpdate(id = Some("/test"), cmd = Some("sleep 2"), version = Some(Timestamp(2).toOffsetDateTime))))
+      assert(vfe.failure.violations.toString.contains("The 'version' field may only be combined with the 'id' field."))
     }
 
     "update may not have both uris and fetch" in {
@@ -267,9 +253,8 @@ class AppUpdateTest extends UnitTest {
       }
       """
 
-      import Formats._
-      val result = Json.fromJson[AppUpdate](Json.parse(json))
-      assert(result == JsError(ValidationError("You cannot specify both uris and fetch fields")))
+      val vfe = intercept[ValidationFailedException](validateOrThrow(fromJsonString(json)))
+      assert(vfe.failure.violations.toString.contains("may not be set in conjunction with fetch"))
     }
 
     "update may not have both ports and portDefinitions" in {
@@ -282,9 +267,8 @@ class AppUpdateTest extends UnitTest {
       }
       """
 
-      import Formats._
-      val result = Json.fromJson[AppUpdate](Json.parse(json))
-      assert(result == JsError(ValidationError("You cannot specify both ports and port definitions")))
+      val vfe = intercept[ValidationFailedException](validateOrThrow(fromJsonString(json)))
+      assert(vfe.failure.violations.toString.contains("cannot specify both ports and port definitions"))
     }
 
     "update may not have duplicated ports" in {
@@ -296,15 +280,14 @@ class AppUpdateTest extends UnitTest {
       }
       """
 
-      import Formats._
-      val result = Json.fromJson[AppUpdate](Json.parse(json))
-      assert(result == JsError(JsPath \ "ports", ValidationError("Ports must be unique.")))
+      val vfe = intercept[ValidationFailedException](validateOrThrow(fromJsonString(json)))
+      assert(vfe.failure.violations.toString.contains("ports must be unique"))
     }
 
     "update JSON serialization preserves readiness checks" in {
       val update = AppUpdate(
-        id = Some(PathId("/test")),
-        readinessChecks = Some(Seq(ReadinessCheckTestHelper.alternativeHttps))
+        id = Some("/test"),
+        readinessChecks = Some(Seq(ReadinessCheckTestHelper.alternativeHttpsRaml))
       )
       val json = Json.toJson(update)
       val reread = json.as[AppUpdate]
@@ -313,13 +296,13 @@ class AppUpdateTest extends UnitTest {
 
     "update readiness checks are applied to app" in {
       val update = AppUpdate(
-        id = Some(PathId("/test")),
-        readinessChecks = Some(Seq(ReadinessCheckTestHelper.alternativeHttps))
+        id = Some("/test"),
+        readinessChecks = Some(Seq(ReadinessCheckTestHelper.alternativeHttpsRaml))
       )
       val app = AppDefinition(id = PathId("/test"))
-      val updated = update(app)
+      val updated = Raml.fromRaml(Raml.fromRaml((update, app)))
 
-      assert(updated.readinessChecks == update.readinessChecks.get)
+      assert(update.readinessChecks.map(_.map(Raml.fromRaml(_))).contains(updated.readinessChecks))
     }
 
     "empty app updateStrategy on persistent volumes" in {
@@ -346,9 +329,11 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val strategy = update.empty("foo".toPath).upgradeStrategy
-      assert(strategy.minimumHealthCapacity == 0.5
-        && strategy.maximumOverCapacity == 0)
+      val strategy = AppsResource.withoutPriorAppDefinition(update, "foo".toPath).upgradeStrategy
+      assert(strategy.contains(raml.UpgradeStrategy(
+        minimumHealthCapacity = 0.5,
+        maximumOverCapacity = 0
+      )))
     }
 
     "empty app residency on persistent volumes" in {
@@ -375,9 +360,8 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val residency = update.empty("foo".toPath).residency
-      assert(residency.isDefined)
-      assert(residency.forall(_ == Residency.defaultResidency))
+      val residency = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "foo".toPath)).residency
+      assert(residency.contains(Residency.default))
     }
 
     "empty app updateStrategy" in {
@@ -404,9 +388,11 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val strategy = update.empty("foo".toPath).upgradeStrategy
-      assert(strategy.minimumHealthCapacity == 0.5
-        && strategy.maximumOverCapacity == 0)
+      val strategy = AppsResource.withoutPriorAppDefinition(update, "foo".toPath).upgradeStrategy
+      assert(strategy.contains(raml.UpgradeStrategy(
+        minimumHealthCapacity = 0.5,
+        maximumOverCapacity = 0
+      )))
     }
 
     "empty app persists container" in {
@@ -438,9 +424,12 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val create = update.empty("/put-path-id".toPath)
+      val createdViaUpdate = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "/put-path-id".toPath))
       assert(update.container.isDefined)
-      assert(update.container == create.container)
+      assert(createdViaUpdate.container.contains(state.Container.Docker(
+        volumes = Seq(PersistentVolume("data", PersistentVolumeInfo(size = 100), mode = Mesos.Volume.Mode.RW)),
+        image = "anImage"
+      )), createdViaUpdate.container)
     }
 
     "empty app persists existing residency" in {
@@ -472,9 +461,9 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val create = update.empty("/app".toPath)
+      val create = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "/app".toPath))
       assert(update.residency.isDefined)
-      assert(update.residency == create.residency)
+      assert(update.residency.map(Raml.fromRaml(_)) == create.residency)
     }
 
     "empty app persists existing upgradeStrategy" in {
@@ -510,9 +499,9 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val create = update.empty("/app".toPath)
+      val create = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "/app".toPath))
       assert(update.upgradeStrategy.isDefined)
-      assert(update.upgradeStrategy.get == create.upgradeStrategy)
+      assert(update.upgradeStrategy.map(Raml.fromRaml(_)).contains(create.upgradeStrategy))
     }
 
     "empty app residency" in {
@@ -539,9 +528,8 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val residency = update.empty("foo".toPath).residency
-      assert(residency.isDefined)
-      assert(residency.forall(_ == Residency.defaultResidency))
+      val residency = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "foo".toPath)).residency
+      assert(residency.contains(Residency.default))
     }
 
     "empty app update strategy on external volumes" in {
@@ -566,25 +554,32 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val strategy = update.empty("foo".toPath).upgradeStrategy
-      assert(strategy == UpgradeStrategy.forResidentTasks)
+      val strategy = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "foo".toPath)).upgradeStrategy
+      assert(strategy == state.UpgradeStrategy.forResidentTasks)
     }
 
     "container change in AppUpdate should be stored" in {
-      val appDef = AppDefinition(id = runSpecId, container = Some(Docker()))
-      val appUpdate = AppUpdate(container = Some(Docker(portMappings = Seq(
-        Container.PortMapping(containerPort = 4000, protocol = "tcp")
-      ))))
-      val roundTrip = appUpdate(appDef)
-      roundTrip.container.get.portMappings should have size 1
-      roundTrip.container.get.portMappings.head.containerPort should be(4000)
+      val appDef = AppDefinition(id = runSpecId, container = Some(state.Container.Docker(image = "something")))
+      // add port mappings..
+      val appUpdate = AppUpdate(container = Some(Container(
+        EngineType.Docker,
+        docker = Some(DockerContainer(image = "something")), portMappings = Option(Seq(
+          ContainerPortMapping(containerPort = 4000)
+        ))
+      )))
+      val roundTrip = Raml.fromRaml((appUpdate, appDef))
+      roundTrip.container should be('nonEmpty)
+      roundTrip.container.foreach { container =>
+        container.portMappings should be('nonEmpty)
+        container.portMappings.flatMap(_.headOption.map(_.containerPort)) should contain(4000)
+      }
     }
 
     "app update changes kill selection" in {
       val appDef = AppDefinition(id = runSpecId, killSelection = KillSelection.YoungestFirst)
-      val update = AppUpdate(killSelection = Some(KillSelection.OldestFirst))
-      val result = update(appDef)
-      result.killSelection should be(KillSelection.OldestFirst)
+      val update = AppUpdate(killSelection = Some(raml.KillSelection.OldestFirst))
+      val result = Raml.fromRaml(update -> appDef)
+      result.killSelection should be(raml.KillSelection.OldestFirst)
     }
   }
 }

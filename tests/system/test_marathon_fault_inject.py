@@ -8,7 +8,7 @@ import time
 from common import (app, block_port, cluster_info, delete_all_apps_wait, ensure_mom,
                     ip_of_mom, ip_other_than_mom, pin_to_host, systemctl_master)
 from dcos import marathon
-from shakedown import dcos_1_8, dcos_version_less_than, private_agent_2, required_private_agents
+from shakedown import dcos_1_8, dcos_version_less_than, private_agents, required_private_agents
 from utils import fixture_dir, get_resource, marathon_on_marathon
 
 
@@ -31,7 +31,7 @@ def setup_function(function):
         delete_all_apps_wait()
 
 
-@private_agent_2
+@private_agents(2)
 def test_mom_with_master_process_failure():
     """ Launches a MoM, launches an app from MoM and restarts the master.
         It is expected that the service endpoint will come back and that the
@@ -55,7 +55,7 @@ def test_mom_with_master_process_failure():
             tasks[0]['id'] == original_task_id
 
 
-@private_agent_2
+@private_agents(2)
 def test_mom_when_disconnected_from_zk():
     """ Launch an app from MoM.  Then knock out access to zk from the MoM.
         Verify the task is still good.
@@ -82,7 +82,7 @@ def test_mom_when_disconnected_from_zk():
             tasks[0]['id'] == original_task_id
 
 
-@private_agent_2
+@private_agents(2)
 def test_mom_when_task_agent_bounced():
     """ Launch an app from MoM and restart the node the task is on.
     """
@@ -103,7 +103,7 @@ def test_mom_when_task_agent_bounced():
             tasks[0]['id'] == original_task_id
 
 
-@private_agent_2
+@private_agents(2)
 def test_mom_when_mom_agent_bounced():
     """ Launch an app from MoM and restart the node MoM is on.
     """
@@ -126,7 +126,7 @@ def test_mom_when_mom_agent_bounced():
             tasks[0]['id'] == original_task_id
 
 
-@private_agent_2
+@private_agents(2)
 def test_mom_when_mom_process_killed():
     """ Launched a task from MoM then killed MoM.
     """
@@ -148,7 +148,7 @@ def test_mom_when_mom_process_killed():
         tasks[0]['id'] == original_task_id
 
 
-@private_agent_2
+@private_agents(2)
 def test_mom_with_network_failure():
     """Marathon on Marathon (MoM) tests for DC/OS with network failures
     simulated by knocking out ports
@@ -193,7 +193,7 @@ def test_mom_with_network_failure():
     assert current_sleep_task_id == original_sleep_task_id, "Task ID shouldn't change"
 
 
-@private_agent_2
+@private_agents(2)
 def test_mom_with_network_failure_bounce_master():
     """Marathon on Marathon (MoM) tests for DC/OS with network failures simulated by
     knocking out ports

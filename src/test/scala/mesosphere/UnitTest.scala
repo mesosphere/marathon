@@ -10,18 +10,13 @@ import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
+import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
 import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures }
 import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.ExecutionContextExecutor
-
-/**
-  * Tests which are still unreliable should be marked with this tag until
-  * they sufficiently pass on master. Prefer this over ignored.
-  */
-object Unstable extends Tag("mesosphere.marathon.UnstableTest")
 
 /**
   * All integration tests should be marked with this tag.
@@ -53,6 +48,16 @@ case class WhenEnvSet(envVarName: String) extends Tag(if (sys.env.getOrElse(envV
   */
 trait RetryOnFailed extends TestSuite with Retries {
   override def withFixture(test: NoArgTest): Outcome = withRetryOnFailure { super.withFixture(test) }
+}
+
+trait ValidationClue {
+  this: Assertions =>
+
+  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
+    // handle RAML validation errors
+    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
+    case th => throw th
+  }.get
 }
 
 /**

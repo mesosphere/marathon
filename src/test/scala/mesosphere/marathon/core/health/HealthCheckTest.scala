@@ -9,6 +9,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.raml.{ AppHealthCheck, Raml }
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import play.api.libs.json.Json
@@ -223,12 +224,12 @@ class HealthCheckTest extends UnitTest {
     }
 
     def toJson(healthCheck: HealthCheck): String = {
-      import mesosphere.marathon.api.v2.json.Formats._
-      Json.prettyPrint(Json.toJson(healthCheck))
+      val ramlObj: AppHealthCheck = Raml.toRaml(healthCheck)
+      Json.prettyPrint(AppHealthCheck.playJsonFormat.writes(ramlObj))
     }
     def fromJson(json: String): HealthCheck = {
-      import mesosphere.marathon.api.v2.json.Formats._
-      Json.fromJson[HealthCheck](Json.parse(json))(HealthCheckFormat).get
+      val parsed: AppHealthCheck = Json.parse(json).as[AppHealthCheck]
+      Raml.fromRaml(parsed)
     }
 
     "SerializationRoundtrip empty" in {
@@ -285,7 +286,7 @@ class HealthCheckTest extends UnitTest {
         .withNetworkInfo(hostPorts = Seq(4321))
         .build().getInstance()
 
-      assert(check.effectivePort(app, instance) == 1234)
+      assert(check.effectivePort(app, instance) == Option(1234))
     }
 
     "effectivePort with a port index" in {
@@ -301,7 +302,7 @@ class HealthCheckTest extends UnitTest {
       }
       val instance = LegacyAppInstance(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
 
-      assert(check.effectivePort(app, instance) == 4321)
+      assert(check.effectivePort(app, instance) == Option(4321))
     }
   }
   private[this] def shouldBeInvalid(hc: HealthCheck): Unit = {

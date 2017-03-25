@@ -24,7 +24,7 @@ import play.api.libs.json.Json
 
 trait ZkStoreSerialization {
   /** General id resolver for a key of Path.Id */
-  private class ZkPathIdResolver[T](
+  class ZkPathIdResolver[T](
     val category: String,
     val hasVersions: Boolean,
     getVersion: (T) => OffsetDateTime)

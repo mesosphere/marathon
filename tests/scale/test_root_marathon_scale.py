@@ -1,5 +1,6 @@
 from utils import *
 from common import *
+from graph import create_scale_graph
 
 import pytest
 
@@ -93,10 +94,10 @@ def initalize_test(marathon_name='root', under_test='apps', style='instances', n
 
     # if need >= (private_resources_available()):
     if not has_enough_resources(need):
-        current_test.skip('insufficient resources')
+        current_test.skip(SKIP_RESOURCES)
 
     if previous_style_test_failed(current_test):
-        current_test.skip('smaller scale failed')
+        current_test.skip(SKIP_PREVIOUS_TEST_FAILED)
 
     if current_test.skipped:
         pytest.skip()
@@ -111,32 +112,13 @@ def has_enough_resources(need):
     return need.cpus <= available.cpus and need.mem <= available.mem
 
 
-def get_test_style_key_base(current_test):
-    """ The style key is historical and is the key to recording test results.
-    For root marathon the key is `root_instances` or `root_group`.
-    """
-    return get_style_key_base(current_test.mom, current_test.style)
-
-
-def get_test_key(current_test, key):
-    return get_key(current_test.mom, current_test.style, key)
-
-
-def get_style_key_base(marathon_name, style):
-    return '{}_{}'.format(marathon_name, style)
-
-
-def get_key(marathon_name, style, key):
-    return "{}_{}".format(get_style_key_base(marathon_name, style), key)
-
-
 def previous_style_test_failed(current_test):
     return type_test_failed.get(get_test_style_key_base(current_test), False)
 
 
 def setup_module(module):
     delete_all_apps_wait()
-    cluster_info()
+    print(get_cluster_metadata())
     print('testing root marathon')
     print("private resources: {}".format(private_resources_available()))
 
@@ -145,30 +127,13 @@ def teardown_module(module):
     stats = collect_stats()
     write_csv(stats)
     read_csv()
-    write_meta_data(get_metadata())
-
+    metadata = get_cluster_metadata()
+    write_meta_data(metadata)
+    create_scale_graph(stats, metadata)
     try:
         delete_all_apps_wait()
     except:
         pass
-
-
-def get_metadata():
-    version = None
-
-    try:
-        ee_version()
-    except:
-        pass
-
-    metadata = {
-        'marathon': 'root'
-    }
-
-    if version is not None:
-        metadata['security'] = version
-
-    return metadata
 
 
 def log_current_test(current_test):
@@ -182,26 +147,7 @@ def log_current_test(current_test):
 
 
 def collect_stats():
-    stats = {
-        'root_instances_target': [],
-        'root_instances_max': [],
-        'root_instances_deploy_time': [],
-        'root_instances_human_deploy_time': [],
-        'root_instances_launch_status': [],
-        'root_instances_deployment_status': [],
-        'root_count_target': [],
-        'root_count_max': [],
-        'root_count_deploy_time': [],
-        'root_count_human_deploy_time': [],
-        'root_count_launch_status': [],
-        'root_count_deployment_status': [],
-        'root_group_target': [],
-        'root_group_max': [],
-        'root_group_deploy_time': [],
-        'root_group_human_deploy_time': [],
-        'root_group_launch_status': [],
-        'root_group_deployment_status': []
-    }
+    stats = empty_stats()
 
     for scale_test in test_log:
         print(scale_test)
@@ -227,7 +173,23 @@ def collect_stats():
         key = get_test_key(scale_test, 'deployment_status')
         stats.get(key).append(pass_status(scale_test, scale_test.deploy_results.success))
 
+        key = get_test_key(scale_test, 'errors')
+        stats.get(key).append(total_errors(scale_test.events))
+
     return stats
+
+
+def total_errors(events):
+    error_events = [event for event in events if is_error(event)]
+    return len(error_events)
+
+
+def is_error(event):
+    # strip 'event: header'
+    message = event[len(EVENT_HEADER) + 1:]
+    # take the event message if any
+    event_header = message[:message.find(':') + 1]
+    return event_header in ERRORS
 
 
 def pass_status(test, successful):
@@ -253,14 +215,14 @@ def write_csv(stats, filename='scale-test.csv'):
 
 
 def write_stat_lines(f, w, stats, marathon_name, test_type):
-        f.write('Marathon: {}, {}'.format('root', test_type))
-        f.write('\n')
+        w.writerow(['Marathon:', 'root', test_type])
         w.writerow(stats[get_key(marathon_name, test_type, 'target')])
         w.writerow(stats[get_key(marathon_name, test_type, 'max')])
         w.writerow(stats[get_key(marathon_name, test_type, 'deploy_time')])
         w.writerow(stats[get_key(marathon_name, test_type, 'human_deploy_time')])
         w.writerow(stats[get_key(marathon_name, test_type, 'launch_status')])
         w.writerow(stats[get_key(marathon_name, test_type, 'deployment_status')])
+        w.writerow(stats[get_key(marathon_name, test_type, 'errors')])
         f.write('\n')
 
 

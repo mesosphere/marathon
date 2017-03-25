@@ -8,12 +8,13 @@ import play.api.libs.json.{ Format, JsArray, JsNull, JsObject, JsValue, Json, Wr
 import scala.collection.Map
 
 object JsonTestHelper extends Assertions with Matchers {
-  def assertSerializationRoundtripWorks[T](value: T)(implicit format: Format[T]): Unit = {
-    val json = Json.toJson(value)
-    val reread = Json.fromJson(json)
+  def assertSerializationRoundtripWorks[T](value: T, normalize: T => T = { t: T => t })(implicit format: Format[T]): Unit = {
+    val normed = normalize(value)
+    val json = Json.toJson(normed)
+    val reread = Json.fromJson[T](json)
     withClue(s"for json:\n${Json.prettyPrint(json)}\n") {
       reread should be ('success)
-      value should be (reread.get)
+      normed should be (normalize(reread.get))
     }
   }
 

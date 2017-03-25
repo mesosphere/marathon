@@ -10,6 +10,7 @@ import time
 import uuid
 import common
 
+from common import event_fixture
 from dcos import marathon
 from utils import fixture_dir, get_resource
 
@@ -26,6 +27,7 @@ def test_default_user():
     application_json = get_resource("{}/unique-sleep.json".format(fixture_dir()))
     client = marathon.create_client()
     client.add_app(application_json)
+    shakedown.deployment_wait()
     app = client.get_app(application_json['id'])
     assert app['user'] is None
 
@@ -129,7 +131,7 @@ def test_declined_offer_due_to_cpu_requirements():
     _test_declined_offer(app_id, app_def, 'InsufficientCpus')
 
 
-@pytest.mark.usefixtures("common.event_fixture")
+@pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
     """ Tests the event channel.  The way events are verified is by streaming the events
         to a test.txt file.   The fixture ensures the file is removed before and after the test.
@@ -262,7 +264,11 @@ def test_external_volume():
         # and have to be cleaned manually.
         agent = shakedown.get_private_agents()[0]
         result, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))
-        assert result, 'Failed to remove external volume with name={}: {}'.format(volume_name, output)
+        # Note: Removing the volume might fail sometimes because EC2 takes some time (~10min) to recognize that
+        # the volume is not in use anymore hence preventing it's removal. This is a known pitfall: we log the error
+        # and the volume should be cleaned up manually later.
+        if not result:
+            print('WARNING: Failed to remove external volume with name={}: {}'.format(volume_name, output))
 
 
 def setup_function(function):

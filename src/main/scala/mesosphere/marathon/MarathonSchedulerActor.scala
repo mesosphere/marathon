@@ -30,9 +30,7 @@ import org.slf4j.LoggerFactory
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
-
-class LockingFailedException(msg: String) extends Exception(msg)
+import scala.util.{ Failure, Success }
 
 class MarathonSchedulerActor private (
   groupRepository: GroupRepository,
@@ -149,24 +147,20 @@ class MarathonSchedulerActor private (
 
     case cmd @ ScaleRunSpec(runSpecId) =>
       logger.debug("Receive scale run spec for {}", runSpecId)
-      val origSender = sender()
-      @SuppressWarnings(Array("all")) /* async/await */
-      def scaleAndAnswer(): Done = {
-        val res: Future[Done] = async {
-          await(schedulerActions.scale(runSpecId))
-          self ! cmd.answer
-          Done
-        }
 
-        if (origSender != context.system.deadLetters) {
-          res.asTry.onComplete {
-            case Success(_) => origSender ! cmd.answer
-            case Failure(t) => origSender ! CommandFailed(cmd, t)
-          }
-        }
-        Done
+      withLockFor(Set(runSpecId)) {
+        val result: Future[Event] = schedulerActions.scale(runSpecId).map { _ =>
+          self ! cmd.answer
+          cmd.answer
+        }.recover { case ex => CommandFailed(cmd, ex) }
+        if (sender != context.system.deadLetters)
+          result.pipeTo(sender)
+      } match {
+        case None =>
+          // ScaleRunSpec is not a user initiated command
+          logger.debug(s"Did not try to scale run spec ${runSpecId}; it is locked")
+        case _ =>
       }
-      withLockFor(runSpecId) { scaleAndAnswer() }
 
     case cmd @ CancelDeployment(plan) =>
       deploymentManager.cancel(plan).onComplete{
@@ -192,8 +186,14 @@ class MarathonSchedulerActor private (
         }
       }
 
-      val result = withLockFor(runSpecId) {
+      withLockFor(Set(runSpecId)) {
         killTasks().pipeTo(sender)
+      } match {
+        case None =>
+          // KillTasks is user initiated. If we don't process it, then we should make it obvious as to why.
+          logger.warn(
+            s"Could not acquire lock while killing tasks ${tasks.map(_.instanceId).toList} for ${runSpecId}")
+        case _ =>
       }
 
     case DeploymentFinished(plan) =>
@@ -219,17 +219,20 @@ class MarathonSchedulerActor private (
 
   /**
     * Tries to acquire the lock for the given runSpecIds.
-    * If it succeeds it executes the given function,
-    * otherwise the result will contain an LockingFailedException.
+    * If it succeeds it evalutes the by name reference, returning Some(result)
+    * Otherwise, returns None, which should be interpretted as lock acquisition failure
+    *
+    * @param runSpecIds the set of runSpecIds for which to acquire the lock
+    * @param f the by-name reference that is evaluated if the lock acquisition is successful
     */
-  def withLockFor[A](runSpecIds: Set[PathId])(f: => A): Try[A] = {
+  def withLockFor[A](runSpecIds: Set[PathId])(f: => A): Option[A] = {
     // there's no need for synchronization here, because this is being
     // executed inside an actor, i.e. single threaded
     if (noConflictsWith(runSpecIds)) {
       addLocks(runSpecIds)
-      Try(f)
+      Some(f)
     } else {
-      Failure(new LockingFailedException("Failed to acquire locks."))
+      None
     }
   }
 
@@ -243,19 +246,15 @@ class MarathonSchedulerActor private (
     if (lockedRunSpecs.contains(runSpecId)) {
       val locks = lockedRunSpecs(runSpecId) - 1
       if (locks <= 0) lockedRunSpecs -= runSpecId else lockedRunSpecs(runSpecId) -= 1
+      logger.debug(s"Removed lock for run spec: id=$runSpecId locks=$locks lockedRunSpec=$lockedRunSpecs")
     }
   }
 
   def addLocks(runSpecIds: Set[PathId]): Unit = runSpecIds.foreach(addLock)
-  def addLock(runSpecId: PathId): Unit = lockedRunSpecs(runSpecId) += 1
-
-  /**
-    * Tries to acquire the lock for the given runSpecId.
-    * If it succeeds it executes the given function,
-    * otherwise the result will contain an AppLockedException.
-    */
-  def withLockFor[A](runSpecId: PathId)(f: => A): Try[A] =
-    withLockFor(Set(runSpecId))(f)
+  def addLock(runSpecId: PathId): Unit = {
+    lockedRunSpecs(runSpecId) += 1
+    logger.debug(s"Added to lock for run spec: id=$runSpecId locks=${lockedRunSpecs(runSpecId)} lockedRunSpec=$lockedRunSpecs")
+  }
 
   // there has to be a better way...
   @SuppressWarnings(Array("OptionGet"))
@@ -265,18 +264,17 @@ class MarathonSchedulerActor private (
     val plan = cmd.plan
     val runSpecIds = plan.affectedRunSpecIds
 
-    // If there are no conflicting locks or the deployment is forced we lock passed runSpecIds.
+    // We raise the lock in any case for a deployment attempt.
     // Afterwards the deployment plan is sent to DeploymentManager. It will take care of cancelling
     // conflicting deployments, scheduling new one or (if there were conflicts but the deployment
-    // is not forced) send to the original sender and AppLockedException with conflicting deployments.
+    // is not forced) send to the original sender an AppLockedException with conflicting deployments.
     //
     // If a deployment is forced (and there exists an old one):
     // - the new deployment will be started
     // - the old deployment will be cancelled and release all claimed locks
-    // - only in this case, one RunSpec can have 2 locks
-    if (noConflictsWith(runSpecIds) || cmd.force) {
-      addLocks(runSpecIds)
-    }
+    //
+    // In the case of a DeploymentFinished or DeploymentFailed we lower the lock again. See the receiving methods
+    addLocks(runSpecIds)
 
     deploymentManager.start(plan, cmd.force, origSender).onComplete{
       case Success(_) => self ! DeploymentFinished(plan)

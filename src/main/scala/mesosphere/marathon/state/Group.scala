@@ -6,6 +6,7 @@ import java.util.Objects
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.state.Group._
@@ -92,7 +93,7 @@ object Group {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def valid(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
+  def validGroup(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
       group.apps.values as "apps" is every(
@@ -100,7 +101,7 @@ object Group {
       group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
       group is noPodsAndGroupsWithSameName
-      group.groupsById.values as "groups" is every(valid(group.id.canonicalPath(base), enabledFeatures))
+      group.groupsById.values as "groups" is every(validGroup(group.id.canonicalPath(base), enabledFeatures))
     }
 
   private def noAppsAndPodsWithSameId: Validator[Group] =
@@ -122,5 +123,25 @@ object Group {
       val groupIds = group.groupsById.keySet
       val clashingIds = groupIds.intersect(group.pods.keySet)
       clashingIds.isEmpty
+    }
+
+  def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
+
+  /** requires that apps are in canonical form */
+  def validNestedGroupUpdateWithBase(base: PathId): Validator[raml.GroupUpdate] =
+    validator[raml.GroupUpdate] { group =>
+      group is notNull
+
+      group.version is theOnlyDefinedOptionIn(group)
+      group.scaleBy is theOnlyDefinedOptionIn(group)
+
+      // this is funny: id is "optional" only because version and scaleBy can't be used in conjunction with other
+      // fields. it feels like we should make an exception for "id" and always require it for non-root groups.
+      group.id.map(_.toPath) as "id" is optional(valid)
+
+      group.apps is optional(every(
+        AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+      group.groups is optional(every(
+        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)))))
     }
 }

@@ -40,12 +40,16 @@ def stageWithCommitStatus(label, block) {
   stage(label) { withCommitStatus(label, block) }
 }
 
-node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
+node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
+    try {
         stage("Checkout Repo") {
             checkout scm
             gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
             shortCommit = gitCommit.take(8)
             currentBuild.displayName = "#${env.BUILD_NUMBER}: ${shortCommit}"
+        }
+        stage("Kill junk processes") {
+            sh "bin/kill-stale-test-processes"
         }
         stageWithCommitStatus("1. Compile") {
           try {
@@ -65,25 +69,37 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         }
         stageWithCommitStatus("2. Test") {
           try {
-              timeout(time: 20, unit: 'MINUTES') {
+              timeout(time: 30, unit: 'MINUTES') {
                 withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                    sh "sudo -E sbt -Dsbt.log.format=false coverage test coverageReport"
                 }
               }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
-            archiveArtifacts artifacts: 'target/**/coverage-report/cobertura.xml, target/**/scoverage-report/**', allowEmptyArchive: true
+            archiveArtifacts(
+                artifacts: 'target/**/coverage-report/cobertura.xml, target/**/scoverage-report/**',
+                allowEmptyArchive: true)
           }
         }
         stageWithCommitStatus("3. Test Integration") {
           try {
-              timeout(time: 20, unit: 'MINUTES') {
+              timeout(time: 30, unit: 'MINUTES') {
                 withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                   sh "sudo -E sbt -Dsbt.log.format=false coverage integration:test mesos-simulation/integration:test coverageReport"
+                   sh "sudo -E sbt -Dsbt.log.format=false clean coverage integration:test coverageReport mesos-simulation/integration:test"
                 }
             }
           } finally {
-            junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
+            junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/**/*.xml'
+            // scoverage does not allow the configuration of a different output
+            // path: https://github.com/scoverage/sbt-scoverage/issues/211
+            // The archive steps does not allow a different target path. So we
+            // move the files to avoid conflicts with the reports from the unit
+            // test run.
+            sh "sudo mv target/scala-2.11/scoverage-report/ target/scala-2.11/scoverage-report-integration"
+            sh "sudo mv target/scala-2.11/coverage-report/cobertura.xml target/scala-2.11/coverage-report/cobertura-integration.xml"
+            archiveArtifacts(
+                artifacts: 'target/**/coverage-report/cobertura-integration.xml, target/**/scoverage-report-integration/**',
+                allowEmptyArchive: true)
           }
         }
         stage("4. Assemble Runnable Binaries") {

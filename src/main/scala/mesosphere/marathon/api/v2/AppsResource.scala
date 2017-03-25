@@ -9,19 +9,20 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.AppUpdate
+import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, PATCH, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, Selector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.raml.{ AppConversion, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -39,10 +40,19 @@ class AppsResource @Inject() (
     val authorizer: Authorizer) extends RestResource with AuthResource {
 
   import AppsResource._
+  import Normalization._
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
-  implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  implicit lazy val appUpdateValidator = AppUpdate.appUpdateValidator(config.availableFeatures)
+  private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
+  private implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures)
+
+  private val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get)
+
+  private implicit val validateAndNormalizeApp: Normalization[raml.App] =
+    appNormalization(NormalizationConfig(config.availableFeatures, normalizationConfig))(AppNormalization.withCanonizedIds())
+
+  private implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
+    appUpdateNormalization(NormalizationConfig(config.availableFeatures, normalizationConfig))(AppNormalization.withCanonizedIds())
 
   @GET
   def index(
@@ -64,17 +74,11 @@ class AppsResource @Inject() (
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withValid(Json.parse(body).as[AppDefinition].withCanonizedIds()) { appDef =>
+
+    assumeValid {
+      val rawApp = Raml.fromRaml(Json.parse(body).as[raml.App].normalize)
       val now = clock.now()
-      val app = appDef.copy(
-        ipAddress = appDef.ipAddress.map { ipAddress =>
-          config.defaultNetworkName.get.collect {
-            case (defaultName: String) if defaultName.nonEmpty && ipAddress.networkName.isEmpty =>
-              ipAddress.copy(networkName = Some(defaultName))
-          }.getOrElse(ipAddress)
-        },
-        versionInfo = VersionInfo.OnlyVersion(now)
-      )
+      val app = validateOrThrow(rawApp).copy(versionInfo = VersionInfo.OnlyVersion(now))
 
       checkAuthorization(CreateRunSpec, app)
 
@@ -137,46 +141,90 @@ class AppsResource @Inject() (
     }
   }
 
+  /**
+    * Validate and normalize a single application update submitted via the REST API. Validation exceptions are not
+    * handled here, that's left as an exercise for the caller.
+    *
+    * @param appId used as the id of the generated app update (vs. whatever might be in the JSON body)
+    * @param body is the raw, unparsed JSON
+    * @param partialUpdate true if the JSON should be parsed as a partial application update (all fields optional)
+    *                      or as a wholesale replacement (parsed like an app definition would be)
+    */
+  def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], partialUpdate: Boolean): raml.AppUpdate = {
+    if (partialUpdate) {
+      Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
+    } else {
+      // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
+      // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
+      // however since this is an update, the user isn't required to specify an ID as part of the definition so we do
+      // some hackery here to pass initial JSON parsing.
+      val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
+      // the version is thrown away in conversion to AppUpdate
+      jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+    }
+  }
+
+  /**
+    * Validate and normalize an array of application updates submitted via the REST API. Validation exceptions are not
+    * handled here, that's left as an exercise for the caller.
+    *
+    * @param body is the raw, unparsed JSON
+    * @param partialUpdate true if the JSON should be parsed as a partial application update (all fields optional)
+    *                      or as a wholesale replacement (parsed like an app definition would be)
+    */
+  def canonicalAppUpdatesFromJson(body: Array[Byte], partialUpdate: Boolean): Seq[raml.AppUpdate] = {
+    if (partialUpdate) {
+      Json.parse(body).as[Seq[raml.AppUpdate]].map(_.normalize)
+    } else {
+      // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
+      // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
+      // the version is thrown away in toUpdate so just pass `zero` for now.
+      Json.parse(body).as[Seq[raml.App]].map { app =>
+        app.normalize.toRaml[raml.AppUpdate]
+      }
+    }
+  }
+
   @PUT
   @Path("""{id:.+}""")
   def replace(
     @PathParam("id") id: String,
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val appId = id.toRootPath
-    val now = clock.now()
 
-    withValid(Json.parse(body).as[AppUpdate].copy(id = Some(appId))) { appUpdate =>
-      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate), now, force))
+    update(id, body, force, partialUpdate, req, allowCreation = true)
+  }
 
-      val response = plan.original.app(appId)
-        .map(_ => Response.ok())
-        .getOrElse(Response.created(new URI(appId.toString)))
-      plan.target.app(appId).foreach { appDef =>
-        maybePostEvent(req, appDef)
-      }
-      deploymentResult(plan, response)
-    }
+  @PATCH
+  @Path("""{id:.+}""")
+  def patch(
+    @PathParam("id") id: String,
+    body: Array[Byte],
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    update(id, body, force, partialUpdate = true, req, allowCreation = false)
   }
 
   @PUT
   def replaceMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
     body: Array[Byte],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withValid(Json.parse(body).as[Seq[AppUpdate]].map(_.withCanonizedIds())) { updates =>
-      val version = clock.now()
 
-      def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
-        update.id match {
-          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update), version)
-          case None => group
-        }
-      }
+    updateMultiple(force, partialUpdate, body, allowCreation = true)
+  }
 
-      deploymentResult(result(groupManager.updateRoot(PathId.empty, updateGroup, version, force)))
-    }
+  @PATCH
+  def patchMultiple(
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    body: Array[Byte],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    updateMultiple(force, partialUpdate = true, body, allowCreation = false)
   }
 
   @DELETE
@@ -225,18 +273,90 @@ class AppsResource @Inject() (
     deploymentResult(restartDeployment)
   }
 
-  private def updateOrCreate(
+  /**
+    * Internal representation of `replace or update` logic.
+    *
+    * @param id appId
+    * @param body request body
+    * @param force force update?
+    * @param partialUpdate partial update?
+    * @param req http servlet request
+    * @param allowCreation is creation allowed?
+    * @param identity implicit identity
+    * @return http servlet response
+    */
+  private[this] def update(id: String, body: Array[Byte], force: Boolean, partialUpdate: Boolean,
+    req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Response = {
+    val appId = id.toRootPath
+
+    assumeValid {
+      val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
+      val version = clock.now()
+      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation), version, force))
+      val response = plan.original.app(appId)
+        .map(_ => Response.ok())
+        .getOrElse(Response.created(new URI(appId.toString)))
+      plan.target.app(appId).foreach { appDef =>
+        maybePostEvent(req, appDef)
+      }
+      deploymentResult(plan, response)
+    }
+  }
+
+  /**
+    * Internal representation of `replace or update` logic for multiple apps.
+    *
+    * @param force force update?
+    * @param partialUpdate partial update?
+    * @param body request body
+    * @param allowCreation is creation allowed?
+    * @param identity implicit identity
+    * @return http servlet response
+    */
+  private[this] def updateMultiple(force: Boolean, partialUpdate: Boolean,
+    body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Response = {
+
+    assumeValid {
+      val version = clock.now()
+      val updates = canonicalAppUpdatesFromJson(body, partialUpdate)
+
+      def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
+        update.id.map(PathId(_)) match {
+          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation), version)
+          case None => group
+        }
+      }
+
+      deploymentResult(result(groupManager.updateRoot(PathId.empty, updateGroup, version, force)))
+    }
+  }
+
+  private[v2] def updateOrCreate(
     appId: PathId,
     existing: Option[AppDefinition],
-    appUpdate: AppUpdate)(implicit identity: Identity): AppDefinition = {
+    appUpdate: raml.AppUpdate,
+    partialUpdate: Boolean,
+    allowCreation: Boolean)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
-      val app = validateOrThrow(appUpdate.empty(appId))
-      checkAuthorization(CreateRunSpec, app)
+      val app = withoutPriorAppDefinition(appUpdate, appId).normalize
+      // versionInfo doesn't change - it's never overridden by an AppUpdate.
+      // the call to fromRaml loses the original versionInfo; it's just the current time in this case
+      // so we just query for that (using a more predictable clock than AppDefinition has access to)
+      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())))
+      checkAuthorization(CreateRunSpec, appDef)
     }
 
     def updateApp(current: AppDefinition): AppDefinition = {
-      val app = validateOrThrow(appUpdate(current))
-      checkAuthorization(UpdateRunSpec, app)
+      val app =
+        if (partialUpdate)
+          Raml.fromRaml(appUpdate -> current).normalize
+        else
+          withoutPriorAppDefinition(appUpdate, appId).normalize
+
+      // versionInfo doesn't change - it's never overridden by an AppUpdate.
+      // the call to fromRaml loses the original versionInfo; we take special care to preserve it
+      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = current.versionInfo))
+      checkAuthorization(UpdateRunSpec, appDef)
     }
 
     def rollback(current: AppDefinition, version: Timestamp): AppDefinition = {
@@ -247,15 +367,17 @@ class AppsResource @Inject() (
     }
 
     def updateOrRollback(current: AppDefinition): AppDefinition = appUpdate.version
-      .map(rollback(current, _))
+      .map(v => rollback(current, Timestamp(v)))
       .getOrElse(updateApp(current))
 
     existing match {
       case Some(app) =>
         // we can only rollback existing apps because we deleted all old versions when dropping an app
         updateOrRollback(app)
-      case None =>
+      case None if allowCreation =>
         createApp()
+      case None =>
+        throw AppNotFoundException(appId)
     }
   }
 
@@ -279,7 +401,40 @@ class AppsResource @Inject() (
 
 object AppsResource {
 
+  case class NormalizationConfig(enabledFeatures: Set[String], config: AppNormalization.Config)
+
+  def appNormalization(config: NormalizationConfig): Normalization[raml.App] = Normalization { app =>
+    validateOrThrow(app)(AppValidation.validateOldAppAPI)
+    val migrated = AppNormalization.forDeprecated.normalized(app)
+    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures))
+    AppNormalization(config.config).normalized(migrated)
+  }
+
+  def appUpdateNormalization(config: NormalizationConfig): Normalization[raml.AppUpdate] = Normalization { app =>
+    validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
+    val migrated = AppNormalization.forDeprecatedUpdates.normalized(app)
+    validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(config.enabledFeatures))
+    AppNormalization.forUpdates(config.config).normalized(migrated)
+  }
+
   def authzSelector(implicit authz: Authorizer, identity: Identity): AppSelector = Selector[AppDefinition] { app =>
     authz.isAuthorized(identity, ViewRunSpec, app)
+  }
+
+  /**
+    * Create an App from an AppUpdate. This basically applies when someone uses our API to create apps
+    * using the `PUT` method: an AppUpdate is submitted for an App that doesn't actually exist: we convert the
+    * "update" operation into a "create" operation. This helper func facilitates that.
+    */
+  def withoutPriorAppDefinition(update: raml.AppUpdate, appId: PathId): raml.App = {
+    val selectedStrategy = AppConversion.ResidencyAndUpgradeStrategy(
+      residency = update.residency.map(Raml.fromRaml(_)),
+      upgradeStrategy = update.upgradeStrategy.map(Raml.fromRaml(_)),
+      hasPersistentVolumes = update.container.exists(_.volumes.exists(_.persistent.nonEmpty)),
+      hasExternalVolumes = update.container.exists(_.volumes.exists(_.external.nonEmpty))
+    )
+    val template = AppDefinition(
+      appId, residency = selectedStrategy.residency, upgradeStrategy = selectedStrategy.upgradeStrategy)
+    Raml.fromRaml(update -> template)
   }
 }

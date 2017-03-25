@@ -71,15 +71,30 @@ message ReadinessCheckDefinition {
   optional bool preserveLastResponse = 8;
 }
 
-message IpAddress {
+// deprecated, left here only to support migrations
+message ObsoleteIpAddress {
   repeated string groups = 1;
   repeated mesos.Label labels = 2;
-  optional DiscoveryInfo discoveryInfo = 3;
+  optional ObsoleteDiscoveryInfo discoveryInfo = 3;
   optional string networkName = 4;
 }
 
-message DiscoveryInfo {
+// deprecated, left here only to support migrations
+message ObsoleteDiscoveryInfo {
   repeated mesos.Port ports = 1;
+}
+
+message NetworkDefinition {
+  enum Mode {
+    UNKNOWN = 0; // so that we can distinguish between set/unset values
+    HOST = 1;
+    CONTAINER = 2;
+    BRIDGE = 3;
+  }
+
+  optional Mode mode = 1;
+  optional string name = 2; // for CONTAINER mode only
+  repeated mesos.Label labels = 3; // for CONTAINER, BRIDGE modes only
 }
 
 message ServiceDefinition {
@@ -107,7 +122,7 @@ message ServiceDefinition {
   optional ResourceRoles acceptedResourceRoles = 22;
   optional int64 last_scaling_at = 23;
   optional int64 last_config_change_at = 24;
-  optional IpAddress ipAddress = 25;
+  optional ObsoleteIpAddress OBSOLETE_ipAddress = 25; // deprecated since 1.5
   optional ResidencyDefinition residency = 26;
   repeated mesos.Port portDefinitions = 27;
   repeated ReadinessCheckDefinition readinessCheckDefinition = 28;
@@ -116,6 +131,7 @@ message ServiceDefinition {
   optional int64 taskKillGracePeriod = 31; // stored as Millis
   optional UnreachableStrategy unreachableStrategy = 32;
   optional KillSelection killSelection = 33 [ default = YoungestFirst ];
+  repeated NetworkDefinition networks = 34; // supersedes ObsoleteIpAddress
 }
 
 enum KillSelection {
@@ -218,9 +234,11 @@ message ExtendedContainerInfo {
 
     required string image = 1;
 
-    optional mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];
+    // deprecated in favor of ServiceDefinition.networks since 1.5
+    optional mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];
 
-    message PortMapping {
+    // deprecated in favor of ExtendedContainerInfo.PortMapping,since 1.5
+    message ObsoleteDockerPortMapping {
       optional uint32 host_port = 1;
       required uint32 container_port = 2;
       optional string protocol = 3;
@@ -229,7 +247,8 @@ message ExtendedContainerInfo {
       optional uint32 service_port = 100 [default = 0];
     }
 
-    repeated PortMapping port_mappings = 3;
+    // deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+    repeated ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;
 
     optional bool privileged = 4 [default = false];
 
@@ -284,8 +303,18 @@ message ExtendedContainerInfo {
     optional bool force_pull_image = 4;
   }
 
+  message PortMapping {
+    optional uint32 host_port = 1;
+    required uint32 container_port = 2;
+    optional string protocol = 3;
+    optional string name = 4;
+    repeated mesos.Label labels = 5;
+    optional uint32 service_port = 6 [default = 0];
+  }
+
   required mesos.ContainerInfo.Type type = 1;
   repeated Volume volumes = 2;
+  repeated PortMapping port_mappings = 6; // since 1.5
 
   optional DockerInfo docker = 3;
   optional MesosDockerInfo mesosDocker = 4;

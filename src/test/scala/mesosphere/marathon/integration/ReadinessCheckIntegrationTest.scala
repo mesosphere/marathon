@@ -5,18 +5,12 @@ import java.io.File
 import java.util.UUID
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state._
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, PortDefinition, ReadinessCheck, UpgradeStrategy }
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.PathId._
 import org.apache.commons.io.FileUtils
-import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.concurrent.Eventually
-
-import scala.concurrent.duration._
 
 @IntegrationTest
 class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
@@ -46,12 +40,13 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       deploy(serviceDef, continue = true)
 
       When("The service is upgraded")
-      val oldTask = marathon.tasks(serviceDef.id).value.head
-      val update = marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
+      val oldTask = marathon.tasks(serviceDef.id.toPath).value.head
+      val update = marathon.updateApp(serviceDef.id.toPath, AppUpdate(env = Some(raml.Environment(sys.env))), force = false)
+      update.success should be(true) withClue (update.entityString)
 
       And("The ServiceMock is up")
-      val serviceFacade = createServiceFacade(serviceDef.id) { task =>
-        task.id != oldTask.id && task.state == MesosProtos.TaskState.TASK_RUNNING.name()
+      val serviceFacade = ServiceMockFacade(marathon.tasks(serviceDef.id.toPath).value) { task =>
+        task.id != oldTask.id && task.launched
       }
 
       Then("The deployment does not succeed until the readiness checks succeed")
@@ -64,14 +59,12 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
     }
   }
 
-  def deploy(service: AppDefinition, continue: Boolean): Unit = {
+  def deploy(service: App, continue: Boolean): Unit = {
     Given("An application service")
     val result = marathon.createAppV2(service)
-    result.code should be (201)
+    result.code should be (201) withClue (result.entityString)
     When("The ServiceMock is up")
-    val serviceFacade = createServiceFacade(service.id) { task =>
-      task.state == MesosProtos.TaskState.TASK_RUNNING.name()
-    }
+    val serviceFacade = ServiceMockFacade(marathon.tasks(service.id.toPath).value)(_.launched)
 
     while (continue && serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
@@ -83,37 +76,31 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
     waitForDeployment(result)
   }
 
-  def createServiceFacade(id: PathId)(predicate: (ITEnrichedTask) => Boolean): ServiceMockFacade = eventually {
-    val newTask = marathon.tasks(id).value.find(predicate(_)).get
-    val serviceFacade = new ServiceMockFacade(newTask)
-    serviceFacade.plan()
-    serviceFacade
-  }
-
-  def serviceProxy(appId: PathId, plan: String, withHealth: Boolean): AppDefinition = {
-    AppDefinition(
-      id = appId,
+  def serviceProxy(appId: PathId, plan: String, withHealth: Boolean): App = {
+    App(
+      id = appId.toString,
       cmd = Some(s"""$serviceMockScript '$plan'"""),
       executor = "//cmd",
-      resources = Resources(cpus = 0.01, mem = 128.0),
-      upgradeStrategy = UpgradeStrategy(0, 0),
-      portDefinitions = Seq(PortDefinition(0, name = Some("http"))),
+      cpus = 0.01,
+      upgradeStrategy = Some(UpgradeStrategy(0, 0)),
+      portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
       healthChecks =
         if (withHealth)
-          Set(
-          MarathonHttpHealthCheck(
-            path = Some("/ping"),
-            portIndex = Some(PortReference(0)),
-            maxConsecutiveFailures = Int.MaxValue,
-            interval = 2.seconds,
-            timeout = 1.second))
-        else Set.empty[HealthCheck],
+          Set(AppHealthCheck(
+          protocol = AppHealthCheckProtocol.Http,
+          path = Some("/ping"),
+          portIndex = Some(0),
+          maxConsecutiveFailures = Int.MaxValue,
+          intervalSeconds = 2,
+          timeoutSeconds = 1
+        ))
+        else Set.empty,
       readinessChecks = Seq(ReadinessCheck(
-        "ready",
+        name = "ready",
         portName = "http",
         path = "/v1/plan",
-        interval = 2.seconds,
-        timeout = 1.second,
+        intervalSeconds = 2,
+        timeoutSeconds = 1,
         preserveLastResponse = true))
     )
   }

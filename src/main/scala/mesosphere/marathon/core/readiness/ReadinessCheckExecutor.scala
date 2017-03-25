@@ -58,7 +58,7 @@ object ReadinessCheckExecutor {
                 case ReadinessCheck.Protocol.HTTPS => "https"
               }
 
-              val portAssignments: Seq[PortAssignment] = task.status.networkInfo.portAssignments(app)
+              val portAssignments: Seq[PortAssignment] = task.status.networkInfo.portAssignments(app, includeUnresolved = false)
               val effectivePortAssignment = portAssignments.find(_.portName.contains(checkDef.portName)).getOrElse(
                 throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found"))
 

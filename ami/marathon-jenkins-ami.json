@@ -3,6 +3,7 @@
     "aws_access_key": "",
     "aws_secret_key": "",
     "ami_name": "",
+    "conduit_token": "",
     "packer_version": "0.10.2"
   },
   "builders": [{
@@ -14,6 +15,8 @@
     "instance_type": "m3.xlarge",
     "ssh_username": "admin",
     "ami_name": "{{user `ami_name`}}",
+    "_comment": "These accounts belong to Velocity / Jenkins.",
+    "ami_users": ["633059600857", "540164828399"],
     "ami_block_device_mappings": [{
       "device_name": "/dev/xvda",
       "volume_type": "gp2",
@@ -33,6 +36,9 @@
     "execute_command": "{{ .Vars }} sudo -E -S bash '{{ .Path }}'",
     "type": "shell",
     "script": "install.bash",
-    "pause_before": "30s"
+    "pause_before": "30s",
+    "environment_vars": [
+        "CONDUIT_TOKEN={{user `conduit_token`}}"
+    ]
   }]
 }

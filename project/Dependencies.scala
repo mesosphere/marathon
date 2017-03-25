@@ -52,6 +52,7 @@ object Dependencies {
     logstash % "compile",
     raven % "compile",
     akkaHttpPlayJson % "compile",
+    alpakkaS3 % "compile",
 
     // test
     Test.diffson % "test",
@@ -77,6 +78,7 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
+    val Alpakka  = "0.6"
     val Chaos = "0.8.7"
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
@@ -120,6 +122,7 @@ object Dependency {
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
   val excludeJavaxServlet = ExclusionRule(organization = "javax.servlet")
 
+  val alpakkaS3 = "com.lightbend.akka" %% "akka-stream-alpakka-s3" % V.Alpakka
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka

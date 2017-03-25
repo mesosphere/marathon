@@ -5,8 +5,9 @@ import java.util.UUID
 
 import mesosphere.marathon.core.deployment._
 import mesosphere.UnitTest
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.raml.{ App, GroupUpdate, Raml }
 import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.GroupCreation
 import play.api.libs.json._
 
@@ -32,19 +33,19 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       |""".
           stripMargin
       val update = Json.parse(json).as[GroupUpdate]
-      update.id should be(Some("a".toPath))
+      update.id should be(Some("a"))
       update.apps should be ('defined)
       update.apps.get should have size 1
-      update.apps.get.head.id should be("b".toPath)
+      update.apps.get.head.id should be("b")
       update.groups should be ('defined)
       update.groups.get should have size 1
-      update.groups.get.head.id should be(Some("c".toPath))
+      update.groups.get.head.id should be(Some("c"))
       update.dependencies should be('defined)
-      update.dependencies.get.head should be("d".toPath)
+      update.dependencies.get.head should be("d")
       update.scaleBy should be('defined)
       update.scaleBy.get should be(23.0 +- 0.01)
       update.version should be('defined)
-      update.version.get should be(Timestamp("2015-06-03T13:00:52.928Z"))
+      update.version.get should be(Timestamp("2015-06-03T13:00:52.928Z").toOffsetDateTime)
     }
 
     "Can write/read GroupUpdate" in {
@@ -62,35 +63,9 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       groupFromNull.version should be('empty)
     }
 
-    "Can read Group json" in {
-      val json =
-        """
-        |{
-        |  "id": "a",
-        |  "apps": [
-        |    { "id": "b", "version": "2015-06-03T13:18:25.639Z" }
-        |  ],
-        |  "groups": [{
-        |    "id": "c",
-        |    "version": "2015-06-03T13:18:26.642Z"
-        |  }],
-        |  "dependencies": [ "d" ],
-        |  "version": "2015-06-03T13:18:25.640Z"
-        |}
-      """.stripMargin
-      val group = Json.parse(json).as[Group]
-      group.id should be("a".toPath)
-      group.apps should have size 1
-      group.apps.head._1 should be("b".toPath)
-      group.groupsById should have size 1
-      group.groupsById.keys.head should be("c".toPath)
-      group.dependencies.head should be("d".toPath)
-      group.version should be(Timestamp("2015-06-03T13:18:25.640Z"))
-    }
-
     "Can write/read Group" in {
-      marshalUnmarshal(genGroup())
-      marshalUnmarshal(genGroup(Set(genGroup(), genGroup(Set(genGroup())))))
+      marshalUnmarshal(Raml.toRaml(genGroup()))
+      marshalUnmarshal(Raml.toRaml(genGroup(Set(genGroup(), genGroup(Set(genGroup()))))))
     }
 
     "Can write/read byte arrays" in {
@@ -117,7 +92,8 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
     // regression test for #1176
     "allow / as id" in {
       val json = """{"id": "/"}"""
-      assert(Json.parse(json).as[Group].id.isRoot)
+      val groupId = Json.parse(json).as[GroupUpdate].id
+      assert(groupId.exists(_.toPath.isRoot))
     }
   }
 
@@ -158,12 +134,12 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =
     GroupUpdate(
-      Some(genId),
-      Some(Set(genApp, genApp)),
+      Some(genId.toString),
+      Some(Set(App(id = genId.toString), App(id = genId.toString))),
       Some(children),
-      Some(Set(genId)),
+      Some(Set(genId.toString)),
       Some(23),
-      Some(genTimestamp)
+      Some(genTimestamp.toOffsetDateTime)
     )
 
 }

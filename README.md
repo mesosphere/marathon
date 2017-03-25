@@ -233,7 +233,7 @@ Not in the list? Open a pull request and add yourself!
 
 ## Help
 
-Have you found an issue? Feel free to report it using our [Issues](https://github.com/mesosphere/marathon/issues) page.
+Have you found an issue? Feel free to report it using our [JIRA Issues](https://jira.mesosphere.com/projects/MARATHON/summary) page.
 In order to speed up response times, we ask you to provide as much
 information on how to reproduce the problem as possible. If the issue is related
  in any way to the web ui, we kindly ask you to use the `gui` label.

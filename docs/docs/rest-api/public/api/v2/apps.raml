@@ -58,7 +58,7 @@
           Note&#58; deprecated and will be removed in future versions
           Please define all embeds explicitly.
 
-          - <code>apps.taskStats</code> exposes task statatistics in the JSON.
+          - <code>apps.taskStats</code> exposes task statistics in the JSON.
 
 
         enum: [ apps.tasks, apps.count, apps.deployments, apps.lastTaskFailure, apps.failures, apps.taskStats ]
@@ -90,6 +90,16 @@
       Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.
        You can query the deployments endoint to see the status of the deployment.
     is: [ secured, deployable ]
+    queryParameters:
+      partialUpdate:
+        required: false
+        default: true
+        description: |
+          Without specifying this parameter, this method has a patch like semantic:
+          All values that are not defined in the json, will not change existing values.
+          This was the default behaviour in previous Marathon versions.
+          For backward compatibility, we will not change this behaviour, but let users opt in for a proper PUT.
+          Note: We will change the default behaviour in the next Marathon version to support PATCH and PUT as HTTP methods.
     body:
       application/json:
         example: !include examples/apps_create.json
@@ -127,8 +137,61 @@
                   ]
                 }
 
+  ###
+  # apply a patch update to a list of applications
+  #
+  patch:
+    description:
+      Change multiple existing applications by applying a patch.
+      All instances of these applications get replaced by the new version.
+      The order of dependencies will be applied correctly.
+      Each upgradeStrategy defines the behaviour of the upgrade for the related app.
 
+      The whole operation fails if the IDs of one or more applications are unknown.
+      The order of dependencies will be applied correctly.
 
+      If you have more complex scenarios with upgrades, use the groups endpoint.
+
+      Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.
+       You can query the deployments endoint to see the status of the deployment.
+    is: [ secured, deployable ]
+    queryParameters:
+    body:
+      application/json:
+        example: !include examples/apps_patch.json
+        type: app.App[]
+    responses:
+      409:
+        description: One or more specified applications is currently locked by a deployment
+        body:
+          application/json:
+            type: error.Error
+            example: |
+              {"message":"App is locked by one or more deployments."}
+      400:
+        description: The application definition provided in the body is not valid.
+        body:
+          application/json:
+            type: error.Error
+            example: |
+               {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+      422:
+        description: The entity send can not be processed, since there are validation errors
+        body:
+          application/json:
+            type: error.Error
+            example: |
+                {
+                  "message": "Object is not valid",
+                  "details": [
+                    {
+                      "path": "/upgradeStrategy/minimumHealthCapacity",
+                      "errors": [
+                        "is greater than 1"
+                      ]
+                    }
+                  ]
+                }
 
   ###
   # Create application
@@ -182,7 +245,6 @@
                 ]
                 }
 
-
   /{app_id}:
 
     ###
@@ -218,7 +280,7 @@
             Note&#58; deprecated and will be removed in future versions
             Please define all embeds explicitly.
 
-            - <code>app.taskStats</code> exposes task statatistics in the JSON.
+            - <code>app.taskStats</code> exposes task statistics in the JSON.
 
 
 
@@ -251,6 +313,16 @@
         Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.
          You can query the deployments endoint to see the status of the deployment.
       is: [ secured, deployable ]
+      queryParameters:
+        partialUpdate:
+          required: false
+          default: true
+          description: |
+            Without specifying this parameter, this method has a patch like semantic:
+            All values that are not defined in the json, will not change existing values.
+            This was the default behaviour in previous Marathon versions.
+            For backward compatibility, we will not change this behaviour, but let users opt in for a proper PUT.
+            Note: We will change the default behaviour in the next Marathon version to support PATCH and PUT as HTTP methods.
       body:
         application/json:
           example: !include examples/app.json
@@ -293,7 +365,59 @@
                   ]
                 }
 
+    ###
+    # Apply a patch update to a specific app.
+    #
+    patch:
+      description:
+        Replaces parameters of a running application. All running instances get upgraded to the new definition.
+        Any given application ID will be ignored.
 
+        Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.
+         You can query the deployments endoint to see the status of the deployment.
+      is: [ secured, deployable ]
+      queryParameters:
+      body:
+        application/json:
+          example: !include examples/app_patch.json
+          type: app.App
+      responses:
+        200:
+          description: The application has been updated and a deployment is started.
+          body:
+            application/json:
+              example: !include examples/deployments_result.json
+        404:
+          description: No task found with this `app_id`.
+          body:
+            application/json:
+              type: error.Error
+              example: |
+                  { "message": "App '/not_existent' does not exist" }
+        400:
+          description: The application definition provided in the body is not valid.
+          body:
+            application/json:
+              type: error.Error
+              example: |
+                {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+        422:
+          description: The entity sent can not be preocessed, since there are validation errors
+          body:
+            application/json:
+              type: error.Error
+              example: |
+                {
+                  "message": "Object is not valid",
+                  "details": [
+                    {
+                      "path": "/upgradeStrategy/minimumHealthCapacity",
+                      "errors": [
+                        "is greater than 1"
+                      ]
+                   }
+                  ]
+                }
 
     ###
     # Delete a specific app

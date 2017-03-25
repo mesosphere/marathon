@@ -1,7 +1,10 @@
 package mesosphere.marathon
 package core.storage.backup
 
+import java.net.URI
+
 import akka.Done
+import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.backup.impl.PersistentStoreBackupImpl
@@ -30,8 +33,8 @@ trait PersistentStoreBackup {
 
 object PersistentStoreBackup extends StrictLogging {
 
-  def apply(location: Option[String], store: PersistenceStore[_, _, _])(implicit materializer: Materializer, ec: ExecutionContext): PersistentStoreBackup = {
-    location.map(new PersistentStoreBackupImpl(store, _)).getOrElse(NoBackup)
+  def apply(location: Option[String], store: PersistenceStore[_, _, _])(implicit materializer: Materializer, actorSystem: ActorSystem, ec: ExecutionContext): PersistentStoreBackup = {
+    location.map(new URI(_)).map(new PersistentStoreBackupImpl(store, _)).getOrElse(NoBackup)
   }
 
   object NoBackup extends PersistentStoreBackup {

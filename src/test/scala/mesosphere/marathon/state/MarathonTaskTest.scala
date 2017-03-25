@@ -42,7 +42,7 @@ class MarathonTaskTest extends UnitTest {
       val proto = makeTask("app/foo", 23000, version = None)
       val merged = dummyState.mergeFromProto(proto.toByteArray)
 
-      Then("The 'merged' state does not have a version because mergeFromProto does not merge but cerate a new instance based on the given proto")
+      Then("The 'merged' state does not have a version because mergeFromProto does not merge but create a new instance based on the given proto")
       merged.toProto shouldEqual proto
     }
   }

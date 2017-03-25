@@ -87,6 +87,7 @@ def assert_mom_ee(version, security_mode='permissive'):
     wait_for_service_endpoint(mom_ee_endpoint(version, security_mode))
 
 
+@pytest.mark.skipif('required_private_agents(2)')
 @pytest.mark.parametrize("version,security_mode", [
 pytest.mark.skipif("ee_version() != 'strict'")(('1.4', 'strict')),
         ('1.4', 'permissive'),
@@ -96,9 +97,8 @@ pytest.mark.skipif("ee_version() != 'strict'")(('1.3', 'strict')),
         ('1.3', 'disabled')
 ])
 def test_mom_ee(version, security_mode):
-    with clean_state():
-        assert_mom_ee(version, security_mode)
-        assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
+    assert_mom_ee(version, security_mode)
+    assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
 
 
 def simple_sleep_app(name):
@@ -157,12 +157,17 @@ def ensure_docker_credentials():
     copy_docker_credentials_file(get_private_agents())
 
 
-@contextlib.contextmanager
-def clean_state():
+def cleanup():
     if is_mom_ee_deployed():
         remove_mom_ee()
-    assert not is_mom_ee_deployed()
-    yield
-    remove_mom_ee()
     delete_service_account(MOM_EE_SERVICE_ACCOUNT)
     delete_secret(MOM_EE_SECRET_NAME)
+
+
+def setup_function(function):
+    if is_mom_ee_deployed():
+        remove_mom_ee()
+
+# An additional cleanup in case one/more tests failed and left mom-ee running
+def teardown_module(module):
+    cleanup()

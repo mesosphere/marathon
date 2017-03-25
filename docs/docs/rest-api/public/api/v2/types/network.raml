@@ -44,7 +44,13 @@ types:
 
   NetworkMode:
     type: string
-    enum: [container, host]
+    enum: [container, "container/bridge", host]
+    description: |
+      `container` networks are named networks and are assigned an IP address by Mesos.
+      The `container/bridge` network is a special container network that operates in a
+      manner similar to Docker's "default bridge" mode, and depends on specific Mesos
+      CNI support. The `host` network results in containers sharing the network namespace
+      of the Mesos agent, and no IP address is allocated.
   Network:
     type: object
     properties:
@@ -68,13 +74,11 @@ types:
     properties:
       number?:
         type: numbers.AnyPort
-        format: int32
         description: The port number
         default: 0
       name:
-        type: string
+        type: strings.LegacyName
         description: Name of the port
-        pattern: ^[a-z][a-z0-9-]*$
       protocol?:
         type: strings.NetworkProtocol
         default: tcp
@@ -102,13 +106,9 @@ types:
       groups?:
         type: array
         (pragma.omitEmpty):
-        description: |
-          DEPRECATED. Will be ignored in a future release.
-          Array of network groups.
-          One IP address can belong to zero or more network groups.
-          The idea is that containers can only reach containers with which they
-          share at least one network group.
+        description: Ignored by Marathon, only exists here to preserve API compat (for now).
         items: string
+        uniqueItems: true
       labels?:
         type: label.KVLabels
         (pragma.omitEmpty):
@@ -118,12 +118,12 @@ types:
           If present, declares the name of the network that the container should
           join.
           In practice it is up to the IPAM to decide how to interpret this field
+        minLength: 1
   PortDefinition:
     type: object
     properties:
       port?:
-        type: integer
-        format: int32
+        type: numbers.AnyPort
         default: 0
         description: |
           If requirePorts is set to true, then this port number will be used
@@ -136,11 +136,10 @@ types:
         type: label.KVLabels
         (pragma.omitEmpty):
       name?:
-        type: string
+        type: strings.LegacyName
         description: |
           Name of the service hosted on this port.
           If provided, it must be unique over all port definitions.
-        pattern: ^[a-z][-a-z0-9]*$
       protocol?:
         type: strings.NetworkProtocol
         default: tcp

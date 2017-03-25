@@ -2,9 +2,9 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state._
+import mesosphere.marathon.raml.App
+import mesosphere.marathon.state.PathId._
 
 import scala.concurrent.duration._
 
@@ -23,10 +23,10 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
   "GracefulTaskKilling" should {
     "create a 'long terminating' app with custom taskKillGracePeriod duration" in {
       Given("a new 'long terminating' app with taskKillGracePeriod set to 10 seconds")
-      val app = AppDefinition(
-        testBasePath / "app",
+      val app = App(
+        (testBasePath / "app").toString,
         cmd = Some(appCommand),
-        taskKillGracePeriod = Some(taskKillGracePeriod))
+        taskKillGracePeriodSeconds = Some(taskKillGracePeriod.toSeconds.toInt))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -34,13 +34,13 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       Then("The app is created")
       result.code should be(201) //Created
       waitForDeployment(result)
-      waitForTasks(app.id, 1)
+      waitForTasks(app.id.toPath, 1)
       //make sure, the app has really started
-      val taskId = marathon.tasks(app.id).value.head.id
+      val taskId = marathon.tasks(app.id.toPath).value.head.id
 
       When("a task of an app is killed")
       val taskKillSentTimestamp = System.currentTimeMillis()
-      marathon.killTask(app.id, taskId).code should be(200)
+      marathon.killTask(app.id.toPath, taskId).code should be(200)
 
       waitForEventWith(
         "status_update_event",
@@ -56,10 +56,10 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
 
     "create a 'short terminating' app with custom taskKillGracePeriod duration" in {
       Given("a new 'short terminating' app with taskKillGracePeriod set to 10 seconds")
-      val app = AppDefinition(
-        testBasePath / "app",
+      val app = App(
+        (testBasePath / "app").toString,
         cmd = Some("sleep 100000"),
-        taskKillGracePeriod = Some(taskKillGracePeriod))
+        taskKillGracePeriodSeconds = Some(taskKillGracePeriod.toSeconds.toInt))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -67,13 +67,13 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       Then("The app is created")
       result.code should be(201) //Created
       waitForDeployment(result)
-      waitForTasks(app.id, 1)
+      waitForTasks(app.id.toPath, 1)
       //make sure, the app has really started
-      val taskId = marathon.tasks(app.id).value.head.id
+      val taskId = marathon.tasks(app.id.toPath).value.head.id
 
       When("a task of an app is killed")
       val taskKillSentTimestamp = System.currentTimeMillis()
-      marathon.killTask(app.id, taskId).code should be(200)
+      marathon.killTask(app.id.toPath, taskId).code should be(200)
 
       waitForEventWith(
         "status_update_event",
@@ -88,9 +88,4 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis
     }
   }
-  def healthCheck = MarathonHttpHealthCheck(
-    gracePeriod = 20.second,
-    interval = 1.second,
-    maxConsecutiveFailures = 10,
-    portIndex = Some(PortReference(0)))
 }

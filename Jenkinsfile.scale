@@ -18,8 +18,10 @@ node('shakedown') {
     }
 
     stage('Installing Dependencies') {
-      sh "pip3 install retrying"
-    }    
+      sh "apk --update add freetype-dev libpng musl-dev linux-headers gcc make cmake  g++ gfortran"
+      sh "ln -s /usr/include/locale.h /usr/include/xlocale.h"
+      sh "pip3 install numpy matplotlib click"
+    }
 
     stage('Configure DCOS Cluster') {
      println "Using: $params.dcos_url"
@@ -44,7 +46,7 @@ node('shakedown') {
     }
 
     stage('Archive Results'){
-      archiveArtifacts 'scale-test.csv, *.json'
+      archiveArtifacts 'scale-test.csv, *.json, scale.png'
     }
   }
   }
