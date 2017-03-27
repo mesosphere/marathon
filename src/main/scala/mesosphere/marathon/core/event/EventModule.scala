@@ -4,6 +4,7 @@ package core.event
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.impl.callback._
@@ -13,7 +14,6 @@ import mesosphere.marathon.storage.repository.EventSubscribersRepository
 import org.eclipse.jetty.servlets.EventSourceServlet
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 /**
@@ -46,7 +46,7 @@ class EventModule(
         f.onFailure {
           case NonFatal(th) =>
             log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
-        }(ExecutionContext.global)
+        }(ExecutionContexts.global)
       }
     }
 

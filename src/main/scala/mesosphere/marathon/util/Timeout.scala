@@ -5,7 +5,7 @@ import java.time.{ Clock, Instant }
 import java.util.concurrent.TimeUnit
 
 import akka.actor.Scheduler
-import mesosphere.marathon.core.async.DeadlineContext
+import mesosphere.marathon.core.async.RunContext
 import mesosphere.util.{ CallerThreadExecutionContext, DurationToHumanReadable }
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
@@ -51,7 +51,7 @@ object Timeout {
       val token = scheduler.scheduleOnce(finiteTimeout) {
         promise.tryFailure(new TimeoutException(s"Timed out after ${timeout.toHumanReadable}"))
       }
-      val result = DeadlineContext.withDeadline(Instant.now(clock))(f)
+      val result = RunContext.withContext(Instant.now(clock))(f)
       result.onComplete { res =>
         promise.tryComplete(res)
         token.cancel()

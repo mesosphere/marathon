@@ -18,7 +18,7 @@ import scala.concurrent.Future
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
     newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService with PodStatusService {
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 

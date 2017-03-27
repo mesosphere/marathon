@@ -12,7 +12,9 @@ import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.Mockito
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
+import mesosphere.marathon.core.async.ExecutionContexts
+import mesosphere.AkkaUnitTestLike
 
 class TestGroupManagerFixture(initialRoot: RootGroup = RootGroup.empty) extends Mockito with AkkaUnitTestLike {
   val service = mock[MarathonSchedulerService]
@@ -34,7 +36,7 @@ class TestGroupManagerFixture(initialRoot: RootGroup = RootGroup.empty) extends 
     config = config,
     scheduler = schedulerProvider,
     groupRepo = groupRepository,
-    storage = provider)(ExecutionContext.global, eventBus)
+    storage = provider)(ExecutionContexts.global, eventBus)
 
   val groupManager = groupManagerModule.groupManager
 }

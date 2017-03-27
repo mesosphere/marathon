@@ -5,10 +5,10 @@ import java.math.BigInteger
 import java.net.{ HttpURLConnection, URL, URLConnection }
 import java.security.MessageDigest
 
+import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.stream.Implicits._
 import org.apache.commons.io.FilenameUtils.getName
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 trait PathFun {

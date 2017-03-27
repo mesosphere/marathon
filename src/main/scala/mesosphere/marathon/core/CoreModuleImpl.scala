@@ -6,6 +6,7 @@ import javax.inject.Named
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.{ Inject, Provider }
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, LifecycleState }
 import mesosphere.marathon.core.deployment.DeploymentModule
@@ -34,7 +35,6 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.storage.StorageModule
 
-import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 /**
@@ -84,7 +84,7 @@ class CoreModuleImpl @Inject() (
     marathonConf,
     lifecycleState)(
     actorsModule.materializer,
-    ExecutionContext.global,
+    ExecutionContexts.global,
     actorSystem.scheduler,
     actorSystem)
 
@@ -196,7 +196,7 @@ class CoreModuleImpl @Inject() (
     marathonConf,
     scheduler,
     storageModule.groupRepository,
-    storage)(ExecutionContext.global, eventStream)
+    storage)(ExecutionContexts.global, eventStream)
 
   // PODS
 
@@ -260,6 +260,6 @@ class CoreModuleImpl @Inject() (
     taskTrackerModule.instanceTracker,
     appOfferMatcherModule.launchQueue,
     eventStream,
-    taskTerminationModule.taskKillService)(ExecutionContext.global)
+    taskTerminationModule.taskKillService)(ExecutionContexts.global)
 
 }

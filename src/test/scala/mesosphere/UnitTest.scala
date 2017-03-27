@@ -1,11 +1,10 @@
 package mesosphere
 
-import akka.testkit.{ TestActor, TestActorRef }
 import java.util.concurrent.{ LinkedBlockingDeque, TimeUnit }
 
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.{ ActorMaterializer, Materializer }
-import akka.testkit.TestKitBase
+import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging

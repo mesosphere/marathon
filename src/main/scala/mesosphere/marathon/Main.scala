@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-import akka.actor.ActorSystem
 import java.lang.Thread.UncaughtExceptionHandler
 import java.net.URI
 
@@ -14,6 +13,7 @@ import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream.Implicits._
@@ -21,7 +21,7 @@ import mesosphere.mesos.LibMesos
 import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler
 
-import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
@@ -33,7 +33,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler {
     override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
       logger.error(s"Terminating ${cliConf.httpPort()} due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
-      Runtime.getRuntime.asyncExit()(ExecutionContext.global)
+      Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
     }
   })
 
@@ -161,13 +161,13 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     *
     * # The Global Execution Context
     *
-    * ExecutionContext.global is an ExecutionContext backed by a ForkJoinPool. It should be sufficient for most
+    * ExecutionContexts.global is an ExecutionContext backed by a ForkJoinPool. It should be sufficient for most
     * situations but requires some care. A ForkJoinPool manages a limited amount of threads (the maximum amount of
     * thread being referred to as parallelism level). The number of concurrently blocking computations can exceed the
     * parallelism level only if each blocking call is wrapped inside a blocking call (more on that below). Otherwise,
     * there is a risk that the thread pool in the global execution context is starved, and no computation can proceed.
     *
-    * By default the ExecutionContext.global sets the parallelism level of its underlying fork-join pool to the amount
+    * By default the ExecutionContexts.global sets the parallelism level of its underlying fork-join pool to the amount
     * of available processors (Runtime.availableProcessors). This configuration can be overriden by setting one
     * (or more) of the following VM attributes:
     *

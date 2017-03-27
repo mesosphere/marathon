@@ -2,6 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.stream.Implicits._
+
 import scala.concurrent.duration._
 
 trait ReadinessConversions {

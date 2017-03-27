@@ -1,8 +1,11 @@
 package mesosphere.marathon
 package util
 
+import java.time.Instant
+
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.async.{ DeadlineContext, ExecutionContexts }
+import mesosphere.marathon.core.async.RunContext.Expired
+import mesosphere.marathon.core.async.{ ExecutionContexts, RunContext }
 import mesosphere.marathon.test.SettableClock
 
 import scala.concurrent.Future
@@ -27,8 +30,8 @@ class TimeoutTest extends AkkaUnitTest {
 
         Timeout(1.second) {
           clock.plus(2.second)
-          Future { DeadlineContext.isExpired() }(ExecutionContexts.global)
-        }.futureValue should be(true)
+          Future { RunContext.state() }(ExecutionContexts.global)
+        }.futureValue should be(Expired(Instant.now(clock).minusSeconds(2)))
       }
     }
     "blocking" should {
@@ -48,8 +51,8 @@ class TimeoutTest extends AkkaUnitTest {
 
         Timeout.blocking(1.second) {
           clock.plus(2.second)
-          DeadlineContext.isExpired()
-        }(scheduler, ExecutionContexts.global).futureValue should be(true)
+          RunContext.state()
+        }.futureValue should be(Expired(Instant.now(clock).minusSeconds(2)))
       }
     }
   }

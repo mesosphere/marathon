@@ -1,17 +1,16 @@
 package mesosphere.marathon
 package core.launcher.impl
 
-import org.apache.mesos.Protos.TaskStatus
-import scala.concurrent.{ Future, Promise }
-
 import akka.stream.scaladsl.{ Sink, Source }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.FrameworkId
+import org.apache.mesos.Protos.TaskStatus
 import org.scalatest.Inside
+
+import scala.concurrent.{ Future, Promise }
 
 class UnreachableReservedOfferMonitorTest extends AkkaUnitTest with Inside {
   import mesosphere.marathon.state.PathId._

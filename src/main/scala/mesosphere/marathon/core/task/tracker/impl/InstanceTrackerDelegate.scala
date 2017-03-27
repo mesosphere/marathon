@@ -25,7 +25,7 @@ private[tracker] class InstanceTrackerDelegate(
     taskTrackerRef: ActorRef) extends InstanceTracker {
 
   override def instancesBySpecSync: InstanceTracker.InstancesBySpec = {
-    import ExecutionContext.Implicits.global
+    import mesosphere.marathon.core.async.ExecutionContexts.global
     Await.result(instancesBySpec(), taskTrackerQueryTimeout.duration)
   }
 

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api
 
+import java.lang.{ Exception => JavaException }
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{ MediaType, Response }
@@ -16,8 +17,6 @@ import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsResultException, JsValue, Json }
 
 import scala.concurrent.TimeoutException
-
-import java.lang.{ Exception => JavaException }
 
 @Provider
 @Singleton

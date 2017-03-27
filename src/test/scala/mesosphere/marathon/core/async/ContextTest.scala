@@ -5,6 +5,8 @@ import java.time.{ Clock, Duration, Instant, ZoneId }
 import java.util.concurrent.{ Executors, Semaphore }
 
 import akka.Done
+import akka.actor.{ Actor, ActorRef, Props }
+import mesosphere.marathon.core.async.RunContext.Expired
 import mesosphere.marathon.test.SettableClock
 import mesosphere.{ AkkaUnitTest, UnitTest }
 
@@ -48,6 +50,18 @@ class ContextTest extends UnitTest {
       }
       TestContext.value should be('empty)
     }
+  }
+}
+
+case class GetTestContextValue(promise: Promise[Option[Int]])
+case class Forward[T](to: ActorRef, msg: T)
+
+class TestActor extends Actor {
+  override def receive: Receive = {
+    case GetTestContextValue(promise) =>
+      promise.success(TestContext.value)
+    case Forward(to, msg) =>
+      to ! msg
   }
 }
 
@@ -119,148 +133,169 @@ class ContextPropagatingExecutionContextTest extends AkkaUnitTest {
         }
       }
     }
+    "when used with akka actors" should {
+      "propagate the context" in {
+        val promise = Promise[Option[Int]]
+        val ref = system.actorOf(Props(classOf[TestActor]))
+        TestContext.withContext(11) {
+          ref ! GetTestContextValue(promise)
+        }
+        promise.future.futureValue.value should be(11)
+
+        val cleared = Promise[Option[Int]]
+        ref ! GetTestContextValue(cleared)
+        cleared.future.futureValue should be('empty)
+      }
+      "between actors" in {
+        val promise = Promise[Option[Int]]
+        val ref = system.actorOf(Props(classOf[TestActor]))
+        val ref2 = system.actorOf(Props(classOf[TestActor]))
+        TestContext.withContext(11) {
+          ref ! Forward(ref2, GetTestContextValue(promise))
+        }
+        promise.future.futureValue.value should be(11)
+
+        val cleared = Promise[Option[Int]]
+        ref ! Forward(ref2, GetTestContextValue(cleared))
+        cleared.future.futureValue should be('empty)
+      }
+    }
   }
 }
 
-class CancelContextTest extends UnitTest {
+class RunContextTest extends UnitTest {
+  implicit val FixedClock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
+
   "CancelContext" should {
     "Return running when there is no context" in {
-      CancelContext.state should be(CancelContext.Running)
+      RunContext.state should be(RunContext.Running)
     }
     "Do nothing when cancel is called and there is no context" in {
-      CancelContext.cancel(false)
-      CancelContext.state should be(CancelContext.Running)
+      RunContext.cancel(false)
+      RunContext.state should be(RunContext.Running)
     }
     "Do nothing when cancel is called with rollback and there is no context" in {
-      CancelContext.cancel(true)
-      CancelContext.state should be(CancelContext.Running)
+      RunContext.cancel(true)
+      RunContext.state should be(RunContext.Running)
     }
     "Set cancellation when there is a context and cancel was requested" in {
-      CancelContext.withContext {
-        CancelContext.cancel(false)
-        CancelContext.state should be(CancelContext.Cancelled)
+      RunContext.withContext() {
+        RunContext.cancel(false)
+        RunContext.state should be(RunContext.Cancelled)
       }
-      CancelContext.state should be(CancelContext.Running)
+      RunContext.state should be(RunContext.Running)
     }
     "Set rollback when there is a context and rollback was requested" in {
-      CancelContext.withContext {
-        CancelContext.cancel(true)
-        CancelContext.state should be(CancelContext.Rollback)
+      RunContext.withContext() {
+        RunContext.cancel(true)
+        RunContext.state should be(RunContext.Rollback)
       }
-      CancelContext.state should be(CancelContext.Running)
+      RunContext.state should be(RunContext.Running)
     }
     "Restore when there is an exception" in {
       intercept[Exception] {
-        CancelContext.withContext {
+        RunContext.withContext() {
           throw new Exception("")
         }
       }
-      CancelContext.state should be(CancelContext.Running)
+      RunContext.state should be(RunContext.Running)
     }
     "Clear the context should restore it" in {
-      CancelContext.withContext {
-        CancelContext.cancel(true)
-        CancelContext.clearContext {
-          CancelContext.state
+      RunContext.withContext() {
+        RunContext.cancel(true)
+        RunContext.clearContext {
+          RunContext.state
         }
-      } should be(CancelContext.Running)
+      } should be(RunContext.Running)
     }
     "Propagate Cancellation across async calls" in {
       val sem = new Semaphore(0)
-      val promise = Promise[CancelContext.CancelState]()
+      val promise = Promise[RunContext.RunState]()
 
-      CancelContext.withContext {
+      RunContext.withContext() {
         Future {
           sem.acquire()
-          promise.success(CancelContext.state)
+          promise.success(RunContext.state)
         }(ExecutionContexts.global)
 
-        CancelContext.cancel(true)
+        RunContext.cancel(true)
         sem.release()
       }
 
-      promise.future.futureValue should be(CancelContext.Rollback)
+      promise.future.futureValue should be(RunContext.Rollback)
     }
     "Cancelling a parent context will cancel a child context" in {
       val sem = new Semaphore(0)
-      val promise = Promise[CancelContext.CancelState]()
+      val promise = Promise[RunContext.RunState]()
 
-      CancelContext.withContext {
-        CancelContext.withContext {
+      RunContext.withContext() {
+        RunContext.withContext() {
           Future {
             sem.acquire()
-            promise.success(CancelContext.state)
+            promise.success(RunContext.state)
           }(ExecutionContexts.global)
         }
 
-        CancelContext.cancel(true)
+        RunContext.cancel(true)
         sem.release()
       }
 
-      promise.future.futureValue should be(CancelContext.Rollback)
+      promise.future.futureValue should be(RunContext.Rollback)
     }
     "Cancelling a child context will not cancel the parent" in {
       val sem = new Semaphore(0)
-      val promise = Promise[CancelContext.CancelState]()
+      val promise = Promise[RunContext.RunState]()
 
-      CancelContext.withContext {
-        CancelContext.withContext {
+      RunContext.withContext() {
+        RunContext.withContext() {
           Future {
             sem.acquire()
-            promise.success(CancelContext.state)
+            promise.success(RunContext.state)
           }(ExecutionContexts.global)
-          CancelContext.cancel(false)
+          RunContext.cancel(false)
           sem.release()
         }
-        CancelContext.state
-      } should equal(CancelContext.Running)
+        RunContext.state
+      } should equal(RunContext.Running)
 
-      promise.future.futureValue should be(CancelContext.Cancelled)
+      promise.future.futureValue should be(RunContext.Cancelled)
     }
-  }
-}
+    "when working with deadlines" should {
+      def getDeadline(): Option[Instant] = Context.get(Context.Run).map(_.deadline).filterNot(_ == Instant.MAX)
 
-class DeadlineContextTest extends UnitTest {
-  implicit val FixedClock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
-
-  def getDeadline(): Option[Instant] = Context.get(Context.Deadline).map(_.deadline)
-
-  "DeadlineContext" should {
-    "Return not expired when there is no deadline" in {
-      DeadlineContext.isExpired() should be(false)
-    }
-    "Return not expired when there is a deadline and it hasn't expired." in {
-      val clock = new SettableClock()
-      DeadlineContext.withDeadline(Instant.now(clock).plus(Duration.ofMinutes(1L))) {
-        DeadlineContext.isExpired()(clock)
-      } should be(false)
-    }
-    "Restore outside of the context" in {
-      DeadlineContext.withDeadline(Instant.now(FixedClock))(Done)
-      getDeadline() should be('empty)
-    }
-    "Return expired when there is a deadline and it has expired" in {
-      val clock = new SettableClock()
-      DeadlineContext.withDeadline(Instant.now(clock).plus(Duration.ofMinutes(1L))) {
-        clock.plus(Duration.ofMinutes(3))
-        DeadlineContext.isExpired()(clock)
-      } should be(true)
-    }
-    "Keep the parent deadline if the parent's deadline is sooner than the child" in {
-      val parentDeadline = Instant.now(FixedClock).plus(Duration.ofMinutes(1L))
-      DeadlineContext.withDeadline(parentDeadline) {
-        DeadlineContext.withDeadline(Instant.now(FixedClock).plus(Duration.ofMinutes(2L))) {
+      "Return not expired when there is a deadline and it hasn't expired." in {
+        val clock = new SettableClock()
+        RunContext.withContext(Instant.now(clock).plus(Duration.ofMinutes(1L))) {
+          RunContext.state()(clock)
+        } should be(RunContext.Running)
+      }
+      "Restore outside of the context" in {
+        RunContext.withContext(Instant.now(FixedClock))(Done)
+        getDeadline() should be('empty)
+      }
+      "Return expired when there is a deadline and it has expired" in {
+        val clock = new SettableClock()
+        val expireAt = Instant.now(clock).plus(Duration.ofMinutes(1L))
+        RunContext.withContext(expireAt) {
+          clock.plus(Duration.ofMinutes(3))
+          RunContext.state()(clock)
+        } should be(Expired(expireAt))
+      }
+      "Keep the parent deadline if the parent's deadline is sooner than the child" in {
+        val parentDeadline = Instant.now(FixedClock).plus(Duration.ofMinutes(1L))
+        RunContext.withContext(parentDeadline) {
+          RunContext.withContext(Instant.now(FixedClock).plus(Duration.ofMinutes(2L))) {
+            getDeadline()
+          }
+        }.value should equal(parentDeadline)
+      }
+      "Clearing will restore the old deadline" in {
+        val outerDeadline = Instant.now(FixedClock).minus(Duration.ofMinutes(1L))
+        RunContext.withContext(outerDeadline) {
+          RunContext.clearContext(getDeadline()) should be('empty)
           getDeadline()
-        }
-      }.value should equal(parentDeadline)
-    }
-    "Clearing will restore the old deadline" in {
-      val outerDeadline = Instant.now(FixedClock).minus(Duration.ofMinutes(1L))
-      DeadlineContext.withDeadline(outerDeadline) {
-        DeadlineContext.clearDeadline(getDeadline()) should be('empty)
-
-        getDeadline()
-      }.value should equal(outerDeadline)
+        }.value should equal(outerDeadline)
+      }
     }
   }
 }

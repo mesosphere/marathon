@@ -10,6 +10,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{ RestResult, SprayHttpResponse }
 import mesosphere.marathon.raml.{ App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml }
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
 import org.slf4j.LoggerFactory
 import play.api.libs.functional.syntax._
@@ -22,7 +23,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import mesosphere.marathon.stream.Implicits._
 
 /**
   * GET /apps will deliver something like Apps instead of List[App]
@@ -71,8 +71,7 @@ class MarathonFacade(val url: String, baseGroup: PathId, waitTime: Duration = 30
     with PodConversion {
   implicit val scheduler = system.scheduler
   import SprayHttpResponse._
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   require(baseGroup.absolute)
 

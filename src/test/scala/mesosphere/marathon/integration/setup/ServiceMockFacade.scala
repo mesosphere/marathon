@@ -13,7 +13,7 @@ import spray.http.HttpResponse
 import scala.concurrent.duration.{ Duration, _ }
 
 class ServiceMockFacade private (val task: ITEnrichedTask, waitTime: Duration = 30.seconds)(implicit system: ActorSystem) extends StrictLogging {
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   private val baseUrl = s"http://${task.host}:${task.ports.map(_.head).get}"
 

@@ -3,6 +3,7 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.health.{ HealthCheck => CoreHealthCheck, _ }
+
 import scala.concurrent.duration._
 
 class HealthCheckConversionTest extends UnitTest {

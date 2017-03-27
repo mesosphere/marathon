@@ -1,10 +1,8 @@
 package mesosphere.marathon
 package api.v2.json
 
-import mesosphere.{ UnitTest, ValidationClue }
 import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.marathon.api.v2.AppNormalization
-import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.api.v2.{ AppNormalization, Validation }
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
@@ -12,6 +10,7 @@ import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
+import mesosphere.{ UnitTest, ValidationClue }
 import org.scalatest.Matchers
 import play.api.libs.json._
 

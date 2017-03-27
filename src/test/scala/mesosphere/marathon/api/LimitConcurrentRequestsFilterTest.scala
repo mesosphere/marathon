@@ -6,8 +6,8 @@ import javax.servlet.FilterChain
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.async.ExecutionContexts.global
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class LimitConcurrentRequestsFilterTest extends UnitTest {

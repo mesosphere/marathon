@@ -285,8 +285,8 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   }
 
   override def ramlVolume(container: raml.Container) = {
-    import VolumeOptions._
     import PathPatterns._
+    import VolumeOptions._
 
     val validMesosVolume = validator[AppVolume] {
       volume =>

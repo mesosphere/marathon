@@ -1,14 +1,14 @@
 package mesosphere.marathon
 package util
 
-import java.util.concurrent.{ CountDownLatch, Semaphore }
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.{ CountDownLatch, Semaphore }
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.async.ExecutionContexts.global
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ ExecutionContext, Future }
 
 class WorkQueueTest extends UnitTest {
   "WorkQueue" should {

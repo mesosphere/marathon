@@ -2,6 +2,7 @@ package mesosphere.marathon
 package state
 
 import org.apache.mesos.{ Protos => mesos }
+
 import scala.collection.immutable.Seq
 
 /**

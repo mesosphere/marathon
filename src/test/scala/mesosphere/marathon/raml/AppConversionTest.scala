@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.{ UnitTest, ValidationClue }
 import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ BridgeNetwork, HostNetwork }
 import mesosphere.marathon.state._
+import mesosphere.{ UnitTest, ValidationClue }
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 

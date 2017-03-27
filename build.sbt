@@ -2,7 +2,6 @@ import com.amazonaws.auth.{EnvironmentVariableCredentialsProvider, InstanceProfi
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.ExecCmd
 import mesosphere.raml.RamlGeneratorPlugin
-import sbt.Tests.SubProcess
 
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
@@ -15,9 +14,6 @@ def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePat
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
-
-
-lazy val checkDoublePackage = taskKey[Unit]("Checks all scala sources use a double declaration")
 
 /**
   * This on load trigger is used to set parameters in teamcity.
@@ -98,7 +94,6 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     "-Yclosure-elim",
     "-Ydead-code"
   ),
-  scalacOptions in Test ~= { _.filter(co => !(co.startsWith("-Xplugin") || co.startsWith("-P"))) },
   javacOptions in Compile ++= Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
@@ -108,35 +103,6 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
-
-  checkDoublePackage := {
-    ((sources in Compile).value ++ (sources in Test).value).withFilter(_.toPath.endsWith(".scala")).foreach { file =>
-      IO.reader(file) { reader =>
-        println(s"Checking $file")
-        var pkgFound = false
-        while(!pkgFound) {
-          val line = Option(reader.readLine())
-          line.fold {
-            pkgFound = true
-          } { pkg =>
-            if (pkg.startsWith("package")) {
-              pkgFound = true
-            }
-            if (pkg.startsWith("package mesosphere.marathon") && pkg.trim().length > "package mesosphere.marathon".length) {
-              sys.error(s"""$file does not use double package notation. e.g.:
-                           |package mesosphere.marathon
-                           |package ${pkg.replaceAll("package mesosphere.marathon.", "")}
-              """.stripMargin)
-            }
-          }
-        }
-      }
-    }
-  },
-  compile in Compile := {
-    checkDoublePackage.value
-    (compile in Compile).value
-  },
   publishTo := Some(s3resolver.value(
     "Mesosphere Public Repo (S3)",
     s3("downloads.mesosphere.io/maven")
@@ -275,7 +241,7 @@ lazy val packagingSettings = Seq(
 )
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
-    .enablePlugins(GitBranchPrompt, CopyPasteDetector)
+    .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin)
     .configs(SerialIntegrationTest)
     .configs(IntegrationTest)
     .configs(UnstableTest)
@@ -293,7 +259,7 @@ lazy val marathon = (project in file("."))
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
-    CopyPasteDetector, RamlGeneratorPlugin, DoublePackagePlugin, GitVersioning)
+    CopyPasteDetector, RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning)
   .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -317,7 +283,7 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
-  .enablePlugins(GitBranchPrompt, CopyPasteDetector)
+  .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
@@ -331,7 +297,7 @@ lazy val benchmark = (project in file("benchmark"))
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
-  .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector)
+  .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")

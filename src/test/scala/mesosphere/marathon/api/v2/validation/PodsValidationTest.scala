@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import mesosphere.UnitTest
 import com.wix.accord.Validator
 import com.wix.accord.scalatest.ResultMatchers
+import mesosphere.UnitTest
 import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 

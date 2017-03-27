@@ -9,6 +9,7 @@ import com.google.inject._
 import com.google.inject.name.Names
 import com.typesafe.config.Config
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
@@ -209,7 +210,7 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideExecutionContext: ExecutionContext = ExecutionContext.global
+  def provideExecutionContext: ExecutionContext = ExecutionContexts.global
 
   @Provides @Singleton
   def httpCallbackSubscriptionService(coreModule: CoreModule): HttpCallbackSubscriptionService = {

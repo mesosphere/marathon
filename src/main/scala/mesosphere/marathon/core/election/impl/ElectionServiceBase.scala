@@ -7,6 +7,7 @@ import akka.pattern.after
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import kamon.metric.instrument.Time
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
@@ -46,7 +47,7 @@ abstract class ElectionServiceBase(
 
   private[impl] var state: State = Idle(candidate = None)
 
-  protected implicit val executionContext: ExecutionContext = ExecutionContext.global
+  protected implicit val executionContext: ExecutionContext = ExecutionContexts.global
 
   def leaderHostPortImpl: Option[String]
 

@@ -3,9 +3,9 @@ package mesosphere.mesos.scale
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
+import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{ App, AppUpdate }
+import mesosphere.marathon.raml.{App, AppUpdate}
 import mesosphere.marathon.state.PathId
 import org.scalatest.concurrent.Eventually
 import org.slf4j.LoggerFactory

@@ -9,10 +9,10 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, PATCH, RestResource }
-import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, Selector, TaskCounts }
+import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager

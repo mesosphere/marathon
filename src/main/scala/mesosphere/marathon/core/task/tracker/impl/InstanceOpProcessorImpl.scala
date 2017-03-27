@@ -10,8 +10,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.storage.repository.InstanceRepository
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.immutable.Seq
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 /**

@@ -6,8 +6,8 @@ import mesosphere.marathon.state.{ FetchUri, PathId }
 
 object AppNormalization {
 
-  import Normalization._
   import Apps._
+  import Normalization._
 
   /**
     * Ensure backwards compatibility by adding portIndex to health checks when necessary.

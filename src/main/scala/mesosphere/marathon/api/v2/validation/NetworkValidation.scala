@@ -1,17 +1,16 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.dsl._
 import com.wix.accord._
-
+import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.pod
 import mesosphere.marathon.raml.{ Network, NetworkMode }
 
 @SuppressWarnings(Array("all")) // wix breaks stuff
 trait NetworkValidation {
-  import Validation._
   import NameValidation._
+  import Validation._
 
   implicit val modelNetworkValidator: Validator[pod.Network] = new Validator[pod.Network] {
     val containerNetworkValidator: Validator[pod.ContainerNetwork] = validator[pod.ContainerNetwork] { net =>

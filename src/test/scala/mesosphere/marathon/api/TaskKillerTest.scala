@@ -3,6 +3,8 @@ package api
 
 import akka.Done
 import mesosphere.UnitTest
+import mesosphere.marathon.core.async.ExecutionContexts.global
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -10,11 +12,9 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state._
-import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 

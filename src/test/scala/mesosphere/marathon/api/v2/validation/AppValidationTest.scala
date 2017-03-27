@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.{ Failure, Result }
 import com.wix.accord.scalatest.ResultMatchers
+import com.wix.accord.{ Failure, Result }
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.raml.{ App, Container, ContainerPortMapping, EngineType, Network, NetworkMode }
