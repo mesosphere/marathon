@@ -14,7 +14,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
-import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef }
+import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkConversionMessages, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -289,10 +289,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
 
       Then("the update should fail")
-      val caught = intercept[IllegalArgumentException] {
+      val caught = intercept[SerializationFailedException] {
         appsResource.replace(updatedApp.id, updatedBody, force = false, partialUpdate = false, auth.request)
       }
-      caught.getMessage() should be("container network must specify a name")
+      caught.getMessage() should be(NetworkConversionMessages.ContainerNetworkRequiresName)
     }
 
     "Create a new app without IP/CT when default virtual network is bar" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {

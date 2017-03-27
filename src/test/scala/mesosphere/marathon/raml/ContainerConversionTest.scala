@@ -193,7 +193,7 @@ class ContainerConversionTest extends UnitTest {
               ))
             )
           )),
-          portMappings = Option(Seq.empty)
+          portMappings = None
         )
         legacyProto.toRaml[Container] should be(expectedRaml)
       }

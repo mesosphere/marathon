@@ -140,7 +140,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
           lastScalingAt = Timestamp.zero.toOffsetDateTime,
           lastConfigChangeAt = Timestamp.zero.toOffsetDateTime
         )),
-        portDefinitions = Option(Seq.empty)
+        portDefinitions = None
       )
       legacy.toRaml[App] should be(expectedRaml)
     }
