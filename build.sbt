@@ -6,8 +6,10 @@ import sbt.Tests.SubProcess
 
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
-lazy val IntegrationTest = config("integration") extend(Test) describedAs("Integration tests against a Mesos cluster and Marathon instance.")
-lazy val SerialIntegrationTest = config("serial-integration") extend(Test) describedAs("Integration tests that run in sequence.")
+lazy val SerialIntegrationTest = config("serial-integration") extend Test
+lazy val IntegrationTest = config("integration") extend Test
+lazy val UnstableTest = config("unstable") extend Test
+lazy val UnstableIntegrationTest = config("unstable-integration") extend Test
 
 def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
 
@@ -66,6 +68,8 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
 
 lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   inConfig(IntegrationTest)(Defaults.testTasks) ++
+  inConfig(UnstableTest)(Defaults.testTasks) ++
+  inConfig(UnstableIntegrationTest)(Defaults.testTasks) ++
   aspectjSettings ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
@@ -140,44 +144,54 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
 
   testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
-
-  // Tests run in parallel on a forked JVM by default. However, tests tagged
-  // with @SerialIntegrationTest run on a forked JVM sequentially after all
-  // other tests.
-  fork in Test:= true,
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(
-    formattingTestArg(target.value / "test-reports"),
-    Tests.Argument(
-      "-l", "mesosphere.marathon.IntegrationTest",
+  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"),
+    Tests.Argument("-l", "mesosphere.marathon.IntegrationTest",
       "-l", "mesosphere.marathon.SerialIntegrationTest",
+      "-l", "mesosphere.marathon.UnstableTest",
       "-y", "org.scalatest.WordSpec")),
+  fork in Test := true,
+
+  parallelExecution in UnstableTest := true,
+  testForkedParallel in UnstableTest := true,
+  testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument(
+    "-l", "mesosphere.marathon.IntegrationTest",
+    "-l", "mesosphere.marathon.SerialIntegrationTest",
+    "-y", "org.scalatest.WordSpec")),
+  fork in UnstableTest := true,
+
+  fork in SerialIntegrationTest := true,
+  testOptions in SerialIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "serial-integration"),
+    Tests.Argument(
+      "-n", "mesosphere.marathon.SerialIntegrationTest",
+      "-l", "mesosphere.marathon.UnstableTest",
+      "-y", "org.scalatest.WordSpec")),
+  parallelExecution in SerialIntegrationTest := false,
+  testForkedParallel in SerialIntegrationTest := false,
 
   fork in IntegrationTest := true,
-  testForkedParallel in IntegrationTest := true,
-  parallelExecution in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(
-    formattingTestArg(target.value / "test-reports" / "integration"),
+  testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
       "-l", "mesosphere.marathon.SerialIntegrationTest",
+      "-l", "mesosphere.marathon.UnstableTest",
       "-y", "org.scalatest.WordSpec")),
+  parallelExecution in IntegrationTest := true,
+  testForkedParallel in IntegrationTest := true,
   concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
-
-  fork in SerialIntegrationTest := true,
-  testForkedParallel in SerialIntegrationTest := false,
-  testOptions in SerialIntegrationTest := Seq(
-    formattingTestArg(target.value / "test-reports" / "serial-integration"),
-    Tests.Argument(
-      "-n", "mesosphere.marathon.SerialIntegrationTest",
-      "-l", "mesosphere.marathon.IntegrationTest",
-      "-y", "org.scalatest.WordSpec")),
-
   test in IntegrationTest := {
     (test in IntegrationTest).value
     (test in SerialIntegrationTest).value
   },
+
+  fork in UnstableIntegrationTest := true,
+  testOptions in UnstableIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable-integration"),
+    Tests.Argument(
+      "-n", "mesosphere.marathon.IntegrationTest",
+      "-l", "mesosphere.marathon.SerialIntegrationTest",
+      "-y", "org.scalatest.WordSpec")),
+  parallelExecution in UnstableIntegrationTest := true,
 
   scapegoatVersion := "1.3.0",
 
@@ -264,6 +278,8 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector)
     .configs(SerialIntegrationTest)
     .configs(IntegrationTest)
+    .configs(UnstableTest)
+    .configs(UnstableIntegrationTest)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
     .settings(
@@ -274,6 +290,8 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
 lazy val marathon = (project in file("."))
   .configs(SerialIntegrationTest)
   .configs(IntegrationTest)
+  .configs(UnstableTest)
+  .configs(UnstableIntegrationTest)
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
     CopyPasteDetector, RamlGeneratorPlugin, DoublePackagePlugin, GitVersioning)
   .dependsOn(`plugin-interface`)
@@ -297,6 +315,8 @@ lazy val marathon = (project in file("."))
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .configs(SerialIntegrationTest)
   .configs(IntegrationTest)
+  .configs(UnstableTest)
+  .configs(UnstableIntegrationTest)
   .enablePlugins(GitBranchPrompt, CopyPasteDetector)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -309,6 +329,8 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
 lazy val benchmark = (project in file("benchmark"))
   .configs(SerialIntegrationTest)
   .configs(IntegrationTest)
+  .configs(UnstableTest)
+  .configs(UnstableIntegrationTest)
   .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)
