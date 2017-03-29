@@ -13,13 +13,13 @@ import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.{ UnitTest, ValidationClue }
+import mesosphere.{ UnitTest, ValidationTestLike }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-class AppDefinitionTest extends UnitTest with ValidationClue {
+class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
   val validAppDefinition = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
 
