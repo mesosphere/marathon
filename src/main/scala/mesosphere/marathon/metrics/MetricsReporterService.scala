@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package metrics
 
-import java.net.{ InetAddress, InetSocketAddress, URI }
+import java.net.{ InetSocketAddress, URI }
 import java.util
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -115,7 +115,7 @@ class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: M
     val reporter = DatadogReporter
       .forRegistry(registry)
       .withTransport(transport)
-      .withHost(InetAddress.getLocalHost.getHostName)
+      .withHost(config.hostname())
       .withPrefix(prefix)
       .withExpansions(util.EnumSet.copyOf(expansions.flatMap(e => Expansion.values().find(_.toString == e))))
       .withTags(tags)
