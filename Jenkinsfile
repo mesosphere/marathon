@@ -76,7 +76,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
               }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
-            sh "sudo mv target/scala-2.11/scoverage-report/target/scala-2.11/scoverage-report-unit"
+            sh "sudo mv target/scala-2.11/scoverage-report/ target/scala-2.11/scoverage-report-unit"
             sh "sudo mv target/scala-2.11/coverage-report/cobertura.xml target/scala-2.11/coverage-report/cobertura-unit.xml"
             archiveArtifacts(
                 artifacts: 'target/**/coverage-report/cobertura-unit.xml, target/**/scoverage-report-unit/**',
