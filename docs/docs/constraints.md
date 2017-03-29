@@ -96,7 +96,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ```
 
 ### UNIQUE operator
-**Value** (optional): A string that defines the value of the attribute. This attribute must be unique. If you specify `hostname:UNIQUE`, any value you define will be ignored.
+`UNIQUE` does not accept a value.
 
 `UNIQUE` tells Marathon to enforce uniqueness of the attribute across all of an app's tasks. For example the following constraint ensures that there is only one app task running on each host.
 
