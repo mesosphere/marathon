@@ -51,8 +51,8 @@ class TimeoutTest extends AkkaUnitTest {
 
         Timeout.blocking(1.second) {
           clock.plus(2.second)
-          RunContext.state()
-        }.futureValue should be(Expired(Instant.now(clock).minusSeconds(2)))
+          RunContext.state()(clock)
+        }(scheduler, ExecutionContexts.global, clock).futureValue should be(Expired(Instant.now(clock).minusSeconds(2)))
       }
     }
   }

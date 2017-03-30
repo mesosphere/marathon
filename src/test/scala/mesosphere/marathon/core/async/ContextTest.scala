@@ -75,6 +75,7 @@ class ContextPropagatingExecutionContextTest extends AkkaUnitTest {
       executor.shutdown()
     }
   }
+
   "ContextPropagatingExecutionContext" should {
     "propagate the result across threads" in {
       TestContext.withContext(7) {

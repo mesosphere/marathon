@@ -28,7 +28,7 @@ object Timeout {
     scheduler: Scheduler,
     ctx: ExecutionContext,
     clock: Clock = Clock.systemDefaultZone()): Future[T] =
-    apply(timeout)(Future(blockingCall(f)))(scheduler, ctx, clock)
+    apply(timeout)(Future(blockingCall(f))(ctx))(scheduler, ctx, clock)
 
   /**
     * Timeout a non-blocking call.
