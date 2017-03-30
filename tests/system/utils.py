@@ -3,9 +3,13 @@ import json
 import os
 import re
 import subprocess
+import pytest
+
 from six.moves import urllib
 from dcos import http, util, config
 from dcos.errors import DCOSException
+from distutils.version import LooseVersion
+from shakedown import (service_available_predicate, marathon_version)
 
 
 def fixture_dir():
@@ -66,3 +70,28 @@ def marathon_on_marathon(name='marathon-user'):
     finally:
         # return config to previous state
         config.save(toml_config_o)
+
+
+mom_1_4 = pytest.mark.skipif('mom_version_less_than("1.4")')
+mom_1_4_2 = pytest.mark.skipif('mom_version_less_than("1.4.2")')
+
+
+def mom_version_less_than(version, name='marathon-user'):
+    """ Returns True if MoM with the given {name} exists and has a version less
+        than {version}. Note that if MoM does not exist False is returned.
+
+        :param version: required version
+        :type: string
+        :param name: MoM name, default is 'marathon-user'
+        :type: string
+        :return: True if version < MoM version
+        :rtype: bool
+    """
+    if service_available_predicate(name):
+        with marathon_on_marathon(name):
+            return marathon_version() < LooseVersion(version)
+    else:
+        # We can either skip the corresponding test by returning False
+        # or raise an exception.
+        print('WARN: {} MoM not found. mom_version_less_than({}) is False'.format(name, version))
+        return False

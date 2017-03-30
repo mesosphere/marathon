@@ -18,7 +18,7 @@ from datetime import timedelta
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_version_less_than, private_agents, required_private_agents,
                        marthon_version_less_than)
-from utils import marathon_on_marathon
+from utils import (marathon_on_marathon, mom_version_less_than)
 
 
 def test_launch_mesos_container():
@@ -509,7 +509,7 @@ def test_command_health_check_healthy():
 
 @pytest.mark.parametrize('protocol', [
    'MESOS_HTTPS',
-   pytest.mark.skipif('marthon_version_less_than("1.4.2")')('HTTPS')
+   pytest.mark.skipif('mom_version_less_than("1.4.2")')('HTTPS')
 ])
 def test_https_health_check_healthy(protocol):
     """ Test HTTPS and MESOS_HTTPS protocols with a prepared nginx image that enables
