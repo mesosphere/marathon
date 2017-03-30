@@ -53,7 +53,8 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       while (serviceFacade.plan().code != 200) {
         When("We continue on block until the plan is ready")
         serviceFacade.continue()
-        marathon.listDeploymentsForBaseGroup().value should have size 1
+        val deployments = marathon.listDeploymentsForBaseGroup().value
+        deployments should have size 1 withClue (s"Expected 1 deployment but found ${deployments}")
       }
       waitForDeployment(update)
     }
@@ -68,7 +69,8 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
     while (continue && serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
-      marathon.listDeploymentsForBaseGroup().value should have size 1
+      val deployments = marathon.listDeploymentsForBaseGroup().value
+      deployments should have size 1 withClue (s"Expected 1 deployment but found ${deployments}")
       serviceFacade.continue()
     }
 
