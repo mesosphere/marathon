@@ -14,6 +14,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.util.ScallopStub
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.concurrent.Future
@@ -29,7 +30,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       embed: java.util.Set[String] = Collections.emptySet[String]) {
     config.zkTimeoutDuration returns (patienceConfig.timeout.toMillis * 2).millis
     config.availableFeatures returns Set.empty
-    config.defaultNetworkName returns new org.rogach.scallop.ScallopOption[String]("default_network_name") {}
+    config.defaultNetworkName returns ScallopStub(None)
+    config.mesosBridgeName returns ScallopStub(Some("default-mesos-bridge-name"))
     val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config)(auth.auth, auth.auth, mat)
   }
 

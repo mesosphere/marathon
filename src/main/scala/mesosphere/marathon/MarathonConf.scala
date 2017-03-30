@@ -32,8 +32,8 @@ private[marathon] object MarathonConfHostNameCache {
 
 trait MarathonConf
     extends ScallopConf
-    with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
-    with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
+    with EventConf with NetworkConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig
+    with LeaderProxyConf with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
     with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
     with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf {
 
@@ -277,12 +277,6 @@ trait MarathonConf
   lazy val envVarsPrefix = opt[String](
     "env_vars_prefix",
     descr = "Prefix to use for environment variables injected automatically into all started tasks.",
-    noshort = true
-  )
-
-  lazy val defaultNetworkName = opt[String](
-    "default_network_name",
-    descr = "Network name, injected into applications' container-mode network{} specs that do not define their own name.",
     noshort = true
   )
 

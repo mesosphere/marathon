@@ -71,12 +71,13 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
           |}
         """.stripMargin).as[App]
 
+      val config = AppNormalization.Configure(None, "mesos-bridge-name")
       val appDef = Raml.fromRaml(
-        AppNormalization.apply(AppNormalization.Configure(None))
-          .normalized(AppNormalization.forDeprecated.normalized(originalApp)))
+        AppNormalization.apply(config)
+          .normalized(AppNormalization.forDeprecated(config).normalized(originalApp)))
 
-      val appUpdate = AppNormalization.forUpdates(AppNormalization.Configure(None)).normalized(
-        AppNormalization.forDeprecatedUpdates.normalized(Json.parse(
+      val appUpdate = AppNormalization.forUpdates(config).normalized(
+        AppNormalization.forDeprecatedUpdates(config).normalized(Json.parse(
           """
           |{
           |	"id": "/sleepy-moby",

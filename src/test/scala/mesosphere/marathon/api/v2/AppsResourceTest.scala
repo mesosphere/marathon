@@ -51,10 +51,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       PluginManager.None
     )(auth.auth, auth.auth)
 
-    val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get)
+    val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get, config.mesosBridgeName())
 
     def normalize(app: App): App = {
-      val migrated = AppNormalization.forDeprecated.normalized(app)
+      val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
       AppNormalization(normalizationConfig).normalized(migrated)
     }
 

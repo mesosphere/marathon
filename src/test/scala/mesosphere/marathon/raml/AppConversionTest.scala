@@ -62,7 +62,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
           AppsResource.appNormalization(
-            AppsResource.NormalizationConfig(features, AppNormalization.Configure(None))).normalized(ramlApp)
+            AppsResource.NormalizationConfig(features, AppNormalization.Configure(None, "bridge-name"))).normalized(ramlApp)
         )
       }
       Then("The app is identical")
@@ -79,8 +79,9 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val protoRamlApp = app.toProto.toRaml[App]
 
       Then("The direct and indirect RAML conversions are identical")
+      val config = AppNormalization.Configure(None, "bridge-name")
       val normalizedProtoRamlApp = AppNormalization(
-        AppNormalization.Configure(None)).normalized(AppNormalization.forDeprecated.normalized(protoRamlApp))
+        config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
       normalizedProtoRamlApp should be(ramlApp)
     }
   }

@@ -28,14 +28,14 @@ trait StorageModule {
 }
 
 object StorageModule {
-  def apply(conf: StorageConf, lifecycleState: LifecycleState)(implicit mat: Materializer, ctx: ExecutionContext,
+  def apply(conf: StorageConf with NetworkConf, lifecycleState: LifecycleState)(implicit mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
     val currentConfig = StorageConfig(conf, lifecycleState)
-    apply(currentConfig)
+    apply(currentConfig, conf.mesosBridgeName())
   }
 
   def apply(
-    config: StorageConfig)(implicit mat: Materializer, ctx: ExecutionContext,
+    config: StorageConfig, mesosBridgeName: String)(implicit mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
 
     config match {
@@ -61,9 +61,10 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(zk.backupLocation, store)
-        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, store, appRepository, groupRepository,
-          deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
-          frameworkIdRepository, eventSubscribersRepository, ServiceDefinitionRepository.zkRepository(store), backup)
+        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, mesosBridgeName, store,
+          appRepository, groupRepository, deploymentRepository, taskRepository, instanceRepository,
+          taskFailureRepository, frameworkIdRepository, eventSubscribersRepository,
+          ServiceDefinitionRepository.zkRepository(store), backup)
 
         StorageModuleImpl(
           instanceRepository,
@@ -97,9 +98,10 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(mem.backupLocation, store)
-        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, store, appRepository, groupRepository,
-          deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
-          frameworkIdRepository, eventSubscribersRepository, ServiceDefinitionRepository.inMemRepository(store), backup)
+        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, mesosBridgeName,
+          store, appRepository, groupRepository, deploymentRepository, taskRepository, instanceRepository,
+          taskFailureRepository, frameworkIdRepository, eventSubscribersRepository,
+          ServiceDefinitionRepository.inMemRepository(store), backup)
 
         StorageModuleImpl(
           instanceRepository,

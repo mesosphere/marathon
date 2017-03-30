@@ -42,17 +42,19 @@ class AppDefinitionFormatsTest extends UnitTest
     """)
   }
 
-  def normalizeAndConvert(app: raml.App): AppDefinition =
+  def normalizeAndConvert(app: raml.App): AppDefinition = {
+    val config = AppNormalization.Configure(None, "mesos-bridge-name")
     Raml.fromRaml(
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
       Validation.validateOrThrow(
-        AppNormalization.apply(AppNormalization.Configure(None))
+        AppNormalization.apply(config)
           .normalized(Validation.validateOrThrow(
-            AppNormalization.forDeprecated.normalized(app))(AppValidation.validateOldAppAPI)))(
+            AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
           AppValidation.validateCanonicalAppAPI(Set.empty)
         )
     )
+  }
 
   "AppDefinitionFormats" should {
     "ToJson" in {

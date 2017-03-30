@@ -29,7 +29,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     backup: PersistentStoreBackup = mock[PersistentStoreBackup],
     eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository],
     serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository]): Migration = {
-    new Migration(Set.empty, None, persistenceStore, appRepository, groupRepository, deploymentRepository,
+    new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, groupRepository, deploymentRepository,
       taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository,
       eventSubscribersRepository, serviceDefinitionRepository, backup)
   }

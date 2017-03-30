@@ -46,7 +46,9 @@ class AppsResource @Inject() (
   private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
   private implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures)
 
-  private val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get)
+  private val normalizationConfig = AppNormalization.Configure(
+    config.defaultNetworkName.get,
+    config.mesosBridgeName())
 
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(NormalizationConfig(config.availableFeatures, normalizationConfig))(AppNormalization.withCanonizedIds())
@@ -405,14 +407,14 @@ object AppsResource {
 
   def appNormalization(config: NormalizationConfig): Normalization[raml.App] = Normalization { app =>
     validateOrThrow(app)(AppValidation.validateOldAppAPI)
-    val migrated = AppNormalization.forDeprecated.normalized(app)
+    val migrated = AppNormalization.forDeprecated(config.config).normalized(app)
     validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures))
     AppNormalization(config.config).normalized(migrated)
   }
 
   def appUpdateNormalization(config: NormalizationConfig): Normalization[raml.AppUpdate] = Normalization { app =>
     validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
-    val migrated = AppNormalization.forDeprecatedUpdates.normalized(app)
+    val migrated = AppNormalization.forDeprecatedUpdates(config.config).normalized(app)
     validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(config.enabledFeatures))
     AppNormalization.forUpdates(config.config).normalized(migrated)
   }

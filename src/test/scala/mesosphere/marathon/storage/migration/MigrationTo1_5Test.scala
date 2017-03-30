@@ -412,7 +412,7 @@ class MigrationTo1_5Test extends AkkaUnitTest with RecoverMethods with GroupCrea
     }
 
     lazy implicit val environment: Environment = Environment(env)
-    lazy implicit val appNormalization: Normalization[raml.App] = appNormalizer(Set.empty, defaultNetworkName)
+    lazy implicit val appNormalization: Normalization[raml.App] = appNormalizer(Set.empty, defaultNetworkName, "mesos-bridge")
 
     val serviceDefinitionRepository = mock[ServiceDefinitionRepository]
     val groupRepository = mock[GroupRepository]

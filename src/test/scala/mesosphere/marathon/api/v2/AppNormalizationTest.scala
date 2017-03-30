@@ -96,10 +96,23 @@ class AppNormalizationTest extends UnitTest {
       }
     }
 
-    "migrate legacy port definitions and mappings to canonical form" when {
-      implicit val appNormalizer = Normalization[App] { app =>
-        AppNormalization(AppNormalization.Configure(None)).normalized(AppNormalization.forDeprecated.normalized(app))
+    def normalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
+      val config = AppNormalization.Configure(defaultNetworkName, mesosBridgeName)
+      Normalization[App] { app =>
+        AppNormalization(config).normalized(AppNormalization.forDeprecated(config).normalized(app))
       }
+    }
+
+    def updateNormalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
+      val config = AppNormalization.Configure(defaultNetworkName, mesosBridgeName)
+      Normalization[AppUpdate] { app =>
+        AppNormalization.forUpdates(config)
+          .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(app))
+      }
+    }
+
+    "migrate legacy port definitions and mappings to canonical form" when {
+      implicit val appNormalizer = normalizer()
       def normalizeMismatchedPortDefinitionsAndMappings(subcase: String, legacyf: Fixture => App, canonicalf: Fixture => App, extraPort: ContainerPortMapping) = {
         s"mismatched port defintions and port mappings are specified for a docker app ($subcase)" in new Fixture {
           val legacy: App = legacyf(this)
@@ -132,22 +145,15 @@ class AppNormalizationTest extends UnitTest {
     }
 
     "normalize a canonical app with a default network specified" when {
-      val defaultNetworkName = Option("default-network0")
-      implicit val appNormalizer = Normalization[App] { app =>
-        AppNormalization(AppNormalization.Configure(defaultNetworkName))
-          .normalized(AppNormalization.forDeprecated.normalized(app))
-      }
+      implicit val appNormalizer = normalizer(Some("default-network0"))
       "normalization doesn't overwrite an existing network name" in new Fixture {
         normalizedMesosApp.normalize should be(normalizedMesosApp)
       }
     }
 
     "migrate ipAddress discovery to container port mappings with a default network specified" when {
-      val defaultNetworkName = Option("default-network0")
-      implicit val appNormalizer = Normalization[App] { app =>
-        AppNormalization(AppNormalization.Configure(defaultNetworkName))
-          .normalized(AppNormalization.forDeprecated.normalized(app))
-      }
+      val defaultNetworkName = Some("default-network0")
+      implicit val appNormalizer = normalizer(defaultNetworkName)
 
       "using legacy docker networking API, without a named network" in new Fixture {
         val normalized = legacyDockerApp.copy(ipAddress = Option(IpAddress())).normalize
@@ -167,10 +173,7 @@ class AppNormalizationTest extends UnitTest {
     }
 
     "migrate legacy network modes to canonical API" when {
-      implicit val appNormalizer = Normalization[App] { app =>
-        AppNormalization(AppNormalization.Configure(None)).normalized(AppNormalization.forDeprecated.normalized(app))
-      }
-
+      implicit val appNormalizer = normalizer()
       "legacy docker bridge app specifies the configured mesos CNI bridge" in {
         val legacyDockerApp = App(
           "/foo",
@@ -293,9 +296,7 @@ class AppNormalizationTest extends UnitTest {
     }
 
     "migrate ipAddress discovery to container port mappings without a default network specified" when {
-      implicit val appNormalizer = Normalization[App] { app =>
-        AppNormalization(AppNormalization.Configure(None)).normalized(AppNormalization.forDeprecated.normalized(app))
-      }
+      implicit val appNormalizer = normalizer(None)
 
       "using legacy docker networking API" in new Fixture {
         val normalized = legacyDockerApp.normalize
@@ -329,10 +330,7 @@ class AppNormalizationTest extends UnitTest {
     }
 
     "not assign defaults for app update normalization" when {
-      implicit val appUpdateNormalizer = Normalization[AppUpdate] { app =>
-        AppNormalization.forUpdates(AppNormalization.Configure(None))
-          .normalized(AppNormalization.forDeprecatedUpdates.normalized(app))
-      }
+      implicit val appUpdateNormalizer = updateNormalizer(None)
 
       "for an empty app update" in {
         val raw = AppUpdate()
@@ -355,9 +353,7 @@ class AppNormalizationTest extends UnitTest {
 
     "normalize requirePorts depending on network type" when {
 
-      implicit val appNormalizer = Normalization[App] { app =>
-        AppNormalization(AppNormalization.Configure(None)).normalized(AppNormalization.forDeprecated.normalized(app))
-      }
+      implicit val appNormalizer = normalizer(None)
 
       "app w/ non-host networking discards requirePorts" in new Fixture {
         val raw = legacyMesosApp.copy(requirePorts = true)
@@ -379,9 +375,7 @@ class AppNormalizationTest extends UnitTest {
 
     "preserve user intent w/ respect to opting into and out of default ports" when {
 
-      implicit val appNormalizer = Normalization[App] { app =>
-        AppNormalization(AppNormalization.Configure(None)).normalized(AppNormalization.forDeprecated.normalized(app))
-      }
+      implicit val appNormalizer = normalizer(None)
 
       "inject default ports for an app w/ container networking but w/o a container" in {
         val raw = App(

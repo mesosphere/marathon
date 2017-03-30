@@ -158,7 +158,8 @@ class TaskBuilder(
           case a: Container.MesosAppC => a.copy(labels = a.labels + ("MESOS_TASK_ID" -> taskId.mesosTaskId.getValue))
           case c => c
         }
-        builder.mergeFrom(ContainerSerializer.toMesos(runSpec.networks, containerWithPortMappings))
+        builder.mergeFrom(
+          ContainerSerializer.toMesos(runSpec.networks, containerWithPortMappings, config.mesosBridgeName()))
       }
 
       // Set container type to MESOS by default (this is a required field)

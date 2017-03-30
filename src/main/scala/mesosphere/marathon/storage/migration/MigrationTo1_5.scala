@@ -26,7 +26,8 @@ case class MigrationTo1_5(
   @SuppressWarnings(Array("all")) // async/await
   def migrate(): Future[Done] = async {
     implicit val env = Environment(sys.env)
-    implicit val appNormalization = appNormalizer(migration.availableFeatures, migration.defaultNetworkName)
+    implicit val appNormalization = appNormalizer(
+      migration.availableFeatures, migration.defaultNetworkName, migration.mesosBridgeName)
     val summary = await(migrateGroups(migration.serviceDefinitionRepo, migration.groupRepository))
     logger.info(s"Migrated $summary to 1.5")
     Done
@@ -47,7 +48,10 @@ private[migration] object MigrationTo1_5 {
 
   case class Environment(vars: Map[String, String])
 
-  def appNormalizer(enabledFeatures: Set[String], networkName: Option[String])(implicit env: Environment): Normalization[raml.App] =
+  def appNormalizer(enabledFeatures: Set[String], networkName: Option[String], mesosBridgeName: String)(
+    implicit
+    env: Environment): Normalization[raml.App] = {
+    val mbn = mesosBridgeName
     // lazily evaluate the special environment variable and configured network name: we might never need them, and in
     // that case we don't want to abort migration (because there's no reason to).
     AppsResource.appNormalization(AppsResource.NormalizationConfig(
@@ -55,7 +59,10 @@ private[migration] object MigrationTo1_5 {
       override def defaultNetworkName: Option[String] =
         env.vars.get(DefaultNetworkNameForMigratedApps).orElse(networkName).orElse(throw SerializationFailedException(
           MigrationFailedMissingNetworkEnvVar))
+      override def mesosBridgeName =
+        mbn
     }))
+  }
 
   /**
     * for each root version (+ current) load all apps from the service-definition-repository, migrate them,

@@ -6,18 +6,10 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.{ RichRuntime, LifecycleState }
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
-import org.rogach.scallop.ScallopOption
-
+import mesosphere.marathon.util.ScallopStub
 import scala.concurrent.duration._
 
 class CuratorElectionServiceTest extends AkkaUnitTest with Mockito with ExitDisabledTest {
-
-  def scallopOption[A](a: Option[A]): ScallopOption[A] = {
-    new ScallopOption[A]("") {
-      override def get = a
-      override def apply() = a.get
-    }
-  }
 
   "The CuratorElectionService" when {
 
@@ -31,8 +23,8 @@ class CuratorElectionServiceTest extends AkkaUnitTest with Mockito with ExitDisa
     "given an unresolvable hostname" should {
 
       conf.zkHosts returns "unresolvable:8080"
-      conf.zooKeeperSessionTimeout returns scallopOption(Some(10))
-      conf.zooKeeperTimeout returns scallopOption(Some(10))
+      conf.zooKeeperSessionTimeout returns ScallopStub(Some(10))
+      conf.zooKeeperTimeout returns ScallopStub(Some(10))
       conf.zkPath returns "/marathon"
       conf.zkTimeoutDuration returns 250.milliseconds
 
