@@ -7,7 +7,8 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.{ Delete, Get, Patch, Post, Put }
-import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.Uri.Query
+import akka.http.scaladsl.model.{ MediaType, _ }
 import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.unmarshalling.{ Unmarshal => AkkaUnmarshal }
 import akka.stream.Materializer
@@ -144,13 +145,16 @@ class MarathonFacade(
     * Connects to the Marathon SSE endpoint. Future completes when the http connection is established. Events are
     * streamed via the materializable-once Source.
     */
-  def events(): Future[Source[ITEvent, NotUsed]] = {
+  def events(eventsType: String*): Future[Source[ITEvent, NotUsed]] = {
 
     import EventUnmarshalling.fromEventStream
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
 
-    Http().singleRequest(Get(s"$url/v2/events").withHeaders(Accept(MediaType.text("event-stream"))))
+    val eventsFilter = Query(eventsType.map(eventType => "event_type" -> eventType): _*)
+
+    Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(eventsFilter))
+      .withHeaders(Accept(MediaType.text("event-stream"))))
       .flatMap { response =>
         AkkaUnmarshal(response).to[Source[ServerSentEvent, NotUsed]]
       }
