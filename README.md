@@ -167,6 +167,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 * [Go client](https://github.com/jbdalido/gomarathon) by Jean-Baptiste Dalido
 * [Node client](https://github.com/silas/node-mesos) by Silas Sewell
 * [Clojure client](https://github.com/codemomentum/marathonclj) by Halit Olali
+* [sbt plugin](https://github.com/Tapad/sbt-marathon), developed at [Tapad](https://tapad.com)
 
 ## Companies using Marathon
 
