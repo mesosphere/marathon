@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package state
 
-import com.wix.accord.dsl._
 import com.wix.accord._
+import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.pod.Network
 

@@ -5,17 +5,17 @@ import akka.Done
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
+import mesosphere.marathon.storage.migration.legacy.MigrationTo_1_4_2
 import mesosphere.marathon.storage.repository._
 
 import scala.async.Async.{ async, await }
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
-import mesosphere.marathon.storage.migration.legacy.MigrationTo_1_4_2
 
 /**
   * @param persistenceStore Optional "new" PersistenceStore for new migrations, the repositories

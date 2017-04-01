@@ -16,9 +16,9 @@ trait AppValidation {
   import ArtifactValidation._
   import EnvVarValidation._
   import NetworkValidation._
-  import SecretValidation._
-  import SchedulingValidation._
   import PathId.{ empty => _, _ }
+  import SchedulingValidation._
+  import SecretValidation._
 
   val portDefinitionsValidator: Validator[Seq[PortDefinition]] = validator[Seq[PortDefinition]] {
     portDefinitions =>

@@ -27,7 +27,7 @@ private[launcher] class OfferProcessorImpl(
     taskLauncher: TaskLauncher,
     taskCreationHandler: InstanceCreationHandler,
     offerStreamInput: SourceQueue[Offer]) extends OfferProcessor with StrictLogging {
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   private[this] val offerMatchingTimeout = conf.offerMatchingTimeout().millis
   private[this] val saveTasksToLaunchTimeout = conf.saveTasksToLaunchTimeout().millis

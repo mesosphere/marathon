@@ -6,12 +6,12 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.util._
 import mesosphere.marathon.util.{ Timeout, TimeoutException }
+import mesosphere.util._
 import org.apache.mesos.Protos.Offer
 
-import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
+import scala.concurrent.{ Future, Promise }
 
 /**
   * Provides a thin wrapper around an OfferMatcher implemented as an actors.
@@ -23,7 +23,7 @@ class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[P
     extends OfferMatcher with StrictLogging {
 
   def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
+    import mesosphere.marathon.core.async.ExecutionContexts.global
 
     val timeout: FiniteDuration = now.until(deadline)
 

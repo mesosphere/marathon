@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package state
 
-import mesosphere.UnitTest
 import com.wix.accord.scalatest.ResultMatchers
+import mesosphere.UnitTest
 
 import scala.concurrent.duration._
 

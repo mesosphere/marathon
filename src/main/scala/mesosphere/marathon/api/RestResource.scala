@@ -7,11 +7,10 @@ import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
 
 import akka.http.scaladsl.model.StatusCodes
 import com.wix.accord._
-import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import play.api.data.validation.ValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._

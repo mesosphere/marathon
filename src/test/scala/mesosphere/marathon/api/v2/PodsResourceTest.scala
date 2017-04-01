@@ -10,8 +10,10 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -22,13 +24,12 @@ import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, Netw
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
 
 class PodsResourceTest extends AkkaUnitTest with Mockito {
 
@@ -237,7 +238,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
     }
 
     "support versions" when {
-      implicit val ctx = ExecutionContext.global
+      implicit val ctx = ExecutionContexts.global
 
       "there are no versions" when {
         "list no versions" in {

@@ -5,18 +5,18 @@ import akka.Done
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import akka.stream.ActorMaterializer
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.termination.KillConfig
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
+import mesosphere.marathon.core.task.termination.KillConfig
+import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream.Sink
 
 import scala.collection.mutable
-import mesosphere.marathon.state.Timestamp
 import scala.concurrent.{ Future, Promise }
 
 /**

@@ -1,15 +1,26 @@
 package mesosphere.marathon
 package integration.facades
 
+import com.typesafe.scalalogging.StrictLogging
 import java.io.File
 import java.util.Date
 
+import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import de.heikoseeberger.akkasse.EventStreamUnmarshalling
+import akka.actor.ActorSystem
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.event.{ EventSubscribers, Subscribe, Unsubscribe }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{ RestResult, SprayHttpResponse }
 import mesosphere.marathon.raml.{ App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml }
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
 import org.slf4j.LoggerFactory
 import play.api.libs.functional.syntax._
@@ -17,12 +28,18 @@ import play.api.libs.json.JsArray
 import spray.client.pipelining._
 import spray.http._
 import spray.httpx.PlayJsonSupport
+import akka.http.scaladsl.{ Http => AkkaHttp }
+import akka.http.scaladsl.client.RequestBuilding.{ Get => AkkaGet }
+import akka.http.scaladsl.model.{ MediaType => AkkaMediaType }
+import akka.http.scaladsl.model.headers.{ Accept => AkkaAccept }
+import akka.http.scaladsl.unmarshalling.{ Unmarshal => AkkaUnmarshal }
+import de.heikoseeberger.akkasse.ServerSentEvent
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import mesosphere.marathon.stream.Implicits._
 
 /**
   * GET /apps will deliver something like Apps instead of List[App]
@@ -49,7 +66,7 @@ case class ITEnrichedTask(
   def suspended: Boolean = startedAt.isEmpty
 }
 case class ITLeaderResult(leader: String) {
-  val port = leader.split(":")(1)
+  val port: Integer = leader.split(":")(1).toInt
 }
 
 case class ITListDeployments(deployments: Seq[ITDeployment])
@@ -60,19 +77,28 @@ case class ITLaunchQueue(queue: List[ITQueueItem])
 
 case class ITDeployment(id: String, affectedApps: Seq[String], affectedPods: Seq[String])
 
+sealed trait ITSSEEvent
+/** Used to signal that the SSE stream is connected */
+case object ITConnected extends ITSSEEvent
+
+/** models each SSE published event */
+case class ITEvent(eventType: String, info: Map[String, Any]) extends ITSSEEvent
+
 /**
   * The MarathonFacade offers the REST API of a remote marathon instance
   * with all local domain objects.
   *
   * @param url the url of the remote marathon instance
   */
-class MarathonFacade(val url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem)
+class MarathonFacade(
+  val url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(
+  implicit
+  val system: ActorSystem, mat: Materializer)
     extends PlayJsonSupport
-    with PodConversion {
+    with PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
   import SprayHttpResponse._
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   require(baseGroup.absolute)
 
@@ -116,6 +142,38 @@ class MarathonFacade(val url: String, baseGroup: PathId, waitTime: Duration = 30
 
   def marathonSendReceive: SendReceive = {
     addHeader("Accept", "*/*") ~> sendReceive
+  }
+
+  // we don't want to lose any events and the default maxEventSize is too small (8K)
+  object EventUnmarshalling extends EventStreamUnmarshalling {
+    override protected def maxEventSize: Int = Int.MaxValue
+    override protected def maxLineSize: Int = Int.MaxValue
+  }
+
+  /**
+    * Connects to the Marathon SSE endpoint. Future completes when the http connection is established. Events are
+    * streamed via the materializable-once Source.
+    */
+  def events(): Future[Source[ITEvent, NotUsed]] = {
+
+    import EventUnmarshalling.fromEventStream
+    val mapper = new ObjectMapper() with ScalaObjectMapper
+    mapper.registerModule(DefaultScalaModule)
+
+    AkkaHttp().singleRequest(AkkaGet(s"$url/v2/events").withHeaders(AkkaAccept(AkkaMediaType.text("event-stream"))))
+      .flatMap { response =>
+        AkkaUnmarshal(response).to[Source[ServerSentEvent, NotUsed]]
+      }
+      .map { stream =>
+        stream
+          .map { event =>
+            event.data.map { d =>
+              val json = mapper.readValue[Map[String, Any]](d) // linter:ignore
+              ITEvent(event.`type`.getOrElse("unknown"), json)
+            }
+          }
+          .collect { case Some(event) => event }
+      }
   }
 
   //app resource ----------------------------------------------
@@ -386,8 +444,12 @@ class MarathonFacade(val url: String, baseGroup: PathId, waitTime: Duration = 30
 
   //leader ----------------------------------------------
   def leader(): RestResult[ITLeaderResult] = {
+    result(leaderAsync(), waitTime)
+  }
+
+  def leaderAsync(): Future[RestResult[ITLeaderResult]] = {
     val pipeline = marathonSendReceive ~> read[ITLeaderResult]
-    result(Retry("leader") { pipeline(Get(s"$url/v2/leader")) }, waitTime)
+    Retry("leader") { pipeline(Get(s"$url/v2/leader")) }
   }
 
   def abdicate(): RestResult[HttpResponse] = {

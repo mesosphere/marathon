@@ -5,14 +5,14 @@ import com.wix.accord._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
 import mesosphere.marathon.api.v2.validation.AppValidation
+import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, PortDefinition, PortDefinitions, Raml, SecretDef, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import play.api.libs.json.{ JsError, Json }
 import org.apache.mesos.{ Protos => Mesos }
+import play.api.libs.json.{ JsError, Json }
 
 import scala.collection.immutable.Seq
 

@@ -30,7 +30,7 @@ class MarathonScheduler @Inject() (
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   implicit val zkTimeout = config.zkTimeoutDuration
 

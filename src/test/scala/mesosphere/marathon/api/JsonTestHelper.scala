@@ -3,7 +3,7 @@ package api
 
 import gnieh.diffson.playJson._
 import org.scalatest.{ Assertions, Matchers }
-import play.api.libs.json.{ Format, JsArray, JsNull, JsObject, JsValue, Json, Writes }
+import play.api.libs.json._
 
 import scala.collection.Map
 

@@ -16,11 +16,11 @@ import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 
+import scala.async.Async._
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.sys.process.Process
 import scala.util.Try
-import scala.async.Async._
 
 case class MesosConfig(
   launcher: String = "posix",

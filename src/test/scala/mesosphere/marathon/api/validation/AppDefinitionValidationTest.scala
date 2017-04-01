@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package api.validation
 
+import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.UnitTest
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
-import com.wix.accord.scalatest.ResultMatchers
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.duration._

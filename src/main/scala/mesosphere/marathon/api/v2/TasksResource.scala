@@ -10,6 +10,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
@@ -24,7 +25,7 @@ import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.async.Async._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 
 @Path("v2/tasks")
 class TasksResource @Inject() (
@@ -37,7 +38,7 @@ class TasksResource @Inject() (
     val authorizer: Authorizer) extends AuthResource {
 
   val log = LoggerFactory.getLogger(getClass.getName)
-  implicit val ec = ExecutionContext.Implicits.global
+  implicit val ec = ExecutionContexts.global
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))

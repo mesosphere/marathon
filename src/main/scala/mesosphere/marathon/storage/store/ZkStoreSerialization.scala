@@ -6,7 +6,6 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
 import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.instance.Instance

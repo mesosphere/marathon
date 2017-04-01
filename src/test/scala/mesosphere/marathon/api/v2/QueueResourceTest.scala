@@ -9,8 +9,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.raml.{ App, Raml }
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.NoOfferMatchReason
 import play.api.libs.json._

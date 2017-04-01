@@ -5,6 +5,8 @@ import java.util.Collections
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
+import mesosphere.marathon.core.async.ExecutionContexts.global
+import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -15,12 +17,10 @@ import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
 import org.mockito.Matchers
 import org.mockito.Mockito._
 
 import scala.collection.immutable.Seq
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 

@@ -8,9 +8,9 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.core.storage.repository.ReadOnlyVersionedRepository
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersionedRepository
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
+import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.store.{ InMemoryStoreSerialization, ZkStoreSerialization }
 

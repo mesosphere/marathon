@@ -5,8 +5,8 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.core.pod.BridgeNetwork
+import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._

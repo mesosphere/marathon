@@ -3,11 +3,11 @@ package api.v2.json
 
 import java.util.UUID
 
-import mesosphere.marathon.core.deployment._
 import mesosphere.UnitTest
+import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.raml.{ App, GroupUpdate, Raml }
-import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
 import mesosphere.marathon.test.GroupCreation
 import play.api.libs.json._
 

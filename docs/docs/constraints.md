@@ -29,9 +29,21 @@ Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the stri
 ## Operators
 
 ### CLUSTER operator
-**Value** (required): A non-empty string value.
+**Value** (optional): A string value.
+When a value is specified then tasks are launched on agent nodes with an attribute whose value matches exactly.
 
-`CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency.
+`CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute.
+This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency.
+
+A field of `"hostname"` tells Marathon that launched tasks of the app/pod have affinity for each other and should be launched together on the same agent:
+* When value is specified then tasks are launched on the agent whose hostname matches the value.
+* When value is empty or unspecified then the first instance is launched on **any** agent node and the remaining tasks are launched alongside it on the same agent.
+
+Attribute fields are handled differently:
+* When value is specified then tasks are launched on any agent with an attribute named according the field **and** with a value matching that of the constraint.
+* When value is empty or unspecified then the first instance is launched on any agent with an attribute named according to the field; the value of the attribute on that agent is used for future constraint matches.
+
+You could specify the exact rack on which to run app tasks:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -42,7 +54,18 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-You can also use this attribute to tie an application to a specific node by using the hostname property:
+Alternatively, you could specify that all of the app tasks should run on the same rack, but without specifying which rack:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-cluster",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "CLUSTER"]]
+  }'
+```
+
+You can also tie an app to a specific node by using the `hostname` field:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -50,6 +73,17 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["hostname", "CLUSTER", "a.specific.node.com"]]
+  }'
+```
+
+Or in a similar way, you can run all app tasks together on the same node but without specifying which agent to use:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-cluster",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["hostname", "CLUSTER"]]
   }'
 ```
 
@@ -96,7 +130,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ```
 
 ### UNIQUE operator
-**Value** (optional): A string that defines the value of the attribute. This attribute must be unique. If you specify `hostname:UNIQUE`, any value you define will be ignored.
+`UNIQUE` does not accept a value.
 
 `UNIQUE` tells Marathon to enforce uniqueness of the attribute across all of an app's tasks. For example the following constraint ensures that there is only one app task running on each host.
 

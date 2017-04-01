@@ -4,8 +4,8 @@ package core.instance.update
 import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.state.{ NetworkInfoPlaceholder, TaskConditionMapping }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -24,7 +24,7 @@ import scala.concurrent.Future
   */
 class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   "InstanceUpdateOpResolver" should {
     "ForceExpunge for an unknown task" in new Fixture {

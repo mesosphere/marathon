@@ -9,6 +9,7 @@ import javax.ws.rs.core.{ Context, Response }
 
 import akka.stream.Materializer
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, Selector }
@@ -21,7 +22,6 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
-import Validation._
 
 import scala.concurrent.Future
 import scala.util.matching.Regex
@@ -79,7 +79,7 @@ class GroupsResource @Inject() (
     @QueryParam("embed") embed: java.util.Set[String],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    import scala.concurrent.ExecutionContext.Implicits.global
+    import mesosphere.marathon.core.async.ExecutionContexts.global
 
     val embeds: Set[String] = if (embed.isEmpty) defaultEmbeds else embed
     val (appEmbed, groupEmbed) = resolveAppGroup(embeds)

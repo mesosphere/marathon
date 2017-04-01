@@ -1,12 +1,11 @@
 package mesosphere.marathon
 
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -21,8 +20,8 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito.Matchers
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
 
 class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
@@ -230,7 +229,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       And("test app gets purged (but not stopped yet because of in-flight tasks)")
       Future {
         launchQueue.purge(app.id)
-      }(ExecutionContext.Implicits.global)
+      }(ExecutionContexts.global)
       WaitTestSupport.waitUntil("purge gets executed", 1.second) {
         !launchQueue.list.exists(_.runSpec.id == app.id)
       }

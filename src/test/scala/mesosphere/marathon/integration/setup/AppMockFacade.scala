@@ -17,7 +17,7 @@ import scala.concurrent.duration.{ Duration, _ }
 case class AppMockResponse(asString: String, response: HttpResponse)
 
 class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem, mat: Materializer) extends StrictLogging {
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   implicit val scheduler: Scheduler = system.scheduler
 

@@ -22,7 +22,7 @@ import scala.util.control.NonFatal
 private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorSystem)
     extends ReadinessCheckExecutor {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def execute(readinessCheckSpec: ReadinessCheckSpec): Observable[ReadinessCheckResult] = {

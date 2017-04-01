@@ -17,12 +17,12 @@ import mesosphere.marathon.util.SemanticVersion
   */
 @SuppressWarnings(Array("all")) // wix breaks stuff
 trait PodsValidation {
-  import Validation._
   import EnvVarValidation._
   import NameValidation._
   import NetworkValidation._
-  import SecretValidation._
   import SchedulingValidation._
+  import SecretValidation._
+  import Validation._
 
   val resourceValidator = validator[Resources] { resource =>
     resource.cpus should be >= 0.0

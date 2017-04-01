@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 
 private[leadership] class LeadershipCoordinatorDelegate(actorRef: ActorRef) extends LeadershipCoordinator {
   override def prepareForStart(): Future[Unit] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
+    import mesosphere.marathon.core.async.ExecutionContexts.global
     implicit val timeout: Timeout = 10.seconds
     (actorRef ? PrepareForStart).map(_ => ())
   }

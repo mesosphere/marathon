@@ -1,21 +1,13 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.{ Failure, Result }
 import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.Validation
+import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.raml.{ App, Container, ContainerPortMapping, EngineType, Network, NetworkMode }
 
-class AppValidationTest extends UnitTest with Validation with ResultMatchers {
+class AppValidationTest extends UnitTest with ResultMatchers with ValidationTestLike {
 
   import Normalization._
-
-  private implicit val normalizeResult: Normalization[Result] = Normalization {
-    // normalize failures => human readable error messages
-    case f: Failure => Failure(f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
-    case x => x
-  }
 
   "canonical app validation" when {
 

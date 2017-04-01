@@ -12,8 +12,8 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._

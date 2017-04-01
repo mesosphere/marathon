@@ -126,6 +126,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
     When("we force the leader to abdicate to simulate a failover")
     server.restart().futureValue
+    f.waitForSSEConnect()
 
     And("second updated task becomes healthy")
     val serviceFacade2 = ServiceMockFacade(f.marathon.tasks(appId).value) { task =>

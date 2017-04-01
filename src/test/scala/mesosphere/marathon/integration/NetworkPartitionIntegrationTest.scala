@@ -4,9 +4,9 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.state.PathId._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Second, Seconds, Span }
-import mesosphere.marathon.state.PathId._
 
 /**
   * Integration test to simulate the issues discovered a verizon where a network partition caused Marathon to be
@@ -84,6 +84,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       And("Marathon is restarted by Systemd")
       // Simulate Systemd rebooting Marathon
       marathonServer.start()
+      waitForSSEConnect()
       eventually {
         marathonServer.isRunning should be(true)
       }

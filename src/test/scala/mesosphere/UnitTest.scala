@@ -1,22 +1,30 @@
 package mesosphere
 
-import akka.testkit.{ TestActor, TestActorRef }
 import java.util.concurrent.{ LinkedBlockingDeque, TimeUnit }
 
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.{ ActorMaterializer, Materializer }
-import akka.testkit.TestKitBase
+import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
+import com.wix.accord.{ Failure, Result }
 import kamon.Kamon
+import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
+import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
 import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures }
 import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.ExecutionContextExecutor
+
+/**
+  * Tests which are still unreliable should be marked with this tag until
+  * they sufficiently pass on master. Prefer this over ignored.
+  */
+object Unstable extends Tag("mesosphere.marathon.UnstableTest")
 
 /**
   * All integration tests should be marked with this tag.
@@ -50,8 +58,14 @@ trait RetryOnFailed extends TestSuite with Retries {
   override def withFixture(test: NoArgTest): Outcome = withRetryOnFailure { super.withFixture(test) }
 }
 
-trait ValidationClue {
+trait ValidationTestLike extends Validation {
   this: Assertions =>
+
+  protected implicit val normalizeResult: Normalization[Result] = Normalization {
+    // normalize failures => human readable error messages
+    case f: Failure => Failure(f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
+    case x => x
+  }
 
   def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
     // handle RAML validation errors

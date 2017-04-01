@@ -8,6 +8,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
@@ -34,7 +35,6 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 object MarathonTestHelper {
@@ -333,7 +333,7 @@ object MarathonTestHelper {
     leadershipModule: LeadershipModule,
     store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
 
-    implicit val ctx = ExecutionContext.global
+    implicit val ctx = ExecutionContexts.global
     val instanceRepo = store.getOrElse(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
     val updateSteps = Seq.empty[InstanceChangeHandler]
 

@@ -1,6 +1,39 @@
-## Changes from 1.4.0 to 1.5.0 (unreleased)
+## Changes from 1.4.x to 1.5.0 (unreleased)
 
 ### Breaking Changes
+
+#### App JSON Fields Changed or Moved.
+
+Marathon will continue to *accept* the app JSON as it did in 1.4;
+however, applications that use deprecated fields will be normalized into a canonical representation.
+The app JSON *generated* by the /v2 REST API has changed: only canonical fields are generated.
+The [App RAML specification](docs/docs/rest-api/public/api/v2/types/app.raml) is the source of truth with respect to deprecated fields.
+The following deprecated fields will no longer be generated for app JSON:
+
+- `ipAddress`
+- `container.docker.portMappings`
+- `container.docker.network`
+- `ports`
+- `uris`
+
+Marathon clients that consume these deprecated fields will require changes.
+In addition, new networking API fields have been introduced:
+
+- `networks`
+- `container.portMappings`
+
+The `networks` field replaces the `ipAddress.networkName` and `container.docker.network` fields, and supports joining an app to multiple `container` networks.
+The legacy IP/CT API did not require a resolvable network name in order to use a `container` network;
+it allowed both an app definition to leave `ipAddress.networkName` unspecified **and** the operator to leave `--default_network_name` unspecified.
+Starting with Marathon v1.5 such apps will be rejected: apps may leave `networks[x].name` unspecified for `container` networks only if `--default_network_name` has been specified by the operator.
+Marathon injects the value of `--default_network_name` into unnamed `container` networks upon app create/update.
+
+Upgrading from Marathon 1.4.x to Marathon 1.5.x will automatically migrate existing applications to the new networking API.
+Migration of legacy Mesos IP/CT apps **may fail** if those apps did not specify `ipAddress.networkName` and there is no default network name specified.
+See the (networking documentation)[docs/docs/networking.md] for details concerning app migration and network API changes.
+
+The [old app networking docs](docs/docs/ports.md) have been relocated.
+See the [networking documentation](docs/docs/networking.md) for details concerning the new API.
 
 #### Metric Names Changed or Moved.
 We moved to a different Metrics library and the metrics are not _always_ compatible or the same as existing metrics;
@@ -8,8 +41,31 @@ however, the metrics are also now more accurate, use less memory, and are expect
 Where it was possible, we maintained the original metric names/groupings/etc, but some are in new locations or have
 slightly different semantics. Any monitoring dashboards should be updated.
 
-Before 1.5.0 releases, we should publish a migration guide for the new metric formats and where the replacement
+Before 1.5.0 releases, we will publish a migration guide for the new metric formats and where the replacement
 metrics can be found and the formats they are now in.
+
+## Changes from 1.4.1 to 1.4.2
+Bugfix release
+
+### Fixed issues
+- [MARATHON-4570](https://jira.mesosphere.com/browse/MARATHON-4570) Don't destroy persistent volumes when killing unreachable tasks
+- [MARATHON-4390](https://jira.mesosphere.com/browse/MARATHON-4390) Lazy event parsing
+- Improve health checks to log less warnings.
+- [MARATHON-1712](https://jira.mesosphere.com/browse/MARATHON-1712) Loosen SSL requirements for HTTPS health checks.
+- [MARATHON-1408](https://jira.mesosphere.com/browse/MARATHON-1408) Fix serialization of maxSize for persistent volumes.
+- [MARATHON-2311](https://jira.mesosphere.com/browse/MARATHON-2311) Publish a TASK_GONE mesos update when an unreachable instance's resources are seen.
+- [MARATHON-1682](https://jira.mesosphere.com/browse/MARATHON-1682) Persist kill selection.
+- Disable unreachable strategy for resident tasks
+- Add a migration to fix the unreachable strategy for resident apps.
+- Read LaunchedOnReservation and ReservedTasks.
+- ForceExpunge for a missing task is a noop rather than a failure.
+- Use non-deployment-interacting kill service during kill and wipe.
+- Validation of application dependencies is too restrictive, loosed the requirements.
+- Retry failed integration tests once.
+- Fix stability in many integration tests.
+- [MARATHON-7133](https://jira.mesosphere.com/browse/MARATHON-7133) AppDefinition history is now properly loaded during boot
+
+### Known issues
 
 
 ## Changes from 1.4.0 to 1.4.1
