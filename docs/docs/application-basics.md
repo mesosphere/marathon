@@ -28,7 +28,7 @@ Note that `cmd` in the above example is the command that gets executed. Its valu
   <img src="{{ site.baseurl }}/img/marathon-basic-0.png" width="800" height="612" alt="Marathon deployment example: simple bash command">
 </p>
 
-When you define and launch an application, Marathon hands over execution to Mesos. Mesos creates a sandbox directory for each task. The sanbox directory is a directory on each agent node that acts as an execution environment and contains relevant log files. The `stderr` and `stdout` streams are also written to the sanbox directory.
+When you define and launch an application, Marathon hands over execution to Mesos. Mesos creates a sandbox directory for each task. The sandbox directory is a directory on each agent node that acts as an execution environment and contains relevant log files. The `stderr` and `stdout` streams are also written to the sandbox directory.
 
 ## Using Resources in Applications
 
