@@ -109,7 +109,7 @@ You can specify an external volume in your Marathon app definition. [Learn more 
 
 In the app definition above:
 
-*   `containerPath` specifies where the volume is mounted inside the container. For Mesos external volumes, this must be a single-level path relative to the container; it cannot contain a forward slash (`/`). For more information, see [the REX-Ray documentation on data directories][6].
+*   `containerPath` specifies where the volume is mounted inside the container. If you are using the [Mesos containerizer](https://dcos.io/docs/latest/usage/containerizers/), this must be a single-level path relative to the container; it cannot contain a forward slash (/). If you are using the [Universal Container Runtime (UCR)](https://dcos.io/docs/latest/usage/containerizers/), you can specify an absolute container path with forward slashes. **Note:** This path must exist on the host machine.
 
 *   `name` is the name that your volume driver uses to look up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it is [created implicitly][7]. Otherwise, the existing volume is reused.
 
@@ -171,7 +171,7 @@ Below is a sample app definition that uses a Docker container and specifies firs
 
 #### Implicit Volumes
 
-The default implicit volume size is 16 GB. If you are using the Mesos containerizer, you can modify this default for a particular volume by setting `volumes[x].external.size`. For the Mesos and Docker containerizers, you can modify the default size for all implicit volumes by [modifying the REX-Ray configuration][11].
+The default implicit volume size is 16 GB. If you are using the original Mesos containerizer or UCR, you can modify this default for a particular volume by setting `volumes[x].external.size`. For the Mesos and Docker containerizers, you can modify the default size for all implicit volumes by [modifying the REX-Ray configuration][11].
 
 ### Potential Pitfalls
 
