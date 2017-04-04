@@ -101,4 +101,15 @@ class HealthCheckConversionTest extends FunTest {
     raml.timeoutSeconds should be(check.timeout.toSeconds)
   }
 
+  test("A HealthCheck with HttpHealthCheck defined should convert to a MesosHealthCheck") {
+    val check = HealthCheck(http = Some(HttpHealthCheck(endpoint = "localhost")))
+    val core = Some(check.fromRaml).collect {
+      case c: MesosHttpHealthCheck => c
+    }.getOrElse(fail("expected MesosHttpHealthCheck"))
+    core.protocol should be(Protos.HealthCheckDefinition.Protocol.MESOS_HTTP)
+    core.maxConsecutiveFailures should be(check.maxConsecutiveFailures)
+    core.path should not be 'defined
+    core.port should not be 'defined
+    core.portIndex should be (Some(PortReference("localhost")))
+  }
 }

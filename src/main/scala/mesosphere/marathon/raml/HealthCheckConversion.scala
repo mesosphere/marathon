@@ -36,7 +36,7 @@ trait HealthCheckConversion {
         maxConsecutiveFailures = maxConFailures,
         delay = delay.seconds,
         path = httpCheck.path,
-        protocol = httpCheck.scheme.map(Raml.fromRaml(_)).getOrElse(HealthCheckDefinition.Protocol.HTTP),
+        protocol = Raml.fromRaml[HttpScheme, HealthCheckDefinition.Protocol](httpCheck.scheme),
         portIndex = Some(PortReference(httpCheck.endpoint))
       )
     case HealthCheck(None, Some(tcpCheck), None, gracePeriod, interval, maxConFailures, timeout, delay) =>
@@ -83,7 +83,7 @@ trait HealthCheckConversion {
           http = Some(HttpHealthCheck(
             endpoint = requireEndpoint(httpCheck.portIndex),
             path = httpCheck.path,
-            scheme = Some(Raml.toRaml(httpCheck.protocol))))
+            scheme = Raml.toRaml(httpCheck.protocol)))
         )
       case tcpCheck: MesosTcpHealthCheck =>
         partialCheck.copy(
