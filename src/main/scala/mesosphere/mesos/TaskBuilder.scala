@@ -118,7 +118,7 @@ class TaskBuilder(
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder
-    portsProto.addAllPorts(PortDiscovery.generate(runSpec, hostPorts))
+    portsProto.addAllPorts(PortDiscovery.generateForApp(runSpec, hostPorts))
 
     discoveryInfoBuilder.setPorts(portsProto)
     discoveryInfoBuilder.build

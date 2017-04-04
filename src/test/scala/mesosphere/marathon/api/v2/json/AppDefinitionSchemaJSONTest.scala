@@ -92,7 +92,7 @@ class AppDefinitionSchemaJSONTest extends UnitTest {
         |}
       """.stripMargin
 
-      Then("validation should succeed")
+      Then("validation should fail")
       MarathonTestHelper.validateJsonSchemaForString(json, valid = false)
     }
 
@@ -155,6 +155,66 @@ class AppDefinitionSchemaJSONTest extends UnitTest {
         |  "id": "/test",
         |  "cmd": "echo hi",
         |  "constraints": [["hostname"]]
+        |}
+      """.stripMargin
+
+      Then("validation should fail")
+      MarathonTestHelper.validateJsonSchemaForString(json, valid = false)
+    }
+
+    "portMapping with valid networkNames should succeed" in {
+      Given("portMapping with invalid networkNames")
+      val json =
+        """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "container": {
+        |    "type": "MESOS",
+        |    "portMappings": [
+        |      {"hostPort": 0, "networkNames": ["valid-name"]}
+        |    ]
+        |  }
+        |}
+      """.stripMargin
+
+      Then("validation should succeed")
+      MarathonTestHelper.validateJsonSchemaForString(json, valid = true)
+    }
+
+    "portMapping with invalid network name should fail" in {
+      Given("portMapping with invalid networkNames")
+      val json =
+        """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "container": {
+        |    "type": "MESOS",
+        |    "portMappings": [
+        |      {"hostPort": 0, "networkNames": ["invalid name"]}
+        |    ]
+        |  }
+        |}
+      """.stripMargin
+
+      Then("validation should fail")
+      MarathonTestHelper.validateJsonSchemaForString(json, valid = false)
+    }
+
+    "portMapping with non-array should fail" in {
+      Given("portMapping with invalid networkNames")
+      val json =
+        """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "container": {
+        |    "type": "MESOS",
+        |    "portMappings": [
+        |      {"hostPort": 0, "networkNames": "invalid name"}
+        |    ]
+        |  }
         |}
       """.stripMargin
 

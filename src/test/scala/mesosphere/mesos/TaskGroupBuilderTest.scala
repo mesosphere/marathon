@@ -8,23 +8,52 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.raml
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ Resources, Endpoint }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Command, EnvVarString, ResourceRole }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
+import scala.collection.JavaConverters._
 import scala.collection.breakOut
 
-class TaskGroupBuilderTest extends UnitTest {
+class TaskGroupBuilderTest extends UnitTest with Inside {
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
     acceptedResourceRoles = Set(ResourceRole.Unreserved),
     envVarsPrefix = None)
 
   "A TaskGroupBuilder" must {
+
+    "correlate Endpoint with the appropriate network" when {
+      "multiple container networks are defined" in {
+
+        val Seq(network1, network2) = TaskGroupBuilder.buildMesosNetworks(
+          List(ContainerNetwork("1"), ContainerNetwork("2")),
+          List(
+            Endpoint("port-1", containerPort = Some(2001), networkNames = List("1")),
+            Endpoint("port-2", containerPort = Some(2002), networkNames = List("2"))),
+          List(
+            Some(1001),
+            Some(1002)))
+
+        network1.getName shouldBe "1"
+        inside(network1.getPortMappingsList.asScala.toList) {
+          case List(port1) =>
+            port1.getContainerPort shouldBe 2001
+            port1.getHostPort shouldBe 1001
+        }
+        inside(network2.getPortMappingsList.asScala.toList) {
+          case List(port2) =>
+            port2.getContainerPort shouldBe 2002
+            port2.getHostPort shouldBe 1002
+        }
+      }
+    }
+
     "build from a PodDefinition with a single container" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.1, mem = 160.0, disk = 10.0).build
 

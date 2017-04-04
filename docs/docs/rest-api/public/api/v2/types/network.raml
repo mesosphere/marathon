@@ -41,7 +41,15 @@ types:
         description: |
           Metadata as key/value pair. Possible uses include VIPs,
           per-network-interface binding
-
+      networkNames?:
+        type: array
+        items: strings.Name
+        description: |
+          List of the container networks associated with this endpoint. If
+          absent, then this endpoint is associated with all defined container
+          networks (for this application). A single item list is mandatory when
+          `hostPort` is specified and multiple container networks are defined.
+        (pragma.omitEmpty):
   NetworkMode:
     type: string
     enum: [container, "container/bridge", host]

@@ -17,6 +17,7 @@ import mesosphere.marathon.util.SemanticVersion
   */
 @SuppressWarnings(Array("all")) // wix breaks stuff
 trait PodsValidation {
+  import PodsValidationMessages._
   import EnvVarValidation._
   import NameValidation._
   import NetworkValidation._
@@ -76,36 +77,41 @@ trait PodsValidation {
     }
   }
 
-  def endpointValidator(networks: Seq[Network]) = validator[Endpoint] { endpoint =>
-    // TODO RAML-generated rules should catch these simple things
-    endpoint.name.length is between(1, 63)
-    endpoint.name should matchRegexFully(NamePattern)
-    endpoint.containerPort.getOrElse(1) is between(1, 65535)
-    endpoint.hostPort.getOrElse(0) is between(0, 65535)
-
-    // host-mode networking implies that hostPort is required
-    endpoint.hostPort is isTrue("is required when using host-mode networking") { hp =>
-      if (networks.exists(_.mode == NetworkMode.Host)) hp.nonEmpty
-      else true
+  def endpointValidator(networks: Seq[Network]) = {
+    val networkNamess = networks.flatMap(_.name)
+    val hostPortRequiresNetworkName = isTrue[Endpoint](NetworkNameRequiredForMultipleContainerNetworks) { endpoint =>
+      endpoint.hostPort.isEmpty || endpoint.networkNames.length == 1
     }
 
-    // host-mode networking implies that containerPort is disallowed
-    endpoint.containerPort is isTrue("is not allowed when using host-mode networking") { cp =>
-      if (networks.exists(_.mode == NetworkMode.Host)) cp.isEmpty
-      else true
+    val normalValidation = validator[Endpoint] { endpoint =>
+      endpoint.networkNames is every(oneOf(networkNamess: _*))
+
+      // host-mode networking implies that hostPort is required
+      endpoint.hostPort is isTrue("is required when using host-mode networking") { hp =>
+        if (networks.exists(_.mode == NetworkMode.Host)) hp.nonEmpty
+        else true
+      }
+
+      // host-mode networking implies that containerPort is disallowed
+      endpoint.containerPort is isTrue("is not allowed when using host-mode networking") { cp =>
+        if (networks.exists(_.mode == NetworkMode.Host)) cp.isEmpty
+        else true
+      }
+
+      // container-mode networking implies that containerPort is required
+      endpoint.containerPort is isTrue("is required when using container-mode networking") { cp =>
+        if (networks.exists(_.mode == NetworkMode.Container)) cp.nonEmpty
+        else true
+      }
+
+      // protocol is an optional field, so we really don't need to validate that is empty/non-empty
+      // but we should validate that it only contains distinct items
+      endpoint.protocol is isTrue ("Duplicate protocols within the same endpoint are not allowed") { proto =>
+        proto == proto.distinct
+      }
     }
 
-    // container-mode networking implies that containerPort is required
-    endpoint.containerPort is isTrue("is required when using container-mode networking") { cp =>
-      if (networks.exists(_.mode == NetworkMode.Container)) cp.nonEmpty
-      else true
-    }
-
-    // protocol is an optional field, so we really don't need to validate that is empty/non-empty
-    // but we should validate that it only contains distinct items
-    endpoint.protocol is isTrue ("Duplicate protocols within the same endpoint are not allowed") { proto =>
-      proto == proto.distinct
-    }
+    normalValidation and implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
   }
 
   val imageValidator = validator[Image] { image =>
@@ -158,17 +164,17 @@ trait PodsValidation {
     }
   }
 
-  val endpointNamesUnique: Validator[Pod] = isTrue("Endpoint names are unique") { pod: Pod =>
+  val endpointNamesUnique: Validator[Pod] = isTrue(EndpointNamesMustBeUnique) { pod: Pod =>
     val names = pod.containers.flatMap(_.endpoints.map(_.name))
     names.distinct.size == names.size
   }
 
-  val endpointContainerPortsUnique: Validator[Pod] = isTrue("Container ports are unique") { pod: Pod =>
+  val endpointContainerPortsUnique: Validator[Pod] = isTrue(ContainerPortsMustBeUnique) { pod: Pod =>
     val containerPorts = pod.containers.flatMap(_.endpoints.flatMap(_.containerPort))
     containerPorts.distinct.size == containerPorts.size
   }
 
-  val endpointHostPortsUnique: Validator[Pod] = isTrue("Host ports are unique") { pod: Pod =>
+  val endpointHostPortsUnique: Validator[Pod] = isTrue(HostPortsMustBeUnique) { pod: Pod =>
     val hostPorts = pod.containers.flatMap(_.endpoints.flatMap(_.hostPort)).filter(_ != 0)
     hostPorts.distinct.size == hostPorts.size
   }
@@ -177,12 +183,12 @@ trait PodsValidation {
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
-    pod.volumes is every(volumeValidator(pod.containers)) and isTrue("volume names are unique") { volumes: Seq[Volume] =>
+    pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[Volume] =>
       val names = volumes.map(_.name)
       names.distinct.size == names.size
     }
     pod.containers is notEmpty and every(containerValidator(pod, enabledFeatures, mesosMasterVersion))
-    pod.containers is isTrue("container names are unique") { containers: Seq[PodContainer] =>
+    pod.containers is isTrue(ContainerNamesMustBeUnique) { containers: Seq[PodContainer] =>
       val names = pod.containers.map(_.name)
       names.distinct.size == names.size
     }
@@ -197,4 +203,15 @@ trait PodsValidation {
 object PodsValidation extends PodsValidation {
   // TODO: Change this value when mesos supports command checks for pods.
   val MinCommandCheckMesosVersion = SemanticVersion(Int.MaxValue, Int.MaxValue, Int.MaxValue)
+}
+
+object PodsValidationMessages {
+  val EndpointNamesMustBeUnique = "endpoint names nust be unique across all containers"
+  val ContainerPortsMustBeUnique = "container ports must be unique across all containers"
+  val HostPortsMustBeUnique = "host ports must be unique across all containers"
+  val VolumeNamesMustBeUnique = "volume names must be unique"
+  val ContainerNamesMustBeUnique = "container names must be unique"
+  // Note: we should keep this in sync with AppValidationMessages
+  val NetworkNameRequiredForMultipleContainerNetworks =
+    "networkNames must be a single item list when hostPort is specified and more than 1 container network is defined"
 }

@@ -83,6 +83,9 @@ case class AppDefinition(
 
   import mesosphere.mesos.protos.Implicits._
 
+  /* The following requirements are either validated at the API layer, or precluded by our normalization layer.
+   * However, we had instances of rogue definitions of apps in our tests that were causing related business logic to be
+   * overly complex and handle state that should not exist */
   require(networks.nonEmpty, "an application must declare at least one network")
 
   require(
@@ -98,6 +101,7 @@ case class AppDefinition(
     "portDefinitions and container.portMappings are not allowed at the same time"
   )
 
+  // Our normalization layer replaces hostPort None to Some(0) for bridge networking
   require(
     !(networks.hasBridgeNetworking && container.fold(false)(c => c.portMappings.exists(_.hostPort.isEmpty))),
     "bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)")

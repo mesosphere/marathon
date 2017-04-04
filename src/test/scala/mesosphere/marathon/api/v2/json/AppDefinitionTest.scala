@@ -3,7 +3,7 @@ package api.v2.json
 
 import com.wix.accord._
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
@@ -36,32 +36,11 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   "AppDefinition" should {
     "Validation" in {
       def shouldViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
-        validate(app) match {
-          case Success => fail(s"expected failure '$template'")
-          case f: Failure =>
-            val violations = ValidationHelper.getAllRuleConstrains(f)
-
-            assert(
-              violations.exists { v =>
-                v.path.contains(path) && v.message == template
-              },
-              s"Violations:\n${violations.mkString}"
-            )
-        }
+        validate(app) should containViolation(path, template)
       }
 
       def shouldNotViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
-        validate(app) match {
-          case Success =>
-          case f: Failure =>
-            val violations = ValidationHelper.getAllRuleConstrains(f)
-            assert(
-              !violations.exists { v =>
-                v.path.contains(path) && v.message == template
-              },
-              s"Violations:\n${violations.mkString}"
-            )
-        }
+        validate(app) shouldNot containViolation(path, template)
       }
 
       var app = AppDefinition(id = "a b".toRootPath)
@@ -85,82 +64,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       MarathonTestHelper.validateJsonSchema(app, false)
       shouldViolate(app, "/id", idError)
 
-      app = AppDefinition(
-        id = "test".toPath,
-        instances = -3,
-        portDefinitions = PortDefinitions(9000, 8080, 9000)
-      )
-      shouldViolate(
-        app,
-        "/portDefinitions",
-        "Ports must be unique."
-      )
-      MarathonTestHelper.validateJsonSchema(app, false)
-
-      app = AppDefinition(
-        id = "test".toPath,
-        portDefinitions = PortDefinitions(0, 0, 8080),
-        cmd = Some("true")
-      )
-      shouldNotViolate(
-        app,
-        "/portDefinitions",
-        "Ports must be unique."
-      )
-      MarathonTestHelper.validateJsonSchema(app, true)
-
-      app = AppDefinition(
-        id = "test".toPath,
-        cmd = Some("true"),
-        networks = Seq(BridgeNetwork()), container = Some(Docker(
-          image = "mesosphere/marathon",
-
-          portMappings = Seq(
-            PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-            PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
-          )
-        )),
-        portDefinitions = Nil
-      )
-      shouldViolate(
-        app,
-        "/container/portMappings",
-        "Port names must be unique."
-      )
-
-      app = AppDefinition(
-        id = "test".toPath,
-        cmd = Some("true"),
-        portDefinitions = Seq(
-          PortDefinition(port = 9000, name = Some("foo")),
-          PortDefinition(port = 9001, name = Some("foo"))
-        )
-      )
-      shouldViolate(
-        app,
-        "/portDefinitions",
-        "Port names must be unique."
-      )
-
       val correct = AppDefinition(id = "test".toRootPath)
-      val containerNetworking = Seq(ContainerNetwork("dcos"))
-
-      app = correct.copy(
-        container = Some(Docker(
-          image = "mesosphere/marathon",
-          portMappings = Seq(
-            PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-            PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
-          )
-        )),
-        portDefinitions = Nil,
-        networks = containerNetworking)
-
-      shouldNotViolate(
-        app,
-        "/container/portMappings",
-        "Port names must be unique."
-      )
 
       app = correct.copy(
         networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
@@ -189,51 +93,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
           portDefinitions = Nil)
       }
       caught.getMessage should include("bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)")
-
-      app = correct.copy(
-        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
-          image = "mesosphere/marathon",
-
-          portMappings = Seq(
-            PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-            PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
-          )
-        )),
-        portDefinitions = Nil)
-      shouldNotViolate(
-        app,
-        "/container/portMappings",
-        "Port names must be unique."
-      )
-
-      // unique port names for USER mode
-      app = correct.copy(
-        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
-          image = "mesosphere/marathon",
-
-          portMappings = Seq(
-            PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-            PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
-          )
-        )),
-        portDefinitions = Nil)
-      shouldViolate(
-        app,
-        "/container/portMappings",
-        "Port names must be unique."
-      )
-
-      app = correct.copy(
-        portDefinitions = Seq(
-          PortDefinition(port = 9000, name = Some("foo")),
-          PortDefinition(port = 9001, name = Some("bar"))
-        )
-      )
-      shouldNotViolate(
-        app,
-        "/portDefinitions",
-        "Port names must be unique."
-      )
 
       app = correct.copy(executor = "//cmd")
       shouldNotViolate(

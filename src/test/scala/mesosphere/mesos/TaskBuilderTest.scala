@@ -284,7 +284,7 @@ class TaskBuilderTest extends UnitTest {
         .setName(taskInfo.getName)
         .setPorts(Helpers.mesosPorts(
           Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), networkInfo.hostPorts.head),
-          Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "container"), 8081)
+          Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "container", "network-name" -> "whatever"), 8081)
         )).build
 
       TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -924,7 +924,7 @@ class TaskBuilderTest extends UnitTest {
             .setName("http")
             .setNumber(80)
             .setProtocol("tcp")
-            .setLabels(Map("network-scope" -> "container").toMesosLabels)
+            .setLabels(Map("network-scope" -> "container", "network-name" -> "whatever").toMesosLabels)
             .build)
           .build)
         .build

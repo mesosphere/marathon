@@ -27,21 +27,32 @@ trait AppValidation {
         filter = { (port: Int) => port != AppDefinition.RandomPortValue })
   }
 
-  val portMappingsValidator = validator[Seq[ContainerPortMapping]] { portMappings =>
+  val portMappingsIndependentOfNetworks = validator[Seq[ContainerPortMapping]] { portMappings =>
     portMappings is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
   }
 
-  def portMappingIsCompatibleWithNetworks(networks: Seq[Network]): Validator[ContainerPortMapping] = {
-    val hostPortNotAllowed = validator[ContainerPortMapping] { mapping =>
-      mapping.hostPort is empty
-    }
-    implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortNotAllowed)
+  private def portMappingNetworkNameValidator(networkNames: Seq[String]) = validator[ContainerPortMapping] { portMapping =>
+    portMapping.networkNames is every(oneOf(networkNames: _*))
   }
 
-  val dockerDockerContainerValidator: Validator[Container] = {
+  private def portMappingIsCompatibleWithNetworks(networks: Seq[Network]): Validator[ContainerPortMapping] = {
+    val hostPortRequiresNetworkName = isTrue[ContainerPortMapping](
+      AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks) { mapping =>
+      mapping.hostPort.isEmpty || mapping.networkNames.length == 1
+    }
+    implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
+  }
+
+  def portMappingsValidator(networks: Seq[Network]): Validator[Seq[ContainerPortMapping]] = validator { portMappings =>
+    portMappings is portMappingsIndependentOfNetworks
+    portMappings is every(portMappingIsCompatibleWithNetworks(networks))
+    portMappings is every(portMappingNetworkNameValidator(networks.flatMap(_.name)))
+  }
+
+  def dockerDockerContainerValidator(networks: Seq[Network]): Validator[Container] = {
     val validDockerEngineSpec: Validator[DockerContainer] = validator[DockerContainer] { docker =>
       docker.image is notEmpty
-      docker.portMappings is valid(optional(portMappingsValidator))
+      docker.portMappings is valid(optional(portMappingsValidator(networks)))
     }
     validator { (container: Container) =>
       container.docker is definedAnd(validDockerEngineSpec)
@@ -118,7 +129,7 @@ trait AppValidation {
       } and every(valid(validVolume(container, enabledFeatures)))
 
     val validGeneralContainer: Validator[Container] = validator[Container] { container =>
-      container.portMappings is optional(portMappingsValidator and every(portMappingIsCompatibleWithNetworks(networks)))
+      container.portMappings is optional(portMappingsValidator(networks))
       container.volumes is volumesValidator(container)
     }
 
@@ -135,7 +146,7 @@ trait AppValidation {
 
     forAll(
       validGeneralContainer,
-      { c: Container => c.`type` == EngineType.Docker } -> dockerDockerContainerValidator,
+      { c: Container => c.`type` == EngineType.Docker } -> dockerDockerContainerValidator(networks),
       { c: Container => c.`type` == EngineType.Mesos } -> mesosContainerImageValidator
     )
   }
@@ -249,7 +260,7 @@ trait AppValidation {
   def validateOldAppUpdateAPI: Validator[AppUpdate] = forAll(
     validator[AppUpdate] { update =>
       update.container is optional(valid(validOldContainerAPI))
-      update.container.flatMap(_.docker.flatMap(_.portMappings)) is optional(portMappingsValidator)
+      update.container.flatMap(_.docker.flatMap(_.portMappings)) is optional(portMappingsIndependentOfNetworks)
       update.ipAddress is optional(isTrue(
         "ipAddress/discovery is not allowed for Docker containers") { (ipAddress: IpAddress) =>
           !(update.container.exists(c => c.`type` == EngineType.Docker) && ipAddress.discovery.nonEmpty)
@@ -316,7 +327,7 @@ trait AppValidation {
   val validateOldAppAPI: Validator[App] = forAll(
     validator[App] { app =>
       app.container is optional(valid(validOldContainerAPI))
-      app.container.flatMap(_.docker.flatMap(_.portMappings)) is optional(portMappingsValidator)
+      app.container.flatMap(_.docker.flatMap(_.portMappings)) is optional(portMappingsIndependentOfNetworks)
       app.ipAddress is optional(isTrue(
         "ipAddress/discovery is not allowed for Docker containers") { (ipAddress: IpAddress) =>
           !(app.container.exists(c => c.`type` == EngineType.Docker) && ipAddress.discovery.nonEmpty)
@@ -499,3 +510,9 @@ trait AppValidation {
 }
 
 object AppValidation extends AppValidation
+
+object AppValidationMessages {
+  // Note: we should keep this in sync with PodsValidationMessages
+  val NetworkNameRequiredForMultipleContainerNetworks =
+    "networkNames must be a single item list when hostPort is specified and more than 1 container network is defined"
+}
