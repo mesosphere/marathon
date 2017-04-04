@@ -171,7 +171,7 @@ Below is a sample app definition that uses a Docker container and specifies firs
 
 #### Implicit Volumes
 
-The default implicit volume size is 16 GB. If you are using the original Mesos containerizer or UCR, you can modify this default for a particular volume by setting `volumes[x].external.size`. For the Mesos and Docker containerizers, you can modify the default size for all implicit volumes by [modifying the REX-Ray configuration][11].
+The default implicit volume size is 16 GB. If you are using the original Mesos containerizer or the UCR, you can modify this default for a particular volume by setting `volumes[x].external.size`. For the Mesos and Docker containerizers, you can modify the default size for all implicit volumes by [modifying the REX-Ray configuration][11].
 
 ### Potential Pitfalls
 
