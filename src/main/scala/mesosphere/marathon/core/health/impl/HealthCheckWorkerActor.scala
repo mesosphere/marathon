@@ -9,15 +9,12 @@ import akka.actor.{ Actor, PoisonPill }
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.{ ConnectionContext, Http }
 import akka.stream.Materializer
-import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.util.ThreadPoolContext
-import spray.client.pipelining._
-import spray.http._
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -93,23 +90,19 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     val url = s"http://$host:$port$absolutePath"
     logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTP")
 
-    def get(url: String): Future[HttpResponse] = {
-      implicit val requestTimeout = Timeout(check.timeout)
-      val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
-      pipeline(Get(url))
-    }
-
-    get(url).map { response =>
-      if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(instance.instanceId, instance.runSpecVersion))
-      else if (check.ignoreHttp1xx && (toIgnoreResponses contains response.status.intValue)) {
-        logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
-        None
-      } else {
-        logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
-        Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
+    Http().singleRequest(
+      RequestBuilding.Get(url)).map { response =>
+        response.discardEntityBytes() //forget about the body
+        if (acceptableResponses.contains(response.status.intValue())) {
+          Some(Healthy(instance.instanceId, instance.runSpecVersion))
+        } else if (check.ignoreHttp1xx && (toIgnoreResponses.contains(response.status.intValue))) {
+          logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
+          None
+        } else {
+          logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
+        }
       }
-    }
   }
 
   def tcp(
@@ -154,9 +147,10 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
         .withDisableSNI(true)
     })
 
-    Http(system).singleRequest(
+    Http().singleRequest(
       RequestBuilding.Get(url),
       connectionContext = ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig))).map { response =>
+        response.discardEntityBytes() // forget about the body
         if (acceptableResponses.contains(response.status.intValue())) {
           Some(Healthy(instance.instanceId, instance.runSpecVersion))
         } else {

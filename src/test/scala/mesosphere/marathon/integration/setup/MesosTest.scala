@@ -119,7 +119,8 @@ case class MesosLocal(
       mesosLocal = Some(create())
     }
     Retry(s"mesos-local-$port", Int.MaxValue, maxDelay = waitForStart) {
-      Http(system).singleRequest(Get(s"http://localhost:$port/version")).map { result =>
+      Http().singleRequest(Get(s"http://localhost:$port/version")).map { result =>
+        result.discardEntityBytes() // forget about the body
         if (result.status.isSuccess()) {
           Done
         } else {
@@ -188,6 +189,7 @@ case class MesosCluster(
     val firstMaster = s"http://localhost:${masters.head.port}"
     val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDelay = waitForLeaderTimeout) {
       Http().singleRequest(Get(firstMaster + "/redirect")).map { result =>
+        result.discardEntityBytes() // forget about the body
         if (result.status.isFailure()) {
           throw new Exception(s"Couldn't determine leader: $result")
         }

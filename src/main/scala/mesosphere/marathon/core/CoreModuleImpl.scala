@@ -89,7 +89,7 @@ class CoreModuleImpl @Inject() (
     actorSystem)
 
   // READINESS CHECKS
-  override lazy val readinessModule = new ReadinessModule(actorSystem)
+  override lazy val readinessModule = new ReadinessModule(actorSystem, actorsModule.materializer)
 
   // this one can't be lazy right now because it wouldn't be instantiated soon enough ...
   override val taskTerminationModule = new TaskTerminationModule(
@@ -177,7 +177,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val eventModule: EventModule = new EventModule(
     eventStream, actorSystem, marathonConf, clock, storageModule.eventSubscribersRepository,
-    electionModule.service, authModule.authenticator, authModule.authorizer)
+    electionModule.service, authModule.authenticator, authModule.authorizer)(actorsModule.materializer)
 
   // HISTORY
 

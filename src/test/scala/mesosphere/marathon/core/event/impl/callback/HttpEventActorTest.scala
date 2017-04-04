@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.event.impl.callback
 
 import akka.actor.{ Actor, Props }
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.testkit.{ EventFilter, TestActorRef }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -11,25 +12,21 @@ import mesosphere.marathon.core.event.impl.callback.HttpEventActor.EventNotifica
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.core.event.{ EventConf, EventStreamAttached, EventSubscribers }
 import mesosphere.marathon.integration.setup.WaitTestSupport.waitUntil
-import spray.http.{ HttpRequest, HttpResponse, StatusCode }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 
 class HttpEventActorTest extends AkkaUnitTest {
   case class Fixture(
       clock: ConstantClock = ConstantClock(),
       duration: FiniteDuration = 10.seconds,
       conf: EventConf = mock[EventConf],
-      statusCode: StatusCode = mock[StatusCode],
-      response: HttpResponse = mock[HttpResponse]) {
+      response: HttpResponse = HttpResponse()) {
     val metrics = new HttpEventActor.HttpEventActorMetrics()
     var responseAction: () => HttpResponse = () => response
 
     conf.slowConsumerDuration returns duration
     conf.eventRequestTimeout returns Timeout(duration)
-    statusCode.isSuccess returns true
-    response.status returns statusCode
   }
 
   override protected lazy val akkaConfig: Config = {
@@ -40,9 +37,10 @@ class HttpEventActorTest extends AkkaUnitTest {
       extends HttpEventActor(f.conf, TestActorRef(Props(new ReturnSubscribersTestActor(subscribers))), f.metrics, f.clock) {
     var _requests = List.empty[HttpRequest]
     def requests = synchronized(_requests)
-    override def pipeline(implicit ec: ExecutionContext): (HttpRequest) => Future[HttpResponse] = synchronized { request =>
-      _requests ::= request
-      Future(f.responseAction())(ec)
+
+    override private[impl] def request(httpRequest: HttpRequest) = {
+      _requests ::= httpRequest
+      Future(f.responseAction())
     }
   }
 

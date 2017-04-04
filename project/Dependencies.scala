@@ -24,8 +24,6 @@ object Dependencies {
     akkaStream % "compile",
     akkaHttp % "compile",
     asyncAwait % "compile",
-    sprayClient % "compile",
-    sprayHttpx % "compile",
     chaos % "compile",
     mesos % "compile",
     jodaTime % "compile",
@@ -88,8 +86,6 @@ object Dependency {
     val MesosDebian = "1.1.0-2.0.107.debian81"
     val Akka = "2.4.17"
     val AsyncAwait = "0.9.6"
-    val Spray = "1.3.4"
-    val TwitterCommons = "0.0.76"
     val Jersey = "1.18.5"
     val JettyServlets = "9.3.6.v20151106"
     val JodaTime = "2.9.7"
@@ -130,8 +126,6 @@ object Dependency {
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.5"
   val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
-  val sprayClient = "io.spray" %% "spray-client" % V.Spray
-  val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
   val guava = "com.google.guava" % "guava" % V.Guava
@@ -168,7 +162,6 @@ object Dependency {
     val akka = "io.kamon" %% "kamon-akka" % "0.6.3" % "compile"
     val autoweave = "io.kamon" %% "kamon-autoweave" % Version % "compile"
     val scala = "io.kamon" %% "kamon-scala" % Version % "compile"
-    val spray = "io.kamon" %% "kamon-spray" % "0.6.3" % "compile"
     val systemMetrics = "io.kamon" %% "kamon-system-metrics" % Version % "compile"
     val akkaHttp = "io.kamon" %% "kamon-akka-http-experimental" % "0.6.3" % "compile"
 
@@ -178,8 +171,8 @@ object Dependency {
       val jmx = "io.kamon" %% "kamon-jmx" % Version % "compile"
     }
 
-    // there are some issues with the Akka/Spray modules that are really unclear
-    val all = Seq(core, /*akka,*/ autoweave, systemMetrics, /*akkaHttp,*/ scala, /*spray,*/ Backends.statsd, Backends.datadog, Backends.jmx)
+    // there are some issues with the Akka modules that are really unclear
+    val all = Seq(core, /*akka,*/ autoweave, systemMetrics, /*akkaHttp,*/ scala,  Backends.statsd, Backends.datadog, Backends.jmx)
   }
 
   object Test {

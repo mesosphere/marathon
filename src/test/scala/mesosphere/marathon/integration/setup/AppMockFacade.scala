@@ -29,7 +29,7 @@ class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(imp
     val url = s"$scheme://$host:$port$uri"
     Retry(s"query$url", Int.MaxValue, maxDuration = waitTime) {
       async {
-        val response = await(Http(system).singleRequest(RequestBuilding.Get(url)))
+        val response = await(Http().singleRequest(RequestBuilding.Get(url)))
         val body = await(Unmarshal(response.entity).to[String])
         AppMockResponse(body, response)
       }

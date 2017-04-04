@@ -4,6 +4,7 @@ package core.event
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
+import akka.stream.Materializer
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
@@ -27,7 +28,7 @@ class EventModule(
     eventSubscribersStore: EventSubscribersRepository,
     electionService: ElectionService,
     authenticator: Authenticator,
-    authorizer: Authorizer) {
+    authorizer: Authorizer)(implicit val materializer: Materializer) {
   val log = LoggerFactory.getLogger(getClass.getName)
 
   private[this] lazy val statusUpdateActor: ActorRef =

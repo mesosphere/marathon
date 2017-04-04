@@ -3,12 +3,12 @@ package integration
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import akka.http.scaladsl.model.DateTime
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck }
 import mesosphere.marathon.raml.{ App, GroupUpdate, UpgradeStrategy }
 import mesosphere.marathon.state.{ Group, PathId }
 import org.apache.http.HttpStatus
-import spray.http.DateTime
 
 import scala.concurrent.duration._
 
