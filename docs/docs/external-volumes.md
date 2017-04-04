@@ -109,7 +109,7 @@ You can specify an external volume in your Marathon app definition. [Learn more 
 
 In the app definition above:
 
-*   `containerPath` specifies where the volume is mounted inside the container. If you are using the [Mesos containerizer](https://dcos.io/docs/latest/usage/containerizers/), this must be a single-level path relative to the container; it cannot contain a forward slash (/). If you are using the [Universal Container Runtime (UCR)](https://dcos.io/docs/latest/usage/containerizers/), you can specify an absolute container path with forward slashes. **Note:** This path must exist on the host machine.
+*   `containerPath` specifies where the volume is mounted inside the container. If you are using the [original Mesos containerizer or the Universal Container Runtime (UCR)](https://dcos.io/docs/latest/usage/containerizers/), you can specify an absolute container path with forward slashes. **Note:** This path must exist on the host machine.
 
 *   `name` is the name that your volume driver uses to look up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it is [created implicitly][7]. Otherwise, the existing volume is reused.
 
