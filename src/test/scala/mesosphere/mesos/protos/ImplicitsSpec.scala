@@ -3,6 +3,8 @@ package mesosphere.mesos.protos
 import mesosphere.UnitTest
 import org.apache.mesos.Protos
 
+import scala.collection.immutable.Seq
+
 class ImplicitsSpec extends UnitTest {
 
   import Implicits._

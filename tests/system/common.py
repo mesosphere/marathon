@@ -3,6 +3,7 @@ from shakedown import *
 from utils import *
 from dcos.errors import DCOSException
 from distutils.version import LooseVersion
+from urllib.parse import urljoin
 
 import uuid
 import random
@@ -856,6 +857,6 @@ def set_service_account_permissions(service_account, ressource='dcos:superuser',
 
     """
     print('Granting {} permissions to {}/users/{}'.format(action, ressource, service_account))
-    url = '{}acs/api/v1/acls/{}/users/{}/{}'.format(dcos_url(), ressource, service_account, action)
+    url = urljoin(dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(ressource, service_account, action))
     req = http.put(url)
     assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)

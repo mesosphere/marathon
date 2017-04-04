@@ -195,8 +195,10 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
         }.orElse(Container.DefaultDocker),
       appc = container.when(_.hasMesosAppC, _.getMesosAppC.toRaml).orElse(Container.DefaultAppc),
       volumes = container.whenOrElse(_.getVolumesCount > 0, _.getVolumesList.map(_.toRaml)(collection.breakOut), Container.DefaultVolumes),
-      portMappings = Option(Seq.empty[ContainerPortMapping]).unless( // RAML default is None, which is not what we want
-        container.when(_.getPortMappingsCount > 0, _.getPortMappingsList.map(_.toRaml)(collection.breakOut)))
+      portMappings = container.collect {
+        case x if !x.hasDocker || x.getDocker.getOBSOLETEPortMappingsCount == 0 =>
+          container.getPortMappingsList.map(_.toRaml)(collection.breakOut)
+      }
     )
   }
 }

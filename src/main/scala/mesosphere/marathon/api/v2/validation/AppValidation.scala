@@ -283,7 +283,7 @@ trait AppValidation {
     validator[AppUpdate] { update =>
       update.id.map(PathId(_)) as "id" is optional(valid)
       update.dependencies.map(_.map(PathId(_))) as "dependencies" is optional(every(valid))
-      update.env is optional(envValidator(update.secrets.getOrElse(Map.empty), enabledFeatures))
+      update.env is optional(envValidator(strictNameValidation = false, update.secrets.getOrElse(Map.empty), enabledFeatures))
       update.secrets is optional({ secrets: Map[String, SecretDef] =>
         secrets.nonEmpty
       } -> (featureEnabled(enabledFeatures, Features.SECRETS)))
@@ -385,7 +385,7 @@ trait AppValidation {
       secrets.nonEmpty
     } -> (featureEnabled(enabledFeatures, Features.SECRETS)))
     app.secrets is valid(featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator)))
-    app.env is envValidator(app.secrets, enabledFeatures)
+    app.env is envValidator(strictNameValidation = false, app.secrets, enabledFeatures)
     app.acceptedResourceRoles is valid(optional(ResourceRole.validAcceptedResourceRoles(app.residency.isDefined) and notEmpty))
     app must complyWithGpuRules(enabledFeatures)
     app must complyWithMigrationAPI

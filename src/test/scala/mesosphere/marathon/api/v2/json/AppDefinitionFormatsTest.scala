@@ -184,7 +184,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail when 'env' contains invalid keys" in {
-      val json = Json.parse(""" { "id": "test", "cmd": "foo", "env": { "%^!": "foo" } }""")
+      val json = Json.parse(""" { "id": "test", "cmd": "foo", "env": { "": "foo" } }""")
       a[ValidationFailedException] shouldBe thrownBy { normalizeAndConvert(json.as[raml.App]) }
     }
 

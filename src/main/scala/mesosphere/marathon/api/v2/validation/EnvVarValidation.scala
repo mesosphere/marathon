@@ -14,10 +14,13 @@ trait EnvVarValidation {
 
   val EnvVarNamePattern = """^[a-zA-Z_][a-zA-Z0-9_]*$""".r
 
-  val validEnvVar: Validator[(String, EnvVarValueOrSecret)] = {
+  /**
+    * @param strictNameValidation corresponds to RAML type EnvVars when true and LegacyEnvVars when false.
+    */
+  def validEnvVar(strictNameValidation: Boolean): Validator[(String, EnvVarValueOrSecret)] = {
 
     val validName = validator[String] { name =>
-      name should matchRegexWithFailureMessage(EnvVarNamePattern, MustContainOnlyAlphanumeric)
+      name is implied(strictNameValidation)(matchRegexWithFailureMessage(EnvVarNamePattern, MustContainOnlyAlphanumeric))
       name is notEmpty
     } and isTrue[String](VariableNameTooLong) { _.length < 255 }
 
@@ -27,9 +30,9 @@ trait EnvVarValidation {
     }
   }
 
-  def envValidator(secrets: Map[String, SecretDef], enabledFeatures: Set[String]) = forAll(
+  def envValidator(strictNameValidation: Boolean, secrets: Map[String, SecretDef], enabledFeatures: Set[String]) = forAll(
     validator[Map[String, EnvVarValueOrSecret]] { env =>
-      env is every(validEnvVar)
+      env is every(validEnvVar(strictNameValidation))
     },
     isTrue(UseOfSecretRefsRequiresSecretFeature) { (env: Map[String, EnvVarValueOrSecret]) =>
       // if the secrets feature is not enabled then don't allow EnvVarSecretRef's in the environment

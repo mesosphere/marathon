@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package state
 
-import java.util.regex.Pattern
-
 import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
@@ -25,7 +23,6 @@ import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.concurrent.duration._
-import scala.util.Try
 
 case class AppDefinition(
 
@@ -520,65 +517,6 @@ object AppDefinition extends GeneralPurposeCombinators {
       } and featureEnabled(enabledFeatures, Features.GPU_RESOURCES)
     }
 
-  val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
-    import Constraint.Operator._
-    override def apply(c: Constraint): Result = {
-      if (!c.hasField || !c.hasOperator) {
-        Failure(Set(RuleViolation(c, "Missing field and operator", None)))
-      } else {
-        c.getOperator match {
-          case UNIQUE =>
-            if (c.hasValue && c.getValue.nonEmpty) {
-              Failure(Set(RuleViolation(c, "Value specified but not used", None)))
-            } else {
-              Success
-            }
-          case CLUSTER =>
-            if (c.hasValue && c.getValue.nonEmpty) {
-              Success
-            } else {
-              Failure(Set(RuleViolation(c, "Missing value", None)))
-            }
-          case GROUP_BY =>
-            if (!c.hasValue || (c.hasValue && c.getValue.nonEmpty && Try(c.getValue.toInt).isSuccess)) {
-              Success
-            } else {
-              Failure(Set(RuleViolation(
-                c,
-                "Value was specified but is not a number",
-                Some("GROUP_BY may either have no value or an integer value"))))
-            }
-          case LIKE | UNLIKE =>
-            if (c.hasValue) {
-              Try(Pattern.compile(c.getValue)) match {
-                case scala.util.Success(_) =>
-                  Success
-                case scala.util.Failure(e) =>
-                  Failure(Set(RuleViolation(
-                    c,
-                    s"'${c.getValue}' is not a valid regular expression",
-                    Some(s"${c.getValue}\n${e.getMessage}"))))
-              }
-            } else {
-              Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
-            }
-          case MAX_PER =>
-            if (c.hasValue && c.getValue.nonEmpty && Try(c.getValue.toInt).isSuccess) {
-              Success
-            } else {
-              Failure(Set(RuleViolation(
-                c,
-                "Value was not specified or is not a number",
-                Some("MAX_PER must have an integer value"))))
-            }
-          case _ =>
-            Failure(Set(
-              RuleViolation(c, "Operator must be one of UNIQUE, CLUSTER, GROUP_BY, LIKE, MAX_PER or UNLIKE", None)))
-        }
-      }
-    }
-  }
-
   private val haveAtMostOneMesosHealthCheck: Validator[AppDefinition] =
     isTrue[AppDefinition]("AppDefinition can contain at most one Mesos health check") { appDef =>
       // Previous versions of Marathon allowed saving an app definition with more than one command health check, and
@@ -622,7 +560,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithUpgradeStrategyRules
     appDef should requireUnreachableDisabledForResidentTasks
-    appDef.constraints.each must complyWithConstraintRules
+    // constraints are only validated in RAML layer
     appDef.unreachableStrategy is valid
     appDef.networks is valid(NetworkValidation.modelNetworksValidator)
     appDef.networks is every(NetworkValidation.modelNetworkValidator)
