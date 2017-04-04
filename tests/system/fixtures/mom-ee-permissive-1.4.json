@@ -2,7 +2,7 @@
   "id": "/marathon-user-ee",
   "cmd": "cd $MESOS_SANDBOX && LIBPROCESS_PORT=$PORT1 && /marathon/bin/start --default_accepted_resource_roles \"*\" --enable_features \"vips,task_killing,external_volumes,secrets,gpu_resources\" --framework_name marathon-user-ee-permissive-1-4 --hostname $LIBPROCESS_IP --http_port $PORT0 --master zk://master.mesos:2181/mesos --max_tasks_per_offer 1 --mesos_leader_ui_url /mesos --mesos_role marathon-user-ee  --zk zk://master.mesos:2181/universe/marathon-user-ee --mesos_authentication --mesos_authentication_principal marathon_user_ee",
   "cpus": 2,
-  "mem": 1536,
+  "mem": 2048,
   "disk": 0,
   "instances": 1,
   "constraints": [
@@ -19,22 +19,16 @@
       "privileged": false,
       "parameters": [],
       "forcePullImage": false
-    },
-    "volumes": [
-      {
-        "containerPath": "/opt/mesosphere",
-        "hostPath": "/opt/mesosphere",
-        "mode": "RO"
-      }
-    ]
+    }
   },
   "env": {
-    "JVM_OPTS": "-Xms256m -Xmx768m",
+    "JVM_OPTS": "-Xms256m -Xmx2g",
     "DCOS_STRICT_SECURITY_ENABLED": "false",
-    "DCOS_SERVICE_ACCOUNT_CREDENTIAL_TOFILE": { "secret": "service-credential" },
+    "DCOS_SERVICE_ACCOUNT_CREDENTIAL_TOFILE": {
+      "secret": "service-credential"
+    },
     "MESOS_AUTHENTICATEE": "com_mesosphere_dcos_ClassicRPCAuthenticatee",
-    "MESOS_MODULES": "file:///opt/mesosphere/etc/mesos-scheduler-modules/dcos_authenticatee_module.json",
-    "MESOS_NATIVE_JAVA_LIBRARY": "/opt/mesosphere/lib/libmesos.so",
+    "MESOS_MODULES": "{\"libraries\":[{\"file\":\"/opt/libmesos-bundle/lib/libdcos_security.so\",\"modules\":[{\"name\":\"com_mesosphere_dcos_ClassicRPCAuthenticatee\"}]}]}",
     "LIBPROCESS_SSL_ENABLED": "false",
     "LIBPROCESS_SSL_SUPPORT_DOWNGRADE": "true",
     "LIBPROCESS_SSL_REQUIRE_CERT": "false",
@@ -48,7 +42,7 @@
       "path": "/ping",
       "protocol": "HTTP",
       "portIndex": 0,
-      "gracePeriodSeconds": 120,
+      "gracePeriodSeconds": 1800,
       "intervalSeconds": 10,
       "timeoutSeconds": 5,
       "maxConsecutiveFailures": 3,
@@ -56,13 +50,19 @@
     }
   ],
   "secrets": {
-      "service-credential": {
-        "source": "my-secret"
-      }
+    "service-credential": {
+      "source": "my-secret"
+    }
   },
-  "ports": [
-    0,
-    0
+  "portDefinitions": [
+    {
+      "port": 0,
+      "name": "http"
+    },
+    {
+      "port": 0,
+      "name": "libprocess"
+    }
   ],
   "fetch": [
     {
