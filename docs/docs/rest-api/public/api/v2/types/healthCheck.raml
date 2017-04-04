@@ -13,7 +13,9 @@ types:
           The endpoint name to use.
           In "host" mode health checks use the hostPort. In other modes use the containerPort.
       path?: strings.Path
-      scheme?: strings.HttpScheme
+      scheme?:
+        type: strings.HttpScheme
+        default: HTTP
   TcpHealthCheck:
     type: object
     properties:

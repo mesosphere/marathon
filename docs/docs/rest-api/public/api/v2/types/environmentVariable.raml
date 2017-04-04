@@ -18,3 +18,10 @@ types:
     type: object
     properties:
       /^[a-zA-Z_][a-zA-Z0-9_]*$/: EnvVarValueOrSecret
+  LegacyEnvVars:
+    type: object
+    usage: |
+      The original v2 apps API did not place any restrictions on environment variable names.
+      New APIs should use EnvVars whenever possible.
+    properties:
+      /^.*$/: EnvVarValueOrSecret

@@ -8,14 +8,17 @@ import org.apache.mesos.Protos.ContainerInfo.DockerInfo.{ Network => DockerNetwo
 
 trait NetworkConversion {
 
+  import NetworkConversionMessages._
+
   implicit val networkRamlReader: Reads[Network, pod.Network] =
     Reads { raml =>
       raml.mode match {
         case NetworkMode.Host => pod.HostNetwork
         case NetworkMode.ContainerBridge => pod.BridgeNetwork(raml.labels)
         case NetworkMode.Container => pod.ContainerNetwork(
-          // TODO(PODS): shouldn't this be caught by validation?
-          raml.name.getOrElse(throw new IllegalArgumentException("container network must specify a name")),
+          // we expect validation to catch this problem first. but it's possible that migration
+          // also runs into this problem so we handle it explicitly.
+          raml.name.getOrElse(throw SerializationFailedException(ContainerNetworkRequiresName)),
           raml.labels
         )
       }
@@ -123,3 +126,7 @@ trait NetworkConversion {
 }
 
 object NetworkConversion extends NetworkConversion
+
+object NetworkConversionMessages {
+  val ContainerNetworkRequiresName = "container network must specify a name"
+}

@@ -150,6 +150,7 @@ A model app definition for PostgreSQL on Marathon would look like this. Note tha
   "cpus": 1,
   "instances": 1,
   "mem": 512,
+  "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",
     "volumes": [
@@ -165,17 +166,16 @@ A model app definition for PostgreSQL on Marathon would look like this. Note tha
       }
     ],
     "docker": {
-      "image": "postgres:latest",
-      "network": "BRIDGE",
-      "portMappings": [
-        {
-          "containerPort": 5432,
-          "hostPort": 0,
-          "protocol": "tcp",
-          "name": "postgres"
-        }
-      ]
-    }
+      "image": "postgres:latest"
+    },
+    "portMappings": [
+      {
+        "containerPort": 5432,
+        "hostPort": 0,
+        "protocol": "tcp",
+        "name": "postgres"
+      }
+    ]
   },
   "env": {
     "POSTGRES_PASSWORD": "password",
@@ -227,6 +227,7 @@ The complete JSON application definition reads as follows:
   "mem": 512,
   "disk": 0,
   "instances": 1,
+  "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",
     "volumes": [
@@ -246,17 +247,16 @@ The complete JSON application definition reads as follows:
     ],
     "docker": {
       "image": "mysql",
-      "network": "BRIDGE",
-      "portMappings": [
-        {
-          "containerPort": 3306,
-          "hostPort": 0,
-          "servicePort": 10000,
-          "protocol": "tcp"
-        }
-      ],
       "forcePullImage": false
-    }
+    },
+    "portMappings": [
+      {
+        "containerPort": 3306,
+        "hostPort": 0,
+        "servicePort": 10000,
+        "protocol": "tcp"
+      }
+    ]
   },
   "env": {
     "MYSQL_USER": "wordpress",

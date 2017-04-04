@@ -162,6 +162,23 @@ class HealthCheckConversionTest extends UnitTest {
         core.timeout should be(check.timeoutSeconds.seconds)
       }
     }
+    "A HealthCheck with HttpHealthCheck defined" should {
+      "convert to a MesosHealthCheck" in {
+        val check = HealthCheck(http = Some(HttpHealthCheck(endpoint = "localhost")))
+        val core = Some(check.fromRaml).collect {
+          case c: MesosHttpHealthCheck => c
+        }.getOrElse(fail("expected MesosHttpHealthCheck"))
+        core.protocol should be(Protos.HealthCheckDefinition.Protocol.MESOS_HTTP)
+        core.gracePeriod should be(check.gracePeriodSeconds.seconds)
+        core.delay should be(CoreHealthCheck.DefaultDelay)
+        core.interval should be(check.intervalSeconds.seconds)
+        core.maxConsecutiveFailures should be(check.maxConsecutiveFailures)
+        core.path should not be 'defined
+        core.port should not be 'defined
+        core.portIndex should be (Some(PortReference("localhost")))
+        core.timeout should be(check.timeoutSeconds.seconds)
+      }
+    }
   }
 
   "A MesosTcpHealthCheck is converted correctly" when {

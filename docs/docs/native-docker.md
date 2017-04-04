@@ -113,16 +113,16 @@ Let's begin by taking an example app definition:
   "cpus": 0.5,
   "mem": 64.0,
   "instances": 2,
+  "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "python:3",
-      "network": "BRIDGE",
-      "portMappings": [
-        { "containerPort": 8080, "hostPort": 0, "servicePort": 9000, "protocol": "tcp" },
-        { "containerPort": 161, "hostPort": 0, "protocol": "udp"}
-      ]
-    }
+      "image": "python:3"
+    },
+    "portMappings": [
+      { "containerPort": 8080, "hostPort": 0, "servicePort": 9000, "protocol": "tcp" },
+      { "containerPort": 161, "hostPort": 0, "protocol": "udp"}
+    ]
   },
   "healthChecks": [
     {

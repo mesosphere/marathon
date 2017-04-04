@@ -15,15 +15,6 @@ can even start other Marathon instances via Marathon.
 
 Since Marathon version 0.7.0 and Mesos 0.20.0, you can [deploy, run and scale Docker containers](https://mesosphere.github.io/marathon/docs/native-docker.html) easily with native support.
 
-## Announcement
-Dear Marathon Community,
-
-As you may have noticed, we are having trouble addressing a growing backlog of GitHub issues. Because Marathon is both its own project and a component of DC/OS, the Marathon team has been tracking issues in multiple places, which has made it hard for us to prioritize, and consolidate duplicates.
-
-In order to address these challenges, on March 6th we will be converting all GitHub issues to public JIRA tickets in Mesosphere's [on-premise JIRA instance](https://jira.mesosphere.com/projects/MARATHON/issues/) that anyone will be able to view and add to using GitHub SSO. This will not only help the Marathon team, it will increase transparency, allowing the community to check on sprints and the order of the ticket backlog.
-
-Please have a look here for more information: https://groups.google.com/forum/#!topic/marathon-framework/khtvf-ifnp8
-
 ## Features
 
 * *HA* -- run any number of Marathon schedulers, but only one gets elected as
@@ -44,6 +35,13 @@ Please have a look here for more information: https://groups.google.com/forum/#!
 Marathon documentation is available on the [Marathon GitHub pages site](http://mesosphere.github.io/marathon/).
 
 Documentation for installing and configuring the full Mesosphere stack including Mesos and Marathon is available on the [Mesosphere website](http://docs.mesosphere.com).
+
+## Issue Tracking
+
+Marathon uses [JIRA](https://jira.mesosphere.com/projects/MARATHON) to track issues. You can [browse](https://jira.mesosphere.com/projects/MARATHON/issues/) existing issues or [file a new issue](https://jira.mesosphere.com/secure/CreateIssue!default.jspa?pid=10401) with your GitHub account. 
+
+Note for users of GitHub issues: All existing issues have been migrated and closed, and a reference to the related [JIRA](https://jira.mesosphere.com/projects/MARATHON) has been added as a comment.
+We leave the GitHub issues available for reference. Going forward please use [JIRA](https://jira.mesosphere.com/projects/MARATHON) always.
 
 ### Contributing
 
@@ -167,6 +165,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 * [Go client](https://github.com/jbdalido/gomarathon) by Jean-Baptiste Dalido
 * [Node client](https://github.com/silas/node-mesos) by Silas Sewell
 * [Clojure client](https://github.com/codemomentum/marathonclj) by Halit Olali
+* [sbt plugin](https://github.com/Tapad/sbt-marathon), developed at [Tapad](https://tapad.com)
 
 ## Companies using Marathon
 
@@ -221,6 +220,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Strava](https://www.strava.com)
 * [Sveriges Television](http://www.svt.se)
 * [T2 Systems](http://t2systems.com)
+* [Tapad](https://tapad.com)
 * [Teradata](http://www.teradata.com)
 * [trivago](http://www.trivago.com/)
 * [VANAD Enovation](http://www.vanadenovation.nl/)

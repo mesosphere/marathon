@@ -5,7 +5,7 @@ import org.slf4j.MDC
 import java.util
 
 package object async {
-  /** public only to enable [[akka.dispatch.ContextPropagatingDispatcher]] to use it */
+  /** public only to enable our akka dispatch weaving to use it */
   def propagateContext[T](context: Map[Context.ContextName[_], Any], mdc: Option[util.Map[String, String]])(f: => T): T = {
     val oldMdc = Option(MDC.getCopyOfContextMap)
     val oldContext = Context.copy // linter:ignore

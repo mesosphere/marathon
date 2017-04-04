@@ -6,13 +6,14 @@ import java.util.regex.Pattern
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ App, Apps, Constraint, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, Apps, Constraint, ConstraintOperator, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy }
 import mesosphere.marathon.state.ResourceRole
 
 import scala.util.Try
 
 trait SchedulingValidation {
   import Validation._
+  import SchedulingValidationMessages._
 
   val backoffStrategyValidator = validator[PodSchedulingBackoffStrategy] { bs =>
     bs.backoff should be >= 0.0
@@ -52,47 +53,36 @@ trait SchedulingValidation {
   val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
     import mesosphere.marathon.raml.ConstraintOperator._
     override def apply(c: Constraint): Result = {
+      def failure(constraintViolation: String, description: Option[String] = None) =
+        Failure(Set(RuleViolation(c, constraintViolation, description)))
       if (c.fieldName.isEmpty) {
-        Failure(Set(RuleViolation(c, "Missing field and operator", None)))
+        failure(ConstraintRequiresField)
       } else {
         c.operator match {
           case Unique =>
-            c.value.fold[Result](Success) { _ => Failure(Set(RuleViolation(c, "Value specified but not used", None))) }
+            c.value.fold[Result](Success) { _ => failure(ConstraintUniqueDoesNotAcceptValue) }
           case Cluster =>
-            if (c.value.isEmpty || c.value.map(_.length).getOrElse(0) == 0) {
-              Failure(Set(RuleViolation(c, "Missing value", None)))
-            } else {
-              Success
-            }
+            // value is completely optional for CLUSTER
+            Success
           case GroupBy =>
             if (c.value.fold(true)(i => Try(i.toInt).isSuccess)) {
               Success
             } else {
-              Failure(Set(RuleViolation(
-                c,
-                "Value was specified but is not a number",
-                Some("GROUP_BY may either have no value or an integer value"))))
+              failure(ConstraintGroupByMustBeEmptyOrInt)
             }
           case MaxPer =>
             if (c.value.fold(false)(i => Try(i.toInt).isSuccess)) {
               Success
             } else {
-              Failure(Set(RuleViolation(
-                c,
-                "Value was not specified or is not a number",
-                Some("MAX_PER must have an integer value"))))
+              failure(ConstraintMaxPerRequiresInt)
             }
           case Like | Unlike =>
             c.value.fold[Result] {
-              Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
+              failure(ConstraintLikeAnUnlikeRequireRegexp)
             } { p =>
               Try(Pattern.compile(p)) match {
                 case util.Success(_) => Success
-                case util.Failure(e) =>
-                  Failure(Set(RuleViolation(
-                    c,
-                    s"'$p' is not a valid regular expression",
-                    Some(s"$p\n${e.getMessage}"))))
+                case util.Failure(e) => failure(InvalidRegularExpression, Option(e.getMessage))
               }
             }
         }
@@ -112,12 +102,7 @@ trait SchedulingValidation {
   }
 
   val complyWithAppConstraintRules: Validator[Seq[String]] = new Validator[Seq[String]] {
-    import Protos.Constraint.Operator._
-
-    def failureIllegalOperator(c: Any) = Failure(Set(
-      RuleViolation(
-        c,
-        "Constraint operator must be one of the following UNIQUE, CLUSTER, GROUP_BY, LIKE, MAX_PER or UNLIKE", None)))
+    def failureIllegalOperator(c: Any) = Failure(Set(RuleViolation(c, ConstraintOperatorInvalid, None)))
 
     override def apply(c: Seq[String]): Result = {
       def badConstraint(reason: String, desc: Option[String] = None): Result =
@@ -126,42 +111,30 @@ trait SchedulingValidation {
       else (c.headOption, c.lift(1), c.lift(2)) match {
         case (None, None, _) =>
           badConstraint("Missing field and operator")
-        case (Some(_), Some(op), value) =>
-          Try(Protos.Constraint.Operator.valueOf(op)) match {
-            case scala.util.Success(operator) =>
-              operator match {
-                case UNIQUE =>
-                  value.map(_ => badConstraint("Value specified but not used")).getOrElse(Success)
-                case CLUSTER =>
-                  value.map(_ => Success).getOrElse(badConstraint("Missing value"))
-                case GROUP_BY =>
-                  value.fold[Result](Success){ v =>
-                    Try(v.toInt).toOption.map(_ => Success).getOrElse(badConstraint(
-                      "Value was specified but is not a number",
-                      Some("GROUP_BY may either have no value or an integer value")))
-                  }
-                case LIKE | UNLIKE =>
-                  value.map { v =>
-                    Try(Pattern.compile(v)).toOption.map(_ => Success).getOrElse(
-                      badConstraint(s"'$v' is not a valid regular expression", Some(s"$v")))
-                  }.getOrElse(badConstraint("A regular expression value must be provided"))
-                case MAX_PER =>
-                  value.fold[Result](Success){ v =>
-                    Try(v.toInt).toOption.map(_ => Success).getOrElse(badConstraint(
-                      "Value was not specified or is not a number",
-                      Some("MAX_PER must have an integer value")))
-                  }
-                case _ =>
-                  failureIllegalOperator(c)
-              }
+        case (Some(field), Some(op), value) if field.nonEmpty =>
+          ConstraintOperator.fromString(op.toUpperCase) match {
+            case Some(operator) =>
+              // reuse the rules from pod constraint validation so that we're not maintaining redundant rule sets
+              complyWithConstraintRules(Constraint(fieldName = field, operator = operator, value = value))
             case _ =>
               failureIllegalOperator(c)
           }
         case _ =>
-          badConstraint(s"illegal constraint specification ${c.mkString(",")}")
+          badConstraint(IllegalConstraintSpecification)
       }
     }
   }
 }
 
 object SchedulingValidation extends SchedulingValidation
+
+object SchedulingValidationMessages {
+  val ConstraintRequiresField = "missing field for constraint declaration"
+  val InvalidRegularExpression = "is not a valid regular expression"
+  val ConstraintLikeAnUnlikeRequireRegexp = "LIKE and UNLIKE require a non-empty, regular expression value"
+  val ConstraintMaxPerRequiresInt = "MAX_PER requires an integer value"
+  val ConstraintGroupByMustBeEmptyOrInt = "GROUP BY must define an integer value or else no value at all"
+  val ConstraintUniqueDoesNotAcceptValue = "UNIQUE does not accept a value"
+  val IllegalConstraintSpecification = "illegal constraint specification"
+  val ConstraintOperatorInvalid = "operator must be one of the following UNIQUE, CLUSTER, GROUP_BY, LIKE, MAX_PER or UNLIKE"
+}

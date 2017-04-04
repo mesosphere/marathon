@@ -40,7 +40,7 @@ def stageWithCommitStatus(label, block) {
   stage(label) { withCommitStatus(label, block) }
 }
 
-node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
+node('JenkinsMarathonCI-Debian8-2017-03-21') {
     try {
         stage("Checkout Repo") {
             checkout scm
@@ -76,8 +76,10 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
               }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
+            sh "sudo mv target/scala-2.11/scoverage-report/ target/scala-2.11/scoverage-report-unit"
+            sh "sudo mv target/scala-2.11/coverage-report/cobertura.xml target/scala-2.11/coverage-report/cobertura-unit.xml"
             archiveArtifacts(
-                artifacts: 'target/**/coverage-report/cobertura.xml, target/**/scoverage-report/**',
+                artifacts: 'target/**/coverage-report/cobertura-unit.xml, target/**/scoverage-report-unit/**',
                 allowEmptyArchive: true)
           }
         }
@@ -120,11 +122,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
                  """
             },
             "Create Debian and Red Hat Package": {
-              sh "sudo rm -rf marathon-pkg && git clone https://github.com/mesosphere/marathon-pkg.git marathon-pkg"
-              dir("marathon-pkg") {
-                 // marathon-pkg has marathon as a git module. We've already
-                 // checked it out. So let's just symlink.
-                 sh "sudo rm -rf marathon && ln -s ../ marathon"
+              dir("packaging") {
                  sh "sudo make all"
               }
             },
@@ -140,8 +138,8 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') {
           archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
           archiveArtifacts artifacts: 'target/marathon-runnable.jar', allowEmptyArchive: true
           archiveArtifacts artifacts: "target/marathon-${gitCommit}.tgz", allowEmptyArchive: false
-          archiveArtifacts artifacts: "marathon-pkg/marathon*.deb", allowEmptyArchive: false
-          archiveArtifacts artifacts: "marathon-pkg/marathon*.rpm", allowEmptyArchive: false
+          archiveArtifacts artifacts: "packaging/marathon*.deb", allowEmptyArchive: false
+          archiveArtifacts artifacts: "packaging/marathon*.rpm", allowEmptyArchive: false
           step([
               $class: 'S3BucketPublisher',
               entries: [[

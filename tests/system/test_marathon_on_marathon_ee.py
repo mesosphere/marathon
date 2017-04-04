@@ -8,6 +8,7 @@ import os
 from common import *
 from shakedown import *
 from dcos import http
+from urllib.parse import urljoin
 
 MOM_EE_NAME = 'marathon-user-ee'
 MOM_EE_SERVICE_ACCOUNT = 'marathon_user_ee'
@@ -17,7 +18,7 @@ PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
 
 DEFAULT_MOM_IMAGES = {
-    'MOM_EE_1.4': '1.4.1_1.9.7',
+    'MOM_EE_1.4': '1.4.2_1.9.8',
     'MOM_EE_1.3': '1.3.10_1.1.5'
 }
 
@@ -132,7 +133,7 @@ def ensure_service_account():
 def ensure_permissions():
     set_service_account_permissions(MOM_EE_SERVICE_ACCOUNT)
 
-    url = '{}acs/api/v1/acls/dcos:superuser/users/{}'.format(dcos_url(), MOM_EE_SERVICE_ACCOUNT)
+    url = urljoin(dcos_url(), 'acs/api/v1/acls/dcos:superuser/users/{}'.format(MOM_EE_SERVICE_ACCOUNT))
     req = http.get(url)
     assert req.json()['array'][0]['url'] == '/acs/api/v1/acls/dcos:superuser/users/{}/full'.format(MOM_EE_SERVICE_ACCOUNT), "Service account permissions couldn't be set"
 

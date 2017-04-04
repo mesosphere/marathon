@@ -3,7 +3,6 @@ package api.validation
 
 import com.wix.accord.validate
 import mesosphere.UnitTest
-import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
@@ -553,87 +552,6 @@ class RunSpecValidatorTest extends UnitTest {
 
       Then("validation fails")
       validAppDefinition(app).isFailure shouldBe true
-    }
-
-    "validation of constraints" in {
-      import Constraint.Operator._
-
-      val unique = Constraint.newBuilder.setField("hostname").setOperator(UNIQUE)
-      val cluster = Constraint.newBuilder.setField("rack-id").setOperator(CLUSTER)
-      val groupBy = Constraint.newBuilder.setField("rack-id").setOperator(GROUP_BY)
-      val like = Constraint.newBuilder.setField("rack-id").setOperator(LIKE)
-      val unlike = Constraint.newBuilder.setField("rack-id").setOperator(UNLIKE)
-      val max_per = Constraint.newBuilder.setField("rack-id").setOperator(MAX_PER)
-
-      Given("no constraints")
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"),
-        constraints = Set())
-      Then("validation succeeds")
-      validAppDefinition(app).isSuccess shouldBe true
-
-      Given("A UNIQUE constraint without a value")
-      val appUnique = app.copy(constraints = Set(unique.build()))
-      Then("validation succeeds")
-      validAppDefinition(appUnique).isSuccess shouldBe true
-
-      Given("A UNIQUE constraint with a value")
-      val appUniqueValue = app.copy(constraints = Set(unique.setValue("a").build()))
-      Then("validation fails")
-      validAppDefinition(appUniqueValue).isFailure shouldBe true
-
-      Given("A CLUSTER constraint without a value")
-      val appClusterNoValue = app.copy(constraints = Set(cluster.build()))
-      Then("validation fails")
-      validAppDefinition(appClusterNoValue).isFailure shouldBe true
-
-      Given("A CLUSTER constraint with a value")
-      val appCluster = app.copy(constraints = Set(cluster.setValue("abc").build()))
-      Then("validation succeeds")
-      validAppDefinition(appCluster).isSuccess shouldBe true
-
-      Given("A GROUP_BY without a value")
-      val appGroupByNoValue = app.copy(constraints = Set(groupBy.build()))
-      Then("validation succeeds")
-      validAppDefinition(appGroupByNoValue).isSuccess shouldBe true
-
-      Given("A GROUP_BY with a numeric value")
-      val appGroupByNumericValue = app.copy(constraints = Set(groupBy.setValue("123").build()))
-      Then("validation succeeds")
-      validAppDefinition(appGroupByNumericValue).isSuccess shouldBe true
-
-      Given("A GROUP_BY with a non-numeric value")
-      val appGroupByNonNumericValue = app.copy(constraints = Set(groupBy.setValue("AbcDZ").build()))
-      Then("validation fails")
-      validAppDefinition(appGroupByNonNumericValue).isFailure shouldBe true
-
-      Given("A MAX_PER with a numeric value")
-      val appMaxPerNumericValue = app.copy(constraints = Set(max_per.setValue("123").build()))
-      Then("validation succeeds")
-      validAppDefinition(appMaxPerNumericValue).isSuccess shouldBe true
-
-      Given("A MAX_PER with a non-numeric value")
-      val appMaxPerNonNumericValue = app.copy(constraints = Set(max_per.setValue("AbcDZ").build()))
-      Then("validation fails")
-      validAppDefinition(appMaxPerNonNumericValue).isFailure shouldBe true
-
-      Seq(like, unlike).foreach { op =>
-        Given(s"A ${op.getOperator} without a value")
-        val appOpNoValue = app.copy(constraints = Set(op.build()))
-        Then("validation fails")
-        validAppDefinition(appOpNoValue).isFailure shouldBe true
-
-        Given(s"A ${op.getOperator} with a valid regex")
-        val appOpRegex = app.copy(constraints = Set(op.setValue(".*").build()))
-        Then("validation succeeds")
-        validAppDefinition(appOpRegex).isSuccess shouldBe true
-
-        Given(s"A ${op.getOperator} with an invalid regex")
-        val appOpBadRegex = app.copy(constraints = Set(op.setValue("*").build()))
-        Then("validation fails")
-        validAppDefinition(appOpBadRegex).isFailure shouldBe true
-      }
     }
 
     "Resident app may only define unreserved acceptedResourceRoles or None" in {

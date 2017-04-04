@@ -2,13 +2,10 @@ package akka.dispatch
 
 import java.util
 
-import akka.actor.ActorCell
-import mesosphere.marathon.core.async.{ Context, ContextPropagatingExecutionContext, propagateContext }
+import mesosphere.marathon.core.async.{ Context, propagateContext }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect }
 import org.slf4j.MDC
-
-import scala.concurrent.duration.{ Duration, FiniteDuration }
 
 // Note: we have to override behavior that is private to akka, so this has to be in the akka.dispatch package.
 
@@ -19,7 +16,7 @@ private object ContextWrapper {
 }
 
 /**
-  * Aspect that unwraps Akka Messages (in pair with [[ContextPropagatingDispatcher]]
+  * Aspect that wraps and unwraps Akka Messages
   * so that the Context/MDC are around the message.
   */
 @Aspect
@@ -34,23 +31,18 @@ private class WeaveActorReceive {
         pjp.proceed(Array(envelope))
     }
   }
-}
 
-/**
-  * Akka Dispatcher that copies the context and MDC when sending an actor a message.
-  */
-class ContextPropagatingDispatcher(
-  configurator: MessageDispatcherConfigurator,
-  id: String,
-  throughput: Int,
-  throughputDeadlineTime: Duration,
-  executorServiceFactoryProvider: ExecutorServiceFactoryProvider,
-  shutdownDeadlineTime: FiniteDuration)
-    extends Dispatcher(configurator, id, throughput, throughputDeadlineTime, executorServiceFactoryProvider, shutdownDeadlineTime)
-    with ContextPropagatingExecutionContext {
-
-  @SuppressWarnings(Array("NoOpOverride"))
-  override protected[akka] def dispatch(receiver: ActorCell, invocation: Envelope): Unit = {
-    super.dispatch(receiver, Envelope(new ContextWrapper(invocation, Context.copy(), Option(MDC.getCopyOfContextMap)), invocation.sender))
+  // Unstarted actors use a chain of sendMessage, so we need to wrap only if we haven't already.
+  @SuppressWarnings(Array("MethodReturningAny"))
+  @Around("execution(* akka.actor..Cell+.sendMessage(..)) && args(envelope)")
+  def sendMessage(pjp: ProceedingJoinPoint, envelope: Envelope): Any = {
+    envelope match {
+      case Envelope(ContextWrapper(_, _, _), _) =>
+        // don't re-wrap
+        pjp.proceed(Array(envelope))
+      case _ =>
+        pjp.proceed(Array(Envelope(new ContextWrapper(envelope, Context.copy(), Option(MDC.getCopyOfContextMap)), envelope.sender)))
+    }
   }
 }
+

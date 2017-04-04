@@ -289,12 +289,13 @@ object AppNormalization {
 
   object Networks {
     implicit val normalizedNetworks: Normalization[Networks] = Normalization { n =>
-      n.config.defaultNetworkName.map { _ =>
-        n.copy(networks = n.networks.map(_.map {
+      // IMPORTANT: only evaluate config.defaultNetworkName if we actually need it
+      n.copy(networks = n.networks.map{ networks =>
+        networks.map {
           case x: Network if x.name.isEmpty && x.mode == NetworkMode.Container => x.copy(name = n.config.defaultNetworkName)
           case x => x
-        }))
-      }.getOrElse(n)
+        }
+      })
     }
   }
 
@@ -318,7 +319,7 @@ object AppNormalization {
     )
   }
 
-  /** dynamic app normalization configuration, useful for testing */
+  /** dynamic app normalization configuration, useful for migration and/or testing */
   trait Config {
     def defaultNetworkName: Option[String]
   }
@@ -393,6 +394,6 @@ object AppNormalization {
         id = PathId(app.id).canonicalPath(base).toString,
         dependencies = app.dependencies.map(dep => PathId(dep).canonicalPath(base).toString)
       ).asInstanceOf[T]
-    case _ => throw new SerializationFailedException("withCanonizedIds only applies for App and AppUpdate")
+    case _ => throw SerializationFailedException("withCanonizedIds only applies for App and AppUpdate")
   }
 }

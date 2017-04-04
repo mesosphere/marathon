@@ -10,7 +10,7 @@ import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
-import mesosphere.{ UnitTest, ValidationClue }
+import mesosphere.{ UnitTest, ValidationTestLike }
 import org.scalatest.Matchers
 import play.api.libs.json._
 
@@ -22,7 +22,7 @@ class AppDefinitionFormatsTest extends UnitTest
     with HealthCheckFormats
     with Matchers
     with ResultMatchers
-    with ValidationClue {
+    with ValidationTestLike {
 
   import Formats.PathIdFormat
 
@@ -184,7 +184,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail when 'env' contains invalid keys" in {
-      val json = Json.parse(""" { "id": "test", "cmd": "foo", "env": { "%^!": "foo" } }""")
+      val json = Json.parse(""" { "id": "test", "cmd": "foo", "env": { "": "foo" } }""")
       a[ValidationFailedException] shouldBe thrownBy { normalizeAndConvert(json.as[raml.App]) }
     }
 

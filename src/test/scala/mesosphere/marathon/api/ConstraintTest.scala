@@ -4,7 +4,7 @@ package api
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.api.v2.validation.SchedulingValidation
+import mesosphere.marathon.api.v2.validation.{ SchedulingValidation, SchedulingValidationMessages }
 import mesosphere.marathon.raml.Raml
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
@@ -59,10 +59,10 @@ class ConstraintTest extends UnitTest {
 
     "Read should give a nice validation error for unknown operators (regression for #3161)" in {
 
-      val ex = intercept[JsResultException](Json.parse("""["foo", "unique"]""").as[Constraint])
+      val ex = intercept[JsResultException](Json.parse("""["foo", "bar"]""").as[Constraint])
       ex.errors should have size 1
       ex.errors.head._2 should have size 1
-      ex.errors.head._2.head.messages.head should startWith("Constraint operator must be one of the following")
+      ex.errors.head._2.head.messages.head should be(SchedulingValidationMessages.ConstraintOperatorInvalid)
     }
 
     "Serialize" in {
