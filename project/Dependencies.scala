@@ -79,7 +79,7 @@ object Dependency {
   object V {
     // runtime deps versions
     val Alpakka  = "0.6"
-    val Chaos = "0.8.7"
+    val Chaos = "0.8.8"
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
     val Mesos = "1.1.0"
