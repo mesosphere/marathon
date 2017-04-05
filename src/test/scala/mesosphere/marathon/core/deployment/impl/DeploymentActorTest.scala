@@ -16,7 +16,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import org.mockito.Matchers
@@ -40,7 +39,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
     val queue: LaunchQueue = mock[LaunchQueue]
     val killService = new KillServiceMock(system)
     val scheduler: SchedulerActions = mock[SchedulerActions]
-    val storage: StorageProvider = mock[StorageProvider]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val config: DeploymentConfig = mock[DeploymentConfig]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
@@ -63,7 +61,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         plan,
         tracker,
         queue,
-        storage,
         hcManager,
         system.eventStream,
         readinessCheckExecutor

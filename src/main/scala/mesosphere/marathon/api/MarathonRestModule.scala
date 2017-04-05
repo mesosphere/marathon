@@ -67,7 +67,6 @@ class MarathonRestModule extends ServletModule {
     bind(classOf[v2.InfoResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.LeaderResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.DeploymentsResource]).in(Scopes.SINGLETON)
-    bind(classOf[v2.ArtifactsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 

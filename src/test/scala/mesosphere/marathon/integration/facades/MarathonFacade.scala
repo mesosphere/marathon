@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration.facades
 
 import com.typesafe.scalalogging.StrictLogging
-import java.io.File
 import java.util.Date
 
 import akka.NotUsed
@@ -25,7 +24,6 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.{ Delete, Get, Patch, Post, Put }
-import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.unmarshalling.{ Unmarshal => AkkaUnmarshal }
@@ -287,7 +285,6 @@ class MarathonFacade(
   def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
     requireInBaseGroup(appId)
     val res = result(requestFor[ITListTasks](Get(s"$url/v2/apps$appId/tasks")), waitTime)
-    println(s">>>> ${res.value} ${res.entityString}")
     res.map(_.tasks.toList)
   }
 
@@ -381,26 +378,6 @@ class MarathonFacade(
 
   def metrics(): RestResult[HttpResponse] = {
     result(request(Get(s"$url/metrics")), waitTime)
-  }
-
-  //artifacts ---------------------------------------------
-  def uploadArtifact(path: String, file: File): RestResult[HttpResponse] = {
-    val formData = Multipart.FormData(Source.single(
-      Multipart.FormData.BodyPart(
-        "file",
-        HttpEntity.fromPath(MediaTypes.`application/octet-stream`, file.toPath),
-        Map("filename" -> file.getName))))
-    result(Marshal(formData).to[RequestEntity].flatMap { entity =>
-      request(Post(s"$url/v2/artifacts$path", entity))
-    }, waitTime)
-  }
-
-  def getArtifact(path: String): RestResult[HttpResponse] = {
-    result(request(Get(s"$url/v2/artifacts$path")), waitTime)
-  }
-
-  def deleteArtifact(path: String): RestResult[HttpResponse] = {
-    result(request(Delete(s"$url/v2/artifacts$path")), waitTime)
   }
 
   //leader ----------------------------------------------

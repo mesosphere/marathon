@@ -33,8 +33,6 @@ object Dependencies {
     jettyEventSource % "compile",
     uuidGenerator % "compile",
     jGraphT % "compile",
-    hadoopHdfs % "compile",
-    hadoopCommon % "compile",
     beanUtils % "compile",
     playJson % "compile",
     jsonSchemaValidator % "compile",
@@ -51,6 +49,8 @@ object Dependencies {
     raven % "compile",
     akkaHttpPlayJson % "compile",
     alpakkaS3 % "compile",
+    commonsCompress % "compile", // used for tar flow
+
 
     // test
     Test.diffson % "test",
@@ -61,7 +61,8 @@ object Dependencies {
     Test.scalacheck % "test",
     Test.wixAccordScalatest % "test",
     Test.curatorTest % "test",
-    Test.akkaSse % "test"
+    Test.akkaSse % "test",
+    Test.commonsIO % "test"
   ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
@@ -85,6 +86,8 @@ object Dependency {
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.1.0-2.0.107.debian81"
     val Akka = "2.4.17"
+    val ApacheCommonsCompress = "1.13"
+    val ApacheCommonsIO = "2.4"
     val AsyncAwait = "0.9.6"
     val Jersey = "1.18.5"
     val JettyServlets = "9.3.6.v20151106"
@@ -92,7 +95,6 @@ object Dependency {
     val JodaConvert = "1.8.1"
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
-    val Hadoop = "2.7.2"
     val Diffson = "2.0.2"
     val PlayJson = "2.5.12"
     val JsonSchemaValidator = "2.2.6"
@@ -137,9 +139,6 @@ object Dependency {
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
-  val hadoopHdfs = "org.apache.hadoop" % "hadoop-hdfs" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
-  val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty,
-    excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
@@ -154,6 +153,7 @@ object Dependency {
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
+  val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
 
   object Kamon {
     val Version = "0.6.5"
@@ -186,5 +186,6 @@ object Dependency {
     val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
     val akkaSse = "de.heikoseeberger" %% "akka-sse" % "2.0.0"
+    val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   }
 }

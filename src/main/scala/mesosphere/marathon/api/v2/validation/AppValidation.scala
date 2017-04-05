@@ -288,7 +288,6 @@ trait AppValidation {
         secrets.nonEmpty
       } -> (featureEnabled(enabledFeatures, Features.SECRETS)))
       update.secrets is optional(featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator)))
-      update.storeUrls is optional(every(urlIsValid))
       update.fetch is optional(every(valid))
       update.portDefinitions is optional(portDefinitionsValidator)
       update.container is optional(valid(validContainer(enabledFeatures, update.networks.getOrElse(Nil))))
@@ -375,7 +374,6 @@ trait AppValidation {
   /** validate most canonical API fields */
   private def validBasicAppDefinition(enabledFeatures: Set[String]): Validator[App] = validator[App] { app =>
     app.container is optional(valid(validContainer(enabledFeatures, app.networks)))
-    app.storeUrls is every(urlIsValid)
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
     app.healthChecks is every(portIndexIsValid(portIndices(app)))

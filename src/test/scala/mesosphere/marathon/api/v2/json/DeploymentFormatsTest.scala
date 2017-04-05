@@ -116,8 +116,7 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
     StartApplication(genApp, genInt),
     ScaleApplication(genApp, genInt),
     StopApplication(genApp),
-    RestartApplication(genApp),
-    ResolveArtifacts(genApp, Map.empty)
+    RestartApplication(genApp)
   ))
 
   def genGroup(children: Set[Group] = Set.empty) = {

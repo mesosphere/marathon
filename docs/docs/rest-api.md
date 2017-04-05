@@ -630,7 +630,6 @@ Transfer-Encoding: chunked
                         10000
                     ],
                     "requirePorts": false,
-                    "storeUrls": [],
                     "upgradeStrategy": {
                         "minimumHealthCapacity": 1.0
                     },
@@ -695,7 +694,6 @@ Transfer-Encoding: chunked
                 10000
             ],
             "requirePorts": false,
-            "storeUrls": [],
             "upgradeStrategy": {
                 "minimumHealthCapacity": 1.0
             },
@@ -1530,7 +1528,6 @@ Transfer-Encoding: chunked
                 "cmd" : "tail -f /dev/null",
                 "backoffSeconds" : 1,
                 "healthChecks" : [],
-                "storeUrls" : [],
                 "constraints" : [],
                 "env" : {},
                 "cpus" : 0.1,

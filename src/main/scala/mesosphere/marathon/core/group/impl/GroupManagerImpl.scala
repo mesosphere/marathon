@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.group.impl
 
-import java.net.URL
 import java.time.OffsetDateTime
 import javax.inject.Provider
 
@@ -10,15 +9,13 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.core.deployment.{ DeploymentPlan, ResolveArtifacts }
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.upgrade.GroupVersioningUtil
 import mesosphere.marathon.util.{ LockedVar, WorkQueue }
 
@@ -33,8 +30,7 @@ class GroupManagerImpl(
     config: GroupManagerConfig,
     initialRoot: RootGroup,
     groupRepository: GroupRepository,
-    deploymentService: Provider[DeploymentService],
-    storage: StorageProvider)(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
+    deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
   /**
     * All updates to root() should go through this workqueue and the maxConcurrent should always be "1"
     * as we don't allow multiple updates to the root at the same time.
@@ -98,10 +94,10 @@ class GroupManagerImpl(
         logger.info(s"Upgrade root group version:$version with force:$force")
 
         val from = rootGroup()
-        val (unversioned, resolve) = await(resolveStoreUrls(assignDynamicServicePorts(from, change(from))))
+        val unversioned = assignDynamicServicePorts(from, change(from))
         val to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
         Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
-        val plan = DeploymentPlan(from, to, resolve, version, toKill)
+        val plan = DeploymentPlan(from, to, version, toKill)
         Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
         logger.info(s"Computed new deployment plan:\n$plan")
         await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
@@ -195,32 +191,5 @@ class GroupManagerImpl(
     dynamicApps.foldLeft(to) { (rootGroup, app) =>
       rootGroup.updateApp(app.id, _ => app, app.version)
     }
-  }
-
-  private[this] def resolveStoreUrls(rootGroup: RootGroup): Future[(RootGroup, Seq[ResolveArtifacts])] = {
-    import io.PathFun._
-    def url2Path(url: String): Future[(String, String)] = contentPath(new URL(url)).map(url -> _)
-    Future.sequence(rootGroup.transitiveApps.flatMap(_.storeUrls).map(url2Path))
-      .map(_.toMap)
-      .map { paths =>
-        //Filter out all items with already existing path.
-        //Since the path is derived from the content itself,
-        //it will only change, if the content changes.
-        val downloads = mutable.Map(paths.filterNotAs { case (url, path) => storage.item(path).exists }(collection.breakOut): _*)
-        val actions = Seq.newBuilder[ResolveArtifacts]
-        rootGroup.updateTransitiveApps(
-          PathId.empty,
-          app =>
-            if (app.storeUrls.isEmpty) app
-            else {
-              val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
-              val resolved = app.copy(fetch = app.fetch ++ storageUrls.map(FetchUri.apply(_)), storeUrls = Seq.empty)
-              val appDownloads: Map[URL, String] =
-                app.storeUrls
-                  .flatMap { url => downloads.remove(url).map { path => new URL(url) -> path } }(collection.breakOut)
-              if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
-              resolved
-            }, rootGroup.version) -> actions.result()
-      }
   }
 }

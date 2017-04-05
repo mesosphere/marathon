@@ -46,8 +46,6 @@ case class AppDefinition(
 
   fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
-  storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
-
   portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
 
   requirePorts: Boolean = App.DefaultRequirePorts,
@@ -155,7 +153,6 @@ case class AppDefinition(
       .addAllHealthChecks(healthChecks.map(_.toProto))
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString))
-      .addAllStoreUrls(storeUrls)
       .addAllLabels(appLabels)
       .addAllSecrets(secrets.map(SecretsSerializer.toProto))
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto))
@@ -255,7 +252,6 @@ case class AppDefinition(
       ),
       env = envMap ++ envRefs,
       fetch = proto.getCmd.getUrisList.map(FetchUri.fromProto)(collection.breakOut),
-      storeUrls = proto.getStoreUrlsList.toSeq,
       container = containerOption,
       healthChecks = proto.getHealthChecksList.map(HealthCheck.fromProto).toSet,
       readinessChecks =
@@ -312,7 +308,6 @@ case class AppDefinition(
           executor != to.executor ||
           constraints != to.constraints ||
           fetch != to.fetch ||
-          storeUrls != to.storeUrls ||
           portDefinitions != to.portDefinitions ||
           requirePorts != to.requirePorts ||
           backoffStrategy != to.backoffStrategy ||
@@ -372,8 +367,6 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultConstraints = Set.empty[Constraint]
 
   val DefaultFetch: Seq[FetchUri] = FetchUri.empty
-
-  val DefaultStoreUrls = Seq.empty[String]
 
   val DefaultPortDefinitions: Seq[PortDefinition] = Nil
 
@@ -536,7 +529,6 @@ object AppDefinition extends GeneralPurposeCombinators {
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
     appDef.container.each is valid(Container.validContainer(appDef.networks, enabledFeatures))
-    appDef.storeUrls is every(urlIsValid)
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef must containsCmdArgsOrContainer

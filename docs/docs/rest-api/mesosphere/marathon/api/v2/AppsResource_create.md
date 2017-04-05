@@ -539,7 +539,6 @@ Transfer-Encoding: chunked
         {"port": 0}
     ],
     "requirePorts": false,
-    "storeUrls": [],
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
         "maximumOverCapacity": 0.5

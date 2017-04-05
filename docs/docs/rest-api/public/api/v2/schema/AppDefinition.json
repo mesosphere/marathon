@@ -719,14 +719,6 @@
         }
       }
     },
-    "storeUrls": {
-      "type": "array",
-      "description": "URL's that have to be resolved and put into the artifact store, before the task will be started.",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
     "taskKillGracePeriodSeconds": {
       "type": "integer",
       "description": "Configures the number of seconds between escalating from SIGTERM to SIGKILL when signalling tasks to terminate. Using this grace period, tasks should perform orderly shut down immediately upon receiving SIGTERM.",

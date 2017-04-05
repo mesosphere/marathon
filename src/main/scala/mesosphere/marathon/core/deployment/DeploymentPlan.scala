@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.deployment
 
-import java.net.URL
 import java.util.UUID
 
 import com.wix.accord._
@@ -15,7 +14,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{ ArgvCommand, ShellCommand }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import org.slf4j.LoggerFactory
 
 import scala.collection.SortedMap
 
@@ -35,7 +33,6 @@ object DeploymentAction {
       case _: StopApplication => s"Stop$actionType"
       case _: ScaleApplication => s"Scale$actionType"
       case _: RestartApplication => s"Restart$actionType"
-      case _: ResolveArtifacts => "ResolveArtifacts"
     }
   }
 }
@@ -55,9 +52,6 @@ case class StopApplication(runSpec: RunSpec) extends DeploymentAction
 
 // runnable spec is there but should be replaced
 case class RestartApplication(runSpec: RunSpec) extends DeploymentAction
-
-// resolve and store artifacts for given runnable spec
-case class ResolveArtifacts(runSpec: RunSpec, url2Path: Map[URL, String]) extends DeploymentAction
 
 /**
   * One step in a deployment plan.
@@ -180,7 +174,6 @@ case class DeploymentPlan(
           toKill.withFilter(_.nonEmpty).map(", killTasks=" + _.map(_.instanceId.idString).mkString(",")).getOrElse("")
         s"Scale(${appString(spec)}, instances=$scale$killTasksString)"
       case RestartApplication(app) => s"Restart(${appString(app)})"
-      case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
     }
     val stepString =
       if (steps.nonEmpty) {
@@ -195,7 +188,6 @@ case class DeploymentPlan(
 }
 
 object DeploymentPlan {
-  private val log = LoggerFactory.getLogger(getClass)
 
   def empty: DeploymentPlan =
     DeploymentPlan(UUID.randomUUID().toString, RootGroup.empty, RootGroup.empty, Nil, Timestamp.now())
@@ -271,7 +263,6 @@ object DeploymentPlan {
   /**
     * @param original the root group before the deployment
     * @param target the root group after the deployment
-    * @param resolveArtifacts artifacts to resolve
     * @param version the version to use for new RunSpec (should be very close to now)
     * @param toKill specific tasks that should be killed
     * @return The deployment plan containing the steps necessary to get from the original to the target group definition
@@ -279,7 +270,6 @@ object DeploymentPlan {
   def apply(
     original: RootGroup,
     target: RootGroup,
-    resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
     toKill: Map[PathId, Seq[Instance]] = Map.empty,
     id: Option[String] = None): DeploymentPlan = {
@@ -291,9 +281,6 @@ object DeploymentPlan {
 
     // A collection of deployment steps for this plan.
     val steps = Seq.newBuilder[DeploymentStep]
-
-    // 0. Resolve artifacts.
-    steps += DeploymentStep(resolveArtifacts)
 
     // 1. Destroy run specs that do not exist in the target.
     steps += DeploymentStep(

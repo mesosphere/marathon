@@ -44,6 +44,12 @@ slightly different semantics. Any monitoring dashboards should be updated.
 Before 1.5.0 releases, we will publish a migration guide for the new metric formats and where the replacement
 metrics can be found and the formats they are now in.
 
+#### Artifact store has been removed
+The artifact store has been deprecated with Marthon 1.4 and is removed with this version.
+The command line flag `--artifact_store` will throw an error if specified.
+The Rest API endpoint`/v2/artifacts` has been removed completely.
+
+
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release
 

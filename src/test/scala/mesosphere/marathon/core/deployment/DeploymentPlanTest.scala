@@ -391,7 +391,6 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val plan = DeploymentPlan(
         original = originalGroup,
         target = targetGroup,
-        resolveArtifacts = Seq.empty,
         version = Timestamp.now(),
         toKill = Map(aId -> Seq(instanceToKill)))
 

@@ -277,15 +277,6 @@ types:
       secrets?:
         type: secrets.Secrets
         (pragma.omitEmpty):
-      storeUrls?:
-        type: array
-        (pragma.omitEmpty):
-        description: |
-          URL's that have to be resolved and put into the artifact store,
-          before the task will be started.
-        items:
-          type: string
-          minLength: 1
       taskKillGracePeriodSeconds?:
         type: integer
         format: int32

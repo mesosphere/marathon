@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.google.inject.Singleton
 import com.sun.jersey.api.NotFoundException
 import mesosphere.marathon.api.v2.Validation._
-import org.apache.http.HttpStatus._
+import akka.http.scaladsl.model.StatusCodes._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsResultException, JsValue, Json }
 
@@ -44,30 +44,30 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] {
   }
 
   private def statusCode(exception: JavaException): Int = exception match {
-    case _: TimeoutException => SC_SERVICE_UNAVAILABLE
-    case _: PathNotFoundException => SC_NOT_FOUND
-    case _: AppNotFoundException => SC_NOT_FOUND
-    case _: PodNotFoundException => SC_NOT_FOUND
-    case _: UnknownGroupException => SC_NOT_FOUND
-    case _: AppLockedException => SC_CONFLICT
-    case _: ConflictingChangeException => SC_CONFLICT
-    case _: BadRequestException => SC_BAD_REQUEST
-    case _: JsonParseException => SC_BAD_REQUEST
+    case _: TimeoutException => ServiceUnavailable.intValue
+    case _: PathNotFoundException => NotFound.intValue
+    case _: AppNotFoundException => NotFound.intValue
+    case _: PodNotFoundException => NotFound.intValue
+    case _: UnknownGroupException => NotFound.intValue
+    case _: AppLockedException => Conflict.intValue
+    case _: ConflictingChangeException => Conflict.intValue
+    case _: BadRequestException => BadRequest.intValue
+    case _: JsonParseException => BadRequest.intValue
 
     case JsResultException(errors) if errors.nonEmpty && errors.forall {
       case (_, validationErrors) => validationErrors.nonEmpty
     } =>
       // if all of the nested errors are validation-related then generate
       // an error code consistent with that generated for ValidationFailedException
-      SC_UNPROCESSABLE_ENTITY
+      UnprocessableEntity.intValue
 
-    case _: JsResultException => SC_BAD_REQUEST
+    case _: JsResultException => BadRequest.intValue
 
-    case _: JsonMappingException => SC_BAD_REQUEST
-    case _: IllegalArgumentException => SC_UNPROCESSABLE_ENTITY
-    case _: ValidationFailedException => SC_UNPROCESSABLE_ENTITY
+    case _: JsonMappingException => BadRequest.intValue
+    case _: IllegalArgumentException => UnprocessableEntity.intValue
+    case _: ValidationFailedException => UnprocessableEntity.intValue
     case e: WebApplicationException => e.getResponse.getStatus
-    case _ => SC_INTERNAL_SERVER_ERROR
+    case _ => InternalServerError.intValue
   }
 
   private def entity(exception: JavaException): JsValue = exception match {

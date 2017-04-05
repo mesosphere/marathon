@@ -23,7 +23,6 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository }
@@ -202,13 +201,12 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     val taskKillService: KillService = mock[KillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val appRepo: AppRepository = AppRepository.inMemRepository(new InMemoryPersistenceStore())
-    val storage: StorageProvider = mock[StorageProvider]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     // A method that returns dummy props. Used to control the deployments progress. Otherwise the tests become racy
     // and depending on when DeploymentActor sends DeploymentFinished message.
-    val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _, _, _, _) => TestActor.props(new LinkedBlockingDeque())
+    val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _, _, _) => TestActor.props(new LinkedBlockingDeque())
 
     def deploymentManager(): TestActorRef[DeploymentManagerActor] = TestActorRef (
       DeploymentManagerActor.props(
@@ -216,7 +214,6 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
         taskKillService,
         launchQueue,
         scheduler,
-        storage,
         hcManager,
         eventBus,
         readinessCheckExecutor,

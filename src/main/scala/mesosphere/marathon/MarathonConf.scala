@@ -13,7 +13,6 @@ import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
 import org.rogach.scallop.ScallopConf
@@ -236,15 +235,6 @@ trait MarathonConf
     "framework_name",
     descr = "Framework name to register with Mesos.",
     default = Some("marathon"))
-
-  lazy val artifactStore = opt[String](
-    "artifact_store",
-    descr = "URL to the artifact store. " +
-      s"""Supported store types ${StorageProvider.examples.keySet.mkString(", ")}. """ +
-      s"""Example: ${StorageProvider.examples.values.mkString(", ")}""",
-    validate = StorageProvider.isValidUrl,
-    noshort = true
-  )
 
   lazy val mesosAuthentication = toggle(
     "mesos_authentication",

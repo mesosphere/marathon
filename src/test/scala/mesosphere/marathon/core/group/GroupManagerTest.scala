@@ -10,7 +10,6 @@ import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.event.GroupChangeSuccess
 import mesosphere.marathon.core.group.impl.GroupManagerImpl
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -25,11 +24,10 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     val config = AllConf.withTestConfig("--local_port_min", servicePortsRange.start.toString, "--local_port_max", (servicePortsRange.end + 1).toString)
     val groupRepository = mock[GroupRepository]
     val deploymentService = mock[DeploymentService]
-    val storage = mock[StorageProvider]
     val eventStream = mock[EventStream]
     val groupManager = new GroupManagerImpl(config, initialRoot, groupRepository, new Provider[DeploymentService] {
       override def get(): DeploymentService = deploymentService
-    }, storage)(eventStream, ExecutionContexts.global)
+    })(eventStream, ExecutionContexts.global)
   }
   "applications with port definitions" when {
     "apps with port definitions should map dynamic ports to a non-0 value" in new Fixture(10.to(20)) {

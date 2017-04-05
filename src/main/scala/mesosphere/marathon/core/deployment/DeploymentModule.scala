@@ -12,7 +12,6 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.storage.repository.DeploymentRepository
 
 import scala.concurrent.Promise
@@ -28,12 +27,11 @@ class DeploymentModule(
     killService: KillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
-    storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, Promise[Done], KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, StorageProvider, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) {
+    deploymentActorProps: (ActorRef, Promise[Done], KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) {
 
   private[this] val deploymentManagerActorRef: ActorRef = {
     val props = DeploymentManagerActor.props(
@@ -41,7 +39,6 @@ class DeploymentModule(
       killService,
       launchQueue,
       scheduler,
-      storage,
       healthCheckManager,
       eventBus,
       readinessCheckExecutor,

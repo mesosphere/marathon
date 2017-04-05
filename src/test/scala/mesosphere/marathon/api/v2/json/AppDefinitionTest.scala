@@ -493,7 +493,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         mem = 55.0,
         disk = 550.0,
         constraints = Set(Seq("attribute", "GROUP_BY", "1")),
-        storeUrls = Seq("http://my.org.com/artifacts/foo.bar"),
         portDefinitions = Some(Seq(raml.PortDefinition(9001), raml.PortDefinition(9002))),
         requirePorts = true,
         backoffSeconds = 5,
