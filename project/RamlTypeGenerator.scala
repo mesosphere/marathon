@@ -76,6 +76,8 @@ object RamlTypeGenerator {
 
   val PlayJsNull = REF("play.api.libs.json.JsNull")
 
+  val NoScalaFormat = "format: OFF"
+
   def camelify(name: String): String = name.toLowerCase.capitalize
 
   def underscoreToCamel(name: String) = "(/|_|\\,)([a-z\\d])".r.replaceAllIn(name, { m =>
@@ -683,8 +685,10 @@ object RamlTypeGenerator {
       val tree = tpe.toTree()
       if (tree.nonEmpty) {
         tpe.name -> BLOCK(tree).inPackage(pkg)
+          .withComment(NoScalaFormat)
       } else {
         tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg)
+          .withComment(NoScalaFormat)
       }
     }(collection.breakOut)
   }
