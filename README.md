@@ -194,6 +194,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Guidewire](https://www.guidewire.com/)
 * [Groupon](https://www.groupon.com/)
 * [GSShop](http://www.gsshop.com/)
+* [GrowingIO](https://www.growingio.com/)
 * [HolidayCheck](http://www.holidaycheck.com/)
 * [Human API](https://humanapi.co/)
 * [Indix](http://www.indix.com/)
