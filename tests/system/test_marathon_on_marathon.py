@@ -1,107 +1,51 @@
-"""Marathon acceptance tests for DC/OS regarding network partitioning"""
+""" Test using marathon on marathon (MoM).
+    This test suite imports all common tests found in marathon_common.py which are
+    to be tested on root marathon and MoM.
+    In addition it contains tests which are specific to MoM environments only.
+"""
 
-import os
-import retrying
-import shakedown
-import time
+import pytest
+import common
 
-from common import (app, block_port, cluster_info, delete_all_apps_wait, ensure_mom,
-                    ip_of_mom, ip_other_than_mom, pin_to_host, systemctl_master)
-from dcos import marathon
-from shakedown import dcos_1_8, dcos_version_less_than, private_agents, required_private_agents
-from utils import fixture_dir, get_resource, marathon_on_marathon
+from datetime import timedelta
+# this is intentional import *
+# it imports all the common test_ methods which are to be tested on root and mom
+from marathon_common_tests import *
+from utils import marathon_on_marathon, fixture_dir, get_resource
+
+pytestmark = [pytest.mark.usefixtures('mom_fix')]
 
 
-PACKAGE_NAME = 'marathon'
-PACKAGE_APP_ID = 'marathon-user'
-DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_APP_ID)
-TOKEN = shakedown.dcos_acs_token()
+@pytest.fixture(scope="function")
+def mom_fix():
+
+    common.ensure_mom()
+    with marathon_on_marathon():
+        yield
+        clear_marathon()
 
 
 def setup_module(module):
-    # verify test system requirements are met (number of nodes needed)
-    ensure_mom()
-    shakedown.wait_for_service_endpoint(PACKAGE_APP_ID)
-    cluster_info()
-
-
-def setup_function(function):
-    shakedown.wait_for_service_endpoint('marathon-user')
+    set_marathon_service_name('marathon-user')
+    common.ensure_mom()
+    common.cluster_info()
     with marathon_on_marathon():
-        delete_all_apps_wait()
+        clear_marathon()
 
 
-@private_agents(2)
-def test_mom_with_master_process_failure():
-    """ Launches a MoM, launches an app from MoM and restarts the master.
-        It is expected that the service endpoint will come back and that the
-        task_id is the original task_id
-    """
-    app_def = app('master-failure')
-    host = ip_other_than_mom()
-    pin_to_host(app_def, host)
+def teardown_module(module):
     with marathon_on_marathon():
-        client = marathon.create_client()
-        client.add_app(app_def)
-        shakedown.deployment_wait()
-        tasks = client.get_tasks('/master-failure')
-        original_task_id = tasks[0]['id']
-        systemctl_master()
-        shakedown.wait_for_service_endpoint('marathon-user')
-
-        @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
-        def check_task_recovery():
-            tasks = client.get_tasks('/master-failure')
-            tasks[0]['id'] == original_task_id
+        clear_marathon()
+    # Uninstall MoM
+    shakedown.uninstall_package_and_wait('marathon')
+    shakedown.delete_zk_node('universe/marathon-user')
+    # Remove everything from root marathon
+    clear_marathon()
 
 
-@private_agents(2)
-def test_mom_when_disconnected_from_zk():
-    """ Launch an app from MoM.  Then knock out access to zk from the MoM.
-        Verify the task is still good.
-    """
-    app_def = app('zk-failure')
-    host = ip_other_than_mom()
-    pin_to_host(app_def, host)
-    with marathon_on_marathon():
-        client = marathon.create_client()
-        client.add_app(app_def)
-        shakedown.deployment_wait()
-        tasks = client.get_tasks('/zk-failure')
-        original_task_id = tasks[0]['id']
-
-        with shakedown.iptable_rules(host):
-            block_port(host, 2181)
-            #  time of the zk block
-            time.sleep(10)
-
-        # after access to zk is restored.
-        @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
-        def check_task_is_back():
-            tasks = client.get_tasks('/zk-failure')
-            tasks[0]['id'] == original_task_id
-
-
-@private_agents(2)
-def test_mom_when_task_agent_bounced():
-    """ Launch an app from MoM and restart the node the task is on.
-    """
-    app_def = app('agent-failure')
-    host = ip_other_than_mom()
-    pin_to_host(app_def, host)
-    with marathon_on_marathon():
-        client = marathon.create_client()
-        client.add_app(app_def)
-        shakedown.deployment_wait()
-        tasks = client.get_tasks('/agent-failure')
-        original_task_id = tasks[0]['id']
-        shakedown.restart_agent(host)
-
-        @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
-        def check_task_is_back():
-            tasks = client.get_tasks('/agent-failure')
-            tasks[0]['id'] == original_task_id
-
+###########
+# MoM only tests
+###########
 
 @private_agents(2)
 def test_mom_when_mom_agent_bounced():
@@ -174,14 +118,14 @@ def test_mom_with_network_failure():
     partition_agent(task_ip)
 
     # wait for a min
-    service_delay()
+    time.sleep(timedelta(minutes=1).total_seconds())
 
     # bring the net up
     reconnect_agent(mom_ip)
     reconnect_agent(task_ip)
 
-    service_delay()
-    shakedown.wait_for_service_endpoint(PACKAGE_APP_ID)
+    time.sleep(timedelta(minutes=1).total_seconds())
+    shakedown.wait_for_service_endpoint('marathon-user')
     shakedown.wait_for_task("marathon-user", "sleep")
 
     with marathon_on_marathon():
@@ -220,7 +164,7 @@ def test_mom_with_network_failure_bounce_master():
     partition_agent(task_ip)
 
     # wait for a min
-    service_delay()
+    time.sleep(timedelta(minutes=1).total_seconds())
 
     # bounce master
     shakedown.run_command_on_master("sudo systemctl restart dcos-mesos-master")
@@ -229,8 +173,8 @@ def test_mom_with_network_failure_bounce_master():
     reconnect_agent(mom_ip)
     reconnect_agent(task_ip)
 
-    service_delay()
-    shakedown.wait_for_service_endpoint(PACKAGE_APP_ID)
+    time.sleep(timedelta(minutes=1).total_seconds())
+    shakedown.wait_for_service_endpoint('marathon-user')
     shakedown.wait_for_task("marathon-user", "sleep")
 
     with marathon_on_marathon():
@@ -242,13 +186,28 @@ def test_mom_with_network_failure_bounce_master():
     assert current_sleep_task_id == original_sleep_task_id, "Task ID shouldn't change"
 
 
-def teardown_module(module):
+def test_framework_unavailable_on_mom():
+    """ Launches an app that has elements necessary to create a service endpoint in DCOS.
+        This test confirms that the endpoint is not created when launched with MoM.
+    """
+    if shakedown.service_available_predicate('pyfw'):
+        client = marathon.create_client()
+        client.remove_app('python-http', True)
+        shakedown.deployment_wait()
+        shakedown.wait_for_service_endpoint_removal('pyfw')
+
     with marathon_on_marathon():
         delete_all_apps_wait()
+        client = marathon.create_client()
+        client.add_app(fake_framework_app())
+        shakedown.deployment_wait()
 
-
-def service_delay(delay=120):
-    time.sleep(delay)
+    try:
+        shakedown.wait_for_service_endpoint('pyfw', 15)
+        assert False, 'MoM shoud NOT create a service endpoint'
+    except:
+        assert True
+        pass
 
 
 def partition_agent(hostname):
