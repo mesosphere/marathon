@@ -89,6 +89,7 @@ object RamlTypeGenerator {
     * declarations (`inPackage`)
     */
   val NoCodeCoverageReporting = "$COVERAGE-OFF$"
+  val NoScalaFormat = "format: OFF"
 
   def camelify(name: String): String = name.toLowerCase.capitalize
 
@@ -818,9 +819,11 @@ object RamlTypeGenerator {
     generateBuiltInTypes(pkg) ++ types.map { tpe =>
       val tree = tpe.toTree()
       if (tree.nonEmpty) {
-        tpe.name -> BLOCK(tree).inPackage(pkg).withComment(NoCodeCoverageReporting)
+        tpe.name -> BLOCK(tree).inPackage(pkg)
+          .withComment(NoCodeCoverageReporting).withComment(NoScalaFormat)
       } else {
-        tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg).withComment(NoCodeCoverageReporting)
+        tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg)
+          .withComment(NoCodeCoverageReporting).withComment(NoScalaFormat)
       }
     }(collection.breakOut)
   }
