@@ -809,13 +809,36 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       responseBody should include("/container/volumes(0)/external/name")
     }
 
-    "Creating an app with an external volume w/ MESOS and absolute containerPath should fail validation" in new Fixture {
+    "Creating an app with an external volume w/ MESOS and absolute containerPath should succeed validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
       val response = createAppWithVolumes(
         "MESOS",
         """
           |    "volumes": [{
           |      "containerPath": "/var",
+          |      "external": {
+          |        "size": 10,
+          |        "provider": "dvdi",
+          |        "name": "namedfoo",
+          |        "options": {"dvdi/driver": "bar"}
+          |      },
+          |      "mode": "RW"
+          |    }]
+        """.stripMargin, groupManager, appsResource, auth
+      )
+
+      Then("The return code indicates create failure")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+    }
+
+    "Creating an app with an external volume w/ MESOS and dotted containerPath should fail validation" in new Fixture {
+      Given("An app with a named, non-'agent' volume provider")
+      val response = createAppWithVolumes(
+        "MESOS",
+        """
+          |    "volumes": [{
+          |      "containerPath": ".",
           |      "external": {
           |        "size": 10,
           |        "provider": "dvdi",
@@ -851,8 +874,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       )
 
       Then("The return code indicates create failure")
-      response.getStatus should be(422)
-      response.getEntity.toString should include("/container/volumes(0)/containerPath")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
     }
 
     "Creating an app with an external volume and MESOS containerizer should pass validation" in new Fixture {

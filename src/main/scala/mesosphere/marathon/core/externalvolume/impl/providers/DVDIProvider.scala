@@ -158,8 +158,6 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         volume =>
           volume.mode is equalTo(ReadMode.Rw)
           volume.containerPath is notOneOf(DotPaths: _*)
-          // same as for local persistent volumes
-          volume.containerPath should matchRegexFully(NoSlashesPattern)
       }
 
       val validDockerExternalVolume = validator[raml.ExternalVolume] { external =>
@@ -223,8 +221,6 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         volume =>
           volume.mode is equalTo(Mode.RW)
           volume.containerPath is notOneOf(DotPaths: _*)
-          // same as for local persistent volumes
-          volume.containerPath should matchRegexFully(NoSlashesPattern)
       }
 
       val validDockerVolume = validator[ExternalVolume] { volume =>
@@ -291,7 +287,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     val validMesosVolume = validator[AppVolume] {
       volume =>
         volume.mode is valid(equalTo(ReadMode.Rw))
-        volume.containerPath is valid(notOneOf(DotPaths: _*) and matchRegexFully(NoSlashesPattern))
+        volume.containerPath is valid(notOneOf(DotPaths: _*))
     }
     val dockerVolumeInfo = validator[raml.ExternalVolume] { v =>
       v.options is isTrue(s"must only contain $driverOption")(_.filterKeys(_ != driverOption).isEmpty)
