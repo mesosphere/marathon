@@ -380,6 +380,10 @@ class MarathonFacade(
     result(request(Get(s"$url/metrics")), waitTime)
   }
 
+  def ping(): RestResult[HttpResponse] = {
+    result(request(Get(s"$url/ping")), waitTime)
+  }
+
   //leader ----------------------------------------------
   def leader(): RestResult[ITLeaderResult] = {
     result(leaderAsync(), waitTime)
