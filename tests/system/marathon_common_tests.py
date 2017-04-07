@@ -17,6 +17,7 @@ from datetime import timedelta
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
                        marthon_version_less_than)
+from urllib.parse import urljoin
 from utils import (marathon_on_marathon, mom_version_less_than, fixture_dir, get_resource)
 
 
@@ -1007,6 +1008,19 @@ def test_private_repository_mesos_app():
     shakedown.deployment_wait()
 
     common.assert_app_tasks_running(client, app_def)
+
+
+def test_ping():
+    """ Tests the API end point for marathon /ping
+        This isn't provided by the client object and will need to create the url to test
+    """
+
+    marathon_service_name = get_marathon_service_name()
+    marathon_url = shakedown.dcos_service_url(marathon_service_name)
+    url = urljoin(marathon_url, 'ping')
+    response = http.get(url)
+    assert response.status_code == 200
+    assert response.text == 'pong'
 
 
 def remove_marathon_service_name():
