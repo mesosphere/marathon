@@ -32,3 +32,6 @@ export RUN_MESOS_INTEGRATION_TESTS=true
 
 # Integration tests using the Mesos containerizer have to be run as superuser.
 sudo -E sbt -Dsbt.log.format=false clean coverage test coverageReport compile scapegoat doc integration:test mesos-simulation/integration:test
+sudo mv target/scala-2.11/scoverage-report target/scala-2.11/scoverage-report-stable
+sudo mv target/scala-2.11/coverage-report/cobertura.xml target/scala-2.11/cobertura-stable.xml
+sudo -E sbt -Dsbt.log.format=false clean coverage unstable:test unstable-integration:test coverageReport || true

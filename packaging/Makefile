@@ -4,8 +4,8 @@ PREFIX := usr
 # Command to extract from X.X.X-rcX the version (X.X.X) and tag (rcX)
 EXTRACT_VER := cut -d \- -f 1
 EXTRACT_TAG := cut -d \- -f 2- | tr - _
-PKG_VER ?= $(shell cd marathon && sbt -Dsbt.log.noformat=true version | awk 'END {print $$2}' | $(EXTRACT_VER))
-PKG_TAG ?= $(shell cd marathon && sbt -Dsbt.log.noformat=true version | awk 'END {print $$2}' | $(EXTRACT_TAG))
+PKG_VER ?= $(shell cd marathon && git describe --tags --always | $(EXTRACT_VER))
+PKG_TAG ?= $(shell cd marathon && git describe --tags --always | $(EXTRACT_TAG))
 
 ifeq ($(strip $(PKG_TAG)),)
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S')
@@ -243,4 +243,3 @@ prep-ubuntu:
 	sudo dpkg -i $(SBT_TMP)
 	rm $(SBT_TMP)
 	sudo gem install fpm
-

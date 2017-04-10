@@ -155,9 +155,10 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   testOptions in UnstableIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable-integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
-      "-l", "mesosphere.marathon.SerialIntegrationTest",
+      "-n", "mesosphere.marathon.SerialIntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in UnstableIntegrationTest := true,
+  testForkedParallel in UnstableIntegrationTest := true,
 
   scapegoatVersion := "1.3.0",
 
@@ -176,8 +177,9 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   javacOptions in Compile += "-g",
   javaOptions in run ++= (AspectjKeys.weaverOptions in Aspectj).value,
   javaOptions in Test ++= (AspectjKeys.weaverOptions in Aspectj).value,
-  // non-tagged builds use this. Should _always_ end in snapshot.
-  git.baseVersion := "1.5.0-SNAPSHOT"
+  git.useGitDescribe := true,
+  // TODO: There appears to be a bug where uncommitted changes is true even if nothing is committed. 
+  git.uncommittedSignifier := None
 )
 
 val aopMerge: sbtassembly.MergeStrategy = new sbtassembly.MergeStrategy {
