@@ -116,7 +116,7 @@ def python_http_app():
 
 
 def nginx_with_ssl_support():
-	return {
+    return {
 		"id": "/web-server",
 		"instances": 1,
 		"cpus": 1,
@@ -143,6 +143,7 @@ def nginx_with_ssl_support():
 			}
 		}
 	}
+
 
 def fake_framework_app():
     return {
@@ -315,6 +316,15 @@ def peristent_volume_app():
         }
 
 
+def assert_http_code(url, http_code='200'):
+    cmd = r'curl -s -o /dev/null -w "%{http_code}"'
+    cmd = cmd + ' {}'.format(url)
+    status, output = shakedown.run_command_on_master(cmd)
+
+    assert status
+    assert output == http_code
+
+
 def pending_deployment_due_to_resource_roles(app_id):
     resource_role = str(random.getrandbits(32))
 
@@ -379,7 +389,7 @@ def external_volume_mesos_app(volume_name=None):
               "size": 1,
               "name": volume_name,
               "provider": "dvdi",
-              "options": { "dvdi/driver": "rexray" }
+              "options": {"dvdi/driver": "rexray"}
               },
             "mode": "RW"
           }
@@ -408,13 +418,13 @@ def external_volume_mesos_app(volume_name=None):
 
 def command_health_check(command='true', failures=1, timeout=2):
 
-	return {
-		  'protocol': 'COMMAND',
-		  'command': { 'value': command },
-		  'timeoutSeconds': timeout,
-		  'intervalSeconds': 2,
-		  'maxConsecutiveFailures': failures
-		}
+    return {
+        'protocol': 'COMMAND',
+        'command': {'value': command},
+        'timeoutSeconds': timeout,
+        'intervalSeconds': 2,
+        'maxConsecutiveFailures': failures
+    }
 
 
 def private_docker_container_app(docker_credentials_filename='docker.tar.gz'):
@@ -475,6 +485,7 @@ def cluster_info(mom_name='marathon-user'):
                 print("Marathon MoM not present")
     else:
         print("Marathon MoM not present")
+
 
 def delete_all_apps():
     client = marathon.create_client()
@@ -806,7 +817,11 @@ def delete_service_account(service_account):
     assert return_code == 0, "Failed to create a service account"
 
 
-def create_service_account(service_account, private_key_filename='private-key.pem', public_key_filename='public-key.pem', account_description='SI test account'):
+def create_service_account(
+        service_account,
+        private_key_filename='private-key.pem',
+        public_key_filename='public-key.pem',
+        account_description='SI test account'):
     """ Create new private and public key pair and use them to add a new service
         with a give name. Public key file is then removed, however private key file
         is left since it might be used to create a secret. If you don't plan on creating

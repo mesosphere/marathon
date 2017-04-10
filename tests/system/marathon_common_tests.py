@@ -1040,6 +1040,61 @@ def test_ping():
     assert response.text == 'pong'
 
 
+def test_vip_mesos_cmd():
+    """ Tests the creation of a VIP from a python command NOT in a docker.  the
+        test validates the creation of an app with the VIP label and the accessability
+        of the service via the VIP.
+    """
+    vip_name = 'vip-service'
+    marathon_service_name = get_marathon_service_name()
+    fqn = '{}.{}.l4lb.thisdcos.directory'.format(vip_name, marathon_service_name)
+    app_def = python_http_app()
+    app_def['portDefinitions'] = [
+        {
+          "port": 0,
+          "protocol": "tcp",
+          "name": "{}".format(vip_name),
+          "labels": {
+            "VIP_0": "/{}:10000".format(vip_name)
+          }
+        }
+        ]
+    app_def['id'] = vip_name
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    common.assert_http_code('{}:{}'.format(fqn, 10000))
+
+
+def test_vip_docker_bridge_mode():
+    """ Tests the creation of a VIP from a python command in a docker image using bridge mode.
+        the test validates the creation of an app with the VIP label and the accessability
+        of the service via the VIP.
+    """
+    vip_name = 'vip-docker-service'
+    marathon_service_name = get_marathon_service_name()
+    fqn = '{}.{}.l4lb.thisdcos.directory'.format(vip_name, marathon_service_name)
+    app_def = app_docker()
+    app_def['container']['docker']['portMappings'] = [
+        {
+          "containerPort": 8080,
+          "hostPort": 0,
+          "labels": {
+            "VIP_0": "/{}:10000".format(vip_name)
+          },
+          "protocol": "tcp",
+          "name": "{}".format(vip_name)
+        }
+      ]
+    app_def['id'] = vip_name
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    common.assert_http_code('{}:{}'.format(fqn, 10000))
+
+
 def remove_marathon_service_name():
     del os.environ['MARATHON_NAME']
 
