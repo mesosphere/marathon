@@ -8,6 +8,7 @@ object Dependencies {
     mesos % "compile",
     guava % "compile",
     wixAccord % "compile",
+    scalaLogging % "compile",
     scalaxml % "provided" // for scapegoat
   )
 
