@@ -3,12 +3,12 @@ package integration
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import akka.http.scaladsl.model.DateTime
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck }
 import mesosphere.marathon.raml.{ App, GroupUpdate, UpgradeStrategy }
 import mesosphere.marathon.state.{ Group, PathId }
-import org.apache.http.HttpStatus
-import spray.http.DateTime
+import akka.http.scaladsl.model.StatusCodes._
 
 import scala.concurrent.duration._
 
@@ -245,7 +245,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v3", 2)))))
 
       Then("An error is indicated")
-      result.code should be (HttpStatus.SC_CONFLICT)
+      result.code should be (Conflict.intValue)
       waitForEvent("group_change_failed")
 
       When("Another upgrade is triggered with force, while the old one is not completed")
@@ -268,7 +268,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val deleteResult = marathon.deleteGroup(gid)
 
       Then("An error is indicated")
-      deleteResult.code should be(HttpStatus.SC_CONFLICT) withClue s"Response code is ${deleteResult.code}: ${deleteResult.entityString}"
+      deleteResult.code should be(Conflict.intValue) withClue s"Response code is ${deleteResult.code}: ${deleteResult.entityString}"
       waitForEvent("group_change_failed")
 
       When("Delete is triggered with force, while the deployment is not completed")

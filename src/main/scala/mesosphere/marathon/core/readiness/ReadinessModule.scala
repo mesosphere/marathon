@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.readiness
 
 import akka.actor.ActorSystem
+import akka.stream.Materializer
 import mesosphere.marathon.core.readiness.impl.ReadinessCheckExecutorImpl
 
 /**
@@ -14,6 +15,6 @@ import mesosphere.marathon.core.readiness.impl.ReadinessCheckExecutorImpl
   * * it needs to load some data
   * * ...
   */
-class ReadinessModule(actorSystem: ActorSystem) {
-  lazy val readinessCheckExecutor: ReadinessCheckExecutor = new ReadinessCheckExecutorImpl()(actorSystem)
+class ReadinessModule(actorSystem: ActorSystem, materializer: Materializer) {
+  lazy val readinessCheckExecutor: ReadinessCheckExecutor = new ReadinessCheckExecutorImpl()(actorSystem, materializer)
 }

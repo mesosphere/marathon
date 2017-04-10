@@ -42,17 +42,19 @@ class AppDefinitionFormatsTest extends UnitTest
     """)
   }
 
-  def normalizeAndConvert(app: raml.App): AppDefinition =
+  def normalizeAndConvert(app: raml.App): AppDefinition = {
+    val config = AppNormalization.Configure(None, "mesos-bridge-name")
     Raml.fromRaml(
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
       Validation.validateOrThrow(
-        AppNormalization.apply(AppNormalization.Configure(None))
+        AppNormalization.apply(config)
           .normalized(Validation.validateOrThrow(
-            AppNormalization.forDeprecated.normalized(app))(AppValidation.validateOldAppAPI)))(
+            AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
           AppValidation.validateCanonicalAppAPI(Set.empty)
         )
     )
+  }
 
   "AppDefinitionFormats" should {
     "ToJson" in {
@@ -79,7 +81,6 @@ class AppDefinitionFormatsTest extends UnitTest
       (r1 \ "executor").as[String] should equal (App.DefaultExecutor)
       (r1 \ "constraints").asOpt[Set[Seq[String]]] should be (empty)
       (r1 \ "fetch").asOpt[Seq[Artifact]] should be (empty)
-      (r1 \ "storeUrls").asOpt[Seq[String]] should be (empty)
       (r1 \ "portDefinitions").asOpt[Seq[PortDefinition]] should equal (Option(Seq.empty))
       (r1 \ "requirePorts").as[Boolean] should equal (App.DefaultRequirePorts)
       (r1 \ "backoffSeconds").as[Long] should equal (App.DefaultBackoffSeconds)
@@ -132,7 +133,6 @@ class AppDefinitionFormatsTest extends UnitTest
       r1.executor should equal (App.DefaultExecutor)
       r1.constraints should equal (DefaultConstraints)
       r1.fetch should equal (DefaultFetch)
-      r1.storeUrls should equal (DefaultStoreUrls)
       r1.portDefinitions should equal (Seq(PortDefinition(port = 0, name = Some("default"))))
       r1.requirePorts should equal (App.DefaultRequirePorts)
       r1.backoffStrategy.backoff should equal (App.DefaultBackoffSeconds.seconds)
@@ -184,7 +184,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail when 'env' contains invalid keys" in {
-      val json = Json.parse(""" { "id": "test", "cmd": "foo", "env": { "%^!": "foo" } }""")
+      val json = Json.parse(""" { "id": "test", "cmd": "foo", "env": { "": "foo" } }""")
       a[ValidationFailedException] shouldBe thrownBy { normalizeAndConvert(json.as[raml.App]) }
     }
 

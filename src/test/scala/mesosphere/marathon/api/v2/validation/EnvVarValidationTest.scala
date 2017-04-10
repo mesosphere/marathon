@@ -15,8 +15,8 @@ class EnvVarValidationTest extends UnitTest with ResultMatchers with ValidationT
   "EnvVarValidation" when {
     "an environment is validated" should {
 
-      def compliantEnv(title: String, m: Map[String, EnvVarValueOrSecret]): Unit = {
-        s"$title is compliant with validation rules" in new WithoutSecrets {
+      def compliantEnv(title: String, m: Map[String, EnvVarValueOrSecret], strictNameValidation: Boolean = true): Unit = {
+        s"$title is compliant with validation rules" in new WithoutSecrets(strictNameValidation) {
           validate(m) should be(aSuccess)
         }
       }
@@ -26,30 +26,40 @@ class EnvVarValidationTest extends UnitTest with ResultMatchers with ValidationT
       behave like compliantEnv("mixed case env", Environment("foo" -> "bar", "FOO" -> "BAR"))
       behave like compliantEnv("underscore env", Environment("_" -> "x"))
       behave like compliantEnv("alpha numerical env", Environment("a_1_" -> "x"))
+      behave like compliantEnv("whitespace env", Environment(" " -> "x"), strictNameValidation = false)
+      behave like compliantEnv("hyphen env", Environment("-" -> "x"), strictNameValidation = false)
+      behave like compliantEnv("numerical env", Environment("9" -> "x"), strictNameValidation = false)
 
       "fail with a numerical env variable name" in new WithoutSecrets {
         validate(Wrapper(Environment("9" -> "x"))).normalize should failWith("/env(9)" -> MustContainOnlyAlphanumeric)
       }
 
-      "fail with empty variable name" in new WithoutSecrets {
-        validate(Wrapper(Environment("" -> "x"))).normalize should failWith(
-          "/env()" -> "must not be empty",
-          "/env()" -> MustContainOnlyAlphanumeric
-        )
+      def failsWhenExpected(subtitle: String, strictNameValidation: Boolean): Unit = {
+        s"fail with empty variable name $subtitle" in new WithoutSecrets(strictNameValidation) {
+          val alwaysExpected: Seq[ViolationMatcher] = Seq("/env()" -> "must not be empty")
+          val expectedNow =
+            if (strictNameValidation) alwaysExpected ++ (Seq[ViolationMatcher]("/env()" -> MustContainOnlyAlphanumeric))
+            else alwaysExpected
+
+          validate(Wrapper(Environment("" -> "x"))).normalize should failWith(expectedNow: _*)
+        }
+
+        s"fail with too long variable name $subtitle" in new WithoutSecrets(strictNameValidation) {
+          val name = ("x" * 255)
+          validate(Wrapper(Environment(name -> "x"))).normalize should failWith(
+            s"/env($name)" -> VariableNameTooLong
+          )
+        }
       }
 
-      "fail with too long variable name" in new WithoutSecrets {
-        val name = ("x" * 255)
-        validate(Wrapper(Environment(name -> "x"))).normalize should failWith(
-          s"/env($name)" -> VariableNameTooLong
-        )
-      }
+      behave like failsWhenExpected("(strict)", true)
+      behave like failsWhenExpected("(non-strict)", false)
     }
   }
 
-  class WithoutSecrets {
+  class WithoutSecrets(strictNameValidation: Boolean = true) {
     implicit lazy val envVarValidation: Validator[Map[String, EnvVarValueOrSecret]] =
-      EnvVarValidation.envValidator(Map.empty, Set.empty)
+      EnvVarValidation.envValidator(strictNameValidation, Map.empty, Set.empty)
 
     case class Wrapper(env: Map[String, EnvVarValueOrSecret])
 

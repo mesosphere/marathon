@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import java.net.URL
-
 import akka.Done
 import akka.actor._
 import akka.event.EventStream
@@ -18,7 +16,6 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import mesosphere.mesos.Constraints
 
@@ -34,7 +31,6 @@ private class DeploymentActor(
     plan: DeploymentPlan,
     instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
-    storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with StrictLogging {
@@ -99,7 +95,6 @@ private class DeploymentActor(
           case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
           case RestartApplication(run) => restartRunnable(run, status)
           case StopApplication(run) => stopRunnable(run.withInstances(0))
-          case ResolveArtifacts(_, urls) => resolveArtifacts(urls)
         }
       }
 
@@ -182,12 +177,6 @@ private class DeploymentActor(
       promise.future
     }
   }
-
-  def resolveArtifacts(urls: Map[URL, String]): Future[Unit] = {
-    val promise = Promise[Boolean]()
-    context.actorOf(ResolveArtifactsActor.props(urls, promise, storage))
-    promise.future.map(_ => ())
-  }
 }
 
 object DeploymentActor {
@@ -206,7 +195,6 @@ object DeploymentActor {
     plan: DeploymentPlan,
     taskTracker: InstanceTracker,
     launchQueue: LaunchQueue,
-    storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor): Props = {
@@ -219,7 +207,6 @@ object DeploymentActor {
       plan,
       taskTracker,
       launchQueue,
-      storage,
       healthCheckManager,
       eventBus,
       readinessCheckExecutor

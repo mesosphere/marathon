@@ -568,4 +568,3 @@ The following pod definition can serve as a reference to create more complicated
 
 - Killing any task of a pod will result in the suicide of the pod executor that owns the task, which means that all of the applications in that pod instance will die.
 
-- No support for `storeUrls` (see [v2/apps]({{ site.baseurl }}/docs/generated/api.html)).

@@ -131,13 +131,14 @@ object AppNormalization {
     *
     * @return an API object in canonical form (read: doesn't use deprecated APIs)
     */
-  val forDeprecatedUpdates: Normalization[AppUpdate] = Normalization { update =>
+  def forDeprecatedUpdates(config: Config): Normalization[AppUpdate] = Normalization { update =>
     val fetch = Artifacts(update.uris, update.fetch).normalize.fetch
 
     val networks = NetworkTranslation(
       update.ipAddress,
       update.container.flatMap(_.docker.flatMap(_.network)),
-      update.networks
+      update.networks,
+      config
     ).normalize.networks
 
     // no container specified in JSON but ipAddress is ==> implies empty Mesos container
@@ -217,14 +218,15 @@ object AppNormalization {
     *
     * @return an API object in canonical form (read: doesn't use deprecated APIs)
     */
-  val forDeprecated: Normalization[App] = Normalization { app =>
+  def forDeprecated(config: Config): Normalization[App] = Normalization { app =>
     import state.PathId._
     val fetch: Seq[Artifact] = Artifacts(app.uris, Option(app.fetch)).normalize.fetch.getOrElse(Nil)
 
     val networks: Seq[Network] = NetworkTranslation(
       app.ipAddress,
       app.container.flatMap(_.docker.flatMap(_.network)),
-      if (app.networks.isEmpty) None else Some(app.networks)
+      if (app.networks.isEmpty) None else Some(app.networks),
+      config
     ).normalize.networks.getOrElse(Nil)
 
     // canonical validation doesn't allow both portDefinitions and container.portMappings:
@@ -289,12 +291,13 @@ object AppNormalization {
 
   object Networks {
     implicit val normalizedNetworks: Normalization[Networks] = Normalization { n =>
-      n.config.defaultNetworkName.map { _ =>
-        n.copy(networks = n.networks.map(_.map {
+      // IMPORTANT: only evaluate config.defaultNetworkName if we actually need it
+      n.copy(networks = n.networks.map{ networks =>
+        networks.map {
           case x: Network if x.name.isEmpty && x.mode == NetworkMode.Container => x.copy(name = n.config.defaultNetworkName)
           case x => x
-        }))
-      }.getOrElse(n)
+        }
+      })
     }
   }
 
@@ -318,13 +321,16 @@ object AppNormalization {
     )
   }
 
-  /** dynamic app normalization configuration, useful for testing */
+  /** dynamic app normalization configuration, useful for migration and/or testing */
   trait Config {
     def defaultNetworkName: Option[String]
+    def mesosBridgeName: String
   }
 
   /** static app normalization configuration */
-  case class Configure(override val defaultNetworkName: Option[String]) extends Config
+  case class Configure(
+    override val defaultNetworkName: Option[String],
+    override val mesosBridgeName: String) extends Config
 
   /**
     * attempt to translate an older app API (that uses ipAddress and container.docker.network) to the new API
@@ -333,7 +339,8 @@ object AppNormalization {
   case class NetworkTranslation(
     ipAddress: Option[IpAddress],
     networkType: Option[DockerNetwork],
-    networks: Option[Seq[Network]])
+    networks: Option[Seq[Network]],
+    config: Config)
 
   object NetworkTranslation {
     implicit val normalizedNetworks: Normalization[NetworkTranslation] = Normalization { nt =>
@@ -342,7 +349,7 @@ object AppNormalization {
     }
 
     private[this] def toNetworks(nt: NetworkTranslation): Option[Seq[Network]] = nt match {
-      case NetworkTranslation(Some(ipAddress), Some(networkType), None) =>
+      case NetworkTranslation(Some(ipAddress), Some(networkType), None, _) =>
         // wants ip/ct with a specific network mode
         import DockerNetwork._
         networkType match {
@@ -355,16 +362,16 @@ object AppNormalization {
           case unsupported =>
             throw SerializationFailedException(s"unsupported docker network type $unsupported")
         }
-      case NetworkTranslation(Some(ipAddress), None, None) =>
+      case NetworkTranslation(Some(ipAddress), None, None, config) =>
         // wants ip/ct with some network mode.
         // if the user gave us a name try to figure out what they want.
         ipAddress.networkName match {
-          case Some(name) if name == raml.Networks.DefaultMesosBridgeName => // users shouldn't do this, but we're tolerant
+          case Some(name) if name == config.mesosBridgeName => // users shouldn't do this, but we're tolerant
             Some(Seq(Network(mode = NetworkMode.ContainerBridge, labels = ipAddress.labels)))
           case name =>
             Some(Seq(Network(mode = NetworkMode.Container, name = name, labels = ipAddress.labels)))
         }
-      case NetworkTranslation(None, Some(networkType), None) =>
+      case NetworkTranslation(None, Some(networkType), None, _) =>
         // user didn't ask for IP-per-CT, but specified a network type anyway
         import DockerNetwork._
         networkType match {
@@ -374,7 +381,7 @@ object AppNormalization {
           case unsupported =>
             throw SerializationFailedException(s"unsupported docker network type $unsupported")
         }
-      case NetworkTranslation(None, None, networks) =>
+      case NetworkTranslation(None, None, networks, _) =>
         // no deprecated APIs used! awesome, so use the canonical networks field
         networks
       case _ =>
@@ -393,6 +400,6 @@ object AppNormalization {
         id = PathId(app.id).canonicalPath(base).toString,
         dependencies = app.dependencies.map(dep => PathId(dep).canonicalPath(base).toString)
       ).asInstanceOf[T]
-    case _ => throw new SerializationFailedException("withCanonizedIds only applies for App and AppUpdate")
+    case _ => throw SerializationFailedException("withCanonizedIds only applies for App and AppUpdate")
   }
 }

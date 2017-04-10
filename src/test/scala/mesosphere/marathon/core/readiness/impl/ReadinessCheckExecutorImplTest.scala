@@ -7,7 +7,7 @@ import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import rx.lang.scala.Observable
-import spray.http.{ ContentType, HttpEntity, HttpHeaders, MediaTypes, StatusCodes, HttpResponse => SprayHttpResponse }
+import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpHeader, StatusCodes, HttpResponse => AkkaHttpResponse }
 
 import scala.concurrent.Future
 import scala.concurrent.duration.{ FiniteDuration, _ }
@@ -31,7 +31,7 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
 
     "terminates on eventual readiness" in {
       val f = new Fixture {
-        override def httpResponse: SprayHttpResponse = synchronized {
+        override def httpResponse: AkkaHttpResponse = synchronized {
           if (httpGetCalls < 5) httpNotOkResponse
           else httpOkResponse
         }
@@ -53,7 +53,7 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
 
     "continue on error" in {
       val f = new Fixture {
-        override def testableSprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] = synchronized {
+        override def testableAkkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = synchronized {
           httpGetCalls += 1
           if (httpGetCalls < 5) Future.failed(new RuntimeException("temporary failure"))
           else Future.successful(httpOkResponse)
@@ -75,15 +75,15 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
       f.httpGetCalls should equal(5)
     }
 
-    "spray result to readiness check http response" in {
+    "akka http result to readiness check http response" in {
       val f = new Fixture
-      When("converting a spray response")
-      val response = f.executor.sprayResponseToCheckResponse(f.httpOkResponse)
+      When("converting a akka http response")
+      val response = f.executor.akkaResponseToCheckResponse(f.httpOkResponse, f.check).futureValue
       Then("we get the expected response")
       response should equal(
         HttpResponse(
           status = f.httpOkResponse.status.intValue,
-          contentType = f.httpOkResponse.headers.find(_.lowercaseName == "content-type").get.value,
+          contentType = "text/plain",
           body = "Hi 0"
         )
       )
@@ -119,22 +119,22 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
     )
 
     lazy val ticks = Observable.from(Seq.fill(10000)(0))
-    lazy val executor: ReadinessCheckExecutorImpl = new ReadinessCheckExecutorImpl()(system) {
+    lazy val executor: ReadinessCheckExecutorImpl = new ReadinessCheckExecutorImpl()(system, mat) {
       override private[impl] def intervalObservable(interval: FiniteDuration): Observable[_] = ticks
-      override private[impl] def sprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] =
-        testableSprayHttpGet(check)
+      override private[impl] def akkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] =
+        testableAkkaHttpGet(check)
     }
 
     def hiBody = synchronized { HttpEntity(s"Hi $httpGetCalls") }
-    def httpOkResponse = SprayHttpResponse(
-      headers = List(HttpHeaders.`Content-Type`(ContentType(MediaTypes.`text/plain`))),
+    def httpOkResponse = AkkaHttpResponse(
+      headers = Seq[HttpHeader](akka.http.scaladsl.model.headers.`Content-Type`(ContentTypes.`text/plain(UTF-8)`)),
       entity = hiBody
     )
     def httpNotOkResponse = httpOkResponse.copy(status = StatusCodes.InternalServerError)
     def httpResponse = httpOkResponse
 
     var httpGetCalls = 0
-    def testableSprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] = synchronized { // linter:ignore:UnusedParameter
+    def testableAkkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = synchronized { // linter:ignore:UnusedParameter
       httpGetCalls += 1
       Future.successful(httpResponse)
     }

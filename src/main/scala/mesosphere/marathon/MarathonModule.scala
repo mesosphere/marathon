@@ -17,7 +17,6 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.util.state._
 import org.apache.mesos.Scheduler
@@ -144,11 +143,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   @Provides
   @Singleton
   def provideActorRefFactory(system: ActorSystem): ActorRefFactory = system
-
-  @Provides
-  @Singleton
-  def provideStorageProvider(http: HttpConf): StorageProvider =
-    StorageProvider.provider(conf, http)
 
   @Provides
   @Singleton

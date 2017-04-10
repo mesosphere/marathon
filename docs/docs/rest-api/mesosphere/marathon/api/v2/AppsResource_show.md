@@ -229,7 +229,6 @@ Transfer-Encoding: chunked
             10000
         ],
         "requirePorts": false,
-        "storeUrls": [],
         "tasks": [ // soon only for ?embed=tasks
             {
                 "appId": "/toggle",

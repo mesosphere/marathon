@@ -24,8 +24,6 @@ object Dependencies {
     akkaStream % "compile",
     akkaHttp % "compile",
     asyncAwait % "compile",
-    sprayClient % "compile",
-    sprayHttpx % "compile",
     chaos % "compile",
     mesos % "compile",
     jodaTime % "compile",
@@ -35,8 +33,6 @@ object Dependencies {
     jettyEventSource % "compile",
     uuidGenerator % "compile",
     jGraphT % "compile",
-    hadoopHdfs % "compile",
-    hadoopCommon % "compile",
     beanUtils % "compile",
     playJson % "compile",
     jsonSchemaValidator % "compile",
@@ -53,6 +49,8 @@ object Dependencies {
     raven % "compile",
     akkaHttpPlayJson % "compile",
     alpakkaS3 % "compile",
+    commonsCompress % "compile", // used for tar flow
+
 
     // test
     Test.diffson % "test",
@@ -63,7 +61,8 @@ object Dependencies {
     Test.scalacheck % "test",
     Test.wixAccordScalatest % "test",
     Test.curatorTest % "test",
-    Test.akkaSse % "test"
+    Test.akkaSse % "test",
+    Test.commonsIO % "test"
   ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
@@ -80,23 +79,22 @@ object Dependency {
   object V {
     // runtime deps versions
     val Alpakka  = "0.6"
-    val Chaos = "0.8.7"
+    val Chaos = "0.8.8"
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
     val Mesos = "1.1.0"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.1.0-2.0.107.debian81"
     val Akka = "2.4.17"
+    val ApacheCommonsCompress = "1.13"
+    val ApacheCommonsIO = "2.4"
     val AsyncAwait = "0.9.6"
-    val Spray = "1.3.4"
-    val TwitterCommons = "0.0.76"
     val Jersey = "1.18.5"
     val JettyServlets = "9.3.6.v20151106"
     val JodaTime = "2.9.7"
     val JodaConvert = "1.8.1"
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
-    val Hadoop = "2.7.2"
     val Diffson = "2.0.2"
     val PlayJson = "2.5.12"
     val JsonSchemaValidator = "2.2.6"
@@ -130,8 +128,6 @@ object Dependency {
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.5"
   val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
-  val sprayClient = "io.spray" %% "spray-client" % V.Spray
-  val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
   val guava = "com.google.guava" % "guava" % V.Guava
@@ -143,9 +139,6 @@ object Dependency {
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
-  val hadoopHdfs = "org.apache.hadoop" % "hadoop-hdfs" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
-  val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty,
-    excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
@@ -160,6 +153,7 @@ object Dependency {
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
+  val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
 
   object Kamon {
     val Version = "0.6.5"
@@ -168,7 +162,6 @@ object Dependency {
     val akka = "io.kamon" %% "kamon-akka" % "0.6.3" % "compile"
     val autoweave = "io.kamon" %% "kamon-autoweave" % Version % "compile"
     val scala = "io.kamon" %% "kamon-scala" % Version % "compile"
-    val spray = "io.kamon" %% "kamon-spray" % "0.6.3" % "compile"
     val systemMetrics = "io.kamon" %% "kamon-system-metrics" % Version % "compile"
     val akkaHttp = "io.kamon" %% "kamon-akka-http-experimental" % "0.6.3" % "compile"
 
@@ -178,8 +171,8 @@ object Dependency {
       val jmx = "io.kamon" %% "kamon-jmx" % Version % "compile"
     }
 
-    // there are some issues with the Akka/Spray modules that are really unclear
-    val all = Seq(core, /*akka,*/ autoweave, systemMetrics, /*akkaHttp,*/ scala, /*spray,*/ Backends.statsd, Backends.datadog, Backends.jmx)
+    // there are some issues with the Akka modules that are really unclear
+    val all = Seq(core, /*akka,*/ autoweave, systemMetrics, /*akkaHttp,*/ scala,  Backends.statsd, Backends.datadog, Backends.jmx)
   }
 
   object Test {
@@ -193,5 +186,6 @@ object Dependency {
     val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
     val akkaSse = "de.heikoseeberger" %% "akka-sse" % "2.0.0"
+    val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   }
 }

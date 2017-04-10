@@ -32,7 +32,6 @@ import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.storage.StorageModule
 
 import scala.util.Random
@@ -51,7 +50,6 @@ class CoreModuleImpl @Inject() (
   actorSystem: ActorSystem,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
   clock: Clock,
-  storage: StorageProvider,
   scheduler: Provider[DeploymentService],
   instanceUpdateSteps: Seq[InstanceChangeHandler],
   taskStatusUpdateProcessor: TaskStatusUpdateProcessor
@@ -89,7 +87,7 @@ class CoreModuleImpl @Inject() (
     actorSystem)
 
   // READINESS CHECKS
-  override lazy val readinessModule = new ReadinessModule(actorSystem)
+  override lazy val readinessModule = new ReadinessModule(actorSystem, actorsModule.materializer)
 
   // this one can't be lazy right now because it wouldn't be instantiated soon enough ...
   override val taskTerminationModule = new TaskTerminationModule(
@@ -177,7 +175,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val eventModule: EventModule = new EventModule(
     eventStream, actorSystem, marathonConf, clock, storageModule.eventSubscribersRepository,
-    electionModule.service, authModule.authenticator, authModule.authorizer)
+    electionModule.service, authModule.authenticator, authModule.authorizer)(actorsModule.materializer)
 
   // HISTORY
 
@@ -195,8 +193,7 @@ class CoreModuleImpl @Inject() (
   override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
     marathonConf,
     scheduler,
-    storageModule.groupRepository,
-    storage)(ExecutionContexts.global, eventStream)
+    storageModule.groupRepository)(ExecutionContexts.global, eventStream)
 
   // PODS
 
@@ -211,7 +208,6 @@ class CoreModuleImpl @Inject() (
     taskTerminationModule.taskKillService,
     appOfferMatcherModule.launchQueue,
     schedulerActions, // alternatively schedulerActionsProvider.get()
-    storage,
     healthModule.healthCheckManager,
     eventStream,
     readinessModule.readinessCheckExecutor,

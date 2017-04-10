@@ -41,7 +41,9 @@ class GroupsResource @Inject() (
 
   /** convert app to canonical form */
   private implicit val appNormalization: Normalization[raml.App] = {
-    val appNormalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get)
+    val appNormalizationConfig = AppNormalization.Configure(
+      config.defaultNetworkName.get,
+      config.mesosBridgeName())
     AppsResource.appNormalization(AppsResource.NormalizationConfig(config.availableFeatures, appNormalizationConfig))
   }
 

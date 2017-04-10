@@ -21,7 +21,6 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository }
@@ -466,7 +465,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val driver: SchedulerDriver = mock[SchedulerDriver]
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     holder.driver = Some(driver)
-    val storage: StorageProvider = mock[StorageProvider]
     val taskFailureEventRepository: TaskFailureRepository = mock[TaskFailureRepository]
     val electionService: ElectionService = mock[ElectionService]
     val schedulerActions: SchedulerActions = new SchedulerActions(
@@ -484,7 +482,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       killService,
       queue,
       schedulerActions,
-      storage,
       hcManager,
       system.eventStream,
       readinessCheckExecutor,

@@ -11,7 +11,7 @@ import org.scalatest.time.{ Second, Seconds, Span }
 /**
   * Integration test to simulate the issues discovered a verizon where a network partition caused Marathon to be
   * separated from ZK and the leading Master.  During this separation the agents were partitioned from the Master.  Marathon was
-  * bounced, then the network connectivity was re-established.  At which time the Mesos kills tasks on the slaves and marathon never
+  * bounced, then the network connectivity was re-established.  At which time the Mesos kills tasks on the slaves and Marathon never
   * restarts them.
   *
   * This collection of integration tests is intended to go beyond the experience at Verizon.  The network partition in these tests
@@ -58,7 +58,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
         matchEvent("TASK_UNREACHABLE", task)
       }
 
-      And("The task is shows in marathon as unreachable")
+      Then("the task is shown in Marathon as unreachable")
       val lost = waitForTasks(app.id.toPath, 1).head
       lost.state should be("TASK_UNREACHABLE")
 
@@ -71,7 +71,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       Then("Marathon suicides")
       eventually {
         marathonServer.isRunning should be(false)
-      }
+      } withClue ("Marathon did not suicide")
       // Proper clean up
       marathonServer.stop()
 
@@ -87,7 +87,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       waitForSSEConnect()
       eventually {
         marathonServer.isRunning should be(true)
-      }
+      } withClue ("Marathon did not come back up")
 
       Then("The task reappears as running")
       waitForEventMatching("Task is declared running again") {

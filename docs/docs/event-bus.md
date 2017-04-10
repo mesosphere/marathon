@@ -102,7 +102,6 @@ Fired every time Marathon receives an API request that modifies an app (create, 
     "mem": 32.0,
     "ports": [10001],
     "requirePorts": false,
-    "storeUrls": [],
     "upgradeStrategy": {
         "minimumHealthCapacity": 1.0
     },
@@ -326,7 +325,6 @@ Fired when a new http callback subscriber is added or removed:
           "mem": 32.0,
           "ports": [10001],
           "requirePorts": false,
-          "storeUrls": [],
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
           },
@@ -392,7 +390,6 @@ Fired when a new http callback subscriber is added or removed:
           "mem": 32.0,
           "ports": [10001],
           "requirePorts": false,
-          "storeUrls": [],
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
           },
@@ -458,7 +455,6 @@ Fired when a new http callback subscriber is added or removed:
           "mem": 32.0,
           "ports": [10001],
           "requirePorts": false,
-          "storeUrls": [],
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
           },

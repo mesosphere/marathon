@@ -18,7 +18,6 @@ import scala.collection.immutable
 @IntegrationTest
 class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonFixture {
   import PathId._
-  val abdicationLoops = 2
 
   "Restarting Marathon" when {
     /**
@@ -42,13 +41,11 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       When("one of the tasks is deployed")
       val tasksBeforeAbdication = f.waitForTasks(app.id.toPath, 1)
 
-      (1 to abdicationLoops).foreach { _ =>
-        And("the leader abdicates")
-        server.restart().futureValue
-        val tasksAfterFirstAbdication = f.waitForTasks(app.id.toPath, 1)
-        Then("the already running task should not be killed")
-        tasksBeforeAbdication should be(tasksAfterFirstAbdication)
-      }
+      And("the leader abdicates")
+      server.restart().futureValue
+      val tasksAfterFirstAbdication = f.waitForTasks(app.id.toPath, 1)
+      Then("the already running task should not be killed")
+      tasksBeforeAbdication should be(tasksAfterFirstAbdication) withClue (s"Tasks before (${tasksBeforeAbdication}) and after (${tasksAfterFirstAbdication}) abdication are different")
     }
 
     "readiness" should {
@@ -96,10 +93,10 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   private def testDeployments(server: LocalMarathon, f: MarathonTest, appId: PathId, createApp: raml.App, updateApp: raml.AppUpdate): Unit = {
     Given("a new simple app with 2 instances")
-    createApp.instances shouldBe 2
+    createApp.instances shouldBe 2 withClue (s"There are ${createApp.instances} running instead of 2 for ${appId}")
 
     val created = f.marathon.createAppV2(createApp)
-    created.code should be (201)
+    created.code should be (201) withClue (s"Response ${created.code}: ${created.entityString}")
     f.waitForDeployment(created)
 
     logger.debug(s"Started app: ${f.marathon.app(appId).entityPrettyJsonString}")
@@ -108,12 +105,12 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val appV2 = f.marathon.updateApp(appId, updateApp)
 
     And("new tasks are started and running")
-    val updated = f.waitForTasks(appId, 4) //make sure there are 2 additional tasks
+    val updated = f.waitForTasks(appId, 4) withClue (s"The new tasks for ${appId} did not start running.") //make sure there are 2 additional tasks
 
     val newVersion = appV2.value.version.toString
     val updatedTasks = updated.filter(_.version.contains(newVersion))
     val updatedTaskIds: List[String] = updatedTasks.map(_.id)
-    updatedTaskIds should have size 2
+    updatedTaskIds should have size 2 withClue (s"Update ${updatedTaskIds.size} instead of 2 for ${appId}")
 
     logger.debug(s"Updated app: ${f.marathon.app(appId).entityPrettyJsonString}")
 

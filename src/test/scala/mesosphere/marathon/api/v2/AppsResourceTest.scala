@@ -14,7 +14,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
-import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef }
+import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkConversionMessages, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -51,10 +51,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       PluginManager.None
     )(auth.auth, auth.auth)
 
-    val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get)
+    val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get, config.mesosBridgeName())
 
     def normalize(app: App): App = {
-      val migrated = AppNormalization.forDeprecated.normalized(app)
+      val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
       AppNormalization(normalizationConfig).normalized(migrated)
     }
 
@@ -289,10 +289,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
 
       Then("the update should fail")
-      val caught = intercept[IllegalArgumentException] {
+      val caught = intercept[SerializationFailedException] {
         appsResource.replace(updatedApp.id, updatedBody, force = false, partialUpdate = false, auth.request)
       }
-      caught.getMessage() should be("container network must specify a name")
+      caught.getMessage() should be(NetworkConversionMessages.ContainerNetworkRequiresName)
     }
 
     "Create a new app without IP/CT when default virtual network is bar" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
@@ -809,13 +809,36 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       responseBody should include("/container/volumes(0)/external/name")
     }
 
-    "Creating an app with an external volume w/ MESOS and absolute containerPath should fail validation" in new Fixture {
+    "Creating an app with an external volume w/ MESOS and absolute containerPath should succeed validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
       val response = createAppWithVolumes(
         "MESOS",
         """
           |    "volumes": [{
           |      "containerPath": "/var",
+          |      "external": {
+          |        "size": 10,
+          |        "provider": "dvdi",
+          |        "name": "namedfoo",
+          |        "options": {"dvdi/driver": "bar"}
+          |      },
+          |      "mode": "RW"
+          |    }]
+        """.stripMargin, groupManager, appsResource, auth
+      )
+
+      Then("The return code indicates create failure")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+    }
+
+    "Creating an app with an external volume w/ MESOS and dotted containerPath should fail validation" in new Fixture {
+      Given("An app with a named, non-'agent' volume provider")
+      val response = createAppWithVolumes(
+        "MESOS",
+        """
+          |    "volumes": [{
+          |      "containerPath": ".",
           |      "external": {
           |        "size": 10,
           |        "provider": "dvdi",
@@ -851,8 +874,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       )
 
       Then("The return code indicates create failure")
-      response.getStatus should be(422)
-      response.getEntity.toString should include("/container/volumes(0)/containerPath")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
     }
 
     "Creating an app with an external volume and MESOS containerizer should pass validation" in new Fixture {

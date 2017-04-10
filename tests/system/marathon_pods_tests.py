@@ -19,7 +19,6 @@ from utils import fixture_dir, get_resource, parse_json
 
 PACKAGE_NAME = 'marathon'
 DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME) + "/"
-WAIT_TIME_IN_SECS = 300
 
 
 def _pods_json(file="simple-pods.json"):
@@ -78,7 +77,6 @@ def _pod_version(client, pod_id, version_id):
 def test_create_pod():
     """Launch simple pod in DC/OS root marathon.
     """
-    print("test")
     client = marathon.create_client()
     pod_id = "/pod-create"
 

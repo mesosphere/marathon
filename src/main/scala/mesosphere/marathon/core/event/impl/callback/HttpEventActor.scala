@@ -2,7 +2,13 @@ package mesosphere.marathon
 package core.event.impl.callback
 
 import akka.actor._
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.pattern.ask
+import akka.stream.Materializer
+import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event._
@@ -13,12 +19,9 @@ import mesosphere.marathon.util.Retry
 import mesosphere.util.CallerThreadExecutionContext
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
-import spray.client.pipelining._
-import spray.http.{ HttpRequest, HttpResponse }
-import spray.httpx.PlayJsonSupport
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
 
@@ -63,15 +66,14 @@ class HttpEventActor(
   conf: EventConf,
   subscribersKeeper: ActorRef,
   metrics: HttpEventActorMetrics,
-  clock: Clock)
+  clock: Clock
+)(implicit val materializer: Materializer)
     extends Actor with PlayJsonSupport {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   implicit val timeout = conf.eventRequestTimeout
-  def pipeline(implicit ec: ExecutionContext): HttpRequest => Future[HttpResponse] = {
-    addHeader("Accept", "application/json") ~> sendReceive
-  }
   var limiter = Map.empty[String, EventNotificationLimit].withDefaultValue(NoLimit)
+  private[this] val defaultSettings = ConnectionPoolSettings(context.system)
 
   def receive: Receive = {
     case event: MarathonEvent => resolveSubscribersForEventAndBroadcast(event)
@@ -121,9 +123,8 @@ class HttpEventActor(
 
     metrics.outstandingCallbacks.increment()
     val start = clock.now()
-    val request = Post(url, event)
 
-    val response = pipeline(context.dispatcher)(request)
+    val response = request(RequestBuilding.Post(url, event)(playJsonMarshaller[JsValue], context.dispatcher))
     response.onComplete { _ =>
       metrics.outstandingCallbacks.decrement()
       metrics.callbackResponseTime.update(start.until(clock.now()))
@@ -142,6 +143,18 @@ class HttpEventActor(
         metrics.failedCallbacks.increment()
         eventActor ! NotificationFailed(url)
     }(context.dispatcher)
+  }
+
+  private[impl] def request(httpRequest: HttpRequest): Future[HttpResponse] = {
+    implicit val actorSystem = context.system
+    val connectionSetting = defaultSettings.connectionSettings.withConnectingTimeout(timeout.duration)
+    Http().singleRequest(
+      request = httpRequest,
+      settings = defaultSettings.withConnectionSettings(connectionSetting)
+    ).map{ response =>
+        response.discardEntityBytes() // forget about the body
+        response
+      }(CallerThreadExecutionContext.callerThreadExecutionContext)
   }
 }
 

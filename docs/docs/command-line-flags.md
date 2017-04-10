@@ -29,10 +29,6 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 
 ### Optional Flags
 
-* `--artifact_store` (Optional. Default: None): URL to the artifact store.
-    Examples: `"hdfs://localhost:54310/path/to/store"`,
-    `"file:///var/log/store"`. For details, see the
-    [artifact store]({{ site.baseurl }}/docs/artifact-store.html) docs.
 * `--access_control_allow_origin` (Optional. Default: None):
     Comma separated list of allowed originating domains for HTTP requests.
     The origin(s) to allow in Marathon. Not set by default.
@@ -170,6 +166,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--mesos_heartbeat_failure_threshold` (Optional. Default: 5):
     after missing this number of expected communications from the mesos master, infer that marathon has become
     disconnected from the master.
+* `--mesos_bridge_name` (Optional. Default: mesos-bridge):
+    The name of the Mesos CNI network used by MESOS-type containers configured to use bridged networking
 * <span class="label label-default">v1.5.0</span>`--minimum_viable_task_execution_duration` (Optional. Default: 60 seconds):
     Delay (in ms) after which a task is considered viable. If the task starts up correctly, but fails during this timeout, the application is backed off. 
 * <span class="label label-default">v1.5.0</span>`--backup_location` (Optional. Default: None):

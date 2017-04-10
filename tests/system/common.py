@@ -3,6 +3,7 @@ from shakedown import *
 from utils import *
 from dcos.errors import DCOSException
 from distutils.version import LooseVersion
+from urllib.parse import urljoin
 
 import uuid
 import random
@@ -462,15 +463,18 @@ def cluster_info(mom_name='marathon-user'):
     about = client.get_about()
     print("marathon version: {}".format(about.get("version")))
     # see if there is a MoM
-    with marathon_on_marathon(mom_name):
-        try:
-            client = marathon.create_client()
-            about = client.get_about()
-            print("marathon MoM version: {}".format(about.get("version")))
 
-        except Exception as e:
-            print("Marathon MoM not present")
+    if service_available_predicate(mom_name):
+        with marathon_on_marathon(mom_name):
+            try:
+                client = marathon.create_client()
+                about = client.get_about()
+                print("marathon MoM version: {}".format(about.get("version")))
 
+            except Exception as e:
+                print("Marathon MoM not present")
+    else:
+        print("Marathon MoM not present")
 
 def delete_all_apps():
     client = marathon.create_client()
@@ -482,18 +486,12 @@ def delete_all_apps():
             client.remove_app(app['id'], True)
 
 
-@pytest.fixture(scope="function")
-def remove_undeployed():
-    yield
-    stop_all_deployments()
-
-
 def stop_all_deployments(noisy=False):
     client = marathon.create_client()
     deployments = client.get_deployments()
     for deployment in deployments:
         try:
-            client.stop_deployment(deployment['id'])
+            client.stop_deployment(deployment['id'], True)
         except Exception as e:
             if noisy:
                 print(e)
@@ -528,14 +526,6 @@ def ip_of_mom():
     service_ips = get_service_ips('marathon', 'marathon-user')
     for mom_ip in service_ips:
         return mom_ip
-
-
-@pytest.fixture(scope='function')
-def mom_needed():
-    ensure_mom()
-    yield
-    with marathon_on_marathon():
-        delete_all_apps_wait()
 
 
 def ensure_mom():
@@ -856,6 +846,6 @@ def set_service_account_permissions(service_account, ressource='dcos:superuser',
 
     """
     print('Granting {} permissions to {}/users/{}'.format(action, ressource, service_account))
-    url = '{}acs/api/v1/acls/{}/users/{}/{}'.format(dcos_url(), ressource, service_account, action)
+    url = urljoin(dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(ressource, service_account, action))
     req = http.put(url)
     assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)

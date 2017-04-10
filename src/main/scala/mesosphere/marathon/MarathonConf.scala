@@ -13,7 +13,6 @@ import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
 import org.rogach.scallop.ScallopConf
@@ -32,8 +31,8 @@ private[marathon] object MarathonConfHostNameCache {
 
 trait MarathonConf
     extends ScallopConf
-    with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
-    with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
+    with EventConf with NetworkConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig
+    with LeaderProxyConf with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
     with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
     with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf {
 
@@ -237,15 +236,6 @@ trait MarathonConf
     descr = "Framework name to register with Mesos.",
     default = Some("marathon"))
 
-  lazy val artifactStore = opt[String](
-    "artifact_store",
-    descr = "URL to the artifact store. " +
-      s"""Supported store types ${StorageProvider.examples.keySet.mkString(", ")}. """ +
-      s"""Example: ${StorageProvider.examples.values.mkString(", ")}""",
-    validate = StorageProvider.isValidUrl,
-    noshort = true
-  )
-
   lazy val mesosAuthentication = toggle(
     "mesos_authentication",
     default = Some(false),
@@ -277,12 +267,6 @@ trait MarathonConf
   lazy val envVarsPrefix = opt[String](
     "env_vars_prefix",
     descr = "Prefix to use for environment variables injected automatically into all started tasks.",
-    noshort = true
-  )
-
-  lazy val defaultNetworkName = opt[String](
-    "default_network_name",
-    descr = "Network name, injected into applications' container-mode network{} specs that do not define their own name.",
     noshort = true
   )
 

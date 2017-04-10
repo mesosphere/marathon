@@ -3,7 +3,7 @@ package api.serialization
 
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork, HostNetwork, Network }
-import mesosphere.marathon.raml.{ Endpoint, Networks }
+import mesosphere.marathon.raml.Endpoint
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -49,7 +49,7 @@ object ContainerSerializer {
     builder.build
   }
 
-  def toMesos(networks: Seq[Network], container: Container): mesos.Protos.ContainerInfo = {
+  def toMesos(networks: Seq[Network], container: Container, mesosBridgeName: String): mesos.Protos.ContainerInfo = {
     val builder = mesos.Protos.ContainerInfo.newBuilder
 
     // First set type-specific values (for Docker) because the external volume provider
@@ -77,7 +77,7 @@ object ContainerSerializer {
     val networkInfos = networks.withFilter(_ != HostNetwork).map { network =>
       val (networkName, networkLabels) = network match {
         case cnet: ContainerNetwork => cnet.name -> cnet.labels.toMesosLabels
-        case bnet: BridgeNetwork => Networks.DefaultMesosBridgeName -> bnet.labels.toMesosLabels
+        case bnet: BridgeNetwork => mesosBridgeName -> bnet.labels.toMesosLabels
         case unsupported => throw new IllegalStateException(s"unsupported networking mode $unsupported")
       }
 

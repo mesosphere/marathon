@@ -135,7 +135,7 @@ trait PodsValidation {
       container.resources is valid(resourceValidator)
       container.endpoints is every(endpointValidator(pod.networks))
       container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
-      container.environment is envValidator(pod.secrets, enabledFeatures)
+      container.environment is envValidator(strictNameValidation = true, pod.secrets, enabledFeatures)
       container.healthCheck is optional(healthCheckValidator(container.endpoints, mesosMasterVersion))
       container.volumeMounts is every(volumeMountValidator(pod.volumes))
       container.artifacts is every(artifactValidator)
@@ -176,7 +176,7 @@ trait PodsValidation {
   def podDefValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
-    pod.environment is envValidator(pod.secrets, enabledFeatures)
+    pod.environment is envValidator(strictNameValidation = true, pod.secrets, enabledFeatures)
     pod.volumes is every(volumeValidator(pod.containers)) and isTrue("volume names are unique") { volumes: Seq[Volume] =>
       val names = volumes.map(_.name)
       names.distinct.size == names.size

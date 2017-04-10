@@ -283,12 +283,11 @@ trait AppValidation {
     validator[AppUpdate] { update =>
       update.id.map(PathId(_)) as "id" is optional(valid)
       update.dependencies.map(_.map(PathId(_))) as "dependencies" is optional(every(valid))
-      update.env is optional(envValidator(update.secrets.getOrElse(Map.empty), enabledFeatures))
+      update.env is optional(envValidator(strictNameValidation = false, update.secrets.getOrElse(Map.empty), enabledFeatures))
       update.secrets is optional({ secrets: Map[String, SecretDef] =>
         secrets.nonEmpty
       } -> (featureEnabled(enabledFeatures, Features.SECRETS)))
       update.secrets is optional(featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator)))
-      update.storeUrls is optional(every(urlIsValid))
       update.fetch is optional(every(valid))
       update.portDefinitions is optional(portDefinitionsValidator)
       update.container is optional(valid(validContainer(enabledFeatures, update.networks.getOrElse(Nil))))
@@ -375,7 +374,6 @@ trait AppValidation {
   /** validate most canonical API fields */
   private def validBasicAppDefinition(enabledFeatures: Set[String]): Validator[App] = validator[App] { app =>
     app.container is optional(valid(validContainer(enabledFeatures, app.networks)))
-    app.storeUrls is every(urlIsValid)
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
     app.healthChecks is every(portIndexIsValid(portIndices(app)))
@@ -385,7 +383,7 @@ trait AppValidation {
       secrets.nonEmpty
     } -> (featureEnabled(enabledFeatures, Features.SECRETS)))
     app.secrets is valid(featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator)))
-    app.env is envValidator(app.secrets, enabledFeatures)
+    app.env is envValidator(strictNameValidation = false, app.secrets, enabledFeatures)
     app.acceptedResourceRoles is valid(optional(ResourceRole.validAcceptedResourceRoles(app.residency.isDefined) and notEmpty))
     app must complyWithGpuRules(enabledFeatures)
     app must complyWithMigrationAPI

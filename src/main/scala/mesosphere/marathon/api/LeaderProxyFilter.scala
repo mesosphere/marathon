@@ -14,7 +14,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.stream.Implicits._
-import org.apache.http.HttpStatus
+import akka.http.scaladsl.model.StatusCodes._
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -103,7 +103,7 @@ class LeaderProxyFilter @Inject() (
           if (waitForConsistentLeadership()) {
             doFilter(rawRequest, rawResponse, chain)
           } else {
-            response.sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, ERROR_STATUS_NO_CURRENT_LEADER)
+            response.sendError(ServiceUnavailable.intValue, ERROR_STATUS_NO_CURRENT_LEADER)
           }
         } else {
           try {
@@ -271,7 +271,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
     try {
       if (hasProxyLoop) {
         log.error("Prevent proxy cycle, rejecting request")
-        response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_LOOP)
+        response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
       } else {
         val leaderConnection: HttpURLConnection = createAndConfigureConnection(url)
         try {
@@ -284,7 +284,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
           )
         } catch {
           case connException: ConnectException =>
-            response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_CONNECTION_REFUSED)
+            response.sendError(BadGateway.intValue, ERROR_STATUS_CONNECTION_REFUSED)
         } finally {
           Try(leaderConnection.getInputStream.close())
           Try(leaderConnection.getErrorStream.close())
@@ -329,7 +329,7 @@ object JavaUrlConnectionRequestForwarder {
       case Failure(e) =>
         // early detection of proxy failure, before we commit the status code to the response stream
         log.warn("failed to proxy response headers from leader", e)
-        response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_BAD_CONNECTION)
+        response.sendError(BadGateway.intValue, ERROR_STATUS_BAD_CONNECTION)
 
       case Success(_) =>
         forwardEntity()
