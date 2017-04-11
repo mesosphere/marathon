@@ -49,6 +49,13 @@ The artifact store has been deprecated with Marthon 1.4 and is removed with this
 The command line flag `--artifact_store` will throw an error if specified.
 The Rest API endpoint`/v2/artifacts` has been removed completely.
 
+#### Logging endpoint
+Marathon has the ability to view and change log level configuration during runtime via the `/logging` endpoint.
+This version switches from a form based API to a JSON based API, while maintaining the functionality.
+We also secured this endpoint, so you can restrict who is allowed to view or update this configuration.
+Please find our [API documentation](https://mesosphere.github.io/marathon/api-console/index.html) for all details.
+
+------------------------------------------------------------
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release

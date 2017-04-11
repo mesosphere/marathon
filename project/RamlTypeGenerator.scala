@@ -115,7 +115,7 @@ object RamlTypeGenerator {
       o.name() -> Some(o.`type`())
     }
   }
-  
+
   def scalaFieldName(name: String): String = {
     if (name.contains("-")) s"`$name`"
     else name
@@ -198,7 +198,7 @@ object RamlTypeGenerator {
       }
 
       val playWildcard = CASE(WILDCARD) ==>
-        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"$name (${sortedValues.mkString(", ")})"))))
+        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.unknown.enum.literal"), LIT(s"$name (${sortedValues.mkString(", ")})"))))
       val playPatternMatches = sortedValues.map { enumValue =>
         CASE(LIT(enumValue.toLowerCase)) ==> (REF(PlayJsSuccess) APPLY REF(underscoreToCamel(camelify(enumValue))))
       }

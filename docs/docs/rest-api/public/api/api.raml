@@ -14,6 +14,7 @@ uses:
   pod: v2/types/pod.raml
   podStatus: v2/types/podStatus.raml
   metrics: v2/types/metrics.raml
+  logging: v2/types/logging.raml
 
 
 traits: !include traits.raml
@@ -42,3 +43,4 @@ traits: !include traits.raml
 # no real API endpoints
 /ping: !include general/ping.raml
 /metrics: !include general/metrics.raml
+/logging: !include general/logging.raml
