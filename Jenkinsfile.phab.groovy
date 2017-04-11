@@ -83,7 +83,7 @@ ansiColor('gnome-terminal') {
         m.phabricator_test_results("fail")
         try {
           m.phabricator("differential.revision.edit", """ transactions: [{type: "reject", value: true}, {type: "comment", value: "\u2717 Build of $DIFF_ID Failed at $BUILD_URL"}], objectIdentifier: "D$REVISION_ID" """)
-        } catch (Exception err) {
+        } catch (Exception ignored) {
           m.phabricator("differential.revision.edit", """ transactions: [{type: "comment", value: "\u2717 Build of $DIFF_ID Failed at $BUILD_URL"}], objectIdentifier: "D$REVISION_ID" """)
         }
         m.currentBuild.result = "FAILURE"
