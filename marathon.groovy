@@ -56,7 +56,7 @@ def publish_test_coverage(name) {
 def phabricator_apply_diff(phid, build_url, revision_id, diff_id) {
   phabricator("harbormaster.createartifact", """buildTargetPHID: "$phid", artifactType: "uri", artifactKey: "$build_url", artifactData: { uri: "$build_url", name: "Velocity Results", "ui.external": true }""")
   ignore_error {
-    phabricator("differential.revision.edit", """transactions: [{type: "request-review", value: true}], objectIdentifier: "D$revision_id" """)
+    phabricator("differential.revision.edit", """transactions: [{type: "reject", value: true}], objectIdentifier: "D$revision_id" """)
   }
   phabricator("harbormaster.sendmessage", """ buildTargetPHID: "$phid", type: "work" """)
   sh "arc patch --diff $diff_id"

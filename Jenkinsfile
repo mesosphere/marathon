@@ -122,7 +122,7 @@ node('JenkinsMarathonCI-Debian8-2017-03-21') {
   } finally {
     if (env.BRANCH_NAME.startsWith("releases/") || env.BRANCH_NAME == "master") {
       // Last build failed but this succeeded.
-      if (previousBuildFailed() && currentBuild.result == 'SUCCESS') {
+      if (m.previousBuildFailed() && currentBuild.result == 'SUCCESS') {
         slackSend(
             message: "╭( ･ㅂ･)و ̑̑ branch `${env.BRANCH_NAME}` is green again. (<${env.BUILD_URL}|Open>)",
             color: "good",
