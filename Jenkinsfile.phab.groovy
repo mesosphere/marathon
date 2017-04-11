@@ -9,6 +9,7 @@ def setBuildInfo(displayName, description) {
 }
 
 def install_dependencies() {
+  sh "chmod 0600 ~/.arcrc"
   // JQ is broken in the image
   sh "curl -L https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 > /tmp/jq && sudo mv /tmp/jq /usr/bin/jq && sudo chmod +x /usr/bin/jq"
   // install ammonite (scala shell)
