@@ -38,6 +38,7 @@ def test_launch_mesos_container():
 
 def test_launch_mesos_container():
     """ Test the successful launch of a mesos container on Marathon.
+        This is a UCR test with a standard command.
     """
     client = marathon.create_client()
     app_id = uuid.uuid4().hex
@@ -64,6 +65,22 @@ def test_launch_docker_container():
 
     assert len(tasks) == 1
     assert app['container']['type'] == 'DOCKER'
+
+
+def test_launch_mesos_container_with_docker_image():
+    """ Test the successful launch of a mesos container (ucr) with a docker image with Marathon.
+    """
+    client = marathon.create_client()
+    app_id = uuid.uuid4().hex
+    app_json = app_ucr(app_id)
+    client.add_app(app_json)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    app = client.get_app(app_id)
+
+    assert len(tasks) == 1
+    assert app['container']['type'] == 'MESOS'
 
 
 # this fails on 1.7, it is likely the version of marathon in universe for 1.7
@@ -1039,6 +1056,24 @@ def set_marathon_service_name(name='marathon'):
 def clear_marathon():
     common.stop_all_deployments()
     common.delete_all_apps_wait()
+
+
+def app_ucr(app_id=None):
+    if app_id is None:
+        app_id = uuid.uuid4().hex
+
+    return {
+        'id': app_id,
+        'cmd': 'python3 -m http.server $PORT0',
+        'cpus': 0.5,
+        'mem': 32.0,
+        'container': {
+            'type': 'MESOS',
+            'docker': {
+                'image': 'python:3',
+            }
+        }
+    }
 
 
 def app_docker(app_id=None):
