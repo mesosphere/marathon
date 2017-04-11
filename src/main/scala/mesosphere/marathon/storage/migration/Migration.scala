@@ -106,7 +106,7 @@ class Migration(
       migrations
     }.recover {
       case ex: MigrationFailedException => throw ex
-      case NonFatal(ex) => throw new MigrationFailedException(s"Migration Failed: ${ex.getMessage}", ex)
+      case NonFatal(ex) => throw new MigrationFailedException(s"Migration Failed: ${ex.getMessage} ${ex.getStackTrace.mkString}", ex)
     }
 
     val migrations = Await.result(result, Duration.Inf)
@@ -146,6 +146,13 @@ object StorageVersions {
           major.toInt,
           minor.toInt,
           patch.toInt,
+          StorageVersion.StorageFormat.PERSISTENCE_STORE
+        )
+      case BuildInfo.DefaultBuildVersion =>
+        StorageVersions(
+          BuildInfo.DefaultMajor,
+          BuildInfo.DefaultMinor,
+          BuildInfo.DefaultPatch,
           StorageVersion.StorageFormat.PERSISTENCE_STORE
         )
     }

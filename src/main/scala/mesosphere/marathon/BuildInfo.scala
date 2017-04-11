@@ -6,6 +6,11 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 case object BuildInfo {
+  lazy val DefaultMajor = 1
+  lazy val DefaultMinor = 5
+  lazy val DefaultPatch = 0
+
+  lazy val DefaultBuildVersion = s"$DefaultMajor.$DefaultMinor.$DefaultPatch-SNAPSHOT"
 
   lazy val manifest: Option[Manifest] = Try {
     val mf = new Manifest()
@@ -25,7 +30,7 @@ case object BuildInfo {
 
   lazy val name: String = getAttribute("Implementation-Title").getOrElse("unknown")
 
-  lazy val version: String = getAttribute("Implementation-Version").getOrElse("1.5.0-SNAPSHOT")
+  lazy val version: String = getAttribute("Implementation-Version").getOrElse(DefaultBuildVersion)
 
   lazy val scalaVersion: String = getAttribute("Scala-Version").getOrElse("2.x.x")
 
