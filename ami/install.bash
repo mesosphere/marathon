@@ -36,12 +36,12 @@ apt-get install -y \
     docker-engine \
     curl \
     build-essential \
-    rpm
-
+    rpm \
+    npm
 
 # Download (but don't install) Mesos and its dependencies.
 # The CI task will install Mesos later.
-apt-get install -y -d mesos
+apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
 
 # Add arcanist
 mkdir -p /opt/arcanist
@@ -51,6 +51,10 @@ ln -sf /opt/arcanist/arcanist/bin/arc /usr/local/bin/
 
 # Add user to docker group
 gpasswd -a admin docker
+
+# Nodejs: add the NodeSource APT repository for Debian-based distributions repository AND the PGP key for verifying packages
+curl -sL https://deb.nodesource.com/setup_6.x | bash -
+apt-get install -y nodejs
 
 # Setup system
 systemctl enable docker
@@ -66,7 +70,9 @@ curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq
 # Install Ammonite
 curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm
 
-# Warmup ivy2 cache
+# Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
+# so we need ivy2 cache in `/root`
 git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
-su - admin -c "cd /home/admin/marathon && sbt update"
+cd /home/admin/marathon
+sbt update
 rm -rf /home/admin/marathon

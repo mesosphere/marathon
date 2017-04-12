@@ -4,7 +4,8 @@
     "aws_secret_key": "",
     "ami_name": "",
     "conduit_token": "",
-    "packer_version": "0.10.2"
+    "packer_version": "0.10.2",
+    "mesos_version": ""
   },
   "builders": [{
     "type": "amazon-ebs",
@@ -37,7 +38,8 @@
     "script": "install.bash",
     "pause_before": "30s",
     "environment_vars": [
-        "CONDUIT_TOKEN={{user `conduit_token`}}"
+        "CONDUIT_TOKEN={{user `conduit_token`}}",
+        "MESOS_VERSION={{user `mesos_version`}}"
     ]
   }]
 }
