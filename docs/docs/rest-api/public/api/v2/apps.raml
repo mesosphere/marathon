@@ -93,7 +93,7 @@
     queryParameters:
       partialUpdate:
         required: false
-        default: true
+        default: "true"
         description: |
           Without specifying this parameter, this method has a patch like semantic:
           All values that are not defined in the json, will not change existing values.
@@ -316,7 +316,7 @@
       queryParameters:
         partialUpdate:
           required: false
-          default: true
+          default: "true"
           description: |
             Without specifying this parameter, this method has a patch like semantic:
             All values that are not defined in the json, will not change existing values.
@@ -486,13 +486,11 @@
           host:
             description: all tasks of that application on the supplied slave are killed
           scale:
-            type: boolean
             description: If `scale=true` is specified, then the application is scaled down by the number of killed tasks. Only possible if `wipe=false` or not specified.
-            default: false
+            default: "false"
           wipe:
-            type: boolean
             description: If `wipe=true` is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if `scale=false` or not specified.
-            default: false
+            default: "false"
         responses:
 
           200:
@@ -517,13 +515,11 @@
           is: [ secured, deployable ]
           queryParameters:
             scale:
-              type: boolean
               description: If `scale=true` is specified, then the application is scaled down by the number of killed tasks. Only possible if `wipe=false` or not specified.
-              default: false
+              default: "false"
             wipe:
-              type: boolean
               description: If `wipe=true` is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if `scale=false` or not specified.
-              default: false
+              default: "false"
           responses:
             200:
               description: If scale=false, the task that was killed is returned.
