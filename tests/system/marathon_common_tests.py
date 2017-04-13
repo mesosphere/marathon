@@ -1125,7 +1125,7 @@ def app_ucr(app_id=None):
         'container': {
             'type': 'MESOS',
             'docker': {
-                'image': 'python:3',
+                'image': 'python:3.5-alpine',
             }
         }
     }
@@ -1143,7 +1143,7 @@ def app_docker(app_id=None):
         'container': {
             'type': 'DOCKER',
             'docker': {
-                'image': 'python:3',
+                'image': 'python:3.5-alpine',
                 'network': 'BRIDGE',
                 'portMappings': [
                     {'containerPort': 8080, 'hostPort': 0}
