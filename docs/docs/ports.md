@@ -14,7 +14,7 @@ title: Ports
 
 Port configuration for applications in Marathon can be confusing and there is [an outstanding issue](https://github.com/mesosphere/marathon/issues/670) to redesign the ports API. This page attempts to explain more clearly how they work.
 
-If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started) you can use [virtual addresses (VIPs)](https://dcos.io/docs/1.8/usage/service-discovery/virtual-ip-addresses/) to make ports management easier. VIPs simplify inter-app communication and implement a reliable service-oriented architecture. VIPs map traffic from a single virtual address to multiple IP addresses and ports.
+If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started) you can use [virtual addresses (VIPs)](https://dcos.io/docs/1.9/usage/service-discovery/load-balancing-vips/virtual-ip-addresses/) to make ports management easier. VIPs simplify inter-app communication and implement a reliable service-oriented architecture. VIPs map traffic from a single virtual address to multiple IP addresses and ports.
 
 ## Definitions
 
@@ -34,6 +34,8 @@ If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started
 
 *portDefinitions*: The _portDefinitions_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. This array is meant to replace the _ports_ array, and makes it possible to specify a port name, protocol and labels. Only one of _ports_ and _portDefinitions_ should be defined for an application.
 
+**Note:** Pods use the `endpoints` array instead of the `portDefinitions` array to define and name ports. See the [pods documentation]({{ site.baseurl }}/docs/pods.html) for more information.
+
 *protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp`, `udp` or `udp,tcp` for both). This is only necessary as part of a _port mapping_ when using `BRIDGE` or `USER` mode networking with a Docker container.
 
 *requirePorts*: _requirePorts_ is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` or `USER` mode networking.
@@ -47,6 +49,8 @@ Using the value 0 for any port settings indicates to Marathon that you would lik
 ## Environment Variables
 
 Each *host port* value is exposed to the running application instance via environment variables `$PORT0`, `$PORT1`, etc. Each Marathon application is given a single port by default, so `$PORT0` is always available. These variables are available inside a Docker container being run by Marathon too. Additionally, if the port is named `NAME`, it will also be accessible via the environment variable, `$PORT_NAME`.
+
+**Note:** For pods, this environment variable is accessible via `ENDPOINT_NAME`.
 
 When using `BRIDGE` or `USER` mode networking, be sure to bind your application to the `containerPort`s you have specified in your `portMapping`s. However, if you have set `containerPort` to 0 then this will be the same as `hostPort` and you can use the `$PORT` environment variables.
 
