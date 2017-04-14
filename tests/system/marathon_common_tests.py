@@ -15,7 +15,7 @@ from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait)
 from datetime import timedelta
 from dcos import http, marathon, mesos
-from shakedown import (dcos_1_8, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
+from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
                        marthon_version_less_than)
 from urllib.parse import urljoin
 from utils import (marathon_on_marathon, mom_version_less_than, fixture_dir, get_resource)
@@ -1040,6 +1040,7 @@ def test_ping():
     assert response.text == 'pong'
 
 
+@dcos_1_9
 def test_vip_mesos_cmd():
     """ Tests the creation of a VIP from a python command NOT in a docker.  the
         test validates the creation of an app with the VIP label and the accessability
@@ -1067,6 +1068,7 @@ def test_vip_mesos_cmd():
     common.assert_http_code('{}:{}'.format(fqn, 10000))
 
 
+@dcos_1_9
 def test_vip_docker_bridge_mode():
     """ Tests the creation of a VIP from a python command in a docker image using bridge mode.
         the test validates the creation of an app with the VIP label and the accessability
@@ -1093,6 +1095,78 @@ def test_vip_docker_bridge_mode():
     shakedown.deployment_wait()
 
     common.assert_http_code('{}:{}'.format(fqn, 10000))
+
+
+def get_container_pinger_app(name='pinger'):
+    return add_container_network(common.pinger_localhost_app(name), 'dcos')
+
+
+def add_container_network(app_def, network, port=7777):
+    app_def['ipAddress'] = {
+        "networkName": network,
+        "discovery":
+        {
+            "ports": [{
+                "name": "my-port",
+                "number": port,
+                "protocol": "tcp"
+            }]
+        }
+    }
+    del app_def['portDefinitions']
+    del app_def['requirePorts']
+    return app_def
+
+
+@pytest.mark.parametrize("test_type, get_pinger_app, dns_format", [
+        ('localhost', common.pinger_localhost_app, '{}.{}.mesos'),
+        ('bridge', common.pinger_bridge_app, '{}.{}.mesos'),
+        ('container', get_container_pinger_app, '{}.{}.containerip.dcos.thisdcos.directory'),
+])
+@dcos_1_9
+@private_agents(2)
+def test_network_pinger(test_type, get_pinger_app, dns_format):
+    """ This test runs a pinger app and a relay app. It retrieves the python app from the
+    master via the new http service (which will be moving into shakedown). Then a curl call
+    to the relay will invoke a call to the 2nd pinger app and return back pong to the relay
+    then back to curl.
+
+    It tests that 1 task can network communicate to another task on the given network
+    It tests inbound and outbound connectivity
+
+    test_type param is not used.  It is passed so that it is clear which parametrized test
+    is running or may be failing.
+    """
+    marathon_service_name = get_marathon_service_name()
+    client = marathon.create_client()
+    pinger_app = get_pinger_app('pinger') #add_container_network(common.pinger_localhost_app(), 'dcos')
+    relay_app = get_pinger_app('relay')  #add_container_network(common.pinger_localhost_app('relay'), 'dcos')
+    pinger_dns = dns_format.format('pinger', marathon_service_name)
+    relay_dns = dns_format.format('relay', marathon_service_name)
+
+    # test pinger app to master
+    shakedown.copy_file_to_master(fixture_dir() + "/pinger.py")
+
+    with shakedown.master_http_service():
+        # need to add app with http service in place or it will fail to fetch
+        client.add_app(pinger_app)
+        client.add_app(relay_app)
+        shakedown.deployment_wait()
+        shakedown.wait_for_dns(relay_dns)
+
+    relay_url = 'http://{}:7777/relay-ping?url={}:7777'.format(
+        relay_dns, pinger_dns
+    )
+
+
+    @retrying.retry
+    def http_output_check(stop_max_attempt_number=30):
+        status, output = shakedown.run_command_on_master('curl {}'.format(relay_url))
+        assert status
+        assert 'Pong /pinger' in output
+        assert 'Relay from /relay' in output
+
+    http_output_check()
 
 
 def remove_marathon_service_name():

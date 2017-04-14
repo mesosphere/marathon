@@ -117,7 +117,7 @@ def python_http_app():
 
 def nginx_with_ssl_support():
     return {
-		"id": "/web-server",
+        "id": "/web-server",
 		"instances": 1,
 		"cpus": 1,
 		"mem": 128,
@@ -466,6 +466,73 @@ def private_mesos_container_app(principal, secret):
     }
 
 
+def pinger_localhost_app(id='pinger', port=7777):
+    """ pinger app requires, the pinger.py app in fixure_dir and the master
+        http service started at port 7777
+
+        This app also defaults to 7777 for easy service locating
+    """
+    return {
+      "id": id,
+      "instances": 1,
+      "cpus": 0.1,
+      "mem": 128,
+      "cmd": "/opt/mesosphere/bin/python pinger.py {}".format(port),
+      "fetch": [
+        {
+          "uri": "http://master.mesos:7777/pinger.py"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "port": port,
+          "protocol": "tcp",
+          "name": "api"
+        }
+      ],
+      "requirePorts": True
+    }
+
+
+def pinger_bridge_app(id='pinger', port=7777):
+
+    return {
+      "id": id,
+      "instances": 1,
+      "container": {
+        "type": "DOCKER",
+        "docker": {
+          "image": "python:3.5-alpine",
+          "network": "BRIDGE",
+          "portMappings": [
+            {
+                "containerPort": 80,
+                "hostPort": port,
+                "protocol": "tcp",
+                "name": "http"
+            }
+            ],
+            "requirePorts": True
+        },
+        "volumes": [
+           {
+             "containerPath": "/opt/pinger.py",
+             "hostPath": "pinger.py",
+             "mode": "RO"
+           }
+         ]
+      },
+      "cpus": 0.1,
+      "mem": 128,
+      "cmd": "python3 /opt/pinger.py 80",
+      "fetch": [
+        {
+          "uri": "http://master.mesos:7777/pinger.py"
+        }
+      ]
+    }
+
+
 def cluster_info(mom_name='marathon-user'):
     agents = get_private_agents()
     print("agents: {}".format(len(agents)))
@@ -652,6 +719,10 @@ def assert_app_tasks_healthy(client, app_def):
 
     app = client.get_app(app_id)
     assert app['tasksHealthy'] == instances
+
+#############
+#  moving to shakedown  START
+#############
 
 
 def install_enterprise_cli_package():
@@ -864,3 +935,8 @@ def set_service_account_permissions(service_account, ressource='dcos:superuser',
     url = urljoin(dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(ressource, service_account, action))
     req = http.put(url)
     assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+
+
+#############
+# moving to shakedown  END
+#############
