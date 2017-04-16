@@ -163,6 +163,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 * [Python client](https://github.com/Wizcorp/marathon-client.py), developed at [Wizcorp](http://www.wizcorp.jp)
 * [Go client](https://github.com/gambol99/go-marathon) by Rohith Jayawardene
 * [Go client](https://github.com/jbdalido/gomarathon) by Jean-Baptiste Dalido
+* [Go client](https://github.com/gambol99/go-marathon) by Rohith Jayawardene
 * [Node client](https://github.com/silas/node-mesos) by Silas Sewell
 * [Clojure client](https://github.com/codemomentum/marathonclj) by Halit Olali
 * [sbt plugin](https://github.com/Tapad/sbt-marathon), developed at [Tapad](https://tapad.com)
