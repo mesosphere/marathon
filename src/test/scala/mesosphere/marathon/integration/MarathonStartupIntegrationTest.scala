@@ -7,6 +7,7 @@ import org.scalatest.concurrent.TimeLimits
 import org.scalatest.time.{ Seconds, Span }
 
 @IntegrationTest
+@UnstableTest(issueUrl = "https://jira.mesosphere.com/browse/MARATHON-7230")
 class MarathonStartupIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with TimeLimits {
 
   "Marathon" should {

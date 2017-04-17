@@ -64,12 +64,13 @@ def phabricator_apply_diff(phid, build_url, revision_id, diff_id) {
 
 // installs mesos at the revision listed in the build.
 def install_mesos() {
+  def aptInstall = "sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION"
   sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
           MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
         else
           MESOS_VERSION=\$(sed -n 's/^.*mesos=\\(.*\\)&&.*/\\1/p' <\$WORKSPACE/Dockerfile)
         fi
-        sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
+        ${aptInstall} || sudo apt-get update && ${aptInstall}
       """
   return this
 }

@@ -92,7 +92,7 @@ ansiColor('gnome-terminal') {
       }
       stage("Unstable Test") {
         if (m.has_unstable_tests()) {
-          ignore_error {
+          m.ignore_error {
             m.unstable_test()
           }
           m.phabricator_convert_test_coverage()

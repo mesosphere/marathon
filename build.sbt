@@ -80,7 +80,8 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     "-Xfuture",
     "-Xlog-reflective-calls",
     "-Xlint",
-    "-Xfatal-warnings",
+    //FIXME: CORE-977 and MESOS-7368 are filed and need to be resolved to re-enable this
+    // "-Xfatal-warnings",
     "-Yno-adapted-args",
     "-Ywarn-numeric-widen",
     //"-Ywarn-dead-code", We should turn this one on soon
