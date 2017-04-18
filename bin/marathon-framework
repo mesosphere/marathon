@@ -147,10 +147,11 @@ function run_jar {
 }
 
 function logged {
-  local token="$1[$$]" ; shift
-  exec 1> >(exec logger -p user.info   -t "$token")
-  exec 2> >(exec logger -p user.notice -t "$token")
-  "$@"
+   if [[ "${MARATHON_USE_SYSLOG:-1}" == "1" ]]; then
+    local token="$1[$$]" ; shift
+    exec 1> >(exec logger -p user.info   -t "$token")
+    exec 2> >(exec logger -p user.notice -t "$token")
+  fi
 }
 
 function msg { out "$*" >&2 ;}
