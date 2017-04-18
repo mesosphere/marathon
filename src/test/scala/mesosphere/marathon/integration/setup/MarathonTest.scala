@@ -30,6 +30,7 @@ import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
+import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{ Milliseconds, Span }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 import play.api.libs.json.{ JsObject, Json }
@@ -455,6 +456,8 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     }
   } catch {
     case _: NoSuchElementException =>
+      None
+    case _: TestFailedDueToTimeoutException =>
       None
   }
 
