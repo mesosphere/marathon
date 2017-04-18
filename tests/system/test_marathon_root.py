@@ -13,7 +13,7 @@ import os
 from dcos_service_marathon_tests import *
 from marathon_common_tests import *
 from marathon_pods_tests import *
-from shakedown import (masters, required_masters)
+from shakedown import (masters, required_masters, public_agents, required_public_agents)
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
@@ -86,6 +86,23 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
         assert original_leader != current_leader
 
     marathon_leadership_changed()
+
+
+@public_agents(1)
+def test_launch_app_on_public_agent():
+    """ Test the successful launch of a mesos container on public agent.
+        MoMs by default do not have slave_public access.
+    """
+    client = marathon.create_client()
+    app_id = uuid.uuid4().hex
+    app_def = common.add_role_constraint_to_app_def(app_mesos(app_id).copy(), ['slave_public'])
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    task_ip = tasks[0]['host']
+
+    assert task_ip in shakedown.get_public_agents()
 
 
 def test_external_volume():

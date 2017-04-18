@@ -328,6 +328,16 @@ def assert_http_code(url, http_code='200'):
     assert output == http_code
 
 
+def add_role_constraint_to_app_def(app_def, roles=['*']):
+    """ Roles are a comma delimited list.  acceptable roles include:
+        '*'
+        'slave_public'
+        '*, slave_public'
+    """
+    app_def['acceptedResourceRoles'] = roles
+    return app_def
+
+
 def pending_deployment_due_to_resource_roles(app_id):
     resource_role = str(random.getrandbits(32))
 
