@@ -733,6 +733,23 @@ It is possible to make Marathon let Mesos use the `TASK_KILLING` state introduce
 - #3439 - Relative paths in dependencies should be resolvable.
 - #3575 - Container IP not correctly displayed
 
+## Fixed issues in RC2
+
+- #3477 - Improve ForceExpunge and restart logic
+- #3574 - ResidentTasks: ResourceMatching and Constraints by not considering the volumeMatch's Reserved task when inspecting constraints
+- #3579 - Resident Tasks: Flaky test: restart
+- #3597 - Upgrading applications with persistent storage
+- #3612 - Marathon should validate that port names contain only letters and numbers
+- #3614 - Don't allow persistent container paths containing slashes
+- #3624 - Constraints are not working for updating. Respect constraints for same version.
+- #3646 - Liquid Exception in docs 
+- #3654 - PortMapping labels are not being set
+- AppTaskLauncherActor: Reply to unknown messages immediately
+- framework start script: accept --no-logger and --no_logger
+- Make mesos principal optional.
+
+
+
 ## Changes from 0.15.2 to 0.15.3
 
 This is a bug fix release.
