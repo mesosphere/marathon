@@ -6,6 +6,7 @@
 
 import pytest
 import common
+import shakedown
 
 from datetime import timedelta
 # this is intentional import *
@@ -13,21 +14,22 @@ from datetime import timedelta
 from marathon_common_tests import *
 from utils import marathon_on_marathon, fixture_dir, get_resource
 
-pytestmark = [pytest.mark.usefixtures('mom_fix')]
+pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
 
 @pytest.fixture(scope="function")
-def mom_fix():
+def marathon_service_name():
 
     common.ensure_mom()
     with marathon_on_marathon():
-        yield
+        yield 'marathon-user'
+        shakedown.wait_for_service_endpoint('marathon-user')
         clear_marathon()
 
 
 def setup_module(module):
-    set_marathon_service_name('marathon-user')
     common.ensure_mom()
+    common.wait_for_marathon_up('marathon-user')
     common.cluster_info()
     with marathon_on_marathon():
         clear_marathon()
@@ -35,7 +37,10 @@ def setup_module(module):
 
 def teardown_module(module):
     with marathon_on_marathon():
-        clear_marathon()
+        try:
+            clear_marathon()
+        except:
+            pass
     # Uninstall MoM
     shakedown.uninstall_package_and_wait('marathon')
     shakedown.delete_zk_node('universe/marathon-user')

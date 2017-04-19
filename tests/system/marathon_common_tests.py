@@ -86,11 +86,11 @@ def test_launch_mesos_container_with_docker_image():
 # this fails on 1.7, it is likely the version of marathon in universe for 1.7
 # which is 1.1.5.   We do not have a check for marathon version.
 @dcos_1_8
-def test_launch_mesos_graceperiod():
+def test_launch_mesos_graceperiod(marathon_fixture):
     """ Test the 'taskKillGracePeriodSeconds' in a Marathon environment.  Read more details
         on this test in `test_root_marathon.py::test_launch_mesos_root_marathon_graceperiod`
     """
-    marathon_service_name = get_marathon_service_name()
+    marathon_service_name = marathon_fixture
 
     app_id = uuid.uuid4().hex
     app_def = app_mesos(app_id)
@@ -126,11 +126,10 @@ def test_launch_mesos_graceperiod():
     assert tasks is None
 
 
-def test_launch_docker_graceperiod():
+def test_launch_docker_graceperiod(marathon_service_name):
     """ Test the 'taskKillGracePeriodSeconds' in a Marathon environment.
         This is the same test as above however tests against docker.
     """
-    marathon_service_name = get_marathon_service_name()
 
     app_id = uuid.uuid4().hex
     app_def = app_docker(app_id)
@@ -181,10 +180,9 @@ def test_docker_port_mappings():
     assert output == "200"
 
 
-def test_docker_dns_mapping():
+def test_docker_dns_mapping(marathon_service_name):
     """ Tests that a running docker task is accessible from DNS.
     """
-    marathon_service_name = get_marathon_service_name()
 
     app_id = uuid.uuid4().hex
     client = marathon.create_client()
@@ -238,11 +236,10 @@ def test_ui_registration_requirement():
                     assert label['value'] == 'marathon-user'
 
 
-def test_ui_available():
+def test_ui_available(marathon_service_name):
     """ This simply confirms that a URL call the service endpoint is successful if
     marathon is launched.
     """
-    marathon_service_name = get_marathon_service_name()
 
     response = http.get("{}/ui/".format(
         shakedown.dcos_service_url(marathon_service_name)))
@@ -811,12 +808,11 @@ def test_update_app_poor_health():
 
 
 @private_agents(2)
-def test_marathon_with_master_process_failure():
+def test_marathon_with_master_process_failure(marathon_service_name):
     """ Launches an app from Marathon and restarts the master.
         It is expected that the service endpoint will come back and that the
         task_id is the original task_id
     """
-    marathon_service_name = get_marathon_service_name()
 
     app_def = app('master-failure')
     host = ip_other_than_mom()
@@ -1027,27 +1023,24 @@ def test_private_repository_mesos_app():
     common.assert_app_tasks_running(client, app_def)
 
 
-def test_ping():
+def test_ping(marathon_fixture):
     """ Tests the API end point for marathon /ping
         This isn't provided by the client object and will need to create the url to test
     """
+    print(marathon_fixture)
 
-    marathon_service_name = get_marathon_service_name()
-    marathon_url = shakedown.dcos_service_url(marathon_service_name)
-    url = urljoin(marathon_url, 'ping')
-    response = http.get(url)
+    response = common.http_get_marathon_path('ping', marathon_fixture)
     assert response.status_code == 200
     assert response.text == 'pong'
 
 
 @dcos_1_9
-def test_vip_mesos_cmd():
+def test_vip_mesos_cmd(marathon_service_name):
     """ Tests the creation of a VIP from a python command NOT in a docker.  the
         test validates the creation of an app with the VIP label and the accessability
         of the service via the VIP.
     """
     vip_name = 'vip-service'
-    marathon_service_name = get_marathon_service_name()
     fqn = '{}.{}.l4lb.thisdcos.directory'.format(vip_name, marathon_service_name)
     app_def = python_http_app()
     app_def['portDefinitions'] = [
@@ -1069,13 +1062,12 @@ def test_vip_mesos_cmd():
 
 
 @dcos_1_9
-def test_vip_docker_bridge_mode():
+def test_vip_docker_bridge_mode(marathon_service_name):
     """ Tests the creation of a VIP from a python command in a docker image using bridge mode.
         the test validates the creation of an app with the VIP label and the accessability
         of the service via the VIP.
     """
     vip_name = 'vip-docker-service'
-    marathon_service_name = get_marathon_service_name()
     fqn = '{}.{}.l4lb.thisdcos.directory'.format(vip_name, marathon_service_name)
     app_def = app_docker()
     app_def['container']['docker']['portMappings'] = [
@@ -1125,7 +1117,7 @@ def add_container_network(app_def, network, port=7777):
 ])
 @dcos_1_9
 @private_agents(2)
-def test_network_pinger(test_type, get_pinger_app, dns_format):
+def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_name):
     """ This test runs a pinger app and a relay app. It retrieves the python app from the
     master via the new http service (which will be moving into shakedown). Then a curl call
     to the relay will invoke a call to the 2nd pinger app and return back pong to the relay
@@ -1137,10 +1129,9 @@ def test_network_pinger(test_type, get_pinger_app, dns_format):
     test_type param is not used.  It is passed so that it is clear which parametrized test
     is running or may be failing.
     """
-    marathon_service_name = get_marathon_service_name()
     client = marathon.create_client()
-    pinger_app = get_pinger_app('pinger') #add_container_network(common.pinger_localhost_app(), 'dcos')
-    relay_app = get_pinger_app('relay')  #add_container_network(common.pinger_localhost_app('relay'), 'dcos')
+    pinger_app = get_pinger_app('pinger')
+    relay_app = get_pinger_app('relay')
     pinger_dns = dns_format.format('pinger', marathon_service_name)
     relay_dns = dns_format.format('relay', marathon_service_name)
 
@@ -1158,7 +1149,6 @@ def test_network_pinger(test_type, get_pinger_app, dns_format):
         relay_dns, pinger_dns
     )
 
-
     @retrying.retry
     def http_output_check(stop_max_attempt_number=30):
         status, output = shakedown.run_command_on_master('curl {}'.format(relay_url))
@@ -1169,23 +1159,12 @@ def test_network_pinger(test_type, get_pinger_app, dns_format):
     http_output_check()
 
 
-def remove_marathon_service_name():
-    del os.environ['MARATHON_NAME']
-
-
-def get_marathon_service_name():
-    return os.environ.get('MARATHON_NAME', 'marathon')
-
-
-def set_marathon_service_name(name='marathon'):
-    print('setting marathon_name to: {}'.format(name))
-    os.environ['MARATHON_NAME'] = name
-
-
 def clear_marathon():
-    common.stop_all_deployments()
-    common.delete_all_apps_wait()
-
+    try:
+        common.stop_all_deployments()
+        common.delete_all_apps_wait()
+    except Exception as e:
+        print(e)
 
 def app_ucr(app_id=None):
     if app_id is None:
