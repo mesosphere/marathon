@@ -227,7 +227,7 @@ def publish_artifacts() {
           // with anyone. The directory listing isn't public anyways.
           profile = "aws-production"
           bucket = "downloads.mesosphere.io/marathon/snapshots/"
-
+          region = "us-east-1"
           if (is_release_build(gitTag)) {
             storageClass = "STANDARD"
             bucket = "downloads.mesosphere.io/marathon/${gitTag}/"
@@ -237,7 +237,7 @@ def publish_artifacts() {
               entries: [[
                   sourceFile: "target/universal/marathon-*.txz",
                   bucket: bucket,
-                  selectedRegion: 'us-west-2',
+                  selectedRegion: region,
                   noUploadOnFailure: true,
                   managedArtifacts: false,
                   flatten: true,
@@ -248,7 +248,7 @@ def publish_artifacts() {
                   [
                       sourceFile: "target/universal/marathon-*.zip",
                       bucket: bucket,
-                      selectedRegion: 'us-west-2',
+                      selectedRegion: region,
                       noUploadOnFailure: true,
                       managedArtifacts: false,
                       flatten: true,
