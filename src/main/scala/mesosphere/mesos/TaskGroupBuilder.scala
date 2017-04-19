@@ -300,7 +300,7 @@ object TaskGroupBuilder extends StrictLogging {
     commandInfo.setEnvironment(mesos.Environment.newBuilder.addAllVariables(envVars))
   }
 
-  private[this] def computeContainerInfo(
+  private[mesos] def computeContainerInfo(
     podDefinition: PodDefinition,
     container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
 
@@ -356,6 +356,9 @@ object TaskGroupBuilder extends StrictLogging {
       val mesosInfo = mesos.ContainerInfo.MesosInfo.newBuilder.setImage(image)
       containerInfo.setMesos(mesosInfo)
     }
+
+    // attach a tty if specified
+    container.tty.foreach(containerInfo.setTtyInfo(_))
 
     // Only create a 'ContainerInfo' when some of it's fields are set.
     // If no fields other than the type have been set, then we shouldn't pass the container info

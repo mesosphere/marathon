@@ -14,7 +14,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ HostNetwork, Network }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.raml.{ App, Apps, Resources }
+import mesosphere.marathon.raml.{ App, Apps, Resources, TTY }
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.stream.Implicits._
@@ -78,7 +78,9 @@ case class AppDefinition(
 
   override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
 
-  override val killSelection: KillSelection = KillSelection.DefaultKillSelection) extends RunSpec
+  override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
+
+  tty: Option[TTY] = AppDefinition.DefaultTTY) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
@@ -163,6 +165,7 @@ case class AppDefinition(
       .setUnreachableStrategy(unreachableStrategy.toProto)
       .setKillSelection(killSelection.toProto)
 
+    tty.foreach(builder.setTty(_))
     networks.foreach { network => builder.addNetworks(Network.toProto(network)) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
     readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
@@ -221,6 +224,8 @@ case class AppDefinition(
 
     val residencyOption = if (proto.hasResidency) Some(ResidencySerializer.fromProto(proto.getResidency)) else None
 
+    val tty: Option[TTY] = if (proto.hasTty) Some(proto.getTty) else None
+
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
@@ -272,7 +277,8 @@ case class AppDefinition(
       residency = residencyOption,
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
       unreachableStrategy = unreachableStrategy,
-      killSelection = KillSelection.fromProto(proto.getKillSelection)
+      killSelection = KillSelection.fromProto(proto.getKillSelection),
+      tty = tty
     )
   }
 
@@ -327,7 +333,8 @@ case class AppDefinition(
           residency != to.residency ||
           secrets != to.secrets ||
           unreachableStrategy != to.unreachableStrategy ||
-          killSelection != to.killSelection
+          killSelection != to.killSelection ||
+          tty != to.tty
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -399,6 +406,8 @@ object AppDefinition extends GeneralPurposeCombinators {
     * This default is only used in tests
     */
   val DefaultAcceptedResourceRoles = Set.empty[String]
+
+  val DefaultTTY = Option.empty[TTY]
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`

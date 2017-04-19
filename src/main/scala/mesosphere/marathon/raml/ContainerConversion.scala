@@ -22,7 +22,8 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       volumeMounts = c.volumeMounts,
       artifacts = c.artifacts,
       labels = c.labels,
-      lifecycle = c.lifecycle
+      lifecycle = c.lifecycle,
+      tty = c.tty
     )
   }
 
@@ -39,7 +40,8 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       volumeMounts = c.volumeMounts,
       artifacts = c.artifacts,
       labels = c.labels,
-      lifecycle = c.lifecycle
+      lifecycle = c.lifecycle,
+      tty = c.tty
     )
   }
 

@@ -7908,6 +7908,20 @@ public final class Protos {
      */
     mesosphere.marathon.Protos.NetworkDefinitionOrBuilder getNetworksOrBuilder(
         int index);
+
+    // optional .mesos.TTYInfo tty = 35;
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    boolean hasTty();
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    org.apache.mesos.Protos.TTYInfo getTty();
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    org.apache.mesos.Protos.TTYInfoOrBuilder getTtyOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -8243,6 +8257,19 @@ public final class Protos {
                 mutable_bitField1_ |= 0x00000001;
               }
               networks_.add(input.readMessage(mesosphere.marathon.Protos.NetworkDefinition.PARSER, extensionRegistry));
+              break;
+            }
+            case 282: {
+              org.apache.mesos.Protos.TTYInfo.Builder subBuilder = null;
+              if (((bitField0_ & 0x00200000) == 0x00200000)) {
+                subBuilder = tty_.toBuilder();
+              }
+              tty_ = input.readMessage(org.apache.mesos.Protos.TTYInfo.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(tty_);
+                tty_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00200000;
               break;
             }
           }
@@ -9300,6 +9327,28 @@ public final class Protos {
       return networks_.get(index);
     }
 
+    // optional .mesos.TTYInfo tty = 35;
+    public static final int TTY_FIELD_NUMBER = 35;
+    private org.apache.mesos.Protos.TTYInfo tty_;
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    public boolean hasTty() {
+      return ((bitField0_ & 0x00200000) == 0x00200000);
+    }
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    public org.apache.mesos.Protos.TTYInfo getTty() {
+      return tty_;
+    }
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    public org.apache.mesos.Protos.TTYInfoOrBuilder getTtyOrBuilder() {
+      return tty_;
+    }
+
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -9334,6 +9383,7 @@ public final class Protos {
       unreachableStrategy_ = mesosphere.marathon.Protos.UnreachableStrategy.getDefaultInstance();
       killSelection_ = mesosphere.marathon.Protos.KillSelection.YoungestFirst;
       networks_ = java.util.Collections.emptyList();
+      tty_ = org.apache.mesos.Protos.TTYInfo.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -9428,6 +9478,12 @@ public final class Protos {
       }
       for (int i = 0; i < getNetworksCount(); i++) {
         if (!getNetworks(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      if (hasTty()) {
+        if (!getTty().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -9537,6 +9593,9 @@ public final class Protos {
       }
       for (int i = 0; i < networks_.size(); i++) {
         output.writeMessage(34, networks_.get(i));
+      }
+      if (((bitField0_ & 0x00200000) == 0x00200000)) {
+        output.writeMessage(35, tty_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -9694,6 +9753,10 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(34, networks_.get(i));
       }
+      if (((bitField0_ & 0x00200000) == 0x00200000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(35, tty_);
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
@@ -9819,6 +9882,7 @@ public final class Protos {
           getEnvVarReferencesFieldBuilder();
           getUnreachableStrategyFieldBuilder();
           getNetworksFieldBuilder();
+          getTtyFieldBuilder();
         }
       }
       private static Builder create() {
@@ -9961,6 +10025,12 @@ public final class Protos {
         } else {
           networksBuilder_.clear();
         }
+        if (ttyBuilder_ == null) {
+          tty_ = org.apache.mesos.Protos.TTYInfo.getDefaultInstance();
+        } else {
+          ttyBuilder_.clear();
+        }
+        bitField1_ = (bitField1_ & ~0x00000002);
         return this;
       }
 
@@ -10203,6 +10273,14 @@ public final class Protos {
           result.networks_ = networks_;
         } else {
           result.networks_ = networksBuilder_.build();
+        }
+        if (((from_bitField1_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00200000;
+        }
+        if (ttyBuilder_ == null) {
+          result.tty_ = tty_;
+        } else {
+          result.tty_ = ttyBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -10555,6 +10633,9 @@ public final class Protos {
             }
           }
         }
+        if (other.hasTty()) {
+          mergeTty(other.getTty());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -10648,6 +10729,12 @@ public final class Protos {
         }
         for (int i = 0; i < getNetworksCount(); i++) {
           if (!getNetworks(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        if (hasTty()) {
+          if (!getTty().isInitialized()) {
             
             return false;
           }
@@ -14833,6 +14920,123 @@ public final class Protos {
           networks_ = null;
         }
         return networksBuilder_;
+      }
+
+      // optional .mesos.TTYInfo tty = 35;
+      private org.apache.mesos.Protos.TTYInfo tty_ = org.apache.mesos.Protos.TTYInfo.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.TTYInfo, org.apache.mesos.Protos.TTYInfo.Builder, org.apache.mesos.Protos.TTYInfoOrBuilder> ttyBuilder_;
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public boolean hasTty() {
+        return ((bitField1_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public org.apache.mesos.Protos.TTYInfo getTty() {
+        if (ttyBuilder_ == null) {
+          return tty_;
+        } else {
+          return ttyBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public Builder setTty(org.apache.mesos.Protos.TTYInfo value) {
+        if (ttyBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          tty_ = value;
+          onChanged();
+        } else {
+          ttyBuilder_.setMessage(value);
+        }
+        bitField1_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public Builder setTty(
+          org.apache.mesos.Protos.TTYInfo.Builder builderForValue) {
+        if (ttyBuilder_ == null) {
+          tty_ = builderForValue.build();
+          onChanged();
+        } else {
+          ttyBuilder_.setMessage(builderForValue.build());
+        }
+        bitField1_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public Builder mergeTty(org.apache.mesos.Protos.TTYInfo value) {
+        if (ttyBuilder_ == null) {
+          if (((bitField1_ & 0x00000002) == 0x00000002) &&
+              tty_ != org.apache.mesos.Protos.TTYInfo.getDefaultInstance()) {
+            tty_ =
+              org.apache.mesos.Protos.TTYInfo.newBuilder(tty_).mergeFrom(value).buildPartial();
+          } else {
+            tty_ = value;
+          }
+          onChanged();
+        } else {
+          ttyBuilder_.mergeFrom(value);
+        }
+        bitField1_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public Builder clearTty() {
+        if (ttyBuilder_ == null) {
+          tty_ = org.apache.mesos.Protos.TTYInfo.getDefaultInstance();
+          onChanged();
+        } else {
+          ttyBuilder_.clear();
+        }
+        bitField1_ = (bitField1_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public org.apache.mesos.Protos.TTYInfo.Builder getTtyBuilder() {
+        bitField1_ |= 0x00000002;
+        onChanged();
+        return getTtyFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public org.apache.mesos.Protos.TTYInfoOrBuilder getTtyOrBuilder() {
+        if (ttyBuilder_ != null) {
+          return ttyBuilder_.getMessageOrBuilder();
+        } else {
+          return tty_;
+        }
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.TTYInfo, org.apache.mesos.Protos.TTYInfo.Builder, org.apache.mesos.Protos.TTYInfoOrBuilder> 
+          getTtyFieldBuilder() {
+        if (ttyBuilder_ == null) {
+          ttyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.mesos.Protos.TTYInfo, org.apache.mesos.Protos.TTYInfo.Builder, org.apache.mesos.Protos.TTYInfoOrBuilder>(
+                  tty_,
+                  getParentForChildren(),
+                  isClean());
+          tty_ = null;
+        }
+        return ttyBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
@@ -47768,7 +47972,7 @@ public final class Protos {
       "e.marathon.NetworkDefinition.Mode\022\014\n\004nam" +
       "e\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.Label\"8\n" +
       "\004Mode\022\013\n\007UNKNOWN\020\000\022\010\n\004HOST\020\001\022\r\n\tCONTAINE" +
-      "R\020\002\022\n\n\006BRIDGE\020\003\"\241\013\n\021ServiceDefinition\022\n\n" +
+      "R\020\002\022\n\n\006BRIDGE\020\003\"\276\013\n\021ServiceDefinition\022\n\n" +
       "\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandIn" +
       "fo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(\013" +
       "2\017.mesos.Resource\022\023\n\013description\030\005 \001(\t\022\r" +
@@ -47804,136 +48008,136 @@ public final class Protos {
       "trategy\022H\n\rkillSelection\030! \001(\0162\".mesosph" +
       "ere.marathon.KillSelection:\rYoungestFirs",
       "t\0228\n\010networks\030\" \003(\0132&.mesosphere.maratho" +
-      "n.NetworkDefinition\"]\n\023UnreachableStrate" +
-      "gy\022!\n\024inactiveAfterSeconds\030\001 \001(\004:\003900\022#\n" +
-      "\023expungeAfterSeconds\030\002 \001(\004:\006604800\"\024\n\004Js" +
-      "on\022\014\n\004json\030\001 \002(\t\"\035\n\rResourceRoles\022\014\n\004rol" +
-      "e\030\001 \003(\t\"\346\t\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\025\n\r" +
-      "OBSOLETE_host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022-\n\023OB" +
-      "SOLETE_attributes\030\004 \003(\0132\020.mesos.Attribut" +
-      "e\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003" +
-      "\022,\n\021OBSOLETE_statuses\030\007 \003(\0132\021.mesos.Task",
-      "Status\022)\n\007version\030\010 \001(\t:\0301970-01-01T00:0" +
-      "0:00.000Z\022!\n\006status\030\t \001(\0132\021.mesos.TaskSt" +
-      "atus\022(\n\020OBSOLETE_slaveId\030\n \001(\0132\016.mesos.S" +
-      "laveID\022-\n\021OBSOLETE_networks\030\013 \003(\0132\022.meso" +
-      "s.NetworkInfo\022B\n\013reservation\030\014 \001(\0132-.mes" +
-      "osphere.marathon.MarathonTask.Reservatio" +
-      "n\022>\n\tcondition\030\r \001(\0162+.mesosphere.marath" +
-      "on.MarathonTask.Condition\032\231\004\n\013Reservatio" +
-      "n\022\030\n\020local_volume_ids\030\001 \003(\t\022B\n\005state\030\002 \002" +
-      "(\01323.mesosphere.marathon.MarathonTask.Re",
-      "servation.State\032\253\003\n\005State\022F\n\004type\030\001 \002(\0162" +
-      "8.mesosphere.marathon.MarathonTask.Reser" +
-      "vation.State.Type\022L\n\007timeout\030\002 \001(\0132;.mes" +
-      "osphere.marathon.MarathonTask.Reservatio" +
-      "n.State.Timeout\032\303\001\n\007Timeout\022\021\n\tinitiated" +
-      "\030\001 \002(\003\022\020\n\010deadline\030\002 \002(\003\022R\n\006reason\030\003 \002(\016" +
-      "2B.mesosphere.marathon.MarathonTask.Rese" +
-      "rvation.State.Timeout.Reason\"?\n\006Reason\022\035" +
-      "\n\031RelaunchEscalationTimeout\020\001\022\026\n\022Reserva" +
-      "tionTimeout\020\002\"F\n\004Type\022\007\n\003New\020\001\022\014\n\010Launch",
-      "ed\020\002\022\r\n\tSuspended\020\003\022\013\n\007Garbage\020\004\022\013\n\007Unkn" +
-      "own\020\005\"\330\001\n\tCondition\022\013\n\007Invalid\020\000\022\014\n\010Rese" +
-      "rved\020\001\022\013\n\007Created\020\002\022\t\n\005Error\020\003\022\n\n\006Failed" +
-      "\020\004\022\014\n\010Finished\020\005\022\n\n\006Killed\020\006\022\013\n\007Killing\020" +
-      "\007\022\010\n\004Lost\020\010\022\013\n\007Running\020\t\022\013\n\007Staging\020\n\022\014\n" +
-      "\010Starting\020\013\022\017\n\013Unreachable\020\014\022\010\n\004Gone\020\r\022\013" +
-      "\n\007Unknown\020\016\022\013\n\007Dropped\020\017\"M\n\013MarathonApp\022" +
-      "\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesospher" +
-      "e.marathon.MarathonTask\"1\n\rContainerInfo" +
-      "\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\345\t\n\025E",
-      "xtendedContainerInfo\022\'\n\004type\030\001 \002(\0162\031.mes" +
-      "os.ContainerInfo.Type\022,\n\007volumes\030\002 \003(\0132\033" +
-      ".mesosphere.marathon.Volume\022M\n\rport_mapp" +
-      "ings\030\006 \003(\01326.mesosphere.marathon.Extende" +
-      "dContainerInfo.PortMapping\022E\n\006docker\030\003 \001" +
-      "(\01325.mesosphere.marathon.ExtendedContain" +
-      "erInfo.DockerInfo\022O\n\013mesosDocker\030\004 \001(\0132:" +
-      ".mesosphere.marathon.ExtendedContainerIn" +
-      "fo.MesosDockerInfo\022K\n\tmesosAppC\030\005 \001(\01328." +
-      "mesosphere.marathon.ExtendedContainerInf",
-      "o.MesosAppCInfo\032\320\003\n\nDockerInfo\022\r\n\005image\030" +
-      "\001 \002(\t\022G\n\020OBSOLETE_network\030\002 \001(\0162\'.mesos." +
-      "ContainerInfo.DockerInfo.Network:\004HOST\022o" +
-      "\n\026OBSOLETE_port_mappings\030\003 \003(\0132O.mesosph" +
-      "ere.marathon.ExtendedContainerInfo.Docke" +
-      "rInfo.ObsoleteDockerPortMapping\022\031\n\nprivi" +
-      "leged\030\004 \001(\010:\005false\022$\n\nparameters\030\005 \003(\0132\020" +
-      ".mesos.Parameter\022\030\n\020force_pull_image\030\006 \001" +
-      "(\010\032\235\001\n\031ObsoleteDockerPortMapping\022\021\n\thost" +
-      "_port\030\001 \001(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010p",
-      "rotocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 " +
-      "\003(\0132\014.mesos.Label\022\027\n\014service_port\030d \001(\r:" +
-      "\0010\032a\n\017MesosDockerInfo\022\r\n\005image\030\001 \002(\t\022%\n\n" +
-      "credential\030\002 \001(\0132\021.mesos.Credential\022\030\n\020f" +
-      "orce_pull_image\030\003 \001(\010\032b\n\rMesosAppCInfo\022\r" +
-      "\n\005image\030\001 \002(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003(" +
-      "\0132\014.mesos.Label\022\030\n\020force_pull_image\030\004 \001(" +
-      "\010\032\246\001\n\013PortMapping\022\021\n\thost_port\030\001 \001(\r\022\026\n\016" +
-      "container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014" +
-      "\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.Lab",
-      "el\022\027\n\014service_port\030\006 \001(\r:\0010\022\025\n\rnetwork_n" +
-      "ames\030\007 \003(\t\"\377\003\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.me" +
-      "sos.Volume.Mode\022\026\n\016container_path\030\001 \002(\t\022" +
-      "\021\n\thost_path\030\002 \001(\t\022\033\n\005image\030\004 \001(\0132\014.meso" +
-      "s.Image\022D\n\npersistent\030\005 \001(\01320.mesosphere" +
-      ".marathon.Volume.PersistentVolumeInfo\022@\n" +
-      "\010external\030\006 \001(\0132..mesosphere.marathon.Vo" +
-      "lume.ExternalVolumeInfo\032\237\001\n\024PersistentVo" +
-      "lumeInfo\022\014\n\004size\030\001 \002(\004\0222\n\004type\030\002 \001(\0162$.m" +
-      "esos.Resource.DiskInfo.Source.Type\0224\n\013co",
-      "nstraints\030\003 \003(\0132\037.mesosphere.marathon.Co" +
-      "nstraint\022\017\n\007maxSize\030\004 \001(\004\032a\n\022ExternalVol" +
-      "umeInfo\022\014\n\004size\030\001 \001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010p" +
-      "rovider\030\003 \002(\t\022\035\n\007options\030\004 \003(\0132\014.mesos.L" +
-      "abel\")\n\020EventSubscribers\022\025\n\rcallback_url" +
-      "s\030\001 \003(\t\"\274\001\n\016StorageVersion\022\r\n\005major\030\001 \002(" +
-      "\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006forma" +
-      "t\030\004 \001(\01621.mesosphere.marathon.StorageVer" +
-      "sion.StorageFormat:\006LEGACY\"2\n\rStorageFor" +
-      "mat\022\n\n\006LEGACY\020\000\022\025\n\021PERSISTENCE_STORE\020\001\"Z",
-      "\n\031UpgradeStrategyDefinition\022\035\n\025minimumHe" +
-      "althCapacity\030\001 \002(\001\022\036\n\023maximumOverCapacit" +
-      "y\030\002 \001(\001:\0011\"\236\003\n\017GroupDefinition\022\n\n\002id\030\001 \002" +
-      "(\t\022\017\n\007version\030\002 \002(\t\022?\n\017deprecated_apps\030\003" +
-      " \003(\0132&.mesosphere.marathon.ServiceDefini" +
-      "tion\0222\n\017deprecated_pods\030\010 \003(\0132\031.mesosphe" +
-      "re.marathon.Json\0224\n\006groups\030\004 \003(\0132$.mesos" +
-      "phere.marathon.GroupDefinition\022\024\n\014depend" +
-      "encies\030\005 \003(\t\022?\n\004apps\030\006 \003(\01321.mesosphere." +
-      "marathon.GroupDefinition.AppReference\022?\n",
-      "\004pods\030\007 \003(\01321.mesosphere.marathon.GroupD" +
-      "efinition.AppReference\032+\n\014AppReference\022\n" +
-      "\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\"\371\001\n\030Deployme" +
-      "ntPlanDefinition\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestam" +
-      "p\030\002 \001(\t\022A\n\023deprecated_original\030\004 \001(\0132$.m" +
-      "esosphere.marathon.GroupDefinition\022?\n\021de" +
-      "precated_target\030\005 \001(\0132$.mesosphere.marat" +
-      "hon.GroupDefinition\022\035\n\025original_root_ver" +
-      "sion\030\006 \001(\t\022\033\n\023target_root_version\030\007 \001(\t\"" +
-      "\306\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_",
-      "id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020" +
-      ".mesos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004h" +
-      "ost\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestam" +
-      "p\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID" +
-      "\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002" +
-      " \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:" +
-      "\005false\"\326\001\n\023ResidencyDefinition\022(\n relaun" +
-      "chEscalationTimeoutSeconds\030\001 \001(\003\022S\n\020task" +
-      "LostBehavior\030\002 \001(\01629.mesosphere.marathon" +
-      ".ResidencyDefinition.TaskLostBehavior\"@\n",
-      "\020TaskLostBehavior\022\032\n\026RELAUNCH_AFTER_TIME" +
-      "OUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030" +
-      "\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n\017EnvVarReferenc" +
-      "e\0227\n\004type\030\001 \002(\0162).mesosphere.marathon.En" +
-      "vVarReference.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecr" +
-      "etRef\030\003 \001(\0132$.mesosphere.marathon.EnvVar" +
-      "SecretRef\"\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET" +
-      "\020\001\"#\n\017EnvVarSecretRef\022\020\n\010secretId\030\001 \002(\t*" +
-      "3\n\rKillSelection\022\021\n\rYoungestFirst\020\001\022\017\n\013O" +
-      "ldestFirst\020\002B\035\n\023mesosphere.marathonB\006Pro",
-      "tos"
+      "n.NetworkDefinition\022\033\n\003tty\030# \001(\0132\016.mesos" +
+      ".TTYInfo\"]\n\023UnreachableStrategy\022!\n\024inact" +
+      "iveAfterSeconds\030\001 \001(\004:\003900\022#\n\023expungeAft" +
+      "erSeconds\030\002 \001(\004:\006604800\"\024\n\004Json\022\014\n\004json\030" +
+      "\001 \002(\t\"\035\n\rResourceRoles\022\014\n\004role\030\001 \003(\t\"\346\t\n" +
+      "\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\025\n\rOBSOLETE_ho" +
+      "st\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022-\n\023OBSOLETE_attr" +
+      "ibutes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged" +
+      "_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022,\n\021OBSOLET",
+      "E_statuses\030\007 \003(\0132\021.mesos.TaskStatus\022)\n\007v" +
+      "ersion\030\010 \001(\t:\0301970-01-01T00:00:00.000Z\022!" +
+      "\n\006status\030\t \001(\0132\021.mesos.TaskStatus\022(\n\020OBS" +
+      "OLETE_slaveId\030\n \001(\0132\016.mesos.SlaveID\022-\n\021O" +
+      "BSOLETE_networks\030\013 \003(\0132\022.mesos.NetworkIn" +
+      "fo\022B\n\013reservation\030\014 \001(\0132-.mesosphere.mar" +
+      "athon.MarathonTask.Reservation\022>\n\tcondit" +
+      "ion\030\r \001(\0162+.mesosphere.marathon.Marathon" +
+      "Task.Condition\032\231\004\n\013Reservation\022\030\n\020local_" +
+      "volume_ids\030\001 \003(\t\022B\n\005state\030\002 \002(\01323.mesosp",
+      "here.marathon.MarathonTask.Reservation.S" +
+      "tate\032\253\003\n\005State\022F\n\004type\030\001 \002(\01628.mesospher" +
+      "e.marathon.MarathonTask.Reservation.Stat" +
+      "e.Type\022L\n\007timeout\030\002 \001(\0132;.mesosphere.mar" +
+      "athon.MarathonTask.Reservation.State.Tim" +
+      "eout\032\303\001\n\007Timeout\022\021\n\tinitiated\030\001 \002(\003\022\020\n\010d" +
+      "eadline\030\002 \002(\003\022R\n\006reason\030\003 \002(\0162B.mesosphe" +
+      "re.marathon.MarathonTask.Reservation.Sta" +
+      "te.Timeout.Reason\"?\n\006Reason\022\035\n\031RelaunchE" +
+      "scalationTimeout\020\001\022\026\n\022ReservationTimeout",
+      "\020\002\"F\n\004Type\022\007\n\003New\020\001\022\014\n\010Launched\020\002\022\r\n\tSus" +
+      "pended\020\003\022\013\n\007Garbage\020\004\022\013\n\007Unknown\020\005\"\330\001\n\tC" +
+      "ondition\022\013\n\007Invalid\020\000\022\014\n\010Reserved\020\001\022\013\n\007C" +
+      "reated\020\002\022\t\n\005Error\020\003\022\n\n\006Failed\020\004\022\014\n\010Finis" +
+      "hed\020\005\022\n\n\006Killed\020\006\022\013\n\007Killing\020\007\022\010\n\004Lost\020\010" +
+      "\022\013\n\007Running\020\t\022\013\n\007Staging\020\n\022\014\n\010Starting\020\013" +
+      "\022\017\n\013Unreachable\020\014\022\010\n\004Gone\020\r\022\013\n\007Unknown\020\016" +
+      "\022\013\n\007Dropped\020\017\"M\n\013MarathonApp\022\014\n\004name\030\001 \001" +
+      "(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.marathon." +
+      "MarathonTask\"1\n\rContainerInfo\022\017\n\005image\030\001",
+      " \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\345\t\n\025ExtendedCont" +
+      "ainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Containe" +
+      "rInfo.Type\022,\n\007volumes\030\002 \003(\0132\033.mesosphere" +
+      ".marathon.Volume\022M\n\rport_mappings\030\006 \003(\0132" +
+      "6.mesosphere.marathon.ExtendedContainerI" +
+      "nfo.PortMapping\022E\n\006docker\030\003 \001(\01325.mesosp" +
+      "here.marathon.ExtendedContainerInfo.Dock" +
+      "erInfo\022O\n\013mesosDocker\030\004 \001(\0132:.mesosphere" +
+      ".marathon.ExtendedContainerInfo.MesosDoc" +
+      "kerInfo\022K\n\tmesosAppC\030\005 \001(\01328.mesosphere.",
+      "marathon.ExtendedContainerInfo.MesosAppC" +
+      "Info\032\320\003\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022G\n\020OB" +
+      "SOLETE_network\030\002 \001(\0162\'.mesos.ContainerIn" +
+      "fo.DockerInfo.Network:\004HOST\022o\n\026OBSOLETE_" +
+      "port_mappings\030\003 \003(\0132O.mesosphere.maratho" +
+      "n.ExtendedContainerInfo.DockerInfo.Obsol" +
+      "eteDockerPortMapping\022\031\n\nprivileged\030\004 \001(\010" +
+      ":\005false\022$\n\nparameters\030\005 \003(\0132\020.mesos.Para" +
+      "meter\022\030\n\020force_pull_image\030\006 \001(\010\032\235\001\n\031Obso" +
+      "leteDockerPortMapping\022\021\n\thost_port\030\001 \001(\r",
+      "\022\026\n\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001" +
+      "(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos" +
+      ".Label\022\027\n\014service_port\030d \001(\r:\0010\032a\n\017Mesos" +
+      "DockerInfo\022\r\n\005image\030\001 \002(\t\022%\n\ncredential\030" +
+      "\002 \001(\0132\021.mesos.Credential\022\030\n\020force_pull_i" +
+      "mage\030\003 \001(\010\032b\n\rMesosAppCInfo\022\r\n\005image\030\001 \002" +
+      "(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.L" +
+      "abel\022\030\n\020force_pull_image\030\004 \001(\010\032\246\001\n\013PortM" +
+      "apping\022\021\n\thost_port\030\001 \001(\r\022\026\n\016container_p" +
+      "ort\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014\n\004name\030\004 \001(",
+      "\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.Label\022\027\n\014servi" +
+      "ce_port\030\006 \001(\r:\0010\022\025\n\rnetwork_names\030\007 \003(\t\"" +
+      "\377\003\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume." +
+      "Mode\022\026\n\016container_path\030\001 \002(\t\022\021\n\thost_pat" +
+      "h\030\002 \001(\t\022\033\n\005image\030\004 \001(\0132\014.mesos.Image\022D\n\n" +
+      "persistent\030\005 \001(\01320.mesosphere.marathon.V" +
+      "olume.PersistentVolumeInfo\022@\n\010external\030\006" +
+      " \001(\0132..mesosphere.marathon.Volume.Extern" +
+      "alVolumeInfo\032\237\001\n\024PersistentVolumeInfo\022\014\n" +
+      "\004size\030\001 \002(\004\0222\n\004type\030\002 \001(\0162$.mesos.Resour",
+      "ce.DiskInfo.Source.Type\0224\n\013constraints\030\003" +
+      " \003(\0132\037.mesosphere.marathon.Constraint\022\017\n" +
+      "\007maxSize\030\004 \001(\004\032a\n\022ExternalVolumeInfo\022\014\n\004" +
+      "size\030\001 \001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002" +
+      "(\t\022\035\n\007options\030\004 \003(\0132\014.mesos.Label\")\n\020Eve" +
+      "ntSubscribers\022\025\n\rcallback_urls\030\001 \003(\t\"\274\001\n" +
+      "\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030" +
+      "\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.m" +
+      "esosphere.marathon.StorageVersion.Storag" +
+      "eFormat:\006LEGACY\"2\n\rStorageFormat\022\n\n\006LEGA",
+      "CY\020\000\022\025\n\021PERSISTENCE_STORE\020\001\"Z\n\031UpgradeSt" +
+      "rategyDefinition\022\035\n\025minimumHealthCapacit" +
+      "y\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:\0011\"" +
+      "\236\003\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versi" +
+      "on\030\002 \002(\t\022?\n\017deprecated_apps\030\003 \003(\0132&.meso" +
+      "sphere.marathon.ServiceDefinition\0222\n\017dep" +
+      "recated_pods\030\010 \003(\0132\031.mesosphere.marathon" +
+      ".Json\0224\n\006groups\030\004 \003(\0132$.mesosphere.marat" +
+      "hon.GroupDefinition\022\024\n\014dependencies\030\005 \003(" +
+      "\t\022?\n\004apps\030\006 \003(\01321.mesosphere.marathon.Gr",
+      "oupDefinition.AppReference\022?\n\004pods\030\007 \003(\013" +
+      "21.mesosphere.marathon.GroupDefinition.A" +
+      "ppReference\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t\022" +
+      "\017\n\007version\030\002 \002(\t\"\371\001\n\030DeploymentPlanDefin" +
+      "ition\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023" +
+      "deprecated_original\030\004 \001(\0132$.mesosphere.m" +
+      "arathon.GroupDefinition\022?\n\021deprecated_ta" +
+      "rget\030\005 \001(\0132$.mesosphere.marathon.GroupDe" +
+      "finition\022\035\n\025original_root_version\030\006 \001(\t\022" +
+      "\033\n\023target_root_version\030\007 \001(\t\"\306\001\n\013TaskFai",
+      "lure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r." +
+      "mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.Task" +
+      "State\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000" +
+      "\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007" +
+      "slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStore" +
+      "Entry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005val" +
+      "ue\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n\023" +
+      "ResidencyDefinition\022(\n relaunchEscalatio" +
+      "nTimeoutSeconds\030\001 \001(\003\022S\n\020taskLostBehavio" +
+      "r\030\002 \001(\01629.mesosphere.marathon.ResidencyD",
+      "efinition.TaskLostBehavior\"@\n\020TaskLostBe" +
+      "havior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WA" +
+      "IT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006so" +
+      "urce\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227\n\004type\030\001" +
+      " \002(\0162).mesosphere.marathon.EnvVarReferen" +
+      "ce.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\013" +
+      "2$.mesosphere.marathon.EnvVarSecretRef\"\037" +
+      "\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVa" +
+      "rSecretRef\022\020\n\010secretId\030\001 \002(\t*3\n\rKillSele" +
+      "ction\022\021\n\rYoungestFirst\020\001\022\017\n\013OldestFirst\020",
+      "\002B\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -47981,7 +48185,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "OBSOLETEIpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", "UnreachableStrategy", "KillSelection", "Networks", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "OBSOLETEIpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", "UnreachableStrategy", "KillSelection", "Networks", "Tty", });
           internal_static_mesosphere_marathon_UnreachableStrategy_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_mesosphere_marathon_UnreachableStrategy_fieldAccessorTable = new

@@ -4,7 +4,7 @@ package state
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ Resources, TTY }
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
@@ -299,6 +299,17 @@ class AppDefinitionTest extends UnitTest {
           "foo" -> "bar".toEnvVar,
           "ssh" -> EnvVarSecretRef("psst")
         ),
+        versionInfo = fullVersion
+      )
+      val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
+      assert(result == app, s"expected $app instead of $result")
+    }
+
+    "Proto round trip for tty" in {
+      val app = AppDefinition(
+        id = runSpecId,
+        cmd = Some("true"),
+        tty = Some(TTY()),
         versionInfo = fullVersion
       )
       val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
