@@ -1,5 +1,26 @@
 #!/usr/bin/env groovy
 
+/*
+ If you modify this file, you can't quite test it with the regular pipeline, instead,
+ perform the following:
+
+ - Clone the current public-marathon-phabricator-pipeline as <user>-marathon-d<rev>
+ - Push your branch and set the job to pull from your branch instead of master.
+ - Switch the checkout stage to use "checkout scm" and copy the build parameters
+   from a previous run of public-marathon-phabricator-pipeline for your diff. Now you
+   can test whenever you'd like just by hitting rebuild.
+   e.g.
+   {{{
+   stage("Checkout D$REVISION_ID($DIFF_ID)") {
+     checkout scm
+     m = load('marathon.groovy')
+   }
+   }}}
+
+ - Don't forget to push/update and undo the last piece before you submit.
+ - If you need to test it against master too, name your branch with pipelines/ as a prefix.
+ */
+
 /* BEGIN: Things defined in marathon.groovy that have to be duplicated because we don't have marathon.groovy available at the time they are needed. */
 // Install job-level dependencies that aren't specific to the build and
 // can be required as part of checkout and should be applied before knowing
@@ -84,11 +105,15 @@ ansiColor('gnome-terminal') {
           m.publish_test_coverage("Integration Test Coverage")
         }
       }
-      stage("Assemble Binaries") {
-        m.assembly()
-      }
       stage("Package Binaries") {
         m.package_binaries()
+      }
+      stage("Publish Artifacts") {
+        if (env.PUBLISH_SNAPSHOT == "true") {
+          m.publish_artifacts()
+        } else {
+          echo "Skipping Artifact Publishing, snapshot publishing not requested."
+        }
       }
       stage("Unstable Test") {
         if (m.has_unstable_tests()) {

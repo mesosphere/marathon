@@ -13,9 +13,9 @@ object Dependencies {
   )
 
   val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
-  val excludeLog4j = ExclusionRule(organization = "log4j")
-  val excludeJCL = ExclusionRule(organization = "commons-logging")
-  val excludeAkkaHttpExperimental = ExclusionRule(name = "akka-http-experimental_2.11")
+  val excludeLog4j = ExclusionRule(organization = "log4j", name = "log4j")
+  val excludeJCL = ExclusionRule(organization = "commons-logging", name = "commons-logging")
+  val excludeAkkaHttpExperimental = ExclusionRule(organization = "com.typesafe.akka", name = "akka-http-experimental_2.11")
 
   val marathon = (Seq(
     // runtime
@@ -81,10 +81,10 @@ object Dependency {
     val Alpakka  = "0.6"
     val Chaos = "0.8.8"
     val Guava = "19.0"
-    // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
     val Mesos = "1.2.0"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.2.0-2.0.6"
+    val OpenJDK = "openjdk:8u121-jdk"
     val Akka = "2.4.17"
     val ApacheCommonsCompress = "1.13"
     val ApacheCommonsIO = "2.4"

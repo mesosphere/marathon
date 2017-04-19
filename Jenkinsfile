@@ -55,13 +55,10 @@ node('JenkinsMarathonCI-Debian8-2017-03-21') {
             allowEmptyArchive: true)
       }
     }
-    stage("4. Assemble Runnable Binaries") {
-      m.assembly()
-    }
-    stage("5. Package Binaries") {
+    stage("4. Package Binaries") {
       m.package_binaries()
     }
-    stage("6. Run Unstable Tests") {
+    stage("5. Run Unstable Tests") {
       if (m.has_unstable_tests()) {
         try {
           m.unstable_test()
@@ -76,38 +73,14 @@ node('JenkinsMarathonCI-Debian8-2017-03-21') {
         }
       }
     }
-    stage("7. Archive Artifacts") {
+    stage("6. Archive Artifacts") {
       archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
-      archiveArtifacts artifacts: 'target/marathon-runnable.jar', allowEmptyArchive: true
-      archiveArtifacts artifacts: "target/marathon-${gitVersion}.tgz", allowEmptyArchive: false
-      archiveArtifacts artifacts: "packaging/marathon*.deb", allowEmptyArchive: false
-      archiveArtifacts artifacts: "packaging/marathon*.rpm", allowEmptyArchive: false
-      step([
-          $class: 'S3BucketPublisher',
-          entries: [[
-              sourceFile: "target/marathon-*.tgz",
-              bucket: 'marathon-artifacts',
-              selectedRegion: 'us-west-2',
-              noUploadOnFailure: true,
-              managedArtifacts: true,
-              flatten: true,
-              showDirectlyInBrowser: false,
-              keepForever: true,
-          ]],
-          profileName: 'marathon-artifacts',
-          dontWaitForConcurrentBuildCompletion: false,
-          consoleLogLevel: 'INFO',
-          pluginFailureResultConstraint: 'FAILURE'
-      ])
+      archiveArtifacts artifacts: 'target/universal/marathon-*.zip', allowEmptyArchive: false
+      archiveArtifacts artifacts: 'target/universal/marathon-*.txz', allowEmptyArchive: false
+      archiveArtifacts artifacts: "taget/packages/*", allowEmptyArchive: false
     }
-    // Only create latest-dev snapshot for master.
-    if (env.BRANCH_NAME == "master") {
-      stage("8. Publish Docker Image Snaphot") {
-        docker.image("mesosphere/marathon:${gitVersion}").tag("latest-dev")
-        docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
-          docker.image("mesosphere/marathon:latest-dev").push()
-        }
-      }
+    stage("7. Publish Artifacts") {
+      m.publish_artifacts()
     }
   } catch (Exception err) {
     currentBuild.result = 'FAILURE'

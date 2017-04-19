@@ -3,7 +3,7 @@
 def ignore_error(block) {
   try {
     block()
-  } catch(err) {
+  } catch (err) {
 
   }
   return this
@@ -90,7 +90,6 @@ def install_dependencies() {
   // JQ is broken in the image
   sh "curl -L https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 > /tmp/jq && sudo mv /tmp/jq /usr/bin/jq && sudo chmod +x /usr/bin/jq"
   // install ammonite (scala shell)
-  sh """mkdir -p ~/.ammonite && curl -L -o ~/.ammonite/predef.sc https://git.io/v6r5y && mkdir -p ~/.ammonite && curl -L -o ~/.ammonite/predef.sc https://git.io/v6r5y"""
   sh """sudo curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm"""
   return this
 }
@@ -139,7 +138,7 @@ def test() {
 
 def integration_test() {
   try {
-    timeout(time: 30, unit: 'MINUTES') {
+    timeout(time: 60, unit: 'MINUTES') {
       withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
         STATUS = sh(script: """sudo -E sbt -Dsbt.log.format=false '; clean; coverage; integration:test; mesos-simulation/integration:test' """, returnStatus: true)
         sh """sudo -E sbt -Dsbt.log.format=false '; set coverageFailOnMinimum := false; coverageReport'"""
@@ -178,37 +177,107 @@ def unstable_test() {
 }
 
 def assembly() {
-  sh "sudo -E sbt assembly"
-  sh "sudo bin/build-distribution"
+  return this
 }
 
 def package_binaries() {
-  gitVersion = sh(returnStdout: true, script: 'git describe --tags --always').trim()
+  sh("sudo rm -f target/packages/*")
+  sh("sudo sbt packageAll")
+  return this
+}
+
+def is_phabricator_build() {
+  return "".equals(env.DIFF_ID)
+}
+
+def is_release_build(gitTag) {
+  if (gitTag.contains("SNAPSHOT") || gitTag.contains("g")) {
+    return false
+  } else if (env.BRANCH_NAME == null) {
+    return false
+  } else if (env.BRANCH_NAME.startsWith("releases/")) {
+    return true
+  }
+}
+
+def publish_artifacts() {
+  gitTag = sh(returnStdout: true, script: "git describe --tags --always").trim().replaceFirst("v", "")
 
   parallel(
-      "Tar Binaries": {
-        sh """sudo tar -czv -f "target/marathon-${gitVersion}.tgz" \
-                      Dockerfile \
-                      README.md \
-                      LICENSE \
-                      bin \
-                      examples \
-                      docs \
-                      target/scala-2.*/marathon-assembly-*.jar
-                 """
-      },
-      "Create Debian and Red Hat Package": {
-        dir("packaging") {
-          sh "sudo make all"
+      docker: {
+        // Only create latest-dev snapshot for master.
+        // TODO: Docker 1.12 doesn't support tag -f and the jenkins docker plugin still passes it in.
+        if (env.BRANCH_NAME == "master" && !is_phabricator_build()) {
+          sh "docker tag mesosphere/marathon:${gitTag} mesosphere/marathon:latest-dev"
+          docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
+            sh "docker push mesosphere/marathon:latest-dev"
+          }
+        } else if (env.PUBLISH_SNAPSHOT == "true" || (is_release_build(gitTag) && !is_phabricator_build())) {
+          docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
+            sh "docker push mesosphere/marathon:${gitTag}"
+          }
         }
       },
-      "Build Docker Image": {
-        // target is in .dockerignore so we just copy the jar before.
-        sh "cp target/*/marathon-assembly-*.jar ."
-        mesosVersion = sh(returnStdout: true, script: "sed -n 's/^.*MesosDebian = \"\\(.*\\)\"/\\1/p' <./project/Dependencies.scala").trim()
-        docker.build("mesosphere/marathon:${gitVersion}", "--build-arg MESOS_VERSION=${mesosVersion} .")
-      }
-  )
+      s3: {
+        if (env.BRANCH_NAME == "master" || env.PUBLISH_SNAPSHOT == "true" || is_release_build(gitTag)) {
+          storageClass = "STANDARD_IA"
+          // TODO: we could use marathon-artifacts for both profile and buckets, but we would
+          // need to either setup a bucket policy for public-read on the s3://marathon-artifacts/snapshots
+          // We should probably prefer downloads as this allows us to share snapshot builds
+          // with anyone. The directory listing isn't public anyways.
+          profile = "aws-production"
+          bucket = "downloads.mesosphere.io/marathon/snapshots/"
+
+          if (is_release_build(gitTag)) {
+            storageClass = "STANDARD"
+            bucket = "downloads.mesosphere.io/marathon/${gitTag}/"
+          }
+          step([
+              $class: 'S3BucketPublisher',
+              entries: [[
+                  sourceFile: "target/universal/marathon-*.txz",
+                  bucket: bucket,
+                  selectedRegion: 'us-west-2',
+                  noUploadOnFailure: true,
+                  managedArtifacts: false,
+                  flatten: true,
+                  showDirectlyInBrowser: true,
+                  keepForever: true,
+                  storageClass: storageClass,
+              ],
+                  [
+                      sourceFile: "target/universal/marathon-*.zip",
+                      bucket: bucket,
+                      selectedRegion: 'us-west-2',
+                      noUploadOnFailure: true,
+                      managedArtifacts: false,
+                      flatten: true,
+                      showDirectlyInBrowser: true,
+                      keepForever: true,
+                      storageClass: storageClass,
+                  ],
+              ],
+              profileName: profile,
+              dontWaitForConcurrentBuildCompletion: false,
+              consoleLogLevel: 'INFO',
+              pluginFailureResultConstraint: 'FAILURE'
+          ])
+        }
+      },
+      nativePackages: {
+        if (env.BRANCH_NAME == "master" || env.PUBLISH_SNAPSHOT == "true" || is_release_build(gitTag)) {
+          sshagent(credentials: ['0f7ec9c9-99b2-4797-9ed5-625572d5931d']) {
+            echo "Uploading Artifacts to package server"
+            // we rsync a directory first, then copy over the binaries into specific folders so
+            // that the cron job won't try to publish half-uploaded RPMs/DEBs
+            sh """ssh -o StrictHostKeyChecking=no pkgmaintainer@repo1.hw.ca1.mesosphere.com "mkdir -p ~/repo/incoming/marathon-${gitTag}" """
+            sh "rsync -avzP target/packages/*${gitTag}* target/packages/*.rpm pkgmaintainer@repo1.hw.ca1.mesosphere.com:~/repo/incoming/marathon-${gitTag}"
+            sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "env GIT_TAG=${gitTag} bash -s --" < scripts/publish_packages.sh """
+            sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "rm -rf ~/repo/incoming/marathon-${gitTag}" """
+          }
+        }
+      })
+  return this
 }
 
 /**

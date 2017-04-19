@@ -2,6 +2,17 @@
 
 ### Breaking Changes
 
+#### Packaging standardized
+
+We now publish more normalized packages that attempt to follow Linux Standard Base Guidelines and use sbt-native-packager to achieve this.
+As a result of this and the many historic ways of passing options into marathon, we will only read `/etc/default/marathon` when starting up.
+This file, like `/etc/sysconfig/marathon`, has all marathon command line options as "MARATHON_XXX=YYY" which will translate to `--xx=yyy`.
+We no longer support /etc/marathon/conf which was a set of files that would get translated into command line arguments. In addition,
+we no longer assume that if there is no zk/master argument passed in, then both are running on localhost.
+
+If support for any of the above is important to you, please file a JIRA and/or create a PR/Patch.
+
+
 #### App JSON Fields Changed or Moved.
 
 Marathon will continue to *accept* the app JSON as it did in 1.4;
