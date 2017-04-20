@@ -555,7 +555,7 @@ def cluster_info(mom_name='marathon-user'):
     # see if there is a MoM
 
     if service_available_predicate(mom_name):
-        with marathon_on_marathon(mom_name):
+        with shakedown.marathon_on_marathon(mom_name):
             try:
                 client = marathon.create_client()
                 about = client.get_about()

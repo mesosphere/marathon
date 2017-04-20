@@ -12,7 +12,7 @@ from datetime import timedelta
 # this is intentional import *
 # it imports all the common test_ methods which are to be tested on root and mom
 from marathon_common_tests import *
-from utils import marathon_on_marathon, fixture_dir, get_resource
+from utils import fixture_dir, get_resource
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
@@ -21,7 +21,7 @@ pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 def marathon_service_name():
 
     common.ensure_mom()
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         yield 'marathon-user'
         shakedown.wait_for_service_endpoint('marathon-user')
         clear_marathon()
@@ -31,12 +31,12 @@ def setup_module(module):
     common.ensure_mom()
     common.wait_for_marathon_up('marathon-user')
     common.cluster_info()
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         clear_marathon()
 
 
 def teardown_module(module):
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         try:
             clear_marathon()
         except:
@@ -52,6 +52,7 @@ def teardown_module(module):
 # MoM only tests
 ###########
 
+
 @private_agents(2)
 def test_mom_when_mom_agent_bounced():
     """ Launch an app from MoM and restart the node MoM is on.
@@ -60,7 +61,7 @@ def test_mom_when_mom_agent_bounced():
     mom_ip = ip_of_mom()
     host = ip_other_than_mom()
     pin_to_host(app_def, host)
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
         shakedown.deployment_wait()
@@ -82,7 +83,7 @@ def test_mom_when_mom_process_killed():
     app_def = app('agent-failure')
     host = ip_other_than_mom()
     pin_to_host(app_def, host)
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
         shakedown.deployment_wait()
@@ -109,7 +110,7 @@ def test_mom_with_network_failure():
 
     app_def = get_resource("{}/large-sleep.json".format(fixture_dir()))
 
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
         shakedown.wait_for_task("marathon-user", "sleep")
@@ -133,7 +134,7 @@ def test_mom_with_network_failure():
     shakedown.wait_for_service_endpoint('marathon-user')
     shakedown.wait_for_task("marathon-user", "sleep")
 
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         client = marathon.create_client()
         shakedown.wait_for_task("marathon-user", "sleep")
         tasks = client.get_tasks('sleep')
@@ -154,7 +155,7 @@ def test_mom_with_network_failure_bounce_master():
 
     app_def = get_resource("{}/large-sleep.json".format(fixture_dir()))
 
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
         shakedown.wait_for_task("marathon-user", "sleep")
@@ -182,7 +183,7 @@ def test_mom_with_network_failure_bounce_master():
     shakedown.wait_for_service_endpoint('marathon-user')
     shakedown.wait_for_task("marathon-user", "sleep")
 
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         client = marathon.create_client()
         shakedown.wait_for_task("marathon-user", "sleep")
         tasks = client.get_tasks('sleep')
@@ -201,7 +202,7 @@ def test_framework_unavailable_on_mom():
         shakedown.deployment_wait()
         shakedown.wait_for_service_endpoint_removal('pyfw')
 
-    with marathon_on_marathon():
+    with shakedown.marathon_on_marathon():
         delete_all_apps_wait()
         client = marathon.create_client()
         client.add_app(common.fake_framework_app())

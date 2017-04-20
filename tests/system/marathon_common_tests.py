@@ -16,9 +16,9 @@ from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
 from datetime import timedelta
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
-                       marthon_version_less_than)
+                       marthon_version_less_than, mom_version_less_than)
 from urllib.parse import urljoin
-from utils import (marathon_on_marathon, mom_version_less_than, fixture_dir, get_resource)
+from utils import fixture_dir, get_resource
 
 
 def test_launch_mesos_container():
