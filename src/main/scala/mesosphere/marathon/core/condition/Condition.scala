@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.condition
+package mesosphere.marathon
+package core.condition
 
 import play.api.libs.json.Json
 import org.apache.mesos.Protos.{ TaskState => MesosTaskState }

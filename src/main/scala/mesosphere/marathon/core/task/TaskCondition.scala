@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task
+package mesosphere.marathon
+package core.task
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.state.TaskConditionMapping

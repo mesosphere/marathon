@@ -2,11 +2,13 @@ package mesosphere.marathon
 package integration.facades
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.client.RequestBuilding.{ Get, Post }
+import akka.http.scaladsl.model.HttpResponse
+import akka.stream.Materializer
+import com.typesafe.scalalogging.StrictLogging
+import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon.integration.setup.RestResult
-import mesosphere.marathon.integration.setup.SprayHttpResponse._
-import spray.client.pipelining._
-import spray.http.HttpResponse
-import spray.httpx.PlayJsonSupport
+import mesosphere.marathon.integration.setup.AkkaHttpResponse._
 
 import scala.concurrent.Await._
 import scala.concurrent.Future
@@ -66,30 +68,27 @@ object MesosFacade {
   case class ITFrameworks(frameworks: Seq[ITFramework])
 }
 
-class MesosFacade(url: String, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem)
-    extends PlayJsonSupport {
+class MesosFacade(url: String, implicit val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
+    extends PlayJsonSupport with StrictLogging {
 
   import MesosFacade._
   import MesosFormats._
   import system.dispatcher
 
   def state: RestResult[ITMesosState] = {
-    val pipeline = sendReceive ~> read[ITMesosState]
-    result(pipeline(Get(s"$url/state.json")), waitTime)
+    logger.info(s"fetching state from $url")
+    result(requestFor[ITMesosState](Get(s"$url/state.json")), waitTime)
   }
 
   def frameworkIds(): RestResult[Seq[String]] = {
-    val pipeline = sendReceive ~> read[ITFrameworks]
-    result(pipeline(Get(s"$url/frameworks")), waitTime).map(_.frameworks.map(_.id))
+    result(requestFor[ITFrameworks](Get(s"$url/frameworks")), waitTime).map(_.frameworks.map(_.id))
   }
 
   def terminate(frameworkId: String): HttpResponse = {
-    val pipeline = sendReceive
-    result(pipeline(Post(s"$url/terminate", s"frameworkId=$frameworkId")), waitTime)
+    result(request(Post(s"$url/terminate", s"frameworkId=$frameworkId")), waitTime).value
   }
 
   def teardown(frameworkId: String): Future[HttpResponse] = {
-    val pipeline = sendReceive
-    pipeline(Post(s"$url/teardown", s"frameworkId=$frameworkId"))
+    request(Post(s"$url/teardown", s"frameworkId=$frameworkId")).map(_.value)
   }
 }

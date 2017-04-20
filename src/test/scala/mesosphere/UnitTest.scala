@@ -1,15 +1,24 @@
 package mesosphere
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ LinkedBlockingDeque, TimeUnit }
 
 import akka.actor.{ ActorSystem, Scheduler }
-import akka.stream.ActorMaterializer
-import akka.testkit.TestKitBase
+import akka.stream.{ ActorMaterializer, Materializer }
+import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
+import com.wix.accord.{ Failure, Result, Success }
+import kamon.Kamon
+import mesosphere.marathon.Normalization
+import mesosphere.marathon.ValidationFailedException
+import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
+import org.scalatest.matchers.{ Matcher, MatchResult }
 import org.scalatest._
+import org.scalatest.concurrent.{ JavaFutures, ScalaFutures }
+import org.scalatest.time.{ Seconds, Span }
+import mesosphere.marathon.api.v2.ValidationHelper
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -51,32 +60,89 @@ trait RetryOnFailed extends TestSuite with Retries {
   override def withFixture(test: NoArgTest): Outcome = withRetryOnFailure { super.withFixture(test) }
 }
 
+trait ValidationTestLike extends Validation {
+  this: Assertions =>
+
+  protected implicit val normalizeResult: Normalization[Result] = Normalization {
+    // normalize failures => human readable error messages
+    case f: Failure => Failure(f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
+    case x => x
+  }
+
+  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
+    // handle RAML validation errors
+    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
+    case th => throw th
+  }.get
+
+  def containViolation(tuple: (String, String)): Matcher[Result] = containViolation(tuple._1, tuple._2)
+
+  def containViolation(path: String, message: String): Matcher[Result] = {
+    Matcher {
+      case Success =>
+        MatchResult(
+          false,
+          s"result had no violations; expected ${path} -> ${message}",
+          s"result was success")
+
+      case f: Failure =>
+        val violations = ValidationHelper.getAllRuleConstrains(f)
+
+        MatchResult(
+          violations.exists { v =>
+            v.path.contains(path) && v.message == message
+          },
+          s"Violations:\n${violations.mkString("\n")} did not contain ${path} -> ${message}",
+          s"Violation contains ${path} -> ${message}"
+        )
+    }
+  }
+}
+
 /**
   * Base trait for all unit tests in WordSpec style with common matching/before/after and Option/Try/Future
   * helpers all mixed in.
   */
 trait UnitTestLike extends WordSpecLike
-  with FutureTestSupport
-  with GivenWhenThen
-  with Matchers
-  with BeforeAndAfter
-  with BeforeAndAfterEach
-  with OptionValues
-  with TryValues
-  with AppendedClues
-  with StrictLogging
-  with Mockito
-  with ExitDisabledTest
+    with GivenWhenThen
+    with ScalaFutures
+    with JavaFutures
+    with Matchers
+    with BeforeAndAfter
+    with BeforeAndAfterEach
+    with OptionValues
+    with TryValues
+    with AppendedClues
+    with StrictLogging
+    with Mockito
+    with ExitDisabledTest {
+
+  override def beforeAll(): Unit = {
+    Kamon.start()
+    super.beforeAll()
+  }
+
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(3, Seconds))
+}
 
 abstract class UnitTest extends WordSpec with UnitTestLike
 
-trait AkkaTest extends Suite with BeforeAndAfterAll with FutureTestSupport with TestKitBase {
-  protected lazy val akkaConfig: Config = ConfigFactory.load
-  implicit lazy val system = ActorSystem(suiteName, akkaConfig)
+trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
+  protected lazy val akkaConfig: Config = ConfigFactory.parseString(
+    s"""
+      |akka.test.default-timeout=${patienceConfig.timeout.millisPart}
+    """.stripMargin).withFallback(ConfigFactory.load())
+  implicit lazy val system: ActorSystem = {
+    Kamon.start()
+    ActorSystem(suiteName, akkaConfig)
+  }
   implicit lazy val scheduler: Scheduler = system.scheduler
-  implicit lazy val mat = ActorMaterializer()
+  implicit lazy val mat: Materializer = ActorMaterializer()
   implicit lazy val ctx: ExecutionContextExecutor = system.dispatcher
-  implicit val askTimeout = Timeout(patienceConfig.timeout.toMillis, TimeUnit.MILLISECONDS)
+  implicit val askTimeout: Timeout = Timeout(patienceConfig.timeout.toMillis, TimeUnit.MILLISECONDS)
+
+  def newTestActor() =
+    TestActorRef[TestActor](TestActor.props(new LinkedBlockingDeque()))
 
   abstract override def afterAll(): Unit = {
     super.afterAll()
@@ -85,15 +151,20 @@ trait AkkaTest extends Suite with BeforeAndAfterAll with FutureTestSupport with 
   }
 }
 
-trait AkkaUnitTestLike extends UnitTestLike with AkkaTest
-
 abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 
-trait IntegrationTestLike extends UnitTestLike with IntegrationFutureTestSupport
+trait IntegrationTestLike extends UnitTestLike {
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(90, Seconds), interval = Span(2, Seconds))
+}
 
 abstract class IntegrationTest extends WordSpec with IntegrationTestLike with RetryOnFailed
 
-trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike
+trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike {
+  protected override lazy val akkaConfig: Config = ConfigFactory.parseString(
+    s"""
+       |akka.test.default-timeout=${patienceConfig.timeout.millisPart}
+    """.stripMargin).withFallback(ConfigFactory.load())
+}
 
 abstract class AkkaIntegrationTest extends IntegrationTest with AkkaIntegrationTestLike
 

@@ -19,7 +19,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = f.noTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = 0
+        scaleTo = 0,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "lead to ScalingProposition(None, _)" in {
@@ -35,7 +36,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = Seq(instance),
         toKill = Some(Seq(instance)),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = 0
+        scaleTo = 0,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "lead to ScalingProposition(Some(_), _)" in {
@@ -50,7 +52,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = f.noTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = 0
+        scaleTo = 0,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "lead to ScalingProposition(_, None)" in {
@@ -65,7 +68,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = f.noTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = -42
+        scaleTo = -42,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "lead to ScalingProposition(_, None)" in {
@@ -80,7 +84,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = f.noTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = 42
+        scaleTo = 42,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "lead to ScaleProposition(_ Some(_)" in {
@@ -95,7 +100,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3)),
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = 5
+        scaleTo = 5,
+        killSelection = KillSelection.DefaultKillSelection
       )
       "determine tasks to kill" in {
         proposition.tasksToKill shouldBe empty
@@ -113,7 +119,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = runningTasks,
         toKill = Some(f.noTasks),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = 0
+        scaleTo = 0,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "determine tasks to kill" in {
@@ -137,7 +144,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = Seq(task_1, task_2, task_3),
         toKill = Some(Seq(task_2, task_3, alreadyKilled)),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = 3
+        scaleTo = 3,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "determine tasks to kill" in {
@@ -162,7 +170,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
         toKill = Some(Seq(alreadyKilled)),
         meetConstraints = f.noConstraintsToMeet,
-        scaleTo = 3
+        scaleTo = 3,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "determine tasks to kill" in {
@@ -186,7 +195,8 @@ class ScalingPropositionTest extends UnitTest {
         runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
         toKill = Some(Seq(instance_2)),
         meetConstraints = f.killToMeetConstraints(instance_3),
-        scaleTo = 1
+        scaleTo = 1,
+        killSelection = KillSelection.DefaultKillSelection
       )
 
       "determine tasks to kill" in {

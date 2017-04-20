@@ -1,10 +1,13 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.state.{ DiskType, PersistentVolume, DiskSource }
+import mesosphere.marathon.raml._
+import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume }
+import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.Resource.DiskInfo
-import org.apache.mesos.Protos.Resource.ReservationInfo
+import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
+
+import scala.collection.immutable.Seq
 
 /** The result of an attempted scalar resource match. */
 sealed trait ScalarMatchResult {
@@ -160,11 +163,18 @@ case class DiskResourceNoMatch(
     failedWith: Either[Double, PersistentVolume],
     scope: ScalarMatchResult.Scope) extends ScalarMatchResult {
 
-  import ResourceHelpers._
+  import ResourceUtil.RichResource
 
   def resourceName: String = Resource.DISK
   def requiredValue: Double = {
     failedWith.right.map(_.persistent.size.toDouble).merge + consumed.foldLeft(0.0)(_ + _.consumedValue)
+  }
+
+  def requestedStringification(requested: Either[Double, PersistentVolume]): String = requested match {
+    case Left(value) => s"disk:root:${value}"
+    case Right(vol) =>
+      val constraintsJson: Seq[Seq[String]] = vol.persistent.constraints.map(_.toRaml[Seq[String]])(collection.breakOut)
+      s"disk:${vol.persistent.`type`.toString}:${vol.persistent.size}:[${constraintsJson.mkString(",")}]"
   }
 
   def matches: Boolean = false

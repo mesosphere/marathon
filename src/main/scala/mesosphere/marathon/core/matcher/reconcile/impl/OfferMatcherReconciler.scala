@@ -36,7 +36,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
 
   private val log = LoggerFactory.getLogger(getClass)
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   override def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
 

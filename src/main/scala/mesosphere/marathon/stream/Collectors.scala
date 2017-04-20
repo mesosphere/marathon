@@ -1,4 +1,5 @@
-package mesosphere.marathon.stream
+package mesosphere.marathon
+package stream
 
 import java.util
 import java.util.function.{ BiConsumer, BinaryOperator, Function, Supplier }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.state
+package mesosphere.marathon
+package core.task.state
 
 import org.apache.mesos
 

@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.util.resource.Resource
@@ -11,6 +12,7 @@ class PublicServlet extends DefaultServlet {
   // Set resource base to serve resources from classpath available under /public/*.
   override def getInitParameter(name: String): String = name match {
     case "resourceBase" => Option(getClass.getClassLoader.getResource(path)).fold(null: String)(_.toExternalForm)
+    case "dirAllowed" => "false"
     case _ => super.getInitParameter(name)
   }
 

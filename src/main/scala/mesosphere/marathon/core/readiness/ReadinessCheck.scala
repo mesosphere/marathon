@@ -1,10 +1,11 @@
-package mesosphere.marathon.core.readiness
+package mesosphere.marathon
+package core.readiness
 
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.state.AppDefinition
-import org.apache.http.HttpStatus
+import akka.http.scaladsl.model.StatusCodes._
 
 import scala.concurrent.duration._
 
@@ -30,7 +31,7 @@ object ReadinessCheck {
   val DefaultPath = "/"
   val DefaultInterval = 30.seconds
   val DefaultTimeout = 10.seconds
-  val DefaultHttpStatusCodesForReady = Set(HttpStatus.SC_OK)
+  val DefaultHttpStatusCodesForReady = Set(OK.intValue)
   val DefaultPreserveLastResponse = false
 
   sealed trait Protocol

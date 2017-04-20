@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher
+package mesosphere.marathon
+package core.launcher
 
 import akka.Done
 import org.apache.mesos.Protos.Offer

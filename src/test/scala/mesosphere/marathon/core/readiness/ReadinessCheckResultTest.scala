@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package core.readiness
 
+import akka.http.scaladsl.model.{ ContentTypes, StatusCodes }
 import mesosphere.UnitTest
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
-import spray.http.{ ContentTypes, StatusCodes }
 
 import scala.concurrent.duration._
 
@@ -84,13 +84,13 @@ class ReadinessCheckResultTest extends UnitTest {
 
     val readyResponse = HttpResponse(
       status = 200,
-      contentType = ContentTypes.`text/plain`.value,
+      contentType = ContentTypes.`text/plain(UTF-8)`.value,
       body = "Hi"
     )
 
     val notReadyResponse = HttpResponse(
       status = 503,
-      contentType = ContentTypes.`text/plain`.value,
+      contentType = ContentTypes.`text/plain(UTF-8)`.value,
       body = "Hi"
     )
   }

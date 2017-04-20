@@ -78,17 +78,18 @@ sealed trait MarathonHealthCheck extends HealthCheckWithPort { this: HealthCheck
   def portIndex: Option[PortReference]
   def port: Option[Int]
 
-  def effectivePort(app: AppDefinition, instance: Instance): Int = {
-    def portViaIndex(task: Task): Option[Int] = portIndex.map(_(task.status.networkInfo.portAssignments(app)).effectivePort)
-
+  def effectivePort(app: AppDefinition, instance: Instance): Option[Int] = {
+    def portViaIndex(task: Task): Option[Int] = portIndex.flatMap { idx =>
+      val effectivePort = idx(task.status.networkInfo.portAssignments(app, includeUnresolved = true)).effectivePort
+      if (effectivePort == PortAssignment.NoPort) None
+      else Option(effectivePort)
+    }
     port.orElse {
       // HealthChecks are only supported for legacy App instances with exactly one task
       require(
         instance.tasksMap.size == 1,
         s"Unable to compute effective port for ${instance.instanceId} with ${instance.tasksMap.size} containers")
       portViaIndex(instance.appTask)
-    }.getOrElse {
-      throw new IllegalStateException(s"Unable to compute effective port for instance ${instance.instanceId}")
     }
   }
 }
@@ -103,18 +104,18 @@ sealed trait MesosHealthCheck extends HealthCheck {
   override protected def protoBuilder: Protos.HealthCheckDefinition.Builder =
     super.protoBuilder.setDelaySeconds(delay.toSeconds.toInt)
 
-  def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): MesosProtos.HealthCheck
+  def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.HealthCheck]
 }
 
 sealed trait MesosHealthCheckWithPorts extends HealthCheckWithPort { this: HealthCheck =>
   @SuppressWarnings(Array("OptionGet"))
-  def effectivePort(portAssignments: Seq[PortAssignment]): Int = {
-    port.getOrElse {
+  def effectivePort(portAssignments: Seq[PortAssignment]): Option[Int] = {
+    port.orElse {
       val portAssignment: Option[PortAssignment] = portIndex.flatMap {
         case intIndex: PortReference.ByIndex => Some(portAssignments(intIndex.value))
         case nameIndex: PortReference.ByName => portAssignments.find(_.portName.contains(nameIndex.value))
       }
-      portAssignment.flatMap(_.containerPort).getOrElse(portAssignment.flatMap(_.hostPort).get)
+      portAssignment.flatMap(_.containerPort).orElse(portAssignment.flatMap(_.hostPort))
     }
   }
 }
@@ -207,8 +208,8 @@ case class MesosCommandHealthCheck(
       .build
   }
 
-  def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): MesosProtos.HealthCheck = {
-    MesosProtos.HealthCheck.newBuilder
+  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.HealthCheck] = {
+    Option(MesosProtos.HealthCheck.newBuilder
       .setType(MesosProtos.HealthCheck.Type.COMMAND)
       .setIntervalSeconds(this.interval.toSeconds.toDouble)
       .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
@@ -216,7 +217,7 @@ case class MesosCommandHealthCheck(
       .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
       .setDelaySeconds(this.delay.toUnit(SECONDS))
       .setCommand(Executable.toProto(this.command))
-      .build()
+      .build())
   }
 }
 
@@ -257,21 +258,24 @@ case class MesosHttpHealthCheck(
     builder.build
   }
 
-  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): MesosProtos.HealthCheck = {
-    val httpInfoBuilder = MesosProtos.HealthCheck.HTTPCheckInfo.newBuilder()
-      .setScheme(if (protocol == Protocol.MESOS_HTTP) "http" else "https")
-      .setPort(effectivePort(portAssignments))
-    path.foreach(httpInfoBuilder.setPath)
+  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.HealthCheck] = {
+    val port = effectivePort(portAssignments)
+    port.map { healthCheckPort =>
+      val httpInfoBuilder = MesosProtos.HealthCheck.HTTPCheckInfo.newBuilder()
+        .setScheme(if (protocol == Protocol.MESOS_HTTP) "http" else "https")
+        .setPort(healthCheckPort)
+      path.foreach(httpInfoBuilder.setPath)
 
-    MesosProtos.HealthCheck.newBuilder
-      .setType(MesosProtos.HealthCheck.Type.HTTP)
-      .setIntervalSeconds(this.interval.toSeconds.toDouble)
-      .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
-      .setConsecutiveFailures(this.maxConsecutiveFailures)
-      .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
-      .setDelaySeconds(this.delay.toUnit(SECONDS))
-      .setHttp(httpInfoBuilder)
-      .build()
+      MesosProtos.HealthCheck.newBuilder
+        .setType(MesosProtos.HealthCheck.Type.HTTP)
+        .setIntervalSeconds(this.interval.toSeconds.toDouble)
+        .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
+        .setConsecutiveFailures(this.maxConsecutiveFailures)
+        .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
+        .setDelaySeconds(this.delay.toUnit(SECONDS))
+        .setHttp(httpInfoBuilder)
+        .build()
+    }
   }
 }
 
@@ -311,18 +315,21 @@ case class MesosTcpHealthCheck(
     builder.build
   }
 
-  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): MesosProtos.HealthCheck = {
-    val tcpInfoBuilder = MesosProtos.HealthCheck.TCPCheckInfo.newBuilder().setPort(effectivePort(portAssignments))
+  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.HealthCheck] = {
+    val port = effectivePort(portAssignments)
+    port.map { healthCheckPort =>
+      val tcpInfoBuilder = MesosProtos.HealthCheck.TCPCheckInfo.newBuilder().setPort(healthCheckPort)
 
-    MesosProtos.HealthCheck.newBuilder
-      .setType(MesosProtos.HealthCheck.Type.TCP)
-      .setIntervalSeconds(this.interval.toSeconds.toDouble)
-      .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
-      .setConsecutiveFailures(this.maxConsecutiveFailures)
-      .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
-      .setDelaySeconds(this.delay.toUnit(SECONDS))
-      .setTcp(tcpInfoBuilder)
-      .build()
+      MesosProtos.HealthCheck.newBuilder
+        .setType(MesosProtos.HealthCheck.Type.TCP)
+        .setIntervalSeconds(this.interval.toSeconds.toDouble)
+        .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
+        .setConsecutiveFailures(this.maxConsecutiveFailures)
+        .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
+        .setDelaySeconds(this.delay.toUnit(SECONDS))
+        .setTcp(tcpInfoBuilder)
+        .build()
+    }
   }
 }
 

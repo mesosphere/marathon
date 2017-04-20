@@ -1,6 +1,12 @@
-package mesosphere.marathon.util
+package mesosphere.marathon
+package util
+
+import java.time.Instant
 
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.async.RunContext.Expired
+import mesosphere.marathon.core.async.{ ExecutionContexts, RunContext }
+import mesosphere.marathon.test.SettableClock
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -19,6 +25,14 @@ class TimeoutTest extends AkkaUnitTest {
         val failure = Timeout(1.milli)(Future(Thread.sleep(1000))).failed.futureValue
         failure shouldBe a[TimeoutException]
       }
+      "set the deadline" in {
+        implicit val clock = new SettableClock()
+
+        Timeout(1.second) {
+          clock.plus(2.second)
+          Future { RunContext.state() }(ExecutionContexts.global)
+        }.futureValue should be(Expired(Instant.now(clock).minusSeconds(2)))
+      }
     }
     "blocking" should {
       "complete" in {
@@ -31,6 +45,14 @@ class TimeoutTest extends AkkaUnitTest {
       "fail with a timeout if the method took too long" in {
         val failure = Timeout.blocking(1.milli)(Thread.sleep(1000)).failed.futureValue
         failure shouldBe a[TimeoutException]
+      }
+      "set the deadline" in {
+        implicit val clock = new SettableClock()
+
+        Timeout.blocking(1.second) {
+          clock.plus(2.second)
+          RunContext.state()(clock)
+        }(scheduler, ExecutionContexts.global, clock).futureValue should be(Expired(Instant.now(clock).minusSeconds(2)))
       }
     }
   }

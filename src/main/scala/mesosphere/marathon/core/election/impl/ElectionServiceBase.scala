@@ -1,15 +1,16 @@
-package mesosphere.marathon.core.election.impl
+package mesosphere.marathon
+package core.election.impl
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.after
-import com.codahale.metrics.{ Gauge, MetricRegistry }
 import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
+import kamon.metric.instrument.Time
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base._
-import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
-import mesosphere.marathon.metrics.Metrics.Timer
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.{ ControlThrowable, NonFatal }
@@ -40,21 +41,19 @@ private[impl] object ElectionServiceBase {
 abstract class ElectionServiceBase(
     system: ActorSystem,
     eventStream: EventStream,
-    metrics: Metrics = new Metrics(new MetricRegistry),
     backoff: Backoff,
-    shutdownHooks: ShutdownHooks) extends ElectionService with StrictLogging {
+    lifecycleState: LifecycleState) extends ElectionService with StrictLogging {
   import ElectionServiceBase._
 
   private[impl] var state: State = Idle(candidate = None)
 
-  protected implicit val executionContext: ExecutionContext = ExecutionContext.global
+  protected implicit val executionContext: ExecutionContext = ExecutionContexts.global
 
   def leaderHostPortImpl: Option[String]
 
-  val getLeaderDataTimer: Timer =
-    metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "current-leader-host-port"))
+  val getLeaderDataTimer: Timer = Metrics.timer(ServiceMetric, getClass, "current-leader-host-port")
 
-  final override def leaderHostPort: Option[String] = getLeaderDataTimer {
+  final override def leaderHostPort: Option[String] = getLeaderDataTimer.blocking {
     synchronized {
       try {
         leaderHostPortImpl
@@ -119,8 +118,8 @@ abstract class ElectionServiceBase(
   }
 
   final override def offerLeadership(candidate: ElectionCandidate): Unit = synchronized {
-    if (shutdownHooks.isShuttingDown) {
-      logger.info("Ignoring leadership offer while shutting down")
+    if (!lifecycleState.isRunning) {
+      logger.info("Not offering leadership: Process is shutting down.")
     } else {
       setOfferState(
         offeringCase = {
@@ -232,17 +231,13 @@ abstract class ElectionServiceBase(
     eventStream.unsubscribe(self, classOf[LocalLeadershipEvent])
   }
 
+  private val MetricName = "service.mesosphere.marathon.leaderDuration"
   private def startMetrics(): Unit = {
-    metrics.gauge("service.mesosphere.marathon.leaderDuration", new Gauge[Long] {
-      val startedAt = System.currentTimeMillis()
-
-      override def getValue: Long = {
-        System.currentTimeMillis() - startedAt
-      }
-    })
+    val startedAt = System.currentTimeMillis()
+    Kamon.metrics.gauge(MetricName, Time.Milliseconds)(System.currentTimeMillis() - startedAt)
   }
 
   private def stopMetrics(): Unit = {
-    metrics.registry.remove("service.mesosphere.marathon.leaderDuration")
+    Kamon.metrics.removeGauge(MetricName)
   }
 }

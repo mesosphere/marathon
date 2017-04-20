@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.store
+package mesosphere.marathon
+package storage.store
 
 import java.time.OffsetDateTime
 
@@ -22,7 +23,7 @@ trait InMemoryStoreSerialization {
   implicit def unmarshaller[V]: Unmarshaller[Identity, V] =
     Unmarshaller.strict { a: Identity => a.value.asInstanceOf[V] }
 
-  private class InMemPathIdResolver[T](
+  class InMemPathIdResolver[T](
     val category: String,
     val hasVersions: Boolean,
     getVersion: T => OffsetDateTime)

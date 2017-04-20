@@ -10,8 +10,8 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.state.PathId
-import scala.async.Async._
 
+import scala.async.Async._
 import scala.concurrent.Future
 
 class NotifyRateLimiterStepImpl @Inject() (
@@ -19,7 +19,7 @@ class NotifyRateLimiterStepImpl @Inject() (
     groupManagerProvider: Provider[GroupManager]) extends InstanceChangeHandler {
 
   import NotifyRateLimiterStep._
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
   private[this] lazy val groupManager = groupManagerProvider.get()

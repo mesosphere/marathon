@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state.{ Group, RootGroup }

@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.{ Map, Seq }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 // TODO(jdef) pods rename this to something like ResourceInfoBaseData
@@ -30,8 +30,7 @@ class AppInfoBaseData(
     groupManager: GroupManager) {
 
   import AppInfoBaseData._
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   if (log.isDebugEnabled) log.debug(s"new AppInfoBaseData $this")
 
@@ -147,7 +146,7 @@ class AppInfoBaseData(
       log.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         instances.map { instance =>
-          EnrichedTask(app.id, instance.appTask, instance.agentInfo, statuses.getOrElse(instance.instanceId, Seq.empty[Health]))
+          EnrichedTask(app.id, instance.appTask, instance.agentInfo, statuses.getOrElse(instance.instanceId, Seq.empty[Health]).to[Seq])
         }
       }
 
@@ -168,7 +167,7 @@ class AppInfoBaseData(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def podStatus(podDef: PodDefinition)(implicit ec: ExecutionContext): Future[PodStatus] =
+  def podStatus(podDef: PodDefinition): Future[PodStatus] =
     async { // linter:ignore UnnecessaryElseBranch
       val now = clock.now().toOffsetDateTime
       val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
@@ -213,7 +212,7 @@ class AppInfoBaseData(
   protected def podState(
     expectedInstanceCount: Integer,
     instanceStatus: Seq[PodInstanceStatus],
-    isPodTerminating: Future[Boolean])(implicit ec: ExecutionContext): Future[PodState] =
+    isPodTerminating: Future[Boolean]): Future[PodState] =
 
     async { // linter:ignore UnnecessaryElseBranch
       val terminal = await(isPodTerminating)

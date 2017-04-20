@@ -3,12 +3,10 @@ package storage.repository
 
 import java.util.UUID
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.pod.{ PodDefinition, MesosContainer }
+import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId
 
@@ -36,7 +34,6 @@ class PodRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   }
 
   class Fixture {
-    implicit val metrics = new Metrics(new MetricRegistry)
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
     val store = new ZkPersistenceStore(rootClient, Duration.Inf)

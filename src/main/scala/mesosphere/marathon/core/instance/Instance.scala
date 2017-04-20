@@ -49,6 +49,11 @@ case class Instance(
   def isDropped: Boolean = state.condition == Condition.Dropped
   def isTerminated: Boolean = state.condition.isTerminal
   def isActive: Boolean = state.condition.isActive
+  def hasReservation =
+    tasksMap.values.exists {
+      case _: Task.ReservedTask => true
+      case _ => false
+    }
 
   override def mergeFromProto(message: Protos.Json): Instance = {
     Json.parse(message.getJson).as[Instance]

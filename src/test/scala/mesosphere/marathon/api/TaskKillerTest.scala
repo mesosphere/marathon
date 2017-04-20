@@ -1,18 +1,20 @@
 package mesosphere.marathon
 package api
 
+import akka.Done
 import mesosphere.UnitTest
+import mesosphere.marathon.core.async.ExecutionContexts.global
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state._
-import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -96,7 +98,7 @@ class TaskKillerTest extends UnitTest {
       })
 
       result.futureValue shouldEqual tasksToKill
-      verify(f.service, times(1)).killTasks(appId, tasksToKill)
+      verify(f.service, times(1)).killInstances(appId, tasksToKill)
     }
 
     "Kill and scale w/o force should fail if there is a deployment" in {
@@ -134,6 +136,7 @@ class TaskKillerTest extends UnitTest {
       val expungeRunning = InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId)
       val expungeReserved = InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId)
 
+      when(f.killService.killInstances(launchedInstances, KillReason.KillingTasksViaApi)).thenReturn(Future(Done))
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
       when(f.stateOpProcessor.process(expungeRunning)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance, events = Nil)))
@@ -145,7 +148,7 @@ class TaskKillerTest extends UnitTest {
       }, wipe = true)
       result.futureValue shouldEqual instancesToKill
       // only task1 is killed
-      verify(f.service, times(1)).killTasks(appId, launchedInstances)
+      verify(f.killService, times(1)).killInstances(launchedInstances, KillReason.KillingTasksViaApi)
       // all found instances are expunged and the launched instance is eventually expunged again
       verify(f.stateOpProcessor, atLeastOnce).process(expungeRunning)
       verify(f.stateOpProcessor).process(expungeReserved)
@@ -156,12 +159,14 @@ class TaskKillerTest extends UnitTest {
     val tracker: InstanceTracker = mock[InstanceTracker]
     val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
     val service: MarathonSchedulerService = mock[MarathonSchedulerService]
+    val killService: KillService = mock[KillService]
     val groupManager: GroupManager = mock[GroupManager]
 
     val config: MarathonConf = mock[MarathonConf]
     when(config.zkTimeoutDuration).thenReturn(1.second)
 
-    val taskKiller: TaskKiller = new TaskKiller(tracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth)
+    val taskKiller: TaskKiller = new TaskKiller(
+      tracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth, killService)
   }
 
 }

@@ -3,13 +3,13 @@ package core.task.jobs.impl
 
 import akka.actor._
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.state.Timestamp
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -35,7 +35,7 @@ private[jobs] object OverdueTasksActor {
       taskStateOpProcessor: TaskStateOpProcessor,
       killService: KillService,
       clock: Clock) {
-    import scala.concurrent.ExecutionContext.Implicits.global
+    import mesosphere.marathon.core.async.ExecutionContexts.global
 
     private[this] val log = LoggerFactory.getLogger(getClass)
 

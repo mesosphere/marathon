@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.auth
+package mesosphere.marathon
+package plugin.auth
 
 import mesosphere.marathon.plugin.http.HttpResponse
 import mesosphere.marathon.plugin.plugin.Plugin

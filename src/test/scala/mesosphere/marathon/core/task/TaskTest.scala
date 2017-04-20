@@ -5,29 +5,34 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{ Protos => MesosProtos }
+import org.scalatest.Inside
 import play.api.libs.json._
 
 // TODO(cleanup): remove most of the test cases into a NetworkInTest
 import scala.concurrent.duration._
 
-class TaskTest extends UnitTest {
+class TaskTest extends UnitTest with Inside {
 
   class Fixture {
 
     val clock = ConstantClock()
 
-    val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), ipAddress = None)
+    val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
+    val appVirtualNetworks = Seq(ContainerNetwork("whatever"))
     val appWithIpAddress = AppDefinition(
       id = PathId("/foo/bar"),
       portDefinitions = Seq.empty,
-      ipAddress = Some(IpAddress()))
+      networks = appVirtualNetworks
+    )
 
     val networkWithoutIp = MesosProtos.NetworkInfo.newBuilder.build()
 
@@ -50,31 +55,31 @@ class TaskTest extends UnitTest {
 
     def taskWithOneIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithMultipleNetworksAndOneIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithOneIp1).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithMultipleNetworkAndNoIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithoutIp).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithOneNetworkAndMultipleIPs: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithMultipleIps).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithMultipleNetworkAndMultipleIPs: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1, networkWithOneIp2).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
   }
@@ -149,7 +154,7 @@ class TaskTest extends UnitTest {
       task.isUnreachableExpired(f.clock.now, 10.minutes) should be(false)
     }
 
-    "a reserved task throws an exception on MesosUpdate" in {
+    "a reserved task transitions to launched on running MesosUpdate" in {
       val f = new Fixture
 
       val condition = Condition.Reserved
@@ -161,9 +166,74 @@ class TaskTest extends UnitTest {
       val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
       val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
 
-      val effect = task.update(op)
+      inside(task.update(op)) {
+        case effect: TaskUpdateEffect.Update =>
+          effect.newState shouldBe a[Task.LaunchedOnReservation]
+      }
+    }
 
-      effect shouldBe a[TaskUpdateEffect.Failure]
+    "a LaunchedOnReservation task updates network info on MesosUpdate" in {
+      val f = new Fixture
+
+      val condition = Condition.Running
+      val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
+      val reservation = mock[Task.Reservation]
+      val status = Task.Status(
+        stagedAt = f.clock.now,
+        startedAt = Some(f.clock.now),
+        mesosStatus = None, condition, NetworkInfoPlaceholder())
+      val task = Task.LaunchedOnReservation(taskId, f.clock.now, status, reservation)
+
+      val containerStatus = MarathonTestHelper.containerStatusWithNetworkInfo(f.networkWithOneIp1)
+
+      val mesosStatus = MesosProtos.TaskStatus.newBuilder
+        .setTaskId(taskId.mesosTaskId)
+        .setState(MesosProtos.TaskState.TASK_RUNNING)
+        .setContainerStatus(containerStatus)
+        .setTimestamp(f.clock.now.millis.toDouble).build()
+      val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
+
+      When("task is launched, no ipAddress should be found")
+      task.status.networkInfo.ipAddresses shouldBe Nil
+
+      Then("MesosUpdate TASK_RUNNING is applied with containing NetworkInfo")
+      inside(task.update(op)) {
+        case effect: TaskUpdateEffect.Update =>
+          Then("NetworkInfo should be updated")
+          effect.newState.status.networkInfo.ipAddresses shouldBe Seq(f.ipAddress1)
+      }
+    }
+
+    "a task that was not running before and is updated to running updates network info" in {
+      val f = new Fixture
+
+      val condition = Condition.Staging
+      val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
+      val reservation = mock[Task.Reservation]
+      val status = Task.Status(
+        stagedAt = f.clock.now,
+        startedAt = None,
+        mesosStatus = None, condition, NetworkInfoPlaceholder())
+      val task = Task.LaunchedOnReservation(taskId, f.clock.now, status, reservation)
+
+      val containerStatus = MarathonTestHelper.containerStatusWithNetworkInfo(f.networkWithOneIp1)
+
+      val mesosStatus = MesosProtos.TaskStatus.newBuilder
+        .setTaskId(taskId.mesosTaskId)
+        .setState(MesosProtos.TaskState.TASK_RUNNING)
+        .setContainerStatus(containerStatus)
+        .setTimestamp(f.clock.now.millis.toDouble).build()
+      val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
+
+      When("task is launched, no ipAddress should be found")
+      task.status.networkInfo.ipAddresses shouldBe Nil
+
+      Then("MesosUpdate TASK_RUNNING is applied with containing NetworkInfo")
+      inside(task.update(op)) {
+        case effect: TaskUpdateEffect.Update =>
+          Then("NetworkInfo should be updated")
+          effect.newState.status.networkInfo.ipAddresses shouldBe Seq(f.ipAddress1)
+      }
     }
 
     "a reserved task returns an update" in {

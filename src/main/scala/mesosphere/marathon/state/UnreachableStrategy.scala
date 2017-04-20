@@ -4,8 +4,8 @@ package state
 import com.wix.accord._
 import com.wix.accord.dsl._
 
+import scala.concurrent.duration.FiniteDuration._
 import scala.concurrent.duration._
-import mesosphere.marathon.Protos
 
 sealed trait UnreachableStrategy {
   def toProto: Protos.UnreachableStrategy

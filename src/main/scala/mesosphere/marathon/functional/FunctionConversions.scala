@@ -1,8 +1,10 @@
-package mesosphere.marathon.functional
+package mesosphere.marathon
+package functional
 
-import scala.language.implicitConversions
 import java.util.function._
+
 import scala.compat.java8.FunctionConverters._
+import scala.language.implicitConversions
 
 trait FunctionConversions {
   @inline implicit def asBiConsumer[A, B, R](f: (A, B) => R): BiConsumer[A, B] = asJavaBiConsumer{ (a: A, b: B) =>
@@ -72,7 +74,6 @@ trait FunctionConversions {
   @inline implicit def asLongBiFunction[A, B](f: (A, B) => Long): ToLongBiFunction[A, B] = asJavaToLongBiFunction[A, B](f)
   @inline implicit def asLongFunction[A](f: A => Long): ToLongFunction[A] = asJavaToLongFunction[A](f)
   @inline implicit def asUnaryOperator[A](f: A => A): UnaryOperator[A] = asJavaUnaryOperator[A](f)
-
 }
 
 object FunctionConversions extends FunctionConversions

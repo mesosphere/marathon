@@ -10,3 +10,7 @@ case class Range(
     begin to end
   }
 }
+
+object Range {
+  def apply(port: Long): Range = Range(port, port)
+}

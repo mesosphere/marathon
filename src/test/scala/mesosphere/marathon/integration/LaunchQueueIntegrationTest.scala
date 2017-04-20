@@ -2,9 +2,9 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.raml.App
+import mesosphere.marathon.state.PathId._
 
 import scala.concurrent.duration._
 
@@ -25,9 +25,9 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
     "GET /v2/queue with pending app" in {
       Given("a new app with constraints that cannot be fulfilled")
-      val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
+      val c = Seq("nonExistent", "CLUSTER", "na")
       val appId = testBasePath / "app"
-      val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = List.empty)
+      val app = App(appId.toString, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = None)
       val create = marathon.createAppV2(app)
       create.code should be (201) // Created
 
@@ -38,7 +38,7 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       val queue = response.value.queue
       queue should have size 1
-      queue.head.app.id should be (appId)
+      queue.head.app.id.toPath should be (appId)
       queue.head.count should be (5)
     }
   }

@@ -3,6 +3,7 @@ package api.serialization
 
 import mesosphere.marathon.state.PortDefinition
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos
 
 object PortDefinitionSerializer {
@@ -25,7 +26,7 @@ object PortDefinitionSerializer {
       portDefinition.name.foreach(builder.setName)
 
       if (portDefinition.labels.nonEmpty) {
-        builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(portDefinition.labels))
+        builder.setLabels(portDefinition.labels.toMesosLabels)
       }
 
       builder.build

@@ -9,7 +9,7 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import mesosphere.UnitTest
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
-import org.apache.http.HttpStatus
+import akka.http.scaladsl.model.StatusCodes._
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf
 
@@ -64,7 +64,7 @@ class LeaderProxyFilterTest extends UnitTest {
       verify(electionService, times(12)).isLeader
       verify(electionService, times(12)).leaderHostPort
       verify(response, times(1))
-        .sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
+        .sendError(ServiceUnavailable.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
       verifyClean()
     }
 
@@ -175,7 +175,7 @@ class LeaderProxyFilterTest extends UnitTest {
       verify(electionService, times(12)).isLeader
       verify(electionService, times(12)).leaderHostPort
       verify(response, times(1))
-        .sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
+        .sendError(ServiceUnavailable.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
       verifyClean()
     }
 
@@ -194,7 +194,7 @@ class LeaderProxyFilterTest extends UnitTest {
 
       verify(response, times(1)).setStatus(200)
       verify(response, times(1))
-        .sendError(HttpStatus.SC_BAD_GATEWAY, JavaUrlConnectionRequestForwarder.ERROR_STATUS_BAD_CONNECTION)
+        .sendError(BadGateway.intValue, JavaUrlConnectionRequestForwarder.ERROR_STATUS_BAD_CONNECTION)
       verifyNoMoreInteractions(response)
       verifyClean()
     }

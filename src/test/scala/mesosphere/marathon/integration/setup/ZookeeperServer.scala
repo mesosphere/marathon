@@ -1,6 +1,8 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework }
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
@@ -13,7 +15,6 @@ import org.scalatest.{ BeforeAndAfterAll, Suite }
 
 import scala.collection.mutable
 import scala.concurrent.duration._
-
 import org.apache.curator.test.TestingServer
 
 /**
@@ -92,8 +93,10 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
     zkServer.start()
     val client = CuratorFrameworkFactory.newClient(zkServer.connectUri, retryPolicy)
     client.start()
+    val richClient = RichCuratorFramework(client)
+    richClient.blockUntilConnected(LifecycleState.WatchingJVM)
     val actualClient = namespace.fold(client) { ns =>
-      RichCuratorFramework(client).create(s"/$namespace").futureValue(Timeout(10.seconds))
+      richClient.create(s"/$namespace").futureValue(Timeout(10.seconds))
       client.usingNamespace(ns)
     }
     // don't need to add the actualClient (namespaced clients don't need to be closed)

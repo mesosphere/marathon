@@ -427,14 +427,36 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
+    private def toLaunchedOnReservation(
+      taskId: Task.Id = taskId,
+      reservation: Reservation = reservation,
+      status: Status = status,
+      runSpecVersion: Timestamp = runSpecVersion) = {
+      LaunchedOnReservation(
+        taskId = taskId,
+        reservation = reservation,
+        status = status,
+        runSpecVersion = runSpecVersion)
+    }
+
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
       case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus) =>
-        val updatedTask = LaunchedOnReservation(
-          taskId, newRunSpecVersion, taskStatus, reservation)
+        val updatedTask = toLaunchedOnReservation(
+          runSpecVersion = newRunSpecVersion,
+          status = taskStatus)
         TaskUpdateEffect.Update(updatedTask)
 
       case update: TaskUpdateOperation.MesosUpdate =>
-        TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
+        /* There are small edge cases in which Marathon thinks a resident task is reserved but it is actually running
+         * (restore ZK backup, for example). If Mesos says that it's running, then transition accordingly */
+        if (update.condition.isActive)
+          TaskUpdateEffect.Update(
+            toLaunchedOnReservation(status =
+              status.copy(
+                startedAt = Some(update.now),
+                mesosStatus = Some(update.taskStatus))))
+        else
+          TaskUpdateEffect.Noop
     }
   }
 
@@ -464,11 +486,13 @@ object Task {
 
       // case 1: now running
       case TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, now) if !hasStartedRunning =>
+        val updatedNetworkInfo = status.networkInfo.update(mesosStatus)
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
             mesosStatus = Some(mesosStatus),
-            condition = Condition.Running))
+            condition = Condition.Running,
+            networkInfo = updatedNetworkInfo))
         TaskUpdateEffect.Update(updated)
 
       // case 2: terminal
@@ -486,11 +510,14 @@ object Task {
         TaskUpdateEffect.Update(updatedTask)
 
       // case 3: health or state updated
-      case TaskUpdateOperation.MesosUpdate(newStatus, mesosUpdate, _) =>
-        updatedHealthOrState(status.mesosStatus, mesosUpdate).map { newTaskStatus =>
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus, _) =>
+        updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
+          val updatedNetworkInfo = status.networkInfo.update(mesosStatus)
           val updatedTask = copy(status = status.copy(
             mesosStatus = Some(newTaskStatus),
-            condition = newStatus))
+            condition = newStatus,
+            networkInfo = updatedNetworkInfo
+          ))
           TaskUpdateEffect.Update(newState = updatedTask)
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)

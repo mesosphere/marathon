@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import javax.inject.Named
 import javax.net.ssl.SSLContext
@@ -34,24 +35,11 @@ class LeaderProxyFilterModule extends ServletModule {
   }
 }
 
-/**
-  * Base module provided by chaos.
-  */
-class ChaosModule extends ServletModule {
-  override def configureServlets(): Unit = {
-    bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
-    serve("/logging").`with`(classOf[LogConfigServlet])
-  }
-}
-
 class MarathonRestModule extends ServletModule {
 
   protected override def configureServlets(): Unit = {
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
-
-    // Chaos API
-    install(new ChaosModule)
 
     // Service API
     bind(classOf[SystemResource]).in(Scopes.SINGLETON)
@@ -66,7 +54,6 @@ class MarathonRestModule extends ServletModule {
     bind(classOf[v2.InfoResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.LeaderResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.DeploymentsResource]).in(Scopes.SINGLETON)
-    bind(classOf[v2.ArtifactsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 

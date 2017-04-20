@@ -5,7 +5,9 @@ import akka.Done
 import akka.actor.{ ActorRef, ActorRefFactory }
 import akka.event.EventStream
 import akka.pattern.ask
+import akka.stream.Materializer
 import akka.util.Timeout
+import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health._
@@ -18,19 +20,18 @@ import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
 
+import scala.async.Async._
 import scala.collection.immutable.{ Map, Seq }
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.async.Async._
 
 class MarathonHealthCheckManager(
     actorRefFactory: ActorRefFactory,
     killService: KillService,
     eventBus: EventStream,
     instanceTracker: InstanceTracker,
-    groupManager: GroupManager) extends HealthCheckManager {
+    groupManager: GroupManager)(implicit mat: Materializer) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,

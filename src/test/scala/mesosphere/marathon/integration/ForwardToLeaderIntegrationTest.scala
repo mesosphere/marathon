@@ -8,7 +8,7 @@ import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyF
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
 import mesosphere.util.PortAllocator
-import org.apache.commons.httpclient.HttpStatus
+import akka.http.scaladsl.model.StatusCodes._
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.concurrent.duration._
@@ -17,6 +17,7 @@ import scala.concurrent.duration._
   * Tests forwarding requests.
   */
 @IntegrationTest
+@SerialIntegrationTest
 class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
   def withForwarder[T](testCode: ForwarderService => T): T = {
     val forwarder = new ForwarderService
@@ -162,7 +163,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
       val forwardPort = forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue(Timeout(30.seconds))
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort).futureValue
-      assert(result.response.status.intValue == HttpStatus.SC_BAD_GATEWAY)
+      assert(result.response.status.intValue == BadGateway.intValue)
     }
 
     "forwarding loop" in withForwarder { forwarder =>
@@ -171,7 +172,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
 
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort1).futureValue
-      assert(result.response.status.intValue == HttpStatus.SC_BAD_GATEWAY)
+      assert(result.response.status.intValue == BadGateway.intValue)
     }
 
   }

@@ -1,20 +1,18 @@
-package mesosphere.marathon.core.election.impl
+package mesosphere.marathon
+package core.election.impl
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.base.ShutdownHooks
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.core.base.LifecycleState
 import org.slf4j.LoggerFactory
 
 class PseudoElectionService(
   system: ActorSystem,
   eventStream: EventStream,
-  metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
   backoff: ExponentialBackoff,
-  shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  system, eventStream, metrics, backoff, shutdownHooks
+  lifecycleState: LifecycleState) extends ElectionServiceBase(
+  system, eventStream, backoff, lifecycleState
 ) {
   private val log = LoggerFactory.getLogger(getClass.getName)
 

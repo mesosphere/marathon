@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.pod
+package mesosphere.marathon
+package core.pod
 
 sealed trait Volume extends Product with Serializable {
   val name: String

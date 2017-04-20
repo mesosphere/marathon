@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 import akka.stream.Materializer
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -13,7 +14,7 @@ import scala.concurrent.Future
   */
 private[tracker] class InstancesLoaderImpl(repo: InstanceRepository)(implicit val mat: Materializer)
     extends InstancesLoader {
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 

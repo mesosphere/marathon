@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-node('shakedown') {
+node('shakedown-scale') {
   wrap([$class: 'MesosSingleUseSlave']) {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
     def timeout=360000
@@ -15,6 +15,10 @@ node('shakedown') {
 
     stage('Checkout Repo') {
         checkout scm
+    }
+
+    stage('Installing Dependencies') {
+      sh "pip3 install retrying click"
     }
 
     stage('Configure DCOS Cluster') {
@@ -40,7 +44,7 @@ node('shakedown') {
     }
 
     stage('Archive Results'){
-      archiveArtifacts 'scale-test.csv, *.json'
+      archiveArtifacts 'scale-test.csv, *.json, scale.png'
     }
   }
   }

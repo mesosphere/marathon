@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.base
+package mesosphere.marathon
+package core.base
 
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.ExitDisabledTest

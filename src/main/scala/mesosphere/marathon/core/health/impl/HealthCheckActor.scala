@@ -1,7 +1,9 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
+import akka.stream.Materializer
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
@@ -19,7 +21,7 @@ private[health] class HealthCheckActor(
     killService: KillService,
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
-    eventBus: EventStream) extends Actor with ActorLogging {
+    eventBus: EventStream)(implicit mat: Materializer) extends Actor with ActorLogging {
 
   import HealthCheckWorker.HealthCheckJob
   import context.dispatcher
@@ -27,7 +29,7 @@ private[health] class HealthCheckActor(
   var nextScheduledCheck: Option[Cancellable] = None
   var healthByInstanceId = Map.empty[Instance.Id, Health]
 
-  val workerProps: Props = Props[HealthCheckWorkerActor]
+  val workerProps: Props = Props(classOf[HealthCheckWorkerActor], mat)
 
   override def preStart(): Unit = {
     log.info(
@@ -207,7 +209,7 @@ private[health] class HealthCheckActor(
     case GetInstanceHealth(instanceId) => sender() ! healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(healthByInstanceId.values.toSeq)
+      sender() ! AppHealth(healthByInstanceId.values.to[Seq])
 
     case Tick =>
       updateInstances()
@@ -235,7 +237,7 @@ object HealthCheckActor {
     killService: KillService,
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
-    eventBus: EventStream): Props = {
+    eventBus: EventStream)(implicit mat: Materializer): Props = {
 
     Props(new HealthCheckActor(
       app,

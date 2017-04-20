@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.bus.impl
+package mesosphere.marathon
+package core.task.bus.impl
 
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.bus.TaskChangeObservables

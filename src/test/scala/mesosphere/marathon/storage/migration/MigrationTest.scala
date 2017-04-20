@@ -3,12 +3,11 @@ package storage.migration
 
 import akka.Done
 import akka.stream.scaladsl.Source
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.test.Mockito
@@ -17,9 +16,7 @@ import org.scalatest.GivenWhenThen
 import scala.concurrent.Future
 
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
-  implicit private def metrics = new Metrics(new MetricRegistry)
 
-  // scalastyle:off
   private[this] def migration(
     persistenceStore: PersistenceStore[_, _, _] = new InMemoryPersistenceStore(),
     appRepository: AppRepository = mock[AppRepository],
@@ -29,11 +26,13 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     instanceRepository: InstanceRepository = mock[InstanceRepository],
     taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
-    eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository]): Migration = {
-    new Migration(Set.empty, persistenceStore, appRepository, groupRepository, deploymentRepository,
-      taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
+    backup: PersistentStoreBackup = mock[PersistentStoreBackup],
+    eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository],
+    serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository]): Migration = {
+    new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, groupRepository, deploymentRepository,
+      taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository,
+      eventSubscribersRepository, serviceDefinitionRepository, backup)
   }
-  // scalastyle:on
 
   val currentVersion: StorageVersion = StorageVersions.current
 
@@ -99,7 +98,6 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     "migrate throws an error for versions > current" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
       val migrate = migration(persistenceStore = mockedStore)
-      val minVersion = migrate.minSupportedStorageVersion
 
       Given("An unsupported storage version")
       val unsupportedVersion = StorageVersions(Int.MaxValue, Int.MaxValue, Int.MaxValue, StorageVersion.StorageFormat.PERSISTENCE_STORE)
@@ -121,12 +119,14 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       mockedStore.versions(any)(any) returns Source.empty
       mockedStore.ids()(any) returns Source.empty
       mockedStore.get(any)(any, any) returns Future.successful(None)
+      mockedStore.getVersions(any)(any, any) returns Source.empty
       mockedStore.get(any, any)(any, any) returns Future.successful(None)
       mockedStore.store(any, any)(any, any) returns Future.successful(Done)
       mockedStore.store(any, any, any)(any, any) returns Future.successful(Done)
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
 
       val migrate = migration(persistenceStore = mockedStore)
+      migrate.appRepository.all() returns Source(Nil)
       val result = migrate.migrate()
       result should be ('nonEmpty)
       result should be(migrate.migrations.drop(1).map(_._1))

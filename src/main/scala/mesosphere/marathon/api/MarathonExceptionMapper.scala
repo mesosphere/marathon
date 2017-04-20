@@ -1,5 +1,7 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
+import java.lang.{ Exception => JavaException }
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{ MediaType, Response }
@@ -10,8 +12,7 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.google.inject.Singleton
 import com.sun.jersey.api.NotFoundException
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.{ Exception => _, _ }
-import org.apache.http.HttpStatus._
+import akka.http.scaladsl.model.StatusCodes._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsResultException, JsValue, Json }
 
@@ -19,11 +20,11 @@ import scala.concurrent.TimeoutException
 
 @Provider
 @Singleton
-class MarathonExceptionMapper extends ExceptionMapper[Exception] {
+class MarathonExceptionMapper extends ExceptionMapper[JavaException] {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
-  def toResponse(exception: Exception): Response = {
+  def toResponse(exception: JavaException): Response = {
     exception match {
       case e: NotFoundException =>
         // route is not found
@@ -42,25 +43,34 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       .build
   }
 
-  private def statusCode(exception: Exception): Int = exception match {
-    case e: TimeoutException => SC_SERVICE_UNAVAILABLE
-    case e: PathNotFoundException => SC_NOT_FOUND
-    case e: AppNotFoundException => SC_NOT_FOUND
-    case e: PodNotFoundException => SC_NOT_FOUND
-    case e: UnknownGroupException => SC_NOT_FOUND
-    case e: AppLockedException => SC_CONFLICT
-    case e: ConflictingChangeException => SC_CONFLICT
-    case e: BadRequestException => SC_BAD_REQUEST
-    case e: JsonParseException => SC_BAD_REQUEST
-    case e: JsResultException => SC_BAD_REQUEST
-    case e: JsonMappingException => SC_BAD_REQUEST
-    case e: IllegalArgumentException => SC_UNPROCESSABLE_ENTITY
-    case e: ValidationFailedException => SC_UNPROCESSABLE_ENTITY
+  private def statusCode(exception: JavaException): Int = exception match {
+    case _: TimeoutException => ServiceUnavailable.intValue
+    case _: PathNotFoundException => NotFound.intValue
+    case _: AppNotFoundException => NotFound.intValue
+    case _: PodNotFoundException => NotFound.intValue
+    case _: UnknownGroupException => NotFound.intValue
+    case _: AppLockedException => Conflict.intValue
+    case _: ConflictingChangeException => Conflict.intValue
+    case _: BadRequestException => BadRequest.intValue
+    case _: JsonParseException => BadRequest.intValue
+
+    case JsResultException(errors) if errors.nonEmpty && errors.forall {
+      case (_, validationErrors) => validationErrors.nonEmpty
+    } =>
+      // if all of the nested errors are validation-related then generate
+      // an error code consistent with that generated for ValidationFailedException
+      UnprocessableEntity.intValue
+
+    case _: JsResultException => BadRequest.intValue
+
+    case _: JsonMappingException => BadRequest.intValue
+    case _: IllegalArgumentException => UnprocessableEntity.intValue
+    case _: ValidationFailedException => UnprocessableEntity.intValue
     case e: WebApplicationException => e.getResponse.getStatus
-    case _ => SC_INTERNAL_SERVER_ERROR
+    case _ => InternalServerError.intValue
   }
 
-  private def entity(exception: Exception): JsValue = exception match {
+  private def entity(exception: JavaException): JsValue = exception match {
     case e: NotFoundException =>
       Json.obj("message" -> s"URI not found: ${e.getNotFoundUri.getRawPath}")
     case e: AppLockedException =>
@@ -79,13 +89,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
         "details" -> e.getMessage
       )
     case e: JsResultException =>
-      val errors = e.errors.map {
-        case (path, errs) => Json.obj("path" -> path.toString(), "errors" -> errs.map(_.message))
-      }
-      Json.obj(
-        "message" -> "Invalid JSON",
-        "details" -> errors
-      )
+      RestResource.entity(e.errors)
     case ValidationFailedException(obj, failure) => Json.toJson(failure)
     case e: WebApplicationException =>
       Option(Status.fromStatusCode(e.getResponse.getStatus)).fold {

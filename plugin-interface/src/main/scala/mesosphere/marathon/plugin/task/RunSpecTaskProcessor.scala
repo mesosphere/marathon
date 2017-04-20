@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.task
+package mesosphere.marathon
+package plugin.task
 
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.plugin.plugin.Plugin

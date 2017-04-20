@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
-//scalastyle:off
 import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
@@ -11,14 +10,13 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
+import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
-//scalastyle:on
+
 object InstanceTrackerActor {
   def props(
     metrics: ActorMetrics,
@@ -50,9 +48,10 @@ object InstanceTrackerActor {
   /** Inform the [[InstanceTrackerActor]] of a task state change (after persistence). */
   private[impl] case class StateChanged(ack: Ack)
 
-  private[tracker] class ActorMetrics(metrics: Metrics) {
-    val stagedCount = metrics.gauge("service.mesosphere.marathon.task.staged.count", new AtomicIntGauge)
-    val runningCount = metrics.gauge("service.mesosphere.marathon.task.running.count", new AtomicIntGauge)
+  private[tracker] class ActorMetrics {
+    // We can't use Metrics as we need custom names for compatibility.
+    val stagedCount: AtomicGauge = AtomicGauge("service.mesosphere.marathon.task.staged.count")
+    val runningCount: AtomicGauge = AtomicGauge("service.mesosphere.marathon.task.running.count")
 
     def resetMetrics(): Unit = {
       stagedCount.setValue(0)
@@ -134,8 +133,8 @@ private[impl] class InstanceTrackerActor(
     }
 
     // this is run on any state change
-    metrics.stagedCount.setValue(counts.tasksStaged)
-    metrics.runningCount.setValue(counts.tasksRunning)
+    metrics.stagedCount.setValue(counts.tasksStaged.toLong)
+    metrics.runningCount.setValue(counts.tasksRunning.toLong)
 
     LoggingReceive.withLabel("withTasks") {
       case InstanceTrackerActor.List =>

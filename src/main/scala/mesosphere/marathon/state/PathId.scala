@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
@@ -108,7 +109,7 @@ object PathId {
   /**
     * This regular expression is used to validate each path segment of an ID.
     *
-    * If you change this, please also change "pathType" in AppDefinition.json and
+    * If you change this, please also change `pathType` in AppDefinition.json, `PathId` in stringTypes.raml, and
     * notify the maintainers of the DCOS CLI.
     */
   private[this] val ID_PATH_SEGMENT_PATTERN =

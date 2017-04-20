@@ -8,9 +8,15 @@ types:
     type: object
     properties:
       uri: strings.Uri
-      extract?: boolean
-      executable?: boolean
-      cache?: boolean
+      extract?:
+        type: boolean
+        default: true
+      executable?:
+        type: boolean
+        default: false
+      cache?:
+        type: boolean
+        default: false
       destPath?: strings.Path
     example: |
       {

@@ -1,9 +1,10 @@
-package mesosphere.marathon.core.event.impl.callback
+package mesosphere.marathon
+package core.event.impl.callback
 
 import akka.actor.ActorRef
 import akka.event.EventStream
 import akka.pattern.ask
-import SubscribersKeeperActor.GetSubscribers
+import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.core.event.{ EventConf, _ }
 
 import scala.concurrent.Future
@@ -14,7 +15,7 @@ class ActorHttpCallbackSubscriptionService(
   conf: EventConf)
     extends HttpCallbackSubscriptionService {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
   implicit val timeout = conf.eventRequestTimeout
 
   override def handleSubscriptionEvent(event: MarathonSubscriptionEvent): Future[MarathonEvent] =

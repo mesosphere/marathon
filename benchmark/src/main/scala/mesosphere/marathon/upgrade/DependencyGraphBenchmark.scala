@@ -3,6 +3,7 @@ package upgrade
 
 import java.util.concurrent.TimeUnit
 
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state.AppDefinition.AppKey
 import mesosphere.marathon.state.Group.GroupKey
 import mesosphere.marathon.state.PathId._

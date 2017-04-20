@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService

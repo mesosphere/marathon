@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository
+package mesosphere.marathon
+package storage.repository
 
 import java.time.OffsetDateTime
 import java.util.concurrent.Semaphore
@@ -7,15 +8,14 @@ import java.util.concurrent.atomic.AtomicReference
 import akka.Done
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.testkit.{ TestFSMRef, TestKitBase }
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.test.{ GroupCreation, Mockito }
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.scalatest.GivenWhenThen
+import mesosphere.util.CallerThreadExecutionContext
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ Future, Promise, blocking }
@@ -23,7 +23,6 @@ import scala.concurrent.{ Future, Promise, blocking }
 class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with GroupCreation with Mockito {
   import GcActor._
   import PathId._
-  implicit val metrics = new Metrics(new MetricRegistry)
 
   def scanWaitOnSem(sem: Semaphore): Option[() => Future[ScanDone]] = {
     Some(() => Future {
@@ -52,11 +51,12 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
   private def processReceiveUntil[T <: GcActor[_, _, _]](fsm: TestFSMRef[State, _, T], state: State): State = {
     // give the blocking scan a little time to deliver the message
+    val checks = 1000
     var done = 0
-    while (done < 500) {
+    while (done < checks) {
       Thread.`yield`()
-      Thread.sleep(1)
-      done = if (fsm.stateName == state) 500
+      Thread.sleep(5)
+      done = if (fsm.stateName == state) checks
       else done + 1
     }
     fsm.stateName
@@ -70,7 +70,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     val podRepo = PodRepository.inMemRepository(store)
     val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
     val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, maxVersions)
-    val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, maxVersions) {
+    val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, maxVersions)(mat, CallerThreadExecutionContext.callerThreadExecutionContext) {
       override def scan(): Future[ScanDone] = {
         testScan.fold(super.scan())(_())
       }
@@ -212,7 +212,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val app2 = AppDefinition("b".toRootPath)
         val root1 = createRootGroup(Map("a".toRootPath -> app1))
         val root2 = createRootGroup(Map("b".toRootPath -> app2))
-        f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), deployPromise)
+        f.actor ! StorePlan(DeploymentPlan(root1, root2, Timestamp.now()), deployPromise)
         deployPromise.future.isCompleted should be(true)
         f.actor.stateData should equal(
           UpdatedEntities(
@@ -396,7 +396,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val app2 = AppDefinition("b".toRootPath)
         val root1 = createRootGroup(Map("a".toRootPath -> app1))
         val root2 = createRootGroup(Map("b".toRootPath -> app2))
-        f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), promise)
+        f.actor ! StorePlan(DeploymentPlan(root1, root2, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
         processReceiveUntil(f.actor, Compacting) should be(Compacting)
         promise.future.futureValue should be(Done)
@@ -411,7 +411,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val promise = Promise[Done]()
         val app2 = AppDefinition("b".toRootPath)
         val root2 = createRootGroup(Map("b".toRootPath -> app2))
-        f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), promise)
+        f.actor ! StorePlan(DeploymentPlan(root1, root2, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
         processReceiveUntil(f.actor, Compacting) should be(Compacting)
         promise.future.isCompleted should be(false)
@@ -432,7 +432,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 1)
         val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 1))
         groupRepo.rootVersions() returns Source(Seq(OffsetDateTime.now(), OffsetDateTime.MIN, OffsetDateTime.MAX))
-        groupRepo.root() returns Future.failed(new Exception)
+        groupRepo.root() returns Future.failed(new Exception(""))
         actor ! RunGC
         processReceiveUntil(actor, Idle) should be(Idle)
       }
@@ -447,7 +447,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val root2 = createRootGroup()
         val root3 = createRootGroup()
         Seq(root1, root2, root3).foreach(groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
-        appRepo.ids returns Source.failed(new Exception)
+        appRepo.ids returns Source.failed(new Exception(""))
         actor ! RunGC
         processReceiveUntil(actor, Idle) should be(Idle)
       }
@@ -462,7 +462,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val root2 = createRootGroup()
         val root3 = createRootGroup()
         Seq(root1, root2, root3).foreach(groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
-        podRepo.ids returns Source.failed(new Exception)
+        podRepo.ids returns Source.failed(new Exception(""))
         actor ! RunGC
         processReceiveUntil(actor, Idle) should be(Idle)
       }
@@ -474,7 +474,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 2)
         val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2))
         actor.setState(Scanning, UpdatedEntities())
-        appRepo.delete(any) returns Future.failed(new Exception)
+        appRepo.delete(any) returns Future.failed(new Exception(""))
         actor ! ScanDone(appsToDelete = Set("a".toRootPath))
         processReceiveUntil(actor, Idle) should be(Idle)
       }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 /**
   * Defines a kill selection for tasks. See [[mesosphere.marathon.core.deployment.ScalingProposition]].
@@ -9,21 +10,29 @@ sealed trait KillSelection {
     case KillSelection.OldestFirst => a.olderThan(b)
   }
   val value: String
+
+  def toProto: Protos.KillSelection
 }
 
 object KillSelection {
-  def withName(value: String): KillSelection = {
-    if (value == "YOUNGEST_FIRST") YoungestFirst
-    else if (value == "OLDEST_FIRST") OldestFirst
-    else throw new NoSuchElementException(s"There is no KillSelection with name '$value'")
-  }
 
   case object YoungestFirst extends KillSelection {
-    override val value = "YOUNGEST_FIRST"
+    override val value = raml.KillSelection.YoungestFirst.value
+    override val toProto: Protos.KillSelection =
+      Protos.KillSelection.YoungestFirst
   }
   case object OldestFirst extends KillSelection {
-    override val value = "OLDEST_FIRST"
+    override val value = raml.KillSelection.OldestFirst.value
+    override val toProto: Protos.KillSelection =
+      Protos.KillSelection.OldestFirst
   }
 
-  val DefaultKillSelection: KillSelection = YoungestFirst
+  lazy val DefaultKillSelection: KillSelection = raml.KillSelection.DefaultValue.fromRaml
+
+  private[this] val proto2Model = Map(
+    Protos.KillSelection.YoungestFirst -> YoungestFirst,
+    Protos.KillSelection.OldestFirst -> OldestFirst
+  )
+
+  def fromProto(proto: Protos.KillSelection): KillSelection = proto2Model(proto)
 }

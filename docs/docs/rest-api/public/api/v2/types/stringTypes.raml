@@ -5,9 +5,16 @@ types:
     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
     maxLength: 63
     minLength: 1
+  LegacyName:
+    type: string
+    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+    minLength: 1
+    usage: |
+      Same as `Name` but without a max-length, useful for older v2 names for which length
+      validation has historically been lax.
   PathId:
     type: string
-    pattern: ^(\/?((\.{2})|([a-z0-9][a-z0-9\-.]*[a-z0-9]+)|([a-z0-9]*))($|\/))+$
+    pattern: ^(\/?((\.\.)|(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9]))?($|\/))+$
     minLength: 1
     example: /ops/audit
     description: |
@@ -22,11 +29,6 @@ types:
     type: string
     minLength: 1
     maxLength: 1024
-  EnvName:
-    type: string
-    minLength: 1
-    maxLength: 1024
-    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
   HttpScheme:
     type: string
     enum: [ HTTP, HTTPS ]

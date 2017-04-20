@@ -5,17 +5,12 @@ import java.io.File
 import java.util.UUID
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state._
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, PortDefinition, ReadinessCheck, UpgradeStrategy }
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.PathId._
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
-
-import scala.concurrent.duration._
-import scala.util.Try
 
 @IntegrationTest
 class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
@@ -45,36 +40,37 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       deploy(serviceDef, continue = true)
 
       When("The service is upgraded")
-      val oldTask = marathon.tasks(serviceDef.id).value.head
-      val update = marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
-      val newTask = eventually {
-        marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id).get
+      val oldTask = marathon.tasks(serviceDef.id.toPath).value.head
+      val update = marathon.updateApp(serviceDef.id.toPath, AppUpdate(env = Some(raml.Environment(sys.env))), force = false)
+      update.success should be(true) withClue (update.entityString)
+
+      And("The ServiceMock is up")
+      val serviceFacade = ServiceMockFacade(marathon.tasks(serviceDef.id.toPath).value) { task =>
+        task.id != oldTask.id && task.launched
       }
 
       Then("The deployment does not succeed until the readiness checks succeed")
-      val serviceFacade = new ServiceMockFacade(newTask)
-      WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos) {
-        Try(serviceFacade.plan()).isSuccess
-      }
       while (serviceFacade.plan().code != 200) {
         When("We continue on block until the plan is ready")
         serviceFacade.continue()
-        marathon.listDeploymentsForBaseGroup().value should have size 1
+        val deployments = marathon.listDeploymentsForBaseGroup().value
+        deployments should have size 1 withClue (s"Expected 1 deployment but found ${deployments}")
       }
       waitForDeployment(update)
     }
   }
-  def deploy(service: AppDefinition, continue: Boolean): Unit = {
+
+  def deploy(service: App, continue: Boolean): Unit = {
     Given("An application service")
     val result = marathon.createAppV2(service)
-    result.code should be (201)
-    val task = waitForTasks(service.id, 1).head //make sure, the app has really started
-    val serviceFacade = new ServiceMockFacade(task)
-    WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos){ Try(serviceFacade.plan()).isSuccess }
+    result.code should be (201) withClue (result.entityString)
+    When("The ServiceMock is up")
+    val serviceFacade = ServiceMockFacade(marathon.tasks(service.id.toPath).value)(_.launched)
 
     while (continue && serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
-      marathon.listDeploymentsForBaseGroup().value should have size 1
+      val deployments = marathon.listDeploymentsForBaseGroup().value
+      deployments should have size 1 withClue (s"Expected 1 deployment but found ${deployments}")
       serviceFacade.continue()
     }
 
@@ -82,30 +78,31 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
     waitForDeployment(result)
   }
 
-  def serviceProxy(appId: PathId, plan: String, withHealth: Boolean): AppDefinition = {
-    AppDefinition(
-      id = appId,
+  def serviceProxy(appId: PathId, plan: String, withHealth: Boolean): App = {
+    App(
+      id = appId.toString,
       cmd = Some(s"""$serviceMockScript '$plan'"""),
       executor = "//cmd",
-      resources = Resources(cpus = 0.01, mem = 128.0),
-      upgradeStrategy = UpgradeStrategy(0, 0),
-      portDefinitions = Seq(PortDefinition(0, name = Some("http"))),
+      cpus = 0.01,
+      upgradeStrategy = Some(UpgradeStrategy(0, 0)),
+      portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
       healthChecks =
         if (withHealth)
-          Set(
-          MarathonHttpHealthCheck(
-            path = Some("/ping"),
-            portIndex = Some(PortReference(0)),
-            maxConsecutiveFailures = Int.MaxValue,
-            interval = 2.seconds,
-            timeout = 1.second))
-        else Set.empty[HealthCheck],
+          Set(AppHealthCheck(
+          protocol = AppHealthCheckProtocol.Http,
+          path = Some("/ping"),
+          portIndex = Some(0),
+          maxConsecutiveFailures = Int.MaxValue,
+          intervalSeconds = 2,
+          timeoutSeconds = 1
+        ))
+        else Set.empty,
       readinessChecks = Seq(ReadinessCheck(
-        "ready",
+        name = "ready",
         portName = "http",
         path = "/v1/plan",
-        interval = 2.seconds,
-        timeout = 1.second,
+        intervalSeconds = 2,
+        timeoutSeconds = 1,
         preserveLastResponse = true))
     )
   }

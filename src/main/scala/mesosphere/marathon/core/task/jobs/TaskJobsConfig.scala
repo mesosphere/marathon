@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.jobs
+package mesosphere.marathon
+package core.task.jobs
 
 import org.rogach.scallop.ScallopConf
 import scala.concurrent.duration._

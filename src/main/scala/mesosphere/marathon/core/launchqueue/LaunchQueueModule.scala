@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launchqueue
+package mesosphere.marathon
+package core.launchqueue
 
 import akka.actor.{ ActorRef, Props }
 import mesosphere.marathon.core.base.Clock

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.reconcile
+package mesosphere.marathon
+package core.matcher.reconcile
 
 import akka.event.EventStream
 import mesosphere.marathon.core.base.Clock

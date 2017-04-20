@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health
+package mesosphere.marathon
+package core.health
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.json.Formats

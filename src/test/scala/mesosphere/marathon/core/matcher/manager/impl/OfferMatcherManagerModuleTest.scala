@@ -3,7 +3,6 @@ package core.matcher.manager.impl
 
 import java.util.UUID
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
@@ -16,11 +15,10 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, In
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
@@ -28,7 +26,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
 
-class OfferMatcherManagerModuleTest extends AkkaUnitTest with MarathonShutdownHookSupport with OfferMatcherSpec {
+class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
   // FIXME: Missing Tests
   // Adding matcher while matching offers
@@ -52,12 +50,12 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with MarathonShutdownHo
   class Fixture {
     val clock: Clock = Clock()
     val random: Random.type = Random
-    val leaderModule: LeadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
+    val leaderModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val config: OfferMatcherManagerConfig = new OfferMatcherManagerConfig {
       verify()
     }
     val module: OfferMatcherManagerModule =
-      new OfferMatcherManagerModule(clock, random, new Metrics(new MetricRegistry), config, system.scheduler, leaderModule,
+      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule,
         actorName = UUID.randomUUID().toString)
   }
 

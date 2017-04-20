@@ -14,7 +14,7 @@ object ScalingProposition {
     toKill: Option[Seq[Instance]],
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int,
-    killSelection: KillSelection = KillSelection.DefaultKillSelection): ScalingProposition = {
+    killSelection: KillSelection): ScalingProposition = {
 
     val killingTaskCount = runningTasks.count(_.state.condition == Condition.Killing)
 

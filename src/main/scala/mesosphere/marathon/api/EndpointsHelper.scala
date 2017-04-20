@@ -9,14 +9,21 @@ object EndpointsHelper {
     * Produces a script-friendly string representation of the supplied
     * apps' tasks.  The data columns in the result are separated by
     * the supplied delimiter string.
+    *
+    * Generated line format is: * <pre>{app-id}{d}{service-port}{d}{address-list}</pre>.
+    * `{service-port}` is `" "` for apps without service ports.
+    * `{address-list}` is either `{host-list}` (for apps without service ports), or `{host-address-list}`.
+    * `{host-list}` is a delimited list of agents that are running the task.
+    * `{host-address-list}` is a delimited list of `{agent}:{hostPort}` tuples.
+    * The contents of `{address-list}` are sorted for deterministic output.
     */
   def appsToEndpointString(
     instancesMap: InstancesBySpec,
     apps: Seq[AppDefinition],
-    delimiter: String): String = {
+    delimiter: String = "\t"): String = {
 
     val sb = new StringBuilder
-    for (app <- apps if app.ipAddress.isEmpty) {
+    apps.foreach { app =>
       val instances = instancesMap.specInstances(app.id)
       val cleanId = app.id.safePath
 
@@ -24,22 +31,24 @@ object EndpointsHelper {
 
       if (servicePorts.isEmpty) {
         sb.append(cleanId).append(delimiter).append(' ').append(delimiter)
-        for (instance <- instances if instance.isRunning) {
-          sb.append(instance.agentInfo.host).append(' ')
+        instances.withFilter(_.isRunning).map(_.agentInfo.host).sorted.foreach { hostname =>
+          sb.append(hostname).append(delimiter)
         }
         sb.append('\n')
       } else {
-        for ((port, i) <- servicePorts.zipWithIndex) {
-          sb.append(cleanId).append(delimiter).append(port).append(delimiter)
-
-          for {
-            instance <- instances if instance.isRunning
-            (_, task) <- instance.tasksMap
-          } {
-            val taskPort = task.status.networkInfo.hostPorts.drop(i).headOption.getOrElse(0)
-            sb.append(instance.agentInfo.host).append(':').append(taskPort).append(delimiter)
-          }
-          sb.append('\n')
+        servicePorts.zipWithIndex.foreach {
+          case (port, i) =>
+            sb.append(cleanId).append(delimiter).append(port).append(delimiter)
+            instances.withFilter(_.isRunning).flatMap { instance =>
+              instance.tasksMap.map {
+                case (_, task) =>
+                  val taskPort = task.status.networkInfo.hostPorts.drop(i).headOption.getOrElse(0)
+                  s"${instance.agentInfo.host}:$taskPort"
+              }
+            }.sorted.foreach { address =>
+              sb.append(address).append(delimiter)
+            }
+            sb.append('\n')
         }
       }
     }

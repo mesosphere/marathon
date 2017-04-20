@@ -8,6 +8,88 @@ public final class Protos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  /**
+   * Protobuf enum {@code mesosphere.marathon.KillSelection}
+   */
+  public enum KillSelection
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>YoungestFirst = 1;</code>
+     */
+    YoungestFirst(0, 1),
+    /**
+     * <code>OldestFirst = 2;</code>
+     */
+    OldestFirst(1, 2),
+    ;
+
+    /**
+     * <code>YoungestFirst = 1;</code>
+     */
+    public static final int YoungestFirst_VALUE = 1;
+    /**
+     * <code>OldestFirst = 2;</code>
+     */
+    public static final int OldestFirst_VALUE = 2;
+
+
+    public final int getNumber() { return value; }
+
+    public static KillSelection valueOf(int value) {
+      switch (value) {
+        case 1: return YoungestFirst;
+        case 2: return OldestFirst;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<KillSelection>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<KillSelection>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<KillSelection>() {
+            public KillSelection findValueByNumber(int number) {
+              return KillSelection.valueOf(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return mesosphere.marathon.Protos.getDescriptor().getEnumTypes().get(0);
+    }
+
+    private static final KillSelection[] VALUES = values();
+
+    public static KillSelection valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int index;
+    private final int value;
+
+    private KillSelection(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:mesosphere.marathon.KillSelection)
+  }
+
   public interface ConstraintOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -4064,7 +4146,7 @@ public final class Protos {
     // @@protoc_insertion_point(class_scope:mesosphere.marathon.ReadinessCheckDefinition)
   }
 
-  public interface IpAddressOrBuilder
+  public interface ObsoleteIpAddressOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // repeated string groups = 1;
@@ -4112,19 +4194,19 @@ public final class Protos {
     org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
         int index);
 
-    // optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;
+    // optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;
     /**
-     * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
      */
     boolean hasDiscoveryInfo();
     /**
-     * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
      */
-    mesosphere.marathon.Protos.DiscoveryInfo getDiscoveryInfo();
+    mesosphere.marathon.Protos.ObsoleteDiscoveryInfo getDiscoveryInfo();
     /**
-     * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
      */
-    mesosphere.marathon.Protos.DiscoveryInfoOrBuilder getDiscoveryInfoOrBuilder();
+    mesosphere.marathon.Protos.ObsoleteDiscoveryInfoOrBuilder getDiscoveryInfoOrBuilder();
 
     // optional string networkName = 4;
     /**
@@ -4142,24 +4224,28 @@ public final class Protos {
         getNetworkNameBytes();
   }
   /**
-   * Protobuf type {@code mesosphere.marathon.IpAddress}
+   * Protobuf type {@code mesosphere.marathon.ObsoleteIpAddress}
+   *
+   * <pre>
+   * deprecated, left here only to support migrations
+   * </pre>
    */
-  public static final class IpAddress extends
+  public static final class ObsoleteIpAddress extends
       com.google.protobuf.GeneratedMessage
-      implements IpAddressOrBuilder {
-    // Use IpAddress.newBuilder() to construct.
-    private IpAddress(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements ObsoleteIpAddressOrBuilder {
+    // Use ObsoleteIpAddress.newBuilder() to construct.
+    private ObsoleteIpAddress(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private IpAddress(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private ObsoleteIpAddress(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final IpAddress defaultInstance;
-    public static IpAddress getDefaultInstance() {
+    private static final ObsoleteIpAddress defaultInstance;
+    public static ObsoleteIpAddress getDefaultInstance() {
       return defaultInstance;
     }
 
-    public IpAddress getDefaultInstanceForType() {
+    public ObsoleteIpAddress getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -4169,7 +4255,7 @@ public final class Protos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private IpAddress(
+    private ObsoleteIpAddress(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -4209,11 +4295,11 @@ public final class Protos {
               break;
             }
             case 26: {
-              mesosphere.marathon.Protos.DiscoveryInfo.Builder subBuilder = null;
+              mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.Builder subBuilder = null;
               if (((bitField0_ & 0x00000001) == 0x00000001)) {
                 subBuilder = discoveryInfo_.toBuilder();
               }
-              discoveryInfo_ = input.readMessage(mesosphere.marathon.Protos.DiscoveryInfo.PARSER, extensionRegistry);
+              discoveryInfo_ = input.readMessage(mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(discoveryInfo_);
                 discoveryInfo_ = subBuilder.buildPartial();
@@ -4246,28 +4332,28 @@ public final class Protos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_IpAddress_descriptor;
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteIpAddress_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_IpAddress_fieldAccessorTable
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteIpAddress_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              mesosphere.marathon.Protos.IpAddress.class, mesosphere.marathon.Protos.IpAddress.Builder.class);
+              mesosphere.marathon.Protos.ObsoleteIpAddress.class, mesosphere.marathon.Protos.ObsoleteIpAddress.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<IpAddress> PARSER =
-        new com.google.protobuf.AbstractParser<IpAddress>() {
-      public IpAddress parsePartialFrom(
+    public static com.google.protobuf.Parser<ObsoleteIpAddress> PARSER =
+        new com.google.protobuf.AbstractParser<ObsoleteIpAddress>() {
+      public ObsoleteIpAddress parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new IpAddress(input, extensionRegistry);
+        return new ObsoleteIpAddress(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<IpAddress> getParserForType() {
+    public com.google.protobuf.Parser<ObsoleteIpAddress> getParserForType() {
       return PARSER;
     }
 
@@ -4338,25 +4424,25 @@ public final class Protos {
       return labels_.get(index);
     }
 
-    // optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;
+    // optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;
     public static final int DISCOVERYINFO_FIELD_NUMBER = 3;
-    private mesosphere.marathon.Protos.DiscoveryInfo discoveryInfo_;
+    private mesosphere.marathon.Protos.ObsoleteDiscoveryInfo discoveryInfo_;
     /**
-     * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
      */
     public boolean hasDiscoveryInfo() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
      */
-    public mesosphere.marathon.Protos.DiscoveryInfo getDiscoveryInfo() {
+    public mesosphere.marathon.Protos.ObsoleteDiscoveryInfo getDiscoveryInfo() {
       return discoveryInfo_;
     }
     /**
-     * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
      */
-    public mesosphere.marathon.Protos.DiscoveryInfoOrBuilder getDiscoveryInfoOrBuilder() {
+    public mesosphere.marathon.Protos.ObsoleteDiscoveryInfoOrBuilder getDiscoveryInfoOrBuilder() {
       return discoveryInfo_;
     }
 
@@ -4406,7 +4492,7 @@ public final class Protos {
     private void initFields() {
       groups_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       labels_ = java.util.Collections.emptyList();
-      discoveryInfo_ = mesosphere.marathon.Protos.DiscoveryInfo.getDefaultInstance();
+      discoveryInfo_ = mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.getDefaultInstance();
       networkName_ = "";
     }
     private byte memoizedIsInitialized = -1;
@@ -4487,53 +4573,53 @@ public final class Protos {
       return super.writeReplace();
     }
 
-    public static mesosphere.marathon.Protos.IpAddress parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseFrom(byte[] data)
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseFrom(java.io.InputStream input)
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseDelimitedFrom(java.io.InputStream input)
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseDelimitedFrom(
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static mesosphere.marathon.Protos.IpAddress parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteIpAddress parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -4542,7 +4628,7 @@ public final class Protos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(mesosphere.marathon.Protos.IpAddress prototype) {
+    public static Builder newBuilder(mesosphere.marathon.Protos.ObsoleteIpAddress prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -4554,24 +4640,28 @@ public final class Protos {
       return builder;
     }
     /**
-     * Protobuf type {@code mesosphere.marathon.IpAddress}
+     * Protobuf type {@code mesosphere.marathon.ObsoleteIpAddress}
+     *
+     * <pre>
+     * deprecated, left here only to support migrations
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements mesosphere.marathon.Protos.IpAddressOrBuilder {
+       implements mesosphere.marathon.Protos.ObsoleteIpAddressOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_IpAddress_descriptor;
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteIpAddress_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_IpAddress_fieldAccessorTable
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteIpAddress_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                mesosphere.marathon.Protos.IpAddress.class, mesosphere.marathon.Protos.IpAddress.Builder.class);
+                mesosphere.marathon.Protos.ObsoleteIpAddress.class, mesosphere.marathon.Protos.ObsoleteIpAddress.Builder.class);
       }
 
-      // Construct using mesosphere.marathon.Protos.IpAddress.newBuilder()
+      // Construct using mesosphere.marathon.Protos.ObsoleteIpAddress.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -4602,7 +4692,7 @@ public final class Protos {
           labelsBuilder_.clear();
         }
         if (discoveryInfoBuilder_ == null) {
-          discoveryInfo_ = mesosphere.marathon.Protos.DiscoveryInfo.getDefaultInstance();
+          discoveryInfo_ = mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.getDefaultInstance();
         } else {
           discoveryInfoBuilder_.clear();
         }
@@ -4618,23 +4708,23 @@ public final class Protos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_IpAddress_descriptor;
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteIpAddress_descriptor;
       }
 
-      public mesosphere.marathon.Protos.IpAddress getDefaultInstanceForType() {
-        return mesosphere.marathon.Protos.IpAddress.getDefaultInstance();
+      public mesosphere.marathon.Protos.ObsoleteIpAddress getDefaultInstanceForType() {
+        return mesosphere.marathon.Protos.ObsoleteIpAddress.getDefaultInstance();
       }
 
-      public mesosphere.marathon.Protos.IpAddress build() {
-        mesosphere.marathon.Protos.IpAddress result = buildPartial();
+      public mesosphere.marathon.Protos.ObsoleteIpAddress build() {
+        mesosphere.marathon.Protos.ObsoleteIpAddress result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public mesosphere.marathon.Protos.IpAddress buildPartial() {
-        mesosphere.marathon.Protos.IpAddress result = new mesosphere.marathon.Protos.IpAddress(this);
+      public mesosphere.marathon.Protos.ObsoleteIpAddress buildPartial() {
+        mesosphere.marathon.Protos.ObsoleteIpAddress result = new mesosphere.marathon.Protos.ObsoleteIpAddress(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -4670,16 +4760,16 @@ public final class Protos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof mesosphere.marathon.Protos.IpAddress) {
-          return mergeFrom((mesosphere.marathon.Protos.IpAddress)other);
+        if (other instanceof mesosphere.marathon.Protos.ObsoleteIpAddress) {
+          return mergeFrom((mesosphere.marathon.Protos.ObsoleteIpAddress)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(mesosphere.marathon.Protos.IpAddress other) {
-        if (other == mesosphere.marathon.Protos.IpAddress.getDefaultInstance()) return this;
+      public Builder mergeFrom(mesosphere.marathon.Protos.ObsoleteIpAddress other) {
+        if (other == mesosphere.marathon.Protos.ObsoleteIpAddress.getDefaultInstance()) return this;
         if (!other.groups_.isEmpty()) {
           if (groups_.isEmpty()) {
             groups_ = other.groups_;
@@ -4748,11 +4838,11 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        mesosphere.marathon.Protos.IpAddress parsedMessage = null;
+        mesosphere.marathon.Protos.ObsoleteIpAddress parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (mesosphere.marathon.Protos.IpAddress) e.getUnfinishedMessage();
+          parsedMessage = (mesosphere.marathon.Protos.ObsoleteIpAddress) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -5096,20 +5186,20 @@ public final class Protos {
         return labelsBuilder_;
       }
 
-      // optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;
-      private mesosphere.marathon.Protos.DiscoveryInfo discoveryInfo_ = mesosphere.marathon.Protos.DiscoveryInfo.getDefaultInstance();
+      // optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;
+      private mesosphere.marathon.Protos.ObsoleteDiscoveryInfo discoveryInfo_ = mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          mesosphere.marathon.Protos.DiscoveryInfo, mesosphere.marathon.Protos.DiscoveryInfo.Builder, mesosphere.marathon.Protos.DiscoveryInfoOrBuilder> discoveryInfoBuilder_;
+          mesosphere.marathon.Protos.ObsoleteDiscoveryInfo, mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.Builder, mesosphere.marathon.Protos.ObsoleteDiscoveryInfoOrBuilder> discoveryInfoBuilder_;
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
       public boolean hasDiscoveryInfo() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
-      public mesosphere.marathon.Protos.DiscoveryInfo getDiscoveryInfo() {
+      public mesosphere.marathon.Protos.ObsoleteDiscoveryInfo getDiscoveryInfo() {
         if (discoveryInfoBuilder_ == null) {
           return discoveryInfo_;
         } else {
@@ -5117,9 +5207,9 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
-      public Builder setDiscoveryInfo(mesosphere.marathon.Protos.DiscoveryInfo value) {
+      public Builder setDiscoveryInfo(mesosphere.marathon.Protos.ObsoleteDiscoveryInfo value) {
         if (discoveryInfoBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -5133,10 +5223,10 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
       public Builder setDiscoveryInfo(
-          mesosphere.marathon.Protos.DiscoveryInfo.Builder builderForValue) {
+          mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.Builder builderForValue) {
         if (discoveryInfoBuilder_ == null) {
           discoveryInfo_ = builderForValue.build();
           onChanged();
@@ -5147,14 +5237,14 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
-      public Builder mergeDiscoveryInfo(mesosphere.marathon.Protos.DiscoveryInfo value) {
+      public Builder mergeDiscoveryInfo(mesosphere.marathon.Protos.ObsoleteDiscoveryInfo value) {
         if (discoveryInfoBuilder_ == null) {
           if (((bitField0_ & 0x00000004) == 0x00000004) &&
-              discoveryInfo_ != mesosphere.marathon.Protos.DiscoveryInfo.getDefaultInstance()) {
+              discoveryInfo_ != mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.getDefaultInstance()) {
             discoveryInfo_ =
-              mesosphere.marathon.Protos.DiscoveryInfo.newBuilder(discoveryInfo_).mergeFrom(value).buildPartial();
+              mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.newBuilder(discoveryInfo_).mergeFrom(value).buildPartial();
           } else {
             discoveryInfo_ = value;
           }
@@ -5166,11 +5256,11 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
       public Builder clearDiscoveryInfo() {
         if (discoveryInfoBuilder_ == null) {
-          discoveryInfo_ = mesosphere.marathon.Protos.DiscoveryInfo.getDefaultInstance();
+          discoveryInfo_ = mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.getDefaultInstance();
           onChanged();
         } else {
           discoveryInfoBuilder_.clear();
@@ -5179,17 +5269,17 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
-      public mesosphere.marathon.Protos.DiscoveryInfo.Builder getDiscoveryInfoBuilder() {
+      public mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.Builder getDiscoveryInfoBuilder() {
         bitField0_ |= 0x00000004;
         onChanged();
         return getDiscoveryInfoFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
-      public mesosphere.marathon.Protos.DiscoveryInfoOrBuilder getDiscoveryInfoOrBuilder() {
+      public mesosphere.marathon.Protos.ObsoleteDiscoveryInfoOrBuilder getDiscoveryInfoOrBuilder() {
         if (discoveryInfoBuilder_ != null) {
           return discoveryInfoBuilder_.getMessageOrBuilder();
         } else {
@@ -5197,14 +5287,14 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.DiscoveryInfo discoveryInfo = 3;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteDiscoveryInfo discoveryInfo = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          mesosphere.marathon.Protos.DiscoveryInfo, mesosphere.marathon.Protos.DiscoveryInfo.Builder, mesosphere.marathon.Protos.DiscoveryInfoOrBuilder> 
+          mesosphere.marathon.Protos.ObsoleteDiscoveryInfo, mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.Builder, mesosphere.marathon.Protos.ObsoleteDiscoveryInfoOrBuilder> 
           getDiscoveryInfoFieldBuilder() {
         if (discoveryInfoBuilder_ == null) {
           discoveryInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              mesosphere.marathon.Protos.DiscoveryInfo, mesosphere.marathon.Protos.DiscoveryInfo.Builder, mesosphere.marathon.Protos.DiscoveryInfoOrBuilder>(
+              mesosphere.marathon.Protos.ObsoleteDiscoveryInfo, mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.Builder, mesosphere.marathon.Protos.ObsoleteDiscoveryInfoOrBuilder>(
                   discoveryInfo_,
                   getParentForChildren(),
                   isClean());
@@ -5287,18 +5377,18 @@ public final class Protos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.IpAddress)
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ObsoleteIpAddress)
     }
 
     static {
-      defaultInstance = new IpAddress(true);
+      defaultInstance = new ObsoleteIpAddress(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:mesosphere.marathon.IpAddress)
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.ObsoleteIpAddress)
   }
 
-  public interface DiscoveryInfoOrBuilder
+  public interface ObsoleteDiscoveryInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // repeated .mesos.Port ports = 1;
@@ -5327,24 +5417,28 @@ public final class Protos {
         int index);
   }
   /**
-   * Protobuf type {@code mesosphere.marathon.DiscoveryInfo}
+   * Protobuf type {@code mesosphere.marathon.ObsoleteDiscoveryInfo}
+   *
+   * <pre>
+   * deprecated, left here only to support migrations
+   * </pre>
    */
-  public static final class DiscoveryInfo extends
+  public static final class ObsoleteDiscoveryInfo extends
       com.google.protobuf.GeneratedMessage
-      implements DiscoveryInfoOrBuilder {
-    // Use DiscoveryInfo.newBuilder() to construct.
-    private DiscoveryInfo(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements ObsoleteDiscoveryInfoOrBuilder {
+    // Use ObsoleteDiscoveryInfo.newBuilder() to construct.
+    private ObsoleteDiscoveryInfo(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private DiscoveryInfo(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private ObsoleteDiscoveryInfo(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final DiscoveryInfo defaultInstance;
-    public static DiscoveryInfo getDefaultInstance() {
+    private static final ObsoleteDiscoveryInfo defaultInstance;
+    public static ObsoleteDiscoveryInfo getDefaultInstance() {
       return defaultInstance;
     }
 
-    public DiscoveryInfo getDefaultInstanceForType() {
+    public ObsoleteDiscoveryInfo getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -5354,7 +5448,7 @@ public final class Protos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private DiscoveryInfo(
+    private ObsoleteDiscoveryInfo(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -5402,28 +5496,28 @@ public final class Protos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_DiscoveryInfo_descriptor;
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_DiscoveryInfo_fieldAccessorTable
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              mesosphere.marathon.Protos.DiscoveryInfo.class, mesosphere.marathon.Protos.DiscoveryInfo.Builder.class);
+              mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.class, mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<DiscoveryInfo> PARSER =
-        new com.google.protobuf.AbstractParser<DiscoveryInfo>() {
-      public DiscoveryInfo parsePartialFrom(
+    public static com.google.protobuf.Parser<ObsoleteDiscoveryInfo> PARSER =
+        new com.google.protobuf.AbstractParser<ObsoleteDiscoveryInfo>() {
+      public ObsoleteDiscoveryInfo parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new DiscoveryInfo(input, extensionRegistry);
+        return new ObsoleteDiscoveryInfo(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<DiscoveryInfo> getParserForType() {
+    public com.google.protobuf.Parser<ObsoleteDiscoveryInfo> getParserForType() {
       return PARSER;
     }
 
@@ -5512,53 +5606,53 @@ public final class Protos {
       return super.writeReplace();
     }
 
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseFrom(byte[] data)
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseFrom(java.io.InputStream input)
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseDelimitedFrom(java.io.InputStream input)
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseDelimitedFrom(
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static mesosphere.marathon.Protos.DiscoveryInfo parseFrom(
+    public static mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -5567,7 +5661,7 @@ public final class Protos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(mesosphere.marathon.Protos.DiscoveryInfo prototype) {
+    public static Builder newBuilder(mesosphere.marathon.Protos.ObsoleteDiscoveryInfo prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -5579,24 +5673,28 @@ public final class Protos {
       return builder;
     }
     /**
-     * Protobuf type {@code mesosphere.marathon.DiscoveryInfo}
+     * Protobuf type {@code mesosphere.marathon.ObsoleteDiscoveryInfo}
+     *
+     * <pre>
+     * deprecated, left here only to support migrations
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements mesosphere.marathon.Protos.DiscoveryInfoOrBuilder {
+       implements mesosphere.marathon.Protos.ObsoleteDiscoveryInfoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_DiscoveryInfo_descriptor;
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_DiscoveryInfo_fieldAccessorTable
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                mesosphere.marathon.Protos.DiscoveryInfo.class, mesosphere.marathon.Protos.DiscoveryInfo.Builder.class);
+                mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.class, mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.Builder.class);
       }
 
-      // Construct using mesosphere.marathon.Protos.DiscoveryInfo.newBuilder()
+      // Construct using mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -5632,23 +5730,23 @@ public final class Protos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_DiscoveryInfo_descriptor;
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_descriptor;
       }
 
-      public mesosphere.marathon.Protos.DiscoveryInfo getDefaultInstanceForType() {
-        return mesosphere.marathon.Protos.DiscoveryInfo.getDefaultInstance();
+      public mesosphere.marathon.Protos.ObsoleteDiscoveryInfo getDefaultInstanceForType() {
+        return mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.getDefaultInstance();
       }
 
-      public mesosphere.marathon.Protos.DiscoveryInfo build() {
-        mesosphere.marathon.Protos.DiscoveryInfo result = buildPartial();
+      public mesosphere.marathon.Protos.ObsoleteDiscoveryInfo build() {
+        mesosphere.marathon.Protos.ObsoleteDiscoveryInfo result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public mesosphere.marathon.Protos.DiscoveryInfo buildPartial() {
-        mesosphere.marathon.Protos.DiscoveryInfo result = new mesosphere.marathon.Protos.DiscoveryInfo(this);
+      public mesosphere.marathon.Protos.ObsoleteDiscoveryInfo buildPartial() {
+        mesosphere.marathon.Protos.ObsoleteDiscoveryInfo result = new mesosphere.marathon.Protos.ObsoleteDiscoveryInfo(this);
         int from_bitField0_ = bitField0_;
         if (portsBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -5664,16 +5762,16 @@ public final class Protos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof mesosphere.marathon.Protos.DiscoveryInfo) {
-          return mergeFrom((mesosphere.marathon.Protos.DiscoveryInfo)other);
+        if (other instanceof mesosphere.marathon.Protos.ObsoleteDiscoveryInfo) {
+          return mergeFrom((mesosphere.marathon.Protos.ObsoleteDiscoveryInfo)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(mesosphere.marathon.Protos.DiscoveryInfo other) {
-        if (other == mesosphere.marathon.Protos.DiscoveryInfo.getDefaultInstance()) return this;
+      public Builder mergeFrom(mesosphere.marathon.Protos.ObsoleteDiscoveryInfo other) {
+        if (other == mesosphere.marathon.Protos.ObsoleteDiscoveryInfo.getDefaultInstance()) return this;
         if (portsBuilder_ == null) {
           if (!other.ports_.isEmpty()) {
             if (ports_.isEmpty()) {
@@ -5718,11 +5816,11 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        mesosphere.marathon.Protos.DiscoveryInfo parsedMessage = null;
+        mesosphere.marathon.Protos.ObsoleteDiscoveryInfo parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (mesosphere.marathon.Protos.DiscoveryInfo) e.getUnfinishedMessage();
+          parsedMessage = (mesosphere.marathon.Protos.ObsoleteDiscoveryInfo) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -5973,15 +6071,1218 @@ public final class Protos {
         return portsBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.DiscoveryInfo)
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ObsoleteDiscoveryInfo)
     }
 
     static {
-      defaultInstance = new DiscoveryInfo(true);
+      defaultInstance = new ObsoleteDiscoveryInfo(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:mesosphere.marathon.DiscoveryInfo)
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.ObsoleteDiscoveryInfo)
+  }
+
+  public interface NetworkDefinitionOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;
+    /**
+     * <code>optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;</code>
+     */
+    boolean hasMode();
+    /**
+     * <code>optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;</code>
+     */
+    mesosphere.marathon.Protos.NetworkDefinition.Mode getMode();
+
+    // optional string name = 2;
+    /**
+     * <code>optional string name = 2;</code>
+     *
+     * <pre>
+     * for CONTAINER mode only
+     * </pre>
+     */
+    boolean hasName();
+    /**
+     * <code>optional string name = 2;</code>
+     *
+     * <pre>
+     * for CONTAINER mode only
+     * </pre>
+     */
+    java.lang.String getName();
+    /**
+     * <code>optional string name = 2;</code>
+     *
+     * <pre>
+     * for CONTAINER mode only
+     * </pre>
+     */
+    com.google.protobuf.ByteString
+        getNameBytes();
+
+    // repeated .mesos.Label labels = 3;
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    java.util.List<org.apache.mesos.Protos.Label> 
+        getLabelsList();
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    org.apache.mesos.Protos.Label getLabels(int index);
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    int getLabelsCount();
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
+        getLabelsOrBuilderList();
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code mesosphere.marathon.NetworkDefinition}
+   */
+  public static final class NetworkDefinition extends
+      com.google.protobuf.GeneratedMessage
+      implements NetworkDefinitionOrBuilder {
+    // Use NetworkDefinition.newBuilder() to construct.
+    private NetworkDefinition(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private NetworkDefinition(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final NetworkDefinition defaultInstance;
+    public static NetworkDefinition getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public NetworkDefinition getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private NetworkDefinition(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+              mesosphere.marathon.Protos.NetworkDefinition.Mode value = mesosphere.marathon.Protos.NetworkDefinition.Mode.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                mode_ = value;
+              }
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              name_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                labels_ = new java.util.ArrayList<org.apache.mesos.Protos.Label>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              labels_.add(input.readMessage(org.apache.mesos.Protos.Label.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          labels_ = java.util.Collections.unmodifiableList(labels_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_NetworkDefinition_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_NetworkDefinition_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              mesosphere.marathon.Protos.NetworkDefinition.class, mesosphere.marathon.Protos.NetworkDefinition.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<NetworkDefinition> PARSER =
+        new com.google.protobuf.AbstractParser<NetworkDefinition>() {
+      public NetworkDefinition parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new NetworkDefinition(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<NetworkDefinition> getParserForType() {
+      return PARSER;
+    }
+
+    /**
+     * Protobuf enum {@code mesosphere.marathon.NetworkDefinition.Mode}
+     */
+    public enum Mode
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>UNKNOWN = 0;</code>
+       *
+       * <pre>
+       * so that we can distinguish between set/unset values
+       * </pre>
+       */
+      UNKNOWN(0, 0),
+      /**
+       * <code>HOST = 1;</code>
+       */
+      HOST(1, 1),
+      /**
+       * <code>CONTAINER = 2;</code>
+       */
+      CONTAINER(2, 2),
+      /**
+       * <code>BRIDGE = 3;</code>
+       */
+      BRIDGE(3, 3),
+      ;
+
+      /**
+       * <code>UNKNOWN = 0;</code>
+       *
+       * <pre>
+       * so that we can distinguish between set/unset values
+       * </pre>
+       */
+      public static final int UNKNOWN_VALUE = 0;
+      /**
+       * <code>HOST = 1;</code>
+       */
+      public static final int HOST_VALUE = 1;
+      /**
+       * <code>CONTAINER = 2;</code>
+       */
+      public static final int CONTAINER_VALUE = 2;
+      /**
+       * <code>BRIDGE = 3;</code>
+       */
+      public static final int BRIDGE_VALUE = 3;
+
+
+      public final int getNumber() { return value; }
+
+      public static Mode valueOf(int value) {
+        switch (value) {
+          case 0: return UNKNOWN;
+          case 1: return HOST;
+          case 2: return CONTAINER;
+          case 3: return BRIDGE;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<Mode>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<Mode>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<Mode>() {
+              public Mode findValueByNumber(int number) {
+                return Mode.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.NetworkDefinition.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final Mode[] VALUES = values();
+
+      public static Mode valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private Mode(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:mesosphere.marathon.NetworkDefinition.Mode)
+    }
+
+    private int bitField0_;
+    // optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;
+    public static final int MODE_FIELD_NUMBER = 1;
+    private mesosphere.marathon.Protos.NetworkDefinition.Mode mode_;
+    /**
+     * <code>optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;</code>
+     */
+    public boolean hasMode() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;</code>
+     */
+    public mesosphere.marathon.Protos.NetworkDefinition.Mode getMode() {
+      return mode_;
+    }
+
+    // optional string name = 2;
+    public static final int NAME_FIELD_NUMBER = 2;
+    private java.lang.Object name_;
+    /**
+     * <code>optional string name = 2;</code>
+     *
+     * <pre>
+     * for CONTAINER mode only
+     * </pre>
+     */
+    public boolean hasName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string name = 2;</code>
+     *
+     * <pre>
+     * for CONTAINER mode only
+     * </pre>
+     */
+    public java.lang.String getName() {
+      java.lang.Object ref = name_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          name_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string name = 2;</code>
+     *
+     * <pre>
+     * for CONTAINER mode only
+     * </pre>
+     */
+    public com.google.protobuf.ByteString
+        getNameBytes() {
+      java.lang.Object ref = name_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        name_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // repeated .mesos.Label labels = 3;
+    public static final int LABELS_FIELD_NUMBER = 3;
+    private java.util.List<org.apache.mesos.Protos.Label> labels_;
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    public java.util.List<org.apache.mesos.Protos.Label> getLabelsList() {
+      return labels_;
+    }
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    public java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
+        getLabelsOrBuilderList() {
+      return labels_;
+    }
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    public int getLabelsCount() {
+      return labels_.size();
+    }
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    public org.apache.mesos.Protos.Label getLabels(int index) {
+      return labels_.get(index);
+    }
+    /**
+     * <code>repeated .mesos.Label labels = 3;</code>
+     *
+     * <pre>
+     * for CONTAINER, BRIDGE modes only
+     * </pre>
+     */
+    public org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
+        int index) {
+      return labels_.get(index);
+    }
+
+    private void initFields() {
+      mode_ = mesosphere.marathon.Protos.NetworkDefinition.Mode.UNKNOWN;
+      name_ = "";
+      labels_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      for (int i = 0; i < getLabelsCount(); i++) {
+        if (!getLabels(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, mode_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getNameBytes());
+      }
+      for (int i = 0; i < labels_.size(); i++) {
+        output.writeMessage(3, labels_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, mode_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getNameBytes());
+      }
+      for (int i = 0; i < labels_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, labels_.get(i));
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static mesosphere.marathon.Protos.NetworkDefinition parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static mesosphere.marathon.Protos.NetworkDefinition parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(mesosphere.marathon.Protos.NetworkDefinition prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code mesosphere.marathon.NetworkDefinition}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements mesosphere.marathon.Protos.NetworkDefinitionOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_NetworkDefinition_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_NetworkDefinition_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                mesosphere.marathon.Protos.NetworkDefinition.class, mesosphere.marathon.Protos.NetworkDefinition.Builder.class);
+      }
+
+      // Construct using mesosphere.marathon.Protos.NetworkDefinition.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getLabelsFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        mode_ = mesosphere.marathon.Protos.NetworkDefinition.Mode.UNKNOWN;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        name_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        if (labelsBuilder_ == null) {
+          labels_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+        } else {
+          labelsBuilder_.clear();
+        }
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_NetworkDefinition_descriptor;
+      }
+
+      public mesosphere.marathon.Protos.NetworkDefinition getDefaultInstanceForType() {
+        return mesosphere.marathon.Protos.NetworkDefinition.getDefaultInstance();
+      }
+
+      public mesosphere.marathon.Protos.NetworkDefinition build() {
+        mesosphere.marathon.Protos.NetworkDefinition result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public mesosphere.marathon.Protos.NetworkDefinition buildPartial() {
+        mesosphere.marathon.Protos.NetworkDefinition result = new mesosphere.marathon.Protos.NetworkDefinition(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.mode_ = mode_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.name_ = name_;
+        if (labelsBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+            labels_ = java.util.Collections.unmodifiableList(labels_);
+            bitField0_ = (bitField0_ & ~0x00000004);
+          }
+          result.labels_ = labels_;
+        } else {
+          result.labels_ = labelsBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof mesosphere.marathon.Protos.NetworkDefinition) {
+          return mergeFrom((mesosphere.marathon.Protos.NetworkDefinition)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(mesosphere.marathon.Protos.NetworkDefinition other) {
+        if (other == mesosphere.marathon.Protos.NetworkDefinition.getDefaultInstance()) return this;
+        if (other.hasMode()) {
+          setMode(other.getMode());
+        }
+        if (other.hasName()) {
+          bitField0_ |= 0x00000002;
+          name_ = other.name_;
+          onChanged();
+        }
+        if (labelsBuilder_ == null) {
+          if (!other.labels_.isEmpty()) {
+            if (labels_.isEmpty()) {
+              labels_ = other.labels_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+            } else {
+              ensureLabelsIsMutable();
+              labels_.addAll(other.labels_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.labels_.isEmpty()) {
+            if (labelsBuilder_.isEmpty()) {
+              labelsBuilder_.dispose();
+              labelsBuilder_ = null;
+              labels_ = other.labels_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+              labelsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getLabelsFieldBuilder() : null;
+            } else {
+              labelsBuilder_.addAllMessages(other.labels_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        for (int i = 0; i < getLabelsCount(); i++) {
+          if (!getLabels(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        mesosphere.marathon.Protos.NetworkDefinition parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (mesosphere.marathon.Protos.NetworkDefinition) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;
+      private mesosphere.marathon.Protos.NetworkDefinition.Mode mode_ = mesosphere.marathon.Protos.NetworkDefinition.Mode.UNKNOWN;
+      /**
+       * <code>optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;</code>
+       */
+      public boolean hasMode() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;</code>
+       */
+      public mesosphere.marathon.Protos.NetworkDefinition.Mode getMode() {
+        return mode_;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;</code>
+       */
+      public Builder setMode(mesosphere.marathon.Protos.NetworkDefinition.Mode value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        mode_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.NetworkDefinition.Mode mode = 1;</code>
+       */
+      public Builder clearMode() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        mode_ = mesosphere.marathon.Protos.NetworkDefinition.Mode.UNKNOWN;
+        onChanged();
+        return this;
+      }
+
+      // optional string name = 2;
+      private java.lang.Object name_ = "";
+      /**
+       * <code>optional string name = 2;</code>
+       *
+       * <pre>
+       * for CONTAINER mode only
+       * </pre>
+       */
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string name = 2;</code>
+       *
+       * <pre>
+       * for CONTAINER mode only
+       * </pre>
+       */
+      public java.lang.String getName() {
+        java.lang.Object ref = name_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          name_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string name = 2;</code>
+       *
+       * <pre>
+       * for CONTAINER mode only
+       * </pre>
+       */
+      public com.google.protobuf.ByteString
+          getNameBytes() {
+        java.lang.Object ref = name_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          name_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string name = 2;</code>
+       *
+       * <pre>
+       * for CONTAINER mode only
+       * </pre>
+       */
+      public Builder setName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        name_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string name = 2;</code>
+       *
+       * <pre>
+       * for CONTAINER mode only
+       * </pre>
+       */
+      public Builder clearName() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        name_ = getDefaultInstance().getName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string name = 2;</code>
+       *
+       * <pre>
+       * for CONTAINER mode only
+       * </pre>
+       */
+      public Builder setNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        name_ = value;
+        onChanged();
+        return this;
+      }
+
+      // repeated .mesos.Label labels = 3;
+      private java.util.List<org.apache.mesos.Protos.Label> labels_ =
+        java.util.Collections.emptyList();
+      private void ensureLabelsIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          labels_ = new java.util.ArrayList<org.apache.mesos.Protos.Label>(labels_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder> labelsBuilder_;
+
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public java.util.List<org.apache.mesos.Protos.Label> getLabelsList() {
+        if (labelsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(labels_);
+        } else {
+          return labelsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public int getLabelsCount() {
+        if (labelsBuilder_ == null) {
+          return labels_.size();
+        } else {
+          return labelsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public org.apache.mesos.Protos.Label getLabels(int index) {
+        if (labelsBuilder_ == null) {
+          return labels_.get(index);
+        } else {
+          return labelsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder setLabels(
+          int index, org.apache.mesos.Protos.Label value) {
+        if (labelsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureLabelsIsMutable();
+          labels_.set(index, value);
+          onChanged();
+        } else {
+          labelsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder setLabels(
+          int index, org.apache.mesos.Protos.Label.Builder builderForValue) {
+        if (labelsBuilder_ == null) {
+          ensureLabelsIsMutable();
+          labels_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          labelsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder addLabels(org.apache.mesos.Protos.Label value) {
+        if (labelsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureLabelsIsMutable();
+          labels_.add(value);
+          onChanged();
+        } else {
+          labelsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder addLabels(
+          int index, org.apache.mesos.Protos.Label value) {
+        if (labelsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureLabelsIsMutable();
+          labels_.add(index, value);
+          onChanged();
+        } else {
+          labelsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder addLabels(
+          org.apache.mesos.Protos.Label.Builder builderForValue) {
+        if (labelsBuilder_ == null) {
+          ensureLabelsIsMutable();
+          labels_.add(builderForValue.build());
+          onChanged();
+        } else {
+          labelsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder addLabels(
+          int index, org.apache.mesos.Protos.Label.Builder builderForValue) {
+        if (labelsBuilder_ == null) {
+          ensureLabelsIsMutable();
+          labels_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          labelsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder addAllLabels(
+          java.lang.Iterable<? extends org.apache.mesos.Protos.Label> values) {
+        if (labelsBuilder_ == null) {
+          ensureLabelsIsMutable();
+          super.addAll(values, labels_);
+          onChanged();
+        } else {
+          labelsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder clearLabels() {
+        if (labelsBuilder_ == null) {
+          labels_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+          onChanged();
+        } else {
+          labelsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public Builder removeLabels(int index) {
+        if (labelsBuilder_ == null) {
+          ensureLabelsIsMutable();
+          labels_.remove(index);
+          onChanged();
+        } else {
+          labelsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public org.apache.mesos.Protos.Label.Builder getLabelsBuilder(
+          int index) {
+        return getLabelsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
+          int index) {
+        if (labelsBuilder_ == null) {
+          return labels_.get(index);  } else {
+          return labelsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
+           getLabelsOrBuilderList() {
+        if (labelsBuilder_ != null) {
+          return labelsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(labels_);
+        }
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public org.apache.mesos.Protos.Label.Builder addLabelsBuilder() {
+        return getLabelsFieldBuilder().addBuilder(
+            org.apache.mesos.Protos.Label.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public org.apache.mesos.Protos.Label.Builder addLabelsBuilder(
+          int index) {
+        return getLabelsFieldBuilder().addBuilder(
+            index, org.apache.mesos.Protos.Label.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 3;</code>
+       *
+       * <pre>
+       * for CONTAINER, BRIDGE modes only
+       * </pre>
+       */
+      public java.util.List<org.apache.mesos.Protos.Label.Builder> 
+           getLabelsBuilderList() {
+        return getLabelsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder> 
+          getLabelsFieldBuilder() {
+        if (labelsBuilder_ == null) {
+          labelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder>(
+                  labels_,
+                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  getParentForChildren(),
+                  isClean());
+          labels_ = null;
+        }
+        return labelsBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.NetworkDefinition)
+    }
+
+    static {
+      defaultInstance = new NetworkDefinition(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.NetworkDefinition)
   }
 
   public interface ServiceDefinitionOrBuilder
@@ -6381,19 +7682,31 @@ public final class Protos {
      */
     long getLastConfigChangeAt();
 
-    // optional .mesosphere.marathon.IpAddress ipAddress = 25;
+    // optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;
     /**
-     * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+     *
+     * <pre>
+     * deprecated since 1.5
+     * </pre>
      */
-    boolean hasIpAddress();
+    boolean hasOBSOLETEIpAddress();
     /**
-     * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+     *
+     * <pre>
+     * deprecated since 1.5
+     * </pre>
      */
-    mesosphere.marathon.Protos.IpAddress getIpAddress();
+    mesosphere.marathon.Protos.ObsoleteIpAddress getOBSOLETEIpAddress();
     /**
-     * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+     *
+     * <pre>
+     * deprecated since 1.5
+     * </pre>
      */
-    mesosphere.marathon.Protos.IpAddressOrBuilder getIpAddressOrBuilder();
+    mesosphere.marathon.Protos.ObsoleteIpAddressOrBuilder getOBSOLETEIpAddressOrBuilder();
 
     // optional .mesosphere.marathon.ResidencyDefinition residency = 26;
     /**
@@ -6540,6 +7853,75 @@ public final class Protos {
      * <code>optional .mesosphere.marathon.UnreachableStrategy unreachableStrategy = 32;</code>
      */
     mesosphere.marathon.Protos.UnreachableStrategyOrBuilder getUnreachableStrategyOrBuilder();
+
+    // optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];
+    /**
+     * <code>optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];</code>
+     */
+    boolean hasKillSelection();
+    /**
+     * <code>optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];</code>
+     */
+    mesosphere.marathon.Protos.KillSelection getKillSelection();
+
+    // repeated .mesosphere.marathon.NetworkDefinition networks = 34;
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    java.util.List<mesosphere.marathon.Protos.NetworkDefinition> 
+        getNetworksList();
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    mesosphere.marathon.Protos.NetworkDefinition getNetworks(int index);
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    int getNetworksCount();
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    java.util.List<? extends mesosphere.marathon.Protos.NetworkDefinitionOrBuilder> 
+        getNetworksOrBuilderList();
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    mesosphere.marathon.Protos.NetworkDefinitionOrBuilder getNetworksOrBuilder(
+        int index);
+
+    // optional .mesos.TTYInfo tty = 35;
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    boolean hasTty();
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    org.apache.mesos.Protos.TTYInfo getTty();
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    org.apache.mesos.Protos.TTYInfoOrBuilder getTtyOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -6575,6 +7957,7 @@ public final class Protos {
         throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
+      int mutable_bitField1_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
@@ -6782,14 +8165,14 @@ public final class Protos {
               break;
             }
             case 202: {
-              mesosphere.marathon.Protos.IpAddress.Builder subBuilder = null;
+              mesosphere.marathon.Protos.ObsoleteIpAddress.Builder subBuilder = null;
               if (((bitField0_ & 0x00010000) == 0x00010000)) {
-                subBuilder = ipAddress_.toBuilder();
+                subBuilder = oBSOLETEIpAddress_.toBuilder();
               }
-              ipAddress_ = input.readMessage(mesosphere.marathon.Protos.IpAddress.PARSER, extensionRegistry);
+              oBSOLETEIpAddress_ = input.readMessage(mesosphere.marathon.Protos.ObsoleteIpAddress.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(ipAddress_);
-                ipAddress_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(oBSOLETEIpAddress_);
+                oBSOLETEIpAddress_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00010000;
               break;
@@ -6857,6 +8240,38 @@ public final class Protos {
               bitField0_ |= 0x00080000;
               break;
             }
+            case 264: {
+              int rawValue = input.readEnum();
+              mesosphere.marathon.Protos.KillSelection value = mesosphere.marathon.Protos.KillSelection.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(33, rawValue);
+              } else {
+                bitField0_ |= 0x00100000;
+                killSelection_ = value;
+              }
+              break;
+            }
+            case 274: {
+              if (!((mutable_bitField1_ & 0x00000001) == 0x00000001)) {
+                networks_ = new java.util.ArrayList<mesosphere.marathon.Protos.NetworkDefinition>();
+                mutable_bitField1_ |= 0x00000001;
+              }
+              networks_.add(input.readMessage(mesosphere.marathon.Protos.NetworkDefinition.PARSER, extensionRegistry));
+              break;
+            }
+            case 282: {
+              org.apache.mesos.Protos.TTYInfo.Builder subBuilder = null;
+              if (((bitField0_ & 0x00200000) == 0x00200000)) {
+                subBuilder = tty_.toBuilder();
+              }
+              tty_ = input.readMessage(org.apache.mesos.Protos.TTYInfo.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(tty_);
+                tty_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00200000;
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -6897,6 +8312,9 @@ public final class Protos {
         }
         if (((mutable_bitField0_ & 0x10000000) == 0x10000000)) {
           envVarReferences_ = java.util.Collections.unmodifiableList(envVarReferences_);
+        }
+        if (((mutable_bitField1_ & 0x00000001) == 0x00000001)) {
+          networks_ = java.util.Collections.unmodifiableList(networks_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -7591,26 +9009,38 @@ public final class Protos {
       return lastConfigChangeAt_;
     }
 
-    // optional .mesosphere.marathon.IpAddress ipAddress = 25;
-    public static final int IPADDRESS_FIELD_NUMBER = 25;
-    private mesosphere.marathon.Protos.IpAddress ipAddress_;
+    // optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;
+    public static final int OBSOLETE_IPADDRESS_FIELD_NUMBER = 25;
+    private mesosphere.marathon.Protos.ObsoleteIpAddress oBSOLETEIpAddress_;
     /**
-     * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+     *
+     * <pre>
+     * deprecated since 1.5
+     * </pre>
      */
-    public boolean hasIpAddress() {
+    public boolean hasOBSOLETEIpAddress() {
       return ((bitField0_ & 0x00010000) == 0x00010000);
     }
     /**
-     * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+     *
+     * <pre>
+     * deprecated since 1.5
+     * </pre>
      */
-    public mesosphere.marathon.Protos.IpAddress getIpAddress() {
-      return ipAddress_;
+    public mesosphere.marathon.Protos.ObsoleteIpAddress getOBSOLETEIpAddress() {
+      return oBSOLETEIpAddress_;
     }
     /**
-     * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+     * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+     *
+     * <pre>
+     * deprecated since 1.5
+     * </pre>
      */
-    public mesosphere.marathon.Protos.IpAddressOrBuilder getIpAddressOrBuilder() {
-      return ipAddress_;
+    public mesosphere.marathon.Protos.ObsoleteIpAddressOrBuilder getOBSOLETEIpAddressOrBuilder() {
+      return oBSOLETEIpAddress_;
     }
 
     // optional .mesosphere.marathon.ResidencyDefinition residency = 26;
@@ -7825,6 +9255,100 @@ public final class Protos {
       return unreachableStrategy_;
     }
 
+    // optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];
+    public static final int KILLSELECTION_FIELD_NUMBER = 33;
+    private mesosphere.marathon.Protos.KillSelection killSelection_;
+    /**
+     * <code>optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];</code>
+     */
+    public boolean hasKillSelection() {
+      return ((bitField0_ & 0x00100000) == 0x00100000);
+    }
+    /**
+     * <code>optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];</code>
+     */
+    public mesosphere.marathon.Protos.KillSelection getKillSelection() {
+      return killSelection_;
+    }
+
+    // repeated .mesosphere.marathon.NetworkDefinition networks = 34;
+    public static final int NETWORKS_FIELD_NUMBER = 34;
+    private java.util.List<mesosphere.marathon.Protos.NetworkDefinition> networks_;
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    public java.util.List<mesosphere.marathon.Protos.NetworkDefinition> getNetworksList() {
+      return networks_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    public java.util.List<? extends mesosphere.marathon.Protos.NetworkDefinitionOrBuilder> 
+        getNetworksOrBuilderList() {
+      return networks_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    public int getNetworksCount() {
+      return networks_.size();
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    public mesosphere.marathon.Protos.NetworkDefinition getNetworks(int index) {
+      return networks_.get(index);
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+     *
+     * <pre>
+     * supersedes ObsoleteIpAddress
+     * </pre>
+     */
+    public mesosphere.marathon.Protos.NetworkDefinitionOrBuilder getNetworksOrBuilder(
+        int index) {
+      return networks_.get(index);
+    }
+
+    // optional .mesos.TTYInfo tty = 35;
+    public static final int TTY_FIELD_NUMBER = 35;
+    private org.apache.mesos.Protos.TTYInfo tty_;
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    public boolean hasTty() {
+      return ((bitField0_ & 0x00200000) == 0x00200000);
+    }
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    public org.apache.mesos.Protos.TTYInfo getTty() {
+      return tty_;
+    }
+    /**
+     * <code>optional .mesos.TTYInfo tty = 35;</code>
+     */
+    public org.apache.mesos.Protos.TTYInfoOrBuilder getTtyOrBuilder() {
+      return tty_;
+    }
+
     private void initFields() {
       id_ = "";
       cmd_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
@@ -7849,7 +9373,7 @@ public final class Protos {
       acceptedResourceRoles_ = mesosphere.marathon.Protos.ResourceRoles.getDefaultInstance();
       lastScalingAt_ = 0L;
       lastConfigChangeAt_ = 0L;
-      ipAddress_ = mesosphere.marathon.Protos.IpAddress.getDefaultInstance();
+      oBSOLETEIpAddress_ = mesosphere.marathon.Protos.ObsoleteIpAddress.getDefaultInstance();
       residency_ = mesosphere.marathon.Protos.ResidencyDefinition.getDefaultInstance();
       portDefinitions_ = java.util.Collections.emptyList();
       readinessCheckDefinition_ = java.util.Collections.emptyList();
@@ -7857,6 +9381,9 @@ public final class Protos {
       envVarReferences_ = java.util.Collections.emptyList();
       taskKillGracePeriod_ = 0L;
       unreachableStrategy_ = mesosphere.marathon.Protos.UnreachableStrategy.getDefaultInstance();
+      killSelection_ = mesosphere.marathon.Protos.KillSelection.YoungestFirst;
+      networks_ = java.util.Collections.emptyList();
+      tty_ = org.apache.mesos.Protos.TTYInfo.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -7925,8 +9452,8 @@ public final class Protos {
           return false;
         }
       }
-      if (hasIpAddress()) {
-        if (!getIpAddress().isInitialized()) {
+      if (hasOBSOLETEIpAddress()) {
+        if (!getOBSOLETEIpAddress().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -7945,6 +9472,18 @@ public final class Protos {
       }
       for (int i = 0; i < getEnvVarReferencesCount(); i++) {
         if (!getEnvVarReferences(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getNetworksCount(); i++) {
+        if (!getNetworks(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      if (hasTty()) {
+        if (!getTty().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -8026,7 +9565,7 @@ public final class Protos {
         output.writeInt64(24, lastConfigChangeAt_);
       }
       if (((bitField0_ & 0x00010000) == 0x00010000)) {
-        output.writeMessage(25, ipAddress_);
+        output.writeMessage(25, oBSOLETEIpAddress_);
       }
       if (((bitField0_ & 0x00020000) == 0x00020000)) {
         output.writeMessage(26, residency_);
@@ -8048,6 +9587,15 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00080000) == 0x00080000)) {
         output.writeMessage(32, unreachableStrategy_);
+      }
+      if (((bitField0_ & 0x00100000) == 0x00100000)) {
+        output.writeEnum(33, killSelection_.getNumber());
+      }
+      for (int i = 0; i < networks_.size(); i++) {
+        output.writeMessage(34, networks_.get(i));
+      }
+      if (((bitField0_ & 0x00200000) == 0x00200000)) {
+        output.writeMessage(35, tty_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -8167,7 +9715,7 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00010000) == 0x00010000)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(25, ipAddress_);
+          .computeMessageSize(25, oBSOLETEIpAddress_);
       }
       if (((bitField0_ & 0x00020000) == 0x00020000)) {
         size += com.google.protobuf.CodedOutputStream
@@ -8196,6 +9744,18 @@ public final class Protos {
       if (((bitField0_ & 0x00080000) == 0x00080000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(32, unreachableStrategy_);
+      }
+      if (((bitField0_ & 0x00100000) == 0x00100000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(33, killSelection_.getNumber());
+      }
+      for (int i = 0; i < networks_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(34, networks_.get(i));
+      }
+      if (((bitField0_ & 0x00200000) == 0x00200000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(35, tty_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8314,13 +9874,15 @@ public final class Protos {
           getContainerFieldBuilder();
           getLabelsFieldBuilder();
           getAcceptedResourceRolesFieldBuilder();
-          getIpAddressFieldBuilder();
+          getOBSOLETEIpAddressFieldBuilder();
           getResidencyFieldBuilder();
           getPortDefinitionsFieldBuilder();
           getReadinessCheckDefinitionFieldBuilder();
           getSecretsFieldBuilder();
           getEnvVarReferencesFieldBuilder();
           getUnreachableStrategyFieldBuilder();
+          getNetworksFieldBuilder();
+          getTtyFieldBuilder();
         }
       }
       private static Builder create() {
@@ -8411,10 +9973,10 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00200000);
         lastConfigChangeAt_ = 0L;
         bitField0_ = (bitField0_ & ~0x00400000);
-        if (ipAddressBuilder_ == null) {
-          ipAddress_ = mesosphere.marathon.Protos.IpAddress.getDefaultInstance();
+        if (oBSOLETEIpAddressBuilder_ == null) {
+          oBSOLETEIpAddress_ = mesosphere.marathon.Protos.ObsoleteIpAddress.getDefaultInstance();
         } else {
-          ipAddressBuilder_.clear();
+          oBSOLETEIpAddressBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00800000);
         if (residencyBuilder_ == null) {
@@ -8455,6 +10017,20 @@ public final class Protos {
           unreachableStrategyBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x40000000);
+        killSelection_ = mesosphere.marathon.Protos.KillSelection.YoungestFirst;
+        bitField0_ = (bitField0_ & ~0x80000000);
+        if (networksBuilder_ == null) {
+          networks_ = java.util.Collections.emptyList();
+          bitField1_ = (bitField1_ & ~0x00000001);
+        } else {
+          networksBuilder_.clear();
+        }
+        if (ttyBuilder_ == null) {
+          tty_ = org.apache.mesos.Protos.TTYInfo.getDefaultInstance();
+        } else {
+          ttyBuilder_.clear();
+        }
+        bitField1_ = (bitField1_ & ~0x00000002);
         return this;
       }
 
@@ -8482,6 +10058,7 @@ public final class Protos {
       public mesosphere.marathon.Protos.ServiceDefinition buildPartial() {
         mesosphere.marathon.Protos.ServiceDefinition result = new mesosphere.marathon.Protos.ServiceDefinition(this);
         int from_bitField0_ = bitField0_;
+        int from_bitField1_ = bitField1_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
@@ -8623,10 +10200,10 @@ public final class Protos {
         if (((from_bitField0_ & 0x00800000) == 0x00800000)) {
           to_bitField0_ |= 0x00010000;
         }
-        if (ipAddressBuilder_ == null) {
-          result.ipAddress_ = ipAddress_;
+        if (oBSOLETEIpAddressBuilder_ == null) {
+          result.oBSOLETEIpAddress_ = oBSOLETEIpAddress_;
         } else {
-          result.ipAddress_ = ipAddressBuilder_.build();
+          result.oBSOLETEIpAddress_ = oBSOLETEIpAddressBuilder_.build();
         }
         if (((from_bitField0_ & 0x01000000) == 0x01000000)) {
           to_bitField0_ |= 0x00020000;
@@ -8683,6 +10260,27 @@ public final class Protos {
           result.unreachableStrategy_ = unreachableStrategy_;
         } else {
           result.unreachableStrategy_ = unreachableStrategyBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x80000000) == 0x80000000)) {
+          to_bitField0_ |= 0x00100000;
+        }
+        result.killSelection_ = killSelection_;
+        if (networksBuilder_ == null) {
+          if (((bitField1_ & 0x00000001) == 0x00000001)) {
+            networks_ = java.util.Collections.unmodifiableList(networks_);
+            bitField1_ = (bitField1_ & ~0x00000001);
+          }
+          result.networks_ = networks_;
+        } else {
+          result.networks_ = networksBuilder_.build();
+        }
+        if (((from_bitField1_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00200000;
+        }
+        if (ttyBuilder_ == null) {
+          result.tty_ = tty_;
+        } else {
+          result.tty_ = ttyBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -8890,8 +10488,8 @@ public final class Protos {
         if (other.hasLastConfigChangeAt()) {
           setLastConfigChangeAt(other.getLastConfigChangeAt());
         }
-        if (other.hasIpAddress()) {
-          mergeIpAddress(other.getIpAddress());
+        if (other.hasOBSOLETEIpAddress()) {
+          mergeOBSOLETEIpAddress(other.getOBSOLETEIpAddress());
         }
         if (other.hasResidency()) {
           mergeResidency(other.getResidency());
@@ -9006,6 +10604,38 @@ public final class Protos {
         if (other.hasUnreachableStrategy()) {
           mergeUnreachableStrategy(other.getUnreachableStrategy());
         }
+        if (other.hasKillSelection()) {
+          setKillSelection(other.getKillSelection());
+        }
+        if (networksBuilder_ == null) {
+          if (!other.networks_.isEmpty()) {
+            if (networks_.isEmpty()) {
+              networks_ = other.networks_;
+              bitField1_ = (bitField1_ & ~0x00000001);
+            } else {
+              ensureNetworksIsMutable();
+              networks_.addAll(other.networks_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.networks_.isEmpty()) {
+            if (networksBuilder_.isEmpty()) {
+              networksBuilder_.dispose();
+              networksBuilder_ = null;
+              networks_ = other.networks_;
+              bitField1_ = (bitField1_ & ~0x00000001);
+              networksBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getNetworksFieldBuilder() : null;
+            } else {
+              networksBuilder_.addAllMessages(other.networks_);
+            }
+          }
+        }
+        if (other.hasTty()) {
+          mergeTty(other.getTty());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -9073,8 +10703,8 @@ public final class Protos {
             return false;
           }
         }
-        if (hasIpAddress()) {
-          if (!getIpAddress().isInitialized()) {
+        if (hasOBSOLETEIpAddress()) {
+          if (!getOBSOLETEIpAddress().isInitialized()) {
             
             return false;
           }
@@ -9093,6 +10723,18 @@ public final class Protos {
         }
         for (int i = 0; i < getEnvVarReferencesCount(); i++) {
           if (!getEnvVarReferences(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getNetworksCount(); i++) {
+          if (!getNetworks(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        if (hasTty()) {
+          if (!getTty().isInitialized()) {
             
             return false;
           }
@@ -9118,6 +10760,7 @@ public final class Protos {
         return this;
       }
       private int bitField0_;
+      private int bitField1_;
 
       // required string id = 1;
       private java.lang.Object id_ = "";
@@ -11535,121 +13178,157 @@ public final class Protos {
         return this;
       }
 
-      // optional .mesosphere.marathon.IpAddress ipAddress = 25;
-      private mesosphere.marathon.Protos.IpAddress ipAddress_ = mesosphere.marathon.Protos.IpAddress.getDefaultInstance();
+      // optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;
+      private mesosphere.marathon.Protos.ObsoleteIpAddress oBSOLETEIpAddress_ = mesosphere.marathon.Protos.ObsoleteIpAddress.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          mesosphere.marathon.Protos.IpAddress, mesosphere.marathon.Protos.IpAddress.Builder, mesosphere.marathon.Protos.IpAddressOrBuilder> ipAddressBuilder_;
+          mesosphere.marathon.Protos.ObsoleteIpAddress, mesosphere.marathon.Protos.ObsoleteIpAddress.Builder, mesosphere.marathon.Protos.ObsoleteIpAddressOrBuilder> oBSOLETEIpAddressBuilder_;
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
-      public boolean hasIpAddress() {
+      public boolean hasOBSOLETEIpAddress() {
         return ((bitField0_ & 0x00800000) == 0x00800000);
       }
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
-      public mesosphere.marathon.Protos.IpAddress getIpAddress() {
-        if (ipAddressBuilder_ == null) {
-          return ipAddress_;
+      public mesosphere.marathon.Protos.ObsoleteIpAddress getOBSOLETEIpAddress() {
+        if (oBSOLETEIpAddressBuilder_ == null) {
+          return oBSOLETEIpAddress_;
         } else {
-          return ipAddressBuilder_.getMessage();
+          return oBSOLETEIpAddressBuilder_.getMessage();
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
-      public Builder setIpAddress(mesosphere.marathon.Protos.IpAddress value) {
-        if (ipAddressBuilder_ == null) {
+      public Builder setOBSOLETEIpAddress(mesosphere.marathon.Protos.ObsoleteIpAddress value) {
+        if (oBSOLETEIpAddressBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ipAddress_ = value;
+          oBSOLETEIpAddress_ = value;
           onChanged();
         } else {
-          ipAddressBuilder_.setMessage(value);
+          oBSOLETEIpAddressBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00800000;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
-      public Builder setIpAddress(
-          mesosphere.marathon.Protos.IpAddress.Builder builderForValue) {
-        if (ipAddressBuilder_ == null) {
-          ipAddress_ = builderForValue.build();
+      public Builder setOBSOLETEIpAddress(
+          mesosphere.marathon.Protos.ObsoleteIpAddress.Builder builderForValue) {
+        if (oBSOLETEIpAddressBuilder_ == null) {
+          oBSOLETEIpAddress_ = builderForValue.build();
           onChanged();
         } else {
-          ipAddressBuilder_.setMessage(builderForValue.build());
+          oBSOLETEIpAddressBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00800000;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
-      public Builder mergeIpAddress(mesosphere.marathon.Protos.IpAddress value) {
-        if (ipAddressBuilder_ == null) {
+      public Builder mergeOBSOLETEIpAddress(mesosphere.marathon.Protos.ObsoleteIpAddress value) {
+        if (oBSOLETEIpAddressBuilder_ == null) {
           if (((bitField0_ & 0x00800000) == 0x00800000) &&
-              ipAddress_ != mesosphere.marathon.Protos.IpAddress.getDefaultInstance()) {
-            ipAddress_ =
-              mesosphere.marathon.Protos.IpAddress.newBuilder(ipAddress_).mergeFrom(value).buildPartial();
+              oBSOLETEIpAddress_ != mesosphere.marathon.Protos.ObsoleteIpAddress.getDefaultInstance()) {
+            oBSOLETEIpAddress_ =
+              mesosphere.marathon.Protos.ObsoleteIpAddress.newBuilder(oBSOLETEIpAddress_).mergeFrom(value).buildPartial();
           } else {
-            ipAddress_ = value;
+            oBSOLETEIpAddress_ = value;
           }
           onChanged();
         } else {
-          ipAddressBuilder_.mergeFrom(value);
+          oBSOLETEIpAddressBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00800000;
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
-      public Builder clearIpAddress() {
-        if (ipAddressBuilder_ == null) {
-          ipAddress_ = mesosphere.marathon.Protos.IpAddress.getDefaultInstance();
+      public Builder clearOBSOLETEIpAddress() {
+        if (oBSOLETEIpAddressBuilder_ == null) {
+          oBSOLETEIpAddress_ = mesosphere.marathon.Protos.ObsoleteIpAddress.getDefaultInstance();
           onChanged();
         } else {
-          ipAddressBuilder_.clear();
+          oBSOLETEIpAddressBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00800000);
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
-      public mesosphere.marathon.Protos.IpAddress.Builder getIpAddressBuilder() {
+      public mesosphere.marathon.Protos.ObsoleteIpAddress.Builder getOBSOLETEIpAddressBuilder() {
         bitField0_ |= 0x00800000;
         onChanged();
-        return getIpAddressFieldBuilder().getBuilder();
+        return getOBSOLETEIpAddressFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
-      public mesosphere.marathon.Protos.IpAddressOrBuilder getIpAddressOrBuilder() {
-        if (ipAddressBuilder_ != null) {
-          return ipAddressBuilder_.getMessageOrBuilder();
+      public mesosphere.marathon.Protos.ObsoleteIpAddressOrBuilder getOBSOLETEIpAddressOrBuilder() {
+        if (oBSOLETEIpAddressBuilder_ != null) {
+          return oBSOLETEIpAddressBuilder_.getMessageOrBuilder();
         } else {
-          return ipAddress_;
+          return oBSOLETEIpAddress_;
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.IpAddress ipAddress = 25;</code>
+       * <code>optional .mesosphere.marathon.ObsoleteIpAddress OBSOLETE_ipAddress = 25;</code>
+       *
+       * <pre>
+       * deprecated since 1.5
+       * </pre>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          mesosphere.marathon.Protos.IpAddress, mesosphere.marathon.Protos.IpAddress.Builder, mesosphere.marathon.Protos.IpAddressOrBuilder> 
-          getIpAddressFieldBuilder() {
-        if (ipAddressBuilder_ == null) {
-          ipAddressBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              mesosphere.marathon.Protos.IpAddress, mesosphere.marathon.Protos.IpAddress.Builder, mesosphere.marathon.Protos.IpAddressOrBuilder>(
-                  ipAddress_,
+          mesosphere.marathon.Protos.ObsoleteIpAddress, mesosphere.marathon.Protos.ObsoleteIpAddress.Builder, mesosphere.marathon.Protos.ObsoleteIpAddressOrBuilder> 
+          getOBSOLETEIpAddressFieldBuilder() {
+        if (oBSOLETEIpAddressBuilder_ == null) {
+          oBSOLETEIpAddressBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              mesosphere.marathon.Protos.ObsoleteIpAddress, mesosphere.marathon.Protos.ObsoleteIpAddress.Builder, mesosphere.marathon.Protos.ObsoleteIpAddressOrBuilder>(
+                  oBSOLETEIpAddress_,
                   getParentForChildren(),
                   isClean());
-          ipAddress_ = null;
+          oBSOLETEIpAddress_ = null;
         }
-        return ipAddressBuilder_;
+        return oBSOLETEIpAddressBuilder_;
       }
 
       // optional .mesosphere.marathon.ResidencyDefinition residency = 26;
@@ -12882,7 +14561,7 @@ public final class Protos {
        * <code>optional .mesosphere.marathon.UnreachableStrategy unreachableStrategy = 32;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          mesosphere.marathon.Protos.UnreachableStrategy, mesosphere.marathon.Protos.UnreachableStrategy.Builder, mesosphere.marathon.Protos.UnreachableStrategyOrBuilder>
+          mesosphere.marathon.Protos.UnreachableStrategy, mesosphere.marathon.Protos.UnreachableStrategy.Builder, mesosphere.marathon.Protos.UnreachableStrategyOrBuilder> 
           getUnreachableStrategyFieldBuilder() {
         if (unreachableStrategyBuilder_ == null) {
           unreachableStrategyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -12893,6 +14572,471 @@ public final class Protos {
           unreachableStrategy_ = null;
         }
         return unreachableStrategyBuilder_;
+      }
+
+      // optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];
+      private mesosphere.marathon.Protos.KillSelection killSelection_ = mesosphere.marathon.Protos.KillSelection.YoungestFirst;
+      /**
+       * <code>optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];</code>
+       */
+      public boolean hasKillSelection() {
+        return ((bitField0_ & 0x80000000) == 0x80000000);
+      }
+      /**
+       * <code>optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];</code>
+       */
+      public mesosphere.marathon.Protos.KillSelection getKillSelection() {
+        return killSelection_;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];</code>
+       */
+      public Builder setKillSelection(mesosphere.marathon.Protos.KillSelection value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x80000000;
+        killSelection_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.KillSelection killSelection = 33 [default = YoungestFirst];</code>
+       */
+      public Builder clearKillSelection() {
+        bitField0_ = (bitField0_ & ~0x80000000);
+        killSelection_ = mesosphere.marathon.Protos.KillSelection.YoungestFirst;
+        onChanged();
+        return this;
+      }
+
+      // repeated .mesosphere.marathon.NetworkDefinition networks = 34;
+      private java.util.List<mesosphere.marathon.Protos.NetworkDefinition> networks_ =
+        java.util.Collections.emptyList();
+      private void ensureNetworksIsMutable() {
+        if (!((bitField1_ & 0x00000001) == 0x00000001)) {
+          networks_ = new java.util.ArrayList<mesosphere.marathon.Protos.NetworkDefinition>(networks_);
+          bitField1_ |= 0x00000001;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.NetworkDefinition, mesosphere.marathon.Protos.NetworkDefinition.Builder, mesosphere.marathon.Protos.NetworkDefinitionOrBuilder> networksBuilder_;
+
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public java.util.List<mesosphere.marathon.Protos.NetworkDefinition> getNetworksList() {
+        if (networksBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(networks_);
+        } else {
+          return networksBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public int getNetworksCount() {
+        if (networksBuilder_ == null) {
+          return networks_.size();
+        } else {
+          return networksBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.NetworkDefinition getNetworks(int index) {
+        if (networksBuilder_ == null) {
+          return networks_.get(index);
+        } else {
+          return networksBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder setNetworks(
+          int index, mesosphere.marathon.Protos.NetworkDefinition value) {
+        if (networksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureNetworksIsMutable();
+          networks_.set(index, value);
+          onChanged();
+        } else {
+          networksBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder setNetworks(
+          int index, mesosphere.marathon.Protos.NetworkDefinition.Builder builderForValue) {
+        if (networksBuilder_ == null) {
+          ensureNetworksIsMutable();
+          networks_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          networksBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder addNetworks(mesosphere.marathon.Protos.NetworkDefinition value) {
+        if (networksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureNetworksIsMutable();
+          networks_.add(value);
+          onChanged();
+        } else {
+          networksBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder addNetworks(
+          int index, mesosphere.marathon.Protos.NetworkDefinition value) {
+        if (networksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureNetworksIsMutable();
+          networks_.add(index, value);
+          onChanged();
+        } else {
+          networksBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder addNetworks(
+          mesosphere.marathon.Protos.NetworkDefinition.Builder builderForValue) {
+        if (networksBuilder_ == null) {
+          ensureNetworksIsMutable();
+          networks_.add(builderForValue.build());
+          onChanged();
+        } else {
+          networksBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder addNetworks(
+          int index, mesosphere.marathon.Protos.NetworkDefinition.Builder builderForValue) {
+        if (networksBuilder_ == null) {
+          ensureNetworksIsMutable();
+          networks_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          networksBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder addAllNetworks(
+          java.lang.Iterable<? extends mesosphere.marathon.Protos.NetworkDefinition> values) {
+        if (networksBuilder_ == null) {
+          ensureNetworksIsMutable();
+          super.addAll(values, networks_);
+          onChanged();
+        } else {
+          networksBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder clearNetworks() {
+        if (networksBuilder_ == null) {
+          networks_ = java.util.Collections.emptyList();
+          bitField1_ = (bitField1_ & ~0x00000001);
+          onChanged();
+        } else {
+          networksBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public Builder removeNetworks(int index) {
+        if (networksBuilder_ == null) {
+          ensureNetworksIsMutable();
+          networks_.remove(index);
+          onChanged();
+        } else {
+          networksBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.NetworkDefinition.Builder getNetworksBuilder(
+          int index) {
+        return getNetworksFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.NetworkDefinitionOrBuilder getNetworksOrBuilder(
+          int index) {
+        if (networksBuilder_ == null) {
+          return networks_.get(index);  } else {
+          return networksBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public java.util.List<? extends mesosphere.marathon.Protos.NetworkDefinitionOrBuilder> 
+           getNetworksOrBuilderList() {
+        if (networksBuilder_ != null) {
+          return networksBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(networks_);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.NetworkDefinition.Builder addNetworksBuilder() {
+        return getNetworksFieldBuilder().addBuilder(
+            mesosphere.marathon.Protos.NetworkDefinition.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.NetworkDefinition.Builder addNetworksBuilder(
+          int index) {
+        return getNetworksFieldBuilder().addBuilder(
+            index, mesosphere.marathon.Protos.NetworkDefinition.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.NetworkDefinition networks = 34;</code>
+       *
+       * <pre>
+       * supersedes ObsoleteIpAddress
+       * </pre>
+       */
+      public java.util.List<mesosphere.marathon.Protos.NetworkDefinition.Builder> 
+           getNetworksBuilderList() {
+        return getNetworksFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.NetworkDefinition, mesosphere.marathon.Protos.NetworkDefinition.Builder, mesosphere.marathon.Protos.NetworkDefinitionOrBuilder> 
+          getNetworksFieldBuilder() {
+        if (networksBuilder_ == null) {
+          networksBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              mesosphere.marathon.Protos.NetworkDefinition, mesosphere.marathon.Protos.NetworkDefinition.Builder, mesosphere.marathon.Protos.NetworkDefinitionOrBuilder>(
+                  networks_,
+                  ((bitField1_ & 0x00000001) == 0x00000001),
+                  getParentForChildren(),
+                  isClean());
+          networks_ = null;
+        }
+        return networksBuilder_;
+      }
+
+      // optional .mesos.TTYInfo tty = 35;
+      private org.apache.mesos.Protos.TTYInfo tty_ = org.apache.mesos.Protos.TTYInfo.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.TTYInfo, org.apache.mesos.Protos.TTYInfo.Builder, org.apache.mesos.Protos.TTYInfoOrBuilder> ttyBuilder_;
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public boolean hasTty() {
+        return ((bitField1_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public org.apache.mesos.Protos.TTYInfo getTty() {
+        if (ttyBuilder_ == null) {
+          return tty_;
+        } else {
+          return ttyBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public Builder setTty(org.apache.mesos.Protos.TTYInfo value) {
+        if (ttyBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          tty_ = value;
+          onChanged();
+        } else {
+          ttyBuilder_.setMessage(value);
+        }
+        bitField1_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public Builder setTty(
+          org.apache.mesos.Protos.TTYInfo.Builder builderForValue) {
+        if (ttyBuilder_ == null) {
+          tty_ = builderForValue.build();
+          onChanged();
+        } else {
+          ttyBuilder_.setMessage(builderForValue.build());
+        }
+        bitField1_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public Builder mergeTty(org.apache.mesos.Protos.TTYInfo value) {
+        if (ttyBuilder_ == null) {
+          if (((bitField1_ & 0x00000002) == 0x00000002) &&
+              tty_ != org.apache.mesos.Protos.TTYInfo.getDefaultInstance()) {
+            tty_ =
+              org.apache.mesos.Protos.TTYInfo.newBuilder(tty_).mergeFrom(value).buildPartial();
+          } else {
+            tty_ = value;
+          }
+          onChanged();
+        } else {
+          ttyBuilder_.mergeFrom(value);
+        }
+        bitField1_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public Builder clearTty() {
+        if (ttyBuilder_ == null) {
+          tty_ = org.apache.mesos.Protos.TTYInfo.getDefaultInstance();
+          onChanged();
+        } else {
+          ttyBuilder_.clear();
+        }
+        bitField1_ = (bitField1_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public org.apache.mesos.Protos.TTYInfo.Builder getTtyBuilder() {
+        bitField1_ |= 0x00000002;
+        onChanged();
+        return getTtyFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      public org.apache.mesos.Protos.TTYInfoOrBuilder getTtyOrBuilder() {
+        if (ttyBuilder_ != null) {
+          return ttyBuilder_.getMessageOrBuilder();
+        } else {
+          return tty_;
+        }
+      }
+      /**
+       * <code>optional .mesos.TTYInfo tty = 35;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.mesos.Protos.TTYInfo, org.apache.mesos.Protos.TTYInfo.Builder, org.apache.mesos.Protos.TTYInfoOrBuilder> 
+          getTtyFieldBuilder() {
+        if (ttyBuilder_ == null) {
+          ttyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.mesos.Protos.TTYInfo, org.apache.mesos.Protos.TTYInfo.Builder, org.apache.mesos.Protos.TTYInfoOrBuilder>(
+                  tty_,
+                  getParentForChildren(),
+                  isClean());
+          tty_ = null;
+        }
+        return ttyBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ServiceDefinition)
@@ -12914,7 +15058,7 @@ public final class Protos {
      * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
      *
      * <pre>
-     * 15 minutes
+     * UnreachableDisabled is represented by both of these fields missing
      * </pre>
      */
     boolean hasInactiveAfterSeconds();
@@ -12922,7 +15066,7 @@ public final class Protos {
      * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
      *
      * <pre>
-     * 15 minutes
+     * UnreachableDisabled is represented by both of these fields missing
      * </pre>
      */
     long getInactiveAfterSeconds();
@@ -13053,7 +15197,7 @@ public final class Protos {
      * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
      *
      * <pre>
-     * 15 minutes
+     * UnreachableDisabled is represented by both of these fields missing
      * </pre>
      */
     public boolean hasInactiveAfterSeconds() {
@@ -13063,7 +15207,7 @@ public final class Protos {
      * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
      *
      * <pre>
-     * 15 minutes
+     * UnreachableDisabled is represented by both of these fields missing
      * </pre>
      */
     public long getInactiveAfterSeconds() {
@@ -13344,7 +15488,7 @@ public final class Protos {
        * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
        *
        * <pre>
-       * 15 minutes
+       * UnreachableDisabled is represented by both of these fields missing
        * </pre>
        */
       public boolean hasInactiveAfterSeconds() {
@@ -13354,7 +15498,7 @@ public final class Protos {
        * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
        *
        * <pre>
-       * 15 minutes
+       * UnreachableDisabled is represented by both of these fields missing
        * </pre>
        */
       public long getInactiveAfterSeconds() {
@@ -13364,7 +15508,7 @@ public final class Protos {
        * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
        *
        * <pre>
-       * 15 minutes
+       * UnreachableDisabled is represented by both of these fields missing
        * </pre>
        */
       public Builder setInactiveAfterSeconds(long value) {
@@ -13377,7 +15521,7 @@ public final class Protos {
        * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
        *
        * <pre>
-       * 15 minutes
+       * UnreachableDisabled is represented by both of these fields missing
        * </pre>
        */
       public Builder clearInactiveAfterSeconds() {
@@ -21340,6 +23484,51 @@ public final class Protos {
     mesosphere.marathon.Protos.VolumeOrBuilder getVolumesOrBuilder(
         int index);
 
+    // repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping> 
+        getPortMappingsList();
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping getPortMappings(int index);
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    int getPortMappingsCount();
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder> 
+        getPortMappingsOrBuilderList();
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder getPortMappingsOrBuilder(
+        int index);
+
     // optional .mesosphere.marathon.ExtendedContainerInfo.DockerInfo docker = 3;
     /**
      * <code>optional .mesosphere.marathon.ExtendedContainerInfo.DockerInfo docker = 3;</code>
@@ -21496,6 +23685,14 @@ public final class Protos {
               bitField0_ |= 0x00000008;
               break;
             }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                portMappings_ = new java.util.ArrayList<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              portMappings_.add(input.readMessage(mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -21506,6 +23703,9 @@ public final class Protos {
       } finally {
         if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
           volumes_ = java.util.Collections.unmodifiableList(volumes_);
+        }
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          portMappings_ = java.util.Collections.unmodifiableList(portMappings_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -21556,39 +23756,67 @@ public final class Protos {
       com.google.protobuf.ByteString
           getImageBytes();
 
-      // optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];
+      // optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];
       /**
-       * <code>optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];</code>
+       * <code>optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];</code>
+       *
+       * <pre>
+       * deprecated in favor of ServiceDefinition.networks since 1.5
+       * </pre>
        */
-      boolean hasNetwork();
+      boolean hasOBSOLETENetwork();
       /**
-       * <code>optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];</code>
+       * <code>optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];</code>
+       *
+       * <pre>
+       * deprecated in favor of ServiceDefinition.networks since 1.5
+       * </pre>
        */
-      org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network getNetwork();
+      org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network getOBSOLETENetwork();
 
-      // repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;
+      // repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping> 
-          getPortMappingsList();
+      java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping> 
+          getOBSOLETEPortMappingsList();
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping getPortMappings(int index);
+      mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping getOBSOLETEPortMappings(int index);
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      int getPortMappingsCount();
+      int getOBSOLETEPortMappingsCount();
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder> 
-          getPortMappingsOrBuilderList();
+      java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder> 
+          getOBSOLETEPortMappingsOrBuilderList();
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder getPortMappingsOrBuilder(
+      mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder getOBSOLETEPortMappingsOrBuilder(
           int index);
 
       // optional bool privileged = 4 [default = false];
@@ -21750,16 +23978,16 @@ public final class Protos {
                   unknownFields.mergeVarintField(2, rawValue);
                 } else {
                   bitField0_ |= 0x00000002;
-                  network_ = value;
+                  oBSOLETENetwork_ = value;
                 }
                 break;
               }
               case 26: {
                 if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
-                  portMappings_ = new java.util.ArrayList<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping>();
+                  oBSOLETEPortMappings_ = new java.util.ArrayList<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping>();
                   mutable_bitField0_ |= 0x00000004;
                 }
-                portMappings_.add(input.readMessage(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.PARSER, extensionRegistry));
+                oBSOLETEPortMappings_.add(input.readMessage(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.PARSER, extensionRegistry));
                 break;
               }
               case 32: {
@@ -21789,7 +24017,7 @@ public final class Protos {
               e.getMessage()).setUnfinishedMessage(this);
         } finally {
           if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
-            portMappings_ = java.util.Collections.unmodifiableList(portMappings_);
+            oBSOLETEPortMappings_ = java.util.Collections.unmodifiableList(oBSOLETEPortMappings_);
           }
           if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
             parameters_ = java.util.Collections.unmodifiableList(parameters_);
@@ -21825,7 +24053,7 @@ public final class Protos {
         return PARSER;
       }
 
-      public interface PortMappingOrBuilder
+      public interface ObsoleteDockerPortMappingOrBuilder
           extends com.google.protobuf.MessageOrBuilder {
 
         // optional uint32 host_port = 1;
@@ -21914,24 +24142,28 @@ public final class Protos {
         int getServicePort();
       }
       /**
-       * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping}
+       * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping}
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.PortMapping,since 1.5
+       * </pre>
        */
-      public static final class PortMapping extends
+      public static final class ObsoleteDockerPortMapping extends
           com.google.protobuf.GeneratedMessage
-          implements PortMappingOrBuilder {
-        // Use PortMapping.newBuilder() to construct.
-        private PortMapping(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+          implements ObsoleteDockerPortMappingOrBuilder {
+        // Use ObsoleteDockerPortMapping.newBuilder() to construct.
+        private ObsoleteDockerPortMapping(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
           super(builder);
           this.unknownFields = builder.getUnknownFields();
         }
-        private PortMapping(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+        private ObsoleteDockerPortMapping(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-        private static final PortMapping defaultInstance;
-        public static PortMapping getDefaultInstance() {
+        private static final ObsoleteDockerPortMapping defaultInstance;
+        public static ObsoleteDockerPortMapping getDefaultInstance() {
           return defaultInstance;
         }
 
-        public PortMapping getDefaultInstanceForType() {
+        public ObsoleteDockerPortMapping getDefaultInstanceForType() {
           return defaultInstance;
         }
 
@@ -21941,7 +24173,7 @@ public final class Protos {
             getUnknownFields() {
           return this.unknownFields;
         }
-        private PortMapping(
+        private ObsoleteDockerPortMapping(
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
@@ -22014,28 +24246,28 @@ public final class Protos {
         }
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_descriptor;
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_descriptor;
         }
 
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_fieldAccessorTable
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_fieldAccessorTable
               .ensureFieldAccessorsInitialized(
-                  mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.class, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder.class);
+                  mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.class, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder.class);
         }
 
-        public static com.google.protobuf.Parser<PortMapping> PARSER =
-            new com.google.protobuf.AbstractParser<PortMapping>() {
-          public PortMapping parsePartialFrom(
+        public static com.google.protobuf.Parser<ObsoleteDockerPortMapping> PARSER =
+            new com.google.protobuf.AbstractParser<ObsoleteDockerPortMapping>() {
+          public ObsoleteDockerPortMapping parsePartialFrom(
               com.google.protobuf.CodedInputStream input,
               com.google.protobuf.ExtensionRegistryLite extensionRegistry)
               throws com.google.protobuf.InvalidProtocolBufferException {
-            return new PortMapping(input, extensionRegistry);
+            return new ObsoleteDockerPortMapping(input, extensionRegistry);
           }
         };
 
         @java.lang.Override
-        public com.google.protobuf.Parser<PortMapping> getParserForType() {
+        public com.google.protobuf.Parser<ObsoleteDockerPortMapping> getParserForType() {
           return PARSER;
         }
 
@@ -22303,53 +24535,53 @@ public final class Protos {
           return super.writeReplace();
         }
 
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseFrom(
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseFrom(
             com.google.protobuf.ByteString data)
             throws com.google.protobuf.InvalidProtocolBufferException {
           return PARSER.parseFrom(data);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseFrom(
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseFrom(
             com.google.protobuf.ByteString data,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           return PARSER.parseFrom(data, extensionRegistry);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseFrom(byte[] data)
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseFrom(byte[] data)
             throws com.google.protobuf.InvalidProtocolBufferException {
           return PARSER.parseFrom(data);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseFrom(
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseFrom(
             byte[] data,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           return PARSER.parseFrom(data, extensionRegistry);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseFrom(java.io.InputStream input)
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseFrom(java.io.InputStream input)
             throws java.io.IOException {
           return PARSER.parseFrom(input);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseFrom(
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseFrom(
             java.io.InputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws java.io.IOException {
           return PARSER.parseFrom(input, extensionRegistry);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseDelimitedFrom(java.io.InputStream input)
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseDelimitedFrom(java.io.InputStream input)
             throws java.io.IOException {
           return PARSER.parseDelimitedFrom(input);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseDelimitedFrom(
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseDelimitedFrom(
             java.io.InputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws java.io.IOException {
           return PARSER.parseDelimitedFrom(input, extensionRegistry);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseFrom(
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseFrom(
             com.google.protobuf.CodedInputStream input)
             throws java.io.IOException {
           return PARSER.parseFrom(input);
         }
-        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parseFrom(
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parseFrom(
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws java.io.IOException {
@@ -22358,7 +24590,7 @@ public final class Protos {
 
         public static Builder newBuilder() { return Builder.create(); }
         public Builder newBuilderForType() { return newBuilder(); }
-        public static Builder newBuilder(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping prototype) {
+        public static Builder newBuilder(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping prototype) {
           return newBuilder().mergeFrom(prototype);
         }
         public Builder toBuilder() { return newBuilder(this); }
@@ -22370,24 +24602,28 @@ public final class Protos {
           return builder;
         }
         /**
-         * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping}
+         * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping}
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.PortMapping,since 1.5
+         * </pre>
          */
         public static final class Builder extends
             com.google.protobuf.GeneratedMessage.Builder<Builder>
-           implements mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder {
+           implements mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder {
           public static final com.google.protobuf.Descriptors.Descriptor
               getDescriptor() {
-            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_descriptor;
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_descriptor;
           }
 
           protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
               internalGetFieldAccessorTable() {
-            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_fieldAccessorTable
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_fieldAccessorTable
                 .ensureFieldAccessorsInitialized(
-                    mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.class, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder.class);
+                    mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.class, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder.class);
           }
 
-          // Construct using mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.newBuilder()
+          // Construct using mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.newBuilder()
           private Builder() {
             maybeForceBuilderInitialization();
           }
@@ -22433,23 +24669,23 @@ public final class Protos {
 
           public com.google.protobuf.Descriptors.Descriptor
               getDescriptorForType() {
-            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_descriptor;
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_descriptor;
           }
 
-          public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping getDefaultInstanceForType() {
-            return mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.getDefaultInstance();
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping getDefaultInstanceForType() {
+            return mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.getDefaultInstance();
           }
 
-          public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping build() {
-            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping result = buildPartial();
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping build() {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping result = buildPartial();
             if (!result.isInitialized()) {
               throw newUninitializedMessageException(result);
             }
             return result;
           }
 
-          public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping buildPartial() {
-            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping result = new mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping(this);
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping buildPartial() {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping result = new mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping(this);
             int from_bitField0_ = bitField0_;
             int to_bitField0_ = 0;
             if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -22487,16 +24723,16 @@ public final class Protos {
           }
 
           public Builder mergeFrom(com.google.protobuf.Message other) {
-            if (other instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping) {
-              return mergeFrom((mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping)other);
+            if (other instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping) {
+              return mergeFrom((mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping)other);
             } else {
               super.mergeFrom(other);
               return this;
             }
           }
 
-          public Builder mergeFrom(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping other) {
-            if (other == mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.getDefaultInstance()) return this;
+          public Builder mergeFrom(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping other) {
+            if (other == mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.getDefaultInstance()) return this;
             if (other.hasHostPort()) {
               setHostPort(other.getHostPort());
             }
@@ -22564,11 +24800,11 @@ public final class Protos {
               com.google.protobuf.CodedInputStream input,
               com.google.protobuf.ExtensionRegistryLite extensionRegistry)
               throws java.io.IOException {
-            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping parsedMessage = null;
+            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping parsedMessage = null;
             try {
               parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
             } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-              parsedMessage = (mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping) e.getUnfinishedMessage();
+              parsedMessage = (mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping) e.getUnfinishedMessage();
               throw e;
             } finally {
               if (parsedMessage != null) {
@@ -23066,15 +25302,15 @@ public final class Protos {
             return this;
           }
 
-          // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping)
+          // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping)
         }
 
         static {
-          defaultInstance = new PortMapping(true);
+          defaultInstance = new ObsoleteDockerPortMapping(true);
           defaultInstance.initFields();
         }
 
-        // @@protoc_insertion_point(class_scope:mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping)
+        // @@protoc_insertion_point(class_scope:mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping)
       }
 
       private int bitField0_;
@@ -23121,56 +25357,84 @@ public final class Protos {
         }
       }
 
-      // optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];
-      public static final int NETWORK_FIELD_NUMBER = 2;
-      private org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network network_;
+      // optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];
+      public static final int OBSOLETE_NETWORK_FIELD_NUMBER = 2;
+      private org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network oBSOLETENetwork_;
       /**
-       * <code>optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];</code>
+       * <code>optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];</code>
+       *
+       * <pre>
+       * deprecated in favor of ServiceDefinition.networks since 1.5
+       * </pre>
        */
-      public boolean hasNetwork() {
+      public boolean hasOBSOLETENetwork() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];</code>
+       * <code>optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];</code>
+       *
+       * <pre>
+       * deprecated in favor of ServiceDefinition.networks since 1.5
+       * </pre>
        */
-      public org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network getNetwork() {
-        return network_;
+      public org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network getOBSOLETENetwork() {
+        return oBSOLETENetwork_;
       }
 
-      // repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;
-      public static final int PORT_MAPPINGS_FIELD_NUMBER = 3;
-      private java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping> portMappings_;
+      // repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;
+      public static final int OBSOLETE_PORT_MAPPINGS_FIELD_NUMBER = 3;
+      private java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping> oBSOLETEPortMappings_;
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping> getPortMappingsList() {
-        return portMappings_;
+      public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping> getOBSOLETEPortMappingsList() {
+        return oBSOLETEPortMappings_;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      public java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder> 
-          getPortMappingsOrBuilderList() {
-        return portMappings_;
+      public java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder> 
+          getOBSOLETEPortMappingsOrBuilderList() {
+        return oBSOLETEPortMappings_;
       }
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      public int getPortMappingsCount() {
-        return portMappings_.size();
+      public int getOBSOLETEPortMappingsCount() {
+        return oBSOLETEPortMappings_.size();
       }
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping getPortMappings(int index) {
-        return portMappings_.get(index);
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping getOBSOLETEPortMappings(int index) {
+        return oBSOLETEPortMappings_.get(index);
       }
       /**
-       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+       *
+       * <pre>
+       * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+       * </pre>
        */
-      public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder getPortMappingsOrBuilder(
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder getOBSOLETEPortMappingsOrBuilder(
           int index) {
-        return portMappings_.get(index);
+        return oBSOLETEPortMappings_.get(index);
       }
 
       // optional bool privileged = 4 [default = false];
@@ -23290,8 +25554,8 @@ public final class Protos {
 
       private void initFields() {
         image_ = "";
-        network_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
-        portMappings_ = java.util.Collections.emptyList();
+        oBSOLETENetwork_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
+        oBSOLETEPortMappings_ = java.util.Collections.emptyList();
         privileged_ = false;
         parameters_ = java.util.Collections.emptyList();
         forcePullImage_ = false;
@@ -23305,8 +25569,8 @@ public final class Protos {
           memoizedIsInitialized = 0;
           return false;
         }
-        for (int i = 0; i < getPortMappingsCount(); i++) {
-          if (!getPortMappings(i).isInitialized()) {
+        for (int i = 0; i < getOBSOLETEPortMappingsCount(); i++) {
+          if (!getOBSOLETEPortMappings(i).isInitialized()) {
             memoizedIsInitialized = 0;
             return false;
           }
@@ -23328,10 +25592,10 @@ public final class Protos {
           output.writeBytes(1, getImageBytes());
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeEnum(2, network_.getNumber());
+          output.writeEnum(2, oBSOLETENetwork_.getNumber());
         }
-        for (int i = 0; i < portMappings_.size(); i++) {
-          output.writeMessage(3, portMappings_.get(i));
+        for (int i = 0; i < oBSOLETEPortMappings_.size(); i++) {
+          output.writeMessage(3, oBSOLETEPortMappings_.get(i));
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           output.writeBool(4, privileged_);
@@ -23357,11 +25621,11 @@ public final class Protos {
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeEnumSize(2, network_.getNumber());
+            .computeEnumSize(2, oBSOLETENetwork_.getNumber());
         }
-        for (int i = 0; i < portMappings_.size(); i++) {
+        for (int i = 0; i < oBSOLETEPortMappings_.size(); i++) {
           size += com.google.protobuf.CodedOutputStream
-            .computeMessageSize(3, portMappings_.get(i));
+            .computeMessageSize(3, oBSOLETEPortMappings_.get(i));
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
@@ -23487,7 +25751,7 @@ public final class Protos {
         }
         private void maybeForceBuilderInitialization() {
           if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-            getPortMappingsFieldBuilder();
+            getOBSOLETEPortMappingsFieldBuilder();
             getParametersFieldBuilder();
           }
         }
@@ -23499,13 +25763,13 @@ public final class Protos {
           super.clear();
           image_ = "";
           bitField0_ = (bitField0_ & ~0x00000001);
-          network_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
+          oBSOLETENetwork_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
           bitField0_ = (bitField0_ & ~0x00000002);
-          if (portMappingsBuilder_ == null) {
-            portMappings_ = java.util.Collections.emptyList();
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            oBSOLETEPortMappings_ = java.util.Collections.emptyList();
             bitField0_ = (bitField0_ & ~0x00000004);
           } else {
-            portMappingsBuilder_.clear();
+            oBSOLETEPortMappingsBuilder_.clear();
           }
           privileged_ = false;
           bitField0_ = (bitField0_ & ~0x00000008);
@@ -23552,15 +25816,15 @@ public final class Protos {
           if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
             to_bitField0_ |= 0x00000002;
           }
-          result.network_ = network_;
-          if (portMappingsBuilder_ == null) {
+          result.oBSOLETENetwork_ = oBSOLETENetwork_;
+          if (oBSOLETEPortMappingsBuilder_ == null) {
             if (((bitField0_ & 0x00000004) == 0x00000004)) {
-              portMappings_ = java.util.Collections.unmodifiableList(portMappings_);
+              oBSOLETEPortMappings_ = java.util.Collections.unmodifiableList(oBSOLETEPortMappings_);
               bitField0_ = (bitField0_ & ~0x00000004);
             }
-            result.portMappings_ = portMappings_;
+            result.oBSOLETEPortMappings_ = oBSOLETEPortMappings_;
           } else {
-            result.portMappings_ = portMappingsBuilder_.build();
+            result.oBSOLETEPortMappings_ = oBSOLETEPortMappingsBuilder_.build();
           }
           if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
             to_bitField0_ |= 0x00000004;
@@ -23600,32 +25864,32 @@ public final class Protos {
             image_ = other.image_;
             onChanged();
           }
-          if (other.hasNetwork()) {
-            setNetwork(other.getNetwork());
+          if (other.hasOBSOLETENetwork()) {
+            setOBSOLETENetwork(other.getOBSOLETENetwork());
           }
-          if (portMappingsBuilder_ == null) {
-            if (!other.portMappings_.isEmpty()) {
-              if (portMappings_.isEmpty()) {
-                portMappings_ = other.portMappings_;
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            if (!other.oBSOLETEPortMappings_.isEmpty()) {
+              if (oBSOLETEPortMappings_.isEmpty()) {
+                oBSOLETEPortMappings_ = other.oBSOLETEPortMappings_;
                 bitField0_ = (bitField0_ & ~0x00000004);
               } else {
-                ensurePortMappingsIsMutable();
-                portMappings_.addAll(other.portMappings_);
+                ensureOBSOLETEPortMappingsIsMutable();
+                oBSOLETEPortMappings_.addAll(other.oBSOLETEPortMappings_);
               }
               onChanged();
             }
           } else {
-            if (!other.portMappings_.isEmpty()) {
-              if (portMappingsBuilder_.isEmpty()) {
-                portMappingsBuilder_.dispose();
-                portMappingsBuilder_ = null;
-                portMappings_ = other.portMappings_;
+            if (!other.oBSOLETEPortMappings_.isEmpty()) {
+              if (oBSOLETEPortMappingsBuilder_.isEmpty()) {
+                oBSOLETEPortMappingsBuilder_.dispose();
+                oBSOLETEPortMappingsBuilder_ = null;
+                oBSOLETEPortMappings_ = other.oBSOLETEPortMappings_;
                 bitField0_ = (bitField0_ & ~0x00000004);
-                portMappingsBuilder_ = 
+                oBSOLETEPortMappingsBuilder_ = 
                   com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                     getPortMappingsFieldBuilder() : null;
+                     getOBSOLETEPortMappingsFieldBuilder() : null;
               } else {
-                portMappingsBuilder_.addAllMessages(other.portMappings_);
+                oBSOLETEPortMappingsBuilder_.addAllMessages(other.oBSOLETEPortMappings_);
               }
             }
           }
@@ -23670,8 +25934,8 @@ public final class Protos {
             
             return false;
           }
-          for (int i = 0; i < getPortMappingsCount(); i++) {
-            if (!getPortMappings(i).isInitialized()) {
+          for (int i = 0; i < getOBSOLETEPortMappingsCount(); i++) {
+            if (!getOBSOLETEPortMappings(i).isInitialized()) {
               
               return false;
             }
@@ -23778,280 +26042,368 @@ public final class Protos {
           return this;
         }
 
-        // optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];
-        private org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network network_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
+        // optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];
+        private org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network oBSOLETENetwork_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
         /**
-         * <code>optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];</code>
+         * <code>optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];</code>
+         *
+         * <pre>
+         * deprecated in favor of ServiceDefinition.networks since 1.5
+         * </pre>
          */
-        public boolean hasNetwork() {
+        public boolean hasOBSOLETENetwork() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
         /**
-         * <code>optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];</code>
+         * <code>optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];</code>
+         *
+         * <pre>
+         * deprecated in favor of ServiceDefinition.networks since 1.5
+         * </pre>
          */
-        public org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network getNetwork() {
-          return network_;
+        public org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network getOBSOLETENetwork() {
+          return oBSOLETENetwork_;
         }
         /**
-         * <code>optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];</code>
+         * <code>optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];</code>
+         *
+         * <pre>
+         * deprecated in favor of ServiceDefinition.networks since 1.5
+         * </pre>
          */
-        public Builder setNetwork(org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network value) {
+        public Builder setOBSOLETENetwork(org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network value) {
           if (value == null) {
             throw new NullPointerException();
           }
           bitField0_ |= 0x00000002;
-          network_ = value;
+          oBSOLETENetwork_ = value;
           onChanged();
           return this;
         }
         /**
-         * <code>optional .mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];</code>
+         * <code>optional .mesos.ContainerInfo.DockerInfo.Network OBSOLETE_network = 2 [default = HOST];</code>
+         *
+         * <pre>
+         * deprecated in favor of ServiceDefinition.networks since 1.5
+         * </pre>
          */
-        public Builder clearNetwork() {
+        public Builder clearOBSOLETENetwork() {
           bitField0_ = (bitField0_ & ~0x00000002);
-          network_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
+          oBSOLETENetwork_ = org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.HOST;
           onChanged();
           return this;
         }
 
-        // repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;
-        private java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping> portMappings_ =
+        // repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;
+        private java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping> oBSOLETEPortMappings_ =
           java.util.Collections.emptyList();
-        private void ensurePortMappingsIsMutable() {
+        private void ensureOBSOLETEPortMappingsIsMutable() {
           if (!((bitField0_ & 0x00000004) == 0x00000004)) {
-            portMappings_ = new java.util.ArrayList<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping>(portMappings_);
+            oBSOLETEPortMappings_ = new java.util.ArrayList<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping>(oBSOLETEPortMappings_);
             bitField0_ |= 0x00000004;
            }
         }
 
         private com.google.protobuf.RepeatedFieldBuilder<
-            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder> portMappingsBuilder_;
+            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder> oBSOLETEPortMappingsBuilder_;
 
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping> getPortMappingsList() {
-          if (portMappingsBuilder_ == null) {
-            return java.util.Collections.unmodifiableList(portMappings_);
+        public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping> getOBSOLETEPortMappingsList() {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            return java.util.Collections.unmodifiableList(oBSOLETEPortMappings_);
           } else {
-            return portMappingsBuilder_.getMessageList();
+            return oBSOLETEPortMappingsBuilder_.getMessageList();
           }
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public int getPortMappingsCount() {
-          if (portMappingsBuilder_ == null) {
-            return portMappings_.size();
+        public int getOBSOLETEPortMappingsCount() {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            return oBSOLETEPortMappings_.size();
           } else {
-            return portMappingsBuilder_.getCount();
+            return oBSOLETEPortMappingsBuilder_.getCount();
           }
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping getPortMappings(int index) {
-          if (portMappingsBuilder_ == null) {
-            return portMappings_.get(index);
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping getOBSOLETEPortMappings(int index) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            return oBSOLETEPortMappings_.get(index);
           } else {
-            return portMappingsBuilder_.getMessage(index);
+            return oBSOLETEPortMappingsBuilder_.getMessage(index);
           }
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder setPortMappings(
-            int index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping value) {
-          if (portMappingsBuilder_ == null) {
+        public Builder setOBSOLETEPortMappings(
+            int index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping value) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
             if (value == null) {
               throw new NullPointerException();
             }
-            ensurePortMappingsIsMutable();
-            portMappings_.set(index, value);
+            ensureOBSOLETEPortMappingsIsMutable();
+            oBSOLETEPortMappings_.set(index, value);
             onChanged();
           } else {
-            portMappingsBuilder_.setMessage(index, value);
+            oBSOLETEPortMappingsBuilder_.setMessage(index, value);
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder setPortMappings(
-            int index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder builderForValue) {
-          if (portMappingsBuilder_ == null) {
-            ensurePortMappingsIsMutable();
-            portMappings_.set(index, builderForValue.build());
+        public Builder setOBSOLETEPortMappings(
+            int index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder builderForValue) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            ensureOBSOLETEPortMappingsIsMutable();
+            oBSOLETEPortMappings_.set(index, builderForValue.build());
             onChanged();
           } else {
-            portMappingsBuilder_.setMessage(index, builderForValue.build());
+            oBSOLETEPortMappingsBuilder_.setMessage(index, builderForValue.build());
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder addPortMappings(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping value) {
-          if (portMappingsBuilder_ == null) {
+        public Builder addOBSOLETEPortMappings(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping value) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
             if (value == null) {
               throw new NullPointerException();
             }
-            ensurePortMappingsIsMutable();
-            portMappings_.add(value);
+            ensureOBSOLETEPortMappingsIsMutable();
+            oBSOLETEPortMappings_.add(value);
             onChanged();
           } else {
-            portMappingsBuilder_.addMessage(value);
+            oBSOLETEPortMappingsBuilder_.addMessage(value);
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder addPortMappings(
-            int index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping value) {
-          if (portMappingsBuilder_ == null) {
+        public Builder addOBSOLETEPortMappings(
+            int index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping value) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
             if (value == null) {
               throw new NullPointerException();
             }
-            ensurePortMappingsIsMutable();
-            portMappings_.add(index, value);
+            ensureOBSOLETEPortMappingsIsMutable();
+            oBSOLETEPortMappings_.add(index, value);
             onChanged();
           } else {
-            portMappingsBuilder_.addMessage(index, value);
+            oBSOLETEPortMappingsBuilder_.addMessage(index, value);
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder addPortMappings(
-            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder builderForValue) {
-          if (portMappingsBuilder_ == null) {
-            ensurePortMappingsIsMutable();
-            portMappings_.add(builderForValue.build());
+        public Builder addOBSOLETEPortMappings(
+            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder builderForValue) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            ensureOBSOLETEPortMappingsIsMutable();
+            oBSOLETEPortMappings_.add(builderForValue.build());
             onChanged();
           } else {
-            portMappingsBuilder_.addMessage(builderForValue.build());
+            oBSOLETEPortMappingsBuilder_.addMessage(builderForValue.build());
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder addPortMappings(
-            int index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder builderForValue) {
-          if (portMappingsBuilder_ == null) {
-            ensurePortMappingsIsMutable();
-            portMappings_.add(index, builderForValue.build());
+        public Builder addOBSOLETEPortMappings(
+            int index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder builderForValue) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            ensureOBSOLETEPortMappingsIsMutable();
+            oBSOLETEPortMappings_.add(index, builderForValue.build());
             onChanged();
           } else {
-            portMappingsBuilder_.addMessage(index, builderForValue.build());
+            oBSOLETEPortMappingsBuilder_.addMessage(index, builderForValue.build());
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder addAllPortMappings(
-            java.lang.Iterable<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping> values) {
-          if (portMappingsBuilder_ == null) {
-            ensurePortMappingsIsMutable();
-            super.addAll(values, portMappings_);
+        public Builder addAllOBSOLETEPortMappings(
+            java.lang.Iterable<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping> values) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            ensureOBSOLETEPortMappingsIsMutable();
+            super.addAll(values, oBSOLETEPortMappings_);
             onChanged();
           } else {
-            portMappingsBuilder_.addAllMessages(values);
+            oBSOLETEPortMappingsBuilder_.addAllMessages(values);
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder clearPortMappings() {
-          if (portMappingsBuilder_ == null) {
-            portMappings_ = java.util.Collections.emptyList();
+        public Builder clearOBSOLETEPortMappings() {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            oBSOLETEPortMappings_ = java.util.Collections.emptyList();
             bitField0_ = (bitField0_ & ~0x00000004);
             onChanged();
           } else {
-            portMappingsBuilder_.clear();
+            oBSOLETEPortMappingsBuilder_.clear();
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public Builder removePortMappings(int index) {
-          if (portMappingsBuilder_ == null) {
-            ensurePortMappingsIsMutable();
-            portMappings_.remove(index);
+        public Builder removeOBSOLETEPortMappings(int index) {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            ensureOBSOLETEPortMappingsIsMutable();
+            oBSOLETEPortMappings_.remove(index);
             onChanged();
           } else {
-            portMappingsBuilder_.remove(index);
+            oBSOLETEPortMappingsBuilder_.remove(index);
           }
           return this;
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder getPortMappingsBuilder(
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder getOBSOLETEPortMappingsBuilder(
             int index) {
-          return getPortMappingsFieldBuilder().getBuilder(index);
+          return getOBSOLETEPortMappingsFieldBuilder().getBuilder(index);
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder getPortMappingsOrBuilder(
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder getOBSOLETEPortMappingsOrBuilder(
             int index) {
-          if (portMappingsBuilder_ == null) {
-            return portMappings_.get(index);  } else {
-            return portMappingsBuilder_.getMessageOrBuilder(index);
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            return oBSOLETEPortMappings_.get(index);  } else {
+            return oBSOLETEPortMappingsBuilder_.getMessageOrBuilder(index);
           }
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder> 
-             getPortMappingsOrBuilderList() {
-          if (portMappingsBuilder_ != null) {
-            return portMappingsBuilder_.getMessageOrBuilderList();
+        public java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder> 
+             getOBSOLETEPortMappingsOrBuilderList() {
+          if (oBSOLETEPortMappingsBuilder_ != null) {
+            return oBSOLETEPortMappingsBuilder_.getMessageOrBuilderList();
           } else {
-            return java.util.Collections.unmodifiableList(portMappings_);
+            return java.util.Collections.unmodifiableList(oBSOLETEPortMappings_);
           }
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder addPortMappingsBuilder() {
-          return getPortMappingsFieldBuilder().addBuilder(
-              mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.getDefaultInstance());
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder addOBSOLETEPortMappingsBuilder() {
+          return getOBSOLETEPortMappingsFieldBuilder().addBuilder(
+              mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.getDefaultInstance());
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder addPortMappingsBuilder(
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder addOBSOLETEPortMappingsBuilder(
             int index) {
-          return getPortMappingsFieldBuilder().addBuilder(
-              index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.getDefaultInstance());
+          return getOBSOLETEPortMappingsFieldBuilder().addBuilder(
+              index, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.getDefaultInstance());
         }
         /**
-         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.PortMapping port_mappings = 3;</code>
+         * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping OBSOLETE_port_mappings = 3;</code>
+         *
+         * <pre>
+         * deprecated in favor of ExtendedContainerInfo.port_mappings, since 1.5
+         * </pre>
          */
-        public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder> 
-             getPortMappingsBuilderList() {
-          return getPortMappingsFieldBuilder().getBuilderList();
+        public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder> 
+             getOBSOLETEPortMappingsBuilderList() {
+          return getOBSOLETEPortMappingsFieldBuilder().getBuilderList();
         }
         private com.google.protobuf.RepeatedFieldBuilder<
-            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder> 
-            getPortMappingsFieldBuilder() {
-          if (portMappingsBuilder_ == null) {
-            portMappingsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-                mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.PortMappingOrBuilder>(
-                    portMappings_,
+            mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder> 
+            getOBSOLETEPortMappingsFieldBuilder() {
+          if (oBSOLETEPortMappingsBuilder_ == null) {
+            oBSOLETEPortMappingsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+                mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMappingOrBuilder>(
+                    oBSOLETEPortMappings_,
                     ((bitField0_ & 0x00000004) == 0x00000004),
                     getParentForChildren(),
                     isClean());
-            portMappings_ = null;
+            oBSOLETEPortMappings_ = null;
           }
-          return portMappingsBuilder_;
+          return oBSOLETEPortMappingsBuilder_;
         }
 
         // optional bool privileged = 4 [default = false];
@@ -26905,6 +29257,1443 @@ public final class Protos {
       // @@protoc_insertion_point(class_scope:mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo)
     }
 
+    public interface PortMappingOrBuilder
+        extends com.google.protobuf.MessageOrBuilder {
+
+      // optional uint32 host_port = 1;
+      /**
+       * <code>optional uint32 host_port = 1;</code>
+       */
+      boolean hasHostPort();
+      /**
+       * <code>optional uint32 host_port = 1;</code>
+       */
+      int getHostPort();
+
+      // required uint32 container_port = 2;
+      /**
+       * <code>required uint32 container_port = 2;</code>
+       */
+      boolean hasContainerPort();
+      /**
+       * <code>required uint32 container_port = 2;</code>
+       */
+      int getContainerPort();
+
+      // optional string protocol = 3;
+      /**
+       * <code>optional string protocol = 3;</code>
+       */
+      boolean hasProtocol();
+      /**
+       * <code>optional string protocol = 3;</code>
+       */
+      java.lang.String getProtocol();
+      /**
+       * <code>optional string protocol = 3;</code>
+       */
+      com.google.protobuf.ByteString
+          getProtocolBytes();
+
+      // optional string name = 4;
+      /**
+       * <code>optional string name = 4;</code>
+       */
+      boolean hasName();
+      /**
+       * <code>optional string name = 4;</code>
+       */
+      java.lang.String getName();
+      /**
+       * <code>optional string name = 4;</code>
+       */
+      com.google.protobuf.ByteString
+          getNameBytes();
+
+      // repeated .mesos.Label labels = 5;
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      java.util.List<org.apache.mesos.Protos.Label> 
+          getLabelsList();
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      org.apache.mesos.Protos.Label getLabels(int index);
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      int getLabelsCount();
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
+          getLabelsOrBuilderList();
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
+          int index);
+
+      // optional uint32 service_port = 6 [default = 0];
+      /**
+       * <code>optional uint32 service_port = 6 [default = 0];</code>
+       */
+      boolean hasServicePort();
+      /**
+       * <code>optional uint32 service_port = 6 [default = 0];</code>
+       */
+      int getServicePort();
+
+      // repeated string network_names = 7;
+      /**
+       * <code>repeated string network_names = 7;</code>
+       */
+      java.util.List<java.lang.String>
+      getNetworkNamesList();
+      /**
+       * <code>repeated string network_names = 7;</code>
+       */
+      int getNetworkNamesCount();
+      /**
+       * <code>repeated string network_names = 7;</code>
+       */
+      java.lang.String getNetworkNames(int index);
+      /**
+       * <code>repeated string network_names = 7;</code>
+       */
+      com.google.protobuf.ByteString
+          getNetworkNamesBytes(int index);
+    }
+    /**
+     * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.PortMapping}
+     */
+    public static final class PortMapping extends
+        com.google.protobuf.GeneratedMessage
+        implements PortMappingOrBuilder {
+      // Use PortMapping.newBuilder() to construct.
+      private PortMapping(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+        super(builder);
+        this.unknownFields = builder.getUnknownFields();
+      }
+      private PortMapping(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+      private static final PortMapping defaultInstance;
+      public static PortMapping getDefaultInstance() {
+        return defaultInstance;
+      }
+
+      public PortMapping getDefaultInstanceForType() {
+        return defaultInstance;
+      }
+
+      private final com.google.protobuf.UnknownFieldSet unknownFields;
+      @java.lang.Override
+      public final com.google.protobuf.UnknownFieldSet
+          getUnknownFields() {
+        return this.unknownFields;
+      }
+      private PortMapping(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        initFields();
+        int mutable_bitField0_ = 0;
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+            com.google.protobuf.UnknownFieldSet.newBuilder();
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              default: {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
+                  done = true;
+                }
+                break;
+              }
+              case 8: {
+                bitField0_ |= 0x00000001;
+                hostPort_ = input.readUInt32();
+                break;
+              }
+              case 16: {
+                bitField0_ |= 0x00000002;
+                containerPort_ = input.readUInt32();
+                break;
+              }
+              case 26: {
+                bitField0_ |= 0x00000004;
+                protocol_ = input.readBytes();
+                break;
+              }
+              case 34: {
+                bitField0_ |= 0x00000008;
+                name_ = input.readBytes();
+                break;
+              }
+              case 42: {
+                if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                  labels_ = new java.util.ArrayList<org.apache.mesos.Protos.Label>();
+                  mutable_bitField0_ |= 0x00000010;
+                }
+                labels_.add(input.readMessage(org.apache.mesos.Protos.Label.PARSER, extensionRegistry));
+                break;
+              }
+              case 48: {
+                bitField0_ |= 0x00000010;
+                servicePort_ = input.readUInt32();
+                break;
+              }
+              case 58: {
+                if (!((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
+                  networkNames_ = new com.google.protobuf.LazyStringArrayList();
+                  mutable_bitField0_ |= 0x00000040;
+                }
+                networkNames_.add(input.readBytes());
+                break;
+              }
+            }
+          }
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(this);
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(
+              e.getMessage()).setUnfinishedMessage(this);
+        } finally {
+          if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+            labels_ = java.util.Collections.unmodifiableList(labels_);
+          }
+          if (((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
+            networkNames_ = new com.google.protobuf.UnmodifiableLazyStringList(networkNames_);
+          }
+          this.unknownFields = unknownFields.build();
+          makeExtensionsImmutable();
+        }
+      }
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.class, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder.class);
+      }
+
+      public static com.google.protobuf.Parser<PortMapping> PARSER =
+          new com.google.protobuf.AbstractParser<PortMapping>() {
+        public PortMapping parsePartialFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return new PortMapping(input, extensionRegistry);
+        }
+      };
+
+      @java.lang.Override
+      public com.google.protobuf.Parser<PortMapping> getParserForType() {
+        return PARSER;
+      }
+
+      private int bitField0_;
+      // optional uint32 host_port = 1;
+      public static final int HOST_PORT_FIELD_NUMBER = 1;
+      private int hostPort_;
+      /**
+       * <code>optional uint32 host_port = 1;</code>
+       */
+      public boolean hasHostPort() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional uint32 host_port = 1;</code>
+       */
+      public int getHostPort() {
+        return hostPort_;
+      }
+
+      // required uint32 container_port = 2;
+      public static final int CONTAINER_PORT_FIELD_NUMBER = 2;
+      private int containerPort_;
+      /**
+       * <code>required uint32 container_port = 2;</code>
+       */
+      public boolean hasContainerPort() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required uint32 container_port = 2;</code>
+       */
+      public int getContainerPort() {
+        return containerPort_;
+      }
+
+      // optional string protocol = 3;
+      public static final int PROTOCOL_FIELD_NUMBER = 3;
+      private java.lang.Object protocol_;
+      /**
+       * <code>optional string protocol = 3;</code>
+       */
+      public boolean hasProtocol() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional string protocol = 3;</code>
+       */
+      public java.lang.String getProtocol() {
+        java.lang.Object ref = protocol_;
+        if (ref instanceof java.lang.String) {
+          return (java.lang.String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            protocol_ = s;
+          }
+          return s;
+        }
+      }
+      /**
+       * <code>optional string protocol = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getProtocolBytes() {
+        java.lang.Object ref = protocol_;
+        if (ref instanceof java.lang.String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          protocol_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+
+      // optional string name = 4;
+      public static final int NAME_FIELD_NUMBER = 4;
+      private java.lang.Object name_;
+      /**
+       * <code>optional string name = 4;</code>
+       */
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string name = 4;</code>
+       */
+      public java.lang.String getName() {
+        java.lang.Object ref = name_;
+        if (ref instanceof java.lang.String) {
+          return (java.lang.String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            name_ = s;
+          }
+          return s;
+        }
+      }
+      /**
+       * <code>optional string name = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNameBytes() {
+        java.lang.Object ref = name_;
+        if (ref instanceof java.lang.String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          name_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+
+      // repeated .mesos.Label labels = 5;
+      public static final int LABELS_FIELD_NUMBER = 5;
+      private java.util.List<org.apache.mesos.Protos.Label> labels_;
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      public java.util.List<org.apache.mesos.Protos.Label> getLabelsList() {
+        return labels_;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      public java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
+          getLabelsOrBuilderList() {
+        return labels_;
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      public int getLabelsCount() {
+        return labels_.size();
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      public org.apache.mesos.Protos.Label getLabels(int index) {
+        return labels_.get(index);
+      }
+      /**
+       * <code>repeated .mesos.Label labels = 5;</code>
+       */
+      public org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
+          int index) {
+        return labels_.get(index);
+      }
+
+      // optional uint32 service_port = 6 [default = 0];
+      public static final int SERVICE_PORT_FIELD_NUMBER = 6;
+      private int servicePort_;
+      /**
+       * <code>optional uint32 service_port = 6 [default = 0];</code>
+       */
+      public boolean hasServicePort() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional uint32 service_port = 6 [default = 0];</code>
+       */
+      public int getServicePort() {
+        return servicePort_;
+      }
+
+      // repeated string network_names = 7;
+      public static final int NETWORK_NAMES_FIELD_NUMBER = 7;
+      private com.google.protobuf.LazyStringList networkNames_;
+      /**
+       * <code>repeated string network_names = 7;</code>
+       */
+      public java.util.List<java.lang.String>
+          getNetworkNamesList() {
+        return networkNames_;
+      }
+      /**
+       * <code>repeated string network_names = 7;</code>
+       */
+      public int getNetworkNamesCount() {
+        return networkNames_.size();
+      }
+      /**
+       * <code>repeated string network_names = 7;</code>
+       */
+      public java.lang.String getNetworkNames(int index) {
+        return networkNames_.get(index);
+      }
+      /**
+       * <code>repeated string network_names = 7;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNetworkNamesBytes(int index) {
+        return networkNames_.getByteString(index);
+      }
+
+      private void initFields() {
+        hostPort_ = 0;
+        containerPort_ = 0;
+        protocol_ = "";
+        name_ = "";
+        labels_ = java.util.Collections.emptyList();
+        servicePort_ = 0;
+        networkNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      }
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+
+        if (!hasContainerPort()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        for (int i = 0; i < getLabelsCount(); i++) {
+          if (!getLabels(i).isInitialized()) {
+            memoizedIsInitialized = 0;
+            return false;
+          }
+        }
+        memoizedIsInitialized = 1;
+        return true;
+      }
+
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        getSerializedSize();
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          output.writeUInt32(1, hostPort_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeUInt32(2, containerPort_);
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          output.writeBytes(3, getProtocolBytes());
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          output.writeBytes(4, getNameBytes());
+        }
+        for (int i = 0; i < labels_.size(); i++) {
+          output.writeMessage(5, labels_.get(i));
+        }
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          output.writeUInt32(6, servicePort_);
+        }
+        for (int i = 0; i < networkNames_.size(); i++) {
+          output.writeBytes(7, networkNames_.getByteString(i));
+        }
+        getUnknownFields().writeTo(output);
+      }
+
+      private int memoizedSerializedSize = -1;
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+
+        size = 0;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(1, hostPort_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(2, containerPort_);
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(3, getProtocolBytes());
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(4, getNameBytes());
+        }
+        for (int i = 0; i < labels_.size(); i++) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(5, labels_.get(i));
+        }
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(6, servicePort_);
+        }
+        {
+          int dataSize = 0;
+          for (int i = 0; i < networkNames_.size(); i++) {
+            dataSize += com.google.protobuf.CodedOutputStream
+              .computeBytesSizeNoTag(networkNames_.getByteString(i));
+          }
+          size += dataSize;
+          size += 1 * getNetworkNamesList().size();
+        }
+        size += getUnknownFields().getSerializedSize();
+        memoizedSerializedSize = size;
+        return size;
+      }
+
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
+      }
+
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return PARSER.parseDelimitedFrom(input);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input);
+      }
+      public static mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input, extensionRegistry);
+      }
+
+      public static Builder newBuilder() { return Builder.create(); }
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder(mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping prototype) {
+        return newBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+
+      @java.lang.Override
+      protected Builder newBuilderForType(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        Builder builder = new Builder(parent);
+        return builder;
+      }
+      /**
+       * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.PortMapping}
+       */
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessage.Builder<Builder>
+         implements mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder {
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor;
+        }
+
+        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_fieldAccessorTable
+              .ensureFieldAccessorsInitialized(
+                  mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.class, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder.class);
+        }
+
+        // Construct using mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+
+        private Builder(
+            com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          super(parent);
+          maybeForceBuilderInitialization();
+        }
+        private void maybeForceBuilderInitialization() {
+          if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+            getLabelsFieldBuilder();
+          }
+        }
+        private static Builder create() {
+          return new Builder();
+        }
+
+        public Builder clear() {
+          super.clear();
+          hostPort_ = 0;
+          bitField0_ = (bitField0_ & ~0x00000001);
+          containerPort_ = 0;
+          bitField0_ = (bitField0_ & ~0x00000002);
+          protocol_ = "";
+          bitField0_ = (bitField0_ & ~0x00000004);
+          name_ = "";
+          bitField0_ = (bitField0_ & ~0x00000008);
+          if (labelsBuilder_ == null) {
+            labels_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000010);
+          } else {
+            labelsBuilder_.clear();
+          }
+          servicePort_ = 0;
+          bitField0_ = (bitField0_ & ~0x00000020);
+          networkNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+          bitField0_ = (bitField0_ & ~0x00000040);
+          return this;
+        }
+
+        public Builder clone() {
+          return create().mergeFrom(buildPartial());
+        }
+
+        public com.google.protobuf.Descriptors.Descriptor
+            getDescriptorForType() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor;
+        }
+
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping getDefaultInstanceForType() {
+          return mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.getDefaultInstance();
+        }
+
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping build() {
+          mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping buildPartial() {
+          mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping result = new mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
+          }
+          result.hostPort_ = hostPort_;
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          result.containerPort_ = containerPort_;
+          if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+            to_bitField0_ |= 0x00000004;
+          }
+          result.protocol_ = protocol_;
+          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+            to_bitField0_ |= 0x00000008;
+          }
+          result.name_ = name_;
+          if (labelsBuilder_ == null) {
+            if (((bitField0_ & 0x00000010) == 0x00000010)) {
+              labels_ = java.util.Collections.unmodifiableList(labels_);
+              bitField0_ = (bitField0_ & ~0x00000010);
+            }
+            result.labels_ = labels_;
+          } else {
+            result.labels_ = labelsBuilder_.build();
+          }
+          if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+            to_bitField0_ |= 0x00000010;
+          }
+          result.servicePort_ = servicePort_;
+          if (((bitField0_ & 0x00000040) == 0x00000040)) {
+            networkNames_ = new com.google.protobuf.UnmodifiableLazyStringList(
+                networkNames_);
+            bitField0_ = (bitField0_ & ~0x00000040);
+          }
+          result.networkNames_ = networkNames_;
+          result.bitField0_ = to_bitField0_;
+          onBuilt();
+          return result;
+        }
+
+        public Builder mergeFrom(com.google.protobuf.Message other) {
+          if (other instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping) {
+            return mergeFrom((mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping)other);
+          } else {
+            super.mergeFrom(other);
+            return this;
+          }
+        }
+
+        public Builder mergeFrom(mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping other) {
+          if (other == mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.getDefaultInstance()) return this;
+          if (other.hasHostPort()) {
+            setHostPort(other.getHostPort());
+          }
+          if (other.hasContainerPort()) {
+            setContainerPort(other.getContainerPort());
+          }
+          if (other.hasProtocol()) {
+            bitField0_ |= 0x00000004;
+            protocol_ = other.protocol_;
+            onChanged();
+          }
+          if (other.hasName()) {
+            bitField0_ |= 0x00000008;
+            name_ = other.name_;
+            onChanged();
+          }
+          if (labelsBuilder_ == null) {
+            if (!other.labels_.isEmpty()) {
+              if (labels_.isEmpty()) {
+                labels_ = other.labels_;
+                bitField0_ = (bitField0_ & ~0x00000010);
+              } else {
+                ensureLabelsIsMutable();
+                labels_.addAll(other.labels_);
+              }
+              onChanged();
+            }
+          } else {
+            if (!other.labels_.isEmpty()) {
+              if (labelsBuilder_.isEmpty()) {
+                labelsBuilder_.dispose();
+                labelsBuilder_ = null;
+                labels_ = other.labels_;
+                bitField0_ = (bitField0_ & ~0x00000010);
+                labelsBuilder_ = 
+                  com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                     getLabelsFieldBuilder() : null;
+              } else {
+                labelsBuilder_.addAllMessages(other.labels_);
+              }
+            }
+          }
+          if (other.hasServicePort()) {
+            setServicePort(other.getServicePort());
+          }
+          if (!other.networkNames_.isEmpty()) {
+            if (networkNames_.isEmpty()) {
+              networkNames_ = other.networkNames_;
+              bitField0_ = (bitField0_ & ~0x00000040);
+            } else {
+              ensureNetworkNamesIsMutable();
+              networkNames_.addAll(other.networkNames_);
+            }
+            onChanged();
+          }
+          this.mergeUnknownFields(other.getUnknownFields());
+          return this;
+        }
+
+        public final boolean isInitialized() {
+          if (!hasContainerPort()) {
+            
+            return false;
+          }
+          for (int i = 0; i < getLabelsCount(); i++) {
+            if (!getLabels(i).isInitialized()) {
+              
+              return false;
+            }
+          }
+          return true;
+        }
+
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping parsedMessage = null;
+          try {
+            parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            parsedMessage = (mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping) e.getUnfinishedMessage();
+            throw e;
+          } finally {
+            if (parsedMessage != null) {
+              mergeFrom(parsedMessage);
+            }
+          }
+          return this;
+        }
+        private int bitField0_;
+
+        // optional uint32 host_port = 1;
+        private int hostPort_ ;
+        /**
+         * <code>optional uint32 host_port = 1;</code>
+         */
+        public boolean hasHostPort() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        /**
+         * <code>optional uint32 host_port = 1;</code>
+         */
+        public int getHostPort() {
+          return hostPort_;
+        }
+        /**
+         * <code>optional uint32 host_port = 1;</code>
+         */
+        public Builder setHostPort(int value) {
+          bitField0_ |= 0x00000001;
+          hostPort_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional uint32 host_port = 1;</code>
+         */
+        public Builder clearHostPort() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          hostPort_ = 0;
+          onChanged();
+          return this;
+        }
+
+        // required uint32 container_port = 2;
+        private int containerPort_ ;
+        /**
+         * <code>required uint32 container_port = 2;</code>
+         */
+        public boolean hasContainerPort() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        /**
+         * <code>required uint32 container_port = 2;</code>
+         */
+        public int getContainerPort() {
+          return containerPort_;
+        }
+        /**
+         * <code>required uint32 container_port = 2;</code>
+         */
+        public Builder setContainerPort(int value) {
+          bitField0_ |= 0x00000002;
+          containerPort_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required uint32 container_port = 2;</code>
+         */
+        public Builder clearContainerPort() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          containerPort_ = 0;
+          onChanged();
+          return this;
+        }
+
+        // optional string protocol = 3;
+        private java.lang.Object protocol_ = "";
+        /**
+         * <code>optional string protocol = 3;</code>
+         */
+        public boolean hasProtocol() {
+          return ((bitField0_ & 0x00000004) == 0x00000004);
+        }
+        /**
+         * <code>optional string protocol = 3;</code>
+         */
+        public java.lang.String getProtocol() {
+          java.lang.Object ref = protocol_;
+          if (!(ref instanceof java.lang.String)) {
+            java.lang.String s = ((com.google.protobuf.ByteString) ref)
+                .toStringUtf8();
+            protocol_ = s;
+            return s;
+          } else {
+            return (java.lang.String) ref;
+          }
+        }
+        /**
+         * <code>optional string protocol = 3;</code>
+         */
+        public com.google.protobuf.ByteString
+            getProtocolBytes() {
+          java.lang.Object ref = protocol_;
+          if (ref instanceof String) {
+            com.google.protobuf.ByteString b = 
+                com.google.protobuf.ByteString.copyFromUtf8(
+                    (java.lang.String) ref);
+            protocol_ = b;
+            return b;
+          } else {
+            return (com.google.protobuf.ByteString) ref;
+          }
+        }
+        /**
+         * <code>optional string protocol = 3;</code>
+         */
+        public Builder setProtocol(
+            java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+          protocol_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional string protocol = 3;</code>
+         */
+        public Builder clearProtocol() {
+          bitField0_ = (bitField0_ & ~0x00000004);
+          protocol_ = getDefaultInstance().getProtocol();
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional string protocol = 3;</code>
+         */
+        public Builder setProtocolBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+          protocol_ = value;
+          onChanged();
+          return this;
+        }
+
+        // optional string name = 4;
+        private java.lang.Object name_ = "";
+        /**
+         * <code>optional string name = 4;</code>
+         */
+        public boolean hasName() {
+          return ((bitField0_ & 0x00000008) == 0x00000008);
+        }
+        /**
+         * <code>optional string name = 4;</code>
+         */
+        public java.lang.String getName() {
+          java.lang.Object ref = name_;
+          if (!(ref instanceof java.lang.String)) {
+            java.lang.String s = ((com.google.protobuf.ByteString) ref)
+                .toStringUtf8();
+            name_ = s;
+            return s;
+          } else {
+            return (java.lang.String) ref;
+          }
+        }
+        /**
+         * <code>optional string name = 4;</code>
+         */
+        public com.google.protobuf.ByteString
+            getNameBytes() {
+          java.lang.Object ref = name_;
+          if (ref instanceof String) {
+            com.google.protobuf.ByteString b = 
+                com.google.protobuf.ByteString.copyFromUtf8(
+                    (java.lang.String) ref);
+            name_ = b;
+            return b;
+          } else {
+            return (com.google.protobuf.ByteString) ref;
+          }
+        }
+        /**
+         * <code>optional string name = 4;</code>
+         */
+        public Builder setName(
+            java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+          name_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional string name = 4;</code>
+         */
+        public Builder clearName() {
+          bitField0_ = (bitField0_ & ~0x00000008);
+          name_ = getDefaultInstance().getName();
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional string name = 4;</code>
+         */
+        public Builder setNameBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+          name_ = value;
+          onChanged();
+          return this;
+        }
+
+        // repeated .mesos.Label labels = 5;
+        private java.util.List<org.apache.mesos.Protos.Label> labels_ =
+          java.util.Collections.emptyList();
+        private void ensureLabelsIsMutable() {
+          if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+            labels_ = new java.util.ArrayList<org.apache.mesos.Protos.Label>(labels_);
+            bitField0_ |= 0x00000010;
+           }
+        }
+
+        private com.google.protobuf.RepeatedFieldBuilder<
+            org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder> labelsBuilder_;
+
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public java.util.List<org.apache.mesos.Protos.Label> getLabelsList() {
+          if (labelsBuilder_ == null) {
+            return java.util.Collections.unmodifiableList(labels_);
+          } else {
+            return labelsBuilder_.getMessageList();
+          }
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public int getLabelsCount() {
+          if (labelsBuilder_ == null) {
+            return labels_.size();
+          } else {
+            return labelsBuilder_.getCount();
+          }
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public org.apache.mesos.Protos.Label getLabels(int index) {
+          if (labelsBuilder_ == null) {
+            return labels_.get(index);
+          } else {
+            return labelsBuilder_.getMessage(index);
+          }
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder setLabels(
+            int index, org.apache.mesos.Protos.Label value) {
+          if (labelsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureLabelsIsMutable();
+            labels_.set(index, value);
+            onChanged();
+          } else {
+            labelsBuilder_.setMessage(index, value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder setLabels(
+            int index, org.apache.mesos.Protos.Label.Builder builderForValue) {
+          if (labelsBuilder_ == null) {
+            ensureLabelsIsMutable();
+            labels_.set(index, builderForValue.build());
+            onChanged();
+          } else {
+            labelsBuilder_.setMessage(index, builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder addLabels(org.apache.mesos.Protos.Label value) {
+          if (labelsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureLabelsIsMutable();
+            labels_.add(value);
+            onChanged();
+          } else {
+            labelsBuilder_.addMessage(value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder addLabels(
+            int index, org.apache.mesos.Protos.Label value) {
+          if (labelsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureLabelsIsMutable();
+            labels_.add(index, value);
+            onChanged();
+          } else {
+            labelsBuilder_.addMessage(index, value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder addLabels(
+            org.apache.mesos.Protos.Label.Builder builderForValue) {
+          if (labelsBuilder_ == null) {
+            ensureLabelsIsMutable();
+            labels_.add(builderForValue.build());
+            onChanged();
+          } else {
+            labelsBuilder_.addMessage(builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder addLabels(
+            int index, org.apache.mesos.Protos.Label.Builder builderForValue) {
+          if (labelsBuilder_ == null) {
+            ensureLabelsIsMutable();
+            labels_.add(index, builderForValue.build());
+            onChanged();
+          } else {
+            labelsBuilder_.addMessage(index, builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder addAllLabels(
+            java.lang.Iterable<? extends org.apache.mesos.Protos.Label> values) {
+          if (labelsBuilder_ == null) {
+            ensureLabelsIsMutable();
+            super.addAll(values, labels_);
+            onChanged();
+          } else {
+            labelsBuilder_.addAllMessages(values);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder clearLabels() {
+          if (labelsBuilder_ == null) {
+            labels_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000010);
+            onChanged();
+          } else {
+            labelsBuilder_.clear();
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public Builder removeLabels(int index) {
+          if (labelsBuilder_ == null) {
+            ensureLabelsIsMutable();
+            labels_.remove(index);
+            onChanged();
+          } else {
+            labelsBuilder_.remove(index);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public org.apache.mesos.Protos.Label.Builder getLabelsBuilder(
+            int index) {
+          return getLabelsFieldBuilder().getBuilder(index);
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
+            int index) {
+          if (labelsBuilder_ == null) {
+            return labels_.get(index);  } else {
+            return labelsBuilder_.getMessageOrBuilder(index);
+          }
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
+             getLabelsOrBuilderList() {
+          if (labelsBuilder_ != null) {
+            return labelsBuilder_.getMessageOrBuilderList();
+          } else {
+            return java.util.Collections.unmodifiableList(labels_);
+          }
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public org.apache.mesos.Protos.Label.Builder addLabelsBuilder() {
+          return getLabelsFieldBuilder().addBuilder(
+              org.apache.mesos.Protos.Label.getDefaultInstance());
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public org.apache.mesos.Protos.Label.Builder addLabelsBuilder(
+            int index) {
+          return getLabelsFieldBuilder().addBuilder(
+              index, org.apache.mesos.Protos.Label.getDefaultInstance());
+        }
+        /**
+         * <code>repeated .mesos.Label labels = 5;</code>
+         */
+        public java.util.List<org.apache.mesos.Protos.Label.Builder> 
+             getLabelsBuilderList() {
+          return getLabelsFieldBuilder().getBuilderList();
+        }
+        private com.google.protobuf.RepeatedFieldBuilder<
+            org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder> 
+            getLabelsFieldBuilder() {
+          if (labelsBuilder_ == null) {
+            labelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+                org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder>(
+                    labels_,
+                    ((bitField0_ & 0x00000010) == 0x00000010),
+                    getParentForChildren(),
+                    isClean());
+            labels_ = null;
+          }
+          return labelsBuilder_;
+        }
+
+        // optional uint32 service_port = 6 [default = 0];
+        private int servicePort_ ;
+        /**
+         * <code>optional uint32 service_port = 6 [default = 0];</code>
+         */
+        public boolean hasServicePort() {
+          return ((bitField0_ & 0x00000020) == 0x00000020);
+        }
+        /**
+         * <code>optional uint32 service_port = 6 [default = 0];</code>
+         */
+        public int getServicePort() {
+          return servicePort_;
+        }
+        /**
+         * <code>optional uint32 service_port = 6 [default = 0];</code>
+         */
+        public Builder setServicePort(int value) {
+          bitField0_ |= 0x00000020;
+          servicePort_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional uint32 service_port = 6 [default = 0];</code>
+         */
+        public Builder clearServicePort() {
+          bitField0_ = (bitField0_ & ~0x00000020);
+          servicePort_ = 0;
+          onChanged();
+          return this;
+        }
+
+        // repeated string network_names = 7;
+        private com.google.protobuf.LazyStringList networkNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        private void ensureNetworkNamesIsMutable() {
+          if (!((bitField0_ & 0x00000040) == 0x00000040)) {
+            networkNames_ = new com.google.protobuf.LazyStringArrayList(networkNames_);
+            bitField0_ |= 0x00000040;
+           }
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public java.util.List<java.lang.String>
+            getNetworkNamesList() {
+          return java.util.Collections.unmodifiableList(networkNames_);
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public int getNetworkNamesCount() {
+          return networkNames_.size();
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public java.lang.String getNetworkNames(int index) {
+          return networkNames_.get(index);
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public com.google.protobuf.ByteString
+            getNetworkNamesBytes(int index) {
+          return networkNames_.getByteString(index);
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public Builder setNetworkNames(
+            int index, java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureNetworkNamesIsMutable();
+          networkNames_.set(index, value);
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public Builder addNetworkNames(
+            java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureNetworkNamesIsMutable();
+          networkNames_.add(value);
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public Builder addAllNetworkNames(
+            java.lang.Iterable<java.lang.String> values) {
+          ensureNetworkNamesIsMutable();
+          super.addAll(values, networkNames_);
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public Builder clearNetworkNames() {
+          networkNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+          bitField0_ = (bitField0_ & ~0x00000040);
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>repeated string network_names = 7;</code>
+         */
+        public Builder addNetworkNamesBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureNetworkNamesIsMutable();
+          networkNames_.add(value);
+          onChanged();
+          return this;
+        }
+
+        // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ExtendedContainerInfo.PortMapping)
+      }
+
+      static {
+        defaultInstance = new PortMapping(true);
+        defaultInstance.initFields();
+      }
+
+      // @@protoc_insertion_point(class_scope:mesosphere.marathon.ExtendedContainerInfo.PortMapping)
+    }
+
     private int bitField0_;
     // required .mesos.ContainerInfo.Type type = 1;
     public static final int TYPE_FIELD_NUMBER = 1;
@@ -26956,6 +30745,62 @@ public final class Protos {
     public mesosphere.marathon.Protos.VolumeOrBuilder getVolumesOrBuilder(
         int index) {
       return volumes_.get(index);
+    }
+
+    // repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;
+    public static final int PORT_MAPPINGS_FIELD_NUMBER = 6;
+    private java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping> portMappings_;
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping> getPortMappingsList() {
+      return portMappings_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    public java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder> 
+        getPortMappingsOrBuilderList() {
+      return portMappings_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    public int getPortMappingsCount() {
+      return portMappings_.size();
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping getPortMappings(int index) {
+      return portMappings_.get(index);
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+     *
+     * <pre>
+     * since 1.5
+     * </pre>
+     */
+    public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder getPortMappingsOrBuilder(
+        int index) {
+      return portMappings_.get(index);
     }
 
     // optional .mesosphere.marathon.ExtendedContainerInfo.DockerInfo docker = 3;
@@ -27027,6 +30872,7 @@ public final class Protos {
     private void initFields() {
       type_ = org.apache.mesos.Protos.ContainerInfo.Type.DOCKER;
       volumes_ = java.util.Collections.emptyList();
+      portMappings_ = java.util.Collections.emptyList();
       docker_ = mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.getDefaultInstance();
       mesosDocker_ = mesosphere.marathon.Protos.ExtendedContainerInfo.MesosDockerInfo.getDefaultInstance();
       mesosAppC_ = mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance();
@@ -27042,6 +30888,12 @@ public final class Protos {
       }
       for (int i = 0; i < getVolumesCount(); i++) {
         if (!getVolumes(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getPortMappingsCount(); i++) {
+        if (!getPortMappings(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -27086,6 +30938,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeMessage(5, mesosAppC_);
       }
+      for (int i = 0; i < portMappings_.size(); i++) {
+        output.writeMessage(6, portMappings_.get(i));
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -27114,6 +30969,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, mesosAppC_);
+      }
+      for (int i = 0; i < portMappings_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, portMappings_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -27229,6 +31088,7 @@ public final class Protos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getVolumesFieldBuilder();
+          getPortMappingsFieldBuilder();
           getDockerFieldBuilder();
           getMesosDockerFieldBuilder();
           getMesosAppCFieldBuilder();
@@ -27248,24 +31108,30 @@ public final class Protos {
         } else {
           volumesBuilder_.clear();
         }
+        if (portMappingsBuilder_ == null) {
+          portMappings_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+        } else {
+          portMappingsBuilder_.clear();
+        }
         if (dockerBuilder_ == null) {
           docker_ = mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.getDefaultInstance();
         } else {
           dockerBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000008);
         if (mesosDockerBuilder_ == null) {
           mesosDocker_ = mesosphere.marathon.Protos.ExtendedContainerInfo.MesosDockerInfo.getDefaultInstance();
         } else {
           mesosDockerBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000010);
         if (mesosAppCBuilder_ == null) {
           mesosAppC_ = mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance();
         } else {
           mesosAppCBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -27307,7 +31173,16 @@ public final class Protos {
         } else {
           result.volumes_ = volumesBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (portMappingsBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+            portMappings_ = java.util.Collections.unmodifiableList(portMappings_);
+            bitField0_ = (bitField0_ & ~0x00000004);
+          }
+          result.portMappings_ = portMappings_;
+        } else {
+          result.portMappings_ = portMappingsBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
           to_bitField0_ |= 0x00000002;
         }
         if (dockerBuilder_ == null) {
@@ -27315,7 +31190,7 @@ public final class Protos {
         } else {
           result.docker_ = dockerBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000004;
         }
         if (mesosDockerBuilder_ == null) {
@@ -27323,7 +31198,7 @@ public final class Protos {
         } else {
           result.mesosDocker_ = mesosDockerBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000008;
         }
         if (mesosAppCBuilder_ == null) {
@@ -27376,6 +31251,32 @@ public final class Protos {
             }
           }
         }
+        if (portMappingsBuilder_ == null) {
+          if (!other.portMappings_.isEmpty()) {
+            if (portMappings_.isEmpty()) {
+              portMappings_ = other.portMappings_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+            } else {
+              ensurePortMappingsIsMutable();
+              portMappings_.addAll(other.portMappings_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.portMappings_.isEmpty()) {
+            if (portMappingsBuilder_.isEmpty()) {
+              portMappingsBuilder_.dispose();
+              portMappingsBuilder_ = null;
+              portMappings_ = other.portMappings_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+              portMappingsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getPortMappingsFieldBuilder() : null;
+            } else {
+              portMappingsBuilder_.addAllMessages(other.portMappings_);
+            }
+          }
+        }
         if (other.hasDocker()) {
           mergeDocker(other.getDocker());
         }
@@ -27396,6 +31297,12 @@ public final class Protos {
         }
         for (int i = 0; i < getVolumesCount(); i++) {
           if (!getVolumes(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getPortMappingsCount(); i++) {
+          if (!getPortMappings(i).isInitialized()) {
             
             return false;
           }
@@ -27716,6 +31623,318 @@ public final class Protos {
         return volumesBuilder_;
       }
 
+      // repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;
+      private java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping> portMappings_ =
+        java.util.Collections.emptyList();
+      private void ensurePortMappingsIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          portMappings_ = new java.util.ArrayList<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping>(portMappings_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder> portMappingsBuilder_;
+
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping> getPortMappingsList() {
+        if (portMappingsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(portMappings_);
+        } else {
+          return portMappingsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public int getPortMappingsCount() {
+        if (portMappingsBuilder_ == null) {
+          return portMappings_.size();
+        } else {
+          return portMappingsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping getPortMappings(int index) {
+        if (portMappingsBuilder_ == null) {
+          return portMappings_.get(index);
+        } else {
+          return portMappingsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder setPortMappings(
+          int index, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping value) {
+        if (portMappingsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensurePortMappingsIsMutable();
+          portMappings_.set(index, value);
+          onChanged();
+        } else {
+          portMappingsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder setPortMappings(
+          int index, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder builderForValue) {
+        if (portMappingsBuilder_ == null) {
+          ensurePortMappingsIsMutable();
+          portMappings_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          portMappingsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder addPortMappings(mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping value) {
+        if (portMappingsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensurePortMappingsIsMutable();
+          portMappings_.add(value);
+          onChanged();
+        } else {
+          portMappingsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder addPortMappings(
+          int index, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping value) {
+        if (portMappingsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensurePortMappingsIsMutable();
+          portMappings_.add(index, value);
+          onChanged();
+        } else {
+          portMappingsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder addPortMappings(
+          mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder builderForValue) {
+        if (portMappingsBuilder_ == null) {
+          ensurePortMappingsIsMutable();
+          portMappings_.add(builderForValue.build());
+          onChanged();
+        } else {
+          portMappingsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder addPortMappings(
+          int index, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder builderForValue) {
+        if (portMappingsBuilder_ == null) {
+          ensurePortMappingsIsMutable();
+          portMappings_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          portMappingsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder addAllPortMappings(
+          java.lang.Iterable<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping> values) {
+        if (portMappingsBuilder_ == null) {
+          ensurePortMappingsIsMutable();
+          super.addAll(values, portMappings_);
+          onChanged();
+        } else {
+          portMappingsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder clearPortMappings() {
+        if (portMappingsBuilder_ == null) {
+          portMappings_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+          onChanged();
+        } else {
+          portMappingsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public Builder removePortMappings(int index) {
+        if (portMappingsBuilder_ == null) {
+          ensurePortMappingsIsMutable();
+          portMappings_.remove(index);
+          onChanged();
+        } else {
+          portMappingsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder getPortMappingsBuilder(
+          int index) {
+        return getPortMappingsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder getPortMappingsOrBuilder(
+          int index) {
+        if (portMappingsBuilder_ == null) {
+          return portMappings_.get(index);  } else {
+          return portMappingsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public java.util.List<? extends mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder> 
+           getPortMappingsOrBuilderList() {
+        if (portMappingsBuilder_ != null) {
+          return portMappingsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(portMappings_);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder addPortMappingsBuilder() {
+        return getPortMappingsFieldBuilder().addBuilder(
+            mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder addPortMappingsBuilder(
+          int index) {
+        return getPortMappingsFieldBuilder().addBuilder(
+            index, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.ExtendedContainerInfo.PortMapping port_mappings = 6;</code>
+       *
+       * <pre>
+       * since 1.5
+       * </pre>
+       */
+      public java.util.List<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder> 
+           getPortMappingsBuilderList() {
+        return getPortMappingsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder> 
+          getPortMappingsFieldBuilder() {
+        if (portMappingsBuilder_ == null) {
+          portMappingsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.PortMappingOrBuilder>(
+                  portMappings_,
+                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  getParentForChildren(),
+                  isClean());
+          portMappings_ = null;
+        }
+        return portMappingsBuilder_;
+      }
+
       // optional .mesosphere.marathon.ExtendedContainerInfo.DockerInfo docker = 3;
       private mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo docker_ = mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
@@ -27724,7 +31943,7 @@ public final class Protos {
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.DockerInfo docker = 3;</code>
        */
       public boolean hasDocker() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.DockerInfo docker = 3;</code>
@@ -27749,7 +31968,7 @@ public final class Protos {
         } else {
           dockerBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         return this;
       }
       /**
@@ -27763,7 +31982,7 @@ public final class Protos {
         } else {
           dockerBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         return this;
       }
       /**
@@ -27771,7 +31990,7 @@ public final class Protos {
        */
       public Builder mergeDocker(mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo value) {
         if (dockerBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) == 0x00000004) &&
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
               docker_ != mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.getDefaultInstance()) {
             docker_ =
               mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.newBuilder(docker_).mergeFrom(value).buildPartial();
@@ -27782,7 +32001,7 @@ public final class Protos {
         } else {
           dockerBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         return this;
       }
       /**
@@ -27795,14 +32014,14 @@ public final class Protos {
         } else {
           dockerBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
       /**
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.DockerInfo docker = 3;</code>
        */
       public mesosphere.marathon.Protos.ExtendedContainerInfo.DockerInfo.Builder getDockerBuilder() {
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         onChanged();
         return getDockerFieldBuilder().getBuilder();
       }
@@ -27841,7 +32060,7 @@ public final class Protos {
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosDockerInfo mesosDocker = 4;</code>
        */
       public boolean hasMesosDocker() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosDockerInfo mesosDocker = 4;</code>
@@ -27866,7 +32085,7 @@ public final class Protos {
         } else {
           mesosDockerBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         return this;
       }
       /**
@@ -27880,7 +32099,7 @@ public final class Protos {
         } else {
           mesosDockerBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         return this;
       }
       /**
@@ -27888,7 +32107,7 @@ public final class Protos {
        */
       public Builder mergeMesosDocker(mesosphere.marathon.Protos.ExtendedContainerInfo.MesosDockerInfo value) {
         if (mesosDockerBuilder_ == null) {
-          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+          if (((bitField0_ & 0x00000010) == 0x00000010) &&
               mesosDocker_ != mesosphere.marathon.Protos.ExtendedContainerInfo.MesosDockerInfo.getDefaultInstance()) {
             mesosDocker_ =
               mesosphere.marathon.Protos.ExtendedContainerInfo.MesosDockerInfo.newBuilder(mesosDocker_).mergeFrom(value).buildPartial();
@@ -27899,7 +32118,7 @@ public final class Protos {
         } else {
           mesosDockerBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         return this;
       }
       /**
@@ -27912,14 +32131,14 @@ public final class Protos {
         } else {
           mesosDockerBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
       /**
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosDockerInfo mesosDocker = 4;</code>
        */
       public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosDockerInfo.Builder getMesosDockerBuilder() {
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         onChanged();
         return getMesosDockerFieldBuilder().getBuilder();
       }
@@ -27958,7 +32177,7 @@ public final class Protos {
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
        */
       public boolean hasMesosAppC() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
@@ -27983,7 +32202,7 @@ public final class Protos {
         } else {
           mesosAppCBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         return this;
       }
       /**
@@ -27997,7 +32216,7 @@ public final class Protos {
         } else {
           mesosAppCBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         return this;
       }
       /**
@@ -28005,7 +32224,7 @@ public final class Protos {
        */
       public Builder mergeMesosAppC(mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo value) {
         if (mesosAppCBuilder_ == null) {
-          if (((bitField0_ & 0x00000010) == 0x00000010) &&
+          if (((bitField0_ & 0x00000020) == 0x00000020) &&
               mesosAppC_ != mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance()) {
             mesosAppC_ =
               mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.newBuilder(mesosAppC_).mergeFrom(value).buildPartial();
@@ -28016,7 +32235,7 @@ public final class Protos {
         } else {
           mesosAppCBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         return this;
       }
       /**
@@ -28029,14 +32248,14 @@ public final class Protos {
         } else {
           mesosAppCBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       /**
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
        */
       public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder getMesosAppCBuilder() {
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         onChanged();
         return getMesosAppCFieldBuilder().getBuilder();
       }
@@ -43540,15 +47759,20 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_ReadinessCheckDefinition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_mesosphere_marathon_IpAddress_descriptor;
+    internal_static_mesosphere_marathon_ObsoleteIpAddress_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_mesosphere_marathon_IpAddress_fieldAccessorTable;
+      internal_static_mesosphere_marathon_ObsoleteIpAddress_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_mesosphere_marathon_DiscoveryInfo_descriptor;
+    internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_mesosphere_marathon_DiscoveryInfo_fieldAccessorTable;
+      internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_mesosphere_marathon_NetworkDefinition_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_mesosphere_marathon_NetworkDefinition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_ServiceDefinition_descriptor;
   private static
@@ -43610,10 +47834,10 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_descriptor;
+    internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_fieldAccessorTable;
+      internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosDockerInfo_descriptor;
   private static
@@ -43624,6 +47848,11 @@ public final class Protos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_Volume_descriptor;
   private static
@@ -43733,164 +47962,182 @@ public final class Protos {
       "\t\022\026\n\016intervalMillis\030\005 \001(\004\022\025\n\rtimeoutMill" +
       "is\030\006 \001(\004\022\036\n\026httpStatusCodeForReady\030\007 \003(\r" +
       "\022\034\n\024preserveLastResponse\030\010 \001(\010\"\037\n\010Protoc" +
-      "ol\022\010\n\004HTTP\020\000\022\t\n\005HTTPS\020\001\"\211\001\n\tIpAddress\022\016\n" +
-      "\006groups\030\001 \003(\t\022\034\n\006labels\030\002 \003(\0132\014.mesos.La" +
-      "bel\0229\n\rdiscoveryInfo\030\003 \001(\0132\".mesosphere." +
-      "marathon.DiscoveryInfo\022\023\n\013networkName\030\004 " +
-      "\001(\t\"+\n\rDiscoveryInfo\022\032\n\005ports\030\001 \003(\0132\013.me",
-      "sos.Port\"\214\n\n\021ServiceDefinition\022\n\n\002id\030\001 \002" +
-      "(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandInfo\022\021\n\ti" +
-      "nstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(\0132\017.meso" +
-      "s.Resource\022\023\n\013description\030\005 \001(\t\022\r\n\005ports" +
-      "\030\006 \003(\r\0224\n\013constraints\030\007 \003(\0132\037.mesosphere" +
-      ".marathon.Constraint\022\022\n\010executor\030\010 \002(\t:\000" +
-      "\022>\n\022OBSOLETE_container\030\n \001(\0132\".mesospher" +
-      "e.marathon.ContainerInfo\022)\n\007version\030\013 \001(" +
-      "\t:\0301970-01-01T00:00:00.000Z\022@\n\014healthChe" +
-      "cks\030\014 \003(\0132*.mesosphere.marathon.HealthCh",
-      "eckDefinition\022\025\n\007backoff\030\r \001(\003:\0041000\022\033\n\r" +
-      "backoffFactor\030\016 \001(\001:\0041.15\022G\n\017upgradeStra" +
-      "tegy\030\017 \001(\0132..mesosphere.marathon.Upgrade" +
-      "StrategyDefinition\022\024\n\014dependencies\030\020 \003(\t" +
-      "\022\021\n\tstoreUrls\030\021 \003(\t\022\034\n\rrequire_ports\030\022 \001" +
-      "(\010:\005false\022=\n\tcontainer\030\023 \001(\0132*.mesospher" +
-      "e.marathon.ExtendedContainerInfo\022 \n\006labe" +
-      "ls\030\024 \003(\0132\020.mesos.Parameter\022\037\n\016maxLaunchD" +
-      "elay\030\025 \001(\003:\0073600000\022A\n\025acceptedResourceR" +
-      "oles\030\026 \001(\0132\".mesosphere.marathon.Resourc",
-      "eRoles\022\027\n\017last_scaling_at\030\027 \001(\003\022\035\n\025last_" +
-      "config_change_at\030\030 \001(\003\0221\n\tipAddress\030\031 \001(" +
-      "\0132\036.mesosphere.marathon.IpAddress\022;\n\tres" +
-      "idency\030\032 \001(\0132(.mesosphere.marathon.Resid" +
-      "encyDefinition\022$\n\017portDefinitions\030\033 \003(\0132" +
-      "\013.mesos.Port\022O\n\030readinessCheckDefinition" +
-      "\030\034 \003(\0132-.mesosphere.marathon.ReadinessCh" +
-      "eckDefinition\022,\n\007secrets\030\035 \003(\0132\033.mesosph" +
-      "ere.marathon.Secret\022>\n\020envVarReferences\030" +
-      "\036 \003(\0132$.mesosphere.marathon.EnvVarRefere",
-      "nce\022\033\n\023taskKillGracePeriod\030\037 \001(\003\022E\n\023unre" +
-      "achableStrategy\030  \001(\0132(.mesosphere.marat" +
-      "hon.UnreachableStrategy\"]\n\023UnreachableSt" +
-      "rategy\022!\n\024inactiveAfterSeconds\030\001 \001(\004:\00390" +
-      "0\022#\n\023expungeAfterSeconds\030\002 \001(\004:\006604800\"\024" +
-      "\n\004Json\022\014\n\004json\030\001 \002(\t\"\035\n\rResourceRoles\022\014\n" +
-      "\004role\030\001 \003(\t\"\346\t\n\014MarathonTask\022\n\n\002id\030\001 \002(\t" +
-      "\022\025\n\rOBSOLETE_host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022-" +
-      "\n\023OBSOLETE_attributes\030\004 \003(\0132\020.mesos.Attr" +
-      "ibute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006",
-      " \001(\003\022,\n\021OBSOLETE_statuses\030\007 \003(\0132\021.mesos." +
-      "TaskStatus\022)\n\007version\030\010 \001(\t:\0301970-01-01T" +
-      "00:00:00.000Z\022!\n\006status\030\t \001(\0132\021.mesos.Ta" +
-      "skStatus\022(\n\020OBSOLETE_slaveId\030\n \001(\0132\016.mes" +
-      "os.SlaveID\022-\n\021OBSOLETE_networks\030\013 \003(\0132\022." +
-      "mesos.NetworkInfo\022B\n\013reservation\030\014 \001(\0132-" +
-      ".mesosphere.marathon.MarathonTask.Reserv" +
-      "ation\022>\n\tcondition\030\r \001(\0162+.mesosphere.ma" +
-      "rathon.MarathonTask.Condition\032\231\004\n\013Reserv" +
-      "ation\022\030\n\020local_volume_ids\030\001 \003(\t\022B\n\005state",
-      "\030\002 \002(\01323.mesosphere.marathon.MarathonTas" +
-      "k.Reservation.State\032\253\003\n\005State\022F\n\004type\030\001 " +
-      "\002(\01628.mesosphere.marathon.MarathonTask.R" +
-      "eservation.State.Type\022L\n\007timeout\030\002 \001(\0132;" +
-      ".mesosphere.marathon.MarathonTask.Reserv" +
-      "ation.State.Timeout\032\303\001\n\007Timeout\022\021\n\tiniti" +
-      "ated\030\001 \002(\003\022\020\n\010deadline\030\002 \002(\003\022R\n\006reason\030\003" +
-      " \002(\0162B.mesosphere.marathon.MarathonTask." +
-      "Reservation.State.Timeout.Reason\"?\n\006Reas" +
-      "on\022\035\n\031RelaunchEscalationTimeout\020\001\022\026\n\022Res",
-      "ervationTimeout\020\002\"F\n\004Type\022\007\n\003New\020\001\022\014\n\010La" +
-      "unched\020\002\022\r\n\tSuspended\020\003\022\013\n\007Garbage\020\004\022\013\n\007" +
-      "Unknown\020\005\"\330\001\n\tCondition\022\013\n\007Invalid\020\000\022\014\n\010" +
-      "Reserved\020\001\022\013\n\007Created\020\002\022\t\n\005Error\020\003\022\n\n\006Fa" +
-      "iled\020\004\022\014\n\010Finished\020\005\022\n\n\006Killed\020\006\022\013\n\007Kill" +
-      "ing\020\007\022\010\n\004Lost\020\010\022\013\n\007Running\020\t\022\013\n\007Staging\020" +
-      "\n\022\014\n\010Starting\020\013\022\017\n\013Unreachable\020\014\022\010\n\004Gone" +
-      "\020\r\022\013\n\007Unknown\020\016\022\013\n\007Dropped\020\017\"M\n\013Marathon" +
-      "App\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesos" +
-      "phere.marathon.MarathonTask\"1\n\rContainer",
-      "Info\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\277" +
-      "\007\n\025ExtendedContainerInfo\022\'\n\004type\030\001 \002(\0162\031" +
-      ".mesos.ContainerInfo.Type\022,\n\007volumes\030\002 \003" +
-      "(\0132\033.mesosphere.marathon.Volume\022E\n\006docke" +
-      "r\030\003 \001(\01325.mesosphere.marathon.ExtendedCo" +
-      "ntainerInfo.DockerInfo\022O\n\013mesosDocker\030\004 " +
-      "\001(\0132:.mesosphere.marathon.ExtendedContai" +
-      "nerInfo.MesosDockerInfo\022K\n\tmesosAppC\030\005 \001" +
-      "(\01328.mesosphere.marathon.ExtendedContain" +
-      "erInfo.MesosAppCInfo\032\242\003\n\nDockerInfo\022\r\n\005i",
-      "mage\030\001 \002(\t\022>\n\007network\030\002 \001(\0162\'.mesos.Cont" +
-      "ainerInfo.DockerInfo.Network:\004HOST\022X\n\rpo" +
-      "rt_mappings\030\003 \003(\0132A.mesosphere.marathon." +
-      "ExtendedContainerInfo.DockerInfo.PortMap" +
-      "ping\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\nparam" +
-      "eters\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020force_p" +
-      "ull_image\030\006 \001(\010\032\217\001\n\013PortMapping\022\021\n\thost_" +
-      "port\030\001 \001(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010pr" +
-      "otocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003" +
-      "(\0132\014.mesos.Label\022\027\n\014service_port\030d \001(\r:\001",
-      "0\032a\n\017MesosDockerInfo\022\r\n\005image\030\001 \002(\t\022%\n\nc" +
-      "redential\030\002 \001(\0132\021.mesos.Credential\022\030\n\020fo" +
-      "rce_pull_image\030\003 \001(\010\032b\n\rMesosAppCInfo\022\r\n" +
-      "\005image\030\001 \002(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003(\013" +
-      "2\014.mesos.Label\022\030\n\020force_pull_image\030\004 \001(\010" +
-      "\"\377\003\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume" +
-      ".Mode\022\026\n\016container_path\030\001 \002(\t\022\021\n\thost_pa" +
-      "th\030\002 \001(\t\022\033\n\005image\030\004 \001(\0132\014.mesos.Image\022D\n" +
-      "\npersistent\030\005 \001(\01320.mesosphere.marathon." +
-      "Volume.PersistentVolumeInfo\022@\n\010external\030",
-      "\006 \001(\0132..mesosphere.marathon.Volume.Exter" +
-      "nalVolumeInfo\032\237\001\n\024PersistentVolumeInfo\022\014" +
-      "\n\004size\030\001 \002(\004\0222\n\004type\030\002 \001(\0162$.mesos.Resou" +
-      "rce.DiskInfo.Source.Type\0224\n\013constraints\030" +
-      "\003 \003(\0132\037.mesosphere.marathon.Constraint\022\017" +
-      "\n\007maxSize\030\004 \001(\004\032a\n\022ExternalVolumeInfo\022\014\n" +
-      "\004size\030\001 \001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 " +
-      "\002(\t\022\035\n\007options\030\004 \003(\0132\014.mesos.Label\")\n\020Ev" +
-      "entSubscribers\022\025\n\rcallback_urls\030\001 \003(\t\"\274\001" +
-      "\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor",
-      "\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006format\030\004 \001(\01621." +
-      "mesosphere.marathon.StorageVersion.Stora" +
-      "geFormat:\006LEGACY\"2\n\rStorageFormat\022\n\n\006LEG" +
-      "ACY\020\000\022\025\n\021PERSISTENCE_STORE\020\001\"Z\n\031UpgradeS" +
-      "trategyDefinition\022\035\n\025minimumHealthCapaci" +
-      "ty\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:\0011" +
-      "\"\236\003\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007vers" +
-      "ion\030\002 \002(\t\022?\n\017deprecated_apps\030\003 \003(\0132&.mes" +
-      "osphere.marathon.ServiceDefinition\0222\n\017de" +
-      "precated_pods\030\010 \003(\0132\031.mesosphere.maratho",
-      "n.Json\0224\n\006groups\030\004 \003(\0132$.mesosphere.mara" +
-      "thon.GroupDefinition\022\024\n\014dependencies\030\005 \003" +
-      "(\t\022?\n\004apps\030\006 \003(\01321.mesosphere.marathon.G" +
-      "roupDefinition.AppReference\022?\n\004pods\030\007 \003(" +
-      "\01321.mesosphere.marathon.GroupDefinition." +
-      "AppReference\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t" +
-      "\022\017\n\007version\030\002 \002(\t\"\371\001\n\030DeploymentPlanDefi" +
-      "nition\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n" +
-      "\023deprecated_original\030\004 \001(\0132$.mesosphere." +
-      "marathon.GroupDefinition\022?\n\021deprecated_t",
-      "arget\030\005 \001(\0132$.mesosphere.marathon.GroupD" +
-      "efinition\022\035\n\025original_root_version\030\006 \001(\t" +
-      "\022\033\n\023target_root_version\030\007 \001(\t\"\306\001\n\013TaskFa" +
-      "ilure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r" +
-      ".mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.Tas" +
-      "kState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:" +
-      "\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n" +
-      "\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStor" +
-      "eEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005va" +
-      "lue\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n",
-      "\023ResidencyDefinition\022(\n relaunchEscalati" +
-      "onTimeoutSeconds\030\001 \001(\003\022S\n\020taskLostBehavi" +
-      "or\030\002 \001(\01629.mesosphere.marathon.Residency" +
-      "Definition.TaskLostBehavior\"@\n\020TaskLostB" +
-      "ehavior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014W" +
-      "AIT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006s" +
-      "ource\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227\n\004type\030" +
-      "\001 \002(\0162).mesosphere.marathon.EnvVarRefere" +
-      "nce.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(" +
-      "\0132$.mesosphere.marathon.EnvVarSecretRef\"",
-      "\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvV" +
-      "arSecretRef\022\020\n\010secretId\030\001 \002(\tB\035\n\023mesosph" +
-      "ere.marathonB\006Protos"
+      "ol\022\010\n\004HTTP\020\000\022\t\n\005HTTPS\020\001\"\231\001\n\021ObsoleteIpAd" +
+      "dress\022\016\n\006groups\030\001 \003(\t\022\034\n\006labels\030\002 \003(\0132\014." +
+      "mesos.Label\022A\n\rdiscoveryInfo\030\003 \001(\0132*.mes" +
+      "osphere.marathon.ObsoleteDiscoveryInfo\022\023" +
+      "\n\013networkName\030\004 \001(\t\"3\n\025ObsoleteDiscovery",
+      "Info\022\032\n\005ports\030\001 \003(\0132\013.mesos.Port\"\264\001\n\021Net" +
+      "workDefinition\0229\n\004mode\030\001 \001(\0162+.mesospher" +
+      "e.marathon.NetworkDefinition.Mode\022\014\n\004nam" +
+      "e\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.Label\"8\n" +
+      "\004Mode\022\013\n\007UNKNOWN\020\000\022\010\n\004HOST\020\001\022\r\n\tCONTAINE" +
+      "R\020\002\022\n\n\006BRIDGE\020\003\"\276\013\n\021ServiceDefinition\022\n\n" +
+      "\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.CommandIn" +
+      "fo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 \003(\013" +
+      "2\017.mesos.Resource\022\023\n\013description\030\005 \001(\t\022\r" +
+      "\n\005ports\030\006 \003(\r\0224\n\013constraints\030\007 \003(\0132\037.mes",
+      "osphere.marathon.Constraint\022\022\n\010executor\030" +
+      "\010 \002(\t:\000\022>\n\022OBSOLETE_container\030\n \001(\0132\".me" +
+      "sosphere.marathon.ContainerInfo\022)\n\007versi" +
+      "on\030\013 \001(\t:\0301970-01-01T00:00:00.000Z\022@\n\014he" +
+      "althChecks\030\014 \003(\0132*.mesosphere.marathon.H" +
+      "ealthCheckDefinition\022\025\n\007backoff\030\r \001(\003:\0041" +
+      "000\022\033\n\rbackoffFactor\030\016 \001(\001:\0041.15\022G\n\017upgr" +
+      "adeStrategy\030\017 \001(\0132..mesosphere.marathon." +
+      "UpgradeStrategyDefinition\022\024\n\014dependencie" +
+      "s\030\020 \003(\t\022\021\n\tstoreUrls\030\021 \003(\t\022\034\n\rrequire_po",
+      "rts\030\022 \001(\010:\005false\022=\n\tcontainer\030\023 \001(\0132*.me" +
+      "sosphere.marathon.ExtendedContainerInfo\022" +
+      " \n\006labels\030\024 \003(\0132\020.mesos.Parameter\022\037\n\016max" +
+      "LaunchDelay\030\025 \001(\003:\0073600000\022A\n\025acceptedRe" +
+      "sourceRoles\030\026 \001(\0132\".mesosphere.marathon." +
+      "ResourceRoles\022\027\n\017last_scaling_at\030\027 \001(\003\022\035" +
+      "\n\025last_config_change_at\030\030 \001(\003\022B\n\022OBSOLET" +
+      "E_ipAddress\030\031 \001(\0132&.mesosphere.marathon." +
+      "ObsoleteIpAddress\022;\n\tresidency\030\032 \001(\0132(.m" +
+      "esosphere.marathon.ResidencyDefinition\022$",
+      "\n\017portDefinitions\030\033 \003(\0132\013.mesos.Port\022O\n\030" +
+      "readinessCheckDefinition\030\034 \003(\0132-.mesosph" +
+      "ere.marathon.ReadinessCheckDefinition\022,\n" +
+      "\007secrets\030\035 \003(\0132\033.mesosphere.marathon.Sec" +
+      "ret\022>\n\020envVarReferences\030\036 \003(\0132$.mesosphe" +
+      "re.marathon.EnvVarReference\022\033\n\023taskKillG" +
+      "racePeriod\030\037 \001(\003\022E\n\023unreachableStrategy\030" +
+      "  \001(\0132(.mesosphere.marathon.UnreachableS" +
+      "trategy\022H\n\rkillSelection\030! \001(\0162\".mesosph" +
+      "ere.marathon.KillSelection:\rYoungestFirs",
+      "t\0228\n\010networks\030\" \003(\0132&.mesosphere.maratho" +
+      "n.NetworkDefinition\022\033\n\003tty\030# \001(\0132\016.mesos" +
+      ".TTYInfo\"]\n\023UnreachableStrategy\022!\n\024inact" +
+      "iveAfterSeconds\030\001 \001(\004:\003900\022#\n\023expungeAft" +
+      "erSeconds\030\002 \001(\004:\006604800\"\024\n\004Json\022\014\n\004json\030" +
+      "\001 \002(\t\"\035\n\rResourceRoles\022\014\n\004role\030\001 \003(\t\"\346\t\n" +
+      "\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\025\n\rOBSOLETE_ho" +
+      "st\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022-\n\023OBSOLETE_attr" +
+      "ibutes\030\004 \003(\0132\020.mesos.Attribute\022\021\n\tstaged" +
+      "_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003\022,\n\021OBSOLET",
+      "E_statuses\030\007 \003(\0132\021.mesos.TaskStatus\022)\n\007v" +
+      "ersion\030\010 \001(\t:\0301970-01-01T00:00:00.000Z\022!" +
+      "\n\006status\030\t \001(\0132\021.mesos.TaskStatus\022(\n\020OBS" +
+      "OLETE_slaveId\030\n \001(\0132\016.mesos.SlaveID\022-\n\021O" +
+      "BSOLETE_networks\030\013 \003(\0132\022.mesos.NetworkIn" +
+      "fo\022B\n\013reservation\030\014 \001(\0132-.mesosphere.mar" +
+      "athon.MarathonTask.Reservation\022>\n\tcondit" +
+      "ion\030\r \001(\0162+.mesosphere.marathon.Marathon" +
+      "Task.Condition\032\231\004\n\013Reservation\022\030\n\020local_" +
+      "volume_ids\030\001 \003(\t\022B\n\005state\030\002 \002(\01323.mesosp",
+      "here.marathon.MarathonTask.Reservation.S" +
+      "tate\032\253\003\n\005State\022F\n\004type\030\001 \002(\01628.mesospher" +
+      "e.marathon.MarathonTask.Reservation.Stat" +
+      "e.Type\022L\n\007timeout\030\002 \001(\0132;.mesosphere.mar" +
+      "athon.MarathonTask.Reservation.State.Tim" +
+      "eout\032\303\001\n\007Timeout\022\021\n\tinitiated\030\001 \002(\003\022\020\n\010d" +
+      "eadline\030\002 \002(\003\022R\n\006reason\030\003 \002(\0162B.mesosphe" +
+      "re.marathon.MarathonTask.Reservation.Sta" +
+      "te.Timeout.Reason\"?\n\006Reason\022\035\n\031RelaunchE" +
+      "scalationTimeout\020\001\022\026\n\022ReservationTimeout",
+      "\020\002\"F\n\004Type\022\007\n\003New\020\001\022\014\n\010Launched\020\002\022\r\n\tSus" +
+      "pended\020\003\022\013\n\007Garbage\020\004\022\013\n\007Unknown\020\005\"\330\001\n\tC" +
+      "ondition\022\013\n\007Invalid\020\000\022\014\n\010Reserved\020\001\022\013\n\007C" +
+      "reated\020\002\022\t\n\005Error\020\003\022\n\n\006Failed\020\004\022\014\n\010Finis" +
+      "hed\020\005\022\n\n\006Killed\020\006\022\013\n\007Killing\020\007\022\010\n\004Lost\020\010" +
+      "\022\013\n\007Running\020\t\022\013\n\007Staging\020\n\022\014\n\010Starting\020\013" +
+      "\022\017\n\013Unreachable\020\014\022\010\n\004Gone\020\r\022\013\n\007Unknown\020\016" +
+      "\022\013\n\007Dropped\020\017\"M\n\013MarathonApp\022\014\n\004name\030\001 \001" +
+      "(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.marathon." +
+      "MarathonTask\"1\n\rContainerInfo\022\017\n\005image\030\001",
+      " \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\345\t\n\025ExtendedCont" +
+      "ainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Containe" +
+      "rInfo.Type\022,\n\007volumes\030\002 \003(\0132\033.mesosphere" +
+      ".marathon.Volume\022M\n\rport_mappings\030\006 \003(\0132" +
+      "6.mesosphere.marathon.ExtendedContainerI" +
+      "nfo.PortMapping\022E\n\006docker\030\003 \001(\01325.mesosp" +
+      "here.marathon.ExtendedContainerInfo.Dock" +
+      "erInfo\022O\n\013mesosDocker\030\004 \001(\0132:.mesosphere" +
+      ".marathon.ExtendedContainerInfo.MesosDoc" +
+      "kerInfo\022K\n\tmesosAppC\030\005 \001(\01328.mesosphere.",
+      "marathon.ExtendedContainerInfo.MesosAppC" +
+      "Info\032\320\003\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022G\n\020OB" +
+      "SOLETE_network\030\002 \001(\0162\'.mesos.ContainerIn" +
+      "fo.DockerInfo.Network:\004HOST\022o\n\026OBSOLETE_" +
+      "port_mappings\030\003 \003(\0132O.mesosphere.maratho" +
+      "n.ExtendedContainerInfo.DockerInfo.Obsol" +
+      "eteDockerPortMapping\022\031\n\nprivileged\030\004 \001(\010" +
+      ":\005false\022$\n\nparameters\030\005 \003(\0132\020.mesos.Para" +
+      "meter\022\030\n\020force_pull_image\030\006 \001(\010\032\235\001\n\031Obso" +
+      "leteDockerPortMapping\022\021\n\thost_port\030\001 \001(\r",
+      "\022\026\n\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001" +
+      "(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos" +
+      ".Label\022\027\n\014service_port\030d \001(\r:\0010\032a\n\017Mesos" +
+      "DockerInfo\022\r\n\005image\030\001 \002(\t\022%\n\ncredential\030" +
+      "\002 \001(\0132\021.mesos.Credential\022\030\n\020force_pull_i" +
+      "mage\030\003 \001(\010\032b\n\rMesosAppCInfo\022\r\n\005image\030\001 \002" +
+      "(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.L" +
+      "abel\022\030\n\020force_pull_image\030\004 \001(\010\032\246\001\n\013PortM" +
+      "apping\022\021\n\thost_port\030\001 \001(\r\022\026\n\016container_p" +
+      "ort\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014\n\004name\030\004 \001(",
+      "\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.Label\022\027\n\014servi" +
+      "ce_port\030\006 \001(\r:\0010\022\025\n\rnetwork_names\030\007 \003(\t\"" +
+      "\377\003\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume." +
+      "Mode\022\026\n\016container_path\030\001 \002(\t\022\021\n\thost_pat" +
+      "h\030\002 \001(\t\022\033\n\005image\030\004 \001(\0132\014.mesos.Image\022D\n\n" +
+      "persistent\030\005 \001(\01320.mesosphere.marathon.V" +
+      "olume.PersistentVolumeInfo\022@\n\010external\030\006" +
+      " \001(\0132..mesosphere.marathon.Volume.Extern" +
+      "alVolumeInfo\032\237\001\n\024PersistentVolumeInfo\022\014\n" +
+      "\004size\030\001 \002(\004\0222\n\004type\030\002 \001(\0162$.mesos.Resour",
+      "ce.DiskInfo.Source.Type\0224\n\013constraints\030\003" +
+      " \003(\0132\037.mesosphere.marathon.Constraint\022\017\n" +
+      "\007maxSize\030\004 \001(\004\032a\n\022ExternalVolumeInfo\022\014\n\004" +
+      "size\030\001 \001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002" +
+      "(\t\022\035\n\007options\030\004 \003(\0132\014.mesos.Label\")\n\020Eve" +
+      "ntSubscribers\022\025\n\rcallback_urls\030\001 \003(\t\"\274\001\n" +
+      "\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030" +
+      "\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.m" +
+      "esosphere.marathon.StorageVersion.Storag" +
+      "eFormat:\006LEGACY\"2\n\rStorageFormat\022\n\n\006LEGA",
+      "CY\020\000\022\025\n\021PERSISTENCE_STORE\020\001\"Z\n\031UpgradeSt" +
+      "rategyDefinition\022\035\n\025minimumHealthCapacit" +
+      "y\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:\0011\"" +
+      "\236\003\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versi" +
+      "on\030\002 \002(\t\022?\n\017deprecated_apps\030\003 \003(\0132&.meso" +
+      "sphere.marathon.ServiceDefinition\0222\n\017dep" +
+      "recated_pods\030\010 \003(\0132\031.mesosphere.marathon" +
+      ".Json\0224\n\006groups\030\004 \003(\0132$.mesosphere.marat" +
+      "hon.GroupDefinition\022\024\n\014dependencies\030\005 \003(" +
+      "\t\022?\n\004apps\030\006 \003(\01321.mesosphere.marathon.Gr",
+      "oupDefinition.AppReference\022?\n\004pods\030\007 \003(\013" +
+      "21.mesosphere.marathon.GroupDefinition.A" +
+      "ppReference\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t\022" +
+      "\017\n\007version\030\002 \002(\t\"\371\001\n\030DeploymentPlanDefin" +
+      "ition\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023" +
+      "deprecated_original\030\004 \001(\0132$.mesosphere.m" +
+      "arathon.GroupDefinition\022?\n\021deprecated_ta" +
+      "rget\030\005 \001(\0132$.mesosphere.marathon.GroupDe" +
+      "finition\022\035\n\025original_root_version\030\006 \001(\t\022" +
+      "\033\n\023target_root_version\030\007 \001(\t\"\306\001\n\013TaskFai",
+      "lure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r." +
+      "mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.Task" +
+      "State\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000" +
+      "\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007" +
+      "slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStore" +
+      "Entry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005val" +
+      "ue\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n\023" +
+      "ResidencyDefinition\022(\n relaunchEscalatio" +
+      "nTimeoutSeconds\030\001 \001(\003\022S\n\020taskLostBehavio" +
+      "r\030\002 \001(\01629.mesosphere.marathon.ResidencyD",
+      "efinition.TaskLostBehavior\"@\n\020TaskLostBe" +
+      "havior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WA" +
+      "IT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006so" +
+      "urce\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227\n\004type\030\001" +
+      " \002(\0162).mesosphere.marathon.EnvVarReferen" +
+      "ce.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\013" +
+      "2$.mesosphere.marathon.EnvVarSecretRef\"\037" +
+      "\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVa" +
+      "rSecretRef\022\020\n\010secretId\030\001 \002(\t*3\n\rKillSele" +
+      "ction\022\021\n\rYoungestFirst\020\001\022\017\n\013OldestFirst\020",
+      "\002B\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -43915,44 +48162,50 @@ public final class Protos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ReadinessCheckDefinition_descriptor,
               new java.lang.String[] { "Name", "Protocol", "Path", "PortName", "IntervalMillis", "TimeoutMillis", "HttpStatusCodeForReady", "PreserveLastResponse", });
-          internal_static_mesosphere_marathon_IpAddress_descriptor =
+          internal_static_mesosphere_marathon_ObsoleteIpAddress_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_mesosphere_marathon_IpAddress_fieldAccessorTable = new
+          internal_static_mesosphere_marathon_ObsoleteIpAddress_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_mesosphere_marathon_IpAddress_descriptor,
+              internal_static_mesosphere_marathon_ObsoleteIpAddress_descriptor,
               new java.lang.String[] { "Groups", "Labels", "DiscoveryInfo", "NetworkName", });
-          internal_static_mesosphere_marathon_DiscoveryInfo_descriptor =
+          internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_mesosphere_marathon_DiscoveryInfo_fieldAccessorTable = new
+          internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_mesosphere_marathon_DiscoveryInfo_descriptor,
+              internal_static_mesosphere_marathon_ObsoleteDiscoveryInfo_descriptor,
               new java.lang.String[] { "Ports", });
-          internal_static_mesosphere_marathon_ServiceDefinition_descriptor =
+          internal_static_mesosphere_marathon_NetworkDefinition_descriptor =
             getDescriptor().getMessageTypes().get(5);
+          internal_static_mesosphere_marathon_NetworkDefinition_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_mesosphere_marathon_NetworkDefinition_descriptor,
+              new java.lang.String[] { "Mode", "Name", "Labels", });
+          internal_static_mesosphere_marathon_ServiceDefinition_descriptor =
+            getDescriptor().getMessageTypes().get(6);
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "IpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", "UnreachableStrategy", });
+              new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "OBSOLETEIpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", "UnreachableStrategy", "KillSelection", "Networks", "Tty", });
           internal_static_mesosphere_marathon_UnreachableStrategy_descriptor =
-            getDescriptor().getMessageTypes().get(6);
+            getDescriptor().getMessageTypes().get(7);
           internal_static_mesosphere_marathon_UnreachableStrategy_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_UnreachableStrategy_descriptor,
               new java.lang.String[] { "InactiveAfterSeconds", "ExpungeAfterSeconds", });
           internal_static_mesosphere_marathon_Json_descriptor =
-            getDescriptor().getMessageTypes().get(7);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_mesosphere_marathon_Json_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_Json_descriptor,
               new java.lang.String[] { "Json", });
           internal_static_mesosphere_marathon_ResourceRoles_descriptor =
-            getDescriptor().getMessageTypes().get(8);
+            getDescriptor().getMessageTypes().get(9);
           internal_static_mesosphere_marathon_ResourceRoles_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ResourceRoles_descriptor,
               new java.lang.String[] { "Role", });
           internal_static_mesosphere_marathon_MarathonTask_descriptor =
-            getDescriptor().getMessageTypes().get(9);
+            getDescriptor().getMessageTypes().get(10);
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
@@ -43976,34 +48229,34 @@ public final class Protos {
               internal_static_mesosphere_marathon_MarathonTask_Reservation_State_Timeout_descriptor,
               new java.lang.String[] { "Initiated", "Deadline", "Reason", });
           internal_static_mesosphere_marathon_MarathonApp_descriptor =
-            getDescriptor().getMessageTypes().get(10);
+            getDescriptor().getMessageTypes().get(11);
           internal_static_mesosphere_marathon_MarathonApp_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonApp_descriptor,
               new java.lang.String[] { "Name", "Tasks", });
           internal_static_mesosphere_marathon_ContainerInfo_descriptor =
-            getDescriptor().getMessageTypes().get(11);
+            getDescriptor().getMessageTypes().get(12);
           internal_static_mesosphere_marathon_ContainerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ContainerInfo_descriptor,
               new java.lang.String[] { "Image", "Options", });
           internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor =
-            getDescriptor().getMessageTypes().get(12);
+            getDescriptor().getMessageTypes().get(13);
           internal_static_mesosphere_marathon_ExtendedContainerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor,
-              new java.lang.String[] { "Type", "Volumes", "Docker", "MesosDocker", "MesosAppC", });
+              new java.lang.String[] { "Type", "Volumes", "PortMappings", "Docker", "MesosDocker", "MesosAppC", });
           internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_descriptor =
             internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor.getNestedTypes().get(0);
           internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_descriptor,
-              new java.lang.String[] { "Image", "Network", "PortMappings", "Privileged", "Parameters", "ForcePullImage", });
-          internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_descriptor =
+              new java.lang.String[] { "Image", "OBSOLETENetwork", "OBSOLETEPortMappings", "Privileged", "Parameters", "ForcePullImage", });
+          internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_descriptor =
             internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_descriptor.getNestedTypes().get(0);
-          internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_fieldAccessorTable = new
+          internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_PortMapping_descriptor,
+              internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_ObsoleteDockerPortMapping_descriptor,
               new java.lang.String[] { "HostPort", "ContainerPort", "Protocol", "Name", "Labels", "ServicePort", });
           internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosDockerInfo_descriptor =
             internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor.getNestedTypes().get(1);
@@ -44017,8 +48270,14 @@ public final class Protos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_descriptor,
               new java.lang.String[] { "Image", "Id", "Labels", "ForcePullImage", });
+          internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor =
+            internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor.getNestedTypes().get(3);
+          internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor,
+              new java.lang.String[] { "HostPort", "ContainerPort", "Protocol", "Name", "Labels", "ServicePort", "NetworkNames", });
           internal_static_mesosphere_marathon_Volume_descriptor =
-            getDescriptor().getMessageTypes().get(13);
+            getDescriptor().getMessageTypes().get(14);
           internal_static_mesosphere_marathon_Volume_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_Volume_descriptor,
@@ -44036,25 +48295,25 @@ public final class Protos {
               internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_descriptor,
               new java.lang.String[] { "Size", "Name", "Provider", "Options", });
           internal_static_mesosphere_marathon_EventSubscribers_descriptor =
-            getDescriptor().getMessageTypes().get(14);
+            getDescriptor().getMessageTypes().get(15);
           internal_static_mesosphere_marathon_EventSubscribers_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_EventSubscribers_descriptor,
               new java.lang.String[] { "CallbackUrls", });
           internal_static_mesosphere_marathon_StorageVersion_descriptor =
-            getDescriptor().getMessageTypes().get(15);
+            getDescriptor().getMessageTypes().get(16);
           internal_static_mesosphere_marathon_StorageVersion_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_StorageVersion_descriptor,
               new java.lang.String[] { "Major", "Minor", "Patch", "Format", });
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_descriptor =
-            getDescriptor().getMessageTypes().get(16);
+            getDescriptor().getMessageTypes().get(17);
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_UpgradeStrategyDefinition_descriptor,
               new java.lang.String[] { "MinimumHealthCapacity", "MaximumOverCapacity", });
           internal_static_mesosphere_marathon_GroupDefinition_descriptor =
-            getDescriptor().getMessageTypes().get(17);
+            getDescriptor().getMessageTypes().get(18);
           internal_static_mesosphere_marathon_GroupDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_GroupDefinition_descriptor,
@@ -44066,43 +48325,43 @@ public final class Protos {
               internal_static_mesosphere_marathon_GroupDefinition_AppReference_descriptor,
               new java.lang.String[] { "Id", "Version", });
           internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor =
-            getDescriptor().getMessageTypes().get(18);
+            getDescriptor().getMessageTypes().get(19);
           internal_static_mesosphere_marathon_DeploymentPlanDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor,
               new java.lang.String[] { "Id", "Timestamp", "DeprecatedOriginal", "DeprecatedTarget", "OriginalRootVersion", "TargetRootVersion", });
           internal_static_mesosphere_marathon_TaskFailure_descriptor =
-            getDescriptor().getMessageTypes().get(19);
+            getDescriptor().getMessageTypes().get(20);
           internal_static_mesosphere_marathon_TaskFailure_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_TaskFailure_descriptor,
               new java.lang.String[] { "AppId", "TaskId", "State", "Message", "Host", "Version", "Timestamp", "SlaveId", });
           internal_static_mesosphere_marathon_ZKStoreEntry_descriptor =
-            getDescriptor().getMessageTypes().get(20);
+            getDescriptor().getMessageTypes().get(21);
           internal_static_mesosphere_marathon_ZKStoreEntry_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ZKStoreEntry_descriptor,
               new java.lang.String[] { "Name", "Uuid", "Value", "Compressed", });
           internal_static_mesosphere_marathon_ResidencyDefinition_descriptor =
-            getDescriptor().getMessageTypes().get(21);
+            getDescriptor().getMessageTypes().get(22);
           internal_static_mesosphere_marathon_ResidencyDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ResidencyDefinition_descriptor,
               new java.lang.String[] { "RelaunchEscalationTimeoutSeconds", "TaskLostBehavior", });
           internal_static_mesosphere_marathon_Secret_descriptor =
-            getDescriptor().getMessageTypes().get(22);
+            getDescriptor().getMessageTypes().get(23);
           internal_static_mesosphere_marathon_Secret_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_Secret_descriptor,
               new java.lang.String[] { "Id", "Source", });
           internal_static_mesosphere_marathon_EnvVarReference_descriptor =
-            getDescriptor().getMessageTypes().get(23);
+            getDescriptor().getMessageTypes().get(24);
           internal_static_mesosphere_marathon_EnvVarReference_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_EnvVarReference_descriptor,
               new java.lang.String[] { "Type", "Name", "SecretRef", });
           internal_static_mesosphere_marathon_EnvVarSecretRef_descriptor =
-            getDescriptor().getMessageTypes().get(24);
+            getDescriptor().getMessageTypes().get(25);
           internal_static_mesosphere_marathon_EnvVarSecretRef_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_EnvVarSecretRef_descriptor,

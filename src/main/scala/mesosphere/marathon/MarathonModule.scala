@@ -17,8 +17,6 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.util.state._
 import org.apache.mesos.Scheduler
@@ -44,7 +42,7 @@ object ModuleNames {
   final val MESOS_HEARTBEAT_ACTOR = "MesosHeartbeatActor"
 }
 
-class MarathonModule(conf: MarathonConf, http: HttpConf)
+class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSystem)
     extends AbstractModule {
 
   val log = LoggerFactory.getLogger(getClass.getName)
@@ -68,8 +66,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.SERVER_SET_PATH))
       .toInstance(conf.zooKeeperServerSetPath)
-
-    bind(classOf[Metrics]).in(Scopes.SINGLETON)
   }
 
   @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR)
@@ -141,17 +137,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   @Provides
   @Singleton
-  def provideActorSystem(): ActorSystem = ActorSystem("marathon")
+  def provideActorSystem(): ActorSystem = actorSystem
 
   /* Reexports the `akka.actor.ActorSystem` as `akka.actor.ActorRefFactory`. It doesn't work automatically. */
   @Provides
   @Singleton
   def provideActorRefFactory(system: ActorSystem): ActorRefFactory = system
-
-  @Provides
-  @Singleton
-  def provideStorageProvider(http: HttpConf): StorageProvider =
-    StorageProvider.provider(conf, http)
 
   @Provides
   @Singleton

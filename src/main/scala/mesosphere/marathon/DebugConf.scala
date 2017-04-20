@@ -1,17 +1,13 @@
 package mesosphere.marathon
 
 import java.net.URI
-import javax.inject.Provider
 
 import ch.qos.logback.classic.{ AsyncAppender, Level, LoggerContext }
 import ch.qos.logback.core.net.ssl.SSLConfiguration
 import com.getsentry.raven.logback.SentryAppender
 import com.google.inject.AbstractModule
-import com.google.inject.matcher.{ AbstractMatcher, Matchers }
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import net.logstash.logback.appender._
 import net.logstash.logback.composite.loggingevent.ArgumentsJsonProvider
-import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
 import org.rogach.scallop.ScallopConf
 import org.slf4j.{ Logger, LoggerFactory }
 
@@ -20,31 +16,15 @@ import org.slf4j.{ Logger, LoggerFactory }
   */
 trait DebugConf extends ScallopConf {
 
-  private[this] lazy val debugTracing = toggle(
-    "tracing",
-    descrYes = "Enable trace logging of service method calls.",
-    descrNo = "(Default) Disable trace logging of service method calls.",
+  lazy val metrics = toggle(
+    "metrics",
+    descrYes =
+      "(Deprecated) Ignored",
+    descrNo =
+      "(Deprecated) Ignored",
     default = Some(false),
     noshort = true,
     prefix = "disable_")
-
-  def enableDebugTracing = debugTracing()
-
-  private[this] lazy val metrics = toggle(
-    "metrics",
-    descrYes =
-      "(Default) Expose the execution time of service method calls using code instrumentation" +
-        " via the metrics endpoint (/metrics). This might noticeably degrade performance" +
-        " but can help finding performance problems.",
-    descrNo =
-      "Disable exposing execution time of service method calls using code instrumentation" +
-        " via the metrics endpoing (/metrics). " +
-        "This does not turn off reporting of other metrics.",
-    default = Some(true),
-    noshort = true,
-    prefix = "disable_")
-
-  def enableMetrics = metrics()
 
   lazy val logLevel = opt[String](
     "logging_level",
@@ -71,43 +51,8 @@ trait DebugConf extends ScallopConf {
 }
 
 class DebugModule(conf: DebugConf) extends AbstractModule {
-  /**
-    * Measure processing time of each service method.
-    */
-  class MetricsBehavior(metricsProvider: Provider[Metrics]) extends MethodInterceptor {
-    override def invoke(in: MethodInvocation): AnyRef = {
-      val metrics: Metrics = metricsProvider.get
-
-      metrics.timed(metrics.name(MetricPrefixes.SERVICE, in)) {
-        in.proceed
-      }
-    }
-  }
-
-  /**
-    * Add trace, whenever a service method is entered and finished.
-    */
-  class TracingBehavior(metrics: Provider[Metrics]) extends MethodInterceptor {
-    override def invoke(in: MethodInvocation): AnyRef = {
-      val className = metrics.get.className(in.getThis.getClass)
-      val logger = LoggerFactory.getLogger(className)
-      val method = s"""$className.${in.getMethod.getName}(${in.getArguments.mkString(", ")})"""
-      logger.trace(s">>> $method")
-      val result = in.proceed()
-      logger.trace(s"<<< $method")
-      result
-    }
-  }
-
-  object MarathonMatcher extends AbstractMatcher[Class[_]] {
-    override def matches(t: Class[_]): Boolean = {
-      // Don't instrument the Metrics class, in order to avoid an infinite recursion
-      t.getPackage.getName.startsWith("mesosphere") && t != classOf[Metrics]
-    }
-  }
-
   override def configure(): Unit = {
-    //set trace log level
+    //set trace log levelN
     conf.logLevel.get.foreach { levelName =>
       val level = Level.toLevel(if ("fatal".equalsIgnoreCase(levelName)) "fatal" else levelName)
       LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) match {
@@ -123,15 +68,6 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     conf.sentryUrl.get.foreach {
       configureSentry(_, conf.sentryTags.get)
     }
-
-    //add behaviors
-    val metricsProvider = getProvider(classOf[Metrics])
-
-    val tracingBehavior = if (conf.enableDebugTracing) Some(new TracingBehavior(metricsProvider)) else None
-    val metricsBehavior = if (conf.enableMetrics) Some(new MetricsBehavior(metricsProvider)) else None
-
-    val behaviors = (tracingBehavior :: metricsBehavior :: Nil).flatten
-    if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)
   }
 
   private def configureSentry(uri: URI, tags: Option[String]): Unit = {

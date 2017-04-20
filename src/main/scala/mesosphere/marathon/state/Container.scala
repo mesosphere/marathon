@@ -1,77 +1,63 @@
 package mesosphere.marathon
 package state
 
-import com.wix.accord.dsl._
 import com.wix.accord._
+import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
-
-import org.apache.mesos.Protos.ContainerInfo
+import mesosphere.marathon.core.pod.Network
 
 import scala.collection.immutable.Seq
 
-sealed trait Container {
+sealed trait Container extends Product with Serializable {
+
+  import Container.{ Docker, PortMapping }
+
+  def portMappings: Seq[PortMapping]
   val volumes: Seq[Volume]
 
   // TODO(nfnt): Remove this field and use type matching instead.
-  def docker: Option[Container.Docker] = {
+  def docker: Option[Docker] = {
     this match {
-      case docker: Container.Docker => Some(docker)
+      case docker: Docker => Some(docker)
       case _ => None
     }
   }
-
-  def portMappings: Seq[Container.PortMapping] = Nil
 
   def hostPorts: Seq[Option[Int]] =
     portMappings.map(_.hostPort)
 
   def servicePorts: Seq[Int] =
     portMappings.map(_.servicePort)
+
+  def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes): Container
 }
 
 object Container {
 
-  case class Mesos(volumes: Seq[Volume] = Seq.empty) extends Container
+  case class Mesos(
+      volumes: Seq[Volume] = Seq.empty,
+      override val portMappings: Seq[PortMapping] = Nil
+  ) extends Container {
+
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes) =
+      copy(portMappings = portMappings, volumes = volumes)
+  }
 
   case class Docker(
-    volumes: Seq[Volume] = Seq.empty,
-    image: String = "",
-    network: Option[ContainerInfo.DockerInfo.Network] = None,
-    override val portMappings: Seq[PortMapping] = Nil,
-    privileged: Boolean = false,
-    parameters: Seq[Parameter] = Nil,
-    forcePullImage: Boolean = false) extends Container
+      volumes: Seq[Volume] = Seq.empty,
+      image: String = "",
+      override val portMappings: Seq[PortMapping] = Nil,
+      privileged: Boolean = false,
+      parameters: Seq[Parameter] = Nil,
+      forcePullImage: Boolean = false) extends Container {
+
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes) =
+      copy(portMappings = portMappings, volumes = volumes)
+  }
 
   object Docker {
-
-    def withDefaultPortMappings(
-      volumes: Seq[Volume],
-      image: String = "",
-      network: Option[ContainerInfo.DockerInfo.Network] = None,
-      portMappings: Seq[PortMapping] = Nil,
-      privileged: Boolean = false,
-      parameters: Seq[Parameter] = Seq.empty,
-      forcePullImage: Boolean = false): Docker = Docker(
-      volumes = volumes,
-      image = image,
-      network = network,
-      portMappings = network match {
-        case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
-          portMappings.map {
-            // backwards compat: when in BRIDGE mode, missing host ports default to zero
-            case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
-            case m => m
-          }
-        case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.USER => portMappings
-        case _ => Nil
-      },
-      privileged = privileged,
-      parameters = parameters,
-      forcePullImage = forcePullImage)
-
-    val validDockerContainer = validator[Docker] { docker =>
+    implicit val validDockerContainer: Validator[Docker] = validator[Docker] { docker =>
       docker.image is notEmpty
-      docker.portMappings is PortMapping.portMappingsValidator and PortMapping.validForDocker(docker)
     }
   }
 
@@ -83,50 +69,25 @@ object Container {
     * @param name          Name of the service hosted on this port.
     * @param labels        This can be used to decorate the message with metadata to be
     *                      interpreted by external applications such as firewalls.
+    * @param networkNames  Specifies one or more container networks, by name, for which this PortMapping applies.
     */
   case class PortMapping(
     containerPort: Int = AppDefinition.RandomPortValue,
     hostPort: Option[Int] = None, // defaults to HostPortDefault for BRIDGE mode, None for USER mode
     servicePort: Int = AppDefinition.RandomPortValue,
-    protocol: String = "tcp",
+    protocol: String = PortMapping.TCP,
     name: Option[String] = None,
-    labels: Map[String, String] = Map.empty[String, String])
+    labels: Map[String, String] = Map.empty[String, String],
+    networkNames: Seq[String] = Nil
+  )
 
   object PortMapping {
-    val TCP = "tcp"
-    val UDP = "udp"
+    val TCP = raml.NetworkProtocol.Tcp.value
+    val UDP = raml.NetworkProtocol.Udp.value
+    val UDP_TCP = raml.NetworkProtocol.UdpTcp.value
+    val defaultInstance = PortMapping(name = Option("default"))
 
     val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
-
-    implicit val uniqueProtocols: Validator[Iterable[String]] =
-      isTrue[Iterable[String]]("protocols must be unique.") { protocols =>
-        protocols.size == protocols.toSet.size
-      }
-
-    implicit val portMappingValidator = validator[PortMapping] { portMapping =>
-      portMapping.protocol.split(',').toIterable is uniqueProtocols and every(oneOf(TCP, UDP))
-      portMapping.containerPort should be >= 0
-      portMapping.hostPort.each should be >= 0
-      portMapping.servicePort should be >= 0
-      portMapping.name is optional(matchRegexFully(PortAssignment.PortNamePattern))
-    }
-
-    def networkHostPortValidator(docker: Docker): Validator[PortMapping] =
-      isTrue[PortMapping]("hostPort is required for BRIDGE mode.") { pm =>
-        docker.network match {
-          case Some(ContainerInfo.DockerInfo.Network.BRIDGE) => pm.hostPort.isDefined
-          case _ => true
-        }
-      }
-
-    val portMappingsValidator = validator[Seq[PortMapping]] { portMappings =>
-      portMappings is every(valid)
-      portMappings is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
-    }
-
-    def validForDocker(docker: Docker): Validator[Seq[PortMapping]] = validator[Seq[PortMapping]] { pm =>
-      pm is every(valid(PortMapping.networkHostPortValidator(docker)))
-    }
   }
 
   case class Credential(
@@ -134,10 +95,15 @@ object Container {
     secret: Option[String] = None)
 
   case class MesosDocker(
-    volumes: Seq[Volume] = Seq.empty,
-    image: String = "",
-    credential: Option[Credential] = None,
-    forcePullImage: Boolean = false) extends Container
+      volumes: Seq[Volume] = Seq.empty,
+      image: String = "",
+      override val portMappings: Seq[PortMapping] = Nil,
+      credential: Option[Credential] = None,
+      forcePullImage: Boolean = false) extends Container {
+
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes) =
+      copy(portMappings = portMappings, volumes = volumes)
+  }
 
   object MesosDocker {
     val validMesosDockerContainer = validator[MesosDocker] { docker =>
@@ -146,11 +112,16 @@ object Container {
   }
 
   case class MesosAppC(
-    volumes: Seq[Volume] = Seq.empty,
-    image: String = "",
-    id: Option[String] = None,
-    labels: Map[String, String] = Map.empty[String, String],
-    forcePullImage: Boolean = false) extends Container
+      volumes: Seq[Volume] = Seq.empty,
+      image: String = "",
+      override val portMappings: Seq[PortMapping] = Nil,
+      id: Option[String] = None,
+      labels: Map[String, String] = Map.empty[String, String],
+      forcePullImage: Boolean = false) extends Container {
+
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes) =
+      copy(portMappings = portMappings, volumes = volumes)
+  }
 
   object MesosAppC {
     val prefix = "sha512-"
@@ -168,7 +139,8 @@ object Container {
     }
   }
 
-  def validContainer(enabledFeatures: Set[String]): Validator[Container] = {
+  def validContainer(networks: Seq[Network], enabledFeatures: Set[String]): Validator[Container] = {
+    import Network._
     val validGeneralContainer = validator[Container] { container =>
       container.volumes is every(Volume.validVolume(enabledFeatures))
     }
@@ -180,7 +152,11 @@ object Container {
         case md: MesosDocker => validate(md)(MesosDocker.validMesosDockerContainer)
         case ma: MesosAppC => validate(ma)(MesosAppC.validMesosAppCContainer)
       }
-    } and validGeneralContainer
+    } and
+      validGeneralContainer and
+      implied(networks.hasBridgeNetworking)(validator[Container] { container =>
+        container.portMappings is every(isTrue("hostPort is required for BRIDGE mode.")(_.hostPort.nonEmpty))
+      })
   }
 }
 

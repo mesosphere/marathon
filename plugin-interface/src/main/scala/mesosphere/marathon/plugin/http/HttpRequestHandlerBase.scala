@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.http
+package mesosphere.marathon
+package plugin.http
 
 import java.net.{ URL, URLConnection }
 import com.google.common.io.Resources

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 //scalastyle:off
 import akka.Done
 import akka.actor.ActorRef
@@ -23,7 +24,7 @@ private[tracker] class InstanceCreationHandlerAndUpdaterDelegate(
   instanceTrackerRef: ActorRef)
     extends InstanceCreationHandler with TaskStateOpProcessor {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   private[impl] implicit val timeout: Timeout = conf.internalTaskUpdateRequestTimeout().milliseconds
 

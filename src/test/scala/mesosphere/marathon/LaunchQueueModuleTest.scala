@@ -1,12 +1,11 @@
 package mesosphere.marathon
 
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -18,17 +17,22 @@ import mesosphere.marathon.core.task.bus.{ TaskBusModule, TaskStatusUpdateTestHe
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito.Matchers
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
 
-class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSupport with OfferMatcherSpec {
+class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
+
+  def fixture(fn: Fixture => Unit): Unit = {
+    val f = new Fixture
+    try fn(f)
+    finally f.close()
+  }
 
   "LaunchQueueModule" should {
-    "empty queue returns no results" in {
-      val f = new Fixture
+    "empty queue returns no results" in fixture { f =>
       import f._
       When("querying queue")
       val apps = launchQueue.list
@@ -40,8 +44,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "An added queue item is returned in list" in {
-      val f = new Fixture
+    "An added queue item is returned in list" in fixture { f =>
       import f._
       Given("a launch queue with one item")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
@@ -63,8 +66,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "An added queue item is reflected via count" in {
-      val f = new Fixture
+    "An added queue item is reflected via count" in fixture { f =>
       import f._
       Given("a launch queue with one item")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
@@ -81,8 +83,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "A purged queue item has a count of 0" in {
-      val f = new Fixture
+    "A purged queue item has a count of 0" in fixture { f =>
       import f._
       Given("a launch queue with one item which is purged")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
@@ -100,8 +101,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "A re-added queue item has a count of 1" in {
-      val f = new Fixture
+    "A re-added queue item has a count of 1" in fixture { f =>
       import f._
       Given("a launch queue with one item which is purged")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
@@ -120,8 +120,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "adding a queue item registers new offer matcher" in {
-      val f = new Fixture
+    "adding a queue item registers new offer matcher" in fixture { f =>
       import f._
       Given("An empty task tracker")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
@@ -139,8 +138,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "purging a queue item UNregisters offer matcher" in {
-      val f = new Fixture
+    "purging a queue item UNregisters offer matcher" in fixture { f =>
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
@@ -157,8 +155,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "an offer gets unsuccessfully matched against an item in the queue" in {
-      val f = new Fixture
+    "an offer gets unsuccessfully matched against an item in the queue" in fixture { f =>
       import f._
 
       Given("An app in the queue")
@@ -186,8 +183,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "an offer gets successfully matched against an item in the queue" in {
-      val f = new Fixture
+    "an offer gets successfully matched against an item in the queue" in fixture { f =>
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
@@ -214,9 +210,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       f.verifyNoMoreInteractions()
     }
 
-    "TaskChanged updates are answered immediately for suspended queue entries" in {
+    "TaskChanged updates are answered immediately for suspended queue entries" in fixture { f =>
       // otherwise we get a deadlock in some cases, see comment in LaunchQueueActor
-      val f = new Fixture
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
@@ -234,7 +229,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       And("test app gets purged (but not stopped yet because of in-flight tasks)")
       Future {
         launchQueue.purge(app.id)
-      }(ExecutionContext.Implicits.global)
+      }(ExecutionContexts.global)
       WaitTestSupport.waitUntil("purge gets executed", 1.second) {
         !launchQueue.list.exists(_.runSpec.id == app.id)
       }
@@ -248,7 +243,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
     }
   }
 
-  class Fixture {
+  class Fixture extends AutoCloseable {
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
@@ -272,9 +267,11 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
     lazy val instanceTracker: InstanceTracker = mock[InstanceTracker]
     lazy val instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
     lazy val config = MarathonTestHelper.defaultConfig()
+    lazy val parentActor = newTestActor()
+
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
       config,
-      AlwaysElectedLeadershipModule(shutdownHooks),
+      AlwaysElectedLeadershipModule.forRefFactory(parentActor.underlying),
       clock,
       subOfferMatcherManager = offerMatcherManager,
       maybeOfferReviver = None,
@@ -287,6 +284,10 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(instanceTracker)
       noMoreInteractions(instanceOpFactory)
+    }
+
+    def close(): Unit = {
+      parentActor.stop()
     }
   }
 }

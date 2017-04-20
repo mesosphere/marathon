@@ -17,13 +17,13 @@ import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
+import mesosphere.marathon.util.ScallopStub
 import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
 import org.mockito.Matchers.{ eq => mockEq }
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.rogach.scallop.ScallopOption
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -41,22 +41,15 @@ object MarathonSchedulerServiceTest {
   def mockConfig: MarathonConf = {
     val config = mock(classOf[MarathonConf])
 
-    when(config.reconciliationInitialDelay).thenReturn(scallopOption(Some(ReconciliationDelay)))
-    when(config.reconciliationInterval).thenReturn(scallopOption(Some(ReconciliationInterval)))
-    when(config.scaleAppsInitialDelay).thenReturn(scallopOption(Some(ScaleAppsDelay)))
-    when(config.scaleAppsInterval).thenReturn(scallopOption(Some(ScaleAppsInterval)))
+    when(config.reconciliationInitialDelay).thenReturn(ScallopStub(Some(ReconciliationDelay)))
+    when(config.reconciliationInterval).thenReturn(ScallopStub(Some(ReconciliationInterval)))
+    when(config.scaleAppsInitialDelay).thenReturn(ScallopStub(Some(ScaleAppsDelay)))
+    when(config.scaleAppsInterval).thenReturn(ScallopStub(Some(ScaleAppsInterval)))
     when(config.zkTimeoutDuration).thenReturn(1.second)
-    when(config.maxActorStartupTime).thenReturn(scallopOption(Some(MaxActorStartupTime)))
-    when(config.onElectedPrepareTimeout).thenReturn(scallopOption(Some(OnElectedPrepareTimeout)))
+    when(config.maxActorStartupTime).thenReturn(ScallopStub(Some(MaxActorStartupTime)))
+    when(config.onElectedPrepareTimeout).thenReturn(ScallopStub(Some(OnElectedPrepareTimeout)))
 
     config
-  }
-
-  def scallopOption[A](a: Option[A]): ScallopOption[A] = {
-    new ScallopOption[A]("") {
-      override def get = a
-      override def apply() = a.get
-    }
   }
 }
 

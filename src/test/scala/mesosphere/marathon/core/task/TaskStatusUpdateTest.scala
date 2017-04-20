@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task
+package mesosphere.marathon
+package core.task
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock

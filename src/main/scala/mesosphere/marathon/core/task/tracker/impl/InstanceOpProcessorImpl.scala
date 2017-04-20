@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
@@ -9,8 +10,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.storage.repository.InstanceRepository
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.immutable.Seq
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 /**
@@ -27,6 +28,7 @@ private[tracker] class InstanceOpProcessorImpl(
 
   override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
     val stateChange = stateOpResolver.resolve(op.op)
+
     stateChange.flatMap {
       case change: InstanceUpdateEffect.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.

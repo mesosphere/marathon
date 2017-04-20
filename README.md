@@ -1,7 +1,6 @@
-[![Stories in Ready](https://badge.waffle.io/mesosphere/marathon.png?label=ready&title=Ready)](https://waffle.io/mesosphere/marathon)
-# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)
+# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master) [![Issues](https://img.shields.io/badge/Issues-JIRA-ff69b4.svg?style=flat)](https://jira.mesosphere.com/projects/MARATHON/issues/)
 
-Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon.
+Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon. Issues are tracked in [JIRA](https://jira.mesosphere.com/projects/MARATHON/issues/).
 
 Marathon provides a
 [REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for
@@ -36,6 +35,13 @@ Since Marathon version 0.7.0 and Mesos 0.20.0, you can [deploy, run and scale Do
 Marathon documentation is available on the [Marathon GitHub pages site](http://mesosphere.github.io/marathon/).
 
 Documentation for installing and configuring the full Mesosphere stack including Mesos and Marathon is available on the [Mesosphere website](http://docs.mesosphere.com).
+
+## Issue Tracking
+
+Marathon uses [JIRA](https://jira.mesosphere.com/projects/MARATHON) to track issues. You can [browse](https://jira.mesosphere.com/projects/MARATHON/issues/) existing issues or [file a new issue](https://jira.mesosphere.com/secure/CreateIssue!default.jspa?pid=10401) with your GitHub account. 
+
+Note for users of GitHub issues: All existing issues have been migrated and closed, and a reference to the related [JIRA](https://jira.mesosphere.com/projects/MARATHON) has been added as a comment.
+We leave the GitHub issues available for reference. Going forward please use [JIRA](https://jira.mesosphere.com/projects/MARATHON) always.
 
 ### Contributing
 
@@ -159,6 +165,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 * [Go client](https://github.com/jbdalido/gomarathon) by Jean-Baptiste Dalido
 * [Node client](https://github.com/silas/node-mesos) by Silas Sewell
 * [Clojure client](https://github.com/codemomentum/marathonclj) by Halit Olali
+* [sbt plugin](https://github.com/Tapad/sbt-marathon), developed at [Tapad](https://tapad.com)
 
 ## Companies using Marathon
 
@@ -187,6 +194,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Guidewire](https://www.guidewire.com/)
 * [Groupon](https://www.groupon.com/)
 * [GSShop](http://www.gsshop.com/)
+* [GrowingIO](https://www.growingio.com/)
 * [HolidayCheck](http://www.holidaycheck.com/)
 * [Human API](https://humanapi.co/)
 * [Indix](http://www.indix.com/)
@@ -213,6 +221,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Strava](https://www.strava.com)
 * [Sveriges Television](http://www.svt.se)
 * [T2 Systems](http://t2systems.com)
+* [Tapad](https://tapad.com)
 * [Teradata](http://www.teradata.com)
 * [trivago](http://www.trivago.com/)
 * [VANAD Enovation](http://www.vanadenovation.nl/)
@@ -225,7 +234,7 @@ Not in the list? Open a pull request and add yourself!
 
 ## Help
 
-Have you found an issue? Feel free to report it using our [Issues](https://github.com/mesosphere/marathon/issues) page.
+Have you found an issue? Feel free to report it using our [JIRA Issues](https://jira.mesosphere.com/projects/MARATHON/summary) page.
 In order to speed up response times, we ask you to provide as much
 information on how to reproduce the problem as possible. If the issue is related
  in any way to the web ui, we kindly ask you to use the `gui` label.

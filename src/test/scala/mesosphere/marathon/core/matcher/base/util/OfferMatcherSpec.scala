@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.base.util
+package mesosphere.marathon
+package core.matcher.base.util
 
 import org.apache.mesos.{ Protos => Mesos }
 import mesosphere.marathon.core.launcher.InstanceOp

@@ -1,19 +1,20 @@
-package mesosphere.marathon.core.event
+package mesosphere.marathon
+package core.event
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
+import akka.stream.Materializer
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.impl.callback._
 import mesosphere.marathon.core.event.impl.stream._
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.storage.repository.EventSubscribersRepository
 import org.eclipse.jetty.servlets.EventSourceServlet
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 /**
@@ -23,32 +24,30 @@ class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
     conf: EventConf,
-    metrics: Metrics,
     clock: Clock,
     eventSubscribersStore: EventSubscribersRepository,
     electionService: ElectionService,
     authenticator: Authenticator,
-    authorizer: Authorizer) {
+    authorizer: Authorizer)(implicit val materializer: Materializer) {
   val log = LoggerFactory.getLogger(getClass.getName)
 
   private[this] lazy val statusUpdateActor: ActorRef =
     actorSystem.actorOf(Props(
-      new HttpEventActor(conf, subscribersKeeperActor, new HttpEventActor.HttpEventActorMetrics(metrics), clock))
+      new HttpEventActor(conf, subscribersKeeperActor, new HttpEventActor.HttpEventActorMetrics(), clock))
     )
 
   private[this] lazy val subscribersKeeperActor: ActorRef = {
     implicit val timeout = conf.eventRequestTimeout
-    val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
 
     val actor = actorSystem.actorOf(Props(new SubscribersKeeperActor(eventSubscribersStore)))
     conf.httpEventEndpoints.get foreach { urls =>
       log.info(s"http_endpoints($urls) are specified at startup. Those will be added to subscribers list.")
       urls foreach { url =>
-        val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
+        val f = (actor ? Subscribe(conf.hostname(), url)).mapTo[MarathonSubscriptionEvent]
         f.onFailure {
           case NonFatal(th) =>
             log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
-        }(ExecutionContext.global)
+        }(ExecutionContexts.global)
       }
     }
 
@@ -79,7 +78,7 @@ class EventModule(
       Props(
         new HttpEventStreamActor(
           electionService,
-          new HttpEventStreamActorMetrics(metrics),
+          new HttpEventStreamActorMetrics(),
           handleStreamProps)
       ),
       "HttpEventStream"

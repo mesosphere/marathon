@@ -5,15 +5,15 @@ import akka.Done
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import akka.stream.ActorMaterializer
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.termination.KillConfig
-import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
+import mesosphere.marathon.core.task.termination.KillConfig
+import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream.Sink
 
 import scala.collection.mutable
@@ -30,7 +30,7 @@ import scala.concurrent.{ Future, Promise }
   * number of retries is exceeded, the instance will be expunged from state similar to a
   * lost instance.
   *
-  * For each kill request, a child [[InstanceKillProgressActor]] will be spawned, which
+  * For each kill request, a [[KillStreamWatcher]] will be created, which
   * is supposed to watch the progress and complete a given promise when all watched
   * instances are reportedly terminal.
   *
@@ -99,8 +99,9 @@ private[impl] class KillServiceActor(
   }
 
   def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
-    log.debug("Adding {} instances to queue; setting up child actor to track progress", instances.size)
-    promise.completeWith(watchForKilledInstances(instances.map(_.instanceId)))
+    val instanceIds = instances.map(_.instanceId)
+    log.debug("Adding instances {} to queue; setting up child actor to track progress", instanceIds)
+    promise.completeWith(watchForKilledInstances(instanceIds))
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
       val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
@@ -127,7 +128,7 @@ private[impl] class KillServiceActor(
     val killCount = config.killChunkSize - inFlight.size
     val toKillNow = instancesToKill.take(killCount)
 
-    log.info("processing {} kills", toKillNow.size)
+    log.info("processing {} kills for {}", toKillNow.size, toKillNow.keys: Any)
     toKillNow.foreach {
       case (instanceId, data) => processKill(data)
     }
@@ -143,30 +144,22 @@ private[impl] class KillServiceActor(
     val instanceId = toKill.instanceId
     val taskIds = toKill.taskIdsToKill
 
-    // TODO(PODS): align this with other Terminal/Unreachable/whatever extractors
-    val isLost: Boolean = toKill.maybeInstance.fold(false) { instance =>
-      instance.isGone || instance.isUnknown || instance.isDropped || instance.isUnreachable || instance.isUnreachableInactive
+    KillAction(toKill.instanceId, toKill.taskIdsToKill, toKill.maybeInstance) match {
+      case KillAction.Noop =>
+        ()
+
+      case KillAction.IssueKillRequest =>
+        driverHolder.driver.foreach { driver =>
+          taskIds.map(_.mesosTaskId).foreach(driver.killTask)
+        }
+        val attempts = inFlight.get(toKill.instanceId).fold(1)(_.attempts + 1)
+        inFlight.update(
+          toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
+
+      case KillAction.ExpungeFromState =>
+        stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(toKill.instanceId))
     }
 
-    // An instance will be expunged once all tasks are terminal. Therefore, this case is
-    // highly unlikely. Should it ever occur, this will still expunge the instance to clean up.
-    val allTerminal: Boolean = taskIds.isEmpty
-
-    if (isLost || allTerminal) {
-      val msg = if (isLost) "it is lost" else "all its tasks are terminal"
-      log.warning("Expunging {} from state because {}", instanceId, msg)
-      // we will eventually be notified of a taskStatusUpdate after the instance has been expunged
-      stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(toKill.instanceId))
-    } else {
-      val knownOrNot = if (toKill.maybeInstance.isDefined) "known" else "unknown"
-      log.warning("Killing {} {} of instance {}", knownOrNot, taskIds.mkString(","), instanceId)
-      driverHolder.driver.foreach { driver =>
-        taskIds.map(_.mesosTaskId).foreach(driver.killTask)
-      }
-    }
-
-    val attempts = inFlight.get(toKill.instanceId).fold(1)(_.attempts + 1)
-    inFlight.update(toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
     instancesToKill.remove(instanceId)
   }
 
@@ -199,8 +192,16 @@ private[termination] object KillServiceActor {
   sealed trait InternalRequest
   case object Retry extends InternalRequest
 
+  def props(
+    driverHolder: MarathonSchedulerDriverHolder,
+    stateOpProcessor: TaskStateOpProcessor,
+    config: KillConfig,
+    clock: Clock): Props = Props(
+    new KillServiceActor(driverHolder, stateOpProcessor, config, clock))
+
   /**
     * Metadata used to track which instances to kill and how many attempts have been made
+    *
     * @param instanceId id of the instance to kill
     * @param taskIdsToKill ids of the tasks to kill
     * @param maybeInstance the instance, if available
@@ -213,13 +214,6 @@ private[termination] object KillServiceActor {
     maybeInstance: Option[Instance],
     attempts: Int,
     issued: Timestamp = Timestamp.zero)
-
-  def props(
-    driverHolder: MarathonSchedulerDriverHolder,
-    stateOpProcessor: TaskStateOpProcessor,
-    config: KillConfig,
-    clock: Clock): Props = Props(
-    new KillServiceActor(driverHolder, stateOpProcessor, config, clock))
 }
 
 /**

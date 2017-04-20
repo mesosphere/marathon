@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin
+package mesosphere.marathon
+package plugin
 
 /**
   * A Marathon RunSpec Definition
@@ -20,6 +21,10 @@ trait RunSpec {
     */
   val secrets: Map[String, Secret]
 
+  /**
+    * The networks that this run specification will join.
+    */
+  val networks: Seq[NetworkSpec]
 }
 
 /**
@@ -28,17 +33,17 @@ trait RunSpec {
 trait ApplicationSpec extends RunSpec {
 
   /**
-    * The user to execute the container task
+    * The user to execute the app task
     */
   val user: Option[String]
 
   /**
-    * The environment of this container.
+    * The environment of this app.
     */
   val env: Map[String, EnvVarValue]
 
   /**
-    * The labels in that container
+    * The labels in that app.
     */
   val labels: Map[String, String]
 }
@@ -96,7 +101,7 @@ trait PodSpec extends RunSpec {
   val env: Map[String, EnvVarValue]
 
   /**
-    * The networks that this pod will be a member of.
+    * The labels in that pod.
     */
-  val networks: Seq[NetworkSpec]
+  val labels: Map[String, String]
 }

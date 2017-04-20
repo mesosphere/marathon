@@ -1,4 +1,113 @@
-## Changes from 1.4.0 to 1.5.0 (unreleased)
+## Changes from 1.4.x to 1.5.0 (unreleased)
+
+### Breaking Changes
+
+#### Packaging standardized
+
+We now publish more normalized packages that attempt to follow Linux Standard Base Guidelines and use sbt-native-packager to achieve this.
+As a result of this and the many historic ways of passing options into marathon, we will only read `/etc/default/marathon` when starting up.
+This file, like `/etc/sysconfig/marathon`, has all marathon command line options as "MARATHON_XXX=YYY" which will translate to `--xx=yyy`.
+We no longer support /etc/marathon/conf which was a set of files that would get translated into command line arguments. In addition,
+we no longer assume that if there is no zk/master argument passed in, then both are running on localhost.
+
+If support for any of the above is important to you, please file a JIRA and/or create a PR/Patch.
+
+
+#### App JSON Fields Changed or Moved.
+
+Marathon will continue to *accept* the app JSON as it did in 1.4;
+however, applications that use deprecated fields will be normalized into a canonical representation.
+The app JSON *generated* by the /v2 REST API has changed: only canonical fields are generated.
+The [App RAML specification](docs/docs/rest-api/public/api/v2/types/app.raml) is the source of truth with respect to deprecated fields.
+The following deprecated fields will no longer be generated for app JSON:
+
+- `ipAddress`
+- `container.docker.portMappings`
+- `container.docker.network`
+- `ports`
+- `uris`
+
+Marathon clients that consume these deprecated fields will require changes.
+In addition, new networking API fields have been introduced:
+
+- `networks`
+- `container.portMappings`
+
+The `networks` field replaces the `ipAddress.networkName` and `container.docker.network` fields, and supports joining an app to multiple `container` networks.
+The legacy IP/CT API did not require a resolvable network name in order to use a `container` network;
+it allowed both an app definition to leave `ipAddress.networkName` unspecified **and** the operator to leave `--default_network_name` unspecified.
+Starting with Marathon v1.5 such apps will be rejected: apps may leave `networks[x].name` unspecified for `container` networks only if `--default_network_name` has been specified by the operator.
+Marathon injects the value of `--default_network_name` into unnamed `container` networks upon app create/update.
+
+Upgrading from Marathon 1.4.x to Marathon 1.5.x will automatically migrate existing applications to the new networking API.
+Migration of legacy Mesos IP/CT apps **may fail** if those apps did not specify `ipAddress.networkName` and there is no default network name specified.
+See the (networking documentation)[docs/docs/networking.md] for details concerning app migration and network API changes.
+
+The [old app networking docs](docs/docs/ports.md) have been relocated.
+See the [networking documentation](docs/docs/networking.md) for details concerning the new API.
+
+#### Metric Names Changed or Moved.
+We moved to a different Metrics library and the metrics are not _always_ compatible or the same as existing metrics;
+however, the metrics are also now more accurate, use less memory, and are expected to get better throughout the release.
+Where it was possible, we maintained the original metric names/groupings/etc, but some are in new locations or have
+slightly different semantics. Any monitoring dashboards should be updated.
+
+Before 1.5.0 releases, we will publish a migration guide for the new metric formats and where the replacement
+metrics can be found and the formats they are now in.
+
+#### Artifact store has been removed
+The artifact store has been deprecated with Marthon 1.4 and is removed with this version.
+The command line flag `--artifact_store` will throw an error if specified.
+The Rest API endpoint`/v2/artifacts` has been removed completely.
+
+#### Logging endpoint
+Marathon has the ability to view and change log level configuration during runtime via the `/logging` endpoint.
+This version switches from a form based API to a JSON based API, while maintaining the functionality.
+We also secured this endpoint, so you can restrict who is allowed to view or update this configuration.
+Please find our [API documentation](https://mesosphere.github.io/marathon/api-console/index.html) for all details.
+
+------------------------------------------------------------
+
+## Changes from 1.4.1 to 1.4.2
+Bugfix release
+
+### Fixed issues
+- [MARATHON-4570](https://jira.mesosphere.com/browse/MARATHON-4570) Don't destroy persistent volumes when killing unreachable tasks
+- [MARATHON-4390](https://jira.mesosphere.com/browse/MARATHON-4390) Lazy event parsing
+- Improve health checks to log less warnings.
+- [MARATHON-1712](https://jira.mesosphere.com/browse/MARATHON-1712) Loosen SSL requirements for HTTPS health checks.
+- [MARATHON-1408](https://jira.mesosphere.com/browse/MARATHON-1408) Fix serialization of maxSize for persistent volumes.
+- [MARATHON-2311](https://jira.mesosphere.com/browse/MARATHON-2311) Publish a TASK_GONE mesos update when an unreachable instance's resources are seen.
+- [MARATHON-1682](https://jira.mesosphere.com/browse/MARATHON-1682) Persist kill selection.
+- Disable unreachable strategy for resident tasks
+- Add a migration to fix the unreachable strategy for resident apps.
+- Read LaunchedOnReservation and ReservedTasks.
+- ForceExpunge for a missing task is a noop rather than a failure.
+- Use non-deployment-interacting kill service during kill and wipe.
+- Validation of application dependencies is too restrictive, loosed the requirements.
+- Retry failed integration tests once.
+- Fix stability in many integration tests.
+- [MARATHON-7133](https://jira.mesosphere.com/browse/MARATHON-7133) AppDefinition history is now properly loaded during boot
+
+### Known issues
+
+
+## Changes from 1.4.0 to 1.4.1
+Bugfix release
+
+### Fixed issues
+- Fixes #5211 - Re-enabling `PUT` on `/v2/apps`
+
+### Known issues
+
+- [Marathon does not re-use reserved resources for which a lost task is associated](https://github.com/mesosphere/marathon/issues/4137). In
+  the event that a resident task becomes lost (due to a somewhat common event such as rebooting the host on which the
+  mesos agent and task are running), then the resident task becomes `Unreachable`. Once it becomes this state, Marathon
+  will consider the task gone and create additional reservations (it should probably wait until it becomes
+  `UnreachableInactive` to do this). Even though the prior reservation is re-offered, Marathon will not use it.
+- [Marathon can confuse port-mapping in resident tasks](https://github.com/mesosphere/marathon/issues/4819)
+- [Marathon does not read resident task information properly from the persistence layer](https://github.com/mesosphere/marathon/issues/5165)
+- [Data migration for UnreachableDisabled](https://github.com/mesosphere/marathon/issues/5209)
 
 ## Changes from 1.3.10 to 1.4.0
 
@@ -127,6 +236,11 @@ This version of Marathon reconciles the state of a deployment after a failover.
 A running deployment will be continued on the new elected leader without restarting the deployment.
 
 Every state change operation via the REST API will now return the deployment identifier as an HTTP response header.
+
+
+#### Added support for PATCH on `/v2/apps`
+To handle partial updates with the semantical correct HTTP verb, a support for `PATCH` on `/v2/apps` was introduced. Support for partial updates through `PUT` was deprecated, see below.
+
 
 ### Deprecations
 

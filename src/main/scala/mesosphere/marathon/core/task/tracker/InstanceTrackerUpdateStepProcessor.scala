@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon
+package core.task.tracker
 
 import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange

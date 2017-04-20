@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.flow
+package mesosphere.marathon
+package core.flow
 
 import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerDriverHolder

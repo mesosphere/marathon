@@ -6,10 +6,10 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
-import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory
 
 import scala.async.Async._
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -40,7 +39,6 @@ class AppTasksResource @Inject() (
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
   @GET
-  @Timed
   @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @PathParam("appId") id: String,
@@ -78,7 +76,6 @@ class AppTasksResource @Inject() (
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
-  @Timed
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
     @PathParam("appId") appId: String,
@@ -87,13 +84,12 @@ class AppTasksResource @Inject() (
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app), "\t"))
+        ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app)))
       }
     })
   }
 
   @DELETE
-  @Timed
   def deleteMany(
     @PathParam("appId") appId: String,
     @QueryParam("host") host: String,
@@ -123,7 +119,6 @@ class AppTasksResource @Inject() (
 
   @DELETE
   @Path("{taskId}")
-  @Timed
   def deleteOne(
     @PathParam("appId") appId: String,
     @PathParam("taskId") id: String,

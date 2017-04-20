@@ -8,23 +8,52 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.raml
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ Resources, Endpoint, TTY }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Command, EnvVarString, ResourceRole }
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
+import scala.collection.JavaConverters._
 import scala.collection.breakOut
 
-class TaskGroupBuilderTest extends UnitTest {
+class TaskGroupBuilderTest extends UnitTest with Inside {
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
     acceptedResourceRoles = Set(ResourceRole.Unreserved),
     envVarsPrefix = None)
 
   "A TaskGroupBuilder" must {
+
+    "correlate Endpoint with the appropriate network" when {
+      "multiple container networks are defined" in {
+
+        val Seq(network1, network2) = TaskGroupBuilder.buildMesosNetworks(
+          List(ContainerNetwork("1"), ContainerNetwork("2")),
+          List(
+            Endpoint("port-1", containerPort = Some(2001), networkNames = List("1")),
+            Endpoint("port-2", containerPort = Some(2002), networkNames = List("2"))),
+          List(
+            Some(1001),
+            Some(1002)))
+
+        network1.getName shouldBe "1"
+        inside(network1.getPortMappingsList.asScala.toList) {
+          case List(port1) =>
+            port1.getContainerPort shouldBe 2001
+            port1.getHostPort shouldBe 1001
+        }
+        inside(network2.getPortMappingsList.asScala.toList) {
+          case List(port2) =>
+            port2.getContainerPort shouldBe 2002
+            port2.getHostPort shouldBe 1002
+        }
+      }
+    }
+
     "build from a PodDefinition with a single container" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.1, mem = 160.0, disk = 10.0).build
 
@@ -445,11 +474,11 @@ class TaskGroupBuilderTest extends UnitTest {
           MesosContainer(
             name = "Foo2",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
-            labels = Map("foo" -> "bla"),
             image = Some(
               raml.Image(
                 kind = raml.ImageType.Appc,
-                id = "alpine"
+                id = "alpine",
+                labels = Map("foo" -> "bla")
               ))
           ),
           MesosContainer(
@@ -761,11 +790,11 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task1Ports.map(_.getProtocol) == Seq("tcp", "udp"))
       assert(task1Ports.count(_.getName == "webserver") == 2)
 
-      withClue("expected network-scope=container and VIP_0 in port discovery info, for both tcp and udp protocols") {
+      withClue("expected network-scope=host and VIP_0 in port discovery info, for both tcp and udp protocols") {
         task1Ports.forall { p =>
-          p.getNumber == 80 && {
+          p.getNumber == 8080 && {
             val labels: Map[String, String] = p.getLabels.getLabelsList.to[Seq].map(l => l.getKey -> l.getValue).toMap
-            labels.get("network-scope").contains("container") && labels.get("VIP_0").contains("1.1.1.1:8888")
+            labels.get("network-scope").contains("host") && labels.get("VIP_0").contains("1.1.1.1:8888")
           }
         } shouldBe true
       }
@@ -775,9 +804,9 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task2Ports.map(_.getProtocol) == Seq("tcp", "tcp"))
 
       task2Ports.exists{ p =>
-        p.getName == "webapp" && p.getNumber == 1234 && {
+        p.getName == "webapp" && p.getNumber != 1234 && {
           val labels: Map[String, String] = p.getLabels.getLabelsList.to[Seq].map(l => l.getKey -> l.getValue).toMap
-          labels.get("network-scope").contains("container") && !labels.exists { case (k, v) => k.startsWith("VIP_") }
+          labels.get("network-scope").contains("host") && !labels.exists { case (k, v) => k.startsWith("VIP_") }
         }
       } shouldBe true
 
@@ -886,6 +915,24 @@ class TaskGroupBuilderTest extends UnitTest {
       )
       taskGroupInfo.getTasksCount should be(1)
       taskGroupInfo.getTasks(0).getName should be(s"${container.name}-extended")
+    }
+
+    "tty defined in a pod container will render ContainerInfo correctly" in {
+      val tty = TTY(rows = 50, columns = 120)
+      val container = MesosContainer(name = "withTTY", resources = Resources(), tty = Some(tty))
+      val pod = PodDefinition(id = PathId("/tty"), containers = Seq(container))
+      val containerInfo = TaskGroupBuilder.computeContainerInfo(pod, container)
+      containerInfo should be(defined)
+      containerInfo.get.hasTtyInfo should be(true)
+      containerInfo.get.getTtyInfo.getWindowSize.getColumns should be(tty.columns)
+      containerInfo.get.getTtyInfo.getWindowSize.getRows should be(tty.rows)
+    }
+
+    "no tty defined in a pod container will render ContainerInfo without tty" in {
+      val container = MesosContainer(name = "withTTY", resources = Resources())
+      val pod = PodDefinition(id = PathId("/notty"), containers = Seq(container))
+      val containerInfo = TaskGroupBuilder.computeContainerInfo(pod, container)
+      containerInfo should be(empty)
     }
   }
 }

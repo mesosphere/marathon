@@ -2,10 +2,11 @@ package mesosphere.marathon
 package api.serialization
 
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.raml.Endpoint
+import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork, HostNetwork, Network }
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos
 
 object ContainerSerializer {
@@ -17,8 +18,10 @@ object ContainerSerializer {
     } else if (proto.hasMesosAppC) {
       MesosAppCSerializer.fromProto(proto)
     } else {
+      val pms = proto.getPortMappingsList
       Container.Mesos(
-        volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut)
+        volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut),
+        portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut)
       )
     }
   }
@@ -26,6 +29,7 @@ object ContainerSerializer {
   def toProto(container: Container): Protos.ExtendedContainerInfo = {
     val builder = Protos.ExtendedContainerInfo.newBuilder
       .addAllVolumes(container.volumes.map(VolumeSerializer.toProto))
+      .addAllPortMappings(container.portMappings.map(PortMappingSerializer.toProto))
 
     container match {
       case _: Container.Mesos =>
@@ -44,7 +48,16 @@ object ContainerSerializer {
     builder.build
   }
 
-  def toMesos(container: Container): mesos.Protos.ContainerInfo = {
+  def toMesos(networks: Seq[Network], container: Container, mesosBridgeName: String): mesos.Protos.ContainerInfo = {
+
+    def portMappingToMesos(mapping: PortMapping) = {
+      val portBuilder = mesos.Protos.NetworkInfo.PortMapping.newBuilder()
+        .setContainerPort(mapping.containerPort)
+        .setProtocol(mapping.protocol)
+      mapping.hostPort.foreach(portBuilder.setHostPort)
+      portBuilder.build
+    }
+
     val builder = mesos.Protos.ContainerInfo.newBuilder
 
     // First set type-specific values (for Docker) because the external volume provider
@@ -64,10 +77,34 @@ object ContainerSerializer {
     }
 
     container.volumes.foreach {
-      case pv: PersistentVolume => // PersistentVolumes are handled differently
+      case _: PersistentVolume => // PersistentVolumes are handled differently
       case ev: ExternalVolume => ExternalVolumes.build(builder, ev) // this also adds the volume
       case dv: DockerVolume => builder.addVolumes(VolumeSerializer.toMesos(dv))
     }
+
+    networks.toIterator
+      .filter(_ != HostNetwork)
+      .map { network =>
+        val (networkName, networkLabels) = network match {
+          case cnet: ContainerNetwork => cnet.name -> cnet.labels.toMesosLabels
+          case bnet: BridgeNetwork => mesosBridgeName -> bnet.labels.toMesosLabels
+          case unsupported => throw new IllegalStateException(s"unsupported networking mode $unsupported")
+        }
+
+        val portMappings = container.portMappings.withFilter(_.hostPort.nonEmpty).withFilter { mapping =>
+          // if hostPort is specified, a SINGLE networkName is required.
+          // If it is empty then we've already validated that there is only one container network
+          mapping.networkNames.forall(_ == networkName)
+        }
+
+        mesos.Protos.NetworkInfo.newBuilder()
+          .addIpAddresses(mesos.Protos.NetworkInfo.IPAddress.getDefaultInstance)
+          .setLabels(networkLabels)
+          .setName(networkName)
+          .addAllPortMappings(portMappings.map(portMappingToMesos))
+          .build
+      }
+      .foreach(builder.addNetworkInfos)
 
     builder.build
   }
@@ -122,6 +159,7 @@ object PersistentVolumeInfoSerializer {
         builder.setType(mesos.Protos.Resource.DiskInfo.Source.Type.MOUNT)
     }
     builder.addAllConstraints(info.constraints)
+    info.maxSize.foreach(builder.setMaxSize)
 
     builder.build()
   }
@@ -146,12 +184,11 @@ object ExternalVolumeInfoSerializer {
 object DockerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.Docker = {
     val d = proto.getDocker
-    val pms = d.getPortMappingsList
+    val pms = proto.getPortMappingsList
     Container.Docker(
       volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut),
       image = d.getImage,
-      network = if (d.hasNetwork) Some(d.getNetwork) else None,
-      portMappings = if (pms.nonEmpty) pms.map(PortMappingSerializer.fromProto).to[Seq] else Nil,
+      portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut),
       privileged = d.getPrivileged,
       parameters = d.getParametersList.map(Parameter(_))(collection.breakOut),
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
@@ -159,75 +196,50 @@ object DockerSerializer {
   }
 
   def toProto(docker: Container.Docker): Protos.ExtendedContainerInfo.DockerInfo = {
-    val builder = Protos.ExtendedContainerInfo.DockerInfo.newBuilder
+    Protos.ExtendedContainerInfo.DockerInfo.newBuilder
       .setImage(docker.image)
       .setPrivileged(docker.privileged)
       .addAllParameters(docker.parameters.map(ParameterSerializer.toMesos))
       .setForcePullImage(docker.forcePullImage)
-
-    docker.network.foreach(builder.setNetwork)
-
-    docker.portMappings.foreach(mapping => builder.addPortMappings(PortMappingSerializer.toProto(mapping)))
-
-    builder.build
+      .build
   }
 
   def toMesos(docker: Container.Docker): mesos.Protos.ContainerInfo.DockerInfo = {
     val builder = mesos.Protos.ContainerInfo.DockerInfo.newBuilder
 
     builder.setImage(docker.image)
-
-    docker.network.foreach(builder.setNetwork)
-
     docker.portMappings.foreach(mapping => builder.addAllPortMappings(PortMappingSerializer.toMesos(mapping)))
-
     builder.setPrivileged(docker.privileged)
-
     builder.addAllParameters(docker.parameters.map(ParameterSerializer.toMesos))
-
     builder.setForcePullImage(docker.forcePullImage)
-
     builder.build
   }
 }
 
-object LabelsSerializer {
-  def toMesos(labels: Map[String, String]): Seq[mesos.Protos.Label] = {
-    labels.map {
-      case (k, v) =>
-        mesos.Protos.Label.newBuilder.setKey(k).setValue(v).build
-    }(collection.breakOut)
-  }
-
-  def toMesosLabelsBuilder(labels: Map[String, String]): mesos.Protos.Labels.Builder = {
-    val builder = mesos.Protos.Labels.newBuilder
-    toMesos(labels).foreach(builder.addLabels)
-    builder
-  }
-}
-
 object PortMappingSerializer {
-  def toProto(mapping: Container.PortMapping): Protos.ExtendedContainerInfo.DockerInfo.PortMapping = {
-    val builder = Protos.ExtendedContainerInfo.DockerInfo.PortMapping.newBuilder
+  def toProto(mapping: Container.PortMapping): Protos.ExtendedContainerInfo.PortMapping = {
+    val builder = Protos.ExtendedContainerInfo.PortMapping.newBuilder
       .setContainerPort(mapping.containerPort)
       .setProtocol(mapping.protocol)
       .setServicePort(mapping.servicePort)
 
     mapping.hostPort.foreach(builder.setHostPort)
     mapping.name.foreach(builder.setName)
-    LabelsSerializer.toMesos(mapping.labels).foreach(builder.addLabels)
+    mapping.labels.toProto.foreach(builder.addLabels)
+    mapping.networkNames.foreach(builder.addNetworkNames)
 
     builder.build
   }
 
-  def fromProto(proto: Protos.ExtendedContainerInfo.DockerInfo.PortMapping): PortMapping =
+  def fromProto(proto: Protos.ExtendedContainerInfo.PortMapping): PortMapping =
     PortMapping(
       proto.getContainerPort,
       if (proto.hasHostPort) Some(proto.getHostPort) else None,
       proto.getServicePort,
       proto.getProtocol,
       if (proto.hasName) Some(proto.getName) else None,
-      proto.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut)
+      proto.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
+      proto.getNetworkNamesList.toList
     )
 
   def toMesos(mapping: Container.PortMapping): Seq[mesos.Protos.ContainerInfo.DockerInfo.PortMapping] = {
@@ -250,41 +262,25 @@ object PortMappingSerializer {
   /**
     * Build the representation of the PortMapping as a Port proto.
     *
-    * @param pm Docker Port Mapping
+    * @param name The Port Mapping name
+    * @param labels The labels to be attached to the Port proto
+    * @param protocol The labels to be attached to the Port proto
     * @param effectiveHostPort the effective Mesos Agent port allocated for
     *                          this port mapping.
-    * @return the representation of the PortMapping as a Port proto to be
-    *         included in the task's DiscoveryInfo
+    * @return the representation of provided input to be included in the task's DiscoveryInfo
     */
-  def toMesosPort(pm: PortMapping, effectiveHostPort: Int): mesos.Protos.Port = {
+  def toMesosPort(name: Option[String], labels: Map[String, String], protocol: String, effectivePort: Int): mesos.Protos.Port = {
     val builder = mesos.Protos.Port.newBuilder
-      .setNumber(effectiveHostPort)
-      .setProtocol(pm.protocol)
+      .setNumber(effectivePort)
+      .setProtocol(protocol)
 
-    pm.name.foreach(builder.setName)
+    name.foreach(builder.setName)
 
-    if (pm.labels.nonEmpty) {
-      builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(pm.labels))
+    if (labels.nonEmpty) {
+      builder.setLabels(labels.toMesosLabels)
     }
 
     builder.build
-  }
-
-  /**
-    * Generate mesos ports for some endpoint: one port is generated for each endpoint protocol.
-    */
-  def toMesosPorts(ep: Endpoint, effectivePort: Int): Seq[mesos.Protos.Port] = {
-    val builder = mesos.Protos.Port.newBuilder
-      .setNumber(effectivePort)
-      .setName(ep.name)
-
-    if (ep.labels.nonEmpty) {
-      builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(ep.labels))
-    }
-
-    ep.protocol.map { protocol =>
-      builder.setProtocol(protocol).build
-    }
   }
 
 }
@@ -317,8 +313,10 @@ object CredentialSerializer {
 object MesosDockerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.MesosDocker = {
     val d = proto.getMesosDocker
+    val pms = proto.getPortMappingsList
     Container.MesosDocker(
       volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut),
+      portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut),
       image = d.getImage,
       credential = if (d.hasCredential) Some(CredentialSerializer.fromMesos(d.getCredential)) else None,
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
@@ -357,8 +355,10 @@ object MesosDockerSerializer {
 object MesosAppCSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.MesosAppC = {
     val appc = proto.getMesosAppC
+    val pms = proto.getPortMappingsList
     Container.MesosAppC(
       volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut),
+      portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut),
       image = appc.getImage,
       id = if (appc.hasId) Some(appc.getId) else None,
       labels = appc.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
@@ -372,8 +372,7 @@ object MesosAppCSerializer {
       .setForcePullImage(appc.forcePullImage)
 
     appc.id.foreach(builder.setId)
-
-    LabelsSerializer.toMesos(appc.labels).foreach(builder.addLabels)
+    appc.labels.toProto.foreach(builder.addLabels)
 
     builder.build
   }
@@ -382,7 +381,7 @@ object MesosAppCSerializer {
     val appcBuilder = mesos.Protos.Image.Appc.newBuilder
       .setName(container.image)
     container.id.foreach(appcBuilder.setId)
-    appcBuilder.setLabels(LabelsSerializer.toMesosLabelsBuilder(container.labels))
+    appcBuilder.setLabels(container.labels.toMesosLabels)
 
     val imageBuilder = mesos.Protos.Image.newBuilder
       .setType(mesos.Protos.Image.Type.APPC)

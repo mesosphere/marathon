@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 /**
   * @param portName name of the port
@@ -9,15 +10,24 @@ package mesosphere.marathon.state
   * @param containerPort port on which the container is listening.
   */
 case class PortAssignment(
-  portName: Option[String],
-  effectiveIpAddress: Option[String],
-  effectivePort: Int,
-  hostPort: Option[Int] = None,
-  containerPort: Option[Int] = None)
+    portName: Option[String],
+    effectiveIpAddress: Option[String],
+    effectivePort: Int,
+    hostPort: Option[Int] = None,
+    containerPort: Option[Int] = None) {
+
+  require(
+    effectiveIpAddress.nonEmpty || effectivePort == PortAssignment.NoPort,
+    "must specify a NoPort effectivePort when effectiveIpAddress is undefined"
+  )
+  require(
+    effectivePort != PortAssignment.NoPort || effectiveIpAddress.isEmpty,
+    "must not define effectiveIpAddress when effectivePort is NoPort"
+  )
+
+  val isResolved: Boolean = effectiveIpAddress.nonEmpty && effectivePort != PortAssignment.NoPort
+}
 
 object PortAssignment {
-  /**
-    * If you change this, please also update AppDefinition.json.
-    */
-  val PortNamePattern = """^[a-z0-9-]+$""".r
+  val NoPort = -1
 }

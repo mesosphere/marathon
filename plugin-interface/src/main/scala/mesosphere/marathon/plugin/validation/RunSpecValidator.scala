@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.validation
+package mesosphere.marathon
+package plugin.validation
 
 import com.wix.accord._
 import mesosphere.marathon.plugin.RunSpec

@@ -29,6 +29,9 @@ case class TestInstanceBuilder(
   def addTaskResidentLaunched(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
     addTaskWithBuilder().taskResidentLaunched(localVolumeIds: _*).build()
 
+  def addTaskResidentUnreachable(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
+    addTaskWithBuilder().taskResidentUnreachable(localVolumeIds: _*).build()
+
   def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(containerName, stagedAt, startedAt).build()
 

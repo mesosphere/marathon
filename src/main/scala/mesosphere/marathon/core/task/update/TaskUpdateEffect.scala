@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.update
+package mesosphere.marathon
+package core.task.update
 
 import mesosphere.marathon.core.task.Task
 

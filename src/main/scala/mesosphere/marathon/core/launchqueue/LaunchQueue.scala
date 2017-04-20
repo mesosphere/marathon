@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launchqueue
+package mesosphere.marathon
+package core.launchqueue
 
 import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange

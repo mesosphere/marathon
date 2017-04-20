@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launchqueue.impl
+package mesosphere.marathon
+package core.launchqueue.impl
 
 import akka.Done
 import akka.actor.ActorRef
@@ -65,7 +66,7 @@ private[launchqueue] class LaunchQueueDelegate(
 
     implicit val timeoutImplicit: Timeout = timeout
     val answerFuture = actorRef ? message
-    import scala.concurrent.ExecutionContext.Implicits.global
+    import mesosphere.marathon.core.async.ExecutionContexts.global
     answerFuture.recover {
       case NonFatal(e) => throw new RuntimeException(s"in $method", e)
     }

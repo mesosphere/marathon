@@ -4,11 +4,9 @@ package core.event.impl.stream
 import akka.actor.{ Props, Terminated }
 import akka.event.EventStream
 import akka.testkit._
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
-import mesosphere.marathon.metrics.Metrics
 import org.mockito.Mockito.{ when => call, _ }
 
 import scala.concurrent.duration._
@@ -18,7 +16,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
   case class Fixture(
       electionService: ElectionService = mock[ElectionService],
       stream: EventStream = mock[EventStream],
-      metrics: HttpEventStreamActorMetrics = new HttpEventStreamActorMetrics(new Metrics(new MetricRegistry))) {
+      metrics: HttpEventStreamActorMetrics = new HttpEventStreamActorMetrics()) {
     def handleStreamProps(handle: HttpEventStreamHandle) = Props(new HttpEventStreamHandleActor(handle, stream, 1))
     val streamActor: TestActorRef[HttpEventStreamActor] = TestActorRef(Props(
       new HttpEventStreamActor(electionService, metrics, handleStreamProps)

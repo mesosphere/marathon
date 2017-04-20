@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.heartbeat
+package mesosphere.marathon
+package core.heartbeat
 
 import akka.actor._
 import scala.concurrent.duration._

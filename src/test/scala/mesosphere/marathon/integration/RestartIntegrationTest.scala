@@ -5,17 +5,11 @@ import java.io.File
 import java.util.UUID
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
+import mesosphere.marathon.state.PathId
 import org.apache.commons.io.FileUtils
 
 import scala.collection.immutable
-import scala.concurrent.duration._
-import scala.util.Try
 
 /**
   * Tests that ensure marathon continues working after restarting (for example, as a result of a leader abdication
@@ -23,7 +17,7 @@ import scala.util.Try
   */
 @IntegrationTest
 class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonFixture {
-  val abdicationLoops = 2
+  import PathId._
 
   "Restarting Marathon" when {
     /**
@@ -39,61 +33,57 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     "not kill a running task currently involved in a deployment" in withMarathon("restart-dont-kill") { (server, f) =>
       Given("a new app with an impossible constraint")
       // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
-      val constraint = Protos.Constraint.newBuilder()
-        .setField("hostname")
-        .setOperator(Operator.UNIQUE)
-        .build()
+      val constraint = raml.Constraints("hostname" -> "UNIQUE")
       val app = f.appProxy(PathId("/restart-dont-kill"), "v2", instances = 2, healthCheck = None)
-        .copy(constraints = Set(constraint))
+        .copy(constraints = constraint)
       f.marathon.createAppV2(app)
 
       When("one of the tasks is deployed")
-      val tasksBeforeAbdication = f.waitForTasks(app.id, 1)
+      val tasksBeforeAbdication = f.waitForTasks(app.id.toPath, 1)
 
-      (1 to abdicationLoops).foreach { _ =>
-        And("the leader abdicates")
-        server.restart()
-        val tasksAfterFirstAbdication = f.waitForTasks(app.id, 1)
-        Then("the already running task should not be killed")
-        tasksBeforeAbdication should be(tasksAfterFirstAbdication)
-      }
+      And("the leader abdicates")
+      server.restart().futureValue
+      val tasksAfterFirstAbdication = f.waitForTasks(app.id.toPath, 1)
+      Then("the already running task should not be killed")
+      tasksBeforeAbdication should be(tasksAfterFirstAbdication) withClue (s"Tasks before (${tasksBeforeAbdication}) and after (${tasksAfterFirstAbdication}) abdication are different")
     }
 
     "readiness" should {
       "deployment with 1 ready and 1 not ready instance is continued properly after a restart" in withMarathon("readiness") { (server, f) =>
-        val readinessCheck = ReadinessCheck(
+        val readinessCheck = raml.ReadinessCheck(
           "ready",
           portName = "http",
           path = "/v1/plan",
-          interval = 2.seconds,
-          timeout = 1.second,
+          intervalSeconds = 2,
+          timeoutSeconds = 1,
           preserveLastResponse = true)
 
         val appId = f.testBasePath / "app"
         val create = f.appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
 
         val plan = "phase(block1)"
-        val update = AppUpdate(
+        val update = raml.AppUpdate(
           cmd = Some(s"""${serviceMockScript(f)} '$plan'"""),
-          portDefinitions = Some(immutable.Seq(PortDefinition(0, name = Some("http")))),
+          portDefinitions = Some(immutable.Seq(raml.PortDefinition(name = Some("http")))),
           readinessChecks = Some(Seq(readinessCheck)))
         testDeployments(server, f, appId, create, update)
       }
     }
     "health checks" should {
       "deployment with 1 healthy and 1 unhealthy instance is continued properly after master abdication" in withMarathon("health-check") { (server, f) =>
-        val healthCheck: MarathonHttpHealthCheck = MarathonHttpHealthCheck(
+        val healthCheck: raml.AppHealthCheck = raml.AppHealthCheck(
           path = Some("/v1/plan"),
-          portIndex = Some(PortReference(0)),
-          interval = 2.seconds,
-          timeout = 1.second)
+          portIndex = Some(0),
+          intervalSeconds = 2,
+          timeoutSeconds = 1,
+          protocol = raml.AppHealthCheckProtocol.Http)
         val appId = f.testBasePath / "app"
         val create = f.appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
 
         val plan = "phase(block1)"
-        val update = AppUpdate(
+        val update = raml.AppUpdate(
           cmd = Some(s"""${serviceMockScript(f)} '$plan'"""),
-          portDefinitions = Some(immutable.Seq(PortDefinition(0, name = Some("http")))),
+          portDefinitions = Some(immutable.Seq(raml.PortDefinition(name = Some("http")))),
           healthChecks = Some(Set(healthCheck)))
 
         testDeployments(server, f, appId, create, update)
@@ -101,43 +91,48 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  def testDeployments(server: LocalMarathon, f: MarathonTest, appId: PathId, createApp: AppDefinition, updateApp: AppUpdate) = {
+  private def testDeployments(server: LocalMarathon, f: MarathonTest, appId: PathId, createApp: raml.App, updateApp: raml.AppUpdate): Unit = {
     Given("a new simple app with 2 instances")
-    createApp.instances shouldBe 2
+    createApp.instances shouldBe 2 withClue (s"There are ${createApp.instances} running instead of 2 for ${appId}")
 
     val created = f.marathon.createAppV2(createApp)
-    created.code should be (201)
+    created.code should be (201) withClue (s"Response ${created.code}: ${created.entityString}")
     f.waitForDeployment(created)
 
-    val started = f.marathon.tasks(appId)
     logger.debug(s"Started app: ${f.marathon.app(appId).entityPrettyJsonString}")
 
     When("updating the app")
     val appV2 = f.marathon.updateApp(appId, updateApp)
 
-    And("new and updated tasks are started successfully")
-    val updated = f.waitForTasks(appId, 4) //make sure, the new task has really started
+    And("new tasks are started and running")
+    val updated = f.waitForTasks(appId, 4) withClue (s"The new tasks for ${appId} did not start running.") //make sure there are 2 additional tasks
 
-    val updatedTasks = updated.filter(_.version.getOrElse("none") == appV2.value.version.toString)
+    val newVersion = appV2.value.version.toString
+    val updatedTasks = updated.filter(_.version.contains(newVersion))
     val updatedTaskIds: List[String] = updatedTasks.map(_.id)
-    updatedTaskIds should have size 2
+    updatedTaskIds should have size 2 withClue (s"Update ${updatedTaskIds.size} instead of 2 for ${appId}")
 
     logger.debug(s"Updated app: ${f.marathon.app(appId).entityPrettyJsonString}")
 
-    And("first updated task becomes green")
-    val serviceFacade1 = new ServiceMockFacade(updatedTasks.head)
-    WaitTestSupport.waitUntil("ServiceMock1 is up", 30.seconds){ Try(serviceFacade1.plan()).isSuccess }
+    And("ServiceMock1 is up")
+    val serviceFacade1 = ServiceMockFacade(f.marathon.tasks(appId).value) { task =>
+      task.version.contains(newVersion) && task.launched
+    }
+    And("We trigger the first new task to continue service migration")
     serviceFacade1.continue()
 
-    When("marathon leader is abdicated")
+    When("we force the leader to abdicate to simulate a failover")
     server.restart().futureValue
+    f.waitForSSEConnect()
 
     And("second updated task becomes healthy")
-    val serviceFacade2 = new ServiceMockFacade(updatedTasks.last)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade2.plan()).isSuccess }
+    val serviceFacade2 = ServiceMockFacade(f.marathon.tasks(appId).value) { task =>
+      task != serviceFacade1.task && task.version.contains(newVersion) && task.launched
+    }
+    And("We trigger the second new task to continue service migration")
     serviceFacade2.continue()
 
-    Then("the app should have only 2 tasks launched")
+    Then("the app should eventually have only 2 tasks launched")
     f.waitForTasks(appId, 2) should have size 2
 
     And("app was deployed successfully")

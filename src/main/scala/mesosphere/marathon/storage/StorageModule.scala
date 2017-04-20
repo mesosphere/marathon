@@ -3,9 +3,10 @@ package storage
 
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
+import mesosphere.marathon.core.base.LifecycleState
+import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.migration.Migration
+import mesosphere.marathon.storage.migration.{ Migration, ServiceDefinitionRepository }
 import mesosphere.marathon.storage.repository._
 
 import scala.collection.immutable.Seq
@@ -23,19 +24,18 @@ trait StorageModule {
   val eventSubscribersRepository: EventSubscribersRepository
   val migration: Migration
   val leadershipInitializers: Seq[PrePostDriverCallback]
+  val persistentStoreBackup: PersistentStoreBackup
 }
 
 object StorageModule {
-  def apply(conf: StorageConf)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
+  def apply(conf: StorageConf with NetworkConf, lifecycleState: LifecycleState)(implicit mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
-    val currentConfig = StorageConfig(conf)
-    apply(currentConfig)
+    val currentConfig = StorageConfig(conf, lifecycleState)
+    apply(currentConfig, conf.mesosBridgeName())
   }
 
   def apply(
-    config: StorageConfig)(implicit
-    metrics: Metrics,
-    mat: Materializer, ctx: ExecutionContext,
+    config: StorageConfig, mesosBridgeName: String)(implicit mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
 
     config match {
@@ -60,9 +60,12 @@ object StorageModule {
             Nil
         }
 
-        val migration = new Migration(zk.availableFeatures, store, appRepository, groupRepository,
-          deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
-          frameworkIdRepository, eventSubscribersRepository)
+        val backup = PersistentStoreBackup(zk.backupLocation, store)
+        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, mesosBridgeName, store,
+          appRepository, groupRepository, deploymentRepository, taskRepository, instanceRepository,
+          taskFailureRepository, frameworkIdRepository, eventSubscribersRepository,
+          ServiceDefinitionRepository.zkRepository(store), backup)
+
         StorageModuleImpl(
           instanceRepository,
           deploymentRepository,
@@ -71,7 +74,9 @@ object StorageModule {
           frameworkIdRepository,
           eventSubscribersRepository,
           migration,
-          leadershipInitializers)
+          leadershipInitializers,
+          backup
+        )
       case mem: InMem =>
         val store = mem.store
         val appRepository = AppRepository.inMemRepository(store)
@@ -92,9 +97,12 @@ object StorageModule {
             Nil
         }
 
-        val migration = new Migration(mem.availableFeatures, store, appRepository, groupRepository,
-          deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
-          frameworkIdRepository, eventSubscribersRepository)
+        val backup = PersistentStoreBackup(mem.backupLocation, store)
+        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, mesosBridgeName,
+          store, appRepository, groupRepository, deploymentRepository, taskRepository, instanceRepository,
+          taskFailureRepository, frameworkIdRepository, eventSubscribersRepository,
+          ServiceDefinitionRepository.inMemRepository(store), backup)
+
         StorageModuleImpl(
           instanceRepository,
           deploymentRepository,
@@ -103,7 +111,9 @@ object StorageModule {
           frameworkIdRepository,
           eventSubscribersRepository,
           migration,
-          leadershipInitializers)
+          leadershipInitializers,
+          backup
+        )
     }
   }
 }
@@ -116,4 +126,6 @@ private[storage] case class StorageModuleImpl(
   frameworkIdRepository: FrameworkIdRepository,
   eventSubscribersRepository: EventSubscribersRepository,
   migration: Migration,
-  leadershipInitializers: Seq[PrePostDriverCallback]) extends StorageModule
+  leadershipInitializers: Seq[PrePostDriverCallback],
+  persistentStoreBackup: PersistentStoreBackup
+) extends StorageModule

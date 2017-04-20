@@ -1,11 +1,11 @@
-package mesosphere.marathon.storage.store
+package mesosphere.marathon
+package storage.store
 
 import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
 import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.instance.Instance
@@ -23,7 +23,7 @@ import play.api.libs.json.Json
 
 trait ZkStoreSerialization {
   /** General id resolver for a key of Path.Id */
-  private class ZkPathIdResolver[T](
+  class ZkPathIdResolver[T](
     val category: String,
     val hasVersions: Boolean,
     getVersion: (T) => OffsetDateTime)

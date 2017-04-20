@@ -1,13 +1,12 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
-import com.codahale.metrics.annotation.Timed
 import com.google.inject.Inject
 import com.wix.accord.dsl._
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.Validation.urlIsValid
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
@@ -26,7 +25,6 @@ class EventSubscriptionsResource @Inject() (
     val service: HttpCallbackSubscriptionService) extends AuthResource {
 
   @GET
-  @Timed
   def listSubscribers(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, AuthorizedResource.Events) {
       ok(jsonString(result(service.getSubscribers)))
@@ -34,7 +32,6 @@ class EventSubscriptionsResource @Inject() (
   }
 
   @POST
-  @Timed
   def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
       withAuthorization(ViewResource, AuthorizedResource.Events) {
@@ -47,7 +44,6 @@ class EventSubscriptionsResource @Inject() (
     }
 
   @DELETE
-  @Timed
   def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
       withAuthorization(ViewResource, AuthorizedResource.Events) {

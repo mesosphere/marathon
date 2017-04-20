@@ -10,6 +10,7 @@ import akka.Done
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.google.inject._
+import kamon.Kamon
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
@@ -65,7 +66,7 @@ class ForwarderService {
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val uuid = UUID.randomUUID().toString
     uuids(_ += uuid)
-    val cmd = Seq(java, s"-DforwarderUuid:$uuid", "-classpath", cp) ++ trustStore ++ Seq("mesosphere.marathon.integration.setup.ForwarderService") ++ args
+    val cmd = Seq(java, s"-DforwarderUuid:$uuid", "-classpath", cp, "-Xmx256M", "-client") ++ trustStore ++ Seq("mesosphere.marathon.integration.setup.ForwarderService") ++ args
     val up = Promise[Done]()
     val log = new ProcessLogger {
       def checkUp(s: String) = {
@@ -147,6 +148,7 @@ object ForwarderService {
   class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf
 
   def main(args: Array[String]): Unit = {
+    Kamon.start()
     val service = args(0) match {
       case "helloApp" =>
         createHelloApp(args.tail: _*)

@@ -23,7 +23,6 @@
       "uris": [
         "https://raw.github.com/mesosphere/marathon/master/README.md"
       ],
-      "storeUrls": [],
       "ports": [
         10013,
         10015

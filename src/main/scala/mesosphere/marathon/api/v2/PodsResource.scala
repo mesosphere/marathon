@@ -11,9 +11,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
-import com.codahale.metrics.annotation.Timed
 import com.wix.accord.Validator
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource, TaskKiller }
 import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
@@ -89,12 +87,11 @@ class PodsResource @Inject() (
     * @return HTTP OK if pods are supported
     */
   @HEAD
-  @Timed
   def capability(@Context req: HttpServletRequest): Response = authenticated(req) { _ =>
     ok()
   }
 
-  @POST @Timed
+  @POST
   def create(
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -115,7 +112,7 @@ class PodsResource @Inject() (
     }
   }
 
-  @PUT @Timed @Path("""{id:.+}""")
+  @PUT @Path("""{id:.+}""")
   def update(
     @PathParam("id") id: String,
     body: Array[Byte],
@@ -148,13 +145,13 @@ class PodsResource @Inject() (
     }
   }
 
-  @GET @Timed
+  @GET
   def findAll(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pods = podSystem.findAll(isAuthorized(ViewRunSpec, _))
     ok(Json.stringify(Json.toJson(pods.map(Raml.toRaml(_)))))
   }
 
-  @GET @Timed @Path("""{id:.+}""")
+  @GET @Path("""{id:.+}""")
   def find(
     @PathParam("id") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -170,7 +167,7 @@ class PodsResource @Inject() (
     }
   }
 
-  @DELETE @Timed @Path("""{id:.+}""")
+  @DELETE @Path("""{id:.+}""")
   def remove(
     @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -193,7 +190,6 @@ class PodsResource @Inject() (
   }
 
   @GET
-  @Timed
   @Path("""{id:.+}::status""")
   def status(
     @PathParam("id") id: String,
@@ -210,7 +206,6 @@ class PodsResource @Inject() (
   }
 
   @GET
-  @Timed
   @Path("""{id:.+}::versions""")
   def versions(
     @PathParam("id") id: String,
@@ -228,7 +223,6 @@ class PodsResource @Inject() (
   }
 
   @GET
-  @Timed
   @Path("""{id:.+}::versions/{version}""")
   def version(@PathParam("id") id: String, @PathParam("version") versionString: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -244,7 +238,6 @@ class PodsResource @Inject() (
   }
 
   @GET
-  @Timed
   @Path("::status")
   @SuppressWarnings(Array("OptionGet", "FilterOptionAndGet"))
   def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -256,7 +249,6 @@ class PodsResource @Inject() (
   }
 
   @DELETE
-  @Timed
   @Path("""{id:.+}::instances/{instanceId}""")
   def killInstance(
     @PathParam("id") id: String,
@@ -278,7 +270,6 @@ class PodsResource @Inject() (
   }
 
   @DELETE
-  @Timed
   @Path("""{id:.+}::instances""")
   def killInstances(@PathParam("id") id: String, body: Array[Byte], @Context req: HttpServletRequest): Response =
     authenticated(req) { implicit identity =>

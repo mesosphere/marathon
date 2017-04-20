@@ -64,12 +64,13 @@ class AppDefinitionMesosHealthCheckValidationTest extends UnitTest {
     }
   }
   class Fixture {
-    def app(healthChecks: Set[_ <: HealthCheck] = Set(MarathonHttpHealthCheck())): AppDefinition =
+    def app(healthChecks: Set[HealthCheck] = Set(MarathonHttpHealthCheck())): AppDefinition =
       AppDefinition(
         id = PathId("/test"),
         cmd = Some("sleep 1000"),
         instances = 1,
-        healthChecks = healthChecks
+        healthChecks = healthChecks,
+        portDefinitions = Seq(PortDefinition(0))
       )
   }
 }

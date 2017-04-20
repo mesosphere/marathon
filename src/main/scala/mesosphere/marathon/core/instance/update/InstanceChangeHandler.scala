@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.instance.update
+package mesosphere.marathon
+package core.instance.update
 
 import akka.Done
 import mesosphere.marathon.core.condition.Condition

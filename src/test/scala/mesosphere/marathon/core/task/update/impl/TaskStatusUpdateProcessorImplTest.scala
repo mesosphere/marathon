@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.task.update.impl
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MarathonEvent
@@ -11,7 +10,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.SchedulerDriver
 
@@ -313,7 +311,6 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     }
 
     lazy val updateProcessor = new TaskStatusUpdateProcessorImpl(
-      new Metrics(new MetricRegistry),
       clock,
       taskTracker,
       stateOpProcessor,

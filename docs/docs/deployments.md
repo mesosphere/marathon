@@ -103,7 +103,6 @@ There are several items of information available for every deployment:
 Every step can have several actions. The actions inside a step are performed concurrently.
 Possible actions are:
 
-- `ResolveArtifacts`: Resolve all artifacts of the application and persist it in the artifact store.
 - `StartApplication`: Start the specified application.
 - `StopApplication`: Stop the specified application.
 - `ScaleApplication`: Scale the specified application.

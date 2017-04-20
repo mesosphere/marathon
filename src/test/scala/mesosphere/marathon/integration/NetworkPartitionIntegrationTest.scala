@@ -4,22 +4,23 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.state.PathId._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Second, Seconds, Span }
 
 /**
   * Integration test to simulate the issues discovered a verizon where a network partition caused Marathon to be
   * separated from ZK and the leading Master.  During this separation the agents were partitioned from the Master.  Marathon was
-  * bounced, then the network connectivity was re-established.  At which time the Mesos kills tasks on the slaves and marathon never
+  * bounced, then the network connectivity was re-established.  At which time the Mesos kills tasks on the slaves and Marathon never
   * restarts them.
   *
   * This collection of integration tests is intended to go beyond the experience at Verizon.  The network partition in these tests
   * are simulated with a disconnection from the processes.
   */
-@UnstableTest
+@SerialIntegrationTest
 class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
 
-  override implicit def patienceConfig = PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Second))
+  override implicit lazy val patienceConfig = PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Second))
 
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 1
@@ -48,7 +49,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       Given("a new app")
       val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
       waitForDeployment(marathon.createAppV2(app))
-      val task = waitForTasks(app.id, 1).head
+      val task = waitForTasks(app.id.toPath, 1).head
 
       When("We stop the slave, the task is declared unreachable")
       // stop zk
@@ -57,8 +58,8 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
         matchEvent("TASK_UNREACHABLE", task)
       }
 
-      And("The task is shows in marathon as unreachable")
-      val lost = waitForTasks(app.id, 1).head
+      Then("the task is shown in Marathon as unreachable")
+      val lost = waitForTasks(app.id.toPath, 1).head
       lost.state should be("TASK_UNREACHABLE")
 
       When("Zookeeper and Mesos are partitioned")
@@ -70,7 +71,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       Then("Marathon suicides")
       eventually {
         marathonServer.isRunning should be(false)
-      }
+      } withClue ("Marathon did not suicide")
       // Proper clean up
       marathonServer.stop()
 
@@ -83,9 +84,10 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       And("Marathon is restarted by Systemd")
       // Simulate Systemd rebooting Marathon
       marathonServer.start()
+      waitForSSEConnect()
       eventually {
         marathonServer.isRunning should be(true)
-      }
+      } withClue ("Marathon did not come back up")
 
       Then("The task reappears as running")
       waitForEventMatching("Task is declared running again") {

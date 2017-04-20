@@ -4,14 +4,15 @@ package core.instance.update
 import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.state.{ NetworkInfoPlaceholder, TaskConditionMapping }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -21,9 +22,9 @@ import scala.concurrent.Future
   *
   * More tests are in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]]
   */
-class InstanceUpdateOpResolverTest extends UnitTest {
+class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   "InstanceUpdateOpResolver" should {
     "ForceExpunge for an unknown task" in new Fixture {
@@ -86,11 +87,10 @@ class InstanceUpdateOpResolverTest extends UnitTest {
         verify(instanceTracker).instance(existingInstance.instanceId)
 
         Then("result in an Update with the correct status")
-        effect shouldBe a[InstanceUpdateEffect.Update]
-
-        val update: InstanceUpdateEffect.Update = effect.asInstanceOf[InstanceUpdateEffect.Update]
-        update.instance.isUnreachable should be(true)
-
+        inside(effect) {
+          case update: InstanceUpdateEffect.Update =>
+            update.instance.isUnreachable shouldBe true
+        }
         verifyNoMoreInteractions()
       }
     }
@@ -100,7 +100,8 @@ class InstanceUpdateOpResolverTest extends UnitTest {
     ) {
       s"TASK_LOST update with $reason indicating a task won't come" in new Fixture {
         instanceTracker.instance(existingInstance.instanceId) returns Future.successful(Some(existingInstance))
-        val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, existingInstance).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+        val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(
+          reason, existingInstance).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
         val stateChange = updateOpResolver.resolve(stateOp).futureValue
 
         When("call taskTracker.task")
@@ -126,7 +127,8 @@ class InstanceUpdateOpResolverTest extends UnitTest {
           tasksMap = updatedTasksMap
         )
 
-        val events = eventsGenerator.events(expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(existingInstance.state.condition))
+        val events = eventsGenerator.events(
+          expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(existingInstance.state.condition))
         stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, events)
 
         verifyNoMoreInteractions()
@@ -139,7 +141,8 @@ class InstanceUpdateOpResolverTest extends UnitTest {
       s"a TASK_LOST update with an unreachable $reason but a message saying that the task is unknown to the slave " in new Fixture {
         instanceTracker.instance(existingTask.taskId.instanceId) returns Future.successful(Some(existingInstance))
         val message = "Reconciliation: Task is unknown to the slave"
-        val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, existingInstance, Some(message)).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+        val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(
+          reason, existingInstance, Some(message)).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
         val stateChange = updateOpResolver.resolve(stateOp).futureValue
 
         When("call taskTracker.task")
@@ -179,7 +182,8 @@ class InstanceUpdateOpResolverTest extends UnitTest {
       instanceTracker.instance(unreachableInstance.instanceId) returns Future.successful(Some(unreachableInstance))
       val reason = mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION
       val maybeMessage = Some("Reconciliation: Task is unknown to the slave")
-      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, unreachableInstance, maybeMessage).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(
+        reason, unreachableInstance, maybeMessage).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
       val stateChange = updateOpResolver.resolve(stateOp).futureValue
 
       When("call taskTracker.task")
@@ -218,11 +222,11 @@ class InstanceUpdateOpResolverTest extends UnitTest {
     }
 
     "Processing a Reserve for an existing instanceId" in new Fixture {
-      instanceTracker.instance(existingReservedInstance.instanceId) returns Future.successful(Some(existingReservedInstance))
-      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.Reserve(existingReservedInstance)).futureValue
+      instanceTracker.instance(reservedInstance.instanceId) returns Future.successful(Some(reservedInstance))
+      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.Reserve(reservedInstance)).futureValue
 
       When("call taskTracker.task")
-      verify(instanceTracker).instance(existingReservedInstance.instanceId)
+      verify(instanceTracker).instance(reservedInstance.instanceId)
 
       Then("result in a Failure")
       stateChange shouldBe a[InstanceUpdateEffect.Failure]
@@ -231,10 +235,10 @@ class InstanceUpdateOpResolverTest extends UnitTest {
     }
 
     "Revert" in new Fixture {
-      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.Revert(existingReservedInstance)).futureValue
+      val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.Revert(reservedInstance)).futureValue
 
       When("result in an Update")
-      stateChange shouldEqual InstanceUpdateEffect.Update(existingReservedInstance, None, events = Nil)
+      stateChange shouldEqual InstanceUpdateEffect.Update(reservedInstance, None, events = Nil)
 
       Then("not query the taskTracker all")
       verifyNoMoreInteractions()
@@ -317,9 +321,10 @@ class InstanceUpdateOpResolverTest extends UnitTest {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("result in an update")
-      stateChange shouldBe a[InstanceUpdateEffect.Update]
-      val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
-      updateEffect.events should have size 2
+      inside(stateChange) {
+        case updateEffect: InstanceUpdateEffect.Update =>
+          updateEffect.events should have size 2
+      }
 
       verifyNoMoreInteractions()
     }
@@ -336,11 +341,11 @@ class InstanceUpdateOpResolverTest extends UnitTest {
 
       Then("result in an update")
       stateChange shouldBe a[InstanceUpdateEffect.Update]
-      val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
-      updateEffect.events should have size 2
-
+      inside(stateChange) {
+        case updateEffect: InstanceUpdateEffect.Update =>
+          updateEffect.events should have size 2
+      }
       verifyNoMoreInteractions()
-
     }
 
     "Processing a TASK_UNREACHABLE update for a running task" in new Fixture {
@@ -354,9 +359,10 @@ class InstanceUpdateOpResolverTest extends UnitTest {
       verify(instanceTracker).instance(instance.instanceId)
 
       Then("result in an update")
-      stateChange shouldBe a[InstanceUpdateEffect.Update]
-      val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
-      updateEffect.events should have size 2
+      inside(stateChange) {
+        case updateEffect: InstanceUpdateEffect.Update =>
+          updateEffect.events should have size 2
+      }
 
       verifyNoMoreInteractions()
     }
@@ -384,14 +390,17 @@ class InstanceUpdateOpResolverTest extends UnitTest {
     val instanceTracker = mock[InstanceTracker]
     val updateOpResolver = new InstanceUpdateOpResolver(instanceTracker, clock)
 
-    val appId = PathId("/app")
-    val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-    val existingTask: Task.LaunchedEphemeral = existingInstance.appTask
+    lazy val appId = PathId("/app")
+    lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+    lazy val existingTask: Task.LaunchedEphemeral = existingInstance.appTask
 
-    val existingReservedInstance = TestInstanceBuilder.newBuilder(appId).addTaskReserved().getInstance()
-    val existingReservedTask: Task.Reserved = existingReservedInstance.appTask
-    val notExistingInstanceId = Instance.Id.forRunSpec(appId)
-    val unreachableInstance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
+    lazy val reservedInstance = TestInstanceBuilder.newBuilder(appId).addTaskReserved().getInstance()
+    lazy val existingReservedTask: Task.Reserved = reservedInstance.appTask
+
+    lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched().getInstance()
+
+    lazy val notExistingInstanceId = Instance.Id.forRunSpec(appId)
+    lazy val unreachableInstance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(instanceTracker)

@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import mesosphere.marathon.core.appinfo.AppSelector
 import mesosphere.marathon.state.AppDefinition

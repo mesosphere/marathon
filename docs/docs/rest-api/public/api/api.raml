@@ -13,6 +13,8 @@ uses:
   strings: v2/types/stringTypes.raml
   pod: v2/types/pod.raml
   podStatus: v2/types/podStatus.raml
+  metrics: v2/types/metrics.raml
+  logging: v2/types/logging.raml
 
 
 traits: !include traits.raml
@@ -31,7 +33,6 @@ traits: !include traits.raml
 /v2/tasks: !include v2/tasks.raml
 
 # considered less used endpoints in alphabetical order
-/v2/artifacts: !include v2/artifacts.raml
 /v2/events: !include v2/events.raml
 /v2/eventSubscriptions: !include v2/eventSubscriptions.raml
 /v2/info: !include v2/info.raml
@@ -42,3 +43,4 @@ traits: !include traits.raml
 # no real API endpoints
 /ping: !include general/ping.raml
 /metrics: !include general/metrics.raml
+/logging: !include general/logging.raml

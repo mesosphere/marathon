@@ -3,7 +3,6 @@ package core.health.impl
 
 import akka.event.EventStream
 import akka.testkit.EventFilter
-import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.{ Config, ConfigFactory }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
@@ -15,18 +14,16 @@ import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, Lead
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, InstanceTrackerModule, TaskStateOpProcessor }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport, MarathonTestHelper }
+import mesosphere.marathon.test.{ CaptureEvents, MarathonTestHelper }
 import org.apache.mesos.{ Protos => mesos }
-import org.scalatest.time.{ Millis, Span }
 
 import scala.collection.immutable.Set
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownHookSupport {
+class MarathonHealthCheckManagerTest extends AkkaUnitTest {
 
   override protected lazy val akkaConfig: Config = ConfigFactory.parseString(
     """akka.loggers = ["akka.testkit.TestEventListener"]"""
@@ -36,8 +33,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownH
   private val clock = ConstantClock()
 
   case class Fixture() {
-    implicit val metrics: Metrics = new Metrics(new MetricRegistry)
-    val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule(shutdownHooks)
+    val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     val taskTracker: InstanceTracker = taskTrackerModule.instanceTracker
     implicit val taskCreationHandler: InstanceCreationHandler = taskTrackerModule.instanceCreationHandler
@@ -200,7 +196,10 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownH
           .build
 
       val healthChecks = List(0, 1, 2).map { i =>
-        (0 until i).map { j => MesosCommandHealthCheck(gracePeriod = (i * 3 + j).seconds, command = Command("true")) }.toSet
+        (0 until i).map { j =>
+          val check: HealthCheck = MesosCommandHealthCheck(gracePeriod = (i * 3 + j).seconds, command = Command("true"))
+          check
+        }.to[Set]
       }
       val versions = List(0L, 1L, 2L).map {
         Timestamp(_)
@@ -209,7 +208,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownH
         TestInstanceBuilder.newBuilder(appId, version = versions(i)).addTaskStaged(version = Some(versions(i))).getInstance()
       }
 
-      def startTask(appId: PathId, instance: Instance, version: Timestamp, healthChecks: Set[_ <: HealthCheck]): AppDefinition = {
+      def startTask(appId: PathId, instance: Instance, version: Timestamp, healthChecks: Set[HealthCheck]): AppDefinition = {
         val app = AppDefinition(
           id = appId,
           versionInfo = VersionInfo.forNewConfig(version),
@@ -229,7 +228,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownH
       // one other task of another app
       val otherAppId = "other".toRootPath
       val otherInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp.zero)).getInstance()
-      val otherHealthChecks = Set(MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true")))
+      val otherHealthChecks = Set[HealthCheck](MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true")))
       val otherApp = startTask(otherAppId, otherInstance, Timestamp(42), otherHealthChecks)
 
       hcManager.addAllFor(otherApp, Seq.empty)
@@ -319,6 +318,4 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownH
     }
   }
   def captureEvents(implicit eventStream: EventStream) = new CaptureEvents(eventStream)
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(1000, Millis)))
 }

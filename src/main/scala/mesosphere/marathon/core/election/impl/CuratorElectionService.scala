@@ -1,16 +1,15 @@
 package mesosphere.marathon
 package core.election.impl
 
-import com.typesafe.scalalogging.StrictLogging
 import java.util
 import java.util.Collections
 import java.util.concurrent.{ Executors, TimeUnit }
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import com.codahale.metrics.MetricRegistry
+import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base._
-import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
@@ -20,9 +19,8 @@ import org.apache.curator.{ RetryPolicy, RetrySleeper }
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
-import scala.concurrent.ExecutionContext
 
 /**
   * Handles our election leader election concerns.
@@ -33,12 +31,12 @@ class CuratorElectionService(
   config: MarathonConf,
   system: ActorSystem,
   eventStream: EventStream,
-  metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
   backoff: ExponentialBackoff,
-  shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  system, eventStream, metrics, backoff, shutdownHooks
+  lifecycleState: LifecycleState) extends ElectionServiceBase(
+  system, eventStream, backoff, lifecycleState
 ) with StrictLogging {
+
   private val callbackExecutor = Executors.newSingleThreadExecutor()
   /* We re-use the single thread executor here because code locks (via synchronized) frequently */
   override protected implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutor(callbackExecutor)
@@ -85,7 +83,7 @@ class CuratorElectionService(
     } catch {
       case NonFatal(e) =>
         logger.error(s"ZooKeeper initialization failed - Committing suicide: ${e.getMessage}")
-        Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+        Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
     }
   }
 
@@ -124,7 +122,7 @@ class CuratorElectionService(
     logger.info("Lost connection to ZooKeeper as leader — Committing suicide")
     stopLeadership()
     client.close()
-    Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+    Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
   }
 
   private[this] def onAbdicate(error: Boolean): Unit = synchronized {
@@ -172,7 +170,7 @@ class CuratorElectionService(
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
           logger.error("ZooKeeper access failed — Committing suicide to avoid invalidating ZooKeeper state")
-          Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+          Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
           false
         }
       })

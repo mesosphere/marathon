@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.net.URI
 import javax.ws.rs.core.Response.Status

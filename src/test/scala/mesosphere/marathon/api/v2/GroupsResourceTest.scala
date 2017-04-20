@@ -6,14 +6,15 @@ import java.util.Collections
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ TestAuthFixture, TestGroupManagerFixture }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.raml.{ App, GroupUpdate }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.util.ScallopStub
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.concurrent.Future
@@ -28,6 +29,9 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       groupInfo: GroupInfoService = mock[GroupInfoService],
       embed: java.util.Set[String] = Collections.emptySet[String]) {
     config.zkTimeoutDuration returns (patienceConfig.timeout.toMillis * 2).millis
+    config.availableFeatures returns Set.empty
+    config.defaultNetworkName returns ScallopStub(None)
+    config.mesosBridgeName returns ScallopStub(Some("default-mesos-bridge-name"))
     val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config)(auth.auth, auth.auth, mat)
   }
 
@@ -46,8 +50,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
     "dry run update" in new FixtureWithRealGroupManager {
       Given("A real Group Manager with no groups")
 
-      val app = AppDefinition(id = "/test/app".toRootPath, cmd = Some("test cmd"))
-      val update = GroupUpdate(id = Some("/test".toRootPath), apps = Some(Set(app)))
+      val app = App(id = "/test/app", cmd = Some("test cmd"))
+      val update = GroupUpdate(id = Some("/test"), apps = Some(Set(app)))
 
       When("Doing a dry run update")
       val body = Json.stringify(Json.toJson(update)).getBytes
@@ -71,8 +75,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       Given("A real Group Manager with no groups")
       val rootGroup = createRootGroup().makeGroup(PathId("/foo/bla"))
 
-      val app = AppDefinition(id = "/foo/bla/app".toRootPath, cmd = Some("test cmd"))
-      val update = GroupUpdate(id = Some("/foo/bla".toRootPath), apps = Some(Set(app)))
+      val app = App(id = "/foo/bla/app", cmd = Some("test cmd"))
+      val update = GroupUpdate(id = Some("/foo/bla"), apps = Some(Set(app)))
 
       When("Doing a dry run update")
       val body = Json.stringify(Json.toJson(update)).getBytes
@@ -249,7 +253,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       Given("A real group manager with one app")
 
       When("creating a group with the same path existing app")
-      val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group/app".toRootPath))))
+      val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group/app"))))
 
       Then("we get a 409")
       intercept[ConflictingChangeException] { groupsResource.create(false, body.getBytes, auth.request) }
@@ -262,7 +266,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
         val rootGroup = createRootGroup(groups = Set(createGroup("/group".toRootPath)))
 
         When("creating a group with the same path existing app")
-        val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group".toRootPath))))
+        val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group"))))
 
         Then("we get a 409")
         intercept[ConflictingChangeException] { groupsResource.create(false, body.getBytes, auth.request) }
