@@ -272,9 +272,11 @@ def checkout_marathon() {
 // run through compile/lint/docs. Fail if there were format changes after this.
 def compile() {
   try {
-    withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-      sh "sudo -E sbt -Dsbt.log.format=false clean scapegoat doc test:compile"
-      sh """if git diff --quiet; then echo 'No format issues detected'; else echo 'Patch has Format Issues'; exit 1; fi"""
+    withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
+      withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+        sh "sudo -E sbt -Dsbt.log.format=false clean scapegoat doc test:compile"
+        sh """if git diff --quiet; then echo 'No format issues detected'; else echo 'Patch has Format Issues'; exit 1; fi"""
+      }
     }
   } finally {
     archiveArtifacts artifacts: 'target/**/scapegoat-report/scapegoat.html', allowEmptyArchive: true
@@ -284,8 +286,10 @@ def compile() {
 def test() {
   try {
     timeout(time: 30, unit: 'MINUTES') {
-      withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-        sh """sudo -E sbt -Dsbt.log.format=false '; clean; coverage; testWithCoverageReport' """
+      withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
+        withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+          sh """sudo -E sbt -Dsbt.log.format=false '; clean; coverage; testWithCoverageReport' """
+        }
       }
     }
   } finally {
@@ -300,8 +304,10 @@ def test() {
 def integration_test() {
   try {
     timeout(time: 60, unit: 'MINUTES') {
-      withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-        sh """sudo -E sbt -Dsbt.log.format=false '; clean; coverage; integration:testWithCoverageReport; serial-integration:testWithCoverageReport' """
+      withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
+        withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+          sh """sudo -E sbt -Dsbt.log.format=false '; clean; coverage; integration:testWithCoverageReport; serial-integration:testWithCoverageReport' """
+        }
       }
     }
   } finally {
@@ -321,8 +327,10 @@ def has_unstable_tests() {
 def unstable_test() {
   try {
     timeout(time: 60, unit: 'MINUTES') {
-      withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-        sh "sudo -E sbt -Dsbt.log.format=false '; clean; coverage; unstable:testWithCoverageReport; unstable-integration:testWithCoverageReport' "
+      withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
+        withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+          sh "sudo -E sbt -Dsbt.log.format=false '; clean; coverage; unstable:testWithCoverageReport; unstable-integration:testWithCoverageReport' "
+        }
       }
     }
   } catch (Exception err) {
