@@ -204,7 +204,7 @@ def test_framework_unavailable_on_mom():
     with marathon_on_marathon():
         delete_all_apps_wait()
         client = marathon.create_client()
-        client.add_app(fake_framework_app())
+        client.add_app(common.fake_framework_app())
         shakedown.deployment_wait()
 
     try:
