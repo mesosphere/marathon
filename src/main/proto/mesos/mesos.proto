@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+syntax = "proto2";
+
 package mesos;
 
 option java_package = "org.apache.mesos";
@@ -94,12 +96,19 @@ message ContainerID {
 
 
 /**
+ * A unique ID assigned to a resource provider. Currently, a resource
+ * provider gets a new ID whenever it (re)registers with Mesos.
+ */
+message ResourceProviderID {
+  required string value = 1;
+}
+
+
+/**
  * Represents time since the epoch, in nanoseconds.
  */
 message TimeInfo {
   required int64 nanoseconds = 1;
-
-  // TODO(josephw): Add time zone information, if necessary.
 }
 
 
@@ -867,19 +876,21 @@ message Attribute {
 
 
 /**
- * Describes a resource on a machine. The `name` field is a string
- * like "cpus" or "mem" that indicates which kind of resource this is;
- * the rest of the fields describe the properties of the resource. A
- * resource can take on one of three types: scalar (double), a list of
- * finite and discrete ranges (e.g., [1-10, 20-30]), or a set of
- * items. A resource is described using the standard protocol buffer
- * "union" trick.
+ * Describes a resource from a resource provider. The `name` field is
+ * a string like "cpus" or "mem" that indicates which kind of resource
+ * this is; the rest of the fields describe the properties of the
+ * resource. A resource can take on one of three types: scalar
+ * (double), a list of finite and discrete ranges (e.g., [1-10,
+ * 20-30]), or a set of items. A resource is described using the
+ * standard protocol buffer "union" trick.
  *
  * Note that "disk" and "mem" resources are scalar values expressed in
  * megabytes. Fractional "cpus" values are allowed (e.g., "0.5"),
  * which correspond to partial shares of a CPU.
  */
 message Resource {
+  optional ResourceProviderID provider_id = 12;
+
   required string name = 1;
   required Value.Type type = 2;
   optional Value.Scalar scalar = 3;
@@ -983,6 +994,7 @@ message Resource {
     // TODO(jmlvanre): Add support for BLOCK devices.
     message Source {
       enum Type {
+        UNKNOWN = 0;
         PATH = 1;
         MOUNT = 2;
       }
@@ -991,7 +1003,7 @@ message Resource {
       // can be shared and carved up as necessary between frameworks.
       message Path {
         // Path to the folder (e.g., /mnt/raid/disk0).
-        required string root = 1;
+        optional string root = 1;
       }
 
       // A mounted file-system set up by the Agent administrator. This
@@ -999,7 +1011,7 @@ message Resource {
       // partial amount of this disk.
       message Mount {
         // Path to mount point (e.g., /mnt/raid/disk0).
-        required string root = 1;
+        optional string root = 1;
       }
 
       required Type type = 1;
@@ -1736,7 +1748,9 @@ enum TaskState {
 */
 message CheckStatusInfo {
   message Command {
-    // Exit code of a command check.
+    // Exit code of a command check. It is the result of calling
+    // `WEXITSTATUS()` on `waitpid()` termination information on
+    // Posix and calling `GetExitCodeProcess()` on Windows.
     optional int32 exit_code = 1;
   }
 
@@ -1896,15 +1910,29 @@ message Filters {
 /**
 * Describes a collection of environment variables. This is used with
 * CommandInfo in order to set environment variables before running a
-* command.
+* command. The contents of each variable may be specified as a string
+* or a Secret; only one of `value` and `secret` must be set.
 */
 message Environment {
   message Variable {
     required string name = 1;
-    // NOTE: The `value` field was made optional in Mesos 1.2 but it
-    // is currently enforced to be set. This constraint will be
-    // removed in a future version.
+
+    enum Type {
+      UNKNOWN = 0;
+      VALUE = 1;
+      SECRET = 2;
+    }
+
+    // In Mesos 1.2, the `Environment.variables.value` message was made
+    // optional. The default type for `Environment.variables.type` is now VALUE,
+    // which requires `value` to be set, maintaining backward compatibility.
+    //
+    // TODO(greggomann): The default can be removed in Mesos 2.1 (MESOS-7134).
+    optional Type type = 3 [default = VALUE];
+
+    // Only one of `value` and `secret` must be set.
     optional string value = 2;
+    optional Secret secret = 4;
   }
 
   repeated Variable variables = 1;
@@ -1950,6 +1978,54 @@ message Credential {
  */
 message Credentials {
   repeated Credential credentials = 1;
+}
+
+
+/**
+ * Secret used to pass privileged information. It is designed to provide
+ * pass-by-value or pass-by-reference semantics, where the REFERENCE type can be
+ * used by custom modules which interact with a secure back-end.
+ */
+message Secret
+{
+  enum Type {
+    UNKNOWN = 0;
+    REFERENCE = 1;
+    VALUE = 2;
+  }
+
+  // Can be used by modules to refer to a secret stored in a secure back-end.
+  // The `key` field is provided to permit reference to a single value within a
+  // secret containing arbitrary key-value pairs.
+  //
+  // For example, given a back-end secret store with a secret named
+  // "my-secret" containing the following key-value pairs:
+  //
+  //   {
+  //     "username": "my-user",
+  //     "password": "my-password
+  //   }
+  //
+  // the username could be referred to in a `Secret` by specifying
+  // "my-secret" for the `name` and "username" for the `key`.
+  message Reference
+  {
+    required string name = 1;
+    optional string key = 2;
+    optional Labels labels = 3; // Metadata for accessing/fetching secret
+  }
+
+  // Used to pass the value of a secret.
+  message Value
+  {
+    required bytes data = 1;
+  }
+
+  optional Type type = 1;
+
+  // Only one of `reference` and `value` must be set.
+  optional Reference reference = 2;
+  optional Value value = 3;
 }
 
 
