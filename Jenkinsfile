@@ -58,7 +58,16 @@ node('JenkinsMarathonCI-Debian8-2017-03-21') {
     stage("4. Package Binaries") {
       m.package_binaries()
     }
-    stage("5. Run Unstable Tests") {
+    stage("5. Archive Artifacts") {
+      archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'target/universal/marathon-*.zip', allowEmptyArchive: false
+      archiveArtifacts artifacts: 'target/universal/marathon-*.txz', allowEmptyArchive: false
+      archiveArtifacts artifacts: "taget/packages/*", allowEmptyArchive: false
+    }
+    stage("6. Publish Artifacts") {
+      m.publish_artifacts()
+    }
+    stage("7. Run Unstable Tests") {
       if (m.has_unstable_tests()) {
         try {
           m.unstable_test()
@@ -72,15 +81,6 @@ node('JenkinsMarathonCI-Debian8-2017-03-21') {
           }
         }
       }
-    }
-    stage("6. Archive Artifacts") {
-      archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
-      archiveArtifacts artifacts: 'target/universal/marathon-*.zip', allowEmptyArchive: false
-      archiveArtifacts artifacts: 'target/universal/marathon-*.txz', allowEmptyArchive: false
-      archiveArtifacts artifacts: "taget/packages/*", allowEmptyArchive: false
-    }
-    stage("7. Publish Artifacts") {
-      m.publish_artifacts()
     }
   } catch (Exception err) {
     currentBuild.result = 'FAILURE'

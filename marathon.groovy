@@ -203,80 +203,73 @@ def is_release_build(gitTag) {
 def publish_artifacts() {
   gitTag = sh(returnStdout: true, script: "git describe --tags --always").trim().replaceFirst("v", "")
 
-  parallel(
-      docker: {
-        // Only create latest-dev snapshot for master.
-        // TODO: Docker 1.12 doesn't support tag -f and the jenkins docker plugin still passes it in.
-        if (env.BRANCH_NAME == "master" && !is_phabricator_build()) {
-          sh "docker tag mesosphere/marathon:${gitTag} mesosphere/marathon:latest-dev"
-          docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
-            sh "docker push mesosphere/marathon:latest-dev"
-          }
-        } else if (env.PUBLISH_SNAPSHOT == "true" || (is_release_build(gitTag) && !is_phabricator_build())) {
-          docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
-            sh "docker push mesosphere/marathon:${gitTag}"
-          }
-        }
-      },
-      s3: {
-        if (env.BRANCH_NAME == "master" || env.PUBLISH_SNAPSHOT == "true" || is_release_build(gitTag)) {
-          storageClass = "STANDARD_IA"
-          // TODO: we could use marathon-artifacts for both profile and buckets, but we would
-          // need to either setup a bucket policy for public-read on the s3://marathon-artifacts/snapshots
-          // We should probably prefer downloads as this allows us to share snapshot builds
-          // with anyone. The directory listing isn't public anyways.
-          profile = "aws-production"
-          bucket = "downloads.mesosphere.io/marathon/snapshots/"
-          region = "us-east-1"
-          if (is_release_build(gitTag)) {
-            storageClass = "STANDARD"
-            bucket = "downloads.mesosphere.io/marathon/${gitTag}/"
-          }
-          step([
-              $class: 'S3BucketPublisher',
-              entries: [[
-                  sourceFile: "target/universal/marathon-*.txz",
-                  bucket: bucket,
-                  selectedRegion: region,
-                  noUploadOnFailure: true,
-                  managedArtifacts: false,
-                  flatten: true,
-                  showDirectlyInBrowser: true,
-                  keepForever: true,
-                  storageClass: storageClass,
-              ],
-                  [
-                      sourceFile: "target/universal/marathon-*.zip",
-                      bucket: bucket,
-                      selectedRegion: region,
-                      noUploadOnFailure: true,
-                      managedArtifacts: false,
-                      flatten: true,
-                      showDirectlyInBrowser: true,
-                      keepForever: true,
-                      storageClass: storageClass,
-                  ],
-              ],
-              profileName: profile,
-              dontWaitForConcurrentBuildCompletion: false,
-              consoleLogLevel: 'INFO',
-              pluginFailureResultConstraint: 'FAILURE'
-          ])
-        }
-      },
-      nativePackages: {
-        if (env.BRANCH_NAME == "master" || env.PUBLISH_SNAPSHOT == "true" || is_release_build(gitTag)) {
-          sshagent(credentials: ['0f7ec9c9-99b2-4797-9ed5-625572d5931d']) {
-            echo "Uploading Artifacts to package server"
-            // we rsync a directory first, then copy over the binaries into specific folders so
-            // that the cron job won't try to publish half-uploaded RPMs/DEBs
-            sh """ssh -o StrictHostKeyChecking=no pkgmaintainer@repo1.hw.ca1.mesosphere.com "mkdir -p ~/repo/incoming/marathon-${gitTag}" """
-            sh "rsync -avzP target/packages/*${gitTag}* target/packages/*.rpm pkgmaintainer@repo1.hw.ca1.mesosphere.com:~/repo/incoming/marathon-${gitTag}"
-            sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "env GIT_TAG=${gitTag} bash -s --" < scripts/publish_packages.sh """
-            sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "rm -rf ~/repo/incoming/marathon-${gitTag}" """
-          }
-        }
-      })
+  // Only create latest-dev snapshot for master.
+  // TODO: Docker 1.12 doesn't support tag -f and the jenkins docker plugin still passes it in.
+  if (env.BRANCH_NAME == "master" && !is_phabricator_build()) {
+    sh "docker tag mesosphere/marathon:${gitTag} mesosphere/marathon:latest-dev"
+    docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
+      sh "docker push mesosphere/marathon:latest-dev"
+    }
+  } else if (env.PUBLISH_SNAPSHOT == "true" || (is_release_build(gitTag) && !is_phabricator_build())) {
+    docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
+      sh "docker push mesosphere/marathon:${gitTag}"
+    }
+  }
+  if (env.BRANCH_NAME == "master" || env.PUBLISH_SNAPSHOT == "true" || is_release_build(gitTag)) {
+    storageClass = "STANDARD_IA"
+    // TODO: we could use marathon-artifacts for both profile and buckets, but we would
+    // need to either setup a bucket policy for public-read on the s3://marathon-artifacts/snapshots
+    // We should probably prefer downloads as this allows us to share snapshot builds
+    // with anyone. The directory listing isn't public anyways.
+    profile = "aws-production"
+    bucket = "downloads.mesosphere.io/marathon/snapshots/"
+    region = "us-east-1"
+    if (is_release_build(gitTag)) {
+      storageClass = "STANDARD"
+      bucket = "downloads.mesosphere.io/marathon/${gitTag}/"
+    }
+    step([
+        $class: 'S3BucketPublisher',
+        entries: [[
+            sourceFile: "target/universal/marathon-*.txz",
+            bucket: bucket,
+            selectedRegion: region,
+            noUploadOnFailure: true,
+            managedArtifacts: false,
+            flatten: true,
+            showDirectlyInBrowser: true,
+            keepForever: true,
+            storageClass: storageClass,
+        ],
+            [
+                sourceFile: "target/universal/marathon-*.zip",
+                bucket: bucket,
+                selectedRegion: region,
+                noUploadOnFailure: true,
+                managedArtifacts: false,
+                flatten: true,
+                showDirectlyInBrowser: true,
+                keepForever: true,
+                storageClass: storageClass,
+            ],
+        ],
+        profileName: profile,
+        dontWaitForConcurrentBuildCompletion: false,
+        consoleLogLevel: 'INFO',
+        pluginFailureResultConstraint: 'FAILURE'
+    ])
+  }
+  if (env.BRANCH_NAME == "master" || env.PUBLISH_SNAPSHOT == "true" || is_release_build(gitTag)) {
+    sshagent(credentials: ['0f7ec9c9-99b2-4797-9ed5-625572d5931d']) {
+      echo "Uploading Artifacts to package server"
+      // we rsync a directory first, then copy over the binaries into specific folders so
+      // that the cron job won't try to publish half-uploaded RPMs/DEBs
+      sh """ssh -o StrictHostKeyChecking=no pkgmaintainer@repo1.hw.ca1.mesosphere.com "mkdir -p ~/repo/incoming/marathon-${gitTag}" """
+      sh "rsync -avzP target/packages/*${gitTag}* target/packages/*.rpm pkgmaintainer@repo1.hw.ca1.mesosphere.com:~/repo/incoming/marathon-${gitTag}"
+      sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "env GIT_TAG=${gitTag} bash -s --" < scripts/publish_packages.sh """
+      sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "rm -rf ~/repo/incoming/marathon-${gitTag}" """
+    }
+  }
   return this
 }
 
