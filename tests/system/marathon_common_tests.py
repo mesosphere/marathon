@@ -86,11 +86,10 @@ def test_launch_mesos_container_with_docker_image():
 # this fails on 1.7, it is likely the version of marathon in universe for 1.7
 # which is 1.1.5.   We do not have a check for marathon version.
 @dcos_1_8
-def test_launch_mesos_graceperiod(marathon_fixture):
+def test_launch_mesos_graceperiod(marathon_service_name):
     """ Test the 'taskKillGracePeriodSeconds' in a Marathon environment.  Read more details
         on this test in `test_root_marathon.py::test_launch_mesos_root_marathon_graceperiod`
     """
-    marathon_service_name = marathon_fixture
 
     app_id = uuid.uuid4().hex
     app_def = app_mesos(app_id)
@@ -1023,13 +1022,11 @@ def test_private_repository_mesos_app():
     common.assert_app_tasks_running(client, app_def)
 
 
-def test_ping(marathon_fixture):
+def test_ping(marathon_service_name):
     """ Tests the API end point for marathon /ping
         This isn't provided by the client object and will need to create the url to test
     """
-    print(marathon_fixture)
-
-    response = common.http_get_marathon_path('ping', marathon_fixture)
+    response = common.http_get_marathon_path('ping', marathon_service_name)
     assert response.status_code == 200
     assert response.text == 'pong'
 
