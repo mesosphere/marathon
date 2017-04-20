@@ -163,7 +163,7 @@ def unstable_test() {
       withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
         // ignore the status here.
         STATUS = sh(script: "sudo -E sbt -Dsbt.log.format=false clean coverage unstable:test unstable-integration:test", returnStatus: true)
-        sh """sudo -E sbt -Dsbt.log.format=false coverageReport"""
+        sh """sudo -E sbt -Dsbt.log.format=false '; set coverageFailOnMinimum := false; coverageReport' """
         if (STATUS != 0) {
           throw new Exception("Unstable Tests Failed.")
         }
@@ -222,36 +222,62 @@ def publish_artifacts() {
     // We should probably prefer downloads as this allows us to share snapshot builds
     // with anyone. The directory listing isn't public anyways.
     profile = "aws-production"
-    bucket = "downloads.mesosphere.io/marathon/snapshots/"
+    bucket = "downloads.mesosphere.io/marathon/snapshots"
     region = "us-east-1"
+    upload_on_failure = !is_release_build(gitTag)
     if (is_release_build(gitTag)) {
       storageClass = "STANDARD"
-      bucket = "downloads.mesosphere.io/marathon/${gitTag}/"
+      bucket = "downloads.mesosphere.io/marathon/${gitTag}"
     }
+    sh "sha1sum target/universal/marathon-${gitTag}.txz > target/universal/marathon-${gitTag}.txz.sha1"
+    sh "sha1sum target/universal/marathon-${gitTag}.zip > target/universal/marathon-${gitTag}.zip.sha1"
     step([
         $class: 'S3BucketPublisher',
-        entries: [[
-            sourceFile: "target/universal/marathon-*.txz",
-            bucket: bucket,
-            selectedRegion: region,
-            noUploadOnFailure: true,
-            managedArtifacts: false,
-            flatten: true,
-            showDirectlyInBrowser: true,
-            keepForever: true,
-            storageClass: storageClass,
-        ],
-            [
-                sourceFile: "target/universal/marathon-*.zip",
-                bucket: bucket,
-                selectedRegion: region,
-                noUploadOnFailure: true,
-                managedArtifacts: false,
-                flatten: true,
-                showDirectlyInBrowser: true,
-                keepForever: true,
-                storageClass: storageClass,
-            ],
+        entries: [
+          [
+              sourceFile: "target/universal/marathon-*.txz",
+              bucket: bucket,
+              selectedRegion: region,
+              noUploadOnFailure: upload_on_failure,
+              managedArtifacts: false,
+              flatten: true,
+              showDirectlyInBrowser: false,
+              keepForever: true,
+              storageClass: storageClass,
+          ],
+          [
+              sourceFile: "target/universal/marathon-*.txz.sha1",
+              bucket: bucket,
+              selectedRegion: region,
+              noUploadOnFailure: upload_on_failure,
+              managedArtifacts: false,
+              flatten: true,
+              showDirectlyInBrowser: false,
+              keepForever: true,
+              storageClass: storageClass,
+          ],
+          [
+              sourceFile: "target/universal/marathon-*.zip",
+              bucket: bucket,
+              selectedRegion: region,
+              noUploadOnFailure: upload_on_failure,
+              managedArtifacts: false,
+              flatten: true,
+              showDirectlyInBrowser: false,
+              keepForever: true,
+              storageClass: storageClass,
+          ],
+          [
+              sourceFile: "target/universal/marathon-*.zip.sha1",
+              bucket: bucket,
+              selectedRegion: region,
+              noUploadOnFailure: upload_on_failure,
+              managedArtifacts: false,
+              flatten: true,
+              showDirectlyInBrowser: false,
+              keepForever: true,
+              storageClass: storageClass,
+          ],
         ],
         profileName: profile,
         dontWaitForConcurrentBuildCompletion: false,

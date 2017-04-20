@@ -74,7 +74,7 @@ node('JenkinsMarathonCI-Debian8-2017-03-21') {
         } catch (err) {
           // For PRs, can we report it there somehow?
           if (env.BRANCH_NAME.startsWith("releases/") || env.BRANCH_NAME == "master") {
-            slackSend(message: "\u26a0 branch `${env.BRANCH_NAME}` failed in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
+            slackSend(message: "\u26a0 branch `${env.BRANCH_NAME}` has unstable tests in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
                 color: "danger",
                 channel: "#marathon-dev",
                 tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
@@ -83,10 +83,11 @@ node('JenkinsMarathonCI-Debian8-2017-03-21') {
       }
     }
   } catch (Exception err) {
+    echo "Ran into an error in the pipeline: ${err}"
     currentBuild.result = 'FAILURE'
     if (env.BRANCH_NAME.startsWith("releases/") || env.BRANCH_NAME == "master") {
       slackSend(
-          message: "(;¬_¬) branch `${env.BRANCH_NAME}` failed in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
+          message: "\u2718 branch `${env.BRANCH_NAME}` failed in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
           color: "danger",
           channel: "#marathon-dev",
           tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
@@ -97,7 +98,7 @@ node('JenkinsMarathonCI-Debian8-2017-03-21') {
       // Last build failed but this succeeded.
       if (m.previousBuildFailed() && currentBuild.result == 'SUCCESS') {
         slackSend(
-            message: "╭( ･ㅂ･)و ̑̑ branch `${env.BRANCH_NAME}` is green again. (<${env.BUILD_URL}|Open>)",
+            message: "\u2714 ̑̑ branch `${env.BRANCH_NAME}` is green again. (<${env.BUILD_URL}|Open>)",
             color: "good",
             channel: "#marathon-dev",
             tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
