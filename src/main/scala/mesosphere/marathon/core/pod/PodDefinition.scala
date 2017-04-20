@@ -57,9 +57,7 @@ case class PodDefinition(
           containers != to.containers ||
           constraints != to.constraints ||
           podVolumes != to.podVolumes ||
-          networks != to.networks ||
-          backoffStrategy != to.backoffStrategy ||
-          upgradeStrategy != to.upgradeStrategy
+          networks != to.networks
       }
     case _ =>
       // A validation rule will ensure, this can not happen

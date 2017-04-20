@@ -314,20 +314,17 @@ case class AppDefinition(
           fetch != to.fetch ||
           portDefinitions != to.portDefinitions ||
           requirePorts != to.requirePorts ||
-          backoffStrategy != to.backoffStrategy ||
           container != to.container ||
           healthChecks != to.healthChecks ||
           taskKillGracePeriod != to.taskKillGracePeriod ||
           dependencies != to.dependencies ||
-          upgradeStrategy != to.upgradeStrategy ||
+          (isResident && upgradeStrategy != to.upgradeStrategy) ||
           labels != to.labels ||
           acceptedResourceRoles != to.acceptedResourceRoles ||
           networks != to.networks ||
           readinessChecks != to.readinessChecks ||
           residency != to.residency ||
-          secrets != to.secrets ||
-          unreachableStrategy != to.unreachableStrategy ||
-          killSelection != to.killSelection
+          secrets != to.secrets
       }
     case _ =>
       // A validation rule will ensure, this can not happen

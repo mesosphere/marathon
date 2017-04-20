@@ -319,6 +319,50 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       plan.steps(0).actions.toSet should be(Set(StopApplication(app._1)))
     }
 
+    "when scale with non runtime changes" in {
+      Given("application updates with scale removal of an app and change to upgrade strategy")
+      val app = AppDefinition("/test/independent/app".toPath, Some("app2"),
+        instances = 3, upgradeStrategy = UpgradeStrategy(0.75))
+      val from = createRootGroup(
+        groups = Set(createGroup("/test".toPath, groups = Set(
+          createGroup("/test/independent".toPath, Map(app.id -> app))
+        ))))
+      val updatedApp = AppDefinition("/test/independent/app".toPath, Some("app2"),
+        instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
+      val to = createRootGroup(
+        groups = Set(createGroup("/test".toPath, groups = Set(
+          createGroup("/test/independent".toPath, Map(app.id -> updatedApp))
+        ))))
+
+      When("the deployment plan is computed")
+      val plan = DeploymentPlan(from, to)
+
+      Then("the deployment contains one step consisting of one scale action")
+      plan.steps should have size 1
+      plan.steps.head.actions.toSet should be(Set(ScaleApplication(updatedApp, 2)))
+    }
+
+    "when only non runtime change" in {
+      Given("application with only change to upgrade strategy")
+      val app = AppDefinition("/test/independent/app".toPath, Some("app2"),
+        instances = 3, upgradeStrategy = UpgradeStrategy(0.75))
+      val from = createRootGroup(
+        groups = Set(createGroup("/test".toPath, groups = Set(
+          createGroup("/test/independent".toPath, Map(app.id -> app))
+        ))))
+      val updatedApp = app.copy(upgradeStrategy = UpgradeStrategy(0.5))
+      val to = createRootGroup(
+        groups = Set(createGroup("/test".toPath, groups = Set(
+          createGroup("/test/independent".toPath, Map(app.id -> updatedApp))
+        ))))
+
+      When("the deployment plan is computed")
+      val plan = DeploymentPlan(from, to)
+
+      Then("the deployment is empty")
+      plan.steps should have size 0
+    }
+
     // regression test for #765
     "Should create non-empty deployment plan when only args have changed" in {
       val versionInfo: FullVersionInfo = VersionInfo.forNewConfig(Timestamp(10))
