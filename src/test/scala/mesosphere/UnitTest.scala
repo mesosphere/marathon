@@ -154,7 +154,7 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
 abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 
 trait IntegrationTestLike extends UnitTestLike {
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(90, Seconds), interval = Span(2, Seconds))
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(270, Seconds))
 }
 
 abstract class IntegrationTest extends WordSpec with IntegrationTestLike with RetryOnFailed
@@ -167,4 +167,3 @@ trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike 
 }
 
 abstract class AkkaIntegrationTest extends IntegrationTest with AkkaIntegrationTestLike
-

@@ -1,14 +1,13 @@
 package mesosphere.marathon
 package integration.setup
 
-import akka.actor.Cancellable
 import java.io.File
 import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.Done
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ ActorSystem, Cancellable, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, StatusCodes }
@@ -21,14 +20,13 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITConnected, ITEvent, ITSSEEvent, ITLeaderResult, MarathonFacade, MesosFacade }
+import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{ Milliseconds, Span }
@@ -706,7 +704,7 @@ trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFut
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
-    marathonServer.start().futureValue(Timeout(90.seconds))
+    marathonServer.start().futureValue
     sseStream = Some(startEventSubscriber())
     waitForSSEConnect()
   }
@@ -754,7 +752,7 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    Future.sequence(additionalMarathons.map(_.start())).futureValue(Timeout(60.seconds))
+    Future.sequence(additionalMarathons.map(_.start())).futureValue
   }
 
   override def afterAll(): Unit = {
