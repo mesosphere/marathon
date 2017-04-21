@@ -229,8 +229,8 @@ def publish_artifacts() {
       storageClass = "STANDARD"
       bucket = "downloads.mesosphere.io/marathon/${gitTag}"
     }
-    sh "sha1sum target/universal/marathon-${gitTag}.txz > target/universal/marathon-${gitTag}.txz.sha1"
-    sh "sha1sum target/universal/marathon-${gitTag}.zip > target/universal/marathon-${gitTag}.zip.sha1"
+    sh "sudo sh -c 'sha1sum target/universal/marathon-${gitTag}.txz > target/universal/marathon-${gitTag}.txz.sha1'"
+    sh "sudo sh -c 'sha1sum target/universal/marathon-${gitTag}.zip > target/universal/marathon-${gitTag}.zip.sha1'"
     step([
         $class: 'S3BucketPublisher',
         entries: [
