@@ -738,6 +738,25 @@ def assert_app_tasks_healthy(client, app_def):
     app = client.get_app(app_id)
     assert app['tasksHealthy'] == instances
 
+
+def get_marathon_leader_not_on_master_leader_node():
+    marathon_leader = shakedown.marathon_leader_ip()
+    master_leader = shakedown.master_leader_ip()
+    print('marathon: {}'.format(marathon_leader))
+    print('leader: {}'.format(master_leader))
+
+    if marathon_leader == master_leader:
+        # switch
+        delete_marathon_path('v2/leader')
+        wait_for_marathon_up()
+        new_leader = shakedown.marathon_leader_ip()
+        assert new_leader != marathon_leader
+        marathon_leader = new_leader
+        print('switched leader to: {}'.format(marathon_leader))
+
+    return marathon_leader
+
+
 #############
 #  moving to shakedown  START
 #############
