@@ -15,6 +15,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.storage.repository.{ StoredGroup, StoredPlan }
 import mesosphere.util.state.FrameworkId
+import mesosphere.marathon.raml.RuntimeConfiguration
 
 trait InMemoryStoreSerialization {
   implicit def marshaller[V]: Marshaller[V, Identity] = Marshaller.opaque { a: V => Identity(a) }
@@ -85,6 +86,15 @@ trait InMemoryStoreSerialization {
     override def fromStorageId(key: RamId): String = key.id
     override val hasVersions = false
     override def version(v: FrameworkId): OffsetDateTime = OffsetDateTime.MIN
+  }
+
+  implicit val runtimeConfigurationResolver = new IdResolver[String, RuntimeConfiguration, String, RamId] {
+    override def toStorageId(id: String, version: Option[OffsetDateTime]): RamId =
+      RamId(category, id, version)
+    override val category: String = "runtime-configuration"
+    override def fromStorageId(key: RamId): String = key.id
+    override val hasVersions = false
+    override def version(v: RuntimeConfiguration): OffsetDateTime = OffsetDateTime.MIN
   }
 
   implicit val eventSubscribersResolver = new IdResolver[String, EventSubscribers, String, RamId] {

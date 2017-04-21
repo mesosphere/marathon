@@ -21,6 +21,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.util.state.FrameworkId
+import mesosphere.marathon.raml.RuntimeConfiguration
 
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
@@ -209,6 +210,20 @@ object FrameworkIdRepository {
   }
 }
 
+trait RuntimeConfigurationRepository extends SingletonRepository[RuntimeConfiguration]
+
+object RuntimeConfigurationRepository {
+  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): RuntimeConfigurationRepository = {
+    import mesosphere.marathon.storage.store.ZkStoreSerialization._
+    new RuntimeConfigurationRepositoryImpl(persistenceStore)
+  }
+
+  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): RuntimeConfigurationRepository = {
+    import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
+    new RuntimeConfigurationRepositoryImpl(persistenceStore)
+  }
+}
+
 trait EventSubscribersRepository extends SingletonRepository[EventSubscribers]
 
 object EventSubscribersRepository {
@@ -333,6 +348,19 @@ class FrameworkIdRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C
   private val repo = new PersistenceStoreRepository[String, FrameworkId, K, C, S](persistenceStore, _ => ID)
   override def get(): Future[Option[FrameworkId]] = repo.get(ID)
   override def store(v: FrameworkId): Future[Done] = repo.store(v)
+  override def delete(): Future[Done] = repo.delete(ID)
+}
+
+class RuntimeConfigurationRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
+    implicit
+    ir: IdResolver[String, RuntimeConfiguration, C, K],
+    marshaller: Marshaller[RuntimeConfiguration, S],
+    unmarshaller: Unmarshaller[S, RuntimeConfiguration]
+) extends RuntimeConfigurationRepository {
+  private val ID = "id"
+  private val repo = new PersistenceStoreRepository[String, RuntimeConfiguration, K, C, S](persistenceStore, _ => ID)
+  override def get(): Future[Option[RuntimeConfiguration]] = repo.get(ID)
+  override def store(v: RuntimeConfiguration): Future[Done] = repo.store(v)
   override def delete(): Future[Done] = repo.delete(ID)
 }
 

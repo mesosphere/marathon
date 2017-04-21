@@ -76,7 +76,8 @@ abstract class BackupRestoreAction extends StrictLogging {
   */
 object Backup extends BackupRestoreAction {
   def main(args: Array[String]): Unit = {
-    action(new BackupConfig(args.toVector), _.backup())
+    val config = new BackupConfig(args.toVector)
+    action(config, _.backup(config.backupLocation()))
   }
 }
 
@@ -91,6 +92,7 @@ object Backup extends BackupRestoreAction {
   */
 object Restore extends BackupRestoreAction {
   def main(args: Array[String]): Unit = {
-    action(new BackupConfig(args.toVector), _.restore())
+    val config = new BackupConfig(args.toVector)
+    action(config, _.restore(config.backupLocation()))
   }
 }

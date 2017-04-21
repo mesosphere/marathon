@@ -22,6 +22,7 @@ trait StorageModule {
   val groupRepository: GroupRepository
   val frameworkIdRepository: FrameworkIdRepository
   val eventSubscribersRepository: EventSubscribersRepository
+  val runtimeConfigurationRepository: RuntimeConfigurationRepository
   val migration: Migration
   val leadershipInitializers: Seq[PrePostDriverCallback]
   val persistentStoreBackup: PersistentStoreBackup
@@ -52,6 +53,7 @@ object StorageModule {
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
         val eventSubscribersRepository = EventSubscribersRepository.zkRepository(store)
+        val runtimeConfigurationRepository = RuntimeConfigurationRepository.zkRepository(store)
 
         val leadershipInitializers = store match {
           case s: LoadTimeCachingPersistenceStore[_, _, _] =>
@@ -60,11 +62,11 @@ object StorageModule {
             Nil
         }
 
-        val backup = PersistentStoreBackup(zk.backupLocation, store)
+        val backup = PersistentStoreBackup(store)
         val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, mesosBridgeName, store,
           appRepository, groupRepository, deploymentRepository, taskRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, eventSubscribersRepository,
-          ServiceDefinitionRepository.zkRepository(store), backup)
+          ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
 
         StorageModuleImpl(
           instanceRepository,
@@ -73,6 +75,7 @@ object StorageModule {
           groupRepository,
           frameworkIdRepository,
           eventSubscribersRepository,
+          runtimeConfigurationRepository,
           migration,
           leadershipInitializers,
           backup
@@ -89,6 +92,7 @@ object StorageModule {
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
         val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(store)
+        val runtimeConfigurationRepository = RuntimeConfigurationRepository.inMemRepository(store)
 
         val leadershipInitializers = store match {
           case s: LoadTimeCachingPersistenceStore[_, _, _] =>
@@ -97,11 +101,11 @@ object StorageModule {
             Nil
         }
 
-        val backup = PersistentStoreBackup(mem.backupLocation, store)
+        val backup = PersistentStoreBackup(store)
         val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, mesosBridgeName,
           store, appRepository, groupRepository, deploymentRepository, taskRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, eventSubscribersRepository,
-          ServiceDefinitionRepository.inMemRepository(store), backup)
+          ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
 
         StorageModuleImpl(
           instanceRepository,
@@ -110,6 +114,7 @@ object StorageModule {
           groupRepository,
           frameworkIdRepository,
           eventSubscribersRepository,
+          runtimeConfigurationRepository,
           migration,
           leadershipInitializers,
           backup
@@ -125,6 +130,7 @@ private[storage] case class StorageModuleImpl(
   groupRepository: GroupRepository,
   frameworkIdRepository: FrameworkIdRepository,
   eventSubscribersRepository: EventSubscribersRepository,
+  runtimeConfigurationRepository: RuntimeConfigurationRepository,
   migration: Migration,
   leadershipInitializers: Seq[PrePostDriverCallback],
   persistentStoreBackup: PersistentStoreBackup

@@ -19,5 +19,5 @@ trait BackupConf extends ScallopConf {
     descr = "The location uri of the backup to create.",
     validate = loc => Try(new URI(loc)).map(UriIO.isValid).getOrElse(false),
     noshort = true
-  )
+  ).map(new URI(_))
 }

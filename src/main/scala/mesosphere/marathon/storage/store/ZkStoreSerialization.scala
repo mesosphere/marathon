@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package storage.store
 
+import java.nio.charset.StandardCharsets
 import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
@@ -19,6 +20,7 @@ import mesosphere.marathon.raml.{ Pod, Raml }
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.storage.repository.{ StoredGroup, StoredGroupRepositoryImpl, StoredPlan }
 import mesosphere.util.state.FrameworkId
+import mesosphere.marathon.raml.RuntimeConfiguration
 import play.api.libs.json.Json
 
 trait ZkStoreSerialization {
@@ -52,7 +54,7 @@ trait ZkStoreSerialization {
 
   implicit val podDefMarshaller: Marshaller[PodDefinition, ZkSerialized] =
     Marshaller.opaque { podDef =>
-      ZkSerialized(ByteString(Json.stringify(Json.toJson(Raml.toRaml(podDef))), "UTF-8"))
+      ZkSerialized(ByteString(Json.stringify(Json.toJson(Raml.toRaml(podDef))), StandardCharsets.UTF_8.name()))
     }
 
   implicit val podDefUnmarshaller: Unmarshaller[ZkSerialized, PodDefinition] =
@@ -73,7 +75,7 @@ trait ZkStoreSerialization {
 
   implicit val instanceMarshaller: Marshaller[Instance, ZkSerialized] =
     Marshaller.opaque { instance =>
-      ZkSerialized(ByteString(Json.stringify(Json.toJson(instance)), "UTF-8"))
+      ZkSerialized(ByteString(Json.stringify(Json.toJson(instance)), StandardCharsets.UTF_8.name()))
     }
 
   implicit val instanceUnmarshaller: Unmarshaller[ZkSerialized, Instance] =
@@ -173,6 +175,23 @@ trait ZkStoreSerialization {
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
         FrameworkId.fromProtoBytes(byteString.toArray)
+    }
+
+  implicit val runtimeConfigurationResolver = new IdResolver[String, RuntimeConfiguration, String, ZkId] {
+    override def toStorageId(id: String, version: Option[OffsetDateTime]): ZkId =
+      ZkId(category, id, version)
+    override val category: String = "runtime-configuration"
+    override def fromStorageId(key: ZkId): String = key.id
+    override val hasVersions = false
+    override def version(v: RuntimeConfiguration): OffsetDateTime = OffsetDateTime.MIN
+  }
+
+  implicit val runtimeConfigurationMarshaller: Marshaller[RuntimeConfiguration, ZkSerialized] =
+    Marshaller.opaque(config => ZkSerialized(ByteString(Json.stringify(Json.toJson(config)), StandardCharsets.UTF_8.name())))
+
+  implicit val runtimeConfigurationUnmarshaller: Unmarshaller[ZkSerialized, RuntimeConfiguration] =
+    Unmarshaller.strict {
+      case ZkSerialized(byteString) => Json.parse(byteString.utf8String).as[RuntimeConfiguration]
     }
 
   implicit val eventSubscribersResolver = new IdResolver[String, EventSubscribers, String, ZkId] {

@@ -8,6 +8,7 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.storage.{ InMem, StorageConfig }
 import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.test.Mockito
@@ -26,12 +27,19 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     instanceRepository: InstanceRepository = mock[InstanceRepository],
     taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
+    configurationRepository: RuntimeConfigurationRepository = mock[RuntimeConfigurationRepository],
     backup: PersistentStoreBackup = mock[PersistentStoreBackup],
     eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository],
-    serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository]): Migration = {
+    serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository],
+    config: StorageConfig = InMem(1, Set.empty, None, None)): Migration = {
+
+    // assume no runtime config is stored in repository
+    configurationRepository.get() returns Future.successful(None)
+    configurationRepository.store(any) returns Future.successful(Done)
+
     new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, groupRepository, deploymentRepository,
       taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository,
-      eventSubscribersRepository, serviceDefinitionRepository, backup)
+      eventSubscribersRepository, serviceDefinitionRepository, configurationRepository, backup, config)
   }
 
   val currentVersion: StorageVersion = StorageVersions.current
