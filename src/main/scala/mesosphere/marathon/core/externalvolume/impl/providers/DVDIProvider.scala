@@ -178,7 +178,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       }
 
       validator[AppContainer] { ct =>
-        ct.volumes.filter(_.external.nonEmpty) as "volumes" is
+        ct.volumes.collect{ case v: AppVolume => v }.filter(_.external.nonEmpty) as "volumes" is
           every(ifDVDIVolume(volumeValidator(ct.`type`)))
       }
     }
@@ -322,6 +322,5 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     app.externalVolumes.withFilter(matchesProvider).map(_.external.name)
 
   private[this] def namesOfMatchingVolumes(app: App): Seq[String] =
-    app.container.fold(Seq.empty[AppVolume])(_.volumes.filter(_.external.isDefined)).withFilter(matchesProviderRaml).flatMap(_.external.flatMap(_.name))
-
+    app.container.fold(Seq.empty[AppVolume])(_.volumes.collect{ case v: AppVolume if v.external.isDefined => v }).withFilter(matchesProviderRaml).flatMap(_.external.flatMap(_.name))
 }

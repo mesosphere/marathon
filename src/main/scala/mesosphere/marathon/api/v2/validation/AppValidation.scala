@@ -124,13 +124,15 @@ trait AppValidation {
   def validContainer(enabledFeatures: Set[String], networks: Seq[Network]): Validator[Container] = {
     def volumesValidator(container: Container): Validator[Seq[AppVolume]] =
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
-        val names: Seq[String] = vols.flatMap(_.external.flatMap(_.name))
+        val names: Seq[String] = vols.flatMap {
+          case a: AppExternalVolume => a.external.name
+        }
         names.distinct.size == names.size
       } and every(valid(validVolume(container, enabledFeatures)))
 
     val validGeneralContainer: Validator[Container] = validator[Container] { container =>
       container.portMappings is optional(portMappingsValidator(networks))
-      container.volumes is volumesValidator(container)
+      container.volumes.collect{ case v: AppVolume => v } is volumesValidator(container)
     }
 
     val mesosContainerImageValidator = new Validator[Container] {
@@ -153,7 +155,7 @@ trait AppValidation {
 
   def validVolume(container: Container, enabledFeatures: Set[String]): Validator[AppVolume] = new Validator[AppVolume] {
     import state.PathPatterns._
-    val validHostVolume = validator[AppVolume] { v =>
+    val validHostVolume = validator[AppDockerVolume] { v =>
       v.containerPath is valid(notEmpty)
       v.hostPath is valid(definedAnd(notEmpty))
     }
@@ -204,14 +206,14 @@ trait AppValidation {
         info.constraints.each must complyWithVolumeConstraintRules
       } and meetMaxSizeConstraint and notHaveConstraintsOnRoot and haveProperlyOrderedMaxSize
 
-      validator[AppVolume] { v =>
+      validator[AppPersistentVolume] { v =>
         v.containerPath is valid(notEqualTo("") and notOneOf(DotPaths: _*))
         v.containerPath is valid(matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\""))
         v.mode is equalTo(ReadMode.Rw) // see AppConversion, default is RW
-        v.persistent is valid(definedAnd(validPersistentInfo))
+        v.persistent is valid(validPersistentInfo)
       }
     }
-    val validExternalVolume: Validator[AppVolume] = {
+    val validExternalVolume: Validator[AppExternalVolume] = {
       import state.OptionLabelPatterns._
       val validOptions = validator[Map[String, String]] { option =>
         option.keys.each should matchRegex(OptionKeyRegex)
@@ -223,20 +225,21 @@ trait AppValidation {
       }
 
       forAll(
-        validator[AppVolume] { v =>
+        validator[AppExternalVolume] { v =>
           v.containerPath is valid(notEmpty)
-          v.external is valid(definedAnd(validExternalInfo))
+          v.external is valid(validExternalInfo)
         },
-        { v: AppVolume => v.external.exists(_.provider.nonEmpty) } -> ExternalVolumes.validRamlVolume(container),
+        { v: AppExternalVolume => v.external.provider.nonEmpty } -> ExternalVolumes.validRamlVolume(container),
         featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
       )
     }
     override def apply(v: AppVolume): Result = {
-      (v.persistent, v.external) match {
-        case (None, None) => validate(v)(validHostVolume)
-        case (Some(_), None) => validate(v)(validPersistentVolume)
-        case (None, Some(_)) => validate(v)(validExternalVolume)
-        case _ => Failure(Set(RuleViolation(v, "illegal combination of persistent and external volume fields", None)))
+      v match {
+        case v: AppDockerVolume => validate(v)(validHostVolume)
+        case v: AppPersistentVolume => validate(v)(validPersistentVolume)
+        case v: AppExternalVolume => validate(v)(validExternalVolume)
+        case v: AppSecretVolume => Success // no need for extra validation
+        case _ => Failure(Set(RuleViolation(v, "Unknown volume type", None)))
       }
     }
   }
@@ -427,7 +430,7 @@ trait AppValidation {
 
   private val complyWithResidencyRules: Validator[App] =
     isTrue("App must contain persistent volumes and define residency") { app =>
-      val hasPersistentVolumes = app.container.fold(false)(_.volumes.exists(_.persistent.nonEmpty))
+      val hasPersistentVolumes = app.container.fold(false)(_.volumes.collect{ case v: AppPersistentVolume => v }.nonEmpty)
       !(app.residency.isDefined ^ hasPersistentVolumes)
     }
 

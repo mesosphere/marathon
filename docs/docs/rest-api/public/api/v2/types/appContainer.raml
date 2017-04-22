@@ -176,7 +176,9 @@ types:
         default: DOCKER
       docker?: DockerContainer
       appc?: AppCContainer
-      volumes?: volumes.AppVolume[]
+      volumes?:
+        type: array
+        items: volumes.AppVolume
       portMappings?:
         type: ContainerPortMapping[]
         description: |
