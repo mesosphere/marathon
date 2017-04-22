@@ -18,7 +18,7 @@ import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{ AppConversion, Raml }
+import mesosphere.marathon.raml.{ AppConversion, AppExternalVolume, AppPersistentVolume, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -432,8 +432,8 @@ object AppsResource {
     val selectedStrategy = AppConversion.ResidencyAndUpgradeStrategy(
       residency = update.residency.map(Raml.fromRaml(_)),
       upgradeStrategy = update.upgradeStrategy.map(Raml.fromRaml(_)),
-      hasPersistentVolumes = update.container.exists(_.volumes.exists(_.persistent.nonEmpty)),
-      hasExternalVolumes = update.container.exists(_.volumes.exists(_.external.nonEmpty))
+      hasPersistentVolumes = update.container.exists(_.volumes.collect{ case v: AppPersistentVolume => v }.nonEmpty),
+      hasExternalVolumes = update.container.exists(_.volumes.collect{ case v: AppExternalVolume => v }.nonEmpty)
     )
     val template = AppDefinition(
       appId, residency = selectedStrategy.residency, upgradeStrategy = selectedStrategy.upgradeStrategy)

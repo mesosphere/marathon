@@ -4,6 +4,7 @@ uses:
   label: label.raml
   strings: stringTypes.raml
   pragma: pragma.raml
+  secrets: secrets.raml
 
 types:
   Volume:
@@ -75,7 +76,7 @@ types:
         type: label.KVLabels
         (pragma.omitEmpty):
         description: Provider specific volume configuration options
-  AppVolume:
+  AppDockerVolume:
     type: object
     properties:
       containerPath:
@@ -86,8 +87,44 @@ types:
         type: string
         minLength: 1
         description: The path of the volume on the host
-      persistent?: PersistentVolume
-      external?: ExternalVolume
       mode:
         type: strings.ReadMode
         description: Possible values are RO for ReadOnly and RW for Read/Write
+  AppPersistentVolume:
+    type: object
+    properties:
+      containerPath:
+        type: string
+        minLength: 1
+        description: The path of the volume in the container
+      hostPath?:
+        type: string
+        minLength: 1
+        description: The path of the volume on the host
+      persistent: PersistentVolume
+      mode:
+        type: strings.ReadMode
+        description: Possible values are RO for ReadOnly and RW for Read/Write
+  AppExternalVolume:
+    type: object
+    properties:
+      containerPath:
+        type: string
+        minLength: 1
+        description: The path of the volume in the container
+      hostPath?:
+        type: string
+        minLength: 1
+        description: The path of the volume on the host
+      external: ExternalVolume
+      mode:
+        type: strings.ReadMode
+        description: Possible values are RO for ReadOnly and RW for Read/Write
+  AppSecretVolume:
+    type: object
+    properties:
+      secret:
+        type: secrets.SecretDef
+        description: Secret that is used by this volume
+  AppVolume:
+    type: AppDockerVolume | AppPersistentVolume | AppExternalVolume | AppSecretVolume

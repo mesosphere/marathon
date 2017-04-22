@@ -3,7 +3,7 @@ package core.externalvolume
 
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
-import mesosphere.marathon.raml.AppVolume
+import mesosphere.marathon.raml.{ AppExternalVolume, AppVolume }
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo
 
@@ -49,7 +49,7 @@ object ExternalVolumes {
     override def apply(app: raml.App): Result = {
       val appProviders: Set[ExternalVolumeProvider] = {
         val wantedProviders: Set[String] = app.container.fold(Set.empty[String]) {
-          _.volumes.flatMap(_.external.flatMap(_.provider))(collection.breakOut)
+          _.volumes.collect{ case v: AppExternalVolume => v }.flatMap(_.external.flatMap(_.provider))(collection.breakOut)
         }
         wantedProviders.flatMap(wanted => providers.get(wanted))
       }
