@@ -21,41 +21,6 @@ sealed trait Volume {
 }
 
 object Volume {
-  def apply(
-    containerPath: String,
-    hostPath: Option[String],
-    mode: Mesos.Volume.Mode,
-    persistent: Option[PersistentVolumeInfo],
-    external: Option[ExternalVolumeInfo]): Volume = {
-
-    persistent match {
-      case Some(persistentVolumeInfo) =>
-        if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
-        if (external.isDefined) throw new IllegalArgumentException("external may not be set with persistent")
-        PersistentVolume(
-          containerPath = containerPath,
-          persistent = persistentVolumeInfo,
-          mode = mode
-        )
-      case None =>
-        external match {
-          case Some(externalVolumeInfo) =>
-            if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
-            ExternalVolume(
-              containerPath = containerPath,
-              external = externalVolumeInfo,
-              mode = mode
-            )
-          case None =>
-            DockerVolume(
-              containerPath = containerPath,
-              hostPath = hostPath.getOrElse(""),
-              mode = mode
-            )
-        }
-    }
-  }
-
   def apply(proto: Protos.Volume): Volume = {
     if (proto.hasPersistent)
       PersistentVolume(

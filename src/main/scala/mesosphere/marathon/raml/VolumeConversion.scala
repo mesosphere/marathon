@@ -105,7 +105,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       case AppSecretVolume(secret: SecretDef) =>
         ??? // TODO: Provide implementation
       case AppDockerVolume(ctPath, hostPath, mode) =>
-        state.Volume(containerPath = ctPath, hostPath = hostPath, mode = mode.fromRaml, persistent = None, external = None)
+        state.DockerVolume(containerPath = ctPath, hostPath = hostPath.getOrElse(""), mode = mode.fromRaml)
       case v => failed(s"illegal volume specification $v")
     }
     result
