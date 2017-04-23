@@ -6,7 +6,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.validation.SchedulingValidation
 import mesosphere.marathon.core.externalvolume.impl.providers.OptionSupport._
 import mesosphere.marathon.core.externalvolume.impl.{ ExternalVolumeProvider, ExternalVolumeValidations }
-import mesosphere.marathon.raml.{ App, AppExternalVolume, AppVolume, EngineType, ReadMode, Container => AppContainer }
+import mesosphere.marathon.raml.{ App, AppExternalVolume, EngineType, ReadMode, Container => AppContainer }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Volume.Mode
