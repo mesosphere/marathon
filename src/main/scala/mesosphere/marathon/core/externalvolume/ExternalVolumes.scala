@@ -3,7 +3,7 @@ package core.externalvolume
 
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
-import mesosphere.marathon.raml.{ AppExternalVolume, AppVolume }
+import mesosphere.marathon.raml.AppExternalVolume
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo
 
