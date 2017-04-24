@@ -6,7 +6,7 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
-import mesosphere.marathon.raml.{ App, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolume, PortDefinition, PortDefinitions, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolume, PortDefinition, PortDefinitions, ReadMode, UnreachableDisabled, UpgradeStrategy }
 import mesosphere.marathon.state.PathId
 import org.slf4j.LoggerFactory
 
@@ -275,9 +275,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
       val appId: PathId = PathId(s"/$testBasePath/app-${IdGenerator.generate()}")
 
-      val persistentVolume: AppVolume = AppVolume(
+      val persistentVolume: AppVolume = AppPersistentVolume(
         containerPath = containerPath,
-        persistent = Some(PersistentVolume(size = persistentVolumeSize)),
+        persistent = PersistentVolume(size = persistentVolumeSize),
         mode = ReadMode.Rw
       )
 

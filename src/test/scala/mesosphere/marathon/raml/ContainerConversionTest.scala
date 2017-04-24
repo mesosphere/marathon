@@ -253,5 +253,5 @@ class ContainerConversionTest extends UnitTest {
     labels = Map("wer" -> "rty")
   )
   private lazy val coreHostVolume = state.DockerVolume("cpath", "/host/path", Mesos.Volume.Mode.RW)
-  private lazy val ramlHostVolume = AppVolume("cpath", Option("/host/path"), mode = ReadMode.Rw)
+  private lazy val ramlHostVolume = AppDockerVolume("cpath", Option("/host/path"), mode = ReadMode.Rw)
 }

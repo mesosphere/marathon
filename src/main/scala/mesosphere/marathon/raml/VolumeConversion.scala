@@ -62,54 +62,58 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     }
   }
 
-  implicit val volumeReads: Reads[AppVolume, state.Volume] = Reads { vol =>
-    def failed[T](msg: String): T =
-      throw SerializationFailedException(msg)
-
-    val result: state.Volume = vol match {
-      case AppExternalVolume(ctPath, Some(hostPath), external, mode) =>
-        val info = ExternalVolumeInfo(
-          size = external.size,
-          name = external.name.getOrElse(failed("external volume requires a name")),
-          provider = external.provider.getOrElse(failed("external volume requires a provider")),
-          options = external.options
-        )
-        state.ExternalVolume(containerPath = ctPath, external = info, mode = mode.fromRaml)
-      case AppPersistentVolume(ctPath, hostPath, persistent, mode) =>
-        val volType = persistent.`type` match {
-          case Some(definedType) => definedType match {
-            case PersistentVolumeType.Root => DiskType.Root
-            case PersistentVolumeType.Mount => DiskType.Mount
-            case PersistentVolumeType.Path => DiskType.Path
-          }
-          case None => DiskType.Root
-        }
-        val info = PersistentVolumeInfo(
-          size = persistent.size,
-          maxSize = persistent.maxSize,
-          `type` = volType,
-          constraints = persistent.constraints.map { constraint =>
-            (constraint.headOption, constraint.lift(1), constraint.lift(2)) match {
-              case (Some("path"), Some("LIKE"), Some(value)) =>
-                Protos.Constraint.newBuilder()
-                  .setField("path")
-                  .setOperator(Protos.Constraint.Operator.LIKE)
-                  .setValue(value)
-                  .build()
-              case _ =>
-                throw SerializationFailedException(s"illegal volume constraint ${constraint.mkString(",")}")
-            }
-          }(collection.breakOut)
-        )
-        state.PersistentVolume(containerPath = ctPath, persistent = info, mode = mode.fromRaml)
-      case AppSecretVolume(secret: SecretDef) =>
-        ??? // TODO: Provide implementation
-      case AppDockerVolume(ctPath, hostPath, mode) =>
-        state.DockerVolume(containerPath = ctPath, hostPath = hostPath.getOrElse(""), mode = mode.fromRaml)
-      case v => failed(s"illegal volume specification $v")
-    }
-    result
+  implicit val volumeReads: Reads[AppVolume, state.Volume] = Reads {
+    case v: AppExternalVolume => volumeExternalReads.read(v)
+    case v: AppPersistentVolume => volumePersistentReads.read(v)
+    case v: AppDockerVolume => volumeDockerReads.read(v)
+    case v: AppSecretVolume => volumeSecretReads.read(v)
   }
+
+  implicit val volumeExternalReads: Reads[AppExternalVolume, state.Volume] = Reads { vol =>
+    val info = ExternalVolumeInfo(
+      size = vol.external.size,
+      name = vol.external.name.getOrElse(throw SerializationFailedException("external volume requires a name")),
+      provider = vol.external.provider.getOrElse(throw SerializationFailedException("external volume requires a provider")),
+      options = vol.external.options
+    )
+    state.ExternalVolume(containerPath = vol.containerPath, external = info, mode = vol.mode.fromRaml)
+  }
+
+  implicit val volumePersistentReads: Reads[AppPersistentVolume, state.Volume] = Reads { vol =>
+    val persistent = vol.persistent
+    val volType = persistent.`type` match {
+      case Some(definedType) => definedType match {
+        case PersistentVolumeType.Root => DiskType.Root
+        case PersistentVolumeType.Mount => DiskType.Mount
+        case PersistentVolumeType.Path => DiskType.Path
+      }
+      case None => DiskType.Root
+    }
+    val info = PersistentVolumeInfo(
+      size = persistent.size,
+      maxSize = persistent.maxSize,
+      `type` = volType,
+      constraints = persistent.constraints.map { constraint =>
+        (constraint.headOption, constraint.lift(1), constraint.lift(2)) match {
+          case (Some("path"), Some("LIKE"), Some(value)) =>
+            Protos.Constraint.newBuilder()
+              .setField("path")
+              .setOperator(Protos.Constraint.Operator.LIKE)
+              .setValue(value)
+              .build()
+          case _ =>
+            throw SerializationFailedException(s"illegal volume constraint ${constraint.mkString(",")}")
+        }
+      }(collection.breakOut)
+    )
+    state.PersistentVolume(containerPath = vol.containerPath, persistent = info, mode = vol.mode.fromRaml)
+  }
+
+  implicit val volumeDockerReads: Reads[AppDockerVolume, state.Volume] = Reads { vol =>
+    state.DockerVolume(containerPath = vol.containerPath, hostPath = vol.hostPath.getOrElse(""), mode = vol.mode.fromRaml)
+  }
+
+  implicit val volumeSecretReads: Reads[AppSecretVolume, state.Volume] = Reads { vol => ??? } // TODO adju implement
 
   implicit val appVolumeExternalProtoRamlWriter: Writes[Protos.Volume.ExternalVolumeInfo, ExternalVolume] = Writes { vol =>
     ExternalVolume(
@@ -138,7 +142,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     )
   }
 
-  implicit val appDockerVolumeProtoRamlWriter: Writes[Protos.Volume, AppVolume] = Writes {
+  implicit val appVolumeProtoRamlWriter: Writes[Protos.Volume, AppVolume] = Writes {
     case vol if vol.hasExternal => AppExternalVolume(
       containerPath = vol.getContainerPath,
       hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppDockerVolume.DefaultHostPath),
