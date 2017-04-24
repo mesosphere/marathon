@@ -53,7 +53,7 @@ class VolumeConversionTest extends UnitTest {
       val raml = volume.toRaml[AppVolume]
       behave like convertToProtobufThenToRAML(volume, raml)
       "convert all fields to RAML" in {
-        raml shouldBe a[AppPersistentVolume]
+        raml shouldBe a[AppExternalVolume]
         val externalRaml = raml.asInstanceOf[AppExternalVolume]
         externalRaml.containerPath should be(volume.containerPath)
         externalRaml.hostPath should be(empty)

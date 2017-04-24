@@ -124,15 +124,13 @@ trait AppValidation {
   def validContainer(enabledFeatures: Set[String], networks: Seq[Network]): Validator[Container] = {
     def volumesValidator(container: Container): Validator[Seq[AppVolume]] =
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
-        val names: Seq[String] = vols.flatMap {
-          case a: AppExternalVolume => a.external.name
-        }
+        val names: Seq[String] = vols.collect{ case v: AppExternalVolume => v.external.name }.flatten
         names.distinct.size == names.size
       } and every(valid(validVolume(container, enabledFeatures)))
 
     val validGeneralContainer: Validator[Container] = validator[Container] { container =>
       container.portMappings is optional(portMappingsValidator(networks))
-      container.volumes.collect{ case v: AppVolume => v } is volumesValidator(container)
+      container.volumes is volumesValidator(container)
     }
 
     val mesosContainerImageValidator = new Validator[Container] {
