@@ -23,6 +23,7 @@ object Dependencies {
     akkaStream % "compile",
     akkaHttp % "compile",
     asyncAwait % "compile",
+    aws % "compile",
     chaos % "compile",
     mesos % "compile",
     jodaTime % "compile",
@@ -77,7 +78,8 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Alpakka  = "0.6"
+    val Aws = "1.11.123"
+    val Alpakka  = "0.7"
     val Chaos = "0.8.8"
     val Guava = "19.0"
     val Mesos = "1.2.0"
@@ -120,6 +122,7 @@ object Dependency {
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
   val excludeJavaxServlet = ExclusionRule(organization = "javax.servlet")
 
+  val aws = "com.amazonaws" % "aws-java-sdk-core" % V.Aws
   val alpakkaS3 = "com.lightbend.akka" %% "akka-stream-alpakka-s3" % V.Alpakka
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka

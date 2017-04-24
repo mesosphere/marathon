@@ -169,7 +169,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Currently two providers are allowed: 
     - File provider: file:///path/to/file
     - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1 
-    
+      Please note: access_key and secret_key are optional.
+      If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 

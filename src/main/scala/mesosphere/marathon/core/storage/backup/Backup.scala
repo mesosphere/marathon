@@ -24,8 +24,6 @@ abstract class BackupRestoreAction extends StrictLogging {
 
   class BackupConfig(args: Seq[String]) extends ScallopConf(args) with StorageConf with NetworkConf {
     override def availableFeatures: Set[String] = Set.empty
-    override lazy val defaultNetworkName = opt[String]()
-    override lazy val mesosBridgeName = opt[String]()
     verify()
     require(backupLocation.isDefined, "--backup_location needs to be defined!")
   }
