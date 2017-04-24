@@ -34,7 +34,7 @@ class EventSubscriptionsResource @Inject() (
   @POST
   def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
-      withAuthorization(ViewResource, AuthorizedResource.Events) {
+      withAuthorization(UpdateResource, AuthorizedResource.Events) {
         withValid(callbackUrl) { callback =>
           val future: Future[MarathonEvent] = service.handleSubscriptionEvent(
             Subscribe(req.getRemoteAddr, callback))
@@ -46,7 +46,7 @@ class EventSubscriptionsResource @Inject() (
   @DELETE
   def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
-      withAuthorization(ViewResource, AuthorizedResource.Events) {
+      withAuthorization(UpdateResource, AuthorizedResource.Events) {
         val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
         ok(jsonString(eventToJson(result(future))))
       }
