@@ -138,14 +138,25 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     )
   }
 
-  implicit val appVolumeProtoRamlWriter: Writes[Protos.Volume, AppVolume] = Writes { vol =>
-    AppVolume(
+  implicit val appDockerVolumeProtoRamlWriter: Writes[Protos.Volume, AppVolume] = Writes {
+    case vol if vol.hasExternal => AppExternalVolume(
       containerPath = vol.getContainerPath,
-      hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppVolume.DefaultHostPath),
-      persistent = vol.when(_.hasPersistent, _.getPersistent.toRaml).orElse(AppVolume.DefaultPersistent),
-      external = vol.when(_.hasExternal, _.getExternal.toRaml).orElse(AppVolume.DefaultExternal),
+      hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppDockerVolume.DefaultHostPath),
+      external = vol.getExternal.toRaml,
       mode = vol.getMode.toRaml
     )
+    case vol if vol.hasPersistent => AppPersistentVolume(
+      containerPath = vol.getContainerPath,
+      hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppDockerVolume.DefaultHostPath),
+      persistent = vol.getPersistent.toRaml,
+      mode = vol.getMode.toRaml
+    )
+    case vol => AppDockerVolume(
+      containerPath = vol.getContainerPath,
+      hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppDockerVolume.DefaultHostPath),
+      mode = vol.getMode.toRaml
+    )
+    // TODO adju secrets?
   }
 }
 
