@@ -27,7 +27,8 @@ libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.0",
   "com.eed3si9n" %% "treehugger" % "0.4.1",
   "org.slf4j" % "slf4j-nop" % "1.7.22",
-  "org.vafer" % "jdeb" % "1.3" artifacts Artifact("jdeb", "jar", "jar")
+  "org.vafer" % "jdeb" % "1.3" artifacts Artifact("jdeb", "jar", "jar"),
+  "com.typesafe.play" %% "play-json" % "2.4.11"
 )
 
 sbtPlugin := true

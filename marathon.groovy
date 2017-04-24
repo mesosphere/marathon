@@ -52,13 +52,6 @@ def phabricator_test_results(status) {
   return this
 }
 
-// Convert the test coverage into a "fake" unit test result so that
-// phabricator_test_results can consume it and report the coverage.
-def phabricator_convert_test_coverage(String name, path) {
-  sh """sudo sh -c '/usr/local/bin/amm scripts/convert_test_coverage.sc $name $path > target/phabricator-test-reports/${name}.json' """
-  return this
-}
-
 // Publish the test coverage information into the build.
 // When we finally have the publishHtml plugin, this will hopefully work.
 def publish_test_coverage(name, dir) {
@@ -295,9 +288,6 @@ def test() {
   } finally {
     junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
     publish_test_coverage("Test", "target/test-coverage")
-    if (is_phabricator_build()) {
-      phabricator_convert_test_coverage("Test", "target/test-coverage/coverage-report/cobertura.xml")
-    }
   }
 }
 
@@ -313,9 +303,6 @@ def integration_test() {
   } finally {
     junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/**/*.xml'
     publish_test_coverage("integration test", "target/integration-coverage")
-    if (is_phabricator_build()) {
-      phabricator_convert_test_coverage("Integration", "target/integration-coverage/coverage-report/cobertura.xml")
-    }
   }
 }
 
@@ -341,10 +328,6 @@ def unstable_test() {
     junit allowEmptyResults: true, testResults: 'target/test-reports/unstable/**/*.xml'
     publish_test_coverage("Unstable Test", "target/unstable-coverage")
     publish_test_coverage("Unstable Integration Test", "target/unstable-integration-coverage")
-    if (is_phabricator_build()) {
-      phabricator_convert_test_coverage("Unstable", "target/unstable-coverage/coverage-report/cobertura.xml")
-      phabricator_convert_test_coverage("Unstable-Integration", "target/unstable-integration-coverage/coverage-report/cobertura.xml")
-    }
   }
 }
 

@@ -1,3 +1,4 @@
+import play.api.libs.json.Json
 import sbt._
 import sbt.Keys._
 import sbt.plugins.JvmPlugin
@@ -11,7 +12,7 @@ object TestWithCoveragePlugin extends AutoPlugin {
 
   object autoImport {
     val testWithCoverageReport: TaskKey[Unit] = taskKey[Unit]("Runs tests with coverage")
-    val coverageDir: SettingKey[File] = settingKey[File]("Directory to ouput coverage into")
+    val coverageDir: SettingKey[File] = settingKey[File]("Directory to output coverage into")
 
   }
   import autoImport._
@@ -40,7 +41,48 @@ object TestWithCoveragePlugin extends AutoPlugin {
     }
   }
 
-  def writeCoverageReport(sourceDirs: Seq[File], coverage: Coverage, outputDir: File, log: Logger): Unit = {
+  case class HMTest(name: String, coverage: Map[String, String], result: String = "pass")
+  implicit val hmtestFormat = Json.format[HMTest]
+
+  /**
+    * Convert test coverage data into the format that Phabricator/Harbormaster understands which is actually a
+    * 'fake' unit test.
+    *
+    * {{{
+    * {
+    *    "name": "Test Coverage"
+    *    "result": "pass"
+    *    "coverage": {
+    *       "file": "NNUCCC"
+    *    }
+    * }
+    * }}}
+    *
+    * N = Not Executable
+    * U = Not Covered
+    * C = Covered
+    */
+  def writePhabricator(file: File, name: String, baseDir: File, coverage: Coverage): Unit = {
+    val fileLineCoverage: Map[String, Map[Int, Int]] = coverage.statements.groupBy(_.source).map { case (sourceFile, statements) =>
+      val lineCoverage = statements.groupBy(_.line).map { case (line, lineStatements) =>
+        line -> lineStatements.map(_.count).sum
+      }
+      (new File(sourceFile)).getAbsolutePath.replaceAll(s"${baseDir.getAbsolutePath}/", "") -> lineCoverage
+    }
+    val phabCoverage: Map[String, String] = fileLineCoverage.map { case (file, lineData) =>
+      file -> 1.to(lineData.keys.max).map { lineNo =>
+        lineData.get(lineNo) match {
+          case None => "N"
+          case Some(x) if x < 1 => "U"
+          case Some(x) => "C"
+        }
+      }.mkString("")
+    }(collection.breakOut)
+
+    IO.write(file, Json.stringify(Json.toJson(Seq(HMTest(s"$name Coverage", phabCoverage)))))
+  }
+
+  def writeCoverageReport(name: String, sourceDirs: Seq[File], coverage: Coverage, outputDir: File, target: File, baseDir: File, log: Logger): Unit = {
     log.info(s"Generating scoverage reports")
     outputDir.mkdirs()
     val coberturaDir = outputDir / "coverage-report"
@@ -48,12 +90,16 @@ object TestWithCoveragePlugin extends AutoPlugin {
     val reportDir = outputDir / "scoverage-report"
     reportDir.mkdirs()
 
+    val phabricatorFile = target / "phabricator-test-reports" / s"$name-coverage.json"
+
     log.info(s"Writing Cobertura report to ${coberturaDir / "cobertura.xml"}")
     new CoberturaXmlWriter(sourceDirs, coberturaDir).write(coverage)
     log.info(s"Writing XML coverage report ${reportDir / "scoverage.xml" }")
     new ScoverageXmlWriter(sourceDirs, reportDir, false).write(coverage)
     log.info(s"Writing HTML coverage report to ${reportDir / "index.html" }")
     new ScoverageHtmlWriter(sourceDirs, reportDir, None).write(coverage)
+    log.info(s"Writing Phabricator coverage report to $phabricatorFile")
+    writePhabricator(phabricatorFile, name, baseDir, coverage)
     log.info(s"Statement coverage.: ${coverage.statementCoverageFormatted}%")
     log.info(s"Branch coverage...: ${coverage.branchCoverageFormatted}%")
     log.info(s"Coverage reports completed")
@@ -79,17 +125,17 @@ object TestWithCoveragePlugin extends AutoPlugin {
     }
   }
 
-  def runTestsWithCoverage(config: Configuration, target: File, sourceDirs: Seq[File], outputDir: File, log: Logger, coverageMinimum: Double, failOnMinimum: Boolean): Def.Initialize[Task[Unit]] = Def.task {
+  def runTestsWithCoverage(config: Configuration, target: File, baseDir: File, sourceDirs: Seq[File], outputDir: File, log: Logger, coverageMinimum: Double, failOnMinimum: Boolean): Def.Initialize[Task[Unit]] = Def.task {
     (test in config).andFinally {
       loadCoverage(target, log).foreach { coverage =>
-        writeCoverageReport(sourceDirs, coverage, outputDir, log)
+        writeCoverageReport(config.name, sourceDirs, coverage, outputDir, target, baseDir, log)
         checkCoverage(coverage, log, coverageMinimum, failOnMinimum)
       }
     }.value
   }
 
   def runTestsWithCoverage(config: Configuration): Def.Initialize[Task[Unit]] = Def.taskDyn {
-    runTestsWithCoverage(config, target.value, (sourceDirectories in Compile).value,
+    runTestsWithCoverage(config, target.value, baseDirectory.value, (sourceDirectories in Compile).value,
       (coverageDir in config).value, streams.value.log, (coverageMinimum in config).value,
       (coverageFailOnMinimum in config).value)
   }
