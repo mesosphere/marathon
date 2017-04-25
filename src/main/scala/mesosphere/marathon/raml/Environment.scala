@@ -14,12 +14,12 @@ object Environment {
       def withSecrets(nameToSecretRef: (String, String)*): Map[String, EnvVarValueOrSecret] = {
         env ++ nameToSecretRef.map {
           case (name, secretRef) =>
-            name -> EnvVarSecretRef(secretRef)
+            name -> EnvVarSecret(EnvVarSecretRef(secretRef))
         }
       }
 
       def withSecrets(namesToSecretRefs: Map[String, String]): Map[String, EnvVarValueOrSecret] = {
-        env ++ namesToSecretRefs.mapValues(EnvVarSecretRef(_))
+        env ++ namesToSecretRefs.mapValues(v => EnvVarSecret(EnvVarSecretRef(v)))
       }
     }
   }

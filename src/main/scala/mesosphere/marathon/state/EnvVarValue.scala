@@ -11,6 +11,7 @@ sealed trait EnvVarValue extends plugin.EnvVarValue {
       v match {
         case s: EnvVarString => validate(s)(EnvVarString.valueValidator)
         case r: EnvVarSecretRef => validate(r)(EnvVarSecretRef.valueValidator)
+        case d: EnvVarSecretDef => validate(d)(EnvVarSecretDef.valueValidator)
       }
   }
 }
@@ -22,6 +23,10 @@ sealed trait EnvVarRef extends EnvVarValue {
 case class EnvVarString(value: String) extends EnvVarValue with plugin.EnvVarString
 
 case class EnvVarSecretRef(secret: String) extends EnvVarRef with plugin.EnvVarSecretRef {
+  override lazy val appValidator = EnvVarSecretRef.appValidator
+}
+
+case class EnvVarSecretDef(secret: Secret) extends EnvVarRef with plugin.EnvVarSecretDef {
   override lazy val appValidator = EnvVarSecretRef.appValidator
 }
 
@@ -61,6 +66,11 @@ object EnvVarValue {
 object EnvVarString {
   import com.wix.accord.combinators.NilValidator
   lazy val valueValidator = new NilValidator[EnvVarString]
+}
+
+object EnvVarSecretDef {
+  import com.wix.accord.combinators.NilValidator
+  lazy val valueValidator = new NilValidator[EnvVarSecretDef]
 }
 
 object EnvVarSecretRef {

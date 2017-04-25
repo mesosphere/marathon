@@ -539,7 +539,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecretRef("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.EnvVarSecretRef("foo"))))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -566,7 +566,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecretRef("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.EnvVarSecretRef("foo"))))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -587,7 +587,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecretRef("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.EnvVarSecretRef("foo"))))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")

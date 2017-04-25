@@ -1,19 +1,23 @@
 #%RAML 1.0 Library
 uses:
   strings: stringTypes.raml
+  secrets: secrets.raml
 types:
   EnvVarValue:
     type: string
-  EnvVarSecretRef:
+  EnvVarSecret:
     type: object
     description: An environment variable set to a secret
     properties:
       secret:
-        type: string
+        type: EnvVarSecretRefOrSecretDef
         description: |
           The name of the secret to refer to. At runtime, the value of the
           secret will be injected into the value of the variable.
-  EnvVarValueOrSecret: (EnvVarValue | EnvVarSecretRef)
+  EnvVarSecretRefOrSecretDef: (secrets.SecretDef | EnvVarSecretRef)
+  EnvVarSecretRef:
+    type: string
+  EnvVarValueOrSecret: (EnvVarValue | EnvVarSecret)
   EnvVars:
     type: object
     properties:

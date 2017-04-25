@@ -13,3 +13,8 @@ trait EnvVarString extends EnvVarValue {
 trait EnvVarSecretRef extends EnvVarValue {
   def secret: String
 }
+
+/** EnvVarSecretRef refers to a secret ID that's declared within an app definition */
+trait EnvVarSecretDef extends EnvVarValue {
+  def secret: Secret
+}
