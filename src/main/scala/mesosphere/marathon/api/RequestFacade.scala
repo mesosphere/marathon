@@ -22,5 +22,5 @@ class RequestFacade(request: HttpServletRequest, path: String) extends HttpReque
   override def requestPath: String = path
   override def cookie(name: String): Option[String] = cookies.find(_.getName == name).map(_.getValue)
   override def queryParam(name: String): Seq[String] = Option(params.get(name)).map(_.to[Seq]).getOrElse(Seq.empty)
-  override def method: String = request.getMethod
+  val method: String = request.getMethod
 }
