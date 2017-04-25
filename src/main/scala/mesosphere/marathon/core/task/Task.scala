@@ -122,7 +122,7 @@ object Task {
     private val LegacyTaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
 
     // Regular expression for matching taskIds since instance-era
-    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
+    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._](.+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 

@@ -7,6 +7,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Features
 import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Constraint, Endpoint, EnvVarSecretRef, EnvVarValueOrSecret, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, SecretDef, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
 import mesosphere.marathon.state.{ PathId, ResourceRole }
 import mesosphere.marathon.util.SemanticVersion
@@ -336,6 +337,18 @@ trait PodsValidation {
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
+  }
+
+  // Marathon 1.4.0 did not introduce a validation rule for container names.
+  // Introducing this rule needs to allow existing (possibly wrong) container names.
+  // A migration can not fix this problem, since the task id is generated from the container name
+  // and there might be started tasks.
+  // In a later version this validation rule should be applied in the default validator.
+  val validPodContainerUpdate: Validator[MesosContainer] = validator[MesosContainer] { container =>
+    container.name should matchRegexFully("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
+  }
+  val validPodUpdate: Validator[PodDefinition] = validator[PodDefinition] { pod =>
+    pod.containers is every(validPodContainerUpdate)
   }
 }
 
