@@ -100,20 +100,6 @@ def kill_junk() {
   sh "/usr/local/bin/amm scripts/kill_stale_test_processes.sc"
 }
 
-// Install job-level dependencies that aren't specific to the build and
-// can be required as part of checkout and should be applied before knowing
-// the revision's information. e.g. JQ is required to post to phabricator.
-// This should generally be fixed in the AMI, eventually.
-// MARATHON-7026
-def install_dependencies() {
-  sh "chmod 0600 ~/.arcrc"
-  // JQ is broken in the image
-  sh "curl -L https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 > /tmp/jq && sudo mv /tmp/jq /usr/bin/jq && sudo chmod +x /usr/bin/jq"
-  // install ammonite (scala shell)
-  sh """sudo curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm"""
-  return this
-}
-
 def clean_git() {
   sh "sudo git clean -fdx && git tag | grep phabricator | git tag -d"
   return this
@@ -225,7 +211,6 @@ def setBuildInfo(displayName, description) {
 
 // Note: If any of this content changes, you need to follow the testing process listed in Jenkinsfile.
 def checkout_marathon() {
-  install_dependencies()
   if (is_phabricator_build()) {
     if (is_submit_request()) {
       setBuildInfo("D$REVISION_ID -> $TARGET_BRANCH #$BUILD_NUMBER", "<a href=\"https://phabricator.mesosphere.com/D$REVISION_ID\">D$REVISION_ID</a>")
