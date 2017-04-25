@@ -49,7 +49,7 @@ class LeaderResourceTest extends UnitTest {
     val electionService = mock[ElectionService]
     val runtimeRepo = mock[RuntimeConfigurationRepository]
     val auth = new TestAuthFixture
-    val config = AllConf.withTestConfig("--event_subscriber", "http_callback")
+    val config = AllConf.withTestConfig()
     def leaderResource() = new LeaderResource(electionService, config, runtimeRepo, auth.auth, auth.auth)
   }
 }

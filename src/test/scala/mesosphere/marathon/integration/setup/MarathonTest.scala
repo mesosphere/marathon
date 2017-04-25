@@ -94,7 +94,6 @@ case class LocalMarathon(
     "zk_timeout" -> 20.seconds.toMillis.toString,
     "zk_session_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
-    "event_subscriber" -> "http_callback",
     "access_control_allow_origin" -> "*",
     "reconciliation_initial_delay" -> 5.minutes.toMillis.toString,
     "min_revive_offers_interval" -> "100",
@@ -362,7 +361,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     }
   }
 
-  def cleanUp(withSubscribers: Boolean = false): Unit = {
+  def cleanUp(): Unit = {
     logger.info("Starting to CLEAN UP !!!!!!!!!!")
     events.clear()
 
@@ -396,7 +395,6 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       events.clear()
       healthChecks(_.clear())
       killAppProxies()
-      if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
     } catch {
       case NonFatal(e) => logger.error("Clean up failed with", e)
     }
@@ -764,9 +762,9 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
     marathonFacades.find(!_.url.contains(leader.port.toString)).get
   }
 
-  override def cleanUp(withSubscribers: Boolean): Unit = {
+  override def cleanUp(): Unit = {
     Future.sequence(marathonServer.start() +: additionalMarathons.map(_.start())).futureValue
-    super.cleanUp(withSubscribers)
+    super.cleanUp()
   }
 }
 

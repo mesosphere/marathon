@@ -10,7 +10,6 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
-import mesosphere.marathon.storage.migration.legacy.MigrationTo_1_4_2
 import mesosphere.marathon.storage.StorageConfig
 import mesosphere.marathon.storage.repository._
 
@@ -38,7 +37,6 @@ class Migration(
     private[migration] val instanceRepo: InstanceRepository,
     private[migration] val taskFailureRepo: TaskFailureRepository,
     private[migration] val frameworkIdRepo: FrameworkIdRepository,
-    private[migration] val eventSubscribersRepo: EventSubscribersRepository,
     private[migration] val serviceDefinitionRepo: ServiceDefinitionRepository,
     private[migration] val runtimeConfigurationRepository: RuntimeConfigurationRepository,
     private[migration] val backup: PersistentStoreBackup,
@@ -58,10 +56,10 @@ class Migration(
   def migrations: List[MigrationAction] =
     List(
       StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
-        new MigrationTo_1_4_2(appRepository).migrate()
+        new MigrationTo142(appRepository).migrate()
       },
       StorageVersions(1, 5, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> (() =>
-        MigrationTo1_5(this).migrate()
+        MigrationTo15(this).migrate()
       )
     )
 
@@ -132,7 +130,8 @@ class Migration(
       migrations
     }.recover {
       case ex: MigrationFailedException => throw ex
-      case NonFatal(ex) => throw new MigrationFailedException(s"Migration Failed: ${ex.getMessage} ${ex.getStackTrace.mkString}", ex)
+      case NonFatal(ex) =>
+        throw new MigrationFailedException(s"Migration Failed: ${ex.getMessage}", ex)
     }
   }
 

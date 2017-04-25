@@ -9,7 +9,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
@@ -19,7 +19,6 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
-import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
 
@@ -224,21 +223,6 @@ object RuntimeConfigurationRepository {
   }
 }
 
-trait EventSubscribersRepository extends SingletonRepository[EventSubscribers]
-
-object EventSubscribersRepository {
-
-  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): EventSubscribersRepository = {
-    import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new EventSubscribersRepositoryImpl(persistenceStore)
-  }
-
-  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): EventSubscribersRepository = {
-    import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new EventSubscribersRepositoryImpl(persistenceStore)
-  }
-}
-
 class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[PathId, AppDefinition, C, K],
   marhaller: Marshaller[AppDefinition, S],
@@ -361,18 +345,5 @@ class RuntimeConfigurationRepositoryImpl[K, C, S](persistenceStore: PersistenceS
   private val repo = new PersistenceStoreRepository[String, RuntimeConfiguration, K, C, S](persistenceStore, _ => ID)
   override def get(): Future[Option[RuntimeConfiguration]] = repo.get(ID)
   override def store(v: RuntimeConfiguration): Future[Done] = repo.store(v)
-  override def delete(): Future[Done] = repo.delete(ID)
-}
-
-class EventSubscribersRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
-    implicit
-    ir: IdResolver[String, EventSubscribers, C, K],
-    marshaller: Marshaller[EventSubscribers, S],
-    unmarshaller: Unmarshaller[S, EventSubscribers]
-) extends EventSubscribersRepository {
-  private val ID = "id"
-  private val repo = new PersistenceStoreRepository[String, EventSubscribers, K, C, S](persistenceStore, _ => ID)
-  override def get(): Future[Option[EventSubscribers]] = repo.get(ID)
-  override def store(v: EventSubscribers): Future[Done] = repo.store(v)
   override def delete(): Future[Done] = repo.delete(ID)
 }

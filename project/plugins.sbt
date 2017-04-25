@@ -32,3 +32,4 @@ libraryDependencies ++= Seq(
 )
 
 sbtPlugin := true
+

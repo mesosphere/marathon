@@ -1,18 +1,23 @@
 package mesosphere.marathon
 package integration.facades
 
-import com.typesafe.scalalogging.StrictLogging
 import java.util.Date
 
 import akka.NotUsed
-import akka.stream.Materializer
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding.{ Delete, Get, Patch, Post, Put }
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.Accept
+import akka.http.scaladsl.unmarshalling.{ Unmarshal => AkkaUnmarshal }
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import de.heikoseeberger.akkasse.EventStreamUnmarshalling
-import mesosphere.marathon.core.event.{ EventSubscribers, Subscribe, Unsubscribe }
+import com.typesafe.scalalogging.StrictLogging
+import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
+import de.heikoseeberger.akkasse.{ EventStreamUnmarshalling, ServerSentEvent }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{ AkkaHttpResponse, RestResult }
 import mesosphere.marathon.raml.{ App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml }
@@ -22,13 +27,6 @@ import mesosphere.marathon.util.Retry
 import org.slf4j.LoggerFactory
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.client.RequestBuilding.{ Delete, Get, Patch, Post, Put }
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.Accept
-import akka.http.scaladsl.unmarshalling.{ Unmarshal => AkkaUnmarshal }
-import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
-import de.heikoseeberger.akkasse.ServerSentEvent
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
@@ -98,7 +96,6 @@ class MarathonFacade(
   require(baseGroup.absolute)
 
   import mesosphere.marathon.api.v2.json.Formats._
-  import mesosphere.marathon.integration.setup.V2TestFormats._
   import play.api.libs.json._
 
   implicit lazy val itAppDefinitionFormat = Json.format[ITAppDefinition]
@@ -358,20 +355,6 @@ class MarathonFacade(
 
   def deleteDeployment(id: String, force: Boolean = false): RestResult[HttpResponse] = {
     result(request(Delete(s"$url/v2/deployments/$id?force=$force")), waitTime)
-  }
-
-  //event resource ---------------------------------------------
-
-  def listSubscribers: RestResult[EventSubscribers] = {
-    result(requestFor[EventSubscribers](Get(s"$url/v2/eventSubscriptions")), waitTime)
-  }
-
-  def subscribe(callbackUrl: String): RestResult[Subscribe] = {
-    result(requestFor[Subscribe](Post(s"$url/v2/eventSubscriptions?callbackUrl=$callbackUrl")), waitTime)
-  }
-
-  def unsubscribe(callbackUrl: String): RestResult[Unsubscribe] = {
-    result(requestFor[Unsubscribe](Delete(s"$url/v2/eventSubscriptions?callbackUrl=$callbackUrl")), waitTime)
   }
 
   //metrics ---------------------------------------------

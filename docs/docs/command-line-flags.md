@@ -99,11 +99,6 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--task_launch_timeout` (Optional. Default: 300000 (5 minutes)):
     Time, in milliseconds, to wait for a task to enter the `TASK_RUNNING` state
     before killing it.
-* `--event_subscriber` (Optional. Default: None): Event subscriber module to
-    enable. Currently the only valid value is `http_callback`.
-* `--http_endpoints` (Optional. Default: None): Pre-configured http callback
-    URLs. Valid only in conjunction with `--event_subscriber http_callback`.
-    Additional callback URLs may also be set dynamically via the REST API.
 * `--zk` (Optional. Default: `zk://localhost:2181/marathon`): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
     - <span class="label label-default">v1.1.2</span> Format: `zk://user@pass:host1:port1,user@pass:host2:port2,.../path`.
@@ -150,8 +145,6 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.13.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
 * <span class="label label-default">v0.13.0</span> `--on_elected_prepare_timeout` (Optional. Default: 3 minutes):
     The timeout for preparing the Marathon instance when elected as leader.
-* <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
-    A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
 * `--default_network_name` (Optional.): Network name, injected into applications' `ipAddress{}` specs that do not define their own `networkName`.
 * <span class="label label-default">v0.15.4 Deprecated since v1.4.0</span>`--task_lost_expunge_gc` (Optional. Default: 75 seconds):
     This is the length of time in milliseconds, until a lost task is garbage collected and expunged from the task tracker and task repository.

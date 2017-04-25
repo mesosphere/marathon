@@ -21,7 +21,6 @@ trait StorageModule {
   val taskFailureRepository: TaskFailureRepository
   val groupRepository: GroupRepository
   val frameworkIdRepository: FrameworkIdRepository
-  val eventSubscribersRepository: EventSubscribersRepository
   val runtimeConfigurationRepository: RuntimeConfigurationRepository
   val migration: Migration
   val leadershipInitializers: Seq[PrePostDriverCallback]
@@ -52,7 +51,6 @@ object StorageModule {
           appRepository, podRepository, zk.maxVersions)
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
-        val eventSubscribersRepository = EventSubscribersRepository.zkRepository(store)
         val runtimeConfigurationRepository = RuntimeConfigurationRepository.zkRepository(store)
 
         val leadershipInitializers = store match {
@@ -63,10 +61,9 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, mesosBridgeName, store,
-          appRepository, groupRepository, deploymentRepository, taskRepository, instanceRepository,
-          taskFailureRepository, frameworkIdRepository, eventSubscribersRepository,
-          ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
+        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, mesosBridgeName, store, appRepository, groupRepository,
+          deploymentRepository, taskRepository, instanceRepository,
+          taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
 
         StorageModuleImpl(
           instanceRepository,
@@ -74,7 +71,6 @@ object StorageModule {
           taskFailureRepository,
           groupRepository,
           frameworkIdRepository,
-          eventSubscribersRepository,
           runtimeConfigurationRepository,
           migration,
           leadershipInitializers,
@@ -91,7 +87,6 @@ object StorageModule {
           appRepository, podRepository, mem.maxVersions)
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
-        val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(store)
         val runtimeConfigurationRepository = RuntimeConfigurationRepository.inMemRepository(store)
 
         val leadershipInitializers = store match {
@@ -102,10 +97,9 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, mesosBridgeName,
-          store, appRepository, groupRepository, deploymentRepository, taskRepository, instanceRepository,
-          taskFailureRepository, frameworkIdRepository, eventSubscribersRepository,
-          ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
+        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, mesosBridgeName, store, appRepository, groupRepository,
+          deploymentRepository, taskRepository, instanceRepository,
+          taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
 
         StorageModuleImpl(
           instanceRepository,
@@ -113,7 +107,6 @@ object StorageModule {
           taskFailureRepository,
           groupRepository,
           frameworkIdRepository,
-          eventSubscribersRepository,
           runtimeConfigurationRepository,
           migration,
           leadershipInitializers,
@@ -129,7 +122,6 @@ private[storage] case class StorageModuleImpl(
   taskFailureRepository: TaskFailureRepository,
   groupRepository: GroupRepository,
   frameworkIdRepository: FrameworkIdRepository,
-  eventSubscribersRepository: EventSubscribersRepository,
   runtimeConfigurationRepository: RuntimeConfigurationRepository,
   migration: Migration,
   leadershipInitializers: Seq[PrePostDriverCallback],

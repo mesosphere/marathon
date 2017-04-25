@@ -56,15 +56,19 @@ Before 1.5.0 releases, we will publish a migration guide for the new metric form
 metrics can be found and the formats they are now in.
 
 #### Artifact store has been removed
-The artifact store has been deprecated with Marthon 1.4 and is removed with this version.
+The artifact store was deprecated with Marathon 1.4 and is removed in version.
 The command line flag `--artifact_store` will throw an error if specified.
-The Rest API endpoint`/v2/artifacts` has been removed completely.
+The REST API endpoint `/v2/artifacts` has been removed completely.
 
 #### Logging endpoint
 Marathon has the ability to view and change log level configuration during runtime via the `/logging` endpoint.
 This version switches from a form based API to a JSON based API, while maintaining the functionality.
 We also secured this endpoint, so you can restrict who is allowed to view or update this configuration.
 Please find our [API documentation](https://mesosphere.github.io/marathon/api-console/index.html) for all details.
+
+#### Event Subscribers has been removed.
+The events subscribers endpoint (`/v2/eventSubscribers`) was deprecated in Marathon 1.4 and is removed in this version.
+Please move to the `/v2/events` endpoint instead.
 
 ------------------------------------------------------------
 

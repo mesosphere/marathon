@@ -13,7 +13,6 @@ import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
@@ -215,11 +214,6 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
   @Provides
   @Singleton
   def provideExecutionContext: ExecutionContext = ExecutionContexts.global
-
-  @Provides @Singleton
-  def httpCallbackSubscriptionService(coreModule: CoreModule): HttpCallbackSubscriptionService = {
-    coreModule.eventModule.httpCallbackSubscriptionService
-  }
 
   @Provides @Singleton @Named(ModuleNames.HISTORY_ACTOR_PROPS)
   def historyActor(coreModule: CoreModule): Props = coreModule.historyModule.historyActorProps
