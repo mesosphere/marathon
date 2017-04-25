@@ -1,20 +1,17 @@
 package mesosphere.marathon
 package core.election.impl
 
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ Matchers, WordSpec }
+import mesosphere.AkkaUnitTest
 
 import scala.language.postfixOps
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ExponentialBackoffTest extends WordSpec with Matchers with ScalaFutures {
+class ExponentialBackoffTest extends AkkaUnitTest {
 
   "ExponentialBackoff" when {
 
     "used by several threads" should {
-
-      import scala.concurrent.ExecutionContext.Implicits.global
 
       "not lead to dead locks under any circumstance" in {
 
