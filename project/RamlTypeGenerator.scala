@@ -11,7 +11,6 @@ import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
 
-// scalastyle:off
 object RamlTypeGenerator {
   val AdditionalProperties = "additionalProperties"
   val baseTypeTable: Map[String, Symbol] =

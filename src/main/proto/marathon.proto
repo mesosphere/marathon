@@ -370,10 +370,6 @@ message Volume {
   optional ExternalVolumeInfo external = 6;
 }
 
-message EventSubscribers {
-  repeated string callback_urls = 1;
-}
-
 message StorageVersion {
   enum StorageFormat {
     LEGACY = 0;

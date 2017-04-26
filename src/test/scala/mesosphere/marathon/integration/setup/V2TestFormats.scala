@@ -47,8 +47,4 @@ object V2TestFormats {
     Json.reads[SchedulerRegisteredEvent]
   implicit lazy val SchedulerReregisteredEventWritesReads: Reads[SchedulerReregisteredEvent] =
     Json.reads[SchedulerReregisteredEvent]
-
-  implicit lazy val eventSubscribersReads: Reads[EventSubscribers] = Reads { subscribersJson =>
-    JsSuccess(EventSubscribers(urls = (subscribersJson \ "callbackUrls").asOpt[Set[String]].getOrElse(Set.empty)))
-  }
 }

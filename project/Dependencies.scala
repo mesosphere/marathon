@@ -1,5 +1,4 @@
-import sbt.ExclusionRule
-import sbt._
+import sbt.{ExclusionRule, _}
 
 object Dependencies {
   import Dependency._

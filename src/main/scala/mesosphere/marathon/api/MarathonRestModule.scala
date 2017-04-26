@@ -8,7 +8,6 @@ import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer
 import mesosphere.chaos.http._
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.io.SSLContextUtil
 import org.eclipse.jetty.servlets.EventSourceServlet
 
@@ -48,7 +47,6 @@ class MarathonRestModule extends ServletModule {
     bind(classOf[v2.AppsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.PodsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.TasksResource]).in(Scopes.SINGLETON)
-    bind(classOf[v2.EventSubscriptionsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.QueueResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.GroupsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.InfoResource]).in(Scopes.SINGLETON)

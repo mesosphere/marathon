@@ -9,6 +9,9 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
+import mesosphere.marathon.core.async.ExecutionContexts
+import mesosphere.marathon.core.storage.store.PersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup }
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -16,26 +19,27 @@ import mesosphere.marathon.storage.repository.GroupRepository
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
 
-case class MigrationTo1_5(
+case class MigrationTo15(
     migration: Migration)(implicit
   executionContext: ExecutionContext,
     materializer: Materializer) extends StrictLogging {
 
-  import MigrationTo1_5._
+  import MigrationTo15._
 
   @SuppressWarnings(Array("all")) // async/await
   def migrate(): Future[Done] = async {
     implicit val env = Environment(sys.env)
     implicit val appNormalization = appNormalizer(
       migration.availableFeatures, migration.defaultNetworkName, migration.mesosBridgeName)
+    val deleteSubscribersFuture = deleteEventSubscribers(migration.persistenceStore)
     val summary = await(migrateGroups(migration.serviceDefinitionRepo, migration.groupRepository))
+    await(deleteSubscribersFuture)
     logger.info(s"Migrated $summary to 1.5")
     Done
   }
 }
 
-private[migration] object MigrationTo1_5 {
-
+private[migration] object MigrationTo15 {
   val DefaultNetworkNameForMigratedApps = "MIGRATION_1_5_0_MARATHON_DEFAULT_NETWORK_NAME"
   val MigrationFailedMissingNetworkEnvVar =
     "failed to migrate service because no default-network-name has been configured and" +
@@ -131,4 +135,12 @@ private[migration] object MigrationTo1_5 {
       acc + migratedRoot.apps.size + 1 // number of apps migrated + 1 for the root
   })(Keep.right)
 
+  def deleteEventSubscribers[K, C, S](store: PersistenceStore[K, C, S]): Future[Done] = {
+    store match {
+      case zk: ZkPersistenceStore =>
+        zk.client.delete("/event-subscribers").map(_ => Done)(ExecutionContexts.callerThread)
+      case _ =>
+        Future.successful(Done)
+    }
+  }
 }

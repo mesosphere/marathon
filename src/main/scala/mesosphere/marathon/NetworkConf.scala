@@ -2,6 +2,8 @@ package mesosphere.marathon
 
 import org.rogach.scallop.ScallopConf
 
+import scala.util.matching.Regex
+
 trait NetworkConf extends ScallopConf {
   lazy val mesosBridgeName = opt[String](
     "mesos_bridge_name",
@@ -27,6 +29,6 @@ trait NetworkConf extends ScallopConf {
 
 object NetworkConf {
   // Note - this pattern should match types.Name in stringTypes.raml
-  def NetworkNamePattern = "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$".r
-  def NetworkNameFailedMessage = s"mesos_bridge_name must match pattern ${NetworkNamePattern}"
+  val NetworkNamePattern: Regex = raml.Network.ConstraintNamePattern
+  val NetworkNameFailedMessage: String = s"mesos_bridge_name must match pattern $NetworkNamePattern"
 }

@@ -14,6 +14,7 @@ from dcos_service_marathon_tests import *
 from marathon_common_tests import *
 from marathon_pods_tests import *
 from shakedown import (masters, required_masters, public_agents, required_public_agents)
+from datetime import timedelta
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
@@ -58,18 +59,7 @@ def test_marathon_delete_leader(marathon_service_name):
 @masters(3)
 def test_marathon_zk_partition_leader_change(marathon_service_name):
 
-    # TODO: make sure mesos leader and marathon leader are on differet nodes
-    original_leader = shakedown.marathon_leader_ip()
-    master_leader = shakedown.master_leader_ip()
-    print('marathon: {}'.format(original_leader))
-    print('leader: {}'.format(master_leader))
-
-    if original_leader == master_leader:
-        # switch
-        common.delete_marathon_path('v2/leader')
-        common.wait_for_marathon_up()
-        original_leader = shakedown.marathon_leader_ip()
-        print('switched leader to: {}'.format(original_leader))
+    original_leader = common.get_marathon_leader_not_on_master_leader_node()
 
     # blocking zk on marathon leader (not master leader)
     with shakedown.iptable_rules(original_leader):
@@ -80,12 +70,25 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
 
     common.wait_for_marathon_up()
 
-    @retrying.retry(stop_max_attempt_number=30)
-    def marathon_leadership_changed():
-        current_leader = shakedown.marathon_leader_ip()
-        assert original_leader != current_leader
+    current_leader = shakedown.marathon_leader_ip()
+    assert original_leader != current_leader
 
-    marathon_leadership_changed()
+
+@masters(3)
+def test_marathon_master_partition_leader_change(marathon_service_name):
+
+    original_leader = common.get_marathon_leader_not_on_master_leader_node()
+
+    # blocking outbound connection to mesos master
+    with shakedown.iptable_rules(original_leader):
+        block_port(original_leader, 5050, direction='OUTPUT')
+        #  time of the master block
+        time.sleep(timedelta(minutes=1.5).total_seconds())
+
+    common.wait_for_marathon_up()
+
+    current_leader = shakedown.marathon_leader_ip()
+    assert original_leader != current_leader
 
 
 @public_agents(1)

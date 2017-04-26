@@ -52,14 +52,6 @@ object SerialIntegrationTag extends Tag("mesosphere.marathon.SerialIntegrationTe
   */
 case class WhenEnvSet(envVarName: String) extends Tag(if (sys.env.getOrElse(envVarName, "false") == "true") "" else classOf[Ignore].getName)
 
-/**
-  * Mixing in this trait will result in retrying a failed test again.
-  * If the second run succeeds, the result will be Canceled.
-  */
-trait RetryOnFailed extends TestSuite with Retries {
-  override def withFixture(test: NoArgTest): Outcome = withRetryOnFailure { super.withFixture(test) }
-}
-
 trait ValidationTestLike extends Validation {
   this: Assertions =>
 
@@ -154,10 +146,10 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
 abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 
 trait IntegrationTestLike extends UnitTestLike {
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(90, Seconds), interval = Span(2, Seconds))
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(270, Seconds))
 }
 
-abstract class IntegrationTest extends WordSpec with IntegrationTestLike with RetryOnFailed
+abstract class IntegrationTest extends WordSpec with IntegrationTestLike
 
 trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike {
   protected override lazy val akkaConfig: Config = ConfigFactory.parseString(
@@ -167,4 +159,3 @@ trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike 
 }
 
 abstract class AkkaIntegrationTest extends IntegrationTest with AkkaIntegrationTestLike
-

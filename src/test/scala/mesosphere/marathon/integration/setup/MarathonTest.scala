@@ -1,14 +1,13 @@
 package mesosphere.marathon
 package integration.setup
 
-import akka.actor.Cancellable
 import java.io.File
 import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.Done
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ ActorSystem, Cancellable, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, StatusCodes }
@@ -28,7 +27,6 @@ import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{ Milliseconds, Span }
@@ -96,7 +94,6 @@ case class LocalMarathon(
     "zk_timeout" -> 20.seconds.toMillis.toString,
     "zk_session_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
-    "event_subscriber" -> "http_callback",
     "access_control_allow_origin" -> "*",
     "reconciliation_initial_delay" -> 5.minutes.toMillis.toString,
     "min_revive_offers_interval" -> "100",
@@ -364,7 +361,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     }
   }
 
-  def cleanUp(withSubscribers: Boolean = false): Unit = {
+  def cleanUp(): Unit = {
     logger.info("Starting to CLEAN UP !!!!!!!!!!")
     events.clear()
 
@@ -398,7 +395,6 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       events.clear()
       healthChecks(_.clear())
       killAppProxies()
-      if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
     } catch {
       case NonFatal(e) => logger.error("Clean up failed with", e)
     }
@@ -706,7 +702,7 @@ trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFut
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
-    marathonServer.start().futureValue(Timeout(90.seconds))
+    marathonServer.start().futureValue
     sseStream = Some(startEventSubscriber())
     waitForSSEConnect()
   }
@@ -754,7 +750,7 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    Future.sequence(additionalMarathons.map(_.start())).futureValue(Timeout(60.seconds))
+    Future.sequence(additionalMarathons.map(_.start())).futureValue
   }
 
   override def afterAll(): Unit = {
@@ -766,9 +762,9 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
     marathonFacades.find(!_.url.contains(leader.port.toString)).get
   }
 
-  override def cleanUp(withSubscribers: Boolean): Unit = {
+  override def cleanUp(): Unit = {
     Future.sequence(marathonServer.start() +: additionalMarathons.map(_.start())).futureValue
-    super.cleanUp(withSubscribers)
+    super.cleanUp()
   }
 }
 

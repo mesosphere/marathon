@@ -15,6 +15,9 @@ import akka.stream.scaladsl.{ FileIO, Source, Sink => ScalaSink }
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
+import com.wix.accord.Validator
+import com.wix.accord.dsl._
+import mesosphere.marathon.api.v2.Validation.{ isTrue, uriIsValid }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -94,6 +97,8 @@ object UriIO extends StrictLogging {
       case _ => false
     }
   }
+
+  def valid: Validator[String] = uriIsValid and isTrue[String]{ uri: String => s"Invalid URI or unsupported scheme: $uri" }(uri => isValid(new URI(uri)))
 
   private[this] def s3Client(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer): S3Client = {
     val params = parseParams(uri)
