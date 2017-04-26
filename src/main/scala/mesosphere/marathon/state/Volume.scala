@@ -15,9 +15,9 @@ import org.apache.mesos.{ Protos => Mesos }
 
 import scala.util.Try
 
-sealed trait Volume {
-  def containerPath: String
-  def mode: Mesos.Volume.Mode
+sealed trait Volume extends plugin.AppVolumeSpec {
+  val containerPath: String
+  val mode: Mesos.Volume.Mode
 }
 
 object Volume {
@@ -335,3 +335,7 @@ object ExternalVolume {
     ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
   } and ExternalVolumes.validExternalVolume
 }
+
+case class SecretVolume(
+  containerPath: String,
+  secret: Secret) extends plugin.AppSecretVolumeSpec // No need for extra validation - secret validation already covers it

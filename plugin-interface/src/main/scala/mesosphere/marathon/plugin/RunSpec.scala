@@ -46,6 +46,11 @@ trait ApplicationSpec extends RunSpec {
     * The labels in that app.
     */
   val labels: Map[String, String]
+
+  /**
+    * Container volumes
+    */
+  val volumes: Seq[AppVolumeSpec]
 }
 
 /**
@@ -104,4 +109,20 @@ trait PodSpec extends RunSpec {
     * The labels in that pod.
     */
   val labels: Map[String, String]
+}
+
+/**
+  * Application volume definition
+  */
+trait AppVolumeSpec {
+
+  val containerPath: String
+}
+
+/**
+  * Application volume with a secret
+  */
+trait AppSecretVolumeSpec extends AppVolumeSpec {
+
+  val secret: Secret
 }
