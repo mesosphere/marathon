@@ -36,6 +36,11 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       validator(invalid) should failWith("containers" -> "container names are unique")
     }
 
+    "be rejected if container name is invalid" in new Fixture {
+      private val invalid = validPod.copy(containers = Seq(validContainer.copy(name = "with_underscore")))
+      validator(invalid).isSuccess should be(false)
+    }
+
     "be rejected if endpoint names are not unique" in new Fixture {
       val endpoint1 = Endpoint("endpoint", hostPort = Some(123))
       val endpoint2 = Endpoint("endpoint", hostPort = Some(124))

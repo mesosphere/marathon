@@ -4,8 +4,6 @@ import com.wix.accord._
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.instance.TestInstanceBuilder
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
@@ -424,19 +422,6 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     When("We update the upgrade strategy to the default strategy")
     val app2 = f.validResident.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
     val rootGroup2 = f.rootGroup.updateApps(PathId("/test"), _ => Map(app2.id -> app2), f.rootGroup.version)
-    val plan2 = DeploymentPlan(f.rootGroup, rootGroup2)
-
-    Then("The deployment is not valid")
-    validate(plan2)(f.validator).isSuccess should be(false)
-  }
-
-  test("Deployment plan validation fails for invalid pod updates") {
-    Given("A group without a pod")
-    val f = new Fixture()
-    val pod = PodDefinition(PathId("/pod"), containers = Seq(MesosContainer("name_with_underscore", resources = Resources())))
-
-    When("A pod is created with an invalid container name")
-    val rootGroup2 = f.rootGroup.updatePod(pod.id, _ => pod, f.rootGroup.version)
     val plan2 = DeploymentPlan(f.rootGroup, rootGroup2)
 
     Then("The deployment is not valid")
