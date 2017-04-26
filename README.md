@@ -38,7 +38,7 @@ Documentation for installing and configuring the full Mesosphere stack including
 
 ## Issue Tracking
 
-Marathon uses [JIRA](https://jira.mesosphere.com/projects/MARATHON) to track issues. You can [browse](https://jira.mesosphere.com/projects/MARATHON/issues/) existing issues or [file a new issue](https://jira.mesosphere.com/secure/CreateIssue!default.jspa?pid=10401) with your GitHub account.
+Marathon uses [JIRA](https://jira.mesosphere.com/projects/MARATHON) to track issues. You can [browse](https://jira.mesosphere.com/projects/MARATHON/issues/) existing issues or [file a new issue](https://jira.mesosphere.com/secure/CreateIssue!default.jspa?pid=10401) with your GitHub account. 
 
 Note for users of GitHub issues: All existing issues have been migrated and closed, and a reference to the related [JIRA](https://jira.mesosphere.com/projects/MARATHON) has been added as a comment.
 We leave the GitHub issues available for reference. Going forward please use [JIRA](https://jira.mesosphere.com/projects/MARATHON) always.
@@ -86,16 +86,15 @@ Instructions on how to install prepackaged releases are available [in the Marath
 
 ##### Building from Source
 
-1.  To build Marathon from source, check out this repo and use sbt to build a universal:
+1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
-        sbt run --master localhost:5050 --zk zk://localhost:2181/marathon
+        sbt assembly
 
-1.  Run `sbt universal:packageXzTarball` to package Marathon as an txz file
-    containing bin/marathon fully packaged.
-
-1. Run `sbt docker:publishLocal` for a local marathon docker image.
+1.  Run `./bin/build-distribution` to package Marathon as an
+    [executable JAR](https://mesosphere.com/blog/2013/12/07/executable-jars/)
+    (optional).
 
 ### Running in Development Mode
 
@@ -105,8 +104,7 @@ use. Note that you still need to run ZooKeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
 `http://localhost:8080` to see the Marathon UI.
 
-        mesos-local
-        sbt 'run --master localhost:5050 --zk zk://localhost:2181/marathon'
+    ./bin/start --master local --zk zk://localhost:2181/marathon
 
 For more information on how to run Marathon in production and configuration
 options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
@@ -123,10 +121,8 @@ See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm
 
 Build it:
 
-    sbt docker:publishLocal
-
-Note the version, e.g: `[info] Built image mesosphere/marathon:1.5.0-SNAPSHOT-461-gf1cc63e` => `1.5.0-SNAPSHOT-461-gf1cc63e`
-
+    mesosVersion=$(sed -n 's/^.*MesosDebian = "\(.*\)"/\1/p' <./project/Dependencies.scala)
+    docker build -t marathon-head --build-arg MESOS_VERSION=$mesosVersion .
 
 A running zookeeper instance is required, if there isn't one already available, there is a docker image available for this:
 
@@ -138,11 +134,11 @@ Run it with zookeeper container:
 
 Or run it without zookeeper container:
 
-    docker run marathon:{version} --master local --zk zk://localhost:2181/marathon
+    docker run marathon-head --master local --zk zk://localhost:2181/marathon
 
 If you want to inspect the contents of the Docker container:
 
-    docker run -it --entrypoint=/bin/bash marathon:{version} -s
+    docker run -it --entrypoint=/bin/bash marathon-head -s
 
 ### Marathon UI
 

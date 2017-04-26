@@ -144,15 +144,15 @@ def report_success() {
   if (is_phabricator_build() && !is_submit_request()) {
     phabricator_test_results("pass")
     try {
-      phabricator("differential.revision.edit", """ transactions: [{type: "accept", value: true}, {type: "comment", value: "\u2714 Build of $DIFF_ID completed at $BUILD_URL"}], objectIdentifier: "D$REVISION_ID" """)
+      phabricator("differential.revision.edit", """ transactions: [{type: "accept", value: true}, {type: "comment", value: "\u221a Build of $DIFF_ID completed at $BUILD_URL"}], objectIdentifier: "D$REVISION_ID" """)
     } catch (Exception err) {
-      phabricator("differential.revision.edit", """ transactions: [{type: "comment", value: "\u2174 Build of $DIFF_ID completed at $BUILD_URL"}], objectIdentifier: "D$REVISION_ID" """)
+      phabricator("differential.revision.edit", """ transactions: [{type: "comment", value: "\u221a Build of $DIFF_ID completed at $BUILD_URL"}], objectIdentifier: "D$REVISION_ID" """)
     }
   } else {
     if (is_master_or_release()) {
       if (previousBuildFailed()) {
         slackSend(
-            message: "\u2714 branch `${env.BRANCH_NAME}` is green again. (<${env.BUILD_URL}|Open>)",
+            message: "\u2714 ̑̑branch `${env.BRANCH_NAME}` is green again. (<${env.BUILD_URL}|Open>)",
             color: "good",
             channel: "#marathon-dev",
             tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
@@ -185,7 +185,7 @@ def report_failure() {
     if (is_master_or_release()) {
       slackSend(
           message: "\u2718 branch `${env.BRANCH_NAME}` failed in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
-          color: "warning",
+          color: "danger",
           channel: "#marathon-dev",
           tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
     }
@@ -342,14 +342,12 @@ def publish_to_s3(gitTag) {
     bucket = "downloads.mesosphere.io/marathon/snapshots"
     region = "us-east-1"
     upload_on_failure = true
-    // manage_artifacts == true will put the artifacts in snapshots/job/{pipelinename}/{branch/?}/{build_number}
-    manage_artifacts = is_phabricator_build()
+  manage_artifacts = true
     if (is_release_build(gitTag)) {
       storageClass = "STANDARD"
       bucket = "downloads.mesosphere.io/marathon/${gitTag}"
-      upload_on_failure = false
-      manage_artifacts = false
-    }
+    upload_on_failure = false
+    manage_artifacts = false}
     sh "sudo sh -c 'sha1sum target/universal/marathon-${gitTag}.txz > target/universal/marathon-${gitTag}.txz.sha1'"
     sh "sudo sh -c 'sha1sum target/universal/marathon-${gitTag}.zip > target/universal/marathon-${gitTag}.zip.sha1'"
     step([

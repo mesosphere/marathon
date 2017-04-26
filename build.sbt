@@ -199,9 +199,6 @@ lazy val packagingSettings = Seq(
     version.value match {
       case releasePattern(major, minor, patch) => s"$major.$minor.$patch"
       case snapshotPattern(major, minor, patch, commit) => s"$major.$minor.$patch${LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE)}git$commit"
-      case v =>
-        System.err.println(s"Version '$v' is not fully supported, please update the git tags.")
-        v
     }
   },
   daemonStdoutLogFile := None,
