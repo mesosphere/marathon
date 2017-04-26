@@ -2,11 +2,17 @@
 
 def m
 
+properties([
+    parameters([
+        string(name: 'MARATHON_GROOVY_BRANCH', defaultValue: 'master'),
+    ])
+])
+
+
 ansiColor('gnome-terminal') {
   node('JenkinsMarathonCI-Debian8-2017-04-25') {
     // fetch the file directly from SCM so the job can use it to checkout the rest of the pipeline.
-    // TODO: Switch back to master after landing.
-    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: '*/jason/jenkins-submits']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'SparseCheckoutPaths', sparseCheckoutPaths: [[path: 'marathon.groovy']]]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'mesosphere-ci-github', url: 'git@github.com:mesosphere/marathon.git']]]
+    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: MARATHON_GROOVY_BRANCH]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'SparseCheckoutPaths', sparseCheckoutPaths: [[path: 'marathon.groovy']]]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'mesosphere-ci-github', url: 'git@github.com:mesosphere/marathon.git']]]
     m = load("marathon.groovy")
     stage("Checkout") {
       m.checkout_marathon()
@@ -20,6 +26,7 @@ ansiColor('gnome-terminal') {
        *     artifact publishing on.
        *
        * - Anything _after_ the next line can be tested through a normal review.
+       * - Change MARATHON_GROOVY_BRANCH to your branch when running the build (as a build parameter)
        */
       m = load("marathon.groovy")
     }
