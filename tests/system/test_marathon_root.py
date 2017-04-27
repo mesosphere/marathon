@@ -7,12 +7,13 @@
 import common
 import os
 
-
 # this is intentional import *
 # it imports all the common test_ methods which are to be tested on root and mom
 from dcos_service_marathon_tests import *
 from marathon_common_tests import *
+from marathon_auth_common_tests import *
 from marathon_pods_tests import *
+
 from shakedown import (masters, required_masters, public_agents, required_public_agents)
 from datetime import timedelta
 
