@@ -52,10 +52,10 @@ def phabricator_test_results(status) {
   return this
 }
 
-// Publish the test coverage information into the build.
-// When we finally have the publishHtml plugin, this will hopefully work.
-def publish_test_coverage(name, dir) {
-  //publishHtml([allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true, reportDir: dir, reportFiles: 'index.html', reportName: "$name Coverage"])
+// Archive test coverage data on Jenkins. With MARATHON-7271 the data will be
+// archived on S3.
+def archive_test_coverage(name, dir) {
+  archiveArtifacts artifacts: '${dir}/**', allowEmptyArchive: true
   stash(name: "${name}-scoverage", include: "${dir}/scoverage-report/scoverage.csv")
   return this
 }
@@ -289,7 +289,7 @@ def test() {
     }
   } finally {
     junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
-    publish_test_coverage("Test", "target/test-coverage")
+    archive_test_coverage("Test", "target/test-coverage")
   }
 }
 
@@ -304,7 +304,7 @@ def integration_test() {
     }
   } finally {
     junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/**/*.xml'
-    publish_test_coverage("integration test", "target/integration-coverage")
+    archive_test_coverage("integration test", "target/integration-coverage")
   }
 }
 
@@ -328,8 +328,8 @@ def unstable_test() {
     mark_unstable_results("target/test-reports/unstable-integration target/test-reports/unstable")
     junit allowEmptyResults: true, testResults: 'target/test-reports/unstable-integration/**/*.xml'
     junit allowEmptyResults: true, testResults: 'target/test-reports/unstable/**/*.xml'
-    publish_test_coverage("Unstable Test", "target/unstable-coverage")
-    publish_test_coverage("Unstable Integration Test", "target/unstable-integration-coverage")
+    archive_test_coverage("Unstable Test", "target/unstable-coverage")
+    archive_test_coverage("Unstable Integration Test", "target/unstable-integration-coverage")
   }
 }
 
