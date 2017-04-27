@@ -26,3 +26,13 @@ ansiColor('gnome-terminal') {
     m.build_marathon()
   }
 }
+// We run the post request on a different node because the AWS nodes do not
+// have access to the PostgREST endpoint. See QUALITY-1433 for request of a
+// public endpoint.
+node("ammonite-0.8.2") {
+  stage("Upload") {
+    unstash(name: "Test-scoverage")
+    sh """amm scripts/post_coverage_data.sc "http://postgrest.marathon.l4lb.thisdcos.directory/marathon_test_coverage" """
+    archiveArtifacts artifacts: 'target/test-coverage/scoverage-report/scoverage.csv', allowEmptyArchive: true
+  }
+}

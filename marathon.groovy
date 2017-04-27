@@ -56,6 +56,7 @@ def phabricator_test_results(status) {
 // When we finally have the publishHtml plugin, this will hopefully work.
 def publish_test_coverage(name, dir) {
   //publishHtml([allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true, reportDir: dir, reportFiles: 'index.html', reportName: "$name Coverage"])
+  stash(name: "${name}-scoverage", include: "${dir}/scoverage-report/scoverage.csv")
   return this
 }
 

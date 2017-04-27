@@ -1,7 +1,10 @@
+import java.time.{ ZonedDateTime, ZoneId }
+import java.time.format.DateTimeFormatter
 import play.api.libs.json.Json
 import sbt._
 import sbt.Keys._
 import sbt.plugins.JvmPlugin
+import scala.util.Properties
 import scoverage.{Coverage, IOUtils, Serializer}
 import scoverage.report.{CoberturaXmlWriter, ScoverageHtmlWriter, ScoverageXmlWriter}
 
@@ -39,6 +42,41 @@ object TestWithCoveragePlugin extends AutoPlugin {
     } else {
       None
     }
+  }
+
+  /**
+   * Writes out a CSV with coverage data for each class.
+   *
+   * The header of the CSV is
+   * project_name,pipeline_name,build_id,build_timestamp,target_name,package_name,class_name,class_file_name,statements_count,statements_invoked,branches_count,branches_invoked
+   *
+   *
+   * @param file CSV target
+   * @param name Target name, e.g. test-unit
+   * @param baseDir Bas directory of project
+   * @param coverage Coverage for build target.
+   */
+  def writeCsv(file: File, name: String, baseDir: File, coverage: Coverage): Unit = {
+    val csvHeader = "project_name,pipeline_name,build_id,build_timestamp,target_name,package_name,class_name,class_file_name,statements_count,statements_invoked,branches_count,branches_invoked"
+
+    val projectName = Properties.envOrElse("JOB_NAME", "no_project_name_defined")
+    val pipelineName = Properties.envOrElse("BRANCH_NAME", "no_pipeline_name_defined")
+    val buildId = Properties.envOrElse("BUILD_ID", "no_build_id_defined")
+    val dateTimeFormatter = DateTimeFormatter.ofPattern("Y-MM-d_H:m:s")
+    val buildTimestamp = ZonedDateTime.now(ZoneId.of("UTC")).format(dateTimeFormatter)
+
+    val buildDetails = s"$projectName, $pipelineName, $buildId, $buildTimestamp, $name"
+    val csv: Seq[String] = csvHeader +: coverage.packages.view.flatMap { p =>
+
+      p.classes.map { c =>
+
+        val classSourceFile = c.source.replaceAll(s"${baseDir.getAbsolutePath}/", "")
+
+        s"$buildDetails, ${p.name}, ${c.fullClassName}, ${classSourceFile}, ${c.statementCount}, ${c.invokedStatementCount}, ${c.branchCount}, ${c.invokedBranchesCount}"
+      }
+    }
+
+    IO.write(file, csv.mkString("\n"))
   }
 
   case class HMTest(name: String, coverage: Map[String, String], result: String = "pass")
@@ -94,12 +132,19 @@ object TestWithCoveragePlugin extends AutoPlugin {
 
     log.info(s"Writing Cobertura report to ${coberturaDir / "cobertura.xml"}")
     new CoberturaXmlWriter(sourceDirs, coberturaDir).write(coverage)
+
     log.info(s"Writing XML coverage report ${reportDir / "scoverage.xml" }")
     new ScoverageXmlWriter(sourceDirs, reportDir, false).write(coverage)
+
     log.info(s"Writing HTML coverage report to ${reportDir / "index.html" }")
     new ScoverageHtmlWriter(sourceDirs, reportDir, None).write(coverage)
+
+    log.info(s"Writing CSV coverage report to ${reportDir / "scoverage.csv" }")
+    writeCsv(reportDir / "scoverage.csv", name, baseDir, coverage)
+
     log.info(s"Writing Phabricator coverage report to $phabricatorFile")
     writePhabricator(phabricatorFile, name, baseDir, coverage)
+
     log.info(s"Statement coverage.: ${coverage.statementCoverageFormatted}%")
     log.info(s"Branch coverage...: ${coverage.branchCoverageFormatted}%")
     log.info(s"Coverage reports completed")
