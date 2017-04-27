@@ -16,8 +16,8 @@ import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
 import org.scalatest.matchers.{ Matcher, MatchResult }
 import org.scalatest._
-import org.scalatest.concurrent.{ JavaFutures, ScalaFutures }
-import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
+import org.scalatest.time.{ Minutes, Seconds, Span }
 import mesosphere.marathon.api.v2.ValidationHelper
 
 import scala.concurrent.ExecutionContextExecutor
@@ -107,7 +107,10 @@ trait UnitTestLike extends WordSpecLike
     with AppendedClues
     with StrictLogging
     with Mockito
-    with ExitDisabledTest {
+    with ExitDisabledTest
+    with TimeLimitedTests {
+
+  override val timeLimit = Span(30, Seconds)
 
   override def beforeAll(): Unit = {
     Kamon.start()
@@ -146,6 +149,8 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
 abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 
 trait IntegrationTestLike extends UnitTestLike {
+  override val timeLimit = Span(15, Minutes)
+
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(270, Seconds))
 }
 
