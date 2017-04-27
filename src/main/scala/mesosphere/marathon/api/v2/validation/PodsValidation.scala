@@ -188,6 +188,7 @@ trait PodsValidation {
 
   def containerValidator(pod: Pod, enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[PodContainer] =
     validator[PodContainer] { container =>
+      container.name is validName
       container.resources is valid(resourceValidator)
       container.endpoints is every(endpointValidator(pod.networks))
       container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
