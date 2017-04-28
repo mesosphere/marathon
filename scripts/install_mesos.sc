@@ -30,7 +30,7 @@ def main(): Unit = {
           %('sudo, "apt-get", "update")
           install_mesos(version)
       }
-      println(s"Successfully installed Mesos %version!")
+      println(s"Successfully installed Mesos $version!")
     case None => throw new IllegalStateException("Could not determine Mesos version.")
   }
 }
