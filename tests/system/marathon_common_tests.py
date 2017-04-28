@@ -179,6 +179,10 @@ def test_docker_port_mappings():
     assert output == "200"
 
 
+def retry_on_exception(exc):
+    return isinstance(exc, Exception)
+
+
 def test_docker_dns_mapping(marathon_service_name):
     """ Tests that a running docker task is accessible from DNS.
     """
@@ -199,10 +203,11 @@ def test_docker_dns_mapping(marathon_service_name):
     @retrying.retry(stop_max_delay=10000)
     def check_dns():
         cmd = 'ping -c 1 {}.{}.mesos'.format(app_id, marathon_service_name)
-        wait_for_dns('{}.{}.mesos'.format(app_id, marathon_service_name))
+        shakedown.wait_for_dns('{}.{}.mesos'.format(app_id, marathon_service_name))
         status, output = shakedown.run_command_on_master(cmd)
         assert status
 
+    check_dns()
 
 def test_launch_app_timed():
     """ Most tests wait until a task is launched with no reference to time.
@@ -264,6 +269,8 @@ def test_task_failure_recovers():
         new_tasks = client.get_tasks(app_id)
         assert tasks[0]['id'] != new_tasks[0]['id']
 
+    check_new_task_id()
+
 
 def test_good_user():
     """ Test changes an app from the non-specified (default user) to another
@@ -293,12 +300,14 @@ def test_bad_user():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
         error = "Failed to get user information for 'bad'"
         assert error in message
+
+    check_failure_message()
 
 
 def test_bad_uri():
@@ -315,7 +324,8 @@ def test_bad_uri():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
@@ -525,6 +535,8 @@ def test_health_check_unhealthy():
         assert app['tasksHealthy'] == 0
         assert app['tasksUnhealthy'] == 1
 
+    check_failure_message()
+
 
 @private_agents(2)
 def test_health_failed_check():
@@ -568,6 +580,8 @@ def test_health_failed_check():
         app = client.get_app('/healthy')
         assert app['tasksRunning'] == 1
         assert app['tasksHealthy'] == 1
+
+    check_health_message()
 
 
 def test_resident_health():
@@ -634,6 +648,8 @@ def test_pinned_task_recovers_on_host():
         new_tasks = client.get_tasks('/pinned')
         assert tasks[0]['id'] != new_tasks[0]['id']
         assert new_tasks[0]['host'] == host
+
+    check_for_new_task()
 
 
 @private_agents(2)
@@ -830,6 +846,8 @@ def test_marathon_with_master_process_failure(marathon_service_name):
         tasks = client.get_tasks('/master-failure')
         tasks[0]['id'] == original_task_id
 
+    check_task_recovery()
+
 
 @private_agents(2)
 def test_marathon_when_disconnected_from_zk():
@@ -857,6 +875,8 @@ def test_marathon_when_disconnected_from_zk():
         tasks = client.get_tasks('/zk-failure')
         tasks[0]['id'] == original_task_id
 
+    check_task_is_back()
+
 
 @private_agents(2)
 def test_marathon_when_task_agent_bounced():
@@ -877,6 +897,8 @@ def test_marathon_when_task_agent_bounced():
     def check_task_is_back():
         tasks = client.get_tasks('/agent-failure')
         tasks[0]['id'] == original_task_id
+
+    check_task_is_back()
 
 
 def test_default_user():
@@ -928,7 +950,7 @@ def _test_declined_offer(app_id, app_def, reason):
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
     def verify_declined_offer():
         deployments = client.get_deployments(app_id)
         assert len(deployments) == 1
@@ -941,6 +963,8 @@ def _test_declined_offer(app_id, app_def, reason):
         assert role_summary['processed'] > 0
         assert last_attempt['declined'] > 0
         assert last_attempt['processed'] > 0
+
+    verify_declined_offer()
 
 
 def declined_offer_by_reason(offers, reason):
@@ -972,6 +996,7 @@ def test_event_channel():
         assert 'deployment_info' in stdout
         assert 'deployment_step_success' in stdout
 
+    check_deployment_message()
     client.remove_app(app_id, True)
     shakedown.deployment_wait()
 
@@ -980,7 +1005,14 @@ def test_event_channel():
         status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'Killed' in stdout
 
+    check_kill_message()
 
+
+def docker_env_set():
+    return 'DOCKER_HUB_USERNAME' not in os.environ and 'DOCKER_HUB_PASSWORD' not in os.environ
+
+
+@pytest.mark.skipif("docker_env_set()")
 def test_private_repository_docker_app():
     # Create and copy docker credentials to all private agents
     assert 'DOCKER_HUB_USERNAME' in os.environ, "Couldn't find docker hub username. $DOCKER_HUB_USERNAME is not set"
@@ -1162,6 +1194,7 @@ def clear_marathon():
         common.delete_all_apps_wait()
     except Exception as e:
         print(e)
+
 
 def app_ucr(app_id=None):
     if app_id is None:
