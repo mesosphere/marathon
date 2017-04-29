@@ -56,7 +56,7 @@ Marathon has the following compile-time dependencies:
 
 For run-time, Marathon has the following dependencies:
 * libmesos - JNI bindings for talking to Apache Mesos master. Look at the *Install Mesos* section for instructions to get libmesos.
-* Apache Zookeeper - You can have a spearate Zookeeper installation specifically for Marathon, or you can use the same Zookeeper used by Mesos.
+* Apache Zookeeper - You can have a separate Zookeeper installation specifically for Marathon, or you can use the same Zookeeper used by Mesos.
 
 ### Installation
 
