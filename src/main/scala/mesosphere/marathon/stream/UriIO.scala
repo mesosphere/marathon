@@ -7,6 +7,7 @@ import java.nio.file.Paths
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.ContentTypes
 import akka.stream.Materializer
+import akka.stream.alpakka.s3.S3Settings
 import akka.stream.alpakka.s3.acl.CannedAcl
 import akka.stream.alpakka.s3.auth.AWSCredentials
 import akka.stream.alpakka.s3.impl.MetaHeaders
@@ -14,9 +15,14 @@ import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.scaladsl.{ FileIO, Source, Sink => ScalaSink }
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.typesafe.scalalogging.StrictLogging
+import com.wix.accord.Validator
+import com.wix.accord.dsl._
+import mesosphere.marathon.api.v2.Validation.{ isTrue, uriIsValid }
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 /**
   * UriIO provides sources from and sinks to an URI.
@@ -95,13 +101,34 @@ object UriIO extends StrictLogging {
     }
   }
 
+  def valid: Validator[String] = uriIsValid and isTrue[String]{ uri: String => s"Invalid URI or unsupported scheme: $uri" }(uri => isValid(new URI(uri)))
+
+  /**
+    * Create S3 client.
+    * The credentials use the following chain:
+    * - use credentials provided from URI parameters
+    * - use credentials set via the environment
+    * - use credentials set via system properties
+    * - use default credentials set via the credentials file
+    * - use credentials provided via the Amazon EC2 Container Service
+    * - use credential defined via system configuration in akka.stream.alpakka.s3
+    * @return The S3Client for the defined URI.
+    */
   private[this] def s3Client(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer): S3Client = {
     val params = parseParams(uri)
     val region = params.getOrElse("region", "us-east-1")
-    val accessKey = params.getOrElse("access_key", "")
-    val accessSecret = params.getOrElse("secret_key", "")
-    logger.info(s"S3 settings region: $region accessKey:$accessKey accessSecret:$accessSecret")
-    val credentials = AWSCredentials(accessKey, accessSecret)
+    val credentials = {
+      def fromURL: Option[AWSCredentials] = for {
+        accessKey <- params.get("access_key")
+        accessSecret <- params.get("secret_key")
+      } yield AWSCredentials(accessKey, accessSecret)
+      def fromProviderChain: Option[AWSCredentials] = {
+        Try(new DefaultAWSCredentialsProviderChain().getCredentials)
+          .toOption
+          .map(creds => AWSCredentials(creds.getAWSAccessKeyId, creds.getAWSSecretKey))
+      }
+      fromURL.orElse(fromProviderChain).getOrElse(S3Settings(actorSystem).awsCredentials)
+    }
     new S3Client(credentials, region)
   }
 

@@ -1,15 +1,16 @@
 package mesosphere.marathon
-package storage.migration.legacy
+package storage.migration
 
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
-import mesosphere.marathon.state.{ AppDefinition, PathId, Residency, UnreachableDisabled, UnreachableStrategy }
+import mesosphere.marathon.Seq
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.GroupCreation
 
-class MigrationTo_1_4_2Test extends AkkaUnitTest with GroupCreation {
-  import MigrationTo_1_4_2.migrationFlow
+class MigrationTo142Test extends AkkaUnitTest with GroupCreation {
+  import MigrationTo142.migrationFlow
 
   "Migration to 1.4.2" should {
     "do nothing if there are no resident apps" in {

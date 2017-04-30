@@ -56,9 +56,8 @@ object Container {
   }
 
   object Docker {
-    val validDockerContainer = validator[Docker] { docker =>
+    implicit val validDockerContainer: Validator[Docker] = validator[Docker] { docker =>
       docker.image is notEmpty
-      docker.portMappings is PortMapping.portMappingsValidator
     }
   }
 
@@ -70,6 +69,7 @@ object Container {
     * @param name          Name of the service hosted on this port.
     * @param labels        This can be used to decorate the message with metadata to be
     *                      interpreted by external applications such as firewalls.
+    * @param networkNames  Specifies one or more container networks, by name, for which this PortMapping applies.
     */
   case class PortMapping(
     containerPort: Int = AppDefinition.RandomPortValue,
@@ -77,7 +77,9 @@ object Container {
     servicePort: Int = AppDefinition.RandomPortValue,
     protocol: String = PortMapping.TCP,
     name: Option[String] = None,
-    labels: Map[String, String] = Map.empty[String, String])
+    labels: Map[String, String] = Map.empty[String, String],
+    networkNames: Seq[String] = Nil
+  )
 
   object PortMapping {
     val TCP = raml.NetworkProtocol.Tcp.value
@@ -86,23 +88,6 @@ object Container {
     val defaultInstance = PortMapping(name = Option("default"))
 
     val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
-
-    implicit val uniqueProtocols: Validator[Iterable[String]] =
-      isTrue[Iterable[String]]("protocols must be unique.") { protocols =>
-        protocols.size == protocols.toSet.size
-      }
-
-    implicit val portMappingValidator = validator[PortMapping] { portMapping =>
-      portMapping.protocol.split(',').toIterable is uniqueProtocols and every(oneOf(TCP, UDP))
-      portMapping.containerPort should be >= 0
-      portMapping.hostPort.each should be >= 0
-      portMapping.servicePort should be >= 0
-    }
-
-    val portMappingsValidator = validator[Seq[PortMapping]] { portMappings =>
-      portMappings is every(valid)
-      portMappings is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
-    }
   }
 
   case class Credential(

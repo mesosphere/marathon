@@ -196,6 +196,27 @@ class AppNormalizationTest extends UnitTest {
         legacyDockerApp.normalize should be(normalDockerApp)
       }
 
+      "preserves networkNames field" in {
+        val legacyDockerApp = App(
+          "/foo",
+          container = Some(Container(
+            `type` = EngineType.Docker,
+            docker = Some(DockerContainer(
+              image = "image0",
+              portMappings = Some(Seq(
+                ContainerPortMapping(
+                  containerPort = 80,
+                  networkNames = List("1"))))))
+          )),
+          networks = Seq(Network(mode = NetworkMode.Container, name = Some("1")))
+        )
+
+        val Some(Seq(portMapping)) = legacyDockerApp.normalize.container.flatMap(_.portMappings)
+        portMapping shouldBe ContainerPortMapping(
+          containerPort = 80,
+          networkNames = List("1"))
+      }
+
       "legacy docker app specifies ipAddress and HOST networking" in {
         val legacyDockerApp = App(
           "/foo",

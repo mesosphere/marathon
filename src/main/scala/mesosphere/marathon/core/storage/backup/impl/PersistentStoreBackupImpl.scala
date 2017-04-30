@@ -14,20 +14,20 @@ import mesosphere.marathon.stream.UriIO
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class PersistentStoreBackupImpl(store: PersistenceStore[_, _, _], location: URI)(implicit materializer: Materializer, actorSystem: ActorSystem, ec: ExecutionContext)
+class PersistentStoreBackupImpl(store: PersistenceStore[_, _, _])(implicit materializer: Materializer, actorSystem: ActorSystem, ec: ExecutionContext)
     extends PersistentStoreBackup with StrictLogging {
 
-  override def backup(): Future[Done] = {
-    logger.info(s"Create backup at $location")
+  override def backup(to: URI): Future[Done] = {
+    logger.info(s"Create backup at $to")
     store.backup()
       .via(logFlow("Backup"))
       .via(TarBackupFlow.tar)
-      .runWith(UriIO.writer(location))
+      .runWith(UriIO.writer(to))
   }
 
-  override def restore(): Future[Done] = {
-    logger.info(s"Restore backup from $location")
-    UriIO.reader(location)
+  override def restore(from: URI): Future[Done] = {
+    logger.info(s"Restore backup from $from")
+    UriIO.reader(from)
       .via(TarBackupFlow.untar)
       .via(logFlow("Restore"))
       .runWith(store.restore())

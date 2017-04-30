@@ -31,14 +31,6 @@ object ModuleNames {
   final val SERVER_SET_PATH = "SERVER_SET_PATH"
   final val HISTORY_ACTOR_PROPS = "HISTORY_ACTOR_PROPS"
 
-  final val STORE_APP = "AppStore"
-  final val STORE_TASK_FAILURES = "TaskFailureStore"
-  final val STORE_DEPLOYMENT_PLAN = "DeploymentPlanStore"
-  final val STORE_FRAMEWORK_ID = "FrameworkIdStore"
-  final val STORE_GROUP = "GroupStore"
-  final val STORE_TASK = "TaskStore"
-  final val STORE_EVENT_SUBSCRIBERS = "EventSubscriberStore"
-
   final val MESOS_HEARTBEAT_ACTOR = "MesosHeartbeatActor"
 }
 

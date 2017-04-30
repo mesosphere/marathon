@@ -1,6 +1,7 @@
 package mesosphere.mesos.protos
 
 import com.google.protobuf.{ ByteString, Message }
+import mesosphere.marathon.raml.TTY
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos
 
@@ -66,6 +67,20 @@ trait Implicits {
     Range(
       range.getBegin,
       range.getEnd
+    )
+  }
+
+  implicit def ttyToProto(tty: TTY): Protos.TTYInfo = {
+    Protos.TTYInfo.newBuilder().setWindowSize(
+      Protos.TTYInfo.WindowSize.newBuilder()
+        .setColumns(tty.columns)
+        .setRows(tty.rows)).build()
+  }
+
+  implicit def protoToTTY(proto: Protos.TTYInfo): TTY = {
+    TTY(
+      proto.getWindowSize.getRows,
+      proto.getWindowSize.getColumns
     )
   }
 

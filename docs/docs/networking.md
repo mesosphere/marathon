@@ -21,12 +21,13 @@ Several [command-line flags](command-line-flags.html) determine Marathon's behav
 * `local_port_min` and `local_port_max` define a port range from which Marathon automatically allocates *service-port*s.
 
 ### Environment
+
 * `MIGRATION_1_5_0_MARATHON_DEFAULT_NETWORK_NAME` is used when upgrading Marathon from a version prior to v1.5.
-  * older MESOS IP/CT app definitions were not required to declare an `ipAddress/networkName`; Marathon 1.5 requires a resolvable network name.
-  * migration automatically configures `container` networking mode for each migrated legacy MESOS IP/CT app.
-  * at migration time, legacy MESOS IP/CT app definitions are configured to use the network name defined by the migration-specific environment variable above.
-  * if the environment variable is **unset**, migration uses the network name defined by the `--default_network_name` flag.
-    * if both the environment variable and flag are **unset**, app migration will fail.
+    * older MESOS IP/CT app definitions were not required to declare an `ipAddress/networkName`; Marathon 1.5 requires a resolvable network name.
+    * migration automatically configures `container` networking mode for each migrated legacy MESOS IP/CT app.
+    * at migration time, legacy MESOS IP/CT app definitions are configured to use the network name defined by the migration-specific environment variable above.
+    * if the environment variable is **unset**, migration uses the network name defined by the `--default_network_name` flag.
+        * if both the environment variable and flag are **unset**, app migration will fail.
 
 ## Networking Modes
 
@@ -34,9 +35,11 @@ Marathon apps and pods declare `networks` the same way.
 Three modes of networking are supported:
 
 ### `host`:
+
 An application will share the network namespace of the Mesos agent process, typically the host network namespace.
 
 ### `container`:
+
 An application should be allocated its own network namespace and IP address;
 Mesos network isolators are responsible for providing backend support for this.
 When using the Docker containerizer, this translates to a Docker "user" network.
@@ -44,15 +47,16 @@ Container networks are named, either explicitly by an application or else via `-
 Unnamed container networks will fail to validate if `--default_network_name` is not specified by the operator.
 
 ### `container/bridge`:
+
 Similar to `container`, an application should be allocated its own network namespace and IP address;
 Mesos CNI provides a special `mesos-bridge` that application containers are attached to.
 When using the Docker containerizer, this translates to the Docker "default bridge" network.
 
 *NOTE*: All network modes are supported for both the Mesos and Docker containerizers.
 
-Usage:
+### Usage:
 
-* An application may join one or more `container` mode networks. If joining multiple networks, `hostPort` may not be specified in `portMapping` declarations.
+* An application may join one or more `container` mode networks. When joining multiple container networks, additional restrictions are imposed on *port-mapping* entries (see *Port Mappings* for details).
 * An application may only join one `host` mode network; this is the default if an app definition does not declare a `networks` field.
 * An application may only join one `container/bridge` network.
 * An application cannot mix networking modes: either specify a single `host` network, or; single `container/bridge` network, or; one or more `container` networks.
@@ -67,10 +71,12 @@ The following section is relevant only for Marathon apps.
 #### Port Types
 
 ##### *container-port*:
+
 Specifies a port within a container.
 `containerPort` is specified as a field of a *port-mapping* or *endpoint* when using `container` or `container/bridge` mode networking.
 
 ##### *host-port*:
+
 Specifies a port to allocate from the resources offered by a Mesos agent.
 `hostPort` is specified as a field of a *port-mapping* or *endpoint* when using `container` or `container/bridge` mode networking.
 `port` is specified as a field of a *port-definition* when using `host` mode networking.
@@ -78,6 +84,7 @@ Specifies a port to allocate from the resources offered by a Mesos agent.
 **Note:** Only host ports are made available to a task through environment variables.
 
 ##### *service-port*:
+
 When you create a new application in Marathon (either through the REST API or the front end), you may assign one or more service ports to it.
 You can specify all valid port numbers as service ports or you can use `0` to indicate that Marathon should allocate free service ports to the app automatically.
 Marathon allocates service ports from the range defined by the `--local_port_min` and `--local_port_max` command line flags. 
@@ -88,10 +95,12 @@ Pods (endpoints) do not support service ports.
 #### Declaring ports in an application
 
 ##### *endpoint*:
+
 Endpoints are declared only by the containers of a Pod.
 See the documentation for [pods](pods.html).
 
 ##### *port-definition*:
+
 Port-definitions are used only with `host` mode networking.
 A *port-definition* (specifically its `port` field) is interpreted through the lens of the `requirePorts` app field:
 
@@ -100,6 +109,7 @@ A *port-definition* (specifically its `port` field) is interpreted through the l
 * The special `port` value of `0` tells Marathon to select any *host-port* from a Mesos resource offer and any *service-port* from the configured service port range.
 
 ##### *port-mapping*:
+
 A *port-mapping* declares a *container-port* for an application, possibly linking that *container-port* to a *host-port* and *service-port*.
 Marathon communicates *container-port*/*host-port* links (aka "mappings") to Mesos when launching instances of the application.
 Port-mappings are used with both `container` and `container/bridge` networking.
@@ -111,30 +121,31 @@ Marathon ignores the value of `requirePorts` when interpreting a *port-mapping*.
 ### Port Definitions
 
 #### Summary
+
 * Review *port-definition*, *host-port*, and *service-port* in [#Terminology].
 * Location in app definition: `{ "portDefinitions": [ <port-definition>... ], "requirePorts": <bool>, ... }`
 * Used in conjunction with `host` mode networking.
 * `requirePorts` applies to `portDefinitions`.
 * If no `portDefinitions` are defined (or defined as `null`) at create-time, default to `{ "portDefinitions": [ { "port": 0, "name": "default" } ], ... }`
-  * Specify an empty array (`[]`) to indicate NO ports are used by the app; no default is injected in this case.
+    * Specify an empty array (`[]`) to indicate NO ports are used by the app; no default is injected in this case.
 * Ignored when used in conjunction with other networking modes.
-  * NOTE: Future versions of Marathon may fail to validate apps that declare `portDefinitions` with network modes other than `host`.
+    * NOTE: Future versions of Marathon may fail to validate apps that declare `portDefinitions` with network modes other than `host`.
 
 ### Port Mappings
 
 Summary:
+
 * Review *port-mapping*, *container-port*, and *host-port* in [#Terminology].
 * Location in app definition: `{ "container": { "portMappings": [ <port-mapping>... ], ... }, ... }`
 * Used in conjunction with `container` and `container/bridge` mode networking.
 * When using `container/bridge` mode networking an unspecified (`null`) value for `hostPort` is translated to `"hostPort": 0`.
 * `requirePorts` does not apply to `portMappings`.
 * If unspecified (`null`) at create-time, defaults to `{ "portMappings": [ { "containerPort": 0, "name": "default" } ], ... }`
-  * Specify an empty array (`[]`) to indicate NO ports are used by the app; no default is injected in this case.
-  * **NOTE:** When using `container/bridge` mode, the default *port-mapping* also sets `"hostPort: 0"`.
+    * Specify an empty array (`[]`) to indicate NO ports are used by the app; no default is injected in this case.
+    * **NOTE:** When using `container/bridge` mode, the default *port-mapping* also sets `"hostPort: 0"`.
 * Ignored when used in conjunction with other networking modes.
-  * **NOTE:** Future versions of Marathon may fail to validate apps that declare `container.portMappings` with network modes other than `container` or `container/bridge`.
-* `hostPort` must be `null` when multiple `container` networks are declared by an application.
-  * **NOTE:** This restriction will likely be lifted in some future version of Marathon, once per-mapping network binding is exposed in the API.
+    * **NOTE:** Future versions of Marathon may fail to validate apps that declare `container.portMappings` with network modes other than `container` or `container/bridge`.
+* When used in conjunction with multiple container networks, each mapping entry that specifies a `hostPort` must also declare a `networkNames` value with a single item, identifying the network for which the mapping applies (a single `hostPort` may be mapped to only one container network, and `networkNames` defaults to all container networks for a pod or app).
 
 ## Downward API
 
@@ -156,9 +167,11 @@ Additional [per-task enviroment variables](task-environment-variables.html) are 
 #### DiscoveryInfo and port `labels`:
 
 * `labels` may defined for items of `portDefinitions` as well as for items of `portMappings`. These labels are sent to Mesos via `DiscoveryInfo` protobufs at instance-launch time.
+* Given a mapping or endpoint, we generate a port `DiscoveryInfo` for every combination of specified protocols and associated networks. (IE, if an `Endpoint` specifies 2 protocols and is associated with 3 container networks, then a total of 6 `DiscoveryInfo` protobufs would be generated for that single `Endpoint`).
 * Marathon injects a `network-scope` label into the port `DiscoveryInfo` to disambiguate between a *host-port* and *container-port*.
-  * A scope value of `host` is used for *host-port* discovery.
-  * A scope value of `container` is used for *container-port* discovery.
+    * A scope value of `host` is used for *host-port* discovery.
+    * A scope value of `container` is used for *container-port* discovery.
+* For *container-port* discovery, Marathon also injects a `network-name` label into the respective port `DiscoveryInfo`.
 
 #### Virtual addresses
 

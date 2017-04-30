@@ -20,9 +20,9 @@ import org.scalatest.RecoverMethods
 
 import scala.concurrent.Future
 
-class MigrationTo1_5Test extends AkkaUnitTest with RecoverMethods with GroupCreation {
+class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreation {
 
-  import MigrationTo1_5._
+  import MigrationTo15._
   import Protos.ExtendedContainerInfo.DockerInfo
 
   private def migrateSingleApp(sd: Protos.ServiceDefinition)(implicit n: Normalization[raml.App]): AppDefinition =

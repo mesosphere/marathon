@@ -12,7 +12,7 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.storage.migration.StorageVersions
+import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
 import mesosphere.marathon.util.Lock
 
 import scala.collection.concurrent.TrieMap
@@ -83,21 +83,35 @@ class InMemoryPersistenceStore(implicit
     Source.fromIterator(() => entries.iterator.map {
       case (key, value) =>
         BackupItem(key.category, key.id, key.version, ByteString(InMemoryPersistenceStore.objectToByteArray(value.value)))
-    })
+    }).concat {
+      Source.single {
+        val name = Migration.StorageVersionName
+        BackupItem(name, name, None, ByteString(version(_.build().toByteArray)))
+      }
+    }
   }
 
   override def restore(): Sink[BackupItem, Future[Done]] = {
     def store(item: BackupItem): Done = {
-      val value = InMemoryPersistenceStore.byteArrayToObject[AnyRef](item.data.toArray)
-      entries.put(RamId(item.category, item.key, item.version), Identity(value))
+      InMemoryPersistenceStore.byteArrayToObject[AnyRef](item.data.toArray) match {
+        case Some(value) => entries.put(RamId(item.category, item.key, item.version), Identity(value))
+        case None => throw new IllegalArgumentException(s"Could not read object: ${item.key}=${item.data}")
+      }
       Done
     }
     def clean(): Done = {
       entries.clear()
       Done
     }
+    def setVersion(item: BackupItem): Done = {
+      version(_.mergeFrom(item.data.toArray))
+      Done
+    }
     Flow[BackupItem]
-      .map { store }
+      .map {
+        case item if item.key == Migration.StorageVersionName => setVersion(item)
+        case item => store(item)
+      }
       .prepend { Source.single(clean()) }
       .toMat(Sink.ignore)(Keep.right)
   }

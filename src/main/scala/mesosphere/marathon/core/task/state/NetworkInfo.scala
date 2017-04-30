@@ -106,7 +106,7 @@ object NetworkInfo extends StrictLogging {
       @tailrec
       def gen(ports: List[Int], mappings: List[PortMapping], assignments: List[PortAssignment]): List[PortAssignment] = {
         (ports, mappings) match {
-          case (hostPort :: xs, PortMapping(containerPort, Some(_), _, _, portName, _) :: rs) =>
+          case (hostPort :: xs, PortMapping(containerPort, Some(_), _, _, portName, _, _) :: rs) =>
             // agent port was requested, and we strongly prefer agentIP:hostPort (legacy reasons?)
             val assignment = PortAssignment(
               portName = portName,

@@ -88,6 +88,9 @@ def assert_mom_ee(version, security_mode='permissive'):
     wait_for_service_endpoint(mom_ee_endpoint(version, security_mode))
 
 
+# MoM-ee tests can only run on enterprise DC/OS cluster
+# with at least 2 private nodes.
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.skipif('required_private_agents(2)')
 @pytest.mark.parametrize("version,security_mode", [
 pytest.mark.skipif("ee_version() != 'strict'")(('1.4', 'strict')),

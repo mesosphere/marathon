@@ -118,13 +118,13 @@ class TaskBuilder(
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder
-    portsProto.addAllPorts(PortDiscovery.generate(runSpec, hostPorts))
+    portsProto.addAllPorts(PortDiscovery.generateForApp(runSpec, hostPorts))
 
     discoveryInfoBuilder.setPorts(portsProto)
     discoveryInfoBuilder.build
   }
 
-  protected def computeContainerInfo(hostPorts: Seq[Option[Int]], taskId: Task.Id): Option[ContainerInfo] = {
+  protected[mesos] def computeContainerInfo(hostPorts: Seq[Option[Int]], taskId: Task.Id): Option[ContainerInfo] = {
     if (runSpec.container.isEmpty && !runSpec.networks.hasNonHostNetworking) {
       None
     } else {
@@ -161,6 +161,9 @@ class TaskBuilder(
         builder.mergeFrom(
           ContainerSerializer.toMesos(runSpec.networks, containerWithPortMappings, config.mesosBridgeName()))
       }
+
+      // attach a tty if specified
+      runSpec.tty.foreach(builder.setTtyInfo(_))
 
       // Set container type to MESOS by default (this is a required field)
       if (!builder.hasType)

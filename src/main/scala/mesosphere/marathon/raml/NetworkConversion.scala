@@ -58,6 +58,7 @@ trait NetworkConversion {
 
   implicit val portMappingWrites: Writes[state.Container.PortMapping, ContainerPortMapping] = Writes { portMapping =>
     ContainerPortMapping(
+      networkNames = portMapping.networkNames,
       containerPort = portMapping.containerPort,
       hostPort = portMapping.hostPort,
       labels = portMapping.labels,
@@ -68,7 +69,7 @@ trait NetworkConversion {
   }
 
   implicit val portMappingRamlReader: Reads[ContainerPortMapping, state.Container.PortMapping] = Reads {
-    case ContainerPortMapping(containerPort, hostPort, labels, name, protocol, servicePort) =>
+    case ContainerPortMapping(containerPort, hostPort, labels, name, protocol, servicePort, networkNames) =>
       import state.Container.PortMapping._
       state.Container.PortMapping(
         containerPort = containerPort,
@@ -76,7 +77,8 @@ trait NetworkConversion {
         servicePort = servicePort,
         protocol = protocol.value,
         name = name,
-        labels = labels
+        labels = labels,
+        networkNames = networkNames
       )
   }
 
@@ -87,7 +89,8 @@ trait NetworkConversion {
       labels = mapping.whenOrElse(_.getLabelsCount > 0, _.getLabelsList.flatMap(_.fromProto)(collection.breakOut), ContainerPortMapping.DefaultLabels),
       name = mapping.when(_.hasName, _.getName).orElse(ContainerPortMapping.DefaultName),
       protocol = mapping.when(_.hasProtocol, _.getProtocol).flatMap(NetworkProtocol.fromString).getOrElse(ContainerPortMapping.DefaultProtocol),
-      servicePort = mapping.whenOrElse(_.hasServicePort, _.getServicePort, ContainerPortMapping.DefaultServicePort)
+      servicePort = mapping.whenOrElse(_.hasServicePort, _.getServicePort, ContainerPortMapping.DefaultServicePort),
+      networkNames = mapping.whenOrElse(_.getNetworkNamesList.size > 0, _.getNetworkNamesList.toList, ContainerPortMapping.DefaultNetworkNames)
     )
   }
 

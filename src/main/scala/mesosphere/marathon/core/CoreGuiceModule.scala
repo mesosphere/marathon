@@ -13,7 +13,6 @@ import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
@@ -143,8 +142,12 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
     coreModule.storageModule.groupRepository
 
   @Provides @Singleton
-  def framworkIdRepository(coreModule: CoreModule): FrameworkIdRepository =
+  def frameworkIdRepository(coreModule: CoreModule): FrameworkIdRepository =
     coreModule.storageModule.frameworkIdRepository
+
+  @Provides @Singleton
+  def RuntimeConfigurationRepository(coreModule: CoreModule): RuntimeConfigurationRepository =
+    coreModule.storageModule.runtimeConfigurationRepository
 
   @Provides @Singleton
   def groupManager(coreModule: CoreModule): GroupManager = coreModule.groupManagerModule.groupManager
@@ -211,11 +214,6 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
   @Provides
   @Singleton
   def provideExecutionContext: ExecutionContext = ExecutionContexts.global
-
-  @Provides @Singleton
-  def httpCallbackSubscriptionService(coreModule: CoreModule): HttpCallbackSubscriptionService = {
-    coreModule.eventModule.httpCallbackSubscriptionService
-  }
 
   @Provides @Singleton @Named(ModuleNames.HISTORY_ACTOR_PROPS)
   def historyActor(coreModule: CoreModule): Props = coreModule.historyModule.historyActorProps

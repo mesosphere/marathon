@@ -12,8 +12,6 @@
         <queueSize>1024</queueSize>
     </appender>
 
-    <logger name="org.eclipse" level="INFO"/>
-
     <root level="INFO">
         <appender-ref ref="async"/>
     </root>

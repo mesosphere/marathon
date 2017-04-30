@@ -2,6 +2,17 @@
 
 ### Breaking Changes
 
+#### Packaging standardized
+
+We now publish more normalized packages that attempt to follow Linux Standard Base Guidelines and use sbt-native-packager to achieve this.
+As a result of this and the many historic ways of passing options into marathon, we will only read `/etc/default/marathon` when starting up.
+This file, like `/etc/sysconfig/marathon`, has all marathon command line options as "MARATHON_XXX=YYY" which will translate to `--xx=yyy`.
+We no longer support /etc/marathon/conf which was a set of files that would get translated into command line arguments. In addition,
+we no longer assume that if there is no zk/master argument passed in, then both are running on localhost.
+
+If support for any of the above is important to you, please file a JIRA and/or create a PR/Patch.
+
+
 #### App JSON Fields Changed or Moved.
 
 Marathon will continue to *accept* the app JSON as it did in 1.4;
@@ -45,10 +56,21 @@ Before 1.5.0 releases, we will publish a migration guide for the new metric form
 metrics can be found and the formats they are now in.
 
 #### Artifact store has been removed
-The artifact store has been deprecated with Marthon 1.4 and is removed with this version.
+The artifact store was deprecated with Marathon 1.4 and is removed in version.
 The command line flag `--artifact_store` will throw an error if specified.
-The Rest API endpoint`/v2/artifacts` has been removed completely.
+The REST API endpoint `/v2/artifacts` has been removed completely.
 
+#### Logging endpoint
+Marathon has the ability to view and change log level configuration during runtime via the `/logging` endpoint.
+This version switches from a form based API to a JSON based API, while maintaining the functionality.
+We also secured this endpoint, so you can restrict who is allowed to view or update this configuration.
+Please find our [API documentation](https://mesosphere.github.io/marathon/api-console/index.html) for all details.
+
+#### Event Subscribers has been removed.
+The events subscribers endpoint (`/v2/eventSubscribers`) was deprecated in Marathon 1.4 and is removed in this version.
+Please move to the `/v2/events` endpoint instead.
+
+------------------------------------------------------------
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release

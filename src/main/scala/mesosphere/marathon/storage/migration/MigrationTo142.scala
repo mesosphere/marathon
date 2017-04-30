@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package storage.migration.legacy
+package storage.migration
 
 import akka.Done
 import akka.stream.Materializer
@@ -11,11 +11,11 @@ import mesosphere.marathon.storage.repository.AppRepository
 import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo_1_4_2(appRepository: AppRepository)(implicit
+class MigrationTo142(appRepository: AppRepository)(implicit
   ctx: ExecutionContext,
     mat: Materializer) extends StrictLogging {
 
-  import MigrationTo_1_4_2.migrationFlow
+  import MigrationTo142.migrationFlow
   val sink =
     Flow[AppDefinition]
       .mapAsync(Int.MaxValue)(appRepository.store)
@@ -34,7 +34,7 @@ class MigrationTo_1_4_2(appRepository: AppRepository)(implicit
   }
 }
 
-object MigrationTo_1_4_2 extends StrictLogging {
+object MigrationTo142 extends StrictLogging {
   private def fixResidentApp(app: AppDefinition): AppDefinition = {
     if (app.isResident)
       app.copy(unreachableStrategy = UnreachableDisabled)

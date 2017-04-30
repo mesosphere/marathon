@@ -8,15 +8,17 @@ import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.{ Failure, Result }
+import com.wix.accord.{ Failure, Result, Success }
 import kamon.Kamon
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
+import org.scalatest.matchers.{ Matcher, MatchResult }
 import org.scalatest._
-import org.scalatest.concurrent.{ JavaFutures, ScalaFutures }
-import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
+import org.scalatest.time.{ Minutes, Seconds, Span }
+import mesosphere.marathon.api.v2.ValidationHelper
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -50,14 +52,6 @@ object SerialIntegrationTag extends Tag("mesosphere.marathon.SerialIntegrationTe
   */
 case class WhenEnvSet(envVarName: String) extends Tag(if (sys.env.getOrElse(envVarName, "false") == "true") "" else classOf[Ignore].getName)
 
-/**
-  * Mixing in this trait will result in retrying a failed test again.
-  * If the second run succeeds, the result will be Canceled.
-  */
-trait RetryOnFailed extends TestSuite with Retries {
-  override def withFixture(test: NoArgTest): Outcome = withRetryOnFailure { super.withFixture(test) }
-}
-
 trait ValidationTestLike extends Validation {
   this: Assertions =>
 
@@ -72,6 +66,29 @@ trait ValidationTestLike extends Validation {
     case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
     case th => throw th
   }.get
+
+  def containViolation(tuple: (String, String)): Matcher[Result] = containViolation(tuple._1, tuple._2)
+
+  def containViolation(path: String, message: String): Matcher[Result] = {
+    Matcher {
+      case Success =>
+        MatchResult(
+          false,
+          s"result had no violations; expected ${path} -> ${message}",
+          s"result was success")
+
+      case f: Failure =>
+        val violations = ValidationHelper.getAllRuleConstrains(f)
+
+        MatchResult(
+          violations.exists { v =>
+            v.path.contains(path) && v.message == message
+          },
+          s"Violations:\n${violations.mkString("\n")} did not contain ${path} -> ${message}",
+          s"Violation contains ${path} -> ${message}"
+        )
+    }
+  }
 }
 
 /**
@@ -90,7 +107,10 @@ trait UnitTestLike extends WordSpecLike
     with AppendedClues
     with StrictLogging
     with Mockito
-    with ExitDisabledTest {
+    with ExitDisabledTest
+    with TimeLimitedTests {
+
+  override val timeLimit = Span(30, Seconds)
 
   override def beforeAll(): Unit = {
     Kamon.start()
@@ -129,10 +149,12 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
 abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 
 trait IntegrationTestLike extends UnitTestLike {
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(90, Seconds), interval = Span(2, Seconds))
+  override val timeLimit = Span(15, Minutes)
+
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(270, Seconds))
 }
 
-abstract class IntegrationTest extends WordSpec with IntegrationTestLike with RetryOnFailed
+abstract class IntegrationTest extends WordSpec with IntegrationTestLike
 
 trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike {
   protected override lazy val akkaConfig: Config = ConfigFactory.parseString(
@@ -142,4 +164,3 @@ trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike 
 }
 
 abstract class AkkaIntegrationTest extends IntegrationTest with AkkaIntegrationTestLike
-

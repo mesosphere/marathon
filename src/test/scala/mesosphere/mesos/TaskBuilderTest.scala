@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ App, Resources }
+import mesosphere.marathon.raml.{ App, Resources, TTY }
 import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
@@ -284,7 +284,7 @@ class TaskBuilderTest extends UnitTest {
         .setName(taskInfo.getName)
         .setPorts(Helpers.mesosPorts(
           Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), networkInfo.hostPorts.head),
-          Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "container"), 8081)
+          Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "container", "network-name" -> "whatever"), 8081)
         )).build
 
       TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -924,7 +924,7 @@ class TaskBuilderTest extends UnitTest {
             .setName("http")
             .setNumber(80)
             .setProtocol("tcp")
-            .setLabels(Map("network-scope" -> "container").toMesosLabels)
+            .setLabels(Map("network-scope" -> "container", "network-name" -> "whatever").toMesosLabels)
             .build)
           .build)
         .build
@@ -1815,6 +1815,24 @@ class TaskBuilderTest extends UnitTest {
       assert(gracePeriod.hasNanoseconds)
       val nanoSeconds = gracePeriod.getNanoseconds
       assert(nanoSeconds == seconds.toNanos)
+    }
+
+    "tty defined in an app will render ContainerInfo correctly" in {
+      val tty = TTY(rows = 50, columns = 120)
+      val appWithTTY = AppDefinition(id = PathId("/tty"), container = Some(Docker()), tty = Some(tty))
+      val builder = new TaskBuilder(appWithTTY, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forRunSpec(appWithTTY.id))
+      containerInfo should be(defined)
+      containerInfo.get.hasTtyInfo should be(true)
+      containerInfo.get.getTtyInfo.getWindowSize.getColumns should be(tty.columns)
+      containerInfo.get.getTtyInfo.getWindowSize.getRows should be(tty.rows)
+    }
+
+    "no tty defined in an app will render ContainerInfo without tty" in {
+      val appNoTTY = MarathonTestHelper.makeBasicApp().copy(tty = None)
+      val builder = new TaskBuilder(appNoTTY, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forRunSpec(appNoTTY.id))
+      containerInfo should be(empty)
     }
   }
   def buildIfMatches(

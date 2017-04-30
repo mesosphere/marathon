@@ -33,6 +33,19 @@ object Network {
       case _: ContainerNetwork => true
       case _ => false
     }
+
+    /**
+      * Returns whether or not host networking is specified by the network list.
+      *
+      * Note - validations prevent mixed network modes; see ./docs/docs/networking.md
+      */
+    def isHostModeNetworking =
+      networks.contains(HostNetwork)
+
+    /** Returns all container network names. For bridge or host most networking, returns empty list */
+    def containerNetworkNames: Seq[String] =
+      networks.collect { case ContainerNetwork(name, _) => name }
+
   }
 
   val DefaultLabels: Map[String, String] = Map.empty

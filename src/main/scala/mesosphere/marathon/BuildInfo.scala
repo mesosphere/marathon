@@ -30,7 +30,9 @@ case object BuildInfo {
 
   lazy val name: String = getAttribute("Implementation-Title").getOrElse("unknown")
 
-  lazy val version: String = getAttribute("Implementation-Version").getOrElse(DefaultBuildVersion)
+  // IntelliJ has its own manifest.mf that will inject a version that doesn't necessarily match
+  // our actual version. This can cause Migrations to fail since the version number doesn't correctly match up.
+  lazy val version: String = getAttribute("Implementation-Version").filterNot(_ == "0.1-SNAPSHOT").getOrElse(DefaultBuildVersion)
 
   lazy val scalaVersion: String = getAttribute("Scala-Version").getOrElse("2.x.x")
 
