@@ -18,7 +18,6 @@
             ]
           ],
           "uris": [],
-          "storeUrls": [],
           "ports": [
             1980
           ],
@@ -74,7 +73,6 @@
             ]
           ],
           "uris": [],
-          "storeUrls": [],
           "ports": [
             10018
           ],
@@ -142,7 +140,6 @@
               "executor": "",
               "constraints": [],
               "uris": [],
-              "storeUrls": [],
               "ports": [
                 5000
               ],

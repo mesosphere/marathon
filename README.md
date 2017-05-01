@@ -1,7 +1,6 @@
-[![Stories in Ready](https://badge.waffle.io/mesosphere/marathon.png?label=ready&title=Ready)](https://waffle.io/mesosphere/marathon)
-# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/job/public-marathon-snapshot-packages-master/badge/icon)](https://jenkins.mesosphere.com/service/jenkins/job/public-marathon-snapshot-packages-master) [![Coverage Status](https://coveralls.io/repos/mesosphere/marathon/badge.svg?branch=master)](https://coveralls.io/r/mesosphere/marathon?branch=master)
+# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master) [![Issues](https://img.shields.io/badge/Issues-JIRA-ff69b4.svg?style=flat)](https://jira.mesosphere.com/projects/MARATHON/issues/)
 
-Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon.
+Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon. Issues are tracked in [JIRA](https://jira.mesosphere.com/projects/MARATHON/issues/).
 
 Marathon provides a
 [REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for
@@ -36,6 +35,13 @@ Since Marathon version 0.7.0 and Mesos 0.20.0, you can [deploy, run and scale Do
 Marathon documentation is available on the [Marathon GitHub pages site](http://mesosphere.github.io/marathon/).
 
 Documentation for installing and configuring the full Mesosphere stack including Mesos and Marathon is available on the [Mesosphere website](http://docs.mesosphere.com).
+
+## Issue Tracking
+
+Marathon uses [JIRA](https://jira.mesosphere.com/projects/MARATHON) to track issues. You can [browse](https://jira.mesosphere.com/projects/MARATHON/issues/) existing issues or [file a new issue](https://jira.mesosphere.com/secure/CreateIssue!default.jspa?pid=10401) with your GitHub account.
+
+Note for users of GitHub issues: All existing issues have been migrated and closed, and a reference to the related [JIRA](https://jira.mesosphere.com/projects/MARATHON) has been added as a comment.
+We leave the GitHub issues available for reference. Going forward please use [JIRA](https://jira.mesosphere.com/projects/MARATHON) always.
 
 ### Contributing
 
@@ -80,15 +86,16 @@ Instructions on how to install prepackaged releases are available [in the Marath
 
 ##### Building from Source
 
-1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
+1.  To build Marathon from source, check out this repo and use sbt to build a universal:
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
-        sbt assembly
+        sbt run --master localhost:5050 --zk zk://localhost:2181/marathon
 
-1.  Run `./bin/build-distribution` to package Marathon as an
-    [executable JAR](https://mesosphere.com/blog/2013/12/07/executable-jars/)
-    (optional).
+1.  Run `sbt universal:packageXzTarball` to package Marathon as an txz file
+    containing bin/marathon fully packaged.
+
+1. Run `sbt docker:publishLocal` for a local marathon docker image.
 
 ### Running in Development Mode
 
@@ -98,7 +105,8 @@ use. Note that you still need to run ZooKeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
 `http://localhost:8080` to see the Marathon UI.
 
-    ./bin/start --master local --zk zk://localhost:2181/marathon
+        mesos-local
+        sbt 'run --master localhost:5050 --zk zk://localhost:2181/marathon'
 
 For more information on how to run Marathon in production and configuration
 options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
@@ -107,19 +115,34 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm.html) on how to run Marathon locally inside a virtual machine.
 
-### Running the development Docker
+### Running in Development Mode on Docker
 
-Build tip:
+* Note: Currently the Docker container fails due to strange behavior from the latest Mesos version.  There will be an error about `work_dir` that is still unresolved, much like this:
 
-    docker build -t marathon-head .
+        Failed to start a local cluster while loading agent flags from the environment: Flag 'work_dir' is required, but it was not provided
 
-Run it:
+Build it:
 
-    docker run marathon-head --master local --zk zk://localhost:2181/marathon
+    sbt docker:publishLocal
 
-If you want to inspect the contents of the Docker:
+Note the version, e.g: `[info] Built image mesosphere/marathon:1.5.0-SNAPSHOT-461-gf1cc63e` => `1.5.0-SNAPSHOT-461-gf1cc63e`
 
-    docker run -i -t --entrypoint=/bin/bash marathon-head -s
+
+A running zookeeper instance is required, if there isn't one already available, there is a docker image available for this:
+
+    docker run --name some-zookeeper --restart always -d zookeeper
+
+Run it with zookeeper container:
+
+    docker run --link some-zookeeper:zookeeper marathon-head --master local --zk zk://zookeeper:2181/marathon
+
+Or run it without zookeeper container:
+
+    docker run marathon:{version} --master local --zk zk://localhost:2181/marathon
+
+If you want to inspect the contents of the Docker container:
+
+    docker run -it --entrypoint=/bin/bash marathon:{version} -s
 
 ### Marathon UI
 
@@ -138,6 +161,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 * [Ruby gem marathon_deploy](https://github.com/eBayClassifiedsGroup/marathon_deploy) alternative command line tool to deploy using json or yaml files with ENV macros.
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
+* [Maven plugin](https://github.com/dcos-labs/dcos-maven-plugin), developed by [Johannes Unterstein](https://github.com/unterstein)
 * [Maven plugin](https://github.com/holidaycheck/marathon-maven-plugin), developed at [HolidayCheck](http://www.holidaycheck.com/)
 * [Python client](https://github.com/thefactory/marathon-python), developed at [The Factory](http://www.thefactory.com)
 * [Python client](https://github.com/Wizcorp/marathon-client.py), developed at [Wizcorp](http://www.wizcorp.jp)
@@ -145,6 +169,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 * [Go client](https://github.com/jbdalido/gomarathon) by Jean-Baptiste Dalido
 * [Node client](https://github.com/silas/node-mesos) by Silas Sewell
 * [Clojure client](https://github.com/codemomentum/marathonclj) by Halit Olali
+* [sbt plugin](https://github.com/Tapad/sbt-marathon), developed at [Tapad](https://tapad.com)
 
 ## Companies using Marathon
 
@@ -156,7 +181,9 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [AllUnite](https://allunite.com/)
 * [Argus Cyber Security](http://argus-sec.com/)
 * [Artirix](http://www.artirix.com/)
+* [Arukas](https://arukas.io/)
 * [bol.com](https://www.bol.com/)
+* [Brand24](https://brand24.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
 * [Corvisa](https://www.corvisa.com/)
 * [Criteo] (http://www.criteo.com/)
@@ -171,12 +198,14 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Guidewire](https://www.guidewire.com/)
 * [Groupon](https://www.groupon.com/)
 * [GSShop](http://www.gsshop.com/)
+* [GrowingIO](https://www.growingio.com/)
 * [HolidayCheck](http://www.holidaycheck.com/)
 * [Human API](https://humanapi.co/)
 * [Indix](http://www.indix.com/)
 * [ING](http://www.ing.com/)
 * [iQIYI](http://www.iqiyi.com/)
 * [LaunchKey](https://launchkey.com/)
+* [Mapillary](https://www.mapillary.com/)
 * [Measurence](http://www.measurence.com/)
 * [Motus](http://www.motus.com/)
 * [Notonthehighstreet](http://www.notonthehighstreet.com/)
@@ -190,10 +219,13 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [RelateIQ](https://www.salesforceiq.com/)
 * [Refinery29](https://www.refinery29.com)
 * [Sailthru](http://www.sailthru.com/)
+* [SAKURA Internet Inc](https://www.sakura.ad.jp/)
 * [sloppy.io](http://sloppy.io/)
 * [SmartProcure](https://smartprocure.us/)
 * [Strava](https://www.strava.com)
 * [Sveriges Television](http://www.svt.se)
+* [T2 Systems](http://t2systems.com)
+* [Tapad](https://tapad.com)
 * [Teradata](http://www.teradata.com)
 * [trivago](http://www.trivago.com/)
 * [VANAD Enovation](http://www.vanadenovation.nl/)
@@ -206,7 +238,7 @@ Not in the list? Open a pull request and add yourself!
 
 ## Help
 
-Have you found an issue? Feel free to report it using our [Issues](https://github.com/mesosphere/marathon/issues) page.
+Have you found an issue? Feel free to report it using our [JIRA Issues](https://jira.mesosphere.com/projects/MARATHON/summary) page.
 In order to speed up response times, we ask you to provide as much
 information on how to reproduce the problem as possible. If the issue is related
  in any way to the web ui, we kindly ask you to use the `gui` label.

@@ -3,23 +3,16 @@
     {
       "app": {
         "id": "/tools/datadog-agent",
-        "cmd": null,
-        "args": null,
-        "user": null,
-        "env": { },
         "instances": 5,
         "cpus": 1.0,
         "mem": 512.0,
         "disk": 0.0,
-        "executor": "",
         "constraints": [
           [
             "hostname",
             "UNIQUE"
           ]
         ],
-        "uris": [],
-        "storeUrls": [],
         "ports": [
           10018
         ],
@@ -29,23 +22,17 @@
         "maxLaunchDelaySeconds": 3600,
         "container": {
           "type": "DOCKER",
-          "volumes": [ ],
           "docker": {
             "image": "datadog/docker-dd-agent:latest",
             "network": "HOST",
             "privileged": true,
-            "parameters": [],
             "forcePullImage": false
           }
         },
-        "healthChecks": [],
-        "dependencies": [],
         "upgradeStrategy": {
           "minimumHealthCapacity": 0.5,
           "maximumOverCapacity": 0.0
         },
-        "labels": {},
-        "acceptedResourceRoles": null,
         "version": "2015-08-26T22:33:24.225Z",
         "versionInfo": {
           "lastScalingAt": "2015-08-26T22:33:24.225Z",
@@ -56,13 +43,16 @@
       "delay": {
         "timeLeftSeconds": 0,
         "overdue": true
+      },
+      "since": "2016-02-28T16:41:41.090Z",
+      "processedOffersSummary": {
+        "processedOffersCount": 123,
+        "unusedOffersCount": 0
       }
     },
     {
       "app": {
         "id": "/foo",
-        "cmd": null,
-        "args": null,
         "user": "root",
         "env": {
           "MASTER": "zk://172.16.0.12:2181,172.16.0.13:2181,172.16.0.14:2181/mesos"
@@ -81,7 +71,6 @@
         "uris": [
           "http://www.mesosphere.io/index.html"
         ],
-        "storeUrls": [],
         "ports": [
           10010
         ],
@@ -91,23 +80,17 @@
         "maxLaunchDelaySeconds": 3600,
         "container": {
           "type": "DOCKER",
-          "volumes": [],
           "docker": {
             "image": "thomasr/dispatch",
             "network": "HOST",
             "privileged": false,
-            "parameters": [],
             "forcePullImage": false
           }
         },
-        "healthChecks": [],
-        "dependencies": [],
         "upgradeStrategy": {
           "minimumHealthCapacity": 1.0,
           "maximumOverCapacity": 1.0
         },
-        "labels": {},
-        "acceptedResourceRoles": null,
         "version": "2015-09-30T09:09:17.614Z",
         "versionInfo": {
           "lastScalingAt": "2015-09-30T09:09:17.614Z",
@@ -118,7 +101,126 @@
       "delay": {
         "timeLeftSeconds": 0,
         "overdue": true
-      }
+      },
+      "since": "2016-02-28T16:41:41.090Z",
+      "processedOffersSummary": {
+        "processedOffersCount": 123,
+        "unusedOffersCount": 123,
+        "lastUnusedOfferAt": "2016-02-28T16:41:41.090Z",
+        "lastUsedOfferAt": "2016-02-28T16:41:41.090Z",
+        "rejectSummaryLastOffers": [
+          {
+            "reason": "UnfulfilledRole",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "reason": "UnfulfilledConstraint",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "reason": "NoCorrespondingReservationFound",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "reason": "InsufficientCpus",
+            "declined": 75,
+            "processed": 123
+          },
+          {
+            "reason": "InsufficientMemory",
+            "declined": 15,
+            "processed": 48
+          },
+          {
+            "reason": "InsufficientDisk",
+            "declined": 10,
+            "processed": 33
+          },
+          {
+            "reason": "InsufficientGpus",
+            "declined": 0,
+            "processed": 23
+          },
+          {
+            "reason": "InsufficientGpus",
+            "declined": 0,
+            "processed": 23
+          }
+        ],
+        "rejectSummaryLaunchAttempt": [
+          {
+            "reason": "UnfulfilledRole",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "reason": "UnfulfilledConstraint",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "reason": "NoCorrespondingReservationFound",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "reason": "InsufficientCpus",
+            "declined": 150,
+            "processed": 246
+          },
+          {
+            "reason": "InsufficientMemory",
+            "declined": 30,
+            "processed": 96
+          },
+          {
+            "reason": "InsufficientDisk",
+            "declined": 20,
+            "processed": 66
+          },
+          {
+            "reason": "InsufficientGpus",
+            "declined": 0,
+            "processed": 46
+          },
+          {
+            "reason": "InsufficientGpus",
+            "declined": 0,
+            "processed": 46
+          }
+        ]
+      },
+      "lastUnusedOffers": [
+        {
+          "offer": {
+            "id": "offer_123",
+            "agentId": "slave_123",
+            "hostname": "1.2.3.4",
+            "resources": [
+              {
+                "name": "cpus",
+                "scalar": 23,
+                "ranges": [ { "begin": 1, "end": 5 } ],
+                "set": [ "a", "b" ],
+                "role": "*"
+              }
+            ],
+            "attributes": [
+              {
+                "name": "foo",
+                "scalar": 23,
+                "ranges": [ { "begin": 1, "end": 5 } ],
+                "set": [ "a", "b" ]
+              }
+            ]
+          },
+          "timestamp": "2016-02-28T16:41:41.090Z",
+          "reason": [ "InsufficientMemory" ]
+        }
+      ]
     }
   ]
 }

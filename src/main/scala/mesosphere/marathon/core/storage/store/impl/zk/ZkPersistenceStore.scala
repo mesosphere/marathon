@@ -1,22 +1,21 @@
-package mesosphere.marathon.core.storage.store.impl.zk
+package mesosphere.marathon
+package core.storage.store.impl.zk
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-import akka.actor.{ ActorRefFactory, Scheduler }
+import akka.actor.Scheduler
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Flow, Keep, Merge, Sink, Source }
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
-import mesosphere.marathon.StoreCommandFailedException
+import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.util.{ Retry, Timeout, toRichFuture }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
+import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.apache.zookeeper.data.Stat
@@ -46,21 +45,13 @@ class ZkPersistenceStore(
     val client: RichCuratorFramework,
     timeout: Duration,
     maxConcurrent: Int = 8,
-    maxQueued: Int = 100 // scalastyle:off magic.number
+    maxQueued: Int = 100
 )(
     implicit
     mat: Materializer,
-    actorRefFactory: ActorRefFactory,
     ctx: ExecutionContext,
-    scheduler: Scheduler,
-    val metrics: Metrics
-) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
-  private val limitRequests = CapConcurrentExecutions(
-    CapConcurrentExecutionsMetrics(metrics, getClass),
-    actorRefFactory,
-    s"ZkPersistenceStore_${client}_${UUID.randomUUID}".replaceAll("\\(|\\)|/", "_"),
-    maxConcurrent = maxConcurrent,
-    maxQueued = maxQueued)
+    scheduler: Scheduler) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
+  private val limitRequests = WorkQueue("ZkPersistenceStore", maxConcurrent = maxConcurrent, maxQueueLength = maxQueued)
 
   private val retryOn: Retry.RetryOnFn = {
     case _: KeeperException.ConnectionLossException => true
@@ -68,13 +59,11 @@ class ZkPersistenceStore(
     case NonFatal(_) => true
   }
 
-  private def retry[T](name: String)(f: => Future[T]) =
-    Timeout(timeout) {
-      Retry(name, retryOn = retryOn) {
-        limitRequests(f)
-      }
-    }
+  private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn, maxDuration = timeout) {
+    limitRequests(f)
+  }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def storageVersion(): Future[Option[StorageVersion]] =
     retry("ZkPersistenceStore::storageVersion") {
       async {
@@ -92,7 +81,7 @@ class ZkPersistenceStore(
       }
     }
 
-  /** Update the version of the storage */
+  @SuppressWarnings(Array("all")) // async/await
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
     retry(s"ZkPersistenceStore::setStorageVersion($storageVersion)") {
       async {
@@ -102,10 +91,12 @@ class ZkPersistenceStore(
           ZKStoreEntry.newBuilder().setValue(com.google.protobuf.ByteString.copyFrom(actualVersion.toByteArray))
           .setName(Migration.StorageVersionName)
           .setCompressed(false)
+          .setUuid(com.google.protobuf.ByteString.copyFromUtf8(UUID.randomUUID().toString))
           .build.toByteArray
         )
         await(client.setData(path, data).asTry) match {
-          case Success(_) => Done
+          case Success(_) =>
+            Done
           case Failure(_: NoNodeException) =>
             await(client.create(path, data = Some(data)))
             Done
@@ -117,6 +108,7 @@ class ZkPersistenceStore(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawIds(category: String): Source[ZkId, NotUsed] = {
     val childrenFuture = retry(s"ZkPersistenceStore::ids($category)") {
       async {
@@ -137,6 +129,7 @@ class ZkPersistenceStore(
     Source.fromFuture(childrenFuture).mapConcat(identity)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawVersions(id: ZkId): Source[OffsetDateTime, NotUsed] = {
     val unversioned = id.copy(version = None)
     val path = unversioned.path
@@ -159,12 +152,13 @@ class ZkPersistenceStore(
     Source.fromFuture(versions).mapConcat(identity)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected[store] def rawGet(id: ZkId): Future[Option[ZkSerialized]] =
     retry(s"ZkPersistenceStore::get($id)") {
       async {
         await(client.data(id.path).asTry) match {
           case Success(GetData(_, _, bytes)) =>
-            if (bytes.nonEmpty) {
+            if (bytes.nonEmpty) { // linter:ignore UseIfExpression
               Some(ZkSerialized(bytes))
             } else {
               None
@@ -179,6 +173,7 @@ class ZkPersistenceStore(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDelete(id: ZkId, version: OffsetDateTime): Future[Done] =
     retry(s"ZkPersistenceStore::delete($id, $version)") {
       async {
@@ -192,6 +187,7 @@ class ZkPersistenceStore(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteCurrent(id: ZkId): Future[Done] = {
     retry(s"ZkPersistenceStore::deleteCurrent($id)") {
       async {
@@ -206,6 +202,7 @@ class ZkPersistenceStore(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawStore[V](id: ZkId, v: ZkSerialized): Future[Done] = {
     retry(s"ZkPersistenceStore::store($id, $v)") {
       async {
@@ -218,7 +215,7 @@ class ZkPersistenceStore(
               creatingParentContainersIfNeeded = true, data = Some(v.bytes))).asTry) match {
               case Success(_) =>
                 Done
-              case Failure(e: NodeExistsException) =>
+              case Failure(_: NodeExistsException) =>
                 // it could have been created by another call too... (e.g. creatingParentContainers if needed could
                 // have created the node when creating the parent's, e.g. the version was created first)
                 await(limitRequests(client.setData(id.path, v.bytes)))
@@ -238,6 +235,7 @@ class ZkPersistenceStore(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteAll(id: ZkId): Future[Done] = {
     val unversionedId = id.copy(version = None)
     retry(s"ZkPersistenceStore::delete($unversionedId)") {
@@ -248,8 +246,9 @@ class ZkPersistenceStore(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected[store] def allKeys(): Source[CategorizedKey[String, ZkId], NotUsed] = {
-    val sources = retry(s"ZkPersistenceStore::keys()") {
+    val sources = retry("ZkPersistenceStore::keys()") {
       async {
         val rootChildren = await(client.children("/").map(_.children))
         val sources = rootChildren.map(rawIds)
@@ -257,5 +256,42 @@ class ZkPersistenceStore(
       }
     }
     Source.fromFuture(sources).flatMapConcat(identity).map { k => CategorizedKey(k.category, k) }
+  }
+
+  @SuppressWarnings(Array("all")) // async/await
+  override def backup(): Source[BackupItem, NotUsed] = {
+    val ids: Source[ZkId, NotUsed] = allKeys().map(_.key)
+    val versions: Source[ZkId, NotUsed] = ids.flatMapConcat(id => rawVersions(id).map(v => id.copy(version = Some(v))))
+    val combined = Source.combine(ids, versions)(Merge(_))
+    combined.mapAsync(maxConcurrent) { id =>
+      rawGet(id).filter(_.isDefined).map(ser => BackupItem(id.category, id.id, id.version, ser.get.bytes))
+    }.concat {
+      Source.fromFuture(storageVersion()).map { storedVersion =>
+        val version = storedVersion.getOrElse(StorageVersions.current)
+        val name = Migration.StorageVersionName
+        BackupItem(name, name, None, ByteString(version.toByteArray))
+      }
+    }
+  }
+
+  override def restore(): Sink[BackupItem, Future[Done]] = {
+    def store(item: BackupItem): Future[Done] = {
+      val id = ZkId(item.category, item.key, item.version)
+      rawStore(id, ZkSerialized(item.data))
+    }
+    def clean(): Future[Done] = {
+      client.delete("/", guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done)
+    }
+    def setVersion(item: BackupItem): Future[Done] = {
+      setStorageVersion(StorageVersion.parseFrom(item.data.toArray))
+    }
+    Flow[BackupItem]
+      .map {
+        case item if item.key == Migration.StorageVersionName => () => setVersion(item)
+        case item => () => store(item)
+      }
+      .prepend { Source.single(() => clean()) }
+      .mapAsync(1) { _.apply() } // no parallelization: first element needs to be processed before the second
+      .toMat(Sink.ignore)(Keep.right)
   }
 }

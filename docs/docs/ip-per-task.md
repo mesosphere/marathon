@@ -6,10 +6,9 @@ title: IP-per-task
 
 <div class="alert alert-danger" role="alert">
   <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Available in Marathon Version 0.14.0+ <br/>
-    IP-per-task functionality is considered experimental, so use this
-    feature at your own risk. We might add, change, or delete any
-    functionality described in this document, including the API. We
-    appreciate <a href="https://github.com/mesosphere/marathon/issues/2709">your feedback</a>!
+    The IP-per-task API has been deprecated in favor of the [Networking API](networking.html).
+    Use this deprecated API at your own risk. It will be removed in a future Marathon release.
+    We appreciate <a href="https://jira.mesosphere.com/browse/MARATHON-3429">your feedback</a>!
 </div>
 
 

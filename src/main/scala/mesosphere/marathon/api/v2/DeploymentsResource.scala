@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
@@ -10,6 +11,7 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.util.Logging
 
@@ -28,7 +30,7 @@ class DeploymentsResource @Inject() (
   @GET
   def running(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val infos = result(service.listRunningDeployments())
-      .filter(_.plan.affectedApplications.exists(isAuthorized(ViewRunSpec, _)))
+      .filter(_.plan.affectedRunSpecs.exists(isAuthorized(ViewRunSpec, _)))
     ok(infos)
   }
 
@@ -40,17 +42,17 @@ class DeploymentsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val plan = result(service.listRunningDeployments()).find(_.plan.id == id).map(_.plan)
     plan.fold(notFound(s"DeploymentPlan $id does not exist")) { deployment =>
-      deployment.affectedApplications.foreach(checkAuthorization(UpdateRunSpec, _))
+      deployment.affectedRunSpecs.foreach(checkAuthorization(UpdateRunSpec, _))
 
       if (force) {
         // do not create a new deployment to return to the previous state
         log.info(s"Canceling deployment [$id]")
-        service.cancelDeployment(id)
+        service.cancelDeployment(deployment)
         status(ACCEPTED) // 202: Accepted
       } else {
         // create a new deployment to return to the previous state
-        deploymentResult(result(groupManager.update(
-          deployment.original.id,
+        deploymentResult(result(groupManager.updateRoot(
+          PathId.empty,
           deployment.revert,
           force = true
         )))

@@ -1,17 +1,16 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
-import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewRunSpec }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import org.slf4j.LoggerFactory
 
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -26,18 +25,16 @@ class AppVersionsResource(
   val log = LoggerFactory.getLogger(getClass.getName)
 
   @GET
-  @Timed
   def index(
     @PathParam("appId") appId: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
-    withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { _ =>
-      ok(jsonObjString("versions" -> service.listAppVersions(id).toSeq))
+    withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { _ =>
+      ok(jsonObjString("versions" -> service.listAppVersions(id)))
     }
   }
 
   @GET
-  @Timed
   @Path("{version}")
   def show(
     @PathParam("appId") appId: String,

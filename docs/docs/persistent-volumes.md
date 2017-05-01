@@ -38,14 +38,19 @@ Configure a persistent volume with the following options:
   "containerPath": "data",
   "mode": "RW",
   "persistent": {
-    "size": 10
+    "type": "root",
+    "size": 10,
+    "constraints": []
   }
 }
 ```
 
 - `containerPath`: The path where your application will read and write data. This must be a single-level path relative to the container; it cannot contain a forward slash (`/`). (`"data"`, but not `"/data"`, `"/var/data"` or `"var/data"`).
 - `mode`: The access mode of the volume. Currently, `"RW"` is the only possible value and will let your application read from and write to the volume.
+- `persistent.type`: The type of mesos disk resource to use; the valid options are `root`, `path`, and `mount`, corresponding to the [valid mesos multi-disk resource types](http://mesos.apache.org/documentation/latest/multiple-disk/).
 - `persistent.size`: The size of the persistent volume in MiBs.
+- `persistent.maxSize`: (not seen above) For `root` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
+- `persistent.constraints`: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.
 
 You also need to set the `residency` node in order to tell Marathon to setup a stateful application. Currently, the only valid option for this is:
 ```
@@ -117,7 +122,11 @@ However, if another framework does not respect the presence of labels and the se
 
 ### The Mesos Sandbox
 
-The temporary Mesos sandbox is still the target for the `stdout` and `stderr` logs. To view these logs, go to the Marathon pane of the DCOS web interface.
+The temporary Mesos sandbox is still the target for the `stdout` and `stderr` logs. To view these logs, go to the Marathon pane of the DC/OS web interface.
+
+### Task Handling
+
+The default strategy for handling unreachable tasks in apps with persistent volumes can result in data deletion. [Learn more](configure-task-handling.md).
 
 ### <Missing Multiple Disk Support and it's impact>
 
@@ -131,7 +140,7 @@ The temporary Mesos sandbox is still the target for the `stdout` and `stderr` lo
 1. Specify the container path, from which your application will read and write data. The container path must be non-nested and cannot contain slashes e.g. `data`, but not  `../../../etc/opt` or `/user/data/`.
 1. Click Create.
 
-### Running stateful PostgreSQL on Marathon
+### Running stateful PostgreSQL on Marathon with an exclusive disk resource
 
 A model app definition for PostgreSQL on Marathon would look like this. Note that we set the postgres data folder to `pgdata` which is relative to the Mesos sandbox (as contained in the `$MESOS_SANDBOX` variable). This enables us to set up a persistent volume with a containerPath of `pgdata`. This path is is not nested and relative to the sandbox as required:
 
@@ -141,6 +150,7 @@ A model app definition for PostgreSQL on Marathon would look like this. Note tha
   "cpus": 1,
   "instances": 1,
   "mem": 512,
+  "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",
     "volumes": [
@@ -148,22 +158,24 @@ A model app definition for PostgreSQL on Marathon would look like this. Note tha
         "containerPath": "pgdata",
         "mode": "RW",
         "persistent": {
-          "size": 100
+          "type": "mount",
+          "size": 524288,
+          "maxSize": 1048576,
+          "constraints": [["path", "LIKE", "/mnt/ssd-.+"]]
         }
       }
     ],
     "docker": {
-      "image": "postgres:latest",
-      "network": "BRIDGE",
-      "portMappings": [
-        {
-          "containerPort": 5432,
-          "hostPort": 0,
-          "protocol": "tcp",
-          "name": "postgres"
-        }
-      ]
-    }
+      "image": "postgres:latest"
+    },
+    "portMappings": [
+      {
+        "containerPort": 5432,
+        "hostPort": 0,
+        "protocol": "tcp",
+        "name": "postgres"
+      }
+    ]
   },
   "env": {
     "POSTGRES_PASSWORD": "password",
@@ -178,6 +190,8 @@ A model app definition for PostgreSQL on Marathon would look like this. Note tha
   }
 }
 ```
+
+Also, notice that in this case we request a mesos mount disk between `512mb` and `1gb` of size. This gives the Postgres exclusive access to the resource, improving IO throughput for the application. By specifying that it has a max size of `1gb`, we ensure that too large an exclusive volume isn't allocated to the application. Also, by convention, if SSDs and spinning disks can be identified by the path at which they are mounted, we can use constraints to select one disk type over the other.
 
 ### Running stateful MySQL on Marathon
 
@@ -198,6 +212,7 @@ In addition to that, we configure a persistent volume with a containerPath `mysq
   "containerPath": "mysqldata",
   "mode": "RW",
   "persistent": {
+    "type": "root",
     "size": 1000
   }
 }
@@ -212,6 +227,7 @@ The complete JSON application definition reads as follows:
   "mem": 512,
   "disk": 0,
   "instances": 1,
+  "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",
     "volumes": [
@@ -219,6 +235,7 @@ The complete JSON application definition reads as follows:
         "containerPath": "mysqldata",
         "mode": "RW",
         "persistent": {
+          "type": "root",
           "size": 1000
         }
       },
@@ -230,17 +247,16 @@ The complete JSON application definition reads as follows:
     ],
     "docker": {
       "image": "mysql",
-      "network": "BRIDGE",
-      "portMappings": [
-        {
-          "containerPort": 3306,
-          "hostPort": 0,
-          "servicePort": 10000,
-          "protocol": "tcp"
-        }
-      ],
       "forcePullImage": false
-    }
+    },
+    "portMappings": [
+      {
+        "containerPort": 3306,
+        "hostPort": 0,
+        "servicePort": 10000,
+        "protocol": "tcp"
+      }
+    ]
   },
   "env": {
     "MYSQL_USER": "wordpress",

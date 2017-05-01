@@ -1,4 +1,5 @@
-package mesosphere.marathon.io
+package mesosphere.marathon
+package io
 
 import java.io.FileInputStream
 import java.security.KeyStore
@@ -8,9 +9,8 @@ import javax.net.ssl.{ SSLContext, TrustManager, TrustManagerFactory, X509TrustM
 /**
   * Util for create SSLContext objects.
   */
+@SuppressWarnings(Array("NullParameter", "IsInstanceOf", "AsInstanceOf"))
 object SSLContextUtil {
-
-  //scalastyle:off null
 
   /**
     * Create an SSLContext which accepts the certificates in the given key store (if any).
@@ -22,7 +22,7 @@ object SSLContextUtil {
 
   private[this] def createSSLContext(keyStorePath: String, passwordOpt: Option[String]): SSLContext = {
     def getX509TrustManager(tmf: TrustManagerFactory): X509TrustManager = {
-      tmf.getTrustManagers.find(_.isInstanceOf[X509TrustManager]).orNull.asInstanceOf[X509TrustManager]
+      tmf.getTrustManagers.collect { case x509: X509TrustManager => x509 }.headOption.orNull
     }
 
     val keyStoreTrustManager: X509TrustManager = {

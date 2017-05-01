@@ -1,0 +1,12 @@
+#%RAML 1.0 Library
+types:
+  ErrorDetail:
+    type: object
+    properties:
+      message?: string
+      errors?: string[]
+  Error:
+    type: object
+    properties:
+      message: string
+      details?: ErrorDetail[]

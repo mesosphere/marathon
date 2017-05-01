@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.{ Context, MediaType, Response }
@@ -6,19 +7,18 @@ import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.BuildInfo
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.util.state.MesosLeaderInfo
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.Json
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class InfoResource @Inject() (
-    schedulerService: MarathonSchedulerService,
     mesosLeaderInfo: MesosLeaderInfo,
+    frameworkIdRepository: FrameworkIdRepository,
     electionService: ElectionService,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
@@ -56,21 +56,6 @@ class InfoResource @Inject() (
     "zk_max_versions" -> config.maxVersions()
   )
 
-  private[this] lazy val eventHandlerConfigValues = {
-    def httpEventConfig: JsObject = Json.obj(
-      "http_endpoints" -> config.httpEventEndpoints.get
-    )
-
-    def eventConfig(): JsObject = config.eventSubscriber.get match {
-      case Some("http_callback") => httpEventConfig
-      case _ => Json.obj()
-    }
-
-    Json.obj(
-      "type" -> config.eventSubscriber.get
-    ) ++ eventConfig
-  }
-
   private[this] lazy val httpConfigValues = Json.obj(
     "http_port" -> config.httpPort.get,
     "https_port" -> config.httpsPort.get
@@ -88,10 +73,9 @@ class InfoResource @Inject() (
           "buildref" -> BuildInfo.buildref,
           "elected" -> electionService.isLeader,
           "leader" -> electionService.leaderHostPort,
-          "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
+          "frameworkId" -> result(frameworkIdRepository.get()).map(_.id),
           "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
           "zookeeper_config" -> zookeeperConfigValues,
-          "event_subscriber" -> config.eventSubscriber.get.map(_ => eventHandlerConfigValues),
           "http_config" -> httpConfigValues)).build()
     }
   }

@@ -67,21 +67,21 @@ The following JSON file will make a private Docker registry available in your cl
   "cpus": 0.5,
   "mem": 1024.0,
   "disk": 128,
+  "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "docker": {
       "type": "DOCKER",
       "image": "registry:latest",
-      "network": "BRIDGE",
       "parameters": [],
-      "portMappings": [
-        {
-          "containerPort": 5000,
-          "hostPort": 0,
-          "protocol": "tcp",
-          "servicePort": 5000
-        }
-      ]
     },
+    "portMappings": [
+      {
+        "containerPort": 5000,
+        "hostPort": 0,
+        "protocol": "tcp",
+        "servicePort": 5000
+      }
+    ],
     "volumes": [
       {
         "hostPath": "/local/path/to/store/packages",

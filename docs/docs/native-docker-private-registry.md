@@ -22,7 +22,7 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 ### Step 1: Tar/Gzip credentials
 
-1. Login to the private registry manually. Login creates a `.docker` folder and a `.docker/config.json` in the users home directoy
+1. Login to the private registry manually. Login creates a `.docker` folder and a `.docker/config.json` in the users home directory
 
     ```bash
     $ docker login some.docker.host.com
@@ -96,4 +96,4 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 ## More information
 
-Find out how to [set up a private Docker registry](https://dcos.io/docs/1.7/usage/registry/) with DC/OS. 
+Find out how to [set up a private Docker registry](https://dcos.io/docs/1.8/usage/tutorials/registry/) with DC/OS. 

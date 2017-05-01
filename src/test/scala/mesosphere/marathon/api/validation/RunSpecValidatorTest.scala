@@ -1,33 +1,29 @@
-package mesosphere.marathon.api.validation
+package mesosphere.marathon
+package api.validation
 
 import com.wix.accord.validate
-import mesosphere.marathon.Protos.{ Constraint, HealthCheckDefinition }
-import mesosphere.marathon._
+import mesosphere.UnitTest
+import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.Formats
+import mesosphere.marathon.api.v2.validation.AppValidation
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.pod.{ HostNetwork, Network }
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.raml.{ App, Apps, Raml, Resources }
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{ Protos => mesos }
-import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.reflect.ClassTag
 
-class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
+class RunSpecValidatorTest extends UnitTest {
 
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
-  implicit lazy val validContainer = Container.validContainer(Set())
-
-  test("only cmd") {
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"))
-    validate(app)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set())
+  private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
+  private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
 
   private[this] def testValidId(id: String): Unit = {
     val app = AppDefinition(
@@ -36,71 +32,6 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
 
     validate(app)
     MarathonTestHelper.validateJsonSchema(app)
-  }
-
-  test("id '/app' is valid") {
-    testValidId("/app")
-  }
-
-  test("id '/hy-phenated' is valid") {
-    testValidId("/hy-phenated")
-  }
-
-  test("id '/numbered9' is valid") {
-    testValidId("/numbered9")
-  }
-
-  test("id '/9numbered' is valid") {
-    testValidId("/9numbered")
-  }
-
-  test("id '/num8bered' is valid") {
-    testValidId("/num8bered")
-  }
-
-  test("id '/dot.ted' is valid") {
-    testValidId("/dot.ted")
-  }
-
-  test("id '/deep/ly/nes/ted' is valid") {
-    testValidId("/deep/ly/nes/ted")
-  }
-
-  test("id '/all.to-9gether/now-huh12/nest/nest' is valid") {
-    testValidId("/all.to-9gether/now-huh12/nest/nest")
-  }
-
-  test("id '/trailing/' is valid") {
-    // the trailing slash is apparently ignored by Marathon
-    testValidId("/trailing/")
-  }
-
-  test("single dots in id '/test/.' pass schema and validation") {
-    testInvalid("/test/.")
-  }
-
-  test("single dots in id '/./not.point.less' pass schema and validation") {
-    testInvalid("/./not.point.less")
-  }
-
-  private[this] def testSchemaLessStrictForId(id: String): Unit = {
-    val app = AppDefinition(
-      id = PathId(id),
-      cmd = Some("true"))
-
-    an[ValidationFailedException] should be thrownBy validateOrThrow(app)
-
-    MarathonTestHelper.validateJsonSchema(app)
-  }
-
-  // non-absolute paths (could be allowed in some contexts)
-  test(s"relative id 'relative/asd' passes schema but not validation") {
-    testSchemaLessStrictForId("relative/asd")
-  }
-
-  // non-absolute paths (could be allowed in some contexts)
-  test(s"relative id '../relative' passes schema but not validation") {
-    testSchemaLessStrictForId("../relative")
   }
 
   private[this] def testInvalid(id: String): Unit = {
@@ -115,622 +46,668 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     MarathonTestHelper.validateJsonSchema(app, valid = false)
   }
 
-  test("id '/.../asd' is INVALID") {
-    testInvalid("/.../asd")
-  }
+  "RunSpecValidator" should {
+    "only cmd" in {
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"))
 
-  test("id '/app!' is INVALID") {
-    testInvalid("/app!' i")
-  }
+      validate(app)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("id '/app[' is INVALID") {
-    testInvalid("/app[' i")
-  }
+    "id '/app' is valid" in {
+      testValidId("/app")
+    }
 
-  test("id '/asd/sadf+' is INVALID") {
-    testInvalid("/asd/sadf+")
-  }
+    "id '/hy-phenated' is valid" in {
+      testValidId("/hy-phenated")
+    }
 
-  test("id '/asd asd' is INVALID") {
-    testInvalid("/asd asd")
-  }
+    "id '/numbered9' is valid" in {
+      testValidId("/numbered9")
+    }
 
-  test("id '/app-' is invalid because hyphens and dots are only allowed inside of path fragments") {
-    testInvalid("/app-")
-  }
+    "id '/9numbered' is valid" in {
+      testValidId("/9numbered")
+    }
 
-  test("id '/nest./ted' is invalid because hyphens and dots are only allowed inside of path fragments") {
-    testInvalid("/nest./ted")
-  }
+    "id '/num8bered' is valid" in {
+      testValidId("/num8bered")
+    }
 
-  test("id '/nest/-ted' is invalid because hyphens and dots are only allowed inside of path fragments") {
-    testInvalid("/nest/-ted")
-  }
+    "id '/dot.ted' is valid" in {
+      testValidId("/dot.ted")
+    }
 
-  test("only cmd + command health check") {
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"),
-      healthChecks = Set(
-        HealthCheck(
-          protocol = HealthCheckDefinition.Protocol.COMMAND,
-          command = Some(Command("curl http://localhost:$PORT"))
+    "id '/deep/ly/nes/ted' is valid" in {
+      testValidId("/deep/ly/nes/ted")
+    }
+
+    "id '/all.to-9gether/now-huh12/nest/nest' is valid" in {
+      testValidId("/all.to-9gether/now-huh12/nest/nest")
+    }
+
+    "id '/trailing/' is valid" in {
+      // the trailing slash is apparently ignored by Marathon
+      testValidId("/trailing/")
+    }
+
+    "single dots in id '/test/.' pass schema and validation" in {
+      testInvalid("/test/.")
+    }
+
+    "single dots in id '/./not.point.less' pass schema and validation" in {
+      testInvalid("/./not.point.less")
+    }
+
+    // non-absolute paths (could be allowed in some contexts)
+    "relative id 'relative/asd' passes schema but not validation" in {
+      val app = AppDefinition(
+        id = PathId("relative/asd"),
+        cmd = Some("true"))
+
+      the[ValidationFailedException] thrownBy validateOrThrow(app) should have message "Validation failed: Failure(Set(RuleViolation(relative/asd,Path needs to be absolute,Some(id))))"
+
+      MarathonTestHelper.validateJsonSchema(app)
+    }
+
+    // non-absolute paths (could be allowed in some contexts)
+    "relative id '../relative' passes schema but not validation" in {
+      val app = AppDefinition(
+        id = PathId("../relative"),
+        cmd = Some("true"))
+
+      the[ValidationFailedException] thrownBy validateOrThrow(app) should have message ("Validation failed: Failure(Set(RuleViolation(../relative,Path needs to be absolute,Some(id))))")
+
+      MarathonTestHelper.validateJsonSchema(app)
+    }
+
+    "id '/.../asd' is INVALID" in {
+      testInvalid("/.../asd")
+    }
+
+    "id '/app!' is INVALID" in {
+      testInvalid("/app!' i")
+    }
+
+    "id '/app[' is INVALID" in {
+      testInvalid("/app[' i")
+    }
+
+    "id '/asd/sadf+' is INVALID" in {
+      testInvalid("/asd/sadf+")
+    }
+
+    "id '/asd asd' is INVALID" in {
+      testInvalid("/asd asd")
+    }
+
+    "id '/app-' is invalid because hyphens and dots are only allowed inside of path fragments" in {
+      testInvalid("/app-")
+    }
+
+    "id '/nest./ted' is invalid because hyphens and dots are only allowed inside of path fragments" in {
+      testInvalid("/nest./ted")
+    }
+
+    "id '/nest/-ted' is invalid because hyphens and dots are only allowed inside of path fragments" in {
+      testInvalid("/nest/-ted")
+    }
+
+    "only cmd + command health check" in {
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"),
+        healthChecks = Set(
+          MesosCommandHealthCheck(
+            command = Command("curl http://localhost:$PORT")
+          )
         )
       )
-    )
-    assert(validate(app).isSuccess)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("only cmd + acceptedResourceRoles") {
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"),
-      acceptedResourceRoles = Some(Set(ResourceRole.Unreserved)))
-    assert(validate(app).isSuccess)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+    "only cmd + acceptedResourceRoles" in {
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"),
+        acceptedResourceRoles = Set(ResourceRole.Unreserved))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("only cmd + acceptedResourceRoles 2") {
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"),
-      acceptedResourceRoles = Some(Set(ResourceRole.Unreserved, "production")))
-    assert(validate(app).isSuccess)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+    "only cmd + acceptedResourceRoles 2" in {
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"),
+        acceptedResourceRoles = Set(ResourceRole.Unreserved, "production"))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("only args") {
-    val app = AppDefinition(
-      id = PathId("/test"),
-      args = Some("test" :: Nil))
-    assert(validate(app).isSuccess)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+    "only args" in {
+      val app = AppDefinition(
+        id = PathId("/test"),
+        args = "test" :: Nil)
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("only container") {
-    val f = new Fixture
-    val app = AppDefinition(
-      id = PathId("/test"),
-      container = Some(f.validDockerContainer))
-    assert(validate(app).isSuccess)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+    "only container" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = PathId("/test"),
+        container = Some(f.validDockerContainer))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("empty container is invalid") {
-    val app = AppDefinition(
-      id = PathId("/test"),
-      container = Some(Container.Mesos()))
-    assert(validate(app).isFailure)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+    "empty container is invalid" in {
+      val app = AppDefinition(
+        id = PathId("/test"),
+        container = Some(Container.Mesos()))
+      assert(validate(app).isFailure)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("container and cmd") {
-    val f = new Fixture
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"),
-      container = Some(f.validDockerContainer))
-    assert(validate(app).isSuccess)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+    "docker container and cmd" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"),
+        container = Some(f.validDockerContainer))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("container and args") {
-    val f = new Fixture
-    val app = AppDefinition(
-      id = PathId("/test"),
-      args = Some("test" :: Nil),
-      container = Some(f.validDockerContainer))
-    assert(validate(app).isSuccess)
-    MarathonTestHelper.validateJsonSchema(app)
-  }
+    "docker container and args" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = PathId("/test"),
+        args = "test" :: Nil,
+        container = Some(f.validDockerContainer))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("container, cmd and args is not valid") {
-    val f = new Fixture
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"),
-      args = Some("test" :: Nil),
-      container = Some(f.validDockerContainer))
-    assert(validate(app).isFailure)
-    MarathonTestHelper.validateJsonSchema(app, valid = false)
-  }
+    "mesos container only" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = PathId("/test"),
+        container = Some(f.validMesosDockerContainer))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("container with type MESOS and empty docker field is valid") {
-    val f = new Fixture
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"),
-      container = Some(f.validMesosContainer))
-    assert(validate(app).isSuccess)
-    MarathonTestHelper.validateJsonSchema(app, valid = true)
-  }
+    "mesos container and cmd" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"),
+        container = Some(f.validMesosDockerContainer))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("valid docker volume") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume)
-    )
-    assert(validate(container).isSuccess)
-  }
+    "mesos container and args" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = PathId("/test"),
+        args = "test" :: Nil,
+        container = Some(f.validMesosDockerContainer))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("docker volume with missing containerPath is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validDockerVolume.copy(containerPath = ""))
-    )
-    assert(validate(container).isFailure)
-  }
+    "container, cmd and args is not valid" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"),
+        args = "test" :: Nil,
+        container = Some(f.validDockerContainer))
+      assert(validate(app).isFailure)
+      MarathonTestHelper.validateJsonSchema(app, valid = false)
+    }
 
-  test("docker volume with missing hostPath is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validDockerVolume.copy(hostPath = ""))
-    )
-    assert(validate(container).isFailure)
-  }
+    "container with type MESOS and empty docker field is valid" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"),
+        container = Some(f.validMesosContainer))
+      assert(validate(app).isSuccess)
+      MarathonTestHelper.validateJsonSchema(app)
+    }
 
-  test("persistent volume with missing containerPath is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(containerPath = ""))
-    )
-    assert(validate(container).isFailure)
-  }
-
-  test("persistent volume with mode RO is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(mode = mesos.Volume.Mode.RO))
-    )
-    assert(validate(container).isFailure)
-  }
-
-  test("persistent volume with size 0 is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(0)))
-    )
-    assert(validate(container).isFailure)
-  }
-
-  test("persistent volume with size < 0 is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(-1)))
-    )
-    assert(validate(container).isFailure)
-  }
-
-  test("persistent volume with container path '.' is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(containerPath = "."))
-    )
-    assert(validate(container).isFailure)
-  }
-
-  test("persistent volume with container path '..' is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(containerPath = ".."))
-    )
-    assert(validate(container).isFailure)
-  }
-
-  test("persistent volume with container path '.hidden' is valid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(containerPath = ".hidden"))
-    )
-    assert(validate(container).isSuccess)
-  }
-
-  test("persistent volume with container path with dots in the middle is valid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo..bar"))
-    )
-    assert(validate(container).isSuccess)
-  }
-
-  test("persistent volume with container path starting with a forward slash is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(containerPath = "/path"))
-    )
-    assert(validate(container).isFailure)
-  }
-
-  test("persistent volume with container path containing forward slashes is invalid") {
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo/bar"))
-    )
-    assert(validate(container).isFailure)
-  }
-
-  test("Validation for update of resident apps") {
-    Given("A resident app definition")
-    val f = new Fixture
-    val from = f.validResident
-
-    When("Check if update to itself is valid")
-    val to = from
-    Then("Should be valid")
-    AppDefinition.residentUpdateIsValid(from)(to).isSuccess should be(true)
-
-    When("Check if default upgrade strategy is valid")
-    val to2 = from.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
-    Then("Should be invalid")
-    AppDefinition.residentUpdateIsValid(from)(to2).isSuccess should be(false)
-
-    When("Check if removing a volume is valid")
-    val to3 = f.residentApp(from.id.toString, Seq(f.vol1))
-    Then("Should be invalid")
-    AppDefinition.residentUpdateIsValid(from)(to3).isSuccess should be(false)
-
-    When("Check if adding a volume is valid")
-    val to4 = f.residentApp(from.id.toString, Seq(f.vol1, f.vol2, f.vol3))
-    Then("Should be invalid")
-    AppDefinition.residentUpdateIsValid(from)(to4).isSuccess should be(false)
-
-    When("Check if changing a volume is valid")
-    val to5 = f.residentApp(from.id.toString, Seq(f.vol1, f.vol3))
-    Then("Should be invalid")
-    AppDefinition.residentUpdateIsValid(from)(to5).isSuccess should be(false)
-
-    When("Check if changing mem is valid")
-    val to6 = from.copy(mem = 123)
-    Then("Should be invalid")
-    AppDefinition.residentUpdateIsValid(from)(to6).isSuccess should be(false)
-
-    When("Check if changing cpu is valid")
-    val to7 = from.copy(cpus = 123)
-    Then("Should be invalid")
-    AppDefinition.residentUpdateIsValid(from)(to7).isSuccess should be(false)
-
-    When("Check if changing disk is valid")
-    val to8 = from.copy(disk = 123)
-    Then("Should be invalid")
-    AppDefinition.residentUpdateIsValid(from)(to8).isSuccess should be(false)
-
-    When("Check if changing ports is valid")
-    val to9 = from.copy(portDefinitions = Seq.empty)
-    Then("Should be invalid")
-    AppDefinition.residentUpdateIsValid(from)(to9).isSuccess should be(false)
-  }
-
-  test("Validation for defining a resident app") {
-    Given("A resident app definition")
-    val f = new Fixture
-    val from = f.validResident
-
-    When("Check if only defining residency without persistent volumes is valid")
-    val to1 = from.copy(container = None)
-    Then("Should be invalid")
-    validAppDefinition(to1).isSuccess should be(false)
-
-    When("Check if only defining local volumes without residency is valid")
-    val to2 = from.copy(residency = None)
-    Then("Should be invalid")
-    validAppDefinition(to2).isSuccess should be(false)
-
-    When("Check if defining local volumes and residency is valid")
-    Then("Should be valid")
-    validAppDefinition(from).isSuccess should be(true)
-
-    When("Check if defining no local volumes and no residency is valid")
-    val to3 = from.copy(residency = None, container = None)
-    Then("Should be valid")
-    validAppDefinition(to3).isSuccess should be(true)
-  }
-
-  test("A application with label MARATHON_SINGLE_INSTANCE_APP may not have an instance count > 1") {
-    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an instance count of 0")
-    val app = AppDefinition(
-      cmd = Some("sleep 1000"),
-      instances = 0,
-      upgradeStrategy = UpgradeStrategy(0, 0),
-      labels = Map[String, String](
-        AppDefinition.Labels.SingleInstanceApp -> true.toString
+    "valid docker volume" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume)
       )
-    )
-    Then("the validation succeeds")
-    validAppDefinition(app).isSuccess shouldBe true
+      assert(validate(container)(validContainer()).isSuccess)
+    }
 
-    When("the instance count is set to 1")
-    val appWith1Instance = app.copy(instances = 1)
-    Then("the validation succeeds")
-    validAppDefinition(appWith1Instance).isSuccess shouldBe true
-
-    When("the instance count is set to 2")
-    val appWith2Instances = app.copy(instances = 2)
-    Then("the validation fails")
-    validAppDefinition(appWith2Instances).isFailure shouldBe true
-  }
-
-  test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,0) is invalid") {
-    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,0)")
-    val app = AppDefinition(
-      cmd = Some("sleep 1000"),
-      upgradeStrategy = UpgradeStrategy(1, 0),
-      labels = Map[String, String](
-        AppDefinition.Labels.SingleInstanceApp -> true.toString
+    "docker volume with missing containerPath is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validDockerVolume.copy(containerPath = ""))
       )
-    )
-    Then("the validation fails")
-    validAppDefinition(app).isFailure shouldBe true
-  }
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-  test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,1) is invalid") {
-    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,1)")
-    val app = AppDefinition(
-      cmd = Some("sleep 1000"),
-      upgradeStrategy = UpgradeStrategy(1, 1),
-      labels = Map[String, String](
-        AppDefinition.Labels.SingleInstanceApp -> true.toString
+    "docker volume with missing hostPath is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validDockerVolume.copy(hostPath = ""))
       )
-    )
-    Then("the validation fails")
-    validAppDefinition(app).isFailure shouldBe true
-  }
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-  test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,1) is invalid") {
-    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,1)")
-    val app = AppDefinition(
-      cmd = Some("sleep 1000"),
-      upgradeStrategy = UpgradeStrategy(0, 1),
-      labels = Map[String, String](
-        AppDefinition.Labels.SingleInstanceApp -> true.toString
+    "persistent volume with missing containerPath is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(containerPath = ""))
       )
-    )
-    Then("the validation fails")
-    validAppDefinition(app).isFailure shouldBe true
-  }
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-  test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,0) is valid") {
-    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,0)")
-    val app = AppDefinition(
-      cmd = Some("sleep 1000"),
-      upgradeStrategy = UpgradeStrategy(0, 0),
-      labels = Map[String, String](
-        AppDefinition.Labels.SingleInstanceApp -> true.toString
+    "persistent volume with mode RO is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(mode = mesos.Volume.Mode.RO))
       )
-    )
-    Then("the validation fails")
-    validAppDefinition(app).isSuccess shouldBe true
-  }
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-  test("readinessChecks are invalid for normal apps") {
-    Given("a normal app with a defined readinessCheck")
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"),
-      readinessChecks = Seq(ReadinessCheck()))
+    "persistent volume with size 0 is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(0)))
+      )
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-    Then("validation fails")
-    validAppDefinition(app).isFailure shouldBe true
-  }
+    "persistent volume with size < 0 is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(-1)))
+      )
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-  test("validation of constraints") {
-    import Constraint.Operator._
+    "persistent volume with container path '.' is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(containerPath = "."))
+      )
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-    val unique = Constraint.newBuilder.setField("hostname").setOperator(UNIQUE)
-    val cluster = Constraint.newBuilder.setField("rack-id").setOperator(CLUSTER)
-    val groupBy = Constraint.newBuilder.setField("rack-id").setOperator(GROUP_BY)
-    val like = Constraint.newBuilder.setField("rack-id").setOperator(LIKE)
-    val unlike = Constraint.newBuilder.setField("rack-id").setOperator(UNLIKE)
-    val max_per = Constraint.newBuilder.setField("rack-id").setOperator(MAX_PER)
+    "persistent volume with container path '..' is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(containerPath = ".."))
+      )
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-    Given("no constraints")
-    val app = AppDefinition(
-      id = PathId("/test"),
-      cmd = Some("true"),
-      constraints = Set())
-    Then("validation succeeds")
-    validAppDefinition(app).isSuccess shouldBe true
+    "persistent volume with container path '.hidden' is valid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(containerPath = ".hidden"))
+      )
+      assert(validate(container)(validContainer()).isSuccess)
+    }
 
-    Given("A UNIQUE constraint without a value")
-    val appUnique = app.copy(constraints = Set(unique.build()))
-    Then("validation succeeds")
-    validAppDefinition(appUnique).isSuccess shouldBe true
+    "persistent volume with container path with dots in the middle is valid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo..bar"))
+      )
+      assert(validate(container)(validContainer()).isSuccess)
+    }
 
-    Given("A UNIQUE constraint with a value")
-    val appUniqueValue = app.copy(constraints = Set(unique.setValue("a").build()))
-    Then("validation fails")
-    validAppDefinition(appUniqueValue).isFailure shouldBe true
+    "persistent volume with container path starting with a forward slash is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(containerPath = "/path"))
+      )
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-    Given("A CLUSTER constraint without a value")
-    val appClusterNoValue = app.copy(constraints = Set(cluster.build()))
-    Then("validation fails")
-    validAppDefinition(appClusterNoValue).isFailure shouldBe true
+    "persistent volume with container path containing forward slashes is invalid" in {
+      val f = new Fixture
+      val container = f.validDockerContainer.copy(
+        volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo/bar"))
+      )
+      assert(validate(container)(validContainer()).isFailure)
+    }
 
-    Given("A CLUSTER constraint with a value")
-    val appCluster = app.copy(constraints = Set(cluster.setValue("abc").build()))
-    Then("validation succeeds")
-    validAppDefinition(appCluster).isSuccess shouldBe true
+    "Validation for update of resident apps" in {
+      Given("A resident app definition")
+      val f = new Fixture
+      val from = f.validResident
 
-    Given("A GROUP_BY without a value")
-    val appGroupByNoValue = app.copy(constraints = Set(groupBy.build()))
-    Then("validation succeeds")
-    validAppDefinition(appGroupByNoValue).isSuccess shouldBe true
+      When("Check if update to itself is valid")
+      val to = from
+      Then("Should be valid")
+      AppDefinition.residentUpdateIsValid(from)(to).isSuccess should be(true)
 
-    Given("A GROUP_BY with a numeric value")
-    val appGroupByNumericValue = app.copy(constraints = Set(groupBy.setValue("123").build()))
-    Then("validation succeeds")
-    validAppDefinition(appGroupByNumericValue).isSuccess shouldBe true
+      When("Check if default upgrade strategy is valid")
+      val to2 = from.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
+      Then("Should be invalid")
+      AppDefinition.residentUpdateIsValid(from)(to2).isSuccess should be(false)
 
-    Given("A GROUP_BY with a non-numeric value")
-    val appGroupByNonNumericValue = app.copy(constraints = Set(groupBy.setValue("AbcDZ").build()))
-    Then("validation fails")
-    validAppDefinition(appGroupByNonNumericValue).isFailure shouldBe true
+      When("Check if removing a volume is valid")
+      val to3 = f.residentApp(from.id.toString, Seq(f.vol1))
+      Then("Should be invalid")
+      AppDefinition.residentUpdateIsValid(from)(to3).isSuccess should be(false)
 
-    Given("A MAX_PER with a numeric value")
-    val appMaxPerNumericValue = app.copy(constraints = Set(max_per.setValue("123").build()))
-    Then("validation succeeds")
-    validAppDefinition(appMaxPerNumericValue).isSuccess shouldBe true
+      When("Check if adding a volume is valid")
+      val to4 = f.residentApp(from.id.toString, Seq(f.vol1, f.vol2, f.vol3))
+      Then("Should be invalid")
+      AppDefinition.residentUpdateIsValid(from)(to4).isSuccess should be(false)
 
-    Given("A MAX_PER with a non-numeric value")
-    val appMaxPerNonNumericValue = app.copy(constraints = Set(max_per.setValue("AbcDZ").build()))
-    Then("validation fails")
-    validAppDefinition(appMaxPerNonNumericValue).isFailure shouldBe true
+      When("Check if changing a volume is valid")
+      val to5 = f.residentApp(from.id.toString, Seq(f.vol1, f.vol3))
+      Then("Should be invalid")
+      AppDefinition.residentUpdateIsValid(from)(to5).isSuccess should be(false)
 
-    Seq(like, unlike).foreach { op =>
-      Given(s"A ${op.getOperator} without a value")
-      val appOpNoValue = app.copy(constraints = Set(op.build()))
+      When("Check if changing mem is valid")
+      val to6 = from.copy(resources = Resources(mem = 123))
+      Then("Should be invalid")
+      AppDefinition.residentUpdateIsValid(from)(to6).isSuccess should be(false)
+
+      When("Check if changing cpu is valid")
+      val to7 = from.copy(resources = Resources(cpus = 123))
+      Then("Should be invalid")
+      AppDefinition.residentUpdateIsValid(from)(to7).isSuccess should be(false)
+
+      When("Check if changing disk is valid")
+      val to8 = from.copy(resources = Resources(disk = 123))
+      Then("Should be invalid")
+      AppDefinition.residentUpdateIsValid(from)(to8).isSuccess should be(false)
+
+      When("Check if changing ports is valid")
+      val to9 = from.copy(portDefinitions = Seq.empty)
+      Then("Should be invalid")
+      AppDefinition.residentUpdateIsValid(from)(to9).isSuccess should be(false)
+    }
+
+    "Validation for defining a resident app" in {
+      Given("A resident app definition")
+      val f = new Fixture
+      val from = f.validResident
+
+      When("Check if only defining residency without persistent volumes is valid")
+      val to1 = from.copy(container = None)
+      Then("Should be invalid")
+      validAppDefinition(to1).isSuccess should be(false)
+
+      When("Check if only defining local volumes without residency is valid")
+      val to2 = from.copy(residency = None)
+      Then("Should be invalid")
+      validAppDefinition(to2).isSuccess should be(false)
+
+      When("Check if defining local volumes and residency is valid")
+      Then("Should be valid")
+      validAppDefinition(from).isSuccess should be(true)
+
+      When("Check if defining no local volumes and no residency is valid")
+      val to3 = from.copy(residency = None, container = None)
+      Then("Should be valid")
+      validAppDefinition(to3).isSuccess should be(true)
+    }
+
+    "A application with label MARATHON_SINGLE_INSTANCE_APP may not have an instance count > 1" in {
+      Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an instance count of 0")
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("sleep 1000"),
+        instances = 0,
+        upgradeStrategy = UpgradeStrategy(0, 0),
+        labels = Map[String, String](
+          Apps.LabelSingleInstanceApp -> true.toString
+        )
+      )
+      Then("the validation succeeds")
+      validAppDefinition(app).isSuccess shouldBe true
+
+      When("the instance count is set to 1")
+      val appWith1Instance = app.copy(instances = 1)
+      Then("the validation succeeds")
+      validAppDefinition(appWith1Instance).isSuccess shouldBe true
+
+      When("the instance count is set to 2")
+      val appWith2Instances = app.copy(instances = 2)
+      Then("the validation fails")
+      validAppDefinition(appWith2Instances).isFailure shouldBe true
+    }
+
+    "For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,0) is invalid" in {
+      Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,0)")
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("sleep 1000"),
+        upgradeStrategy = UpgradeStrategy(1, 0),
+        labels = Map[String, String](
+          Apps.LabelSingleInstanceApp -> true.toString
+        )
+      )
+      Then("the validation fails")
+      validAppDefinition(app).isFailure shouldBe true
+    }
+
+    "For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,1) is invalid" in {
+      Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,1)")
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("sleep 1000"),
+        upgradeStrategy = UpgradeStrategy(1, 1),
+        labels = Map[String, String](
+          Apps.LabelSingleInstanceApp -> true.toString
+        )
+      )
+      Then("the validation fails")
+      validAppDefinition(app).isFailure shouldBe true
+    }
+
+    "For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,1) is invalid" in {
+      Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,1)")
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("sleep 1000"),
+        upgradeStrategy = UpgradeStrategy(0, 1),
+        labels = Map[String, String](
+          Apps.LabelSingleInstanceApp -> true.toString
+        )
+      )
+      Then("the validation fails")
+      validAppDefinition(app).isFailure shouldBe true
+    }
+
+    "For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,0) is valid" in {
+      Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,0)")
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("sleep 1000"),
+        upgradeStrategy = UpgradeStrategy(0, 0),
+        labels = Map[String, String](
+          Apps.LabelSingleInstanceApp -> true.toString
+        )
+      )
+      Then("the validation fails")
+      validAppDefinition(app).isSuccess shouldBe true
+    }
+
+    "readinessChecks are invalid for normal apps" in {
+      Given("a normal app with a defined readinessCheck")
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("true"),
+        readinessChecks = Seq(ReadinessCheck()))
+
       Then("validation fails")
-      validAppDefinition(appOpNoValue).isFailure shouldBe true
+      validAppDefinition(app).isFailure shouldBe true
+    }
 
-      Given(s"A ${op.getOperator} with a valid regex")
-      val appOpRegex = app.copy(constraints = Set(op.setValue(".*").build()))
+    "Resident app may only define unreserved acceptedResourceRoles or None" in {
+      Given("A resident app definition")
+      val f = new Fixture
+      val from = f.validResident
+
+      When("validating with role for static reservation")
+      val to1 = from.copy(acceptedResourceRoles = Set("foo"))
+      Then("Should be invalid")
+      validAppDefinition(to1).isSuccess shouldBe false
+
+      When("validating with only unreserved roles")
+      val to2 = from.copy(acceptedResourceRoles = Set(ResourceRole.Unreserved))
+      Then("Should be valid")
+      validAppDefinition(to2).isSuccess shouldBe true
+
+      When("validating without acceptedResourceRoles")
+      val to3 = from.copy(acceptedResourceRoles = Set.empty)
+      Then("Should be valid")
+      validAppDefinition(to3).isSuccess shouldBe true
+    }
+
+    "health check validation should allow port specifications without port indices" in {
+      Given("A docker app with no portDefinitions and HTTP health checks")
+
+      val app1 = AppDefinition(
+        id = PathId("/test"),
+        networks = Seq(HostNetwork), container = Some(Container.Docker(
+          image = "group/image"
+        )),
+        portDefinitions = List.empty,
+        healthChecks = Set(
+          MarathonHttpHealthCheck(
+            path = Some("/"),
+            protocol = Protos.HealthCheckDefinition.Protocol.HTTP,
+            port = Some(8000),
+            portIndex = None
+          )
+        )
+      )
       Then("validation succeeds")
-      validAppDefinition(appOpRegex).isSuccess shouldBe true
-
-      Given(s"A ${op.getOperator} with an invalid regex")
-      val appOpBadRegex = app.copy(constraints = Set(op.setValue("*").build()))
-      Then("validation fails")
-      validAppDefinition(appOpBadRegex).isFailure shouldBe true
+      validAppDefinition(app1).isSuccess shouldBe true
     }
-  }
 
-  test("Resident app may only define unreserved acceptedResourceRoles or None") {
-    Given("A resident app definition")
-    val f = new Fixture
-    val from = f.validResident
+    "cassandraWithoutResidency" in {
 
-    When("validating with role for static reservation")
-    val to1 = from.copy(acceptedResourceRoles = Some(Set("foo")))
-    Then("Should be invalid")
-    validAppDefinition(to1).isSuccess shouldBe false
+      val f = new Fixture
+      val app = Json.parse(f.cassandraWithoutResidency).as[App]
+      val config = AppNormalization.Configure(None, "bridge-name")
+      val result = validAppDefinition(Raml.fromRaml(
+        AppNormalization(config).normalized(
+          validateOrThrow(
+            AppNormalization.forDeprecated(config).normalized(app)))))
+      result.isSuccess shouldBe true
+    }
 
-    When("validating with only unreserved roles")
-    val to2 = from.copy(acceptedResourceRoles = Some(Set(ResourceRole.Unreserved)))
-    Then("Should be valid")
-    validAppDefinition(to2).isSuccess shouldBe true
+    "cassandraWithoutResidencyWithUpgradeStrategy" in {
 
-    When("validating without acceptedResourceRoles")
-    val to3 = from.copy(acceptedResourceRoles = None)
-    Then("Should be valid")
-    validAppDefinition(to3).isSuccess shouldBe true
-  }
-
-  test("health check validation should allow port specifications without port indices") {
-    Given("A docker app with no portDefinitions and HTTP health checks")
-
-    val app1 = AppDefinition(
-      container = Some(Container.Docker(
-        image = "group/image",
-        network = Some(mesos.ContainerInfo.DockerInfo.Network.HOST)
-      )),
-      portDefinitions = List.empty,
-      healthChecks = Set(
-        HealthCheck(
-          path = Some("/"),
-          protocol = Protos.HealthCheckDefinition.Protocol.HTTP,
-          port = Some(8000),
-          portIndex = None
-        )
-      )
-    )
-    Then("validation succeeds")
-    validAppDefinition(app1).isSuccess shouldBe true
-  }
-
-  test("cassandraWithoutResidency") {
-    import Formats._
-
-    val f = new Fixture
-    val app = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
-    val result = validAppDefinition(app)
-    result.isSuccess shouldBe true
-  }
-
-  test("cassandraWithoutResidencyWithUpgradeStrategy") {
-    import Formats._
-
-    val f = new Fixture
-    val base = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
-    val app = base.copy(upgradeStrategy = UpgradeStrategy(0, 0))
-    val result = validAppDefinition(app)
-    result.isSuccess shouldBe true
-  }
-
-  test("Validation plugins can invalidate apps") {
-    Given("An app with an invalid label")
-    val app = AppDefinition(
-      cmd = Some("sleep 1000"),
-      upgradeStrategy = UpgradeStrategy(0, 0),
-      env = Map[String, EnvVarValue]("SECURITY_USER" -> new EnvVarString("admin"))
-    )
-    Then("the validation fails")
-    val pm = new PluginManager() {
-      def plugins[T](implicit ct: ClassTag[T]): Seq[T] = {
-        ct.toString() match {
-          case "mesosphere.marathon.plugin.validation.RunSpecValidator" =>
-            List(
-              isTrue[mesosphere.marathon.plugin.RunSpec]("SECURITY_* environment variables are not permitted") {
-              _.env.keys.count(_.startsWith("SECURITY_")) == 0
-            }.asInstanceOf[T]
-            )
-          case _ => List.empty
-        }
+      val f = new Fixture
+      val base = Json.parse(f.cassandraWithoutResidency).as[App]
+      val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
+      val config = AppNormalization.Configure(None, "bridge-name")
+      val result = validAppDefinition(Raml.fromRaml(
+        AppNormalization(config).normalized(
+          validateOrThrow(
+            AppNormalization.forDeprecated(config).normalized(app)))))
+      withClue(result) {
+        result.isSuccess shouldBe true
       }
-      def definitions: PluginDefinitions = PluginDefinitions.None
     }
-    AppDefinition.validAppDefinition(Set())(pm)(app).isFailure shouldBe true
 
-    Given("An app without an invalid label")
-    val app2 = AppDefinition(
-      cmd = Some("sleep 1000"),
-      upgradeStrategy = UpgradeStrategy(0, 0),
-      env = EnvVarValue(Map[String, String](
-        "APP_USER" -> "admin"
-      ))
-    )
-    Then("the validation succeeds")
-    AppDefinition.validAppDefinition(Set())(pm)(app2).isSuccess shouldBe true
-  }
-
-  class Fixture {
-    def validDockerContainer: Container.Docker = Container.Docker(
-      volumes = Nil,
-      image = "foo/bar:latest"
-    )
-
-    def validMesosContainer: Container.Mesos = Container.Mesos(
-      volumes = Nil
-    )
-
-    // scalastyle:off magic.number
-    def validPersistentVolume: PersistentVolume = PersistentVolume(
-      containerPath = "test",
-      persistent = PersistentVolumeInfo(10),
-      mode = mesos.Volume.Mode.RW)
-
-    def validDockerVolume: DockerVolume = DockerVolume(
-      containerPath = "/test",
-      hostPath = "/etc/foo",
-      mode = mesos.Volume.Mode.RW)
-
-    def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
-    val zero = UpgradeStrategy(0, 0)
-
-    def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
-      AppDefinition(
-        id = PathId(id),
-        cmd = Some("test"),
-        container = Some(Container.Mesos(volumes)),
-        residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT))
+    "Validation plugins can invalidate apps" in {
+      Given("An app with an invalid label")
+      val app = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("sleep 1000"),
+        upgradeStrategy = UpgradeStrategy(0, 0),
+        env = Map[String, EnvVarValue]("SECURITY_USER" -> new EnvVarString("admin"))
       )
-    }
-    val vol1 = persistentVolume("foo")
-    val vol2 = persistentVolume("bla")
-    val vol3 = persistentVolume("test")
-    val validResident = residentApp("/app1", Seq(vol1, vol2)).copy(upgradeStrategy = zero)
+      Then("the validation fails")
+      val pm = new PluginManager() {
+        def plugins[T](implicit ct: ClassTag[T]): Seq[T] = {
+          ct.toString() match {
+            case "mesosphere.marathon.plugin.validation.RunSpecValidator" =>
+              List(
+                isTrue[mesosphere.marathon.plugin.ApplicationSpec]("SECURITY_* environment variables are not permitted") {
+                _.env.keys.count(_.startsWith("SECURITY_")) == 0
+              }.asInstanceOf[T]
+              )
+            case _ => List.empty
+          }
+        }
+        def definitions: PluginDefinitions = PluginDefinitions.None
+      }
+      AppDefinition.validAppDefinition(Set())(pm)(app).isFailure shouldBe true
 
-    def cassandraWithoutResidency =
-      """
+      Given("An app without an invalid label")
+      val app2 = AppDefinition(
+        id = PathId("/test"),
+        cmd = Some("sleep 1000"),
+        upgradeStrategy = UpgradeStrategy(0, 0),
+        env = EnvVarValue(Map[String, String](
+          "APP_USER" -> "admin"
+        ))
+      )
+      Then("the validation succeeds")
+      AppDefinition.validAppDefinition(Set())(pm)(app2).isSuccess shouldBe true
+    }
+
+    class Fixture {
+      def validDockerContainer: Container.Docker = Container.Docker(
+        volumes = Nil,
+        image = "foo/bar:latest"
+      )
+
+      def validMesosContainer: Container.Mesos = Container.Mesos(
+        volumes = Nil
+      )
+
+      def validMesosDockerContainer: Container.MesosDocker = Container.MesosDocker(
+        volumes = Nil,
+        image = "foo/bar:latest"
+      )
+
+      // scalastyle:off magic.number
+      def validPersistentVolume: PersistentVolume = PersistentVolume(
+        containerPath = "test",
+        persistent = PersistentVolumeInfo(10),
+        mode = mesos.Volume.Mode.RW)
+
+      def validDockerVolume: DockerVolume = DockerVolume(
+        containerPath = "/test",
+        hostPath = "/etc/foo",
+        mode = mesos.Volume.Mode.RW)
+
+      def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
+      val zero = UpgradeStrategy(0, 0)
+
+      def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
+        AppDefinition(
+          id = PathId(id),
+          cmd = Some("test"),
+          container = Some(Container.Mesos(volumes)),
+          residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)),
+          portDefinitions = Seq(PortDefinition(0)),
+          unreachableStrategy = UnreachableStrategy.default(resident = true)
+        )
+      }
+      val vol1 = persistentVolume("foo")
+      val vol2 = persistentVolume("bla")
+      val vol3 = persistentVolume("test")
+      val validResident = residentApp("/app1", Seq(vol1, vol2)).copy(upgradeStrategy = zero)
+
+      def cassandraWithoutResidency =
+        """
         |{
         |  "id": "/cassandra",
         |  "cpus": 2,
@@ -797,5 +774,6 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
         |  ]
         |}
       """.stripMargin
+    }
   }
 }

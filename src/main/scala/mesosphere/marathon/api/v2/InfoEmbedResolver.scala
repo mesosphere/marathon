@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import mesosphere.marathon.core.appinfo.{ GroupInfo, AppInfo }
 import org.slf4j.LoggerFactory
@@ -23,6 +24,7 @@ private[v2] object InfoEmbedResolver {
 
   private[v2] val EmbedGroups = "group.groups"
   private[v2] val EmbedApps = "group.apps"
+  private[v2] val EmbedPods = "group.pods"
 
   /**
     * Converts embed arguments to our internal representation.
@@ -61,6 +63,7 @@ private[v2] object InfoEmbedResolver {
     embeds.flatMap {
       case EmbedGroups => Some(GroupInfo.Embed.Groups)
       case EmbedApps => Some(GroupInfo.Embed.Apps)
+      case EmbedPods => Some(GroupInfo.Embed.Pods)
       case unknown: String =>
         log.warn(s"unknown group embed argument: $unknown")
         None

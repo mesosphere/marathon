@@ -1,8 +1,9 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.event.UnhealthyTaskKillEvent
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.event.{ InstanceChanged, UnhealthyInstanceKillEvent }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
@@ -13,8 +14,8 @@ case class TaskFailure(
   state: mesos.TaskState,
   message: String = "",
   host: String = "",
-  version: Timestamp = Timestamp.now,
-  timestamp: Timestamp = Timestamp.now,
+  version: Timestamp = Timestamp.now(),
+  timestamp: Timestamp = Timestamp.now(),
   slaveId: Option[mesos.SlaveID] = None)
     extends MarathonState[Protos.TaskFailure, TaskFailure] {
 
@@ -35,9 +36,7 @@ case class TaskFailure(
       .setHost(host)
       .setVersion(version.toString)
       .setTimestamp(timestamp.toString)
-    if (slaveId.isDefined) {
-      taskFailureBuilder.setSlaveId(slaveId.get)
-    }
+    slaveId.foreach(taskFailureBuilder.setSlaveId)
     taskFailureBuilder.build
   }
 }
@@ -56,7 +55,7 @@ object TaskFailure {
 
   def apply(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(
-      appId = proto.getAppId.toPath,
+      appId = PathId(proto.getAppId),
       taskId = proto.getTaskId,
       state = proto.getState,
       message = proto.getMessage,
@@ -66,12 +65,12 @@ object TaskFailure {
       slaveId = if (proto.hasSlaveId) Some(proto.getSlaveId) else None
     )
 
-  object FromUnhealthyTaskKillEvent {
-    def unapply(event: UnhealthyTaskKillEvent): Option[TaskFailure] =
+  object FromUnhealthyInstanceKillEvent {
+    def unapply(event: UnhealthyInstanceKillEvent): Option[TaskFailure] =
       Some(apply(event))
 
-    def apply(event: UnhealthyTaskKillEvent): TaskFailure = {
-      val UnhealthyTaskKillEvent(appId, taskId, version, reason, host, slaveID, _, timestamp) = event
+    def apply(event: UnhealthyInstanceKillEvent): TaskFailure = {
+      val UnhealthyInstanceKillEvent(appId, taskId, _, version, reason, host, slaveID, _, timestamp) = event
 
       TaskFailure(
         appId,
@@ -92,11 +91,9 @@ object TaskFailure {
 
     def apply(statusUpdate: MesosStatusUpdateEvent): Option[TaskFailure] = {
       val MesosStatusUpdateEvent(
-        slaveId, taskId, taskStateStr, message,
+        slaveId, taskId, state, message,
         appId, host, _, _, version, _, ts
         ) = statusUpdate
-
-      val state = taskState(taskStateStr)
 
       if (isFailureState(state))
         Some(TaskFailure(
@@ -112,15 +109,47 @@ object TaskFailure {
       else None
     }
   }
+  object FromInstanceChangedEvent {
+    def unapply(instanceChange: InstanceChanged): Option[TaskFailure] =
+      apply(instanceChange)
+
+    def apply(instanceChange: InstanceChanged): Option[TaskFailure] = {
+      val InstanceChanged(_, runSpecVersion, runSpecId, condition, instance) = instanceChange
+
+      val (taskId, task) = instance.tasksMap.headOption.getOrElse(throw new RuntimeException("no task in instance"))
+      val mesosTaskId = taskId.mesosTaskId
+      val message = task.status.mesosStatus.fold("") { status =>
+        if (status.hasMessage) status.getMessage else ""
+      }
+
+      Condition.toMesosTaskState(condition) match {
+        case Some(state) if isFailureState(state) =>
+          Some(TaskFailure(
+            runSpecId,
+            mesosTaskId,
+            state,
+            message,
+            instance.agentInfo.host,
+            version = runSpecVersion,
+            instance.state.since,
+            instance.agentInfo.agentId.map(SlaveID(_))
+          ))
+        case _ =>
+          None
+      }
+    }
+  }
 
   protected[this] def taskState(s: String): mesos.TaskState =
     mesos.TaskState.valueOf(s)
 
   // Note that this will also store taskFailures for TASK_LOST no matter the reason
+  // TODO(PODS): this must be aligned with general state handling
   private[this] def isFailureState(state: mesos.TaskState): Boolean = {
     import mesos.TaskState._
     state match {
-      case TASK_FAILED | TASK_LOST | TASK_ERROR => true
+      case TASK_FAILED | TASK_ERROR |
+        TASK_LOST | TASK_DROPPED | TASK_GONE | TASK_GONE_BY_OPERATOR | TASK_UNKNOWN => true
       case _ => false
     }
   }

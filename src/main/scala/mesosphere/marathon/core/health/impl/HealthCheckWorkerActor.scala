@@ -1,115 +1,118 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import java.net.{ InetSocketAddress, Socket }
 import java.security.cert.X509Certificate
 import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 
-import akka.actor.{ Actor, ActorLogging, PoisonPill }
-import akka.util.Timeout
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{ COMMAND, HTTP, HTTPS, TCP }
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.{ HealthCheck, HealthResult, Healthy, Unhealthy }
+import akka.actor.{ Actor, PoisonPill }
+import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.{ ConnectionContext, Http }
+import akka.stream.Materializer
+import com.typesafe.scalalogging.StrictLogging
+import com.typesafe.sslconfig.akka.AkkaSSLConfig
+import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.util.ThreadPoolContext
-import spray.client.pipelining._
-import spray.http._
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
-class HealthCheckWorkerActor extends Actor with ActorLogging {
+class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with StrictLogging {
 
   import HealthCheckWorker._
 
-  implicit val system = context.system
+  private implicit val system = context.system
   import context.dispatcher // execution context for futures
 
   def receive: Receive = {
-    case HealthCheckJob(app, task, launched, check) =>
+    case HealthCheckJob(app, instance, check) =>
       val replyTo = sender() // avoids closing over the volatile sender ref
 
-      doCheck(app, task, launched, check)
+      doCheck(app, instance, check)
         .andThen {
           case Success(Some(result)) => replyTo ! result
           case Success(None) => // ignore
           case Failure(t) =>
+            logger.warn(s"Performing health check for app=${app.id} instance=${instance.instanceId} port=${check.port} failed with exception", t)
             replyTo ! Unhealthy(
-              task.taskId,
-              launched.runSpecVersion,
+              instance.instanceId,
+              instance.runSpecVersion,
               s"${t.getClass.getSimpleName}: ${t.getMessage}"
             )
         }
-        .onComplete { case _ => self ! PoisonPill }
+        .onComplete { _ => self ! PoisonPill }
   }
 
   def doCheck(
-    app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck): Future[Option[HealthResult]] =
-    task.effectiveIpAddress(app) match {
+    app: AppDefinition, instance: Instance, check: MarathonHealthCheck): Future[Option[HealthResult]] = {
+    // HealthChecks are only supported for legacy App instances with exactly one task
+    val effectiveIpAddress = instance.appTask.status.networkInfo.effectiveIpAddress(app)
+    effectiveIpAddress match {
       case Some(host) =>
-        check.effectivePort(app, task) match {
-          case None => Future.successful {
-            Some(
-              Unhealthy(
-                task.taskId,
-                launched.runSpecVersion,
-                "Missing/invalid port index and no explicit port specified"))
-          }
-          case Some(port) => check.protocol match {
-            case HTTP => http(task, launched, check, host, port)
-            case TCP => tcp(task, launched, check, host, port)
-            case HTTPS => https(task, launched, check, host, port)
-            case COMMAND =>
-              Future.failed {
-                val message = "COMMAND health checks can only be performed by the Mesos executor."
-                log.warning(message)
-                new UnsupportedOperationException(message)
-              }
-            case _ =>
-              Future.failed {
-                val message = s"Unknown health check protocol: [${check.protocol}]"
-                log.warning(message)
-                new UnsupportedOperationException(message)
-              }
+        val maybePort = check.effectivePort(app, instance)
+        (check, maybePort) match {
+          case (hc: MarathonHttpHealthCheck, Some(port)) =>
+            hc.protocol match {
+              case Protos.HealthCheckDefinition.Protocol.HTTPS => https(instance, hc, host, port)
+              case Protos.HealthCheckDefinition.Protocol.HTTP => http(instance, hc, host, port)
+              case invalidProtocol: Protos.HealthCheckDefinition.Protocol =>
+                Future.failed {
+                  val message = s"Health check failed: HTTP health check contains invalid protocol: $invalidProtocol"
+                  logger.warn(message)
+                  new UnsupportedOperationException(message)
+                }
+            }
+          case (hc: MarathonTcpHealthCheck, Some(port)) => tcp(instance, hc, host, port)
+          case _ => Future.failed {
+            val message = "Health check failed: unable to get the task's effectivePort"
+            logger.warn(message)
+            new UnsupportedOperationException(message)
           }
         }
       case None =>
         Future.failed {
           val message = "Health check failed: unable to get the task's effective IP address"
-          log.warning(message)
+          logger.warn(message)
           new UnsupportedOperationException(message)
         }
     }
+  }
 
   def http(
-    task: Task, launched: Task.Launched, check: HealthCheck, host: String, port: Int): Future[Option[HealthResult]] = {
+    instance: Instance,
+    check: MarathonHttpHealthCheck,
+    host: String,
+    port: Int): Future[Option[HealthResult]] = {
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"http://$host:$port$absolutePath"
-    log.debug("Checking the health of [{}] via HTTP", url)
+    logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTP")
 
-    def get(url: String): Future[HttpResponse] = {
-      implicit val requestTimeout = Timeout(check.timeout)
-      val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
-      pipeline(Get(url))
-    }
-
-    get(url).map { response =>
-      if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(task.taskId, launched.runSpecVersion))
-      else if (check.ignoreHttp1xx && (toIgnoreResponses contains response.status.intValue)) {
-        log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for ${task.taskId}")
-        None
-      } else {
-        Some(Unhealthy(task.taskId, launched.runSpecVersion, response.status.toString()))
+    Http().singleRequest(
+      RequestBuilding.Get(url)).map { response =>
+        response.discardEntityBytes() //forget about the body
+        if (acceptableResponses.contains(response.status.intValue())) {
+          Some(Healthy(instance.instanceId, instance.runSpecVersion))
+        } else if (check.ignoreHttp1xx && (toIgnoreResponses.contains(response.status.intValue))) {
+          logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
+          None
+        } else {
+          logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
+        }
       }
-    }
   }
 
   def tcp(
-    task: Task, launched: Task.Launched, check: HealthCheck, host: String, port: Int): Future[Option[HealthResult]] = {
+    instance: Instance,
+    check: MarathonTcpHealthCheck,
+    host: String,
+    port: Int): Future[Option[HealthResult]] = {
     val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt
-    log.debug("Checking the health of [{}] via TCP", address)
+    logger.debug(s"Checking the health of [$address] for instance=${instance.instanceId} via TCP")
 
     Future {
       val address = new InetSocketAddress(host, port)
@@ -118,52 +121,66 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         socket.connect(address, timeoutMillis)
         socket.close()
       }
-      Some(Healthy(task.taskId, launched.runSpecVersion, Timestamp.now()))
+      Some(Healthy(instance.instanceId, instance.runSpecVersion, Timestamp.now()))
     }(ThreadPoolContext.ioContext)
   }
 
   def https(
-    task: Task, launched: Task.Launched, check: HealthCheck, host: String, port: Int): Future[Option[HealthResult]] = {
+    instance: Instance,
+    check: MarathonHttpHealthCheck,
+    host: String,
+    port: Int): Future[Option[HealthResult]] = {
+
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"https://$host:$port$absolutePath"
-    log.debug("Checking the health of [{}] via HTTPS", url)
+    logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTPS")
 
-    def get(url: String): Future[HttpResponse] = {
-      implicit val requestTimeout = Timeout(check.timeout)
-      implicit def trustfulSslContext: SSLContext = {
-        object BlindFaithX509TrustManager extends X509TrustManager {
-          def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
-          def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
-          def getAcceptedIssuers: Array[X509Certificate] = Array[X509Certificate]()
+    // This is only a health check, so we are going to allow _very_ bad SSL configuration.
+    val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+      s.loose.withAcceptAnyCertificate(true)
+        .withAllowLegacyHelloMessages(Some(true))
+        .withAllowUnsafeRenegotiation(Some(true))
+        .withAllowWeakCiphers(true)
+        .withAllowWeakProtocols(true)
+        .withDisableHostnameVerification(true)
+        .withDisableSNI(true)
+    })
+
+    Http().singleRequest(
+      RequestBuilding.Get(url),
+      connectionContext = ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig))).map { response =>
+        response.discardEntityBytes() // forget about the body
+        if (acceptableResponses.contains(response.status.intValue())) {
+          Some(Healthy(instance.instanceId, instance.runSpecVersion))
+        } else {
+          logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
         }
-
-        val context = SSLContext.getInstance("Default")
-        //scalastyle:off null
-        context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
-        //scalastyle:on
-        context
       }
-      val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
-      pipeline(Get(url))
-    }
-
-    get(url).map { response =>
-      if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(task.taskId, launched.runSpecVersion))
-      else
-        Some(Unhealthy(task.taskId, launched.runSpecVersion, response.status.toString()))
-    }
   }
-
 }
 
+@SuppressWarnings(Array("NullParameter"))
 object HealthCheckWorker {
 
-  //scalastyle:off magic.number
   // Similar to AWS R53, we accept all responses in [200, 399]
   protected[health] val acceptableResponses = Range(200, 400)
   protected[health] val toIgnoreResponses = Range(100, 200)
 
-  case class HealthCheckJob(app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck)
+  case class HealthCheckJob(app: AppDefinition, instance: Instance, check: MarathonHealthCheck)
+
+  val disabledSslContext: SSLContext = {
+    object BlindFaithX509TrustManager extends X509TrustManager {
+      @SuppressWarnings(Array("EmptyMethod"))
+      def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+      @SuppressWarnings(Array("EmptyMethod"))
+      def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+      def getAcceptedIssuers: Array[X509Certificate] = Array[X509Certificate]()
+    }
+
+    val context = SSLContext.getInstance("TLS")
+    context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
+    context
+  }
 }

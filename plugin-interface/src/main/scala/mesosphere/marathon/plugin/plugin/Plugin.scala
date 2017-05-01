@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.plugin
+package mesosphere.marathon
+package plugin.plugin
 
 /**
   * Base trait for all plugin interfaces

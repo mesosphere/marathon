@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.heartbeat
+package mesosphere.marathon
+package core.heartbeat
 
 import akka.actor._
 import scala.concurrent.duration._
@@ -30,12 +31,13 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
       stay using data.copy(missed = 0)
 
     case Event(StateTimeout, data: DataActive) =>
-      if (data.missed + 1 >= config.missedHeartbeatsThreshold) {
-        data.reactor.onFailure
+      val missed = data.missed + 1
+      if (missed >= config.missedHeartbeatsThreshold) {
+        data.reactor.onFailure()
         goto(StateInactive) using DataNone
       } else {
-        data.reactor.onSkip
-        stay using data.copy(missed = data.missed + 1)
+        data.reactor.onSkip(missed)
+        stay using data.copy(missed = missed)
       }
 
     case Event(MessageDeactivate(token), data: DataActive) =>
@@ -69,7 +71,7 @@ object Heartbeat {
   case class Config(
       heartbeatTimeout: FiniteDuration,
       missedHeartbeatsThreshold: Int,
-      reactorDecorator: Option[Reactor.Decorator] = Some(Reactor.withLogging)) {
+      reactorDecorator: Option[Reactor.Decorator] = Some(Reactor.withLogging()())) {
 
     /** withReactor applies the optional reactorDecorator */
     def withReactor: Reactor.Decorator = Reactor.Decorator { r =>
@@ -83,14 +85,14 @@ object Heartbeat {
   case class MessageActivate(reactor: Reactor, sessionToken: AnyRef) extends Message
 
   trait Reactor {
-    def onSkip(): Unit
+    def onSkip(skipped: Int): Unit
     def onFailure(): Unit
   }
 
   object Reactor {
 
     /** Decorator generates a modified Reactor with enhanced functionality */
-    trait Decorator extends Function1[Reactor, Reactor]
+    trait Decorator extends (Reactor => Reactor)
 
     object Decorator {
       def apply(f: Reactor => Reactor): Decorator = new Decorator {
@@ -101,18 +103,20 @@ object Heartbeat {
     /**
       * withLogging decorates the given Reactor by logging messages prior to forwarding each callback
       */
-    final val withLogging: Decorator = Decorator { r =>
+    def withLogging(
+      skipLogger: String => Unit = log.debug)(
+      failureLogger: String => Unit = log.debug): Decorator = Decorator { r =>
       new Reactor {
-        def onSkip(): Unit = {
-          log.info("detected skipped heartbeat")
-          r.onSkip
+        def onSkip(skipped: Int): Unit = {
+          skipLogger("detected skipped heartbeat")
+          r.onSkip(skipped)
         }
 
         def onFailure(): Unit = {
           // might be a little redundant (depending what is logged elsewhere) but this is a
           // pretty important event that we don't want to miss
-          log.warn("detected heartbeat failure")
-          r.onFailure
+          failureLogger("detected heartbeat failure")
+          r.onFailure()
         }
       }
     }

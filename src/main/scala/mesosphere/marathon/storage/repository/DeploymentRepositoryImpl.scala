@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository
+package mesosphere.marathon
+package storage.repository
 
 import java.time.OffsetDateTime
 
@@ -10,12 +11,11 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreRepository
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.storage.repository.GcActor.{ StoreApp, StorePlan, StoreRoot }
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.state.{ RootGroup, Timestamp }
+import mesosphere.marathon.storage.repository.GcActor.{ StoreApp, StorePlan, StorePod, StoreRoot }
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -25,14 +25,15 @@ case class StoredPlan(
     originalVersion: OffsetDateTime,
     targetVersion: OffsetDateTime,
     version: OffsetDateTime) extends StrictLogging {
+  @SuppressWarnings(Array("all")) // async/await
   def resolve(groupRepository: GroupRepository)(implicit ctx: ExecutionContext): Future[Option[DeploymentPlan]] =
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val originalFuture = groupRepository.rootVersion(originalVersion)
       val targetFuture = groupRepository.rootVersion(targetVersion)
       val (original, target) = (await(originalFuture), await(targetFuture))
       (original, target) match {
         case (Some(o), Some(t)) =>
-          Some(DeploymentPlan(o, t, version = Timestamp(version), id = Some(id)))
+          Some(DeploymentPlan(RootGroup.fromGroup(o), RootGroup.fromGroup(t), version = Timestamp(version), id = Some(id)))
         case (_, None) | (None, _) =>
           logger.error(s"While retrieving $id, either original ($original)"
             + s" or target ($target) were no longer available")
@@ -79,18 +80,18 @@ class DeploymentRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
+    podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int)(implicit
   ir: IdResolver[String, StoredPlan, C, K],
     marshaller: Marshaller[StoredPlan, S],
     unmarshaller: Unmarshaller[S, StoredPlan],
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
-    mat: Materializer,
-    metrics: Metrics) extends DeploymentRepository {
+    mat: Materializer) extends DeploymentRepository {
 
   private val gcActor = GcActor(
-    s"PersistenceGarbageCollector:$hashCode",
-    this, groupRepository, appRepository, maxVersions)
+    s"PersistenceGarbageCollector-$hashCode",
+    this, groupRepository, appRepository, podRepository, maxVersions)
 
   appRepository.beforeStore = Some((id, version) => {
     val promise = Promise[Done]()
@@ -104,6 +105,12 @@ class DeploymentRepositoryImpl[K, C, S](
     promise.future
   })
 
+  podRepository.beforeStore = Some((id, version) => {
+    val promise = Promise[Done]()
+    gcActor ! StorePod(id, version, promise)
+    promise.future
+  })
+
   private def beforeStore(plan: DeploymentPlan): Future[Done] = {
     val promise = Promise[Done]()
     gcActor ! StorePlan(plan, promise)
@@ -112,12 +119,14 @@ class DeploymentRepositoryImpl[K, C, S](
 
   val repo = new PersistenceStoreRepository[String, StoredPlan, K, C, S](persistenceStore, _.id)
 
-  override def store(v: DeploymentPlan): Future[Done] = async {
+  @SuppressWarnings(Array("all")) // async/await
+  override def store(v: DeploymentPlan): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     await(beforeStore(v))
     await(repo.store(StoredPlan(v)))
   }
 
-  override def delete(id: String): Future[Done] = async {
+  @SuppressWarnings(Array("all")) // async/await
+  override def delete(id: String): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val plan = await(get(id))
     val future = repo.delete(id)
     plan.foreach(p => future.onComplete(_ => gcActor ! GcActor.RunGC))
@@ -129,7 +138,8 @@ class DeploymentRepositoryImpl[K, C, S](
   override def all(): Source[DeploymentPlan, NotUsed] =
     repo.ids().mapAsync(Int.MaxValue)(get).collect { case Some(g) => g }
 
-  override def get(id: String): Future[Option[DeploymentPlan]] = async {
+  @SuppressWarnings(Array("all")) // async/await
+  override def get(id: String): Future[Option[DeploymentPlan]] = async { // linter:ignore UnnecessaryElseBranch
     await(repo.get(id)) match {
       case Some(storedPlan) =>
         await(storedPlan.resolve(groupRepository))

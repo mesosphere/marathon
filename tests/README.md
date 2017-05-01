@@ -44,4 +44,12 @@ The system integration tests are integration tests with [DCOS](http://dcos.io) a
 system integration behavior from a user perspective using DCOS as the context.   The tests are
 written in python using [shakedown](https://github.com/dcos/shakedown) as the testing tool.
 
+Instructions for installing shakedown are:
+
+```
+git clone github.com:mesosphere/shakedown.git
+cd shakedown
+pip install -e .
+```
+For more details checkout the [shakedown site](https://github.com/dcos/shakedown).
 The tests are written under the project [test/system](system/README.md).

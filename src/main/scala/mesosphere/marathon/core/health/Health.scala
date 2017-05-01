@@ -1,10 +1,11 @@
-package mesosphere.marathon.core.health
+package mesosphere.marathon
+package core.health
 
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.Timestamp
 
 case class Health(
-    taskId: Task.Id,
+    instanceId: Instance.Id,
     firstSuccess: Option[Timestamp] = None,
     lastSuccess: Option[Timestamp] = None,
     lastFailure: Option[Timestamp] = None,
@@ -12,16 +13,16 @@ case class Health(
     consecutiveFailures: Int = 0) {
 
   def alive: Boolean = lastSuccess.exists { successTime =>
-    lastFailure.isEmpty || successTime > lastFailure.get
+    lastFailure.fold(true) { successTime > _ }
   }
 
   def update(result: HealthResult): Health = result match {
-    case Healthy(_, _, time) => copy(
+    case Healthy(_, _, time, _) => copy(
       firstSuccess = firstSuccess.orElse(Some(time)),
       lastSuccess = Some(time),
       consecutiveFailures = 0
     )
-    case Unhealthy(_, _, cause, time) => copy(
+    case Unhealthy(_, _, cause, time, _) => copy(
       lastFailure = Some(time),
       lastFailureCause = Some(cause),
       consecutiveFailures = consecutiveFailures + 1

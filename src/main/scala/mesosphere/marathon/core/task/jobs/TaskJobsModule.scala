@@ -1,10 +1,11 @@
-package mesosphere.marathon.core.task.jobs
+package mesosphere.marathon
+package core.task.jobs
 
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.jobs.impl.{ ExpungeOverdueLostTasksActor, OverdueTasksActor }
-import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.MarathonConf
 
 /**
@@ -12,21 +13,21 @@ import mesosphere.marathon.MarathonConf
   */
 class TaskJobsModule(config: MarathonConf, leadershipModule: LeadershipModule, clock: Clock) {
   def handleOverdueTasks(
-    taskTracker: TaskTracker,
-    taskReservationTimeoutHandler: TaskReservationTimeoutHandler,
-    killService: TaskKillService): Unit = {
+    taskTracker: InstanceTracker,
+    taskStateOpProcessor: TaskStateOpProcessor,
+    killService: KillService): Unit = {
     leadershipModule.startWhenLeader(
       OverdueTasksActor.props(
         config,
         taskTracker,
-        taskReservationTimeoutHandler,
+        taskStateOpProcessor,
         killService,
         clock
       ),
       "killOverdueStagedTasks")
   }
 
-  def expungeOverdueLostTasks(taskTracker: TaskTracker, stateOpProcessor: TaskStateOpProcessor): Unit = {
+  def expungeOverdueLostTasks(taskTracker: InstanceTracker, stateOpProcessor: TaskStateOpProcessor): Unit = {
     leadershipModule.startWhenLeader(
       ExpungeOverdueLostTasksActor.props(clock, config, taskTracker, stateOpProcessor),
       "expungeOverdueLostTasks"

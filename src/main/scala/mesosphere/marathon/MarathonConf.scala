@@ -1,33 +1,40 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.core.deployment.DeploymentConfig
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
-import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.group.GroupManagerConfig
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
-import mesosphere.marathon.core.task.termination.TaskKillConfig
-import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
+import mesosphere.marathon.core.task.termination.KillConfig
+import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
-import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
-import mesosphere.marathon.upgrade.UpgradeConfig
 import org.rogach.scallop.ScallopConf
 
 import scala.sys.SystemProperties
 
+/**
+  * We have to cache in a separated object because [[mesosphere.marathon.MarathonConf]] is a trait and thus every
+  * instance would call {{{java.net.InetAddress.getLocalHost}}} which is blocking. We want to call it only once.
+  * Note: This affect mostly tests.
+  */
+private[marathon] object MarathonConfHostNameCache {
+
+  lazy val hostname = java.net.InetAddress.getLocalHost.getHostName
+}
+
 trait MarathonConf
     extends ScallopConf
-    with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
-    with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
-    with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with TaskKillConfig
-    with TaskJobsConfig with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
-
-  //scalastyle:off magic.number
+    with EventConf with NetworkConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig
+    with LeaderProxyConf with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
+    with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
+    with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf {
 
   lazy val mesosMaster = opt[String](
     "master",
@@ -50,7 +57,7 @@ trait MarathonConf
     validate = validateFeatures
   )
 
-  lazy val availableFeatures: Set[String] = features.get.map(parseFeatures).getOrElse(Set.empty)
+  override lazy val availableFeatures: Set[String] = features.get.map(parseFeatures).getOrElse(Set.empty)
 
   private[this] def parseFeatures(str: String): Set[String] =
     str.split(',').map(_.trim).filter(_.nonEmpty).toSet
@@ -113,7 +120,7 @@ trait MarathonConf
     "hostname",
     descr = "The advertised hostname that is used for the communication with the Mesos master. " +
       "The value is also stored in the persistent store so another standby host can redirect to the elected leader.",
-    default = Some(java.net.InetAddress.getLocalHost.getHostName))
+    default = Some(MarathonConfHostNameCache.hostname))
 
   lazy val webuiUrl = opt[String](
     "webui_url",
@@ -219,14 +226,6 @@ trait MarathonConf
       "scale apps.",
     default = Some(300000L)) // 300 seconds (5 minutes)
 
-  @deprecated("marathon_store_timeout is no longer used and will be removed soon.", "v0.12")
-  lazy val marathonStoreTimeout = opt[Long](
-    "marathon_store_timeout",
-    descr = "(deprecated) Maximum time, in milliseconds, to wait for persistent storage " +
-      "operations to complete. This option is no longer used and " +
-      "will be removed in a later release.",
-    default = None)
-
   lazy val mesosUser = opt[String](
     "mesos_user",
     descr = "Mesos user for this framework.",
@@ -236,15 +235,6 @@ trait MarathonConf
     "framework_name",
     descr = "Framework name to register with Mesos.",
     default = Some("marathon"))
-
-  lazy val artifactStore = opt[String](
-    "artifact_store",
-    descr = "URL to the artifact store. " +
-      s"""Supported store types ${StorageProvider.examples.keySet.mkString(", ")}. """ +
-      s"""Example: ${StorageProvider.examples.values.mkString(", ")}""",
-    validate = StorageProvider.isValidUrl,
-    noshort = true
-  )
 
   lazy val mesosAuthentication = toggle(
     "mesos_authentication",
@@ -280,12 +270,6 @@ trait MarathonConf
     noshort = true
   )
 
-  lazy val defaultNetworkName = opt[String](
-    "default_network_name",
-    descr = "Network name, injected into applications' ipAddress{} specs that do not define their own networkName.",
-    noshort = true
-  )
-
   //Internal settings, that are not intended for external use
 
   lazy val maxApps = opt[Int](
@@ -302,19 +286,10 @@ trait MarathonConf
 
   lazy val leaderElectionBackend = opt[String](
     "leader_election_backend",
-    descr = "The backend for leader election to use. One of twitter_commons, curator.",
+    descr = "The backend for leader election to use.",
     hidden = true,
-    validate = Set("twitter_commons", "curator").contains,
+    validate = Set("curator").contains,
     default = Some("curator")
-  )
-
-  lazy val internalMaxQueuedRootGroupUpdates = opt[Int](
-    "max_queued_root_group_updates",
-    descr = "INTERNAL TUNING PARAMETER: " +
-      "The maximum number of root group updates that we queue before rejecting updates.",
-    noshort = true,
-    hidden = true,
-    default = Some(500)
   )
 
   lazy val mesosHeartbeatInterval = opt[Long](
@@ -333,3 +308,4 @@ trait MarathonConf
     hidden = true,
     default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD))
 }
+

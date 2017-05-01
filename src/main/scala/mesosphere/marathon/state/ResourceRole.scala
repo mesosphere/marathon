@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
@@ -11,6 +12,7 @@ object ResourceRole {
   //       For example, `char is notEqualTo('\u0020')` would print something like "char is equal to  " as opposed to
   //       "A role name must not include a space (\x20) character".
 
+  @SuppressWarnings(Array("ComparisonToEmptySet"))
   def validAcceptedResourceRoles(isResident: Boolean): Validator[Set[String]] =
     validator[Set[String]] { acceptedResourceRoles =>
       acceptedResourceRoles is notEmpty
@@ -18,17 +20,6 @@ object ResourceRole {
     } and isTrue("""A resident app must have `acceptedResourceRoles = ["*"]`.""") { acceptedResourceRoles =>
       !isResident || acceptedResourceRoles == Set(ResourceRole.Unreserved)
     }
-
-  val validResourceRole: Validator[String] = {
-    val message = "A role name must not be %s."
-    isTrue[String](message.format("\"\"")) { role => role != ""; } and
-      isTrue[String](message.format("\".\"")) { role => role != "."; } and
-      isTrue[String](message.format("\"..\"")) { role => role != ".."; } and
-      isTrue[String]("A role name must not start with a '-'.") { role => !role.startsWith("-") } and
-      validator[String] { role =>
-        role.each is valid(validResourceRoleChar)
-      }
-  }
 
   val validResourceRoleChar: Validator[Char] = {
     val message = "A role name must not include a %s character."
@@ -42,5 +33,16 @@ object ResourceRole {
       isTrue[Char](message.format("space (\\x20)")) { char => char != '\u0020'; } and
       isTrue[Char](message.format("slash (\\x2f)")) { char => char != '\u002f'; } and
       isTrue[Char](message.format("backspace (\\x7f)")) { char => char != '\u007f'; }
+  }
+
+  val validResourceRole: Validator[String] = {
+    val message = "A role name must not be %s."
+    isTrue[String](message.format("\"\"")) { role => role != ""; } and
+      isTrue[String](message.format("\".\"")) { role => role != "."; } and
+      isTrue[String](message.format("\"..\"")) { role => role != ".."; } and
+      isTrue[String]("A role name must not start with a '-'.") { role => !role.startsWith("-") } and
+      validator[String] { role =>
+        role.each is valid(validResourceRoleChar)
+      }
   }
 }

@@ -1,14 +1,17 @@
-package mesosphere.marathon.core.readiness.impl
+package mesosphere.marathon
+package core.readiness.impl
 
 import akka.actor.ActorSystem
-import akka.util.Timeout
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.headers.`Content-Type`
+import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.settings.ConnectionPoolSettings
+import akka.http.scaladsl.model.{ MediaTypes, StatusCodes, HttpResponse => AkkaHttpResponse }
+import akka.stream.Materializer
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult }
 import org.slf4j.LoggerFactory
 import rx.lang.scala.Observable
-import spray.client.pipelining._
-import spray.http.HttpHeaders.`Content-Type`
-import spray.http.{ HttpResponse => SprayHttpResponse, _ }
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
@@ -16,13 +19,14 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 /**
-  * A Spray-based implementation of a ReadinessCheckExecutor.
+  * A Akka-HTTP-based implementation of a ReadinessCheckExecutor.
   */
-private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorSystem)
+private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorSystem, materializer: Materializer)
     extends ReadinessCheckExecutor {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
   private[this] val log = LoggerFactory.getLogger(getClass)
+  private[this] val defaultSettings = ConnectionPoolSettings(actorSystem)
 
   override def execute(readinessCheckSpec: ReadinessCheckSpec): Observable[ReadinessCheckResult] = {
     def singleCheck(): Future[ReadinessCheckResult] = executeSingleCheck(readinessCheckSpec)
@@ -44,20 +48,22 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
   private[impl] def executeSingleCheck(check: ReadinessCheckSpec): Future[ReadinessCheckResult] = {
     log.info(s"Querying ${check.taskId} readiness check '${check.checkName}' at '${check.url}'")
 
-    sprayHttpGet(check)
-      .map(sprayResponseToCheckResponse)
+    akkaHttpGet(check)
+      .flatMap(akkaResponseToCheckResponse(_, check))
       .map(ReadinessCheckResult.forSpecAndResponse(check, _))
       .recover(exceptionToErrorResponse(check))
       .andThen { case Success(result) => log.info(result.summary) }
   }
 
-  private[impl] def sprayResponseToCheckResponse(sprayResponse: SprayHttpResponse): HttpResponse = {
-    val contentType = sprayResponse.headers.collectFirst { case `Content-Type`(t) ⇒ t }
-    HttpResponse(
-      status = sprayResponse.status.intValue,
-      contentType = contentType.fold("")(_.mediaType.value),
-      body = sprayResponse.entity.asString
-    )
+  private[impl] def akkaResponseToCheckResponse(akkaResponse: AkkaHttpResponse, check: ReadinessCheckSpec): Future[HttpResponse] = {
+    val contentType = akkaResponse.headers.collectFirst { case `Content-Type`(t) ⇒ t }
+    akkaResponse.entity.toStrict(check.timeout).map { strict =>
+      HttpResponse(
+        status = akkaResponse.status.intValue,
+        contentType = contentType.fold("")(_.mediaType.value),
+        body = strict.data.decodeString("utf-8")
+      )
+    }
   }
 
   private[impl] def exceptionToErrorResponse(
@@ -72,9 +78,11 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
       ReadinessCheckResult.forSpecAndResponse(check, response).copy(ready = false)
   }
 
-  private[impl] def sprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] = {
-    implicit val requestTimeout = Timeout(check.timeout)
-    val pipeline: HttpRequest => Future[SprayHttpResponse] = sendReceive
-    pipeline(Get(check.url))
+  private[impl] def akkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = {
+    val connectionSetting = defaultSettings.connectionSettings.withConnectingTimeout(check.timeout)
+    Http().singleRequest(
+      request = RequestBuilding.Get(check.url),
+      settings = defaultSettings.withConnectionSettings(connectionSetting)
+    )
   }
 }

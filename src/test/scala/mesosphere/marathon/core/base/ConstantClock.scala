@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.base
+package mesosphere.marathon
+package core.base
 
 import mesosphere.marathon.state.Timestamp
 import org.joda.time.DateTime

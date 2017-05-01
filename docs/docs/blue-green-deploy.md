@@ -8,7 +8,7 @@ Blue-green deployment is a way to safely deploy applications that are serving li
 
 For an overview of the process, here's [a great article by Martin Fowler](http://martinfowler.com/bliki/BlueGreenDeployment.html).
 
-In a production environment, you would typically script this process and integrate it into your existing deployment system. Below, we provide an example of the steps necessary to perform a safe deployment using the DCOS CLI. (The DCOS CLI works with both DCOS and open source Marathon.)
+In a production environment, you would typically script this process and integrate it into your existing deployment system. Below, we provide an example of the steps necessary to perform a safe deployment using the DC/OS CLI. (The DC/OS CLI works with both DC/OS and open source Marathon.)
 
 ## Requirements
 
@@ -27,7 +27,7 @@ We will replace the current app version (BLUE) with a new version (GREEN).
     # launch green
     dcos marathon app add green-myapp.json
     ```
-**Note:** If you were using the API instead of the DCOS CLI, the command above would be much longer:
+**Note:** If you were using the API instead of the DC/OS CLI, the command above would be much longer:
 
     ```sh
     curl -H "Content-Type: application/json" -X POST -d @green-myapp.json <hosturl>/marathon/v2/apps

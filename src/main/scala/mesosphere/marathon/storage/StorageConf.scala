@@ -1,13 +1,15 @@
-package mesosphere.marathon.storage
+package mesosphere.marathon
+package storage
 
-import mesosphere.marathon.ZookeeperConf
+import mesosphere.marathon.core.storage.backup.BackupConf
+import org.rogach.scallop.ScallopOption
 
-trait StorageConf extends ZookeeperConf {
+trait StorageConf extends ZookeeperConf with BackupConf {
   lazy val internalStoreBackend = opt[String](
     "internal_store_backend",
-    descr = s"The backend storage system to use. One of ${TwitterZk.StoreName}, ${MesosZk.StoreName}, ${InMem.StoreName}, ${CuratorZk.StoreName}", // scalastyle:off
+    descr = s"The backend storage system to use. One of ${InMem.StoreName}, ${CuratorZk.StoreName}",
     hidden = true,
-    validate = Set(TwitterZk.StoreName, MesosZk.StoreName, InMem.StoreName, CuratorZk.StoreName).contains,
+    validate = Set(InMem.StoreName, CuratorZk.StoreName).contains,
     default = Some(CuratorZk.StoreName)
   )
 
@@ -28,8 +30,21 @@ trait StorageConf extends ZookeeperConf {
 
   lazy val zkMaxConcurrency = opt[Int](
     "zk_max_concurrency",
-    default = Some(32), // scalastyle:off magic.number
+    default = Some(32),
     hidden = true,
     descr = "Max outstanding requests to Zookeeper persistence"
   )
+
+  lazy val versionCacheEnabled = toggle(
+    "internal_version_caching",
+    default = Some(true),
+    noshort = true,
+    hidden = true,
+    descrYes = "(Default) Enable an additional layer of caching for object versions when store_cache is enabled.",
+    prefix = "disable_"
+  )
+
+  def defaultNetworkName: ScallopOption[String]
+
+  def availableFeatures: Set[String]
 }

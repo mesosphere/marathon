@@ -1,25 +1,25 @@
-package mesosphere.marathon.core.event.impl.stream
+package mesosphere.marathon
+package core.event.impl.stream
 
 import java.io.EOFException
 
 import akka.actor.{ Actor, ActorLogging, Status }
 import akka.event.EventStream
 import akka.pattern.pipe
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamHandleActor._
 import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent }
 import mesosphere.util.ThreadPoolContext
-import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.util.Try
+import scala.util.control.NonFatal
 
 class HttpEventStreamHandleActor(
     handle: HttpEventStreamHandle,
     stream: EventStream,
     maxOutStanding: Int) extends Actor with ActorLogging {
 
-  private[impl] var outstanding = List.empty[MarathonEvent]
+  private[impl] var outstanding = Seq.empty[MarathonEvent]
 
   override def preStart(): Unit = {
     stream.subscribe(self, classOf[MarathonEvent])
@@ -37,13 +37,13 @@ class HttpEventStreamHandleActor(
 
   def waitForEvent: Receive = {
     case event: MarathonEvent =>
-      outstanding = event :: outstanding
+      outstanding = event +: outstanding
       sendAllMessages()
   }
 
   def stashEvents: Receive = handleWorkDone orElse {
     case event: MarathonEvent if outstanding.size >= maxOutStanding => dropEvent(event)
-    case event: MarathonEvent => outstanding = event :: outstanding
+    case event: MarathonEvent => outstanding = event +: outstanding
   }
 
   def handleWorkDone: Receive = {
@@ -59,7 +59,7 @@ class HttpEventStreamHandleActor(
       outstanding = List.empty[MarathonEvent]
       context.become(stashEvents)
       val sendFuture = Future {
-        toSend.foreach(event => handle.sendEvent(event.eventType, Json.stringify(eventToJson(event))))
+        toSend.foreach(event => handle.sendEvent(event))
         WorkDone
       }(ThreadPoolContext.ioContext)
 
@@ -76,7 +76,7 @@ class HttpEventStreamHandleActor(
       //We know the connection is dead, but it is not finalized from the container.
       //Do not act any longer on any event.
       context.become(Actor.emptyBehavior)
-    case _ =>
+    case NonFatal(_) =>
       log.warning("Could not send message to {} reason: {}", handle, ex)
   }
 

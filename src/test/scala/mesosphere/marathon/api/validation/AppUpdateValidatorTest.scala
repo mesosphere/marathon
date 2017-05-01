@@ -1,42 +1,132 @@
-package mesosphere.marathon.api.validation
+package mesosphere.marathon
+package api.validation
 
-import mesosphere.marathon.MarathonSpec
 import com.wix.accord.validate
-import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.{ Container, PathId }
+import mesosphere.UnitTest
+import mesosphere.marathon.api.v2.AppNormalization
+import mesosphere.marathon.api.v2.validation.AppValidation
+import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.raml.{ App, AppCContainer, AppUpdate, ContainerPortMapping, EngineType, Raml }
+import mesosphere.marathon.state.AppDefinition
 import org.scalatest.Matchers
+import play.api.libs.json.Json
 
-import scala.collection.immutable.Seq
+class AppUpdateValidatorTest extends UnitTest with Matchers {
+  implicit val appUpdateValidator = AppValidation.validateCanonicalAppUpdateAPI(Set.empty)
+  implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
 
-class AppUpdateValidatorTest extends MarathonSpec with Matchers {
-  implicit val appUpdateValidator = AppUpdate.appUpdateValidator(Set())
-  test("test that Docker container is validated") {
-    val f = new Fixture
-    val update = AppUpdate(
-      id = Some(PathId("/test")),
-      container = Some(f.invalidDockerContainer))
-    assert(validate(update).isFailure)
+  "validation that considers container types" should {
+    "test that Docker container is validated" in {
+      val f = new Fixture
+      val update = AppUpdate(
+        id = Some("/test"),
+        container = Some(f.invalidDockerContainer))
+      assert(validate(update).isFailure)
+    }
+
+    "test that AppC container is validated" in {
+      val f = new Fixture
+      val update = AppUpdate(
+        id = Some("/test"),
+        container = Some(f.invalidAppCContainer))
+      assert(validate(update).isFailure)
+    }
   }
 
-  test("test that AppC container is validated") {
-    val f = new Fixture
-    val update = AppUpdate(
-      id = Some(PathId("/test")),
-      container = Some(f.invalidAppCContainer))
-    assert(validate(update).isFailure)
+  "validation for network type changes" should {
+    // regression test for DCOS-10641
+    "allow updating from HOST to USER network for an app using a Docker container" in {
+      val originalApp = Json.parse(
+        """
+          | {
+          |  "id": "/sleepy-moby",
+          |  "cmd": "sleep 1000",
+          |  "instances": 1,
+          |  "cpus": 1,
+          |  "mem": 128,
+          |  "disk": 0,
+          |  "gpus": 0,
+          |  "backoffSeconds": 1,
+          |  "backoffFactor": 1.15,
+          |  "maxLaunchDelaySeconds": 3600,
+          |  "container": {
+          |    "docker": {
+          |      "image": "alpine",
+          |      "forcePullImage": false,
+          |      "privileged": false,
+          |      "network": "HOST"
+          |    }
+          |  },
+          |  "upgradeStrategy": {
+          |    "minimumHealthCapacity": 0.5,
+          |    "maximumOverCapacity": 0
+          |  },
+          |  "portDefinitions": [
+          |    {
+          |      "protocol": "tcp",
+          |      "port": 10004
+          |    }
+          |  ],
+          |  "requirePorts": false
+          |}
+        """.stripMargin).as[App]
+
+      val config = AppNormalization.Configure(None, "mesos-bridge-name")
+      val appDef = Raml.fromRaml(
+        AppNormalization.apply(config)
+          .normalized(AppNormalization.forDeprecated(config).normalized(originalApp)))
+
+      val appUpdate = AppNormalization.forUpdates(config).normalized(
+        AppNormalization.forDeprecatedUpdates(config).normalized(Json.parse(
+          """
+          |{
+          |	"id": "/sleepy-moby",
+          |	"cmd": "sleep 1000",
+          |	"instances": 1,
+          |	"cpus": 1,
+          |	"mem": 128,
+          |	"disk": 0,
+          |	"gpus": 0,
+          |	"backoffSeconds": 1,
+          |	"backoffFactor": 1.15,
+          |	"maxLaunchDelaySeconds": 3600,
+          |	"container": {
+          |		"docker": {
+          |			"image": "alpine",
+          |			"forcePullImage": false,
+          |			"privileged": false,
+          |			"network": "USER"
+          |		}
+          |	},
+          |	"upgradeStrategy": {
+          |		"minimumHealthCapacity": 0.5,
+          |		"maximumOverCapacity": 0
+          |	},
+          | "portDefinitions": [],
+          |	"ipAddress": {
+          |		"networkName": "dcos"
+          |	},
+          |	"requirePorts": false
+          |}
+        """.stripMargin).as[AppUpdate]))
+
+      assert(validate(Raml.fromRaml(Raml.fromRaml(appUpdate -> appDef))).isSuccess)
+    }
   }
 
   class Fixture {
-    def invalidDockerContainer: Container = Container.Docker(
-      portMappings = Some(Seq(
-        Docker.PortMapping(-1, Some(-1), -1, "tcp") // Invalid (negative) port numbers
+    def invalidDockerContainer: raml.Container = raml.Container(
+      EngineType.Docker,
+      portMappings = Option(Seq(
+        ContainerPortMapping(
+          // Invalid (negative) port numbers
+          containerPort = -1, hostPort = Some(-1), servicePort = -1)
       ))
     )
 
-    def invalidAppCContainer: Container = Container.MesosAppC(
+    def invalidAppCContainer: raml.Container = raml.Container(EngineType.Mesos, appc = Some(AppCContainer(
       image = "anImage",
-      id = Some("invalidID")
+      id = Some("invalidID")))
     )
   }
 

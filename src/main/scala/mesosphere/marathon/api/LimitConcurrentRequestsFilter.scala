@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.util.concurrent.Semaphore
 import javax.servlet._
@@ -20,7 +21,6 @@ class LimitConcurrentRequestsFilter(concurrentOption: Option[Int]) extends Filte
       finally { semaphore.release() }
     } else {
       response match {
-        //scalastyle:off magic.number
         case r: HttpServletResponse => r.sendError(503, s"Too many concurrent requests! Allowed: $concurrent.")
         case r: ServletResponse => throw new IllegalArgumentException(s"Expected http response but got $response")
       }

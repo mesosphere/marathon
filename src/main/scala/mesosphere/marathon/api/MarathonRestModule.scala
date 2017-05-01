@@ -1,12 +1,13 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import javax.inject.Named
 import javax.net.ssl.SSLContext
 
 import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
-import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.MarathonConf
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer
+import mesosphere.chaos.http._
 import mesosphere.marathon.io.SSLContextUtil
 import org.eclipse.jetty.servlets.EventSourceServlet
 
@@ -15,7 +16,7 @@ import org.eclipse.jetty.servlets.EventSourceServlet
   * This filter will redirect to the master if running in HA mode.
   */
 class LeaderProxyFilterModule extends ServletModule {
-  protected override def configureServlets() {
+  protected override def configureServlets(): Unit = {
     bind(classOf[RequestForwarder]).to(classOf[JavaUrlConnectionRequestForwarder]).in(Scopes.SINGLETON)
     bind(classOf[LeaderProxyFilter]).asEagerSingleton()
     filter("/*").through(classOf[LeaderProxyFilter])
@@ -33,22 +34,24 @@ class LeaderProxyFilterModule extends ServletModule {
   }
 }
 
-class MarathonRestModule extends BaseRestModule {
+class MarathonRestModule extends ServletModule {
 
-  protected override def configureServlets() {
+  protected override def configureServlets(): Unit = {
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
 
+    // Service API
+    bind(classOf[SystemResource]).in(Scopes.SINGLETON)
+
     // V2 API
     bind(classOf[v2.AppsResource]).in(Scopes.SINGLETON)
+    bind(classOf[v2.PodsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.TasksResource]).in(Scopes.SINGLETON)
-    bind(classOf[v2.EventSubscriptionsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.QueueResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.GroupsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.InfoResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.LeaderResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.DeploymentsResource]).in(Scopes.SINGLETON)
-    bind(classOf[v2.ArtifactsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 
@@ -70,7 +73,8 @@ class MarathonRestModule extends BaseRestModule {
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)
     serve("/public/*").`with`(classOf[PublicServlet])
 
-    super.configureServlets()
+    // this servlet will do all jersey handling
+    serve("/*").`with`(classOf[GuiceContainer])
   }
 
   @Provides

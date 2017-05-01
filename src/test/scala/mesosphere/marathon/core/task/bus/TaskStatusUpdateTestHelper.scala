@@ -1,104 +1,179 @@
-package mesosphere.marathon.core.task.bus
+package mesosphere.marathon
+package core.task.bus
 
-import java.util.concurrent.TimeUnit
-
-import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.update._
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.pod.MesosContainer
+import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
-class TaskStatusUpdateTestHelper(val wrapped: TaskChanged) {
-  def simpleName = wrapped.stateOp match {
-    case TaskStateOp.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) =>
+class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val effect: InstanceUpdateEffect) {
+  def simpleName = operation match {
+    case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) =>
       mesosStatus.getState.toString
-    case _ => wrapped.stateOp.getClass.getSimpleName
+    case _ => operation.getClass.getSimpleName
   }
-  def status = wrapped.stateOp match {
-    case TaskStateOp.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) => mesosStatus
+  def status = operation match {
+    case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) => mesosStatus
     case _ => throw new scala.RuntimeException("the wrapped stateOp os no MesosUpdate!")
   }
   def reason: String = if (status.hasReason) status.getReason.toString else "no reason"
+  def wrapped: InstanceChange = effect match {
+    case InstanceUpdateEffect.Update(instance, old, events) => InstanceUpdated(instance, old.map(_.state), events)
+    case InstanceUpdateEffect.Expunge(instance, events) => InstanceDeleted(instance, None, events)
+    case _ => throw new scala.RuntimeException(s"The wrapped effect does not result in an update or expunge: $effect")
+  }
+  private[this] def instanceFromOperation: Instance = operation match {
+    case launch: InstanceUpdateOperation.LaunchEphemeral => launch.instance
+    case update: InstanceUpdateOperation.MesosUpdate => update.instance
+    case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
+  }
+  def updatedInstance: Instance = effect match {
+    case InstanceUpdateEffect.Update(instance, old, events) => instance
+    case InstanceUpdateEffect.Expunge(instance, events) => instance
+    case _ => instanceFromOperation
+  }
 
 }
 
 object TaskStatusUpdateTestHelper {
   val log = LoggerFactory.getLogger(getClass)
-  def apply(taskChanged: TaskChanged): TaskStatusUpdateTestHelper =
-    new TaskStatusUpdateTestHelper(taskChanged)
+  def apply(operation: InstanceUpdateOperation, effect: InstanceUpdateEffect): TaskStatusUpdateTestHelper =
+    new TaskStatusUpdateTestHelper(operation, effect)
 
-  private def newTaskID(appId: String) = {
-    Task.Id.forRunSpec(PathId(appId))
-  }
-
-  val taskId = newTaskID("/app")
-  lazy val defaultTask = MarathonTestHelper.stagedTask(taskId.idString)
+  lazy val defaultInstance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskStaged().getInstance()
   lazy val defaultTimestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 30, 0, 0))
 
-  def taskLaunchFor(task: Task, timestamp: Timestamp = defaultTimestamp) = {
-    val taskStateOp = TaskStateOp.LaunchEphemeral(task)
-    val taskStateChange = task.update(taskStateOp)
-    TaskStatusUpdateTestHelper(TaskChanged(taskStateOp, taskStateChange))
+  def taskLaunchFor(instance: Instance) = {
+    val operation = InstanceUpdateOperation.LaunchEphemeral(instance)
+    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = None, events = Nil)
+    TaskStatusUpdateTestHelper(operation, effect)
   }
 
-  def taskUpdateFor(task: Task, taskStatus: MarathonTaskStatus, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
-    val taskStateOp = TaskStateOp.MesosUpdate(task, taskStatus, mesosStatus, timestamp)
-    val taskStateChange = task.update(taskStateOp)
-    TaskStatusUpdateTestHelper(TaskChanged(taskStateOp, taskStateChange))
+  def taskUpdateFor(instance: Instance, taskCondition: Condition, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
+    val operation = InstanceUpdateOperation.MesosUpdate(instance, taskCondition, mesosStatus, timestamp)
+    val effect = InstanceUpdater.mesosUpdate(instance, operation)
+    TaskStatusUpdateTestHelper(operation, effect)
   }
 
-  def taskExpungeFor(task: Task, taskStatus: MarathonTaskStatus, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
-    TaskStatusUpdateTestHelper(
-      TaskChanged(
-        TaskStateOp.MesosUpdate(task, taskStatus, mesosStatus, timestamp),
-        TaskStateChange.Expunge(task)))
+  def taskExpungeFor(instance: Instance, taskCondition: Condition, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
+    val operation = InstanceUpdateOperation.MesosUpdate(instance, taskCondition, mesosStatus, timestamp)
+    val effect = InstanceUpdater.mesosUpdate(instance, operation)
+    if (!effect.isInstanceOf[InstanceUpdateEffect.Expunge]) {
+      throw new RuntimeException(s"Applying a MesosUpdate with status $taskCondition did not result in an Expunge effect but in a $effect")
+    }
+    TaskStatusUpdateTestHelper(operation, effect)
   }
 
-  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, timestamp: Timestamp = Timestamp.zero) = {
-    val mesosStatus = TaskStatus.newBuilder
-      .setTaskId(taskId.mesosTaskId)
-      .setState(state)
-      .setTimestamp(TimeUnit.MILLISECONDS.convert(timestamp.toDateTime.getMillis, TimeUnit.MICROSECONDS).toDouble)
-    maybeHealth.foreach(mesosStatus.setHealthy)
-    maybeReason.foreach(mesosStatus.setReason)
-    mesosStatus.build()
-  }
-  def makeTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None) = {
-    makeMesosTaskStatus(taskId, state, maybeHealth, maybeReason)
+  def taskId(instance: Instance, container: Option[MesosContainer]): Task.Id = {
+    val taskId = instance.tasksMap.headOption.map(_._1)
+    taskId.getOrElse(Task.Id.forInstanceId(instance.instanceId, container))
   }
 
-  def running(task: Task = defaultTask) = taskUpdateFor(task, MarathonTaskStatus.Running, makeTaskStatus(task.taskId, TaskState.TASK_RUNNING))
+  def running(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.running(taskId)
+    taskUpdateFor(instance, Condition.Running, status)
+  }
 
-  def runningHealthy(task: Task = defaultTask) = taskUpdateFor(task, MarathonTaskStatus.Running, makeTaskStatus(task.taskId, TaskState.TASK_RUNNING, maybeHealth = Some(true)))
+  def runningHealthy(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.runningHealthy(taskId)
+    taskUpdateFor(instance, Condition.Running, status)
+  }
 
-  def runningUnhealthy(task: Task = defaultTask) = taskUpdateFor(task, MarathonTaskStatus.Running, makeTaskStatus(task.taskId, TaskState.TASK_RUNNING, maybeHealth = Some(false)))
+  def runningUnhealthy(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.runningUnhealthy(taskId)
+    taskUpdateFor(instance, Condition.Running, status)
+  }
 
-  def staging(task: Task = defaultTask) = taskUpdateFor(task, MarathonTaskStatus.Staging, makeTaskStatus(task.taskId, TaskState.TASK_STAGING))
+  def staging(instance: Instance = defaultInstance) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, None)
+    val status = MesosTaskStatusTestHelper.staging(taskId)
+    taskUpdateFor(instance, Condition.Staging, status)
+  }
 
-  def finished(task: Task = defaultTask) = taskExpungeFor(task, MarathonTaskStatus.Finished, makeTaskStatus(task.taskId, TaskState.TASK_FINISHED))
+  def finished(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.finished(taskId)
+    taskUpdateFor(instance, Condition.Finished, status)
+  }
 
-  def lost(reason: Reason, task: Task = defaultTask) = {
-    val mesosStatus = makeTaskStatus(task.taskId, TaskState.TASK_LOST, maybeReason = Some(reason))
-    val marathonTaskStatus = MarathonTaskStatus(mesosStatus)
+  def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None, timestamp: Timestamp = defaultTimestamp) = {
+    val taskId = instance.appTask.taskId
+    val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(
+      state = TaskState.TASK_LOST,
+      maybeReason = Some(reason), maybeMessage = maybeMessage,
+      taskId = taskId,
+      timestamp = timestamp
+    )
+    val marathonTaskStatus = TaskCondition(mesosStatus)
 
     marathonTaskStatus match {
-      case _: MarathonTaskStatus.Terminal =>
-        taskExpungeFor(task, marathonTaskStatus, mesosStatus)
+      case _: Condition.Terminal =>
+        taskExpungeFor(instance, marathonTaskStatus, mesosStatus)
 
       case _ =>
-        taskUpdateFor(task, marathonTaskStatus, mesosStatus)
+        taskUpdateFor(instance, marathonTaskStatus, mesosStatus, timestamp)
     }
   }
 
-  def killed(task: Task = defaultTask) = taskExpungeFor(task, MarathonTaskStatus.Killed, makeTaskStatus(task.taskId, TaskState.TASK_KILLED))
+  def unreachable(instance: Instance = defaultInstance) = {
+    val mesosStatus = MesosTaskStatusTestHelper.unreachable(Task.Id.forInstanceId(instance.instanceId, None))
+    val marathonTaskStatus = TaskCondition(mesosStatus)
 
-  def killing(task: Task = defaultTask) = taskUpdateFor(task, MarathonTaskStatus.Killing, makeTaskStatus(task.taskId, TaskState.TASK_KILLING))
+    marathonTaskStatus match {
+      case _: Condition.Terminal =>
+        taskExpungeFor(instance, marathonTaskStatus, mesosStatus)
 
-  def error(task: Task = defaultTask) = taskExpungeFor(task, MarathonTaskStatus.Error, makeTaskStatus(task.taskId, TaskState.TASK_ERROR))
+      case _ =>
+        taskUpdateFor(instance, marathonTaskStatus, mesosStatus)
+    }
+  }
 
-  def failed(task: Task = defaultTask) = taskExpungeFor(task, MarathonTaskStatus.Failed, makeTaskStatus(task.taskId, TaskState.TASK_FAILED))
+  def killed(instance: Instance = defaultInstance) = {
+    // TODO(PODS): the method signature should allow passing a taskId
+    val (taskId, _) = instance.tasksMap.head
+    val status = MesosTaskStatusTestHelper.killed(taskId)
+    taskExpungeFor(instance, Condition.Killed, status)
+  }
+
+  def killing(instance: Instance = defaultInstance) = {
+    val status = MesosTaskStatusTestHelper.killing(Task.Id.forInstanceId(instance.instanceId, None))
+    taskUpdateFor(instance, Condition.Killing, status)
+  }
+
+  def error(instance: Instance = defaultInstance) = {
+    val status = MesosTaskStatusTestHelper.error(Task.Id.forInstanceId(instance.instanceId, None))
+    taskExpungeFor(instance, Condition.Error, status)
+  }
+  def failed(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.failed(taskId)
+    taskUpdateFor(instance, Condition.Failed, status)
+  }
+
+  def gone(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.gone(taskId)
+    taskUpdateFor(instance, Condition.Gone, status)
+  }
+
+  def dropped(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.dropped(taskId)
+    taskUpdateFor(instance, Condition.Dropped, status)
+  }
+
+  def unknown(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.unknown(taskId)
+    taskUpdateFor(instance, Condition.Unknown, status)
+  }
 }

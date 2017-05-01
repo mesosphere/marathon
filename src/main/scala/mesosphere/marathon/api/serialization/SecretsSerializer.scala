@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.serialization
+package mesosphere.marathon
+package api.serialization
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.state.Secret

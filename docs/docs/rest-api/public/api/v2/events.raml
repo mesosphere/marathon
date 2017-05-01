@@ -10,6 +10,13 @@ get:
 
     Note for ApiConsole&#58; this function will not yield the expected result from inside ApiConsole.
 
+  queryParameters:
+    event_type:
+        required: false
+        description:
+            Specify subscribed event types.
+            You can specify this parameter multiple times with different values.
+
   responses:
     200:
       description: the list of all tasks waiting to be scheduled.

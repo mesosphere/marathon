@@ -4,33 +4,28 @@ import java.util.concurrent.CountDownLatch
 import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
+import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.pattern.ask
 import akka.stream.Materializer
 import akka.util.Timeout
-import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
+import mesosphere.marathon.core.base.toRichRuntime
+import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, DeploymentStepInfo }
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
-import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.storage.repository.{ FrameworkIdRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
-import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
-import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future, TimeoutException }
+import scala.concurrent.{ Await, Future }
 import scala.util.Failure
 
 /**
@@ -52,6 +47,7 @@ trait PrePostDriverCallback {
 /**
   * DeploymentService provides methods to deploy plans.
   */
+// TODO (AD): do we need this trait?
 trait DeploymentService {
   /**
     * Deploy a plan.
@@ -60,7 +56,9 @@ trait DeploymentService {
     *              one can control, to stop a current deployment and start a new one.
     * @return a failed future if the deployment failed.
     */
-  def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit]
+  def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Done]
+
+  def listRunningDeployments(): Future[Seq[DeploymentStepInfo]]
 }
 
 /**
@@ -68,21 +66,19 @@ trait DeploymentService {
   */
 class MarathonSchedulerService @Inject() (
   leadershipCoordinator: LeadershipCoordinator,
-  healthCheckManager: HealthCheckManager,
   config: MarathonConf,
-  frameworkIdRepository: FrameworkIdRepository,
   electionService: ElectionService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
-  appRepository: ReadOnlyAppRepository,
+  groupManager: GroupManager,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,
+  deploymentManager: DeploymentManager,
   @Named("schedulerActor") schedulerActor: ActorRef,
-  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef,
-  metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer)
+  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef)(implicit mat: Materializer)
     extends AbstractExecutionThreadService with ElectionCandidate with DeploymentService {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
   implicit val zkTimeout = config.zkTimeoutDuration
 
@@ -108,9 +104,6 @@ class MarathonSchedulerService @Inject() (
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
-  // FIXME: Remove from this class
-  def frameworkId: Option[FrameworkID] = Await.result(frameworkIdRepository.get(), timeout.duration).map(_.toProto)
-
   // This is a little ugly as we are using a mutable variable. But drivers can't
   // be reused (i.e. once stopped they can't be started again. Thus,
   // we have to allocate a new driver before each run or after each stop.
@@ -120,40 +113,32 @@ class MarathonSchedulerService @Inject() (
 
   protected def newTimer() = new Timer("marathonSchedulerTimer")
 
-  def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit] = {
+  def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Done] = {
     log.info(s"Deploy plan with force=$force:\n$plan ")
     val future: Future[Any] = PromiseActor.askWithoutTimeout(system, schedulerActor, Deploy(plan, force))
     future.map {
-      case DeploymentStarted(_) => ()
-      case CommandFailed(_, t) => throw t
+      case DeploymentStarted(_) => Done
+      case DeploymentFailed(_, t) => throw t
     }
   }
 
-  def cancelDeployment(id: String): Unit =
-    schedulerActor ! CancelDeployment(id)
+  def cancelDeployment(plan: DeploymentPlan): Unit =
+    schedulerActor ! CancelDeployment(plan)
 
-  def listAppVersions(appId: PathId): Iterable[Timestamp] =
-    Await.result(appRepository.versions(appId).map(Timestamp(_)).runWith(Sink.seq), config.zkTimeoutDuration)
+  def listAppVersions(appId: PathId): Seq[Timestamp] =
+    Await.result(groupManager.appVersions(appId).map(Timestamp(_)).runWith(Sink.seq), config.zkTimeoutDuration)
 
   def listRunningDeployments(): Future[Seq[DeploymentStepInfo]] =
-    (schedulerActor ? RetrieveRunningDeployments)
-      .recoverWith {
-        case _: TimeoutException =>
-          Future.failed(new TimeoutException(s"Can not retrieve the list of running deployments in time"))
-      }
-      .mapTo[RunningDeployments]
-      .map(_.plans)
+    deploymentManager.list()
 
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
-    Await.result(appRepository.getVersion(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
+    Await.result(groupManager.appVersion(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
   }
 
-  def killTasks(
+  def killInstances(
     appId: PathId,
-    tasks: Iterable[Task]): Iterable[Task] = {
-    schedulerActor ! KillTasks(appId, tasks)
-
-    tasks
+    instances: Seq[Instance]): Unit = {
+    schedulerActor ! KillTasks(appId, instances)
   }
 
   //Begin Service interface
@@ -223,7 +208,7 @@ class MarathonSchedulerService @Inject() (
       Future.sequence(prePostDriverCallbacks.map(_.preDriverStarts)),
       config.onElectedPrepareTimeout().millis
     )
-    log.info(s"Finished preDriverStarts callbacks")
+    log.info("Finished preDriverStarts callbacks")
 
     // start all leadership coordination actors
     Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
@@ -262,7 +247,7 @@ class MarathonSchedulerService @Inject() (
 
         log.info(s"Call postDriverRuns callbacks on ${prePostDriverCallbacks.mkString(", ")}")
         Await.result(Future.sequence(prePostDriverCallbacks.map(_.postDriverTerminates)), config.zkTimeoutDuration)
-        log.info(s"Finished postDriverRuns callbacks")
+        log.info("Finished postDriverRuns callbacks")
       }
     }
   }
@@ -282,11 +267,9 @@ class MarathonSchedulerService @Inject() (
       // Our leadership has been defeated. Thus, stop the driver.
       stopDriver()
     }
-    // Abdication will have already happened if the driver terminated abnormally.
-    // Otherwise we've either been terminated or have lost leadership for some other reason (network part?)
-    if (isRunningLatch.getCount > 0) {
-      electionService.offerLeadership(this)
-    }
+
+    log.error("Terminating after loss of leadership")
+    Runtime.getRuntime.asyncExit()
   }
 
   //End ElectionDelegate interface
@@ -294,9 +277,9 @@ class MarathonSchedulerService @Inject() (
   private def schedulePeriodicOperations(): Unit = synchronized {
     timer.schedule(
       new TimerTask {
-        def run() {
+        def run(): Unit = {
           if (electionService.isLeader) {
-            schedulerActor ! ScaleApps
+            schedulerActor ! ScaleRunSpecs
           } else log.info("Not leader therefore not scaling apps")
         }
       },
@@ -306,7 +289,7 @@ class MarathonSchedulerService @Inject() (
 
     timer.schedule(
       new TimerTask {
-        def run() {
+        def run(): Unit = {
           if (electionService.isLeader) {
             schedulerActor ! ReconcileTasks
             schedulerActor ! ReconcileHealthChecks

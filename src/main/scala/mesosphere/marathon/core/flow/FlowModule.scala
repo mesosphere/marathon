@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.flow
+package mesosphere.marathon
+package core.flow
 
 import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerDriverHolder
@@ -39,10 +40,10 @@ class FlowModule(leadershipModule: LeadershipModule) {
         offersWanted, driverHolder
       )
       val actorRef = leadershipModule.startWhenLeader(reviveOffersActor, "reviveOffersWhenWanted")
-      log.info(s"Calling reviveOffers is enabled. Use --disable_revive_offers_for_new_apps to disable.")
+      log.info("Calling reviveOffers is enabled. Use --disable_revive_offers_for_new_apps to disable.")
       Some(new OfferReviverDelegate(actorRef))
     } else {
-      log.info(s"Calling reviveOffers is disabled. Use --revive_offers_for_new_apps to enable.")
+      log.info("Calling reviveOffers is disabled. Use --revive_offers_for_new_apps to enable.")
       None
     }
   }
@@ -50,7 +51,7 @@ class FlowModule(leadershipModule: LeadershipModule) {
   /**
     * Refills the launch tokens of the OfferMatcherManager periodically. See [[LaunchTokenConfig]] for configuration.
     *
-    * Also adds a launch token to othe OfferMatcherManager for every update we get about a new running tasks.
+    * Also adds a launch token to the OfferMatcherManager for every update we get about a new running tasks.
     *
     * The reasoning is that getting infos about running tasks signals that the Mesos infrastructure is working
     * and not yet completely overloaded.

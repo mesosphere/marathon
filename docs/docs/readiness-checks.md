@@ -22,7 +22,7 @@ Marathon currently allows one readiness check per application. The readiness che
 - `name` (Optional. Default: `"readinessCheck"`): The name used to identify this readiness check.
 - `protocol` (Optional. Default: `"HTTP"`): Protocol of the requests to be performed. Either HTTP or HTTPS.
 - `path` (Optional. Default: `"/"`): Path to the endpoint the task exposes to provide readiness status. Example: `/path/to/readiness`.
-- `portName` (Optional. Default: `"http-api"`): Name of the port to query as described in the portDefinitions. Example: `http-api`.
+- `portName` Default: `"http-api"`: Name of the port in the portDefinitions section. This port will be used to check readiness. Example: `http-api`.
 - `intervalSeconds` (Optional. Default: `30 seconds`): Number of seconds to wait between readiness checks.
 - `timeoutSeconds` (Optional. Default: `10 seconds`): Number of seconds after which a readiness check times out, regardless of the response. This value must be smaller than `intervalSeconds`.
 - `httpStatusCodesForReady` (Optional. Default: `[200]`): The HTTP/HTTPS status code to treat as _ready_.

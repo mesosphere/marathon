@@ -6,6 +6,64 @@
       "type": "string",
       "pattern": "^(\\/?((\\.{2})|([a-z0-9][a-z0-9\\-.]*[a-z0-9]+)|([a-z0-9]*))($|\\/))+$",
       "minLength": 1
+    },
+    "containerPortMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "containerPort": {
+            "type": "integer",
+            "description": "Refers to the port the application listens to inside of the container. It is optional and defaults to 0. For each containerPort with a value of 0 Marathon assigns the containerPort the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "hostPort": {
+            "type": "integer",
+            "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional. In BRIDGE mode it defaults to 0 if left unspecified. In USER mode an unspecified hostPort does not allocate a port from a Mesos offer.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "labels": {
+            "type": "object",
+            "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings.",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "networkNames": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "List of the container networks associated with this mapping. If absent, then this mapping is associated with all defined container networks (for this application). A single item list is mandatory when `hostPort` is specified and multiple container networks are defined.",
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "minLength": 1,
+              "maxLength": 63
+            }
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "tcp",
+              "udp",
+              "udp,tcp"
+            ],
+            "description": "Protocol of the port (one of ['tcp', 'udp'] or 'udp,tcp' for both). Defaults to 'tcp'."
+          },
+          "servicePort": {
+            "type": "integer",
+            "description": "Is a helper port intended for doing service discovery using a well-known port per service. The assigned servicePort value is not used/interpreted by Marathon itself but supposed to be used by the load balancer infrastructure. See Service Discovery Load Balancing doc page. The servicePort parameter is optional and defaults to 0. Like hostPort, If the value is 0, a random port will be assigned. If a servicePort value is assigned by Marathon then Marathon guarantees that its value is unique across the cluster. The values for random service ports are in the range [local_port_min, local_port_max] where local_port_min and local_port_max are command line options with default values of 10000 and 20000, respectively.",
+            "maximum": 65535,
+            "minimum": 0
+          }
+        }
+      }
     }
   },
   "not": {
@@ -130,48 +188,8 @@
               }
             },
             "portMappings": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "containerPort": {
-                    "type": "integer",
-                    "description": "Refers to the port the application listens to inside of the container. It is optional and defaults to 0. For each containerPort with a value of 0 Marathon assigns the containerPort the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
-                    "maximum": 65535,
-                    "minimum": 0
-                  },
-                  "hostPort": {
-                    "type": "integer",
-                    "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional. In BRIDGE mode it defaults to 0 if left unspecified. In USER mode an unspecified hostPort does not allocate a port from a Mesos offer.",
-                    "maximum": 65535,
-                    "minimum": 0
-                  },
-                  "labels": {
-                    "type": "object",
-                    "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
-                    "additionalProperties": {
-                      "type": "string"
-                    }
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings.",
-                    "pattern": "^[a-z][a-z0-9-]*$"
-                  },
-                  "protocol": {
-                    "type": "string",
-                    "enum": ["tcp", "udp", "udp,tcp"],
-                    "description": "Protocol of the port (one of ['tcp', 'udp'] or 'udp,tcp' for both). Defaults to 'tcp'."
-                  },
-                  "servicePort": {
-                    "type": "integer",
-                    "description": "Is a helper port intended for doing service discovery using a well-known port per service. The assigned servicePort value is not used/interpreted by Marathon itself but supposed to used by load balancer infrastructure. See Service Discovery Load Balancing doc page. The servicePort parameter is optional and defaults to 0. Like hostPort, If the value is 0, a random port will be assigned. If a servicePort value is assigned by Marathon then Marathon guarantees that its value is unique across the cluster. The values for random service ports are in the range [local_port_min, local_port_max] where local_port_min and local_port_max are command line options with default values of 10000 and 20000, respectively.",
-                    "maximum": 65535,
-                    "minimum": 0
-                  }
-                }
-              }
+              "$ref": "#/definitions/containerPortMappings",
+              "description": "DEPRECATED in favor of /container/portMappings"
             },
             "privileged": {
               "type": "boolean",
@@ -214,7 +232,12 @@
         "type": {
           "type": "string",
           "description": "Container engine type. Supported engine types at the moment are DOCKER and MESOS.",
-          "enum": ["MESOS", "DOCKER"]
+          "enum": ["MESOS", "DOCKER"],
+	  "default": "DOCKER"
+        },
+        "portMappings": {
+          "$ref": "#/definitions/containerPortMappings",
+          "description": "Defines port usage for container and bridge networking. Use /portDefinitions for host networking."
         },
         "volumes": {
           "items": {
@@ -233,13 +256,46 @@
               "persistent": {
                 "additionalProperties": false,
                 "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The type of mesos disk resource to use; defaults to root",
+                    "enum": ["root", "path", "mount"]
+                  },
                   "size": {
                     "type": "integer",
                     "description": "The size of the persistent volume in MiB",
                     "minimum": 0
+                  },
+                  "maxSize": {
+                    "type": "integer",
+                    "description": "Optional maximum size of an exclusive mount-disk resource to consider; does not apply to root or path disk resource types",
+                    "minimum": 0
+                  },
+                  "constraints": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string",
+                          "enum": ["path"]
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["LIKE"]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "minItems": 3,
+                      "additionalItems": false
+                    },
+                    "description": "List of persistent volume constraints"
                   }
                 },
-                "type": "object"
+                "type": "object",
+                "required": ["size"]
               },
               "external": {
                 "additionalProperties": false,
@@ -291,7 +347,7 @@
     },
     "disk": {
       "type": "number",
-      "description": "How much disk space is needed for this application. This number does not have to be an integer, but can be a fraction.",
+      "description": "How much disk space in MB is needed for this application. This number does not have to be an integer, but can be a fraction.",
       "minimum": 0
     },
     "env": {
@@ -335,15 +391,18 @@
           },
           "executable": {
             "type": "boolean",
-            "description": "Set fetched artifact as executable"
+            "description": "Set fetched artifact as executable",
+	    "default": false
           },
           "extract": {
             "type": "boolean",
-            "description": "Extract fetched artifact if supported by Mesos fetcher module"
+            "description": "Extract fetched artifact if supported by Mesos fetcher module",
+	    "default": true
           },
           "cache": {
             "type": "boolean",
-            "description": "Cache fetched artifact if supported by Mesos fetcher module"
+            "description": "Cache fetched artifact if supported by Mesos fetcher module",
+	    "default": false
           },
           "outputFile": {
             "type": "string",
@@ -406,13 +465,19 @@
           },
           "protocol": {
             "type": "string",
-            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP or COMMAND.",
-            "enum": ["HTTP", "HTTPS", "TCP", "COMMAND"]
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP, COMMAND, MESOS_HTTP, MESOS_HTTPS or MESOS_TCP.",
+            "enum": ["HTTP", "HTTPS", "TCP", "COMMAND", "MESOS_HTTP", "MESOS_HTTPS", "MESOS_TCP"]
           },
           "timeoutSeconds": {
             "type": "integer",
             "description": "Number of seconds after which a health check is considered a failure regardless of the response.",
             "minimum": 0
+          },
+          "delaySeconds": {
+            "type": "integer",
+            "description": "Defaults to 15 seconds. Only applicable to mesos based health checks. Number of seconds after which a health check is started, when the task has been started.",
+            "minimum": 0,
+            "default": 15
           }
         }
       },
@@ -449,9 +514,34 @@
      "description": "The amount of GPU cores that is needed for the application per instance.",
      "minimum": 0
     },
+    "networks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "container",
+              "container/bridge",
+              "host"
+            ],
+            "default": "container"
+          },
+          "labels": {
+            "type": "object",
+            "description": "Key value pair for meta data on that network interface.",
+            "properties": {},
+            "additionalProperties": true
+          }
+        }
+      }
+    },
     "ipAddress": {
       "type": "object",
-      "description": "If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",
+      "description": "DEPRECATED. If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",
       "properties": {
         "discovery": {
           "type": "object",
@@ -486,7 +576,7 @@
         },
         "groups": {
           "type": "array",
-          "description": "Array of network groups. One IP address can belong to zero or more network groups. The idea is that containers can only reach containers with which they share at least one network group.",
+          "description": "IGNORED BY MARATHON",
           "items": {
             "type": "string",
             "description": "The name of the network group."
@@ -567,7 +657,8 @@
           },
           "portName": {
             "type": "string",
-            "description": "Name of the port to query as described in the portDefinitions. Example: http-api."
+            "description": "Name of the port to query as described in the portDefinitions. Example: http-api.",
+            "pattern": "^[a-z][a-z0-9-]*$"
           },
           "intervalSeconds": {
             "type": "integer",
@@ -638,14 +729,6 @@
         }
       }
     },
-    "storeUrls": {
-      "type": "array",
-      "description": "URL's that have to be resolved and put into the artifact store, before the task will be started.",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
     "taskKillGracePeriodSeconds": {
       "type": "integer",
       "description": "Configures the number of seconds between escalating from SIGTERM to SIGKILL when signalling tasks to terminate. Using this grace period, tasks should perform orderly shut down immediately upon receiving SIGTERM.",
@@ -703,6 +786,35 @@
           "format": "date-time"
         }
       }
+    },
+    "killSelection": {
+      "type": "string",
+      "enum": ["YOUNGEST_FIRST", "OLDEST_FIRST"],
+      "default": "YOUNGEST_FIRST",
+      "description": "Defines which instance should be killed first in case of e.g. rescaling."
+    },
+    "unreachableStrategy": {
+      "oneOf": [
+        {"type": "string", "enum": ["disabled"]},
+        {
+
+          "type": "object",
+          "description": "Define handling for unreachable instances. Given `inactiveAfter = 60` and `expungeAfter = 120`, an instance will be expunged if it has been unreachable for more than 120 seconds or a second instance is started if it has been unreachable for more than 60 seconds.",
+          "additionalProperties": false,
+          "properties": {
+            "inactiveAfterSeconds": {
+              "type": "integer",
+              "description": "If an instance is unreachable for longer than inactiveAfter seconds it is marked as inactive. This will trigger a new instance launch. The original task is not expunged yet. Must be less than expungeAfterSeconds.",
+              "minimum": 1
+            },
+            "expungeAfterSeconds": {
+              "type": "number",
+              "description": "If an instance is unreachable for longer than unreachableExpungeAfter seconds it will be expunged.  That means it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged but they don't have to. This value is required to be greater than inactiveAfterSeconds.\n\nIf the instance has any persistent volumes associated with it, then they will be destroyed and associated data will be deleted.\n\nDefault is 7 days (604800 seconds).",
+              "minimum": 2
+            }
+          }
+        }
+      ]
     }
   },
   "required": [

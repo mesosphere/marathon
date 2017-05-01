@@ -1,6 +1,15 @@
+import contextlib
+import json
 import os
+import re
+import subprocess
+import pytest
 
-from dcos import http, util
+from six.moves import urllib
+from dcos import http, util, config
+from dcos.errors import DCOSException
+from distutils.version import LooseVersion
+from shakedown import (service_available_predicate, marathon_version)
 
 
 def fixture_dir():
@@ -34,7 +43,10 @@ def get_resource(resource):
                 else:
                     raise Exception
             except Exception:
-                logger.exception('Cannot read from resource %s', resource)
                 raise DCOSException(
                     "Can't read from resource: {0}.\n"
                     "Please check that it exists.".format(resource))
+
+
+def parse_json(response):
+    return response.json()

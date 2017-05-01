@@ -1,7 +1,7 @@
-package mesosphere.marathon.core.leadership
+package mesosphere.marathon
+package core.leadership
 
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
-import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.leadership.impl._
 
 trait LeadershipModule {
@@ -21,9 +21,8 @@ trait LeadershipModule {
 
 object LeadershipModule {
   def apply(
-    actorRefFactory: ActorRefFactory,
-    electionService: ElectionService): LeadershipModule = {
-    new LeadershipModuleImpl(actorRefFactory, electionService)
+    actorRefFactory: ActorRefFactory): LeadershipModule = {
+    new LeadershipModuleImpl(actorRefFactory)
   }
 }
 
@@ -35,7 +34,7 @@ object LeadershipModule {
   * The leadership election logic needs to call the appropriate methods for this module to work.
   */
 private[leadership] class LeadershipModuleImpl(
-    actorRefFactory: ActorRefFactory, electionService: ElectionService) extends LeadershipModule {
+    actorRefFactory: ActorRefFactory) extends LeadershipModule {
 
   private[this] var whenLeaderRefs = Set.empty[ActorRef]
   private[this] var started: Boolean = false

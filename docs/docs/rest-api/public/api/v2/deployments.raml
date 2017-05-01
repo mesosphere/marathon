@@ -16,6 +16,14 @@ get:
 
     * <code>RestartApplication</code> upgrades an already deployed application with a new version.
 
+    * <code>StartPod</code> starts a pod, which is currently not running.
+
+    * <code>StopPod</code> stops an already running pod.
+
+    * <code>ScalePod</code> changes the number of instances of an pod and allows to kill specified instances while scaling.
+
+    * <code>RestartPod</code> upgrades an already deployed pod with a new version.
+
     * <code>ResolveArtifacts</code> Resolve all artifacts of an application
 
   is: [ secured ]
@@ -39,6 +47,9 @@ get:
                 deployment. Without concurrent deployments, this restores the configuration before this
                 deployment. If set to <code>true</code>, then the deployment
                 is still canceled but no rollback deployment is created.
+                <br><br>
+                **Warning** - Using <code>force=true</code> to abort a deployment can leave behind unaccounted for
+                tasks and/or leave the app in a mixed state of old and new versions of tasks!
         type: boolean
         default: false
     responses:

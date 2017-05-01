@@ -1,69 +1,40 @@
-package mesosphere.marathon.core.group
+package mesosphere.marathon
+package core.group
 
 import javax.inject.Provider
 
-import akka.actor.ActorRef
 import akka.event.EventStream
-import akka.stream.Materializer
-import com.codahale.metrics.Gauge
-import mesosphere.marathon.core.group.impl.{ GroupManagerActor, GroupManagerDelegate }
-import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
-import mesosphere.marathon.{ DeploymentService, MarathonConf }
-import mesosphere.util.CapConcurrentExecutions
+import kamon.Kamon
+import kamon.metric.instrument.Time
+import mesosphere.marathon.core.group.impl.GroupManagerImpl
+import mesosphere.marathon.storage.repository.GroupRepository
 
-import scala.concurrent.Await
+import scala.concurrent.{ Await, ExecutionContext }
 
 /**
   * Provides a [[GroupManager]] implementation.
   */
 class GroupManagerModule(
-    config: MarathonConf,
-    leadershipModule: LeadershipModule,
-    serializeUpdates: CapConcurrentExecutions,
+    config: GroupManagerConfig,
     scheduler: Provider[DeploymentService],
-    groupRepo: GroupRepository,
-    appRepo: ReadOnlyAppRepository,
-    storage: StorageProvider,
-    eventBus: EventStream,
-    metrics: Metrics)(implicit mat: Materializer) {
-
-  private[this] val groupManagerActorRef: ActorRef = {
-    val props = GroupManagerActor.props(
-      serializeUpdates,
-      scheduler,
-      groupRepo,
-      appRepo,
-      storage,
-      config,
-      eventBus)
-    leadershipModule.startWhenLeader(props, "groupManager")
-  }
+    groupRepo: GroupRepository)(implicit ctx: ExecutionContext, eventStream: EventStream) {
 
   val groupManager: GroupManager = {
-    val groupManager = new GroupManagerDelegate(config, groupManagerActorRef)
+    val groupManager = new GroupManagerImpl(config, Await.result(groupRepo.root(), config.zkTimeoutDuration), groupRepo, scheduler)
 
-    metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
-      override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), config.zkTimeoutDuration).transitiveAppsById.size
-      }
-    })
+    // We've already released metrics using these names, so we can't use the Metrics.* methods
+    Kamon.metrics.gauge("service.mesosphere.marathon.app.count")(
+      groupManager.rootGroup().transitiveApps.size.toLong
+    )
 
-    metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
-      override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), config.zkTimeoutDuration).transitiveGroups.size
-      }
-    })
+    Kamon.metrics.gauge("service.mesosphere.marathon.group.count")(
+      groupManager.rootGroup().transitiveGroupsById.size.toLong
+    )
 
-    metrics.gauge("service.mesosphere.marathon.uptime", new Gauge[Long] {
-      val startedAt = System.currentTimeMillis()
-
-      override def getValue: Long = {
-        System.currentTimeMillis() - startedAt
-      }
-    })
+    val startedAt = System.currentTimeMillis()
+    Kamon.metrics.gauge("service.mesosphere.marathon.uptime", Time.Milliseconds)(
+      System.currentTimeMillis() - startedAt
+    )
 
     groupManager
   }

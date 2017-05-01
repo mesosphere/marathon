@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.Response
@@ -13,8 +14,8 @@ import scala.util.{ Failure, Success, Try }
   * Base trait for authentication and authorization in http resource endpoints.
   */
 trait AuthResource extends RestResource {
-  def authenticator: Authenticator
-  def authorizer: Authorizer
+  implicit val authenticator: Authenticator
+  implicit val authorizer: Authorizer
 
   def authenticated(request: HttpServletRequest)(fn: Identity => Response): Response = {
     val requestWrapper = new RequestFacade(request)

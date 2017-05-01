@@ -2,76 +2,70 @@ package mesosphere.util
 
 import akka.actor.{ Props, Status }
 import akka.testkit.{ TestActorRef, TestProbe }
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.test.MarathonActorSupport
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import mesosphere.AkkaUnitTest
 
-import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{ Future, Promise }
 
-class PromiseActorTest
-    extends MarathonActorSupport
-    with MarathonSpec
-    with BeforeAndAfterAll
-    with Matchers {
+class PromiseActorTest extends AkkaUnitTest {
 
-  test("Success") {
-    val promise = Promise[Any]()
-    val ref = TestActorRef(Props(classOf[PromiseActor], promise))
+  "PromiseActor" should {
+    "Success" in {
+      val promise = Promise[Any]()
+      val ref = TestActorRef[PromiseActor](Props(classOf[PromiseActor], promise))
 
-    ref ! 'Test
+      ref ! 'Test
 
-    Await.result(promise.future, 2.seconds) should equal('Test)
+      promise.future.futureValue should equal('Test)
+    }
+
+    "Success with askWithoutTimeout" in {
+      val probe = TestProbe()
+      val future: Future[Symbol] = PromiseActor.askWithoutTimeout(system, probe.ref, 'Question)
+      probe.expectMsg('Question)
+      probe.reply('Answer)
+
+      future.futureValue should equal('Answer)
+    }
+
+    "Status.Success" in {
+      val promise = Promise[Any]()
+      val ref = TestActorRef[PromiseActor](Props(classOf[PromiseActor], promise))
+
+      ref ! Status.Success('Test)
+
+      promise.future.futureValue should equal('Test)
+    }
+
+    "State.Success with askWithoutTimeout" in {
+      val probe = TestProbe()
+      val future: Future[Symbol] = PromiseActor.askWithoutTimeout(system, probe.ref, 'Question)
+      probe.expectMsg('Question)
+      probe.reply(Status.Success('Answer))
+
+      future.futureValue should equal('Answer)
+    }
+
+    "Status.Failure" in {
+      val promise = Promise[Any]()
+      val ref = TestActorRef[PromiseActor](Props(classOf[PromiseActor], promise))
+      val ex = new Exception("test")
+
+      ref ! Status.Failure(ex)
+
+      intercept[Exception] {
+        throw promise.future.failed.futureValue
+      }.getMessage should be("test")
+    }
+
+    "State.Failure with askWithoutTimeout" in {
+      val probe = TestProbe()
+      val future: Future[Symbol] = PromiseActor.askWithoutTimeout(system, probe.ref, 'Question)
+      probe.expectMsg('Question)
+      probe.reply(Status.Failure(new IllegalStateException("error")))
+
+      intercept[IllegalStateException] {
+        throw future.failed.futureValue
+      }.getMessage should be("error")
+    }
   }
-
-  test("Success with askWithoutTimeout") {
-    val probe = TestProbe()
-    val future: Future[Symbol] = PromiseActor.askWithoutTimeout(system, probe.ref, 'Question)
-    probe.expectMsg('Question)
-    probe.reply('Answer)
-
-    Await.result(future, 2.seconds) should equal('Answer)
-  }
-
-  test("Status.Success") {
-    val promise = Promise[Any]()
-    val ref = TestActorRef(Props(classOf[PromiseActor], promise))
-
-    ref ! Status.Success('Test)
-
-    Await.result(promise.future, 2.seconds) should equal('Test)
-  }
-
-  test("State.Success with askWithoutTimeout") {
-    val probe = TestProbe()
-    val future: Future[Symbol] = PromiseActor.askWithoutTimeout(system, probe.ref, 'Question)
-    probe.expectMsg('Question)
-    probe.reply(Status.Success('Answer))
-
-    Await.result(future, 2.seconds) should equal('Answer)
-  }
-
-  test("Status.Failure") {
-    val promise = Promise[Any]()
-    val ref = TestActorRef(Props(classOf[PromiseActor], promise))
-    val ex = new Exception("test")
-
-    ref ! Status.Failure(ex)
-
-    intercept[Exception] {
-      Await.result(promise.future, 2.seconds)
-    }.getMessage should be("test")
-  }
-
-  test("State.Failure with askWithoutTimeout") {
-    val probe = TestProbe()
-    val future: Future[Symbol] = PromiseActor.askWithoutTimeout(system, probe.ref, 'Question)
-    probe.expectMsg('Question)
-    probe.reply(Status.Failure(new IllegalStateException("error")))
-
-    intercept[IllegalStateException] {
-      Await.result(future, 2.seconds)
-    }.getMessage should be("error")
-  }
-
 }

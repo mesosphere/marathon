@@ -1,24 +1,22 @@
-package mesosphere.marathon.core.storage.store.impl.zk
+package mesosphere.marathon
+package core.storage.store.impl.zk
 
 import java.util.UUID
 
 import akka.util.ByteString
 import mesosphere.UnitTest
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.stream.Implicits._
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ ACL, Id }
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider
 import org.apache.zookeeper.{ KeeperException, ZooDefs }
 
-import scala.collection.JavaConversions._
-import scala.collection.immutable.Seq
 import scala.util.Random
 
 class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
-  // scalastyle:off magic.number
   val root = Random.alphanumeric.take(10).mkString
   val user = new Id("digest", DigestAuthenticationProvider.generateDigest("super:secret"))
-  // scalastyle:on
 
   lazy val richClient = {
     zkClient(namespace = Some(root))
@@ -34,19 +32,19 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
 
   "RichCuratorFramework" should {
     "be able to create a simple node" in {
-      richClient.create("/1").futureValue should equal(s"/1")
+      richClient.create("/1").futureValue should equal("/1")
       val childrenData = client.children("/").futureValue
-      childrenData.children should contain only ("1")
+      childrenData.children should contain only "1"
       childrenData.path should equal("/")
       childrenData.stat.getVersion should equal(0)
       childrenData.stat.getEphemeralOwner should equal(0)
       childrenData.stat.getNumChildren should equal(1)
     }
     "be able to create a simple node with data" in {
-      richClient.create("/2", data = Some(ByteString("abc"))).futureValue should equal(s"/2")
+      richClient.create("/2", data = Some(ByteString("abc"))).futureValue should equal("/2")
       client.data("/2").futureValue.data should equal(ByteString("abc"))
       val childrenData = client.children("/").futureValue
-      childrenData.children should contain only ("2")
+      childrenData.children should contain only "2"
       childrenData.path should equal("/")
       childrenData.stat.getVersion should equal(0)
       childrenData.stat.getEphemeralOwner should equal(0)

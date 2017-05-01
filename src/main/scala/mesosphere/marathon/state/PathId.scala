@@ -1,17 +1,21 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.isTrue
 import mesosphere.marathon.plugin
 
-case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId {
+import scala.annotation.tailrec
+import scala.collection.immutable.Seq
+
+case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId {
 
   def root: String = path.headOption.getOrElse("")
 
   def rootPath: PathId = PathId(path.headOption.map(_ :: Nil).getOrElse(Nil), absolute)
 
-  def tail: List[String] = path.tail
+  def tail: Seq[String] = path.tail
 
   def isEmpty: Boolean = path.isEmpty
 
@@ -19,8 +23,8 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
 
   def parent: PathId = path match {
     case Nil => this
-    case head :: Nil => PathId(Nil, absolute)
-    case head :: rest => PathId(path.reverse.tail.reverse, absolute)
+    case head +: Nil => PathId(Nil, absolute)
+    case head +: rest => PathId(path.init, absolute)
   }
 
   def allParents: List[PathId] = if (isRoot) Nil else {
@@ -30,16 +34,16 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
 
   def child: PathId = PathId(tail)
 
-  def append(id: PathId): PathId = PathId(path ::: id.path, absolute)
+  def append(id: PathId): PathId = PathId(path ++ id.path, absolute)
 
   def append(id: String): PathId = append(PathId(id))
 
   def /(id: String): PathId = append(id)
 
   def restOf(parent: PathId): PathId = {
-    def in(currentPath: List[String], parentPath: List[String]): List[String] = {
+    @tailrec def in(currentPath: Seq[String], parentPath: Seq[String]): Seq[String] = {
       if (currentPath.isEmpty) Nil
-      else if (parentPath.isEmpty || currentPath.head != parentPath.head) currentPath
+      else if (parentPath.isEmpty || currentPath.headOption != parentPath.headOption) currentPath
       else in(currentPath.tail, parentPath.tail)
     }
     PathId(in(path, parent.path), absolute)
@@ -47,13 +51,13 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
 
   def canonicalPath(base: PathId = PathId(Nil, absolute = true)): PathId = {
     require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
-    def in(remaining: List[String], result: List[String] = Nil): List[String] = remaining match {
-      case head :: tail if head == "." => in(tail, result)
-      case head :: tail if head == ".." => in(tail, if (result.nonEmpty) result.tail else Nil)
-      case head :: tail => in(tail, head :: result)
+    @tailrec def in(remaining: Seq[String], result: Seq[String] = Nil): Seq[String] = remaining match {
+      case head +: tail if head == "." => in(tail, result)
+      case head +: tail if head == ".." => in(tail, if (result.nonEmpty) result.tail else Nil)
+      case head +: tail => in(tail, head +: result)
       case Nil => result.reverse
     }
-    if (absolute) PathId(in(path)) else PathId(in(base.path ::: path))
+    if (absolute) PathId(in(path)) else PathId(in(base.path ++ path))
   }
 
   def safePath: String = {
@@ -64,7 +68,6 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
   def toHostname: String = path.reverse.mkString(".")
 
   def includes(definition: plugin.PathId): Boolean = {
-    //scalastyle:off return
     if (path.size < definition.path.size) return false
     path.zip(definition.path).forall { case (left, right) => left == right }
   }
@@ -75,7 +78,7 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
 
   override def compare(that: PathId): Int = {
     import Ordering.Implicits._
-    val seqOrder = implicitly(Ordering[List[String]])
+    val seqOrder = implicitly(Ordering[Seq[String]])
     seqOrder.compare(canonicalPath().path, that.canonicalPath().path)
   }
 
@@ -106,7 +109,7 @@ object PathId {
   /**
     * This regular expression is used to validate each path segment of an ID.
     *
-    * If you change this, please also change "pathType" in AppDefinition.json and
+    * If you change this, please also change `pathType` in AppDefinition.json, `PathId` in stringTypes.raml, and
     * notify the maintainers of the DCOS CLI.
     */
   private[this] val ID_PATH_SEGMENT_PATTERN =
@@ -135,17 +138,23 @@ object PathId {
     path is validPathChars
   }
 
+  /**
+    * Make sure that the given path is a child of the defined parent path.
+    * Every relative path can be ignored.
+    */
   private def childOf(parent: PathId): Validator[PathId] = {
     isTrue[PathId](s"Identifier is not child of $parent. Hint: use relative paths.") { child =>
-      parent == PathId.empty || !parent.absolute ||
-        (parent.absolute && child.canonicalPath(parent).parent == parent)
+      !parent.absolute || (child.canonicalPath(parent).parent == parent)
     }
   }
 
   /**
+    * Makes sure, the path is not only the root path and is not empty.
+    */
+  val nonEmptyPath = isTrue[PathId]("Path must contain at least one path element") { _.path.nonEmpty }
+
+  /**
     * Needed for AppDefinitionValidatorTest.testSchemaLessStrictForId.
     */
-  val absolutePathValidator = isTrue[PathId]("Path needs to be absolute") { path =>
-    path.absolute
-  }
+  val absolutePathValidator = isTrue[PathId]("Path needs to be absolute") { _.absolute }
 }

@@ -1,19 +1,14 @@
-package mesosphere.marathon.core.launchqueue
+package mesosphere.marathon
+package core.launchqueue
 
 import akka.actor.{ ActorRef, Props }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
-import mesosphere.marathon.core.launcher.TaskOpFactory
-import mesosphere.marathon.core.launchqueue.impl.{
-  TaskLauncherActor,
-  LaunchQueueActor,
-  LaunchQueueDelegate,
-  RateLimiter,
-  RateLimiterActor
-}
+import mesosphere.marathon.core.launcher.InstanceOpFactory
+import mesosphere.marathon.core.launchqueue.impl._
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
 /**
@@ -25,30 +20,33 @@ class LaunchQueueModule(
     clock: Clock,
     subOfferMatcherManager: OfferMatcherManager,
     maybeOfferReviver: Option[OfferReviver],
-    taskTracker: TaskTracker,
-    taskOpFactory: TaskOpFactory) {
+    taskTracker: InstanceTracker,
+    taskOpFactory: InstanceOpFactory) {
+
+  private[this] val offerMatchStatisticsActor: ActorRef = {
+    leadershipModule.startWhenLeader(OfferMatchStatisticsActor.props(), "offerMatcherStatistics")
+  }
 
   private[this] val launchQueueActorRef: ActorRef = {
-    val props = LaunchQueueActor.props(config, runSpecActorProps)
+    def runSpecActorProps(runSpec: RunSpec, count: Int): Props =
+      TaskLauncherActor.props(
+        config,
+        subOfferMatcherManager,
+        clock,
+        taskOpFactory,
+        maybeOfferReviver,
+        taskTracker,
+        rateLimiterActor,
+        offerMatchStatisticsActor)(runSpec, count)
+    val props = LaunchQueueActor.props(config, offerMatchStatisticsActor, runSpecActorProps)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }
-  private[this] val rateLimiter: RateLimiter = new RateLimiter(clock)
 
+  val rateLimiter: RateLimiter = new RateLimiter(config, clock)
   private[this] val rateLimiterActor: ActorRef = {
     val props = RateLimiterActor.props(
       rateLimiter, launchQueueActorRef)
     leadershipModule.startWhenLeader(props, "rateLimiter")
   }
-
   val launchQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActorRef, rateLimiterActor)
-
-  private[this] def runSpecActorProps(runSpec: RunSpec, count: Int): Props =
-    TaskLauncherActor.props(
-      config,
-      subOfferMatcherManager,
-      clock,
-      taskOpFactory,
-      maybeOfferReviver,
-      taskTracker,
-      rateLimiterActor)(runSpec, count)
 }

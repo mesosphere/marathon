@@ -1,82 +1,87 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import java.net.{ InetAddress, ServerSocket }
 
 import akka.actor.Props
 import akka.testkit.{ ImplicitSender, TestActorRef }
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.core.health.{ HealthCheck, HealthResult, Healthy }
-import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
-import org.scalatest.Matchers
+import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.health.{ HealthResult, Healthy, MarathonTcpHealthCheck, PortReference }
+import mesosphere.marathon.core.instance.Instance.AgentInfo
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestTaskBuilder }
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition, UnreachableStrategy }
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 
-class HealthCheckWorkerActorTest
-    extends MarathonActorSupport
-    with ImplicitSender
-    with MarathonSpec
-    with Matchers {
+class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
 
   import HealthCheckWorker._
-  import MarathonTestHelper.Implicits._
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  "HealthCheckWorkerActor" should {
+    "A TCP health check should correctly resolve the hostname" in {
+      val socket = new ServerSocket(0)
+      val socketPort: Int = socket.getLocalPort
 
-  test("A TCP health check should correctly resolve the hostname") {
-    val socket = new ServerSocket(0)
-    val socketPort: Int = socket.getLocalPort
+      val res = Future {
+        socket.accept().close()
+      }
 
-    val res = Future {
-      socket.accept().close()
+      val appId = PathId("/test_id")
+      val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
+      val hostName = InetAddress.getLocalHost.getCanonicalHostName
+      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+      val task = {
+        val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
+        val hostPorts = Seq(socketPort)
+        t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
+      }
+      val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
+
+      val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
+      ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
+
+      try { res.futureValue }
+      finally { socket.close() }
+
+      expectMsgPF(patienceConfig.timeout) {
+        case Healthy(taskId, _, _, _) => ()
+      }
     }
 
-    val task =
-      MarathonTestHelper.runningTask("test_id")
-        .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withHostPorts(Seq(socketPort))
+    "A health check worker should shut itself down" in {
+      val socket = new ServerSocket(0)
+      val socketPort: Int = socket.getLocalPort
 
-    val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-    val app = AppDefinition(id = "test_id".toPath)
-    ref ! HealthCheckJob(app, task, task.launched.get, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
+      val res = Future {
+        socket.accept().close()
+      }
 
-    try { Await.result(res, 1.seconds) }
-    finally { socket.close() }
+      val appId = PathId("/test_id")
+      val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
+      val hostName = InetAddress.getLocalHost.getCanonicalHostName
+      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+      val task = {
+        val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
+        val hostPorts = Seq(socketPort)
+        t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
+      }
+      val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
 
-    expectMsgPF(1.seconds) {
-      case Healthy(taskId, _, _) => ()
+      val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
+      ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
+
+      try { res.futureValue }
+      finally { socket.close() }
+
+      expectMsgPF(patienceConfig.timeout) {
+        case _: HealthResult => ()
+      }
+
+      watch(ref)
+      expectTerminated(ref)
     }
-  }
-
-  test("A health check worker should shut itself down") {
-    val socket = new ServerSocket(0)
-    val socketPort: Int = socket.getLocalPort
-
-    val res = Future {
-      socket.accept().close()
-    }
-
-    val task =
-      MarathonTestHelper.runningTask("test_id")
-        .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withHostPorts(Seq(socketPort))
-
-    val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-    val app = AppDefinition(id = "test_id".toPath)
-    ref ! HealthCheckJob(app, task, task.launched.get, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
-
-    try { Await.result(res, 1.seconds) }
-    finally { socket.close() }
-
-    expectMsgPF(1.seconds) {
-      case _: HealthResult => ()
-    }
-
-    watch(ref)
-    expectTerminated(ref)
   }
 }

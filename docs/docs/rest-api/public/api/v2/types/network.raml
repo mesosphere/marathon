@@ -1,0 +1,154 @@
+#%RAML 1.0 Library
+uses:
+  label: label.raml
+  numbers: numberTypes.raml
+  strings: stringTypes.raml
+  pragma: pragma.raml
+types:
+  Endpoint:
+    type: object
+    description: |
+      Endpoints accept connections from outside of a pod.
+      Endpoints may also be advertised outside of a cluster.
+    properties:
+      name:
+        type: strings.Name
+        description: |
+          Name of this port. Should be unique in the context of the pod.
+      containerPort?:
+        type: numbers.Port
+        description: |
+          The container port that a task's process is actually listening on.
+          Required if the network mode is container
+      hostPort?:
+        type: numbers.AnyPort
+        description: |
+          Mapped port on the host.
+          All host ports are allocated from resource offers.
+        usage: Specify 0 to tell Marathon to dynamically allocate a host port.
+      protocol?:
+        type: array
+        (pragma.omitEmpty):
+        items: strings.Name
+        minItems: 1
+        description: |
+          The protocol of this port, advertised in Mesos DiscoveryInfo (DI).
+          Specifying more than one protocol here will result in the generation
+          of multiple Port DI entries.
+      labels?:
+        type: label.KVLabels
+        (pragma.omitEmpty):
+        description: |
+          Metadata as key/value pair. Possible uses include VIPs,
+          per-network-interface binding
+      networkNames?:
+        type: array
+        items: strings.Name
+        description: |
+          List of the container networks associated with this endpoint. If
+          absent, then this endpoint is associated with all defined container
+          networks (for this application). A single item list is mandatory when
+          `hostPort` is specified and multiple container networks are defined.
+        (pragma.omitEmpty):
+  NetworkMode:
+    type: string
+    enum: [container, "container/bridge", host]
+    description: |
+      `container` networks are named networks and are assigned an IP address by Mesos.
+      The `container/bridge` network is a special container network that operates in a
+      manner similar to Docker's "default bridge" mode, and depends on specific Mesos
+      CNI support. The `host` network results in containers sharing the network namespace
+      of the Mesos agent, and no IP address is allocated.
+  Network:
+    type: object
+    properties:
+      name?:
+        type: strings.Name
+        description: |
+          Defines the name of the container network to join.
+          Not for use with `host` mode networking.
+      mode?:
+        type: NetworkMode
+        default: container
+      labels?:
+        type: label.KVLabels
+        (pragma.omitEmpty):
+        description: |
+          Labels applied to the pod's NetworkInfo.
+          Ignored when using `host` node networking.
+  IpDiscoveryPort:
+    type: object
+    description: Port
+    properties:
+      number?:
+        type: numbers.AnyPort
+        description: The port number
+        default: 0
+      name:
+        type: strings.LegacyName
+        description: Name of the port
+      protocol?:
+        type: strings.NetworkProtocol
+        default: tcp
+  IpDiscovery:
+    type: object
+    description: Information useful for service discovery
+    properties:
+      ports?:
+        type: IpDiscoveryPort[]
+        (pragma.omitEmpty):
+        description: |
+          Array of objects describing the ports exposed by each task
+  IpAddress:
+    type: object
+    (pragma.deprecated): Experimental API that is now deprecated. Prefer portMappings
+    description: |
+      If an application definition includes the 'ipAddress' field, then Marathon
+      will request a per-task IP from Mesos.
+      A separate ports/portMappings configuration is then disallowed.
+    properties:
+      discovery?:
+        type: IpDiscovery
+        description: |
+          DEPRECATED. Please try to use portMappings instead.
+      groups?:
+        type: array
+        (pragma.omitEmpty):
+        description: Ignored by Marathon, only exists here to preserve API compat (for now).
+        items: string
+        uniqueItems: true
+      labels?:
+        type: label.KVLabels
+        (pragma.omitEmpty):
+      networkName?:
+        type: string
+        description: |
+          If present, declares the name of the network that the container should
+          join.
+          In practice it is up to the IPAM to decide how to interpret this field
+        minLength: 1
+  PortDefinition:
+    type: object
+    properties:
+      port?:
+        type: numbers.AnyPort
+        default: 0
+        description: |
+          If requirePorts is set to true, then this port number will be used
+          on the agent host. Otherwise if the requirePorts is set to false and
+          this port number is not zero, then it will be used as a service port
+          and a dynamic port will be used on the agent host.
+          If it is set to zero, a dynamic port will be used on the host and a
+          unique service port will be assigned by Marathon.
+      labels?:
+        type: label.KVLabels
+        (pragma.omitEmpty):
+      name?:
+        type: strings.LegacyName
+        description: |
+          Name of the service hosted on this port.
+          If provided, it must be unique over all port definitions.
+      protocol?:
+        type: strings.NetworkProtocol
+        default: tcp
+        description: If this port is used for tcp or udp or both.

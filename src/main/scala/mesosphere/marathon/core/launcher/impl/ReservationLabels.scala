@@ -1,15 +1,14 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
-import mesosphere.marathon.api.serialization.LabelsSerializer
+import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
   * Encapsulates information about a reserved resource and its (probably empty) list of reservation labels.
   */
 case class ReservationLabels(labels: Map[String, String]) {
-  lazy val mesosLabels: MesosProtos.Labels = {
-    LabelsSerializer.toMesosLabelsBuilder(labels).build
-  }
+  lazy val mesosLabels: MesosProtos.Labels = labels.toMesosLabels
 
   def get(key: String): Option[String] = labels.get(key)
 
@@ -26,7 +25,6 @@ object ReservationLabels {
       ReservationLabels.withoutLabels
   }
   def apply(labels: MesosProtos.Labels): ReservationLabels = {
-    import scala.collection.JavaConverters._
-    ReservationLabels(labels.getLabelsList.asScala.iterator.map(l => l.getKey -> l.getValue).toMap)
+    ReservationLabels(labels.fromProto)
   }
 }

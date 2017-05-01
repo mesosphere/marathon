@@ -1,11 +1,11 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
-import mesosphere.marathon.state.AppDefinition.VersionInfo
-import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.state.VersionInfo._
+import mesosphere.marathon.state.{ Timestamp, VersionInfo }
 
 case class TaskStatsByVersion(
   maybeStartedAfterLastScaling: Option[TaskStats],
@@ -17,7 +17,7 @@ object TaskStatsByVersion {
 
   def apply(
     versionInfo: VersionInfo,
-    tasks: Iterable[TaskForStatistics]): TaskStatsByVersion =
+    tasks: Seq[TaskForStatistics]): TaskStatsByVersion =
     {
       def statsForVersion(versionTest: Timestamp => Boolean): Option[TaskStats] = {
         TaskStats.forSomeTasks(tasks.filter(task => versionTest(task.version)))
@@ -46,10 +46,10 @@ object TaskStatsByVersion {
   def apply(
     now: Timestamp,
     versionInfo: VersionInfo,
-    tasks: Iterable[Task],
-    statuses: Map[Task.Id, Seq[Health]]): TaskStatsByVersion =
+    instances: Seq[Instance],
+    statuses: Map[Instance.Id, Seq[Health]]): TaskStatsByVersion =
     {
-      TaskStatsByVersion(versionInfo, TaskForStatistics.forTasks(now, tasks, statuses))
+      TaskStatsByVersion(versionInfo, TaskForStatistics.forInstances(now, instances, statuses))
     }
 }
 
@@ -59,12 +59,12 @@ case class TaskStats(
 
 object TaskStats {
   def forSomeTasks(
-    now: Timestamp, tasks: Iterable[Task], statuses: Map[Task.Id, Seq[Health]]): Option[TaskStats] =
+    now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[TaskStats] =
     {
-      forSomeTasks(TaskForStatistics.forTasks(now, tasks, statuses))
+      forSomeTasks(TaskForStatistics.forInstances(now, instances, statuses))
     }
 
-  def forSomeTasks(tasks: Iterable[TaskForStatistics]): Option[TaskStats] = {
+  def forSomeTasks(tasks: Seq[TaskForStatistics]): Option[TaskStats] = {
     if (tasks.isEmpty) {
       None
     } else {

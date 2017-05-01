@@ -1,10 +1,11 @@
-package mesosphere.marathon.core.readiness
+package mesosphere.marathon
+package core.readiness
 
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.state.RunSpec
-import org.apache.http.HttpStatus
+import mesosphere.marathon.state.AppDefinition
+import akka.http.scaladsl.model.StatusCodes._
 
 import scala.concurrent.duration._
 
@@ -30,7 +31,7 @@ object ReadinessCheck {
   val DefaultPath = "/"
   val DefaultInterval = 30.seconds
   val DefaultTimeout = 10.seconds
-  val DefaultHttpStatusCodesForReady = Set(HttpStatus.SC_OK)
+  val DefaultHttpStatusCodesForReady = Set(OK.intValue)
   val DefaultPreserveLastResponse = false
 
   sealed trait Protocol
@@ -39,14 +40,18 @@ object ReadinessCheck {
     case object HTTPS extends Protocol
   }
 
-  implicit def readinessCheckValidator(runSpec: RunSpec): Validator[ReadinessCheck] =
+  implicit def readinessCheckValidator(runSpec: AppDefinition): Validator[ReadinessCheck] = {
+    def portNameExists = isTrue[String]{ name: String => s"No port definition reference for portName $name" } { name =>
+      runSpec.portNames.contains(name)
+    }
     validator[ReadinessCheck] { rc =>
       rc.name is notEmpty
       rc.path is notEmpty
       rc.portName is notEmpty
-      rc.portName is oneOf(runSpec.portNames: _*)
+      rc.portName is portNameExists
       rc.timeout.toSeconds should be < rc.interval.toSeconds
       rc.timeout.toSeconds should be > 0L
       rc.httpStatusCodesForReady is notEmpty
     }
+  }
 }

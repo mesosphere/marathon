@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.flow.impl
+package mesosphere.marathon
+package core.flow.impl
 
 import akka.actor.ActorRef
 import mesosphere.marathon.core.flow.OfferReviver

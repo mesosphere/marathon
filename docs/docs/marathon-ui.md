@@ -68,7 +68,7 @@ True if the `queue` endpoint returns the following JSON condition:
 ## Application Health Reference
 It is possible to specify health checks to be run against an application's
 tasks. For instructions on how to set up and use health checks, please refer to the
-[health checks page]({{ site.baseurl }}/health-checks.html) page.
+[health checks page]({{ site.baseurl }}/docs/health-checks.html) page.
 
 <img src="{{ site.baseurl }}/img/marathon-ui-health.png" width="700" alt="Health States in Marathon UI">
 

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.election
+package mesosphere.marathon
+package core.election
 
 import akka.actor.ActorRef
 
@@ -42,9 +43,9 @@ trait ElectionService {
     * The given actorRef will initally get the current state via the appropriate
     * [[LocalLeadershipEvent]] message and will be informed of changes after that.
     */
-  def subscribe(self: ActorRef)
+  def subscribe(self: ActorRef): Unit
   /** Unsubscribe to any leadership change events to this actor ref. */
-  def unsubscribe(self: ActorRef)
+  def unsubscribe(self: ActorRef): Unit
 }
 
 /**

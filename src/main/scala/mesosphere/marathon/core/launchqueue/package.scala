@@ -1,4 +1,5 @@
-package mesosphere.marathon.core
+package mesosphere.marathon
+package core
 
 /**
   * This package allows starting tasks for applications with the LaunchQueue abstraction.
