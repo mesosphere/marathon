@@ -88,19 +88,40 @@ def assert_mom_ee(version, security_mode='permissive'):
     wait_for_service_endpoint(mom_ee_endpoint(version, security_mode))
 
 
-# MoM-ee tests can only run on enterprise DC/OS cluster
-# with at least 2 private nodes.
-@pytest.mark.skipif("ee_version() is None")
+# strict security mode
 @pytest.mark.skipif('required_private_agents(2)')
+@pytest.mark.skipif("ee_version() != 'strict'")
 @pytest.mark.parametrize("version,security_mode", [
-pytest.mark.skipif("ee_version() != 'strict'")(('1.4', 'strict')),
-        ('1.4', 'permissive'),
-        ('1.4', 'disabled'),
-pytest.mark.skipif("ee_version() != 'strict'")(('1.3', 'strict')),
-        ('1.3', 'permissive'),
-        ('1.3', 'disabled')
+    ('1.4', 'strict'),
+    ('1.3', 'strict')
 ])
-def test_mom_ee(version, security_mode):
+def test_strict_mom_ee(version, security_mode):
+    assert_mom_ee(version, security_mode)
+    assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
+
+
+# permissive security mode
+@pytest.mark.skipif('required_private_agents(2)')
+@pytest.mark.skipif("ee_version() != 'permissive'")
+@pytest.mark.parametrize("version,security_mode", [
+    ('1.4', 'permissive'),
+    ('1.4', 'disabled'),
+    ('1.3', 'permissive'),
+    ('1.3', 'disabled')
+])
+def test_permissive_mom_ee(version, security_mode):
+    assert_mom_ee(version, security_mode)
+    assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
+
+
+# disabled security mode
+@pytest.mark.skipif('required_private_agents(2)')
+@pytest.mark.skipif("ee_version() != 'disabled'")
+@pytest.mark.parametrize("version,security_mode", [
+    ('1.4', 'disabled'),
+    ('1.3', 'disabled')
+])
+def test_disabled_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
     assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
 
@@ -164,8 +185,10 @@ def ensure_docker_credentials():
 def cleanup():
     if is_mom_ee_deployed():
         remove_mom_ee()
-    delete_service_account(MOM_EE_SERVICE_ACCOUNT)
-    delete_secret(MOM_EE_SECRET_NAME)
+    if has_service_account(MOM_EE_SERVICE_ACCOUNT):
+        delete_service_account(MOM_EE_SERVICE_ACCOUNT)
+    if has_secret(MOM_EE_SECRET_NAME):
+        delete_secret(MOM_EE_SECRET_NAME)
 
 
 def setup_function(function):
