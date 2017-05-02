@@ -8,7 +8,7 @@ import mesosphere.marathon.state.PathId._
 
 import scala.concurrent.duration._
 
-@SerialIntegrationTest
+@IntegrationTest
 class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
   before {
     cleanUp()

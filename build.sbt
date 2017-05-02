@@ -11,7 +11,6 @@ import sbt.Def
 
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
-lazy val SerialIntegrationTest = config("serial-integration") extend Test
 lazy val IntegrationTest = config("integration") extend Test
 lazy val UnstableTest = config("unstable") extend Test
 lazy val UnstableIntegrationTest = config("unstable-integration") extend Test
@@ -45,13 +44,15 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     .setPreference(SpacesWithinPatternBinders, true)
 )
 
-lazy val testSettings = Seq(
+lazy val testSettings =
+  inConfig(IntegrationTest)(Defaults.testTasks) ++
+  inConfig(UnstableTest)(Defaults.testTasks) ++
+  inConfig(UnstableIntegrationTest)(Defaults.testTasks) ++
+  Seq(
   (coverageDir in Test) := target.value / "test-coverage",
   (coverageDir in IntegrationTest) := target.value / "integration-coverage",
-  (coverageDir in SerialIntegrationTest) := target.value / "integration-coverage",
   (coverageMinimum in IntegrationTest) := 58,
   testWithCoverageReport in IntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(IntegrationTest).value,
-  testWithCoverageReport in SerialIntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(SerialIntegrationTest).value,
   (coverageDir in UnstableTest) := target.value / "unstable-coverage",
   (coverageDir in UnstableIntegrationTest) := target.value / "unstable-integration-coverage",
   testWithCoverageReport in UnstableTest := TestWithCoveragePlugin.runTestsWithCoverage(UnstableTest).value,
@@ -62,7 +63,6 @@ lazy val testSettings = Seq(
   testForkedParallel in Test := true,
   testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"),
     Tests.Argument("-l", "mesosphere.marathon.IntegrationTest",
-      "-l", "mesosphere.marathon.SerialIntegrationTest",
       "-l", "mesosphere.marathon.UnstableTest",
       "-y", "org.scalatest.WordSpec")),
   fork in Test := true,
@@ -71,46 +71,27 @@ lazy val testSettings = Seq(
   testForkedParallel in UnstableTest := true,
   testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument(
     "-l", "mesosphere.marathon.IntegrationTest",
-    "-l", "mesosphere.marathon.SerialIntegrationTest",
     "-y", "org.scalatest.WordSpec")),
   fork in UnstableTest := true,
-
-  fork in SerialIntegrationTest := true,
-  testOptions in SerialIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "serial-integration"),
-    Tests.Argument(
-      "-n", "mesosphere.marathon.SerialIntegrationTest",
-      "-l", "mesosphere.marathon.UnstableTest",
-      "-y", "org.scalatest.WordSpec")),
-  parallelExecution in SerialIntegrationTest := false,
-  testForkedParallel in SerialIntegrationTest := false,
 
   fork in IntegrationTest := true,
   testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
-      "-l", "mesosphere.marathon.SerialIntegrationTest",
       "-l", "mesosphere.marathon.UnstableTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in IntegrationTest := true,
   testForkedParallel in IntegrationTest := true,
   concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
-  test in IntegrationTest := Def.sequential {
-    test in IntegrationTest
-    test in SerialIntegrationTest
-  }.value,
 
   fork in UnstableIntegrationTest := true,
   testOptions in UnstableIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable-integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
-      "-n", "mesosphere.marathon.SerialIntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in UnstableIntegrationTest := true,
   testForkedParallel in UnstableIntegrationTest := true
-) ++ inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
-  inConfig(IntegrationTest)(Defaults.testTasks) ++
-  inConfig(UnstableTest)(Defaults.testTasks) ++
-  inConfig(UnstableIntegrationTest)(Defaults.testTasks)
+)
 
 lazy val commonSettings = testSettings ++
   aspectjSettings ++ Seq(
@@ -142,6 +123,8 @@ lazy val commonSettings = testSettings ++
     "-Yclosure-elim",
     "-Ydead-code"
   ),
+  // Don't need any linting, etc for docs, so gain a small amount of build time there.
+  scalacOptions in (Compile, doc) := Seq("-encoding", "UTF-8", "-deprecation", "-feature", "-Xfuture"),
   javacOptions in Compile ++= Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
@@ -283,7 +266,6 @@ addCommandAlias("packageRpm",  ";set serverLoading in Rpm := com.typesafe.sbt.pa
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
-    .configs(SerialIntegrationTest)
     .configs(IntegrationTest)
     .configs(UnstableTest)
     .configs(UnstableIntegrationTest)
@@ -295,7 +277,6 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     )
 
 lazy val marathon = (project in file("."))
-  .configs(SerialIntegrationTest)
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
@@ -320,7 +301,6 @@ lazy val marathon = (project in file("."))
 
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
-  .configs(SerialIntegrationTest)
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
@@ -334,7 +314,6 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
 
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
-  .configs(SerialIntegrationTest)
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)

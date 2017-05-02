@@ -1,5 +1,6 @@
 /**
- * The meat of a Jenkins build
+ * The meat of a Jenkins build. Master/Release/Submit do use coverage,
+ * for speed of development, review jobs do not.
  */
 
 def is_phabricator_build() {
@@ -80,7 +81,7 @@ def is_phabricator_fully_accepted(revision_id) {
   return sh(script: """ jq -n '{ queryKey: "all", constraints: { ids: [$revision_id] }, attachments: { "reviewers" : true } }' |\
                         arc call-conduit differential.revision.search |\
                         jq -e '.response.data[0].attachments.reviewers.reviewers | map(if .status == "rejected" then -100 elif .status == "accepted" then 1 else 0 end) | add | if . >= 3 then true else false end' """,
-                        returnStatus: true) == 0
+      returnStatus: true) == 0
 }
 
 // installs mesos at the revision listed in the build.
@@ -115,23 +116,23 @@ def is_master_or_release() {
  * @param block The block to execute in stage.
  */
 def stage_with_commit_status(label, block) {
-    stage(label) {
-      try {
-        // Execute steps in stage
-        block()
-        currentBuild.result = 'SUCCESS'
-      } catch (error) {
-        currentBuild.result = 'FAILURE'
-        throw error
-      } finally {
-        if (!is_phabricator_build()) {
-          // Mark commit with final status
-          step([$class: 'GitHubCommitStatusSetter'
-              , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity " + label]
-          ])
-        }
+  stage(label) {
+    try {
+      // Execute steps in stage
+      block()
+      currentBuild.result = 'SUCCESS'
+    } catch (error) {
+      currentBuild.result = 'FAILURE'
+      throw error
+    } finally {
+      if (!is_phabricator_build()) {
+        // Mark commit with final status
+        step([$class: 'GitHubCommitStatusSetter'
+            , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity " + label]
+        ])
       }
     }
+  }
 }
 
 def report_success() {
@@ -156,13 +157,13 @@ def report_success() {
         , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
         , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity All"]
         , statusResultSource: [
-            $class: 'ConditionalStatusResultSource'
-            , results: [
-                [$class: 'BetterThanOrEqualBuildResult', result: 'UNSTABLE', state: 'SUCCESS', message: currentBuild.description],
-                [$class: 'BetterThanOrEqualBuildResult', result: 'FAILURE', state: 'FAILURE', message: currentBuild.description],
-                [$class: 'AnyBuildResult', state: 'FAILURE', message: 'Loophole']
-            ]
-        ]
+        $class: 'ConditionalStatusResultSource'
+        , results: [
+        [$class: 'BetterThanOrEqualBuildResult', result: 'UNSTABLE', state: 'SUCCESS', message: currentBuild.description],
+        [$class: 'BetterThanOrEqualBuildResult', result: 'FAILURE', state: 'FAILURE', message: currentBuild.description],
+        [$class: 'AnyBuildResult', state: 'FAILURE', message: 'Loophole']
+    ]
+    ]
     ])
   }
 }
@@ -187,13 +188,13 @@ def report_failure() {
         , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
         , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity All"]
         , statusResultSource: [
-            $class: 'ConditionalStatusResultSource'
-            , results: [
-                [$class: 'BetterThanOrEqualBuildResult', result: 'UNSTABLE', state: 'SUCCESS', message: currentBuild.description],
-                [$class: 'BetterThanOrEqualBuildResult', result: 'FAILURE', state: 'FAILURE', message: currentBuild.description],
-                [$class: 'AnyBuildResult', state: 'FAILURE', message: 'Loophole']
-            ]
-        ]
+        $class: 'ConditionalStatusResultSource'
+        , results: [
+        [$class: 'BetterThanOrEqualBuildResult', result: 'UNSTABLE', state: 'SUCCESS', message: currentBuild.description],
+        [$class: 'BetterThanOrEqualBuildResult', result: 'FAILURE', state: 'FAILURE', message: currentBuild.description],
+        [$class: 'AnyBuildResult', state: 'FAILURE', message: 'Loophole']
+    ]
+    ]
     ])
   }
 }
@@ -258,31 +259,32 @@ def checkout_marathon() {
 }
 
 // run through compile/lint/docs. Fail if there were format changes after this.
-def compile() {
+def compile_and_test() {
   try {
     withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
       withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-        sh "sudo -E sbt -Dsbt.log.format=false clean scapegoat doc test:compile"
+        if (is_master_or_release() || is_submit_request()) {
+          sh "sudo -E sbt clean scapegoat doc coverage testWithCoverageReport"
+        } else {
+          sh "sudo -E sbt clean scapegoat doc test"
+        }
         sh """if git diff --quiet; then echo 'No format issues detected'; else echo 'Patch has Format Issues'; exit 1; fi"""
       }
     }
   } finally {
-    archiveArtifacts artifacts: 'target/**/scapegoat-report/scapegoat.html', allowEmptyArchive: true
-  }
-}
-
-def test() {
-  try {
-    timeout(time: 30, unit: 'MINUTES') {
-      withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
-        withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-          sh """sudo -E sbt -Dsbt.log.format=false '; clean; coverage; testWithCoverageReport' """
+    parallel(
+        archive_scapegoat: {
+          archiveArtifacts(artifacts: 'target/**/scapegoat-report/scapegoat.html', allowEmptyArchive: true)
+        },
+        test_results: {
+          junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
+        },
+        archive_coverage: {
+          if (is_master_or_release() || is_submit_request()) {
+            archive_test_coverage("Test", "target/test-coverage")
+          }
         }
-      }
-    }
-  } finally {
-    junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
-    archive_test_coverage("Test", "target/test-coverage")
+    )
   }
 }
 
@@ -291,13 +293,23 @@ def integration_test() {
     timeout(time: 60, unit: 'MINUTES') {
       withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
         withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-          sh """sudo -E sbt -Dsbt.log.format=false '; clean; coverage; integration:testWithCoverageReport; serial-integration:testWithCoverageReport' """
+          if (is_master_or_release() || is_submit_request()) {
+            sh """sudo -E sbt '; clean; coverage; integration:testWithCoverageReport; ' """
+          } else {
+            sh "sudo -E sbt integration:test"
+          }
         }
       }
     }
   } finally {
-    junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/**/*.xml'
-    archive_test_coverage("integration test", "target/integration-coverage")
+    parallel(
+        test_results: { junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml' },
+        coverage: {
+          if (is_master_or_release() || is_submit_request()) {
+            archive_test_coverage("integration test", "target/integration-coverage")
+          }
+        }
+    )
   }
 }
 
@@ -311,7 +323,11 @@ def unstable_test() {
     timeout(time: 60, unit: 'MINUTES') {
       withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
         withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-          sh "sudo -E sbt -Dsbt.log.format=false '; clean; coverage; unstable:testWithCoverageReport; unstable-integration:testWithCoverageReport' "
+          if (is_master_or_release() || is_submit_request()) {
+            sh "sudo -E sbt '; clean; coverage; unstable:testWithCoverageReport; unstable-integration:testWithCoverageReport' "
+          } else {
+            sh "sudo -E sbt unstable:test unstable-integration:test"
+          }
         }
       }
     }
@@ -319,36 +335,46 @@ def unstable_test() {
     report_unstable_tests()
   } finally {
     mark_unstable_results("target/test-reports/unstable-integration target/test-reports/unstable")
-    junit allowEmptyResults: true, testResults: 'target/test-reports/unstable-integration/**/*.xml'
-    junit allowEmptyResults: true, testResults: 'target/test-reports/unstable/**/*.xml'
-    archive_test_coverage("Unstable Test", "target/unstable-coverage")
-    archive_test_coverage("Unstable Integration Test", "target/unstable-integration-coverage")
+    parallel(
+        unstable_results: {
+          junit allowEmptyResults: true, testResults: 'target/test-reports/unstable-integration/*.xml'
+        },
+        unstable_integration_results: {
+          junit allowEmptyResults: true, testResults: 'target/test-reports/unstable/*.xml'
+        },
+        unstable_coverage: {
+          if (is_master_or_release() || is_submit_request()) {
+            archive_test_coverage("Unstable Test", "target/unstable-coverage")
+            archive_test_coverage("Unstable Integration Test", "target/unstable-integration-coverage")
+          }
+        }
+    )
   }
 }
 
 def publish_to_s3(gitTag) {
-    storageClass = "STANDARD_IA"
-    // TODO: we could use marathon-artifacts for both profile and buckets, but we would
-    // need to either setup a bucket policy for public-read on the s3://marathon-artifacts/snapshots
-    // We should probably prefer downloads as this allows us to share snapshot builds
-    // with anyone. The directory listing isn't public anyways.
-    profile = "aws-production"
-    bucket = "downloads.mesosphere.io/marathon/snapshots"
-    region = "us-east-1"
-    upload_on_failure = true
-    // manage_artifacts == true will put the artifacts in snapshots/job/{pipelinename}/{branch/?}/{build_number}
-    manage_artifacts = is_phabricator_build()
-    if (is_release_build(gitTag)) {
-      storageClass = "STANDARD"
-      bucket = "downloads.mesosphere.io/marathon/${gitTag}"
-      upload_on_failure = false
-      manage_artifacts = false
-    }
-    sh "sudo sh -c 'sha1sum target/universal/marathon-${gitTag}.txz > target/universal/marathon-${gitTag}.txz.sha1'"
-    sh "sudo sh -c 'sha1sum target/universal/marathon-${gitTag}.zip > target/universal/marathon-${gitTag}.zip.sha1'"
-    step([
-        $class: 'S3BucketPublisher',
-        entries: [
+  storageClass = "STANDARD_IA"
+  // TODO: we could use marathon-artifacts for both profile and buckets, but we would
+  // need to either setup a bucket policy for public-read on the s3://marathon-artifacts/snapshots
+  // We should probably prefer downloads as this allows us to share snapshot builds
+  // with anyone. The directory listing isn't public anyways.
+  profile = "aws-production"
+  bucket = "downloads.mesosphere.io/marathon/snapshots"
+  region = "us-east-1"
+  upload_on_failure = true
+  // manage_artifacts == true will put the artifacts in snapshots/job/{pipelinename}/{branch/?}/{build_number}
+  manage_artifacts = is_phabricator_build()
+  if (is_release_build(gitTag)) {
+    storageClass = "STANDARD"
+    bucket = "downloads.mesosphere.io/marathon/${gitTag}"
+    upload_on_failure = false
+    manage_artifacts = false
+  }
+  sh "sudo sh -c 'sha1sum target/universal/marathon-${gitTag}.txz > target/universal/marathon-${gitTag}.txz.sha1'"
+  sh "sudo sh -c 'sha1sum target/universal/marathon-${gitTag}.zip > target/universal/marathon-${gitTag}.zip.sha1'"
+  step([
+      $class: 'S3BucketPublisher',
+      entries: [
           [
               sourceFile: "target/universal/marathon-*.txz",
               bucket: bucket,
@@ -393,56 +419,78 @@ def publish_to_s3(gitTag) {
               keepForever: true,
               storageClass: storageClass,
           ],
-        ],
-        profileName: profile,
-        dontWaitForConcurrentBuildCompletion: false,
-        consoleLogLevel: 'INFO',
-        pluginFailureResultConstraint: 'FAILURE'
-    ])}
+      ],
+      profileName: profile,
+      dontWaitForConcurrentBuildCompletion: false,
+      consoleLogLevel: 'INFO',
+      pluginFailureResultConstraint: 'FAILURE'
+  ])
+}
 
 def publish_artifacts() {
   gitTag = sh(returnStdout: true, script: "git describe --tags --always").trim().replaceFirst("v", "")
 
-  // Only create latest-dev snapshot for master.
-  // TODO: Docker 1.12 doesn't support tag -f and the jenkins docker plugin still passes it in.
-  if (env.BRANCH_NAME == "master" && !is_phabricator_build()) {
-    sh "docker tag mesosphere/marathon:${gitTag} mesosphere/marathon:latest-dev"
-    docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
-      sh "docker push mesosphere/marathon:latest-dev"
-    }
-  } else if (env.PUBLISH_SNAPSHOT == "true" || (is_release_build(gitTag) && !is_phabricator_build())) {
-    docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
-      sh "docker push mesosphere/marathon:${gitTag}"
-    }
-  }
+  parallel(
+      // Only create latest-dev snapshot for master.
+      // TODO: Docker 1.12 doesn't support tag -f and the jenkins docker plugin still passes it in.
+      docker_image: {
+        if (env.BRANCH_NAME == "master" && !is_phabricator_build()) {
+          sh "docker tag mesosphere/marathon:${gitTag} mesosphere/marathon:latest-dev"
+          docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
+            sh "docker push mesosphere/marathon:latest-dev"
+          }
+        } else if (env.PUBLISH_SNAPSHOT == "true" || (is_release_build(gitTag) && !is_phabricator_build())) {
+          docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
+            sh "docker push mesosphere/marathon:${gitTag}"
+          }
+        }
+      },
+      s3: {
+        if (env.PUBLISH_SNAPSHOT == "true" || is_master_or_release()) {
+          publish_to_s3(gitTag)
+        }
+      },
 
-
-  if (env.PUBLISH_SNAPSHOT == "true" || is_master_or_release()) {
-    publish_to_s3(gitTag)
-
-    sshagent(credentials: ['0f7ec9c9-99b2-4797-9ed5-625572d5931d']) {
-      // we rsync a directory first, then copy over the binaries into specific folders so
-      // that the cron job won't try to publish half-uploaded RPMs/DEBs
-      sh """ssh -o StrictHostKeyChecking=no pkgmaintainer@repo1.hw.ca1.mesosphere.com "mkdir -p ~/repo/incoming/marathon-${gitTag}" """
-      sh "rsync -avzP target/packages/*${gitTag}* target/packages/*.rpm pkgmaintainer@repo1.hw.ca1.mesosphere.com:~/repo/incoming/marathon-${gitTag}"
-      sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "env GIT_TAG=${gitTag} bash -s --" < scripts/publish_packages.sh """
-      sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "rm -rf ~/repo/incoming/marathon-${gitTag}" """
-    }
-  }
+      rpm_deb: {
+        if (env.PUBLISH_SNAPSHOT == "true" || is_master_or_release()) {
+          sshagent(credentials: ['0f7ec9c9-99b2-4797-9ed5-625572d5931d']) {
+            // we rsync a directory first, then copy over the binaries into specific folders so
+            // that the cron job won't try to publish half-uploaded RPMs/DEBs
+            sh """ssh -o StrictHostKeyChecking=no pkgmaintainer@repo1.hw.ca1.mesosphere.com "mkdir -p ~/repo/incoming/marathon-${gitTag}" """
+            sh "rsync -avzP target/packages/*${gitTag}* target/packages/*.rpm pkgmaintainer@repo1.hw.ca1.mesosphere.com:~/repo/incoming/marathon-${gitTag}"
+            sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "env GIT_TAG=${gitTag} bash -s --" < scripts/publish_packages.sh """
+            sh """ssh -o StrictHostKeyChecking=no -o BatchMode=yes pkgmaintainer@repo1.hw.ca1.mesosphere.com "rm -rf ~/repo/incoming/marathon-${gitTag}" """
+          }
+        }
+      }
+  )
   return this
 }
 
 def package_binaries() {
   sh("sudo rm -f target/packages/*")
-  sh("sudo sbt clean packageAll")
+  // master, release and submit request builds have coverage turned on.
+  // we don't want to accidentally publish coverage instrumented builds.
+  if (is_master_or_release() || is_submit_request()) {
+    sh("sudo sbt clean packageAll")
+  } else {
+    sh("sudo sbt packageAll")
+  }
   return this
 }
 
 def archive_artifacts() {
-  archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
-  archiveArtifacts artifacts: 'target/universal/marathon-*.zip', allowEmptyArchive: false
-  archiveArtifacts artifacts: 'target/universal/marathon-*.txz', allowEmptyArchive: false
-  archiveArtifacts artifacts: "target/packages/*", allowEmptyArchive: false
+  parallel(
+      zip: {
+        archiveArtifacts(artifacts: 'target/universal/marathon-*.zip', allowEmptyArchive: false)
+      },
+      txz: {
+        archiveArtifacts(artifacts: 'target/universal/marathon-*.txz', allowEmptyArchive: false)
+      },
+      debs_and_rpms: {
+        archiveArtifacts(artifacts: "target/packages/*", allowEmptyArchive: false)
+      }
+  )
 }
 
 def build_marathon() {
@@ -453,25 +501,22 @@ def build_marathon() {
     stage("Install Mesos") {
       install_mesos()
     }
-    stage_with_commit_status("1. Compile") {
-      compile()
+    stage_with_commit_status("Compile And Test") {
+      compile_and_test()
     }
-    stage_with_commit_status("2. Test") {
-      test()
-    }
-    stage_with_commit_status("3. Integration Test") {
+    stage_with_commit_status("Integration Test") {
       integration_test()
     }
-    stage_with_commit_status("4. Package Binaries") {
+    stage_with_commit_status("Package Binaries") {
       package_binaries()
     }
-    stage_with_commit_status("5. Archive Artifacts") {
+    stage_with_commit_status("Archive Artifacts") {
       archive_artifacts()
     }
-    stage_with_commit_status("6. Publish Binaries") {
+    stage_with_commit_status("Publish Binaries") {
       publish_artifacts()
     }
-    stage_with_commit_status("7. Unstable Tests") {
+    stage_with_commit_status("Unstable Tests") {
       if (has_unstable_tests()) {
         unstable_test()
       } else {

@@ -36,14 +36,6 @@ object Unstable extends Tag("mesosphere.marathon.UnstableTest")
 object IntegrationTag extends Tag("mesosphere.marathon.IntegrationTest")
 
 /**
-  * All time-sensitive integration tests should be marked with this tag.
-  *
-  * Some integrations are time dependent and excessive resource contention has been known to introduce probabilistic
-  * failure.
-  */
-object SerialIntegrationTag extends Tag("mesosphere.marathon.SerialIntegrationTest")
-
-/**
   * Tag that will conditionally enable a specific test case if an environment variable is set.
   * @param envVarName The name of the environment variable to check if it is set to "true"
   * {{{
@@ -151,7 +143,7 @@ abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 trait IntegrationTestLike extends UnitTestLike {
   override val timeLimit = Span(15, Minutes)
 
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(270, Seconds))
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(300, Seconds))
 }
 
 abstract class IntegrationTest extends WordSpec with IntegrationTestLike

@@ -7,7 +7,7 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId._
 import org.scalatest.Inside
 
-@SerialIntegrationTest
+@IntegrationTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
   override lazy val mesosNumMasters = 1
