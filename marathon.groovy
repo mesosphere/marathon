@@ -294,7 +294,7 @@ def integration_test() {
       withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
         withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
           if (is_master_or_release() || is_submit_request()) {
-            sh """sudo -E sbt '; clean; coverage; integration:testWithCoverageReport; ' """
+            sh """sudo -E sbt '; clean; coverage; integration:testWithCoverageReport ' """
           } else {
             sh "sudo -E sbt integration:test"
           }
