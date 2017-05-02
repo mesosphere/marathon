@@ -7,7 +7,7 @@ def is_phabricator_build() {
 }
 
 def is_submit_request() {
-  return env.TARGET_BRANCH != null
+  return env.TARGET_BRANCH != null && env.TARGET_BRANCH != ""
 }
 
 def is_release_build(gitTag) {
