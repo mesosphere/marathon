@@ -55,7 +55,7 @@ def phabricator_test_results(status) {
 // Archive test coverage data on Jenkins. With MARATHON-7271 the data will be
 // archived on S3.
 def archive_test_coverage(name, dir) {
-  archiveArtifacts artifacts: '${dir}/**', allowEmptyArchive: true
+  archiveArtifacts artifacts: "${dir}/**", allowEmptyArchive: true
   stash(name: "${name}-scoverage", include: "${dir}/scoverage-report/scoverage.csv")
   return this
 }
