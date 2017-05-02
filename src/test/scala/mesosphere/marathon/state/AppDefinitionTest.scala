@@ -4,7 +4,7 @@ package state
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ Resources, TTY }
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
@@ -133,18 +133,19 @@ class AppDefinitionTest extends UnitTest {
       read should be(app)
     }
 
-    "ipAddress to proto and back again w/ Docker container w/ virtual networking" in {
+    "app to proto and back again w/ Docker container w/ virtual networking" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = "app-with-port-mappings".toPath,
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
-        networks = Seq(ContainerNetwork(
-          labels = Map(
-            "foo" -> "bar",
-            "baz" -> "buzz"
-          ),
-          name = "blahze"
-        )),
+        networks = Seq(
+          ContainerNetwork(
+            labels = Map(
+              "foo" -> "bar",
+              "baz" -> "buzz"
+            ),
+            name = "blahze"
+          )),
 
         container = Some(Container.Docker(
           image = "jdef/foo",
@@ -152,13 +153,14 @@ class AppDefinitionTest extends UnitTest {
           portMappings = Seq(
             Container.PortMapping(hostPort = None),
             Container.PortMapping(hostPort = Some(123)),
-            Container.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+            Container.PortMapping(
+              containerPort = 1, hostPort = Some(234), protocol = "udp", networkNames = List("blahze"))
           )
         ))
       )
 
       val proto = app.toProto
-      proto.getId should be("app-with-ip-address")
+      proto.getId should be("app-with-port-mappings")
       assert(proto.getNetworksCount > 0)
 
       val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
@@ -297,6 +299,17 @@ class AppDefinitionTest extends UnitTest {
           "foo" -> "bar".toEnvVar,
           "ssh" -> EnvVarSecretRef("psst")
         ),
+        versionInfo = fullVersion
+      )
+      val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
+      assert(result == app, s"expected $app instead of $result")
+    }
+
+    "Proto round trip for tty" in {
+      val app = AppDefinition(
+        id = runSpecId,
+        cmd = Some("true"),
+        tty = Some(TTY()),
         versionInfo = fullVersion
       )
       val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)

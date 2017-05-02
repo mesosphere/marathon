@@ -14,7 +14,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
 import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
-import mesosphere.marathon.storage.migration.Migration
+import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
 import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
@@ -265,6 +265,12 @@ class ZkPersistenceStore(
     val combined = Source.combine(ids, versions)(Merge(_))
     combined.mapAsync(maxConcurrent) { id =>
       rawGet(id).filter(_.isDefined).map(ser => BackupItem(id.category, id.id, id.version, ser.get.bytes))
+    }.concat {
+      Source.fromFuture(storageVersion()).map { storedVersion =>
+        val version = storedVersion.getOrElse(StorageVersions.current)
+        val name = Migration.StorageVersionName
+        BackupItem(name, name, None, ByteString(version.toByteArray))
+      }
     }
   }
 
@@ -276,8 +282,14 @@ class ZkPersistenceStore(
     def clean(): Future[Done] = {
       client.delete("/", guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done)
     }
+    def setVersion(item: BackupItem): Future[Done] = {
+      setStorageVersion(StorageVersion.parseFrom(item.data.toArray))
+    }
     Flow[BackupItem]
-      .map { item => () => store(item) }
+      .map {
+        case item if item.key == Migration.StorageVersionName => () => setVersion(item)
+        case item => () => store(item)
+      }
       .prepend { Source.single(() => clean()) }
       .mapAsync(1) { _.apply() } // no parallelization: first element needs to be processed before the second
       .toMat(Sink.ignore)(Keep.right)

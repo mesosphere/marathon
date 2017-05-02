@@ -97,6 +97,15 @@ types:
           [local_port_min, local_port_max] where local_port_min and
           local_port_max are command line options with default values of
           10000 and 20000, respectively.
+      networkNames?:
+        type: array
+        items: strings.Name
+        description: |
+          List of the container networks associated with this mapping. If
+          absent, then this mapping is associated with all defined container
+          networks (for this application). A single item list is mandatory when
+          `hostPort` is specified and multiple container networks are defined.
+        (pragma.omitEmpty):
   DockerContainer:
     type: object
     properties:

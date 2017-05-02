@@ -13,6 +13,7 @@
     <logger name="akka" level="INFO"/>
     <logger name="native-zk-connector" level="WARN" />
     <logger name="org.eclipse" level="INFO"/>
+    <logger name="org.apache.zookeeper" level="WARN" />
 
     <logger name="spray" level="ERROR"/>
     <root level="INFO">

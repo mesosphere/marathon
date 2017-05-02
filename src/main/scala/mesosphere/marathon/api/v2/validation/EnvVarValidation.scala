@@ -12,17 +12,21 @@ trait EnvVarValidation {
   import mesosphere.marathon.api.v2.Validation._
   import EnvVarValidationMessages._
 
-  val EnvVarNamePattern = """^[a-zA-Z_][a-zA-Z0-9_]*$""".r
+  val EnvVarNamePattern = raml.Pod.ConstraintEnvironmentKeypattern
 
   /**
-    * @param strictNameValidation corresponds to RAML type EnvVars when true and LegacyEnvVars when false.
+    * @param strictNameValidation corresponds to RAML type EnvVars when true and LegacyEnvVars when false. Keeping this
+    *                             until we completely phase out legacy names for apps (the proposed deprecation process
+    *                             requires the ability to enforce strict name validation via feature flag). String env
+    *                             var names for pod environments is already enforced by the RAML code generator.
+    *                             See https://jira.mesosphere.com/browse/MARATHON-7183.
     */
   def validEnvVar(strictNameValidation: Boolean): Validator[(String, EnvVarValueOrSecret)] = {
 
     val validName = validator[String] { name =>
       name is implied(strictNameValidation)(matchRegexWithFailureMessage(EnvVarNamePattern, MustContainOnlyAlphanumeric))
       name is notEmpty
-    } and isTrue[String](VariableNameTooLong) { _.length < 255 }
+    }
 
     validator[(String, EnvVarValueOrSecret)] { t =>
       // use of "value" relies on special behavior in Validation that humanizes generated error messages
@@ -50,7 +54,6 @@ trait EnvVarValidation {
 object EnvVarValidation extends EnvVarValidation
 
 object EnvVarValidationMessages {
-  val MustContainOnlyAlphanumeric = "must contain only alphanumeric chars or underscore, and must not begin with a number"
+  val MustContainOnlyAlphanumeric = "must contain only alphanumeric chars or underscore, must not begin with a number, and must be 254 chars or less"
   val UseOfSecretRefsRequiresSecretFeature = "use of secret-references in the environment requires the secrets feature to be enabled"
-  val VariableNameTooLong = "variable name must be 254 chars or less"
 }

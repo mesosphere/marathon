@@ -10,6 +10,8 @@ uses:
   resources: resources.raml
   strings: stringTypes.raml
   volumes: volumes.raml
+  containerCommons: containerCommons.raml
+
 types:
   ImageType:
     type: string
@@ -107,3 +109,7 @@ types:
           Useful when passing directives to be interpreted by Mesos modules.
       lifecycle?:
         type: Lifecycle
+      tty?:
+        type: containerCommons.TTY
+        description: |
+          Describes the information about (pseudo) TTY that can be attached to the process of this container.

@@ -75,7 +75,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
       version = Some(app.versionInfo.version.toOffsetDateTime),
       versionInfo = app.versionInfo.toRaml,
       unreachableStrategy = Some(app.unreachableStrategy.toRaml),
-      killSelection = app.killSelection.toRaml
+      killSelection = app.killSelection.toRaml,
+      tty = app.tty
     )
   }
 
@@ -166,7 +167,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
       residency = selectedStrategy.residency,
       secrets = Raml.fromRaml(app.secrets),
       unreachableStrategy = app.unreachableStrategy.map(_.fromRaml).getOrElse(AppDefinition.DefaultUnreachableStrategy),
-      killSelection = app.killSelection.fromRaml
+      killSelection = app.killSelection.fromRaml,
+      tty = app.tty
     )
     result
   }
@@ -213,7 +215,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
       secrets = update.secrets.getOrElse(app.secrets),
       taskKillGracePeriodSeconds = update.taskKillGracePeriodSeconds.orElse(app.taskKillGracePeriodSeconds),
       unreachableStrategy = update.unreachableStrategy.orElse(app.unreachableStrategy),
-      killSelection = update.killSelection.getOrElse(app.killSelection)
+      killSelection = update.killSelection.getOrElse(app.killSelection),
+      tty = update.tty.orElse(app.tty)
     )
   }
 
@@ -342,7 +345,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
       version = version,
       versionInfo = versionInfo, // we restore this but App-to-AppDefinition conversion drops it...
       killSelection = service.whenOrElse(_.hasKillSelection, _.getKillSelection.toRaml, App.DefaultKillSelection),
-      unreachableStrategy = service.when(_.hasUnreachableStrategy, _.getUnreachableStrategy.toRaml).orElse(App.DefaultUnreachableStrategy)
+      unreachableStrategy = service.when(_.hasUnreachableStrategy, _.getUnreachableStrategy.toRaml).orElse(App.DefaultUnreachableStrategy),
+      tty = service.when(_.hasTty, _.getTty: TTY).orElse(App.DefaultTty)
     )
     // special ports normalization when converting from protobuf, because the protos don't allow us to distinguish
     // between "I specified an empty set of ports" and "I specified a null set of ports" (for definitions and mappings).
@@ -401,7 +405,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
       // deprecated fields follow.
       ipAddress = app.ipAddress,
       ports = app.ports,
-      uris = app.uris
+      uris = app.uris,
+      tty = app.tty
     )
   }
 }

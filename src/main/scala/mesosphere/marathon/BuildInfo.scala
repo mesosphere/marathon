@@ -6,6 +6,11 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 case object BuildInfo {
+  lazy val DefaultMajor = 1
+  lazy val DefaultMinor = 5
+  lazy val DefaultPatch = 0
+
+  lazy val DefaultBuildVersion = s"$DefaultMajor.$DefaultMinor.$DefaultPatch-SNAPSHOT"
 
   lazy val manifest: Option[Manifest] = Try {
     val mf = new Manifest()
@@ -25,7 +30,9 @@ case object BuildInfo {
 
   lazy val name: String = getAttribute("Implementation-Title").getOrElse("unknown")
 
-  lazy val version: String = getAttribute("Implementation-Version").getOrElse("1.5.0-SNAPSHOT")
+  // IntelliJ has its own manifest.mf that will inject a version that doesn't necessarily match
+  // our actual version. This can cause Migrations to fail since the version number doesn't correctly match up.
+  lazy val version: String = getAttribute("Implementation-Version").filterNot(_ == "0.1-SNAPSHOT").getOrElse(DefaultBuildVersion)
 
   lazy val scalaVersion: String = getAttribute("Scala-Version").getOrElse("2.x.x")
 

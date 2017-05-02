@@ -132,6 +132,7 @@ message ServiceDefinition {
   optional UnreachableStrategy unreachableStrategy = 32;
   optional KillSelection killSelection = 33 [ default = YoungestFirst ];
   repeated NetworkDefinition networks = 34; // supersedes ObsoleteIpAddress
+  optional mesos.TTYInfo tty = 35;
 }
 
 enum KillSelection {
@@ -310,6 +311,7 @@ message ExtendedContainerInfo {
     optional string name = 4;
     repeated mesos.Label labels = 5;
     optional uint32 service_port = 6 [default = 0];
+    repeated string network_names = 7;
   }
 
   required mesos.ContainerInfo.Type type = 1;
@@ -366,10 +368,6 @@ message Volume {
 
   // Defines an External Volume; implies no hostPath or persistent.
   optional ExternalVolumeInfo external = 6;
-}
-
-message EventSubscribers {
-  repeated string callback_urls = 1;
 }
 
 message StorageVersion {

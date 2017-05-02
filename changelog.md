@@ -2,6 +2,17 @@
 
 ### Breaking Changes
 
+#### Packaging standardized
+
+We now publish more normalized packages that attempt to follow Linux Standard Base Guidelines and use sbt-native-packager to achieve this.
+As a result of this and the many historic ways of passing options into marathon, we will only read `/etc/default/marathon` when starting up.
+This file, like `/etc/sysconfig/marathon`, has all marathon command line options as "MARATHON_XXX=YYY" which will translate to `--xx=yyy`.
+We no longer support /etc/marathon/conf which was a set of files that would get translated into command line arguments. In addition,
+we no longer assume that if there is no zk/master argument passed in, then both are running on localhost.
+
+If support for any of the above is important to you, please file a JIRA and/or create a PR/Patch.
+
+
 #### App JSON Fields Changed or Moved.
 
 Marathon will continue to *accept* the app JSON as it did in 1.4;
@@ -45,10 +56,53 @@ Before 1.5.0 releases, we will publish a migration guide for the new metric form
 metrics can be found and the formats they are now in.
 
 #### Artifact store has been removed
-The artifact store has been deprecated with Marthon 1.4 and is removed with this version.
+The artifact store was deprecated with Marathon 1.4 and is removed in version.
 The command line flag `--artifact_store` will throw an error if specified.
-The Rest API endpoint`/v2/artifacts` has been removed completely.
+The REST API endpoint `/v2/artifacts` has been removed completely.
 
+#### Logging endpoint
+Marathon has the ability to view and change log level configuration during runtime via the `/logging` endpoint.
+This version switches from a form based API to a JSON based API, while maintaining the functionality.
+We also secured this endpoint, so you can restrict who is allowed to view or update this configuration.
+Please find our [API documentation](https://mesosphere.github.io/marathon/api-console/index.html) for all details.
+
+#### Event Subscribers has been removed.
+The events subscribers endpoint (`/v2/eventSubscribers`) was deprecated in Marathon 1.4 and is removed in this version.
+Please move to the `/v2/events` endpoint instead.
+
+### New Features
+
+#### Networking Improvements Involving Multiple Container Networks
+
+The field `networkNames` has been added to [app container's ContainerPortMapping](docs/docs/rest-api/public/api/v2/types/appContainer.raml) and [pod's Endpoint](docs/docs/rest-api/public/api/v2/types/network.raml). Using the field, an app or pod participating in multiple container networks can now forward ports by specifying a single item `networkNames`. For more information, see the [networking documentation](./docs/docs/networking.md).
+
+Additionally container port discovery has been improved, with a pod or app being able specify with which container network(s) a port name/protocol/etc is associated. Discovery labels are now generated for container networks associated with ports.
+
+#### Mesos Bridge Network Name Configurable
+
+The CNI network used for Mesos containers when bridge networking is now configurable via the command-line argument `--mesos_bridge_name`. As with other command-line-args, this can also be specified via `MARATHON_MESOS_BRIDGE_NAME`, as well.
+
+#### Backup and Restore Operations
+
+You can now backup and restore Marathon's internal state via the [DELETE /v2/leader](./docs/docs/rest-api/public/api/v2/leader.raml) API endpoint.
+
+See [MARATHON-7041](https://jira.mesosphere.com/browse/MARATHON-7041)
+
+#### TTY support
+
+You can now specify that a TTY should be allocated for app or pod containers. See the [TTY definition](./docs/docs/rest-api/public/api/v2/types/containerCommons.raml). An example can be found in [v2/examples/app.json](./docs/docs/rest-api/public/api/v2/examples/app.json).
+
+See [MARATHON-7062](https://jira.mesosphere.com/browse/MARATHON-7062)
+
+#### Improved Validation Error Messages
+
+All validation specified in the RAML is now programatically enforced, leading to more consistent, descriptive, and legible error messages.
+
+#### Security improvements
+
+Marathon is in better compliance with various security best-practices. An example of this is that Marathon no longer responds to the directory listing request.
+
+------------------------------------------------------------
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release

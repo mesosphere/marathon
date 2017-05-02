@@ -7,25 +7,26 @@
 import common
 import os
 
-
 # this is intentional import *
 # it imports all the common test_ methods which are to be tested on root and mom
 from dcos_service_marathon_tests import *
 from marathon_common_tests import *
+from marathon_auth_common_tests import *
 from marathon_pods_tests import *
 
-pytestmark = [pytest.mark.usefixtures('marathon_clean')]
+from shakedown import (masters, required_masters, public_agents, required_public_agents)
+from datetime import timedelta
+
+pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
 
 @pytest.fixture(scope="function")
-def marathon_clean():
-    yield
+def marathon_service_name():
+    yield 'marathon'
     clear_marathon()
 
 
 def setup_module(module):
-    set_marathon_service_name('marathon')
-
     common.cluster_info()
     clear_marathon()
 
@@ -36,6 +37,76 @@ def teardown_module(module):
 ##################
 # Root specific tests
 ##################
+
+
+@masters(3)
+def test_marathon_delete_leader(marathon_service_name):
+
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+    common.delete_marathon_path('v2/leader')
+
+    common.wait_for_marathon_up()
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def marathon_leadership_changed():
+        current_leader = shakedown.marathon_leader_ip()
+        print('leader: {}'.format(current_leader))
+        assert original_leader != current_leader
+
+    marathon_leadership_changed()
+
+
+@masters(3)
+def test_marathon_zk_partition_leader_change(marathon_service_name):
+
+    original_leader = common.get_marathon_leader_not_on_master_leader_node()
+
+    # blocking zk on marathon leader (not master leader)
+    with shakedown.iptable_rules(original_leader):
+        block_port(original_leader, 2181, direction='INPUT')
+        block_port(original_leader, 2181, direction='OUTPUT')
+        #  time of the zk block
+        time.sleep(5)
+
+    common.wait_for_marathon_up()
+
+    current_leader = shakedown.marathon_leader_ip()
+    assert original_leader != current_leader
+
+
+@masters(3)
+def test_marathon_master_partition_leader_change(marathon_service_name):
+
+    original_leader = common.get_marathon_leader_not_on_master_leader_node()
+
+    # blocking outbound connection to mesos master
+    with shakedown.iptable_rules(original_leader):
+        block_port(original_leader, 5050, direction='OUTPUT')
+        #  time of the master block
+        time.sleep(timedelta(minutes=1.5).total_seconds())
+
+    common.wait_for_marathon_up()
+
+    current_leader = shakedown.marathon_leader_ip()
+    assert original_leader != current_leader
+
+
+@public_agents(1)
+def test_launch_app_on_public_agent():
+    """ Test the successful launch of a mesos container on public agent.
+        MoMs by default do not have slave_public access.
+    """
+    client = marathon.create_client()
+    app_id = uuid.uuid4().hex
+    app_def = common.add_role_constraint_to_app_def(app_mesos(app_id).copy(), ['slave_public'])
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    task_ip = tasks[0]['host']
+
+    assert task_ip in shakedown.get_public_agents()
 
 
 def test_external_volume():

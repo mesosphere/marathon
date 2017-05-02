@@ -14,7 +14,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ HostNetwork, Network }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.raml.{ App, Apps, Resources }
+import mesosphere.marathon.raml.{ App, Apps, Resources, TTY }
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.stream.Implicits._
@@ -78,11 +78,16 @@ case class AppDefinition(
 
   override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
 
-  override val killSelection: KillSelection = KillSelection.DefaultKillSelection) extends RunSpec
+  override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
+
+  tty: Option[TTY] = AppDefinition.DefaultTTY) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
+  /* The following requirements are either validated at the API layer, or precluded by our normalization layer.
+   * However, we had instances of rogue definitions of apps in our tests that were causing related business logic to be
+   * overly complex and handle state that should not exist */
   require(networks.nonEmpty, "an application must declare at least one network")
 
   require(
@@ -98,6 +103,7 @@ case class AppDefinition(
     "portDefinitions and container.portMappings are not allowed at the same time"
   )
 
+  // Our normalization layer replaces hostPort None to Some(0) for bridge networking
   require(
     !(networks.hasBridgeNetworking && container.fold(false)(c => c.portMappings.exists(_.hostPort.isEmpty))),
     "bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)")
@@ -159,6 +165,7 @@ case class AppDefinition(
       .setUnreachableStrategy(unreachableStrategy.toProto)
       .setKillSelection(killSelection.toProto)
 
+    tty.foreach(builder.setTty(_))
     networks.foreach { network => builder.addNetworks(Network.toProto(network)) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
     readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
@@ -217,6 +224,8 @@ case class AppDefinition(
 
     val residencyOption = if (proto.hasResidency) Some(ResidencySerializer.fromProto(proto.getResidency)) else None
 
+    val tty: Option[TTY] = if (proto.hasTty) Some(proto.getTty) else None
+
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
@@ -268,7 +277,8 @@ case class AppDefinition(
       residency = residencyOption,
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
       unreachableStrategy = unreachableStrategy,
-      killSelection = KillSelection.fromProto(proto.getKillSelection)
+      killSelection = KillSelection.fromProto(proto.getKillSelection),
+      tty = tty
     )
   }
 
@@ -323,7 +333,8 @@ case class AppDefinition(
           residency != to.residency ||
           secrets != to.secrets ||
           unreachableStrategy != to.unreachableStrategy ||
-          killSelection != to.killSelection
+          killSelection != to.killSelection ||
+          tty != to.tty
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -395,6 +406,8 @@ object AppDefinition extends GeneralPurposeCombinators {
     * This default is only used in tests
     */
   val DefaultAcceptedResourceRoles = Set.empty[String]
+
+  val DefaultTTY = Option.empty[TTY]
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`

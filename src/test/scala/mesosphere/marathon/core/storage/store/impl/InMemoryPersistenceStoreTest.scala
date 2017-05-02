@@ -24,4 +24,5 @@ class InMemoryPersistenceStoreTest extends AkkaUnitTest with PersistenceStoreTes
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
   behave like basicPersistenceStore("InMemoryPersistenceStore", new InMemoryPersistenceStore())
+  behave like backupRestoreStore("InMemoryPersistenceStore", new InMemoryPersistenceStore())
 }

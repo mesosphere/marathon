@@ -11,6 +11,7 @@ import akka.stream.scaladsl.{ FileIO, Keep, Sink }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.backup.impl.TarBackupFlow
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
+import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
 import mesosphere.marathon.test.SettableClock
 
 import scala.concurrent.Future
@@ -125,9 +126,21 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         store.deleteAll("test").futureValue should be(Done)
         store.get("test").futureValue should be('empty)
       }
+
+    }
+  }
+
+  def backupRestoreStore[K, C, Serialized](name: String, newStore: => PersistenceStore[K, C, Serialized])(
+    implicit
+    ir: IdResolver[String, TestClass1, C, K],
+    m: Marshaller[TestClass1, Serialized],
+    um: Unmarshaller[Serialized, TestClass1]): Unit = {
+
+    name should {
       "be able to backup and restore the state" in {
-        Given("A persistent store with some data")
+        Given("a persistent store with some data in some version")
         val store = newStore
+        store.setStorageVersion(StorageVersions(1, 1, 1)).futureValue
         implicit val clock = new SettableClock()
         val numEntries = 3
         val content = 0.until(numEntries).map(num => TestClass1(s"name-$num", num))
@@ -136,20 +149,28 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         file.deleteOnExit()
         val tarSink = TarBackupFlow.tar.toMat(FileIO.toPath(file.toPath))(Keep.right)
 
-        When("A backup is created")
+        When("a backup is created")
         store.backup().runWith(tarSink).futureValue
 
-        When("State is restored from the backup")
+        Then("the content of the store can be removed completely")
+        store.ids().map(store.deleteAll(_)).mapAsync(Int.MaxValue)(identity).runWith(Sink.ignore).futureValue
+        store.setStorageVersion(StorageVersions(0, 0, 0)).futureValue
+
+        When("the state is read from the backup")
         val tarSource = FileIO.fromPath(file.toPath).via(TarBackupFlow.untar)
         tarSource.runWith(store.restore()).futureValue
 
-        Then("The state is restored completely")
+        Then("the state is restored completely")
         val children = store.backup().runWith(stream.Sink.seq).futureValue
         children.size should be >= numEntries
+        children.exists(_.key == Migration.StorageVersionName) should be(true)
         content.foreach { item =>
-          store.get(item.str).futureValue should be(defined)
+          store.get(item.str).futureValue should be(Some(item))
         }
         file.delete()
+
+        And("the storage version is also restored correctly")
+        store.storageVersion().futureValue should be(Some(StorageVersions(1, 1, 1)))
       }
     }
   }

@@ -46,9 +46,12 @@ class EnvVarValidationTest extends UnitTest with ResultMatchers with ValidationT
 
         s"fail with too long variable name $subtitle" in new WithoutSecrets(strictNameValidation) {
           val name = ("x" * 255)
-          validate(Wrapper(Environment(name -> "x"))).normalize should failWith(
-            s"/env($name)" -> VariableNameTooLong
-          )
+          val result = validate(Wrapper(Environment(name -> "x"))).normalize
+          if (strictNameValidation) {
+            result should failWith(s"/env($name)" -> MustContainOnlyAlphanumeric)
+          } else {
+            result should be(aSuccess)
+          }
         }
       }
 

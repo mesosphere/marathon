@@ -54,7 +54,6 @@ trait Formats
     with ReadinessCheckFormats
     with DeploymentFormats
     with EventFormats
-    with EventSubscribersFormats
     with PluginFormats {
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
@@ -388,15 +387,6 @@ trait EventFormats {
     case event: InstanceHealthChanged => Json.toJson(event)
     case event: UnknownInstanceTerminated => Json.toJson(event)
     case event: PodEvent => Json.toJson(event)
-  }
-}
-
-trait EventSubscribersFormats {
-
-  implicit lazy val EventSubscribersWrites: Writes[EventSubscribers] = Writes { eventSubscribers =>
-    Json.obj(
-      "callbackUrls" -> eventSubscribers.urls
-    )
   }
 }
 

@@ -1,7 +1,13 @@
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.LocalDate
+
 import com.amazonaws.auth.{EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
-import com.typesafe.sbt.packager.docker.ExecCmd
+import com.typesafe.sbt.packager.docker.Cmd
+import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
+import sbt.Def
 
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
@@ -12,34 +18,11 @@ lazy val UnstableIntegrationTest = config("unstable-integration") extend Test
 
 def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
 
+credentials ++= loadM2Credentials(streams.value.log)
+resolvers ++= loadM2Resolvers(sLog.value)
+
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
-
-/**
-  * This on load trigger is used to set parameters in teamcity.
-  * It is only executed within teamcity and can be ignored otherwise.
-  * It will set values as build and env parameter.
-  * Those parameters can be used in subsequent build steps and dependent builds.
-  * TeamCity does this by watching the output of the build it currently performs.
-  * See: https://confluence.jetbrains.com/display/TCD8/Build+Script+Interaction+with+TeamCity
-  */
-lazy val teamCitySetEnvSettings = Seq(
-  onLoad in Global := {
-    sys.env.get("TEAMCITY_VERSION") match {
-      case None => // no-op
-      case Some(teamcityVersion) =>
-        def reportParameter(key: String, value: String): Unit = {
-          //env parameters will be made available as environment variables
-          println(s"##teamcity[setParameter name='env.SBT_$key' value='$value']")
-          //system parameters will be made available as teamcity build parameters
-          println(s"##teamcity[setParameter name='system.sbt.$key' value='$value']")
-        }
-        reportParameter("SCALA_VERSION", scalaVersion.value)
-        reportParameter("PROJECT_VERSION", version.value)
-    }
-    (onLoad in Global).value
-  }
-)
 
 lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
   ScalariformKeys.preferences := FormattingPreferences()
@@ -62,52 +45,17 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     .setPreference(SpacesWithinPatternBinders, true)
 )
 
-lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
-  inConfig(IntegrationTest)(Defaults.testTasks) ++
-  inConfig(UnstableTest)(Defaults.testTasks) ++
-  inConfig(UnstableIntegrationTest)(Defaults.testTasks) ++
-  aspectjSettings ++ Seq(
-  autoCompilerPlugins := true,
-  organization := "mesosphere.marathon",
-  scalaVersion := "2.11.8",
-  crossScalaVersions := Seq(scalaVersion.value),
-  scalacOptions in Compile ++= Seq(
-    "-encoding", "UTF-8",
-    "-target:jvm-1.8",
-    "-deprecation",
-    "-feature",
-    "-unchecked",
-    "-Xfuture",
-    "-Xlog-reflective-calls",
-    "-Xlint",
-    "-Xfatal-warnings",
-    "-Yno-adapted-args",
-    "-Ywarn-numeric-widen",
-    //"-Ywarn-dead-code", We should turn this one on soon
-    "-Ywarn-inaccessible",
-    "-Ywarn-infer-any",
-    "-Ywarn-nullary-override",
-    "-Ywarn-nullary-unit",
-    //"-Ywarn-unused", We should turn this one on soon
-    "-Ywarn-unused-import",
-    //"-Ywarn-value-discard", We should turn this one on soon.
-    "-Yclosure-elim",
-    "-Ydead-code"
-  ),
-  javacOptions in Compile ++= Seq(
-    "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
-  ),
-  resolvers ++= Seq(
-    "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
-    "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
-    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
-  ),
-  cancelable in Global := true,
-  publishTo := Some(s3resolver.value(
-    "Mesosphere Public Repo (S3)",
-    s3("downloads.mesosphere.io/maven")
-  )),
-  s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
+lazy val testSettings = Seq(
+  (coverageDir in Test) := target.value / "test-coverage",
+  (coverageDir in IntegrationTest) := target.value / "integration-coverage",
+  (coverageDir in SerialIntegrationTest) := target.value / "integration-coverage",
+  (coverageMinimum in IntegrationTest) := 58,
+  testWithCoverageReport in IntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(IntegrationTest).value,
+  testWithCoverageReport in SerialIntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(SerialIntegrationTest).value,
+  (coverageDir in UnstableTest) := target.value / "unstable-coverage",
+  (coverageDir in UnstableIntegrationTest) := target.value / "unstable-integration-coverage",
+  testWithCoverageReport in UnstableTest := TestWithCoveragePlugin.runTestsWithCoverage(UnstableTest).value,
+  testWithCoverageReport in UnstableIntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(UnstableIntegrationTest).value,
 
   testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
   parallelExecution in Test := true,
@@ -146,22 +94,72 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   parallelExecution in IntegrationTest := true,
   testForkedParallel in IntegrationTest := true,
   concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
-  test in IntegrationTest := {
-    (test in IntegrationTest).value
-    (test in SerialIntegrationTest).value
-  },
+  test in IntegrationTest := Def.sequential {
+    test in IntegrationTest
+    test in SerialIntegrationTest
+  }.value,
 
   fork in UnstableIntegrationTest := true,
   testOptions in UnstableIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable-integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
-      "-l", "mesosphere.marathon.SerialIntegrationTest",
+      "-n", "mesosphere.marathon.SerialIntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in UnstableIntegrationTest := true,
+  testForkedParallel in UnstableIntegrationTest := true
+) ++ inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
+  inConfig(IntegrationTest)(Defaults.testTasks) ++
+  inConfig(UnstableTest)(Defaults.testTasks) ++
+  inConfig(UnstableIntegrationTest)(Defaults.testTasks)
+
+lazy val commonSettings = testSettings ++
+  aspectjSettings ++ Seq(
+  autoCompilerPlugins := true,
+  organization := "mesosphere.marathon",
+  scalaVersion := "2.11.8",
+  crossScalaVersions := Seq(scalaVersion.value),
+  scalacOptions in Compile ++= Seq(
+    "-encoding", "UTF-8",
+    "-target:jvm-1.8",
+    "-deprecation",
+    "-feature",
+    "-unchecked",
+    "-Xfuture",
+    "-Xlog-reflective-calls",
+    "-Xlint",
+    //FIXME: CORE-977 and MESOS-7368 are filed and need to be resolved to re-enable this
+    // "-Xfatal-warnings",
+    "-Yno-adapted-args",
+    "-Ywarn-numeric-widen",
+    //"-Ywarn-dead-code", We should turn this one on soon
+    "-Ywarn-inaccessible",
+    "-Ywarn-infer-any",
+    "-Ywarn-nullary-override",
+    "-Ywarn-nullary-unit",
+    //"-Ywarn-unused", We should turn this one on soon
+    "-Ywarn-unused-import",
+    //"-Ywarn-value-discard", We should turn this one on soon.
+    "-Yclosure-elim",
+    "-Ydead-code"
+  ),
+  javacOptions in Compile ++= Seq(
+    "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
+  ),
+  resolvers ++= Seq(
+    "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
+    "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
+    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
+  ),
+  cancelable in Global := true,
+  publishTo := Some(s3resolver.value(
+    "Mesosphere Public Repo (S3)",
+    s3("downloads.mesosphere.io/maven")
+  )),
+  s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
 
   scapegoatVersion := "1.3.0",
 
-  coverageMinimum := 62,
+  coverageMinimum := 75,
   coverageFailOnMinimum := true,
 
   fork in run := true,
@@ -176,72 +174,115 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   javacOptions in Compile += "-g",
   javaOptions in run ++= (AspectjKeys.weaverOptions in Aspectj).value,
   javaOptions in Test ++= (AspectjKeys.weaverOptions in Aspectj).value,
-  // non-tagged builds use this. Should _always_ end in snapshot.
-  git.baseVersion := "1.5.0-SNAPSHOT"
+  git.useGitDescribe := true,
+  // TODO: There appears to be a bug where uncommitted changes is true even if nothing is committed.
+  git.uncommittedSignifier := None
 )
 
-val aopMerge: sbtassembly.MergeStrategy = new sbtassembly.MergeStrategy {
-  val name = "aopMerge"
-  import scala.xml._
-  import scala.xml.dtd._
 
-  def apply(tempDir: File, path: String, files: Seq[File]): Either[String, Seq[(File, String)]] = {
-    val dt = DocType("aspectj", PublicID("-//AspectJ//DTD//EN", "http://www.eclipse.org/aspectj/dtd/aspectj.dtd"), Nil)
-    val file = MergeStrategy.createMergeTarget(tempDir, path)
-    val xmls: Seq[Elem] = files.map(XML.loadFile)
-    val aspectsChildren: Seq[Node] = xmls.flatMap(_ \\ "aspectj" \ "aspects" \ "_")
-    val weaverChildren: Seq[Node] = xmls.flatMap(_ \\ "aspectj" \ "weaver" \ "_")
-    val options: String = xmls.map(x => (x \\ "aspectj" \ "weaver" \ "@options").text).mkString(" ").trim
-    val weaverAttr = if (options.isEmpty) Null else new UnprefixedAttribute("options", options, Null)
-    val aspects = new Elem(null, "aspects", Null, TopScope, false, aspectsChildren: _*)
-    val weaver = new Elem(null, "weaver", weaverAttr, TopScope, false, weaverChildren: _*)
-    val aspectj = new Elem(null, "aspectj", Null, TopScope, false, aspects, weaver)
-    XML.save(file.toString, aspectj, "UTF-8", xmlDecl = false, dt)
-    IO.append(file, IO.Newline.getBytes(IO.defaultCharset))
-    Right(Seq(file -> path))
-  }
-}
-
-// TODO: Move away from sbt-assembly, favoring sbt-native-packager
-lazy val asmSettings = Seq(
-  assemblyMergeStrategy in assembly := {
-    case "application.conf" => MergeStrategy.concat
-    case "META-INF/jersey-module-version" => MergeStrategy.first
-    case "META-INF/aop.xml" => aopMerge
-    case "org/apache/hadoop/yarn/util/package-info.class" => MergeStrategy.first
-    case "org/apache/hadoop/yarn/factories/package-info.class" => MergeStrategy.first
-    case "org/apache/hadoop/yarn/factory/providers/package-info.class" => MergeStrategy.first
-    case x => (assemblyMergeStrategy in assembly).value(x)
-  },
-  assemblyExcludedJars in assembly := {
-    val exclude = Set(
-      "commons-beanutils-1.7.0.jar",
-      "stax-api-1.0.1.jar",
-      "commons-beanutils-core-1.8.0.jar",
-      "servlet-api-2.5.jar",
-      "jsp-api-2.1.jar"
-    )
-    (fullClasspath in assembly).value.filter { x => exclude(x.data.getName) }
-  },
-  test in assembly := {}
-)
+lazy val packageDebianUpstart = taskKey[File]("Create debian upstart package")
+lazy val packageDebianSystemV = taskKey[File]("Create debian systemv package")
+lazy val packageDebianSystemd = taskKey[File]("Create debian systemd package")
+lazy val packageRpmSystemV = taskKey[File]("Create rpm systemv package")
+lazy val packageRpmSystemd = taskKey[File]("create rpm systemd package")
 
 lazy val packagingSettings = Seq(
-  dockerBaseImage in Docker := "openjdk:8u121-jdk",
-  dockerExposedPorts in Docker := Seq(8080),
-  dockerRepository in Docker := Some("mesosphere"),
+  packageSummary := "Scheduler for Apache Mesos",
+  packageDescription := "Cluster-wide init and control system for services running on\\\n\tApache Mesos",
+  maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
+  debianPackageDependencies in Debian := Seq("java8-runtime-headless", "lsb-release", "unzip", s"mesos (>= ${Dependency.V.MesosDebian})"),
+  rpmVendor := "mesosphere",
+  rpmLicense := Some("Apache 2"),
+  version in Rpm := {
+    val releasePattern = """^(\d+)\.(\d+)\.(\d+)$""".r
+    val snapshotPattern = """^(\d+).(\d+)\.(\d+)-SNAPSHOT-\d+-g(\w+)""".r
+    version.value match {
+      case releasePattern(major, minor, patch) => s"$major.$minor.$patch"
+      case snapshotPattern(major, minor, patch, commit) => s"$major.$minor.$patch${LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE)}git$commit"
+      case v =>
+        System.err.println(s"Version '$v' is not fully supported, please update the git tags.")
+        v
+    }
+  },
+  daemonStdoutLogFile := None,
+  debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
+  rpmRequirements in Rpm := Seq("coreutils", "unzip", "java >= 1:1.8.0"),
+  dockerBaseImage := Dependency.V.OpenJDK,
+  dockerExposedPorts := Seq(8080),
+  dockerRepository := Some("mesosphere"),
+  daemonUser in Docker := "root",
   dockerCommands ++= Seq(
-    ExecCmd("RUN", "apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\" +
-    "echo \"deb http://repos.mesosphere.com/debian jessie-testing main\" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\" +
-    "echo \"deb http://repos.mesosphere.com/debian jessie main\" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\" +
-    "apt-get update && \\" +
-    s"apt-get install --no-install-recommends -y --force-yes mesos=${Dependency.V.MesosDebian} && \\" +
-    "apt-get clean")
-  )
+    Cmd("RUN", "apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && " +
+        "echo deb http://repos.mesosphere.com/debian jessie-testing main | tee -a /etc/apt/sources.list.d/mesosphere.list && " +
+        "echo deb http://repos.mesosphere.com/debian jessie main | tee -a /etc/apt/sources.list.d/mesosphere.list && " +
+        "apt-get update && " +
+        s"apt-get install --no-install-recommends -y --force-yes mesos=${Dependency.V.MesosDebian} && " +
+        "apt-get clean"
+    ),
+    Cmd("RUN", "chown -R daemon:daemon ."),
+    Cmd("USER", "daemon")
+  ),
+  bashScriptExtraDefines +=
+    """
+      |for env_op in `env | grep -v ^MARATHON_APP | grep ^MARATHON_ | awk '{gsub(/MARATHON_/,""); gsub(/=/," "); printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'`; do
+      |  addApp "$env_op"
+      |done
+    """.stripMargin,
+  packageDebianUpstart := {
+    val debianFile = (packageBin in Debian).value
+    val output = target.value / "packages" / s"upstart-${debianFile.getName}"
+    IO.move(debianFile, output)
+    streams.value.log.info(s"Moved debian ${(serverLoading in Debian).value} package $debianFile to $output")
+    output
+  },
+  packageDebianSystemV := {
+    val debianFile = (packageBin in Debian).value
+    val output = target.value / "packages" /  s"sysvinit-${debianFile.getName}"
+    IO.move(debianFile, output)
+    streams.value.log.info(s"Moved debian ${(serverLoading in Debian).value} package $debianFile to $output")
+    output
+  },
+  packageDebianSystemd := {
+    val debianFile = (packageBin in Debian).value
+    val output = target.value / "packages" /  s"systemd-${debianFile.getName}"
+    IO.move(debianFile, output)
+    streams.value.log.info(s"Moving debian ${(serverLoading in Debian).value} package $debianFile to $output")
+    output
+  },
+  packageRpmSystemV := {
+    val rpmFile = (packageBin in Rpm).value
+    val output = target.value / "packages" /  s"sysvinit-${rpmFile.getName}"
+    IO.move(rpmFile, output)
+    streams.value.log.info(s"Moving rpm ${(serverLoading in Rpm).value} package $rpmFile to $output")
+    output
+  },
+  packageRpmSystemd := {
+    val rpmFile = (packageBin in Rpm).value
+    val output = target.value / "packages" /  s"systemd-${rpmFile.getName}"
+    IO.move(rpmFile, output)
+    streams.value.log.info(s"Moving rpm ${(serverLoading in Rpm).value} package $rpmFile to $output")
+    output
+  },
+  mappings in (Compile, packageDoc) := Seq()
 )
 
+addCommandAlias("packageAll", ";universal:packageBin; universal:packageXzTarball; docker:publishLocal; packageDebian; packageRpm")
+
+addCommandAlias("packageDebian",  ";set serverLoading in Debian := com.typesafe.sbt.packager.archetypes.ServerLoader.SystemV" +
+  ";packageDebianSystemV" +
+  ";set serverLoading in Debian := com.typesafe.sbt.packager.archetypes.ServerLoader.Upstart" +
+  ";packageDebianUpstart" +
+  ";set serverLoading in Debian := com.typesafe.sbt.packager.archetypes.ServerLoader.Systemd" +
+  ";packageDebianSystemd")
+
+addCommandAlias("packageRpm",  ";set serverLoading in Rpm := com.typesafe.sbt.packager.archetypes.ServerLoader.SystemV" +
+  ";packageRpmSystemV" +
+  ";set serverLoading in Rpm := com.typesafe.sbt.packager.archetypes.ServerLoader.Systemd" +
+  ";packageRpmSystemd")
+
+
 lazy val `plugin-interface` = (project in file("plugin-interface"))
-    .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin)
+    .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
     .configs(SerialIntegrationTest)
     .configs(IntegrationTest)
     .configs(UnstableTest)
@@ -258,13 +299,12 @@ lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
-  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
-    CopyPasteDetector, RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning)
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, DebianPlugin, RpmPlugin, JDebPackaging,
+    CopyPasteDetector, RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, TestWithCoveragePlugin)
   .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
-  .settings(teamCitySetEnvSettings: _*)
-  .settings(asmSettings: _*)
+  .settings(packagingSettings: _*)
   .settings(
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
@@ -278,12 +318,13 @@ lazy val marathon = (project in file("."))
     )
   )
 
+
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .configs(SerialIntegrationTest)
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
-  .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin)
+  .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
@@ -297,7 +338,7 @@ lazy val benchmark = (project in file("benchmark"))
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
-  .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin)
+  .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")

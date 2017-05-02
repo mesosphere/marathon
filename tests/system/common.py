@@ -1,5 +1,7 @@
 """ """
 from shakedown import *
+from shakedown import http
+
 from utils import *
 from dcos.errors import DCOSException
 from distutils.version import LooseVersion
@@ -7,6 +9,7 @@ from urllib.parse import urljoin
 
 import uuid
 import random
+import retrying
 import pytest
 
 
@@ -116,8 +119,8 @@ def python_http_app():
 
 
 def nginx_with_ssl_support():
-	return {
-		"id": "/web-server",
+    return {
+        "id": "/web-server",
 		"instances": 1,
 		"cpus": 1,
 		"mem": 128,
@@ -143,6 +146,7 @@ def nginx_with_ssl_support():
 			}
 		}
 	}
+
 
 def fake_framework_app():
     return {
@@ -315,6 +319,25 @@ def peristent_volume_app():
         }
 
 
+def assert_http_code(url, http_code='200'):
+    cmd = r'curl -s -o /dev/null -w "%{http_code}"'
+    cmd = cmd + ' {}'.format(url)
+    status, output = shakedown.run_command_on_master(cmd)
+
+    assert status
+    assert output == http_code
+
+
+def add_role_constraint_to_app_def(app_def, roles=['*']):
+    """ Roles are a comma delimited list.  acceptable roles include:
+        '*'
+        'slave_public'
+        '*, slave_public'
+    """
+    app_def['acceptedResourceRoles'] = roles
+    return app_def
+
+
 def pending_deployment_due_to_resource_roles(app_id):
     resource_role = str(random.getrandbits(32))
 
@@ -379,7 +402,7 @@ def external_volume_mesos_app(volume_name=None):
               "size": 1,
               "name": volume_name,
               "provider": "dvdi",
-              "options": { "dvdi/driver": "rexray" }
+              "options": {"dvdi/driver": "rexray"}
               },
             "mode": "RW"
           }
@@ -408,13 +431,13 @@ def external_volume_mesos_app(volume_name=None):
 
 def command_health_check(command='true', failures=1, timeout=2):
 
-	return {
-		  'protocol': 'COMMAND',
-		  'command': { 'value': command },
-		  'timeoutSeconds': timeout,
-		  'intervalSeconds': 2,
-		  'maxConsecutiveFailures': failures
-		}
+    return {
+        'protocol': 'COMMAND',
+        'command': {'value': command},
+        'timeoutSeconds': timeout,
+        'intervalSeconds': 2,
+        'maxConsecutiveFailures': failures
+    }
 
 
 def private_docker_container_app(docker_credentials_filename='docker.tar.gz'):
@@ -456,6 +479,73 @@ def private_mesos_container_app(principal, secret):
     }
 
 
+def pinger_localhost_app(id='pinger', port=7777):
+    """ pinger app requires, the pinger.py app in fixure_dir and the master
+        http service started at port 7777
+
+        This app also defaults to 7777 for easy service locating
+    """
+    return {
+      "id": id,
+      "instances": 1,
+      "cpus": 0.1,
+      "mem": 128,
+      "cmd": "/opt/mesosphere/bin/python pinger.py {}".format(port),
+      "fetch": [
+        {
+          "uri": "http://master.mesos:7777/pinger.py"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "port": port,
+          "protocol": "tcp",
+          "name": "api"
+        }
+      ],
+      "requirePorts": True
+    }
+
+
+def pinger_bridge_app(id='pinger', port=7777):
+
+    return {
+      "id": id,
+      "instances": 1,
+      "container": {
+        "type": "DOCKER",
+        "docker": {
+          "image": "python:3.5-alpine",
+          "network": "BRIDGE",
+          "portMappings": [
+            {
+                "containerPort": 80,
+                "hostPort": port,
+                "protocol": "tcp",
+                "name": "http"
+            }
+            ],
+            "requirePorts": True
+        },
+        "volumes": [
+           {
+             "containerPath": "/opt/pinger.py",
+             "hostPath": "pinger.py",
+             "mode": "RO"
+           }
+         ]
+      },
+      "cpus": 0.1,
+      "mem": 128,
+      "cmd": "python3 /opt/pinger.py 80",
+      "fetch": [
+        {
+          "uri": "http://master.mesos:7777/pinger.py"
+        }
+      ]
+    }
+
+
 def cluster_info(mom_name='marathon-user'):
     agents = get_private_agents()
     print("agents: {}".format(len(agents)))
@@ -465,7 +555,7 @@ def cluster_info(mom_name='marathon-user'):
     # see if there is a MoM
 
     if service_available_predicate(mom_name):
-        with marathon_on_marathon(mom_name):
+        with shakedown.marathon_on_marathon(mom_name):
             try:
                 client = marathon.create_client()
                 about = client.get_about()
@@ -475,6 +565,7 @@ def cluster_info(mom_name='marathon-user'):
                 print("Marathon MoM not present")
     else:
         print("Marathon MoM not present")
+
 
 def delete_all_apps():
     client = marathon.create_client()
@@ -530,6 +621,11 @@ def ip_of_mom():
 
 def ensure_mom():
     if not is_mom_installed():
+        # if there is an active deployment... wait for it.
+        # it is possible that mom is currently in the process of being uninstalled
+        # in which case it will not report as installed however install will fail
+        # until the deployment is finished.
+        deployment_wait()
 
         try:
             install_package_and_wait('marathon')
@@ -641,6 +737,29 @@ def assert_app_tasks_healthy(client, app_def):
 
     app = client.get_app(app_id)
     assert app['tasksHealthy'] == instances
+
+
+def get_marathon_leader_not_on_master_leader_node():
+    marathon_leader = shakedown.marathon_leader_ip()
+    master_leader = shakedown.master_leader_ip()
+    print('marathon: {}'.format(marathon_leader))
+    print('leader: {}'.format(master_leader))
+
+    if marathon_leader == master_leader:
+        # switch
+        delete_marathon_path('v2/leader')
+        wait_for_marathon_up()
+        new_leader = shakedown.marathon_leader_ip()
+        assert new_leader != marathon_leader
+        marathon_leader = new_leader
+        print('switched leader to: {}'.format(marathon_leader))
+
+    return marathon_leader
+
+
+#############
+#  moving to shakedown  START
+#############
 
 
 def install_enterprise_cli_package():
@@ -806,7 +925,11 @@ def delete_service_account(service_account):
     assert return_code == 0, "Failed to create a service account"
 
 
-def create_service_account(service_account, private_key_filename='private-key.pem', public_key_filename='public-key.pem', account_description='SI test account'):
+def create_service_account(
+        service_account,
+        private_key_filename='private-key.pem',
+        public_key_filename='public-key.pem',
+        account_description='SI test account'):
     """ Create new private and public key pair and use them to add a new service
         with a give name. Public key file is then removed, however private key file
         is left since it might be used to create a secret. If you don't plan on creating
@@ -849,3 +972,67 @@ def set_service_account_permissions(service_account, ressource='dcos:superuser',
     url = urljoin(dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(ressource, service_account, action))
     req = http.put(url)
     assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+
+
+def get_marathon_endpoint(path, marathon_name='marathon'):
+    """Returns the url for the marathon endpoint
+    """
+    return shakedown.dcos_url_path('service/{}/{}'.format(marathon_name, path))
+
+
+def http_get_marathon_path(name, marathon_name='marathon'):
+    """ Invokes HTTP GET for marathon url with name
+        ex.  name='ping'  http GET {dcos_url}/service/marathon/ping
+    """
+    url = get_marathon_endpoint(name, marathon_name)
+    return http.get(url)
+
+
+# PR added to dcos-cli (however it takes weeks)
+# https://github.com/dcos/dcos-cli/pull/974
+def delete_marathon_path(name, marathon_name='marathon'):
+    """ Invokes HTTP DELETE for marathon url with name
+        ex.  name='v2/leader'  http GET {dcos_url}/service/marathon/v2/leader
+    """
+    url = get_marathon_endpoint(name, marathon_name)
+    return http.delete(url)
+
+
+def wait_for_marathon_up(marathon_name='marathon', require_count=4, noisy=True):
+    """
+        need to investigate what we can change in shakedown for this.
+        in a multi-master world, the marathon bounce can lead to a misleading
+        http 200 for the service being up when it is NOT.   This waits for 4
+        consecutive 200s by default
+    """
+
+    count = 0
+    print("{} Waiting for {} consecutive HTTP 200s for marathon up".format(shakedown.cli.helpers.fchr('>>'), require_count))
+
+    @retrying.retry(stop_max_attempt_number=300)
+    def wait_for_200():
+        nonlocal count
+
+        try:
+            response = http_get_marathon_path('ping', marathon_name)
+
+            if response.status_code == 200:
+                count = count + 1
+                if noisy:
+                    print("{}200 consecutive count:{}".format(shakedown.cli.helpers.fchr('>>'), count))
+            else:
+                count = 0
+        except Exception as e:
+            if noisy:
+                print(e)
+            count = 0
+            assert False
+
+        # need 4 consecutive 200s to call it good (what's your magic number?)
+        assert count >= require_count
+
+    wait_for_200()
+
+#############
+# moving to shakedown  END
+#############

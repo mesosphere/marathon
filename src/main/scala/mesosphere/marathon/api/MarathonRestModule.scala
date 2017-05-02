@@ -8,7 +8,6 @@ import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer
 import mesosphere.chaos.http._
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.io.SSLContextUtil
 import org.eclipse.jetty.servlets.EventSourceServlet
 
@@ -35,24 +34,11 @@ class LeaderProxyFilterModule extends ServletModule {
   }
 }
 
-/**
-  * Base module provided by chaos.
-  */
-class ChaosModule extends ServletModule {
-  override def configureServlets(): Unit = {
-    bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
-    serve("/logging").`with`(classOf[LogConfigServlet])
-  }
-}
-
 class MarathonRestModule extends ServletModule {
 
   protected override def configureServlets(): Unit = {
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
-
-    // Chaos API
-    install(new ChaosModule)
 
     // Service API
     bind(classOf[SystemResource]).in(Scopes.SINGLETON)
@@ -61,7 +47,6 @@ class MarathonRestModule extends ServletModule {
     bind(classOf[v2.AppsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.PodsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.TasksResource]).in(Scopes.SINGLETON)
-    bind(classOf[v2.EventSubscriptionsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.QueueResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.GroupsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.InfoResource]).in(Scopes.SINGLETON)

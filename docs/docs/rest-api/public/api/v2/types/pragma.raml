@@ -33,3 +33,11 @@ annotationTypes:
       Applies to field declarations. Do not emit anything for this field if it is empty.
       Should not be used in combination with required fields, or else fields that provide
       default values. Useful with collection or non-built-in field types.
+  internal:
+    type: string
+    description: |
+      Mark a type as internal to indicate, that it is not used in the external API.
+      No functional change - only to indicate the use of one type.
+      Use only on type level.
+
+

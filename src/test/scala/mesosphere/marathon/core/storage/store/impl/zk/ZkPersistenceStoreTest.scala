@@ -65,5 +65,6 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
   }
 
   behave like basicPersistenceStore("ZookeeperPersistenceStore", defaultStore)
+  behave like backupRestoreStore("ZookeeperPersistenceStore", defaultStore)
 }
 

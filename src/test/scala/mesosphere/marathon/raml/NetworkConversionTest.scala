@@ -36,15 +36,35 @@ class NetworkConversionTest extends UnitTest {
     }
   }
   "NetworkConversion port mapping conversion" should {
-    "convert correctly" in {
-      val portMapping = PortMapping(23, Some(123), 0, "udp", Some("name"), Map("foo" -> "bla"))
-      val raml = portMapping.toRaml[ContainerPortMapping]
-      raml.containerPort should be(portMapping.containerPort)
-      raml.hostPort should be(portMapping.hostPort)
-      raml.servicePort should be(portMapping.servicePort)
-      raml.name should be(portMapping.name)
-      raml.labels should be(portMapping.labels)
-      raml.protocol should be(NetworkProtocol.Udp)
+    "convert between model and raml" in {
+      val portMapping = PortMapping(23, Some(123), 0, "udp", Some("name"), Map("foo" -> "bla"), List("network-name"))
+      val roundTripped = portMapping.toRaml[ContainerPortMapping].fromRaml[PortMapping]
+      roundTripped shouldBe portMapping
+    }
+
+    "convert between protobuf and raml" in {
+      val b = Protos.ExtendedContainerInfo.PortMapping.newBuilder
+        .setName("port-jr")
+        .addNetworkNames("network-1")
+        .addNetworkNames("network-2")
+        .setHostPort(123)
+        .setContainerPort(456)
+        .setProtocol("udp")
+        .setServicePort(999)
+
+      b.addLabelsBuilder.setKey("business-level").setValue("serious")
+
+      val raml = b.build.toRaml
+
+      raml shouldBe ContainerPortMapping(
+        name = Some("port-jr"),
+        hostPort = Some(123),
+        containerPort = 456,
+        protocol = NetworkProtocol.Udp,
+        servicePort = 999,
+        labels = Map("business-level" -> "serious"),
+        networkNames = List("network-1", "network-2")
+      )
     }
   }
   "NetworkConversion network conversion" should {

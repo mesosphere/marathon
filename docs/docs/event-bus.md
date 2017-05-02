@@ -8,26 +8,7 @@ Marathon has an internal event bus that captures all API requests and scaling ev
 By subscribing to the event bus, you can be informed about every event instantly, without pulling.
 The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.
 
-Events can be subscribed to by pluggable subscribers.
-
-The event bus has two APIs:
-
-* The event stream. For more information, see the `/v2/events` entry in the [Marathon REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html).
-
-* <span class="label label-default">Deprecated</span> The callback endpoint, which POSTs events in JSON format to one or more endpoints.
-
-The HTTP callback endpoint support is deprecated with Marathon 1.4 and will be removed in an upcoming version.
-Please use the event stream instead of the callback endpoint because:
-
-* It is easier to set up.
-
-* Delivery is faster because there is no request/response cycle.
-
-* The events are transferred in order.
-
-Other subscribers are easy to add. See the code in
-[marathon/event/http](https://github.com/mesosphere/marathon/tree/master/src/main/scala/mesosphere/marathon/event/http)
-for guidance.
+For more information, see the `/v2/events` entry in the [Marathon REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html).
 
 ## Subscription to Events via The Event Stream
 
@@ -59,16 +40,6 @@ attaching to or detaching from the event stream.
 ```bash
 curl -H "Accept: text/event-stream"  <MARATHON_HOST>:<MARATHON_PORT>/v2/events?event_type=event_stream_detached\&event_type=event_stream_attached
 ```
-
-## Subscription to Events via the Callback Endpoint
-
-Add these command line options to configure events:
-
-``` bash
-$ ./bin/start --master ... --event_subscriber http_callback --http_endpoints http://host1/foo,http://host2/bar
-```
-
-Both host1 and host2 will receive events.
 
 ## Event Types
 
