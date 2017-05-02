@@ -151,7 +151,7 @@ object CuratorZk {
     CuratorZk(
       cacheType = if (conf.storeCache()) LazyCaching else NoCaching,
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
-      connectionTimeout = None,
+      connectionTimeout = Some(conf.zkConnectionTimeoutDuration),
       timeout = conf.zkTimeoutDuration,
       zkHosts = conf.zkHosts,
       zkPath = conf.zooKeeperStatePath,
@@ -180,7 +180,7 @@ object CuratorZk {
     CuratorZk(
       cacheType = CacheType(config.string("cache-type", "lazy")),
       sessionTimeout = config.optionalDuration("session-timeout"),
-      connectionTimeout = config.optionalDuration("connect-timeout"),
+      connectionTimeout = config.optionalDuration("connection-timeout"),
       timeout = config.duration("timeout", 10.seconds),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
       zkPath = s"${config.string("path", "marathon")}/state",

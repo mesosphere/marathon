@@ -24,8 +24,11 @@ class CuratorElectionServiceTest extends AkkaUnitTest with Mockito with ExitDisa
 
       conf.zkHosts returns "unresolvable:8080"
       conf.zooKeeperSessionTimeout returns ScallopStub(Some(10))
+      conf.zooKeeperConnectionTimeout returns ScallopStub(Some(10))
       conf.zooKeeperTimeout returns ScallopStub(Some(10))
       conf.zkPath returns "/marathon"
+      conf.zkSessionTimeoutDuration returns 10000.milliseconds
+      conf.zkConnectionTimeoutDuration returns 10000.milliseconds
       conf.zkTimeoutDuration returns 250.milliseconds
 
       "shut Marathon down on a NonFatal" in {
