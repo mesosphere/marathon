@@ -5,9 +5,27 @@
 # by Jenkins and Cryptographically Signed by the CI Robot.
 
 mkdir -p $HOME/.jenkins || true
+
+user_file="$HOME/.jenkins/user"
 api_token_file="$HOME/.jenkins/api-token"
-api_token=$(cat "$api_token_file" || true)
-user=$(git config user.email)
+
+if [ -f "$user_file" ]; then
+    user=$(cat "$user_file")
+fi
+if [ -f "$api_token_file" ]; then
+    api_token=$(cat "$api_token_file")
+fi
+
+if [ -z "$user" ]; then
+    git_user=$(git config user.email)
+    read -p "Please type a Jenkins username or press Enter to use $git_user instead: " user
+
+    if [ -z "$user" ]; then
+      user="$git_user"
+    fi
+    echo "$user" > "$user_file"
+fi
+
 if [ -z "$api_token" ]; then
     echo
     echo "Obtain your API token from https://jenkins.mesosphere.com/service/jenkins/user/$user/configure"
