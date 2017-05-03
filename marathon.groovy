@@ -108,7 +108,7 @@ def previousBuildFailed() {
 }
 
 def is_master_or_release() {
-  return (!is_phabricator_build() && (is_release_build() ||
+  return (!is_phabricator_build() && (is_release_build(sh(returnStdout: true, script: "git describe --tags --always").trim().replaceFirst("v", "")) ||
     sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true) == "master"))
 }
 
