@@ -92,6 +92,7 @@ case class LocalMarathon(
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
+    "zk_connection_timeout" -> 20.seconds.toMillis.toString,
     "zk_session_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
     "access_control_allow_origin" -> "*",

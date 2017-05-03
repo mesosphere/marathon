@@ -106,14 +106,17 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--zk_max_versions` (Optional. Default: None): Limit the number of versions
     stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)):
-    Timeout for ZooKeeper operations in milliseconds. 
+    Timeout for ZooKeeper operations in milliseconds.
     If this timeout is exceeded, the ZooKeeper operation is marked as failed.
     This timeout is also used for all REST endpoint operations: if an operation takes longer than this timeout, the request will be answered with a failure.
-*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 10000 (10 seconds)): 
-    Timeout for ZooKeeper sessions in milliseconds. 
-    If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout then the session will expire and the connection will be closed. 
+*  <span class="label label-default">v1.5.0</span> `--zk_connection_timeout` (Optional. Default: 10000 (10 seconds)):
+    Timeout to connect to ZooKeeper in milliseconds.
+    If Marathon is unable to connect to the ZK cluster during this timeout, Marathon will give up after a few retries.
+    In Marathon versions prior to v1.5.0 `--zk_timeout` is used instead.
+*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 10000 (10 seconds)):
+    Timeout for ZooKeeper sessions in milliseconds.
+    If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout then the session will expire and the connection will be closed.
     If this happens to the leader then the leader will abdicate.
-    This timeout is also used for the zookeeper connection timeout.
     The default value from Marathon version 0.9 to 0.13 (including) was 30 minutes instead of 10 seconds.
 * <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
     Maximum allowed ZooKeeper node size (in bytes).
@@ -148,7 +151,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--default_network_name` (Optional.): Network name, injected into applications' `ipAddress{}` specs that do not define their own `networkName`.
 * <span class="label label-default">v0.15.4 Deprecated since v1.4.0</span>`--task_lost_expunge_gc` (Optional. Default: 75 seconds):
     This is the length of time in milliseconds, until a lost task is garbage collected and expunged from the task tracker and task repository.
-    Since v1.4.0 an UnreachableStrategy can be defined per application or pod definition. 
+    Since v1.4.0 an UnreachableStrategy can be defined per application or pod definition.
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_initial_delay` (Optional. Default: 5 minutes):
     This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_interval` (Optional. Default: 30 seconds):
@@ -162,13 +165,13 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--mesos_bridge_name` (Optional. Default: mesos-bridge):
     The name of the Mesos CNI network used by MESOS-type containers configured to use bridged networking
 * <span class="label label-default">v1.5.0</span>`--minimum_viable_task_execution_duration` (Optional. Default: 60 seconds):
-    Delay (in ms) after which a task is considered viable. If the task starts up correctly, but fails during this timeout, the application is backed off. 
+    Delay (in ms) after which a task is considered viable. If the task starts up correctly, but fails during this timeout, the application is backed off.
 * <span class="label label-default">v1.5.0</span>`--backup_location` (Optional. Default: None):
-    Create a backup before a migration is applied to the persistent store. 
-    This backup can be used to restore the state at that time. 
-    Currently two providers are allowed: 
+    Create a backup before a migration is applied to the persistent store.
+    This backup can be used to restore the state at that time.
+    Currently two providers are allowed:
     - File provider: file:///path/to/file
-    - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1 
+    - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1
       Please note: access_key and secret_key are optional.
       If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
 
