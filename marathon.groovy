@@ -12,10 +12,12 @@ def is_submit_request() {
 }
 
 def is_release_build(gitTag) {
-  if (gitTag.contains("SNAPSHOT") || gitTag.contains("g")) {
+  if (is_phabricator_build()) {
+    return false
+  } else if (gitTag.contains("SNAPSHOT") || gitTag.contains("g")) {
     return false
   } else if (env.BRANCH_NAME == null) {
-    return false
+    return sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).startsWith("releases/")
   } else if (env.BRANCH_NAME.startsWith("releases/")) {
     return true
   }
@@ -106,7 +108,8 @@ def previousBuildFailed() {
 }
 
 def is_master_or_release() {
-  return env.DIFF_ID != "" && ((env.BRANCH_NAME != null && env.BRANCH_NAME.startsWith("releases/")) || env.BRANCH_NAME == "master")
+  return (!is_phabricator_build() && (is_release_build() ||
+    sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true) == "master"))
 }
 
 /**
@@ -239,7 +242,7 @@ def checkout_marathon() {
               git config user.email "mesosphere-ci@users.noreply.github.com" &&\
               git config user.signingkey 32725FF3 &&\
               git commit -S --amend --signoff --no-edit &&
-              git push origin $(git rev-parse HEAD)'''
+              git push -f origin $(git rev-parse HEAD):jenkins-merge'''
       }
       clean_git()
     } else {
