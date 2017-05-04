@@ -181,7 +181,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      check.pingSince(5.seconds) should be(true) //make sure, the app has really started
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
     }
 
     "create a simple app with a Mesos HTTP health check" in {
@@ -197,7 +200,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      check.pingSince(5.seconds) should be(true) //make sure, the app has really started
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
     }
 
     "create a simple app with a Marathon HTTP health check using port instead of portIndex" in {
@@ -217,7 +223,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      check.pingSince(5.seconds) should be(true) //make sure, the app has really started
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
     }
 
     "create a simple app with a Marathon TCP health check" in {
@@ -334,7 +343,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       update.code should be(200)
       waitForDeployment(update)
       waitForTasks(id, before.value.size)
-      check.pingSince(5.seconds) should be(true) //make sure, the new version is alive
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
     }
 
     "update an app through patch request" in {
@@ -354,7 +366,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       update.code should be (200)
       waitForDeployment(update)
       waitForTasks(appId, before.value.size)
-      check.pingSince(5.seconds) should be (true) //make sure, the new version is alive
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
 
       Then("Check if healthcheck is not updated")
       val appResult = marathon.app(appId)

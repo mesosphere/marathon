@@ -52,7 +52,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       eventually {
-        check.pinged should be(true) withClue "Docker app has not been pinged."
+        check.pinged.get should be(true) withClue "Docker app has not been pinged."
       }
     }
   }

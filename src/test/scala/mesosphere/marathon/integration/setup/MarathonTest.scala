@@ -293,7 +293,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
   }
 
   def appProxyHealthCheck(
-    gracePeriod: FiniteDuration = 3.seconds,
+    gracePeriod: FiniteDuration = 1.seconds,
     interval: FiniteDuration = 1.second,
     maxConsecutiveFailures: Int = Int.MaxValue,
     portIndex: Option[Int] = Some(0)): AppHealthCheck =
@@ -413,7 +413,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
-    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged }
+    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged.get }
   }
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {

@@ -190,16 +190,16 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("The new version is deployed")
       val v2Checks = appProxyCheck(appId, "v2", state = true)
       eventually {
-        v2Checks.pinged should be(true) withClue "v2 apps did not come up"
+        v2Checks.pinged.get should be(true) withClue "v2 apps did not come up"
       }
 
       When("A rollback to the first version is initiated")
-      v1Checks.pinged = false
+      v1Checks.pinged.set(false)
       waitForDeployment(marathon.rollbackGroup(gid, create.value.version), 120.seconds)
 
       Then("The rollback will be performed and the old version is available")
       eventually {
-        v1Checks.pinged should be(true) withClue "v1 apps did not come up again"
+        v1Checks.pinged.get should be(true) withClue "v1 apps did not come up again"
       }
     }
 
@@ -220,9 +220,9 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val update = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
 
       Then("All v1 applications are kept alive")
-      v1Check.pinged = false
+      v1Check.pinged.set(false)
       eventually {
-        v1Check.pinged should be(true) withClue "v1 are not alive"
+        v1Check.pinged.get should be(true) withClue "v1 are not alive"
       }
 
       When("The new application becomes healthy")

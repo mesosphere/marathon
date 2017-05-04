@@ -168,7 +168,10 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       // The timeout is 5 minutes because downloading and provisioning the Python image can take some time.
       waitForDeployment(createResult, 600.seconds)
       waitForPod(podId)
-      check.pingSince(20.seconds) should be(true) //make sure, the app has really started
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
 
       When("The pod definition is changed")
       val updatedPod = pod.copy(
