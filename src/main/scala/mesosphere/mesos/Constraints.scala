@@ -118,7 +118,7 @@ object Constraints {
         case Operator.GROUP_BY =>
           checkGroupBy(getValueString(attr.get), groupFunc)
         case Operator.MAX_PER =>
-          checkMaxPer(offer.getHostname, value.toInt, groupFunc)
+          checkMaxPer(getValueString(attr.get), value.toInt, groupFunc)
         case Operator.LIKE => checkLike
         case Operator.UNLIKE => checkUnlike
       }
