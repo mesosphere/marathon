@@ -20,16 +20,16 @@ pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 @pytest.fixture(scope="function")
 def marathon_service_name():
 
-    common.ensure_mom()
+    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
     with shakedown.marathon_on_marathon():
         yield 'marathon-user'
-        shakedown.wait_for_service_endpoint('marathon-user')
+        shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
         clear_marathon()
 
 
 def setup_module(module):
     common.ensure_mom()
-    common.wait_for_marathon_up('marathon-user')
+    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
     common.cluster_info()
     with shakedown.marathon_on_marathon():
         clear_marathon()

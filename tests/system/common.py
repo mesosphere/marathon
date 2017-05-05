@@ -11,6 +11,7 @@ import uuid
 import random
 import retrying
 import pytest
+import shakedown
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -748,7 +749,7 @@ def get_marathon_leader_not_on_master_leader_node():
     if marathon_leader == master_leader:
         # switch
         delete_marathon_path('v2/leader')
-        wait_for_marathon_up()
+        shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
         new_leader = shakedown.marathon_leader_ip()
         assert new_leader != marathon_leader
         marathon_leader = new_leader
@@ -997,41 +998,6 @@ def delete_marathon_path(name, marathon_name='marathon'):
     url = get_marathon_endpoint(name, marathon_name)
     return http.delete(url)
 
-
-def wait_for_marathon_up(marathon_name='marathon', require_count=4, noisy=True):
-    """
-        need to investigate what we can change in shakedown for this.
-        in a multi-master world, the marathon bounce can lead to a misleading
-        http 200 for the service being up when it is NOT.   This waits for 4
-        consecutive 200s by default
-    """
-
-    count = 0
-    print("{} Waiting for {} consecutive HTTP 200s for marathon up".format(shakedown.cli.helpers.fchr('>>'), require_count))
-
-    @retrying.retry(stop_max_attempt_number=300)
-    def wait_for_200():
-        nonlocal count
-
-        try:
-            response = http_get_marathon_path('ping', marathon_name)
-
-            if response.status_code == 200:
-                count = count + 1
-                if noisy:
-                    print("{}200 consecutive count:{}".format(shakedown.cli.helpers.fchr('>>'), count))
-            else:
-                count = 0
-        except Exception as e:
-            if noisy:
-                print(e)
-            count = 0
-            assert False
-
-        # need 4 consecutive 200s to call it good (what's your magic number?)
-        assert count >= require_count
-
-    wait_for_200()
 
 #############
 # moving to shakedown  END

@@ -46,7 +46,7 @@ def test_marathon_delete_leader(marathon_service_name):
     print('leader: {}'.format(original_leader))
     common.delete_marathon_path('v2/leader')
 
-    common.wait_for_marathon_up()
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     @retrying.retry(stop_max_attempt_number=30)
     def marathon_leadership_changed():
@@ -69,7 +69,7 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
         #  time of the zk block
         time.sleep(5)
 
-    common.wait_for_marathon_up()
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     current_leader = shakedown.marathon_leader_ip()
     assert original_leader != current_leader
@@ -86,7 +86,7 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
         #  time of the master block
         time.sleep(timedelta(minutes=1.5).total_seconds())
 
-    common.wait_for_marathon_up()
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     current_leader = shakedown.marathon_leader_ip()
     assert original_leader != current_leader
@@ -107,6 +107,38 @@ def test_launch_app_on_public_agent():
     task_ip = tasks[0]['host']
 
     assert task_ip in shakedown.get_public_agents()
+
+
+@pytest.mark.usefixtures("event_fixture")
+def test_event_channel():
+    """ Tests the event channel.  The way events are verified is by streaming the events
+        to a test.txt file.   The fixture ensures the file is removed before and after the test.
+        events checked are connecting, deploying a good task and killing a task.
+    """
+    app_def = common.app_mesos()
+    app_id = app_def['id']
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    def check_deployment_message():
+        status, stdout = shakedown.run_command_on_master('cat test.txt')
+        assert 'event_stream_attached' in stdout
+        assert 'deployment_info' in stdout
+        assert 'deployment_step_success' in stdout
+
+    check_deployment_message()
+    client.remove_app(app_id, True)
+    shakedown.deployment_wait()
+
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    def check_kill_message():
+        status, stdout = shakedown.run_command_on_master('cat test.txt')
+        assert 'Killed' in stdout
+
+    check_kill_message()
 
 
 def test_external_volume():
