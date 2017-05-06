@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package util
 
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -33,7 +34,7 @@ import scala.collection.mutable
 case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int, parent: Option[WorkQueue] = None) {
   require(maxConcurrent > 0 && maxQueueLength >= 0)
   private case class WorkItem[T](f: () => Future[T], ctx: ExecutionContext, promise: Promise[T])
-  private val queue = Lock(mutable.Queue.empty[WorkItem[_]])
+  private val queue = new ConcurrentLinkedQueue[WorkItem[_]]()
   private val totalOutstanding = new AtomicInteger(0)
 
   private def run[T](workItem: WorkItem[T]): Future[T] = {
@@ -52,15 +53,9 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int, pare
   }
 
   private def executeNextIfPossible(): Unit = {
-    val next: Option[WorkItem[_]] = queue { q =>
-      if (q.isEmpty) {
-        totalOutstanding.decrementAndGet()
-        None
-      } else {
-        Some(q.dequeue())
-      }
-    }
-    next.foreach(run(_))
+    Option(queue.poll()).fold[Unit] {
+      totalOutstanding.decrementAndGet()
+    } { run(_) }
   }
 
   def blocking[T](f: => T)(implicit ctx: ExecutionContext): Future[T] = {
@@ -73,14 +68,12 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int, pare
       val promise = Promise[T]()
       run(WorkItem(() => f, ctx, promise))
     } else {
-      queue { q =>
-        if (q.size + 1 > maxQueueLength) {
-          Future.failed(new IllegalStateException(s"$name queue may not exceed $maxQueueLength entries"))
-        } else {
-          val promise = Promise[T]()
-          q.enqueue(WorkItem(() => f, ctx, promise))
-          promise.future
-        }
+      if (queue.size + 1 > maxQueueLength) {
+        Future.failed(new IllegalStateException(s"$name queue may not exceed $maxQueueLength entries"))
+      } else {
+        val promise = Promise[T]()
+        queue.add(WorkItem(() => f, ctx, promise))
+        promise.future
       }
     }
   }
