@@ -33,7 +33,7 @@ else:
         return response.getcode()
 
 
-def make_handler(appId, version, url):
+def make_handler(appId, version, base_url):
     """
     Factory method that creates a handler class.
     """
@@ -51,7 +51,30 @@ def make_handler(appId, version, url):
             self.wfile.write(byte_type(msg, "UTF-8"))
             return
 
+        def check_readiness(self):
+
+            url = "{}/ready".format(base_url)
+
+            logging.debug("Query %s for readiness", url)
+            url_req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            response = urlopen(url_req)
+            res = response.read()
+            status = response_status(response)
+            logging.debug("Current readiness is %s, %s", res, status)
+
+            self.send_response(status)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
+            self.wfile.write(res)
+
+            logging.debug("Done processing readiness request.")
+            return
+
         def check_health(self):
+
+            url = "{}/health".format(base_url)
+
             logging.debug("Query %s for health", url)
             url_req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
             response = urlopen(url_req)
@@ -73,6 +96,8 @@ def make_handler(appId, version, url):
                 logging.debug("Got GET request")
                 if self.path == '/ping':
                     return self.handle_ping()
+                elif self.path == '/ready':
+                    return self.check_readiness()
                 else:
                     return self.check_health()
             except:
@@ -106,7 +131,7 @@ if __name__ == "__main__":
     HTTPServer.allow_reuse_address = True
     httpd = HTTPServer(("", port), make_handler(appId, version, url))
     msg = "AppMock[%s %s]: %s has taken the stage at port %d. "\
-          "Will query %s for health status."
+          "Will query %s for health and readiness status."
     logging.info(msg, appId, version, taskId, port, url)
 
     try:
