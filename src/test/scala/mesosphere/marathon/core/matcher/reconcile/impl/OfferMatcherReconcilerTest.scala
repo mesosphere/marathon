@@ -15,7 +15,6 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
 
@@ -25,8 +24,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       Given("an offer without reservations")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       When("reconciling")
-      val now = Timestamp.now()
-      val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
+      val matchedTaskOps = f.reconciler.matchOffer(offer).futureValue
       Then("no task ops are generated")
       matchedTaskOps.ops should be(empty)
     }
@@ -45,8 +43,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
       When("reconciling")
-      val now = Timestamp.now()
-      val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
+      val matchedTaskOps = f.reconciler.matchOffer(offer).futureValue
 
       Then("all resources are destroyed and unreserved")
       val expectedOps =
@@ -76,8 +73,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
       When("reconciling")
-      val now = Timestamp.now()
-      val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
+      val matchedTaskOps = f.reconciler.matchOffer(offer).futureValue
 
       Then("all resources are destroyed and unreserved")
       val expectedOps = Seq(
@@ -106,8 +102,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forInstances(bogusInstance))
 
       When("reconciling")
-      val now = Timestamp.now()
-      val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
+      val matchedTaskOps = f.reconciler.matchOffer(offer).futureValue
 
       Then("all resources are destroyed and unreserved")
       val expectedOps = Seq(
@@ -138,8 +133,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       )
 
       When("reconciling")
-      val now = Timestamp.now()
-      val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
+      val matchedTaskOps = f.reconciler.matchOffer(offer).futureValue
 
       Then("no resources are destroyed and unreserved")
       matchedTaskOps.ops should be(empty)

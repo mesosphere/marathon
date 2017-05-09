@@ -70,6 +70,12 @@ Please find our [API documentation](https://mesosphere.github.io/marathon/api-co
 The events subscribers endpoint (`/v2/eventSubscribers`) was deprecated in Marathon 1.4 and is removed in this version.
 Please move to the `/v2/events` endpoint instead.
 
+#### Removed command line parameters
+- The command line flag `max_tasks_per_offer` has been deprecated since 1.4 and is removed now. Please use `max_instances_per_offer`.
+
+#### Deprecated command line parameters
+- The command line flag `save_tasks_to_launch_timeout` is deprecated and has no effect any longer.
+
 ### New Features
 
 #### Networking Improvements Involving Multiple Container Networks
@@ -101,6 +107,7 @@ All validation specified in the RAML is now programatically enforced, leading to
 #### Security improvements
 
 Marathon is in better compliance with various security best-practices. An example of this is that Marathon no longer responds to the directory listing request.
+
 
 ------------------------------------------------------------
 

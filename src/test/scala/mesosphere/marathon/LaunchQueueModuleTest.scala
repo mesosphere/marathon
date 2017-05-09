@@ -168,7 +168,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       When("we ask for matching an offer")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns noMatchResult
       val now = clock.now()
-      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(now, now + 3.seconds, offer)
+      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
@@ -195,7 +195,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       When("we ask for matching an offer")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
       val now = clock.now()
-      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(now, now + 3.seconds, offer)
+      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
@@ -223,7 +223,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       And("a task gets launched but not confirmed")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
       val now = clock.now()
-      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(now, now + 3.seconds, offer)
+      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       matchFuture.futureValue
 
       And("test app gets purged (but not stopped yet because of in-flight tasks)")

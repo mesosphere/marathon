@@ -190,10 +190,10 @@ resource offers Marathon receives from Mesos more efficiently, we added a new of
 to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is
 configurable with the following startup parameters:
 
-* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 5): Launch at most this
-    number of tasks per Mesos offer. Usually,
+* <span class="label label-default">v1.4.0</span> `--max_instances_per_offer` (Optional. Default: 5): Launch at most this
+    number of instances per Mesos offer. Usually,
     there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
-
+    
 To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
 By default, we allow 100 unconfirmed task launches every 30 seconds. In addition, Marathon launches
 more tasks when it gets feedback about running and healthy tasks from Mesos.
@@ -206,19 +206,14 @@ more tasks when it gets feedback about running and healthy tasks from Mesos.
 To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
 incoming resource offer, i.e. finding suitable tasks to launch for incoming offers.
 
-* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000):
+* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 3000):
+  <span class="label label-default">v1.5.0</span> The default value was 1000 in Version 0.11.0 until 1.5.0
     Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
     All already matched tasks are launched.
+    Note: A small timeout could lead to ineffective offer matching. 
+          A big timeout can lead to offer starvation in a cluster with a lot of frameworks. 
 
 All launched tasks are stored before launching them. There is also a timeout for this:
-
-* <span class="label label-default">v0.11.0</span> `--save_tasks_to_launch_timeout` (Optional. Default: 3000):
-    Timeout (ms) after matching an offer for saving all matched tasks that we are about to launch.
-    When reaching the timeout, only the tasks that we could save within the timeout are also launched.
-    All other task launches are temporarily rejected and retried later.
-
-If the Mesos master fails over or in other unusual circumstances, a launch task request might get lost.
-You can configure how long Marathon waits for the first `TASK_STAGING` update.
 
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 300000 (5 minutes)):
   Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.

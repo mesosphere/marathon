@@ -10,7 +10,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, In
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.state.{ RootGroup, Timestamp }
+import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.util.state.FrameworkId
@@ -38,7 +38,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
 
-  override def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
+  override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
 
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 

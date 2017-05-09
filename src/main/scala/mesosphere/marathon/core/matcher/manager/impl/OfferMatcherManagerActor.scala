@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.matcher.manager.impl
 
-import akka.actor.{ Actor, ActorLogging, Props }
+import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import akka.event.LoggingReceive
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
@@ -9,7 +9,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
-import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchTimeout, OfferData }
+import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchOfferData, CleanUpOverdueOffers, UnprocessedOffer }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, SettableGauge }
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -43,37 +43,33 @@ private[manager] object OfferMatcherManagerActor {
   }
 
   /**
+    * Internal data structure that bundles all related data if an offer is processed.
     *
-    * @constructor Create a new instance that bundles offer, deadline and ops.
+    * @constructor Create a new instance that bundles offer and ops.
     * @param offer The offer that is matched.
-    * @param deadline If an offer is not processed until the deadline the promise
-    *     is succeeded without a match.
-    * @param promise The promise will receive the matched instance ops if a match
-    *     if found. The promise might be fulfilled by the sender, e.g. [[mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher]]
-    *     if the deadline is reached before the offer has been processed.
-    * @param matcherQueue The offer matchers which should be applied to the
-    *     offer.
-    * @param ops ???
-    * @param matchPasses ???
-    * @param resendThisOffer ???
+    * @param promise promise for matched instance ops.
+    * @param matcherQueue The offer matchers which should be applied to the offer.
+    * @param ops All matched operations that should be applied to the offer.
+    * @param matchPasses the number of cycles the offer has been passed to the list of matchers.
+    * @param resendThisOffer true if there are matcher that want to see this offer again, otherwise false.
     */
-  private case class OfferData(
+  private[impl] case class MatchOfferData(
       offer: Offer,
       deadline: Timestamp,
       promise: Promise[OfferMatcher.MatchedInstanceOps],
-      matcherQueue: Queue[OfferMatcher],
+      matcherQueue: Queue[OfferMatcher] = Queue.empty,
       ops: Seq[InstanceOpWithSource] = Seq.empty,
       matchPasses: Int = 0,
       resendThisOffer: Boolean = false) {
 
-    def addMatcher(matcher: OfferMatcher): OfferData = copy(matcherQueue = matcherQueue.enqueue(matcher))
-    def nextMatcherOpt: Option[(OfferMatcher, OfferData)] = {
+    def addMatcher(matcher: OfferMatcher): MatchOfferData = copy(matcherQueue = matcherQueue.enqueue(matcher))
+    def nextMatcherOpt: Option[(OfferMatcher, MatchOfferData)] = {
       matcherQueue.dequeueOption map {
         case (nextMatcher, newQueue) => nextMatcher -> copy(matcherQueue = newQueue)
       }
     }
 
-    def addInstances(added: Seq[InstanceOpWithSource]): OfferData = {
+    def addInstances(added: Seq[InstanceOpWithSource]): MatchOfferData = {
       val leftOverOffer = added.foldLeft(offer) { (offer, nextOp) => nextOp.op.applyToOffer(offer) }
 
       copy(
@@ -83,7 +79,18 @@ private[manager] object OfferMatcherManagerActor {
     }
   }
 
-  private case class MatchTimeout(offerId: OfferID)
+  /**
+    * Internal data structure that holds the data for an offer that can not be processed immediately.
+    */
+  private[impl] case class UnprocessedOffer(offer: Offer, deadline: Timestamp, promise: Promise[OfferMatcher.MatchedInstanceOps]) {
+    def isOverdue(clock: Clock): Boolean = clock.now() >= deadline
+    def notOverdue(clock: Clock): Boolean = !isOverdue(clock)
+  }
+
+  /**
+    * Recurrent timer tick to clean up overdue offers.
+    */
+  private case object CleanUpOverdueOffers
 }
 
 private[impl] class OfferMatcherManagerActor private (
@@ -91,11 +98,25 @@ private[impl] class OfferMatcherManagerActor private (
   random: Random, clock: Clock, conf: OfferMatcherManagerConfig, offersWantedObserver: Observer[Boolean])
     extends Actor with ActorLogging {
 
-  private[this] var launchTokens: Int = 0
+  var launchTokens: Int = 0
 
-  private[this] var matchers: Set[OfferMatcher] = Set.empty
+  var matchers: Set[OfferMatcher] = Set.empty
 
-  private[this] var offerQueues: Map[OfferID, OfferMatcherManagerActor.OfferData] = Map.empty
+  var offerQueues: Map[OfferID, OfferMatcherManagerActor.MatchOfferData] = Map.empty
+
+  var unprocessedOffers: List[UnprocessedOffer] = List.empty
+
+  var timerTick: Option[Cancellable] = None
+
+  override def preStart(): Unit = {
+    implicit val ec = context.system.dispatcher
+    val timeout = conf.offerMatchingTimeout()
+    timerTick = Some(context.system.scheduler.schedule(timeout, timeout, self, CleanUpOverdueOffers))
+  }
+
+  override def postStop(): Unit = {
+    timerTick.foreach(_.cancel())
+  }
 
   override def receive: Receive = LoggingReceive {
     Seq[Receive](
@@ -106,7 +127,7 @@ private[impl] class OfferMatcherManagerActor private (
     ).reduceLeft(_.orElse[Any, Unit](_))
   }
 
-  private[this] def receiveSetLaunchTokens: Receive = {
+  def receiveSetLaunchTokens: Receive = {
     case OfferMatcherManagerDelegate.SetInstanceLaunchTokens(tokens) =>
       val tokensBeforeSet = launchTokens
       launchTokens = tokens
@@ -120,7 +141,7 @@ private[impl] class OfferMatcherManagerActor private (
         updateOffersWanted()
   }
 
-  private[this] def receiveChangingMatchers: Receive = {
+  def receiveChangingMatchers: Receive = {
     case OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher) =>
       if (!matchers(matcher)) {
         log.info("activating matcher {}.", matcher)
@@ -140,10 +161,10 @@ private[impl] class OfferMatcherManagerActor private (
       sender() ! OfferMatcherManagerDelegate.MatcherRemoved(matcher)
   }
 
-  private[this] def offersWanted: Boolean = matchers.nonEmpty && launchTokens > 0
-  private[this] def updateOffersWanted(): Unit = offersWantedObserver.onNext(offersWanted)
+  def offersWanted: Boolean = matchers.nonEmpty && launchTokens > 0
+  def updateOffersWanted(): Unit = offersWantedObserver.onNext(offersWanted)
 
-  private[impl] def offerMatchers(offer: Offer): Queue[OfferMatcher] = {
+  def offerMatchers(offer: Offer): Queue[OfferMatcher] = {
     //the persistence id of a volume encodes the app id
     //we use this information as filter criteria
     val appReservations: Set[PathId] = offer.getResourcesList.view
@@ -158,41 +179,37 @@ private[impl] class OfferMatcherManagerActor private (
     (random.shuffle(reserved) ++ random.shuffle(normal)).to[Queue]
   }
 
-  private[this] def receiveProcessOffer: Receive = {
-    case ActorOfferMatcher.MatchOffer(deadline, offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) if !offersWanted =>
-      log.debug(s"Ignoring offer ${offer.getId.getValue}: No one interested.")
-      promise.trySuccess(OfferMatcher.MatchedInstanceOps.noMatch(offer.getId, resendThisOffer = false))
+  def receiveProcessOffer: Receive = {
+    case ActorOfferMatcher.MatchOffer(offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) if !offersWanted =>
+      completeWithNoMatch("No offers wanted", offer, promise, resendThisOffer = matchers.nonEmpty)
 
-    case ActorOfferMatcher.MatchOffer(deadline, offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) =>
-      log.debug(s"Start processing offer ${offer.getId.getValue}")
-
-      // setup initial offer data
-      val randomizedMatchers = offerMatchers(offer)
-      val data = OfferMatcherManagerActor.OfferData(offer, deadline, promise, randomizedMatchers)
-      offerQueues += offer.getId -> data
-      metrics.currentOffersGauge.setValue(offerQueues.size.toLong)
-
-      // deal with the timeout
-      import context.dispatcher
-      context.system.scheduler.scheduleOnce(
-        clock.now().until(deadline),
-        self,
-        MatchTimeout(offer.getId))
-
-      // process offer for the first time
-      scheduleNextMatcherOrFinish(data)
+    case ActorOfferMatcher.MatchOffer(offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) =>
+      val deadline = clock.now() + conf.offerMatchingTimeout()
+      if (offerQueues.size < conf.maxParallelOffers()) {
+        startProcessOffer(offer, deadline, promise)
+      } else if (unprocessedOffers.size < conf.maxQueuedOffers()) {
+        log.debug(s"The maximum number of configured offers is processed at the moment. Queue offer ${offer.getId.getValue}.")
+        unprocessedOffers ::= UnprocessedOffer(offer, deadline, promise)
+      } else {
+        completeWithNoMatch("Queue is full", offer, promise, resendThisOffer = true)
+      }
+    case CleanUpOverdueOffers =>
+      log.debug(
+        s"Current State: LaunchTokens:$launchTokens OffersWanted:$offersWanted Matchers:${matchers.size} " +
+          s"OfferQueues:${offerQueues.size} UnprocessedOffers:${unprocessedOffers.size}")
+      rejectElapsedOffers()
   }
 
-  private[this] def receiveMatchedInstances: Receive = {
+  def receiveMatchedInstances: Receive = {
     case OfferMatcher.MatchedInstanceOps(offerId, addedOps, resendOffer) =>
-      def processAddedInstances(data: OfferData): OfferData = {
+      def processAddedInstances(data: MatchOfferData): MatchOfferData = {
         val dataWithInstances = try {
           val (acceptedOps, rejectedOps) =
             addedOps.splitAt(Seq(launchTokens, addedOps.size, conf.maxInstancesPerOffer() - data.ops.size).min)
 
           rejectedOps.foreach(_.reject("not enough launch tokens OR already scheduled sufficient instances on offer"))
 
-          val newData: OfferData = data.addInstances(acceptedOps)
+          val newData: MatchOfferData = data.addInstances(acceptedOps)
           launchTokens -= acceptedOps.size
           metrics.launchTokenGauge.setValue(launchTokens.toLong)
           newData
@@ -224,21 +241,77 @@ private[impl] class OfferMatcherManagerActor private (
         case None =>
           addedOps.foreach(_.reject(s"offer '${offerId.getValue}' already timed out"))
       }
-
-    case MatchTimeout(offerId) =>
-      // When the timeout is reached, we will answer with all matching instances we found until then.
-      // Since we cannot be sure if we found all matching instances, we set resendThisOffer to true.
-      offerQueues.get(offerId).foreach(completeWithMatchResult(_, resendThisOffer = true))
   }
 
-  private[this] def scheduleNextMatcherOrFinish(data: OfferData): Unit = {
+  /**
+    * Filter all unprocessed offers that are overdue and decline.
+    */
+  def rejectElapsedOffers(): Unit = {
+    // unprocessed offers are stacked in order with the newest element first: so we can use span here.
+    val (valid, overdue) = unprocessedOffers.span(_.notOverdue(clock))
+    log.debug(s"Reject Elapsed offers. Unprocessed: ${unprocessedOffers.size} Overdue:${overdue.size}")
+    unprocessedOffers = valid
+    overdue.foreach { over =>
+      completeWithNoMatch("Queue Timeout", over.offer, over.promise, resendThisOffer = true)
+    }
+    // safeguard: if matchers are stuck during offer matching, complete the match result
+    offerQueues.valuesIterator.withFilter(_.deadline + conf.offerMatchingTimeout() < clock.now()).foreach { matcher =>
+      log.warning(s"Matcher did not respond with a matching result in time: ${matcher.offer.getId.getValue}")
+      completeWithMatchResult(matcher, resendThisOffer = true)
+    }
+  }
+
+  /**
+    * If there are unprocessed offers, take the next one and start the process.
+    */
+  def startNextUnprocessedOffer(): Unit = {
+    unprocessedOffers match {
+      case head :: _ if head.isOverdue(clock) =>
+        // Not cleaning the offer stack here, could lead to potentially very deep stack traces because:
+        // startProcessOffer -> scheduleNextMatcherOrFinish -> startNextUnprocessedOffer
+        rejectElapsedOffers()
+        startNextUnprocessedOffer()
+      case UnprocessedOffer(offer, _, promise) :: tail if offerQueues.size < conf.maxParallelOffers() =>
+        log.debug(s"Take unprocessed offer ${offer.getId.getValue}. Unprocessed offer count: ${unprocessedOffers.size}")
+        unprocessedOffers = tail
+        val deadline = clock.now() + conf.offerMatchingTimeout()
+        startProcessOffer(offer, deadline, promise)
+      case _ => //ignore
+        log.debug(s"Can not start next unprocessed offer. Unprocessed offer count: ${unprocessedOffers.size}")
+    }
+  }
+
+  /**
+    * Start processing an offer by asking all interested parties.
+    */
+  def startProcessOffer(
+    offer: Offer,
+    deadline: Timestamp,
+    promise: Promise[OfferMatcher.MatchedInstanceOps]): Unit = {
+    log.info(s"Start processing offer ${offer.getId.getValue}. Current offer matcher count: ${offerQueues.size}")
+
+    // setup initial offer data
+    val randomizedMatchers = offerMatchers(offer)
+    val data = OfferMatcherManagerActor.MatchOfferData(offer, deadline, promise, randomizedMatchers)
+    offerQueues += offer.getId -> data
+    metrics.currentOffersGauge.setValue(offerQueues.size.toLong)
+
+    // process offer for the first time
+    scheduleNextMatcherOrFinish(data)
+  }
+
+  /**
+    * Send the offer to the next matcher in the queue if possible.
+    * If there is no matcher left or no launch token left, complete the process.
+    */
+  def scheduleNextMatcherOrFinish(data: MatchOfferData): Unit = {
     val nextMatcherOpt = if (data.deadline < clock.now()) {
-      log.warning(s"Deadline for ${data.offer.getId.getValue} overdue. Scheduled ${data.ops.size} ops so far.")
+      log.info(s"Deadline for ${data.offer.getId.getValue} overdue. Scheduled ${data.ops.size} ops so far.")
       None
     } else if (data.ops.size >= conf.maxInstancesPerOffer()) {
       log.info(
         s"Already scheduled the maximum number of ${data.ops.size} instances on this offer. " +
-          s"Increase with --${conf.maxInstancesPerOfferFlag.name}.")
+          s"Increase with --${conf.maxInstancesPerOffer.name}.")
       None
     } else if (launchTokens <= 0) {
       log.info(
@@ -252,19 +325,22 @@ private[impl] class OfferMatcherManagerActor private (
     nextMatcherOpt match {
       case Some((nextMatcher, newData)) =>
         import context.dispatcher
-        log.debug(s"query next offer matcher $nextMatcher for offer id ${data.offer.getId.getValue}")
+        log.debug(s"Query next offer matcher $nextMatcher for offer id ${data.offer.getId.getValue}")
         nextMatcher
-          .matchOffer(clock.now(), newData.deadline, newData.offer)
+          .matchOffer(newData.offer)
           .recover {
             case NonFatal(e) =>
               log.warning("Received error from {}", e)
               MatchedInstanceOps.noMatch(data.offer.getId, resendThisOffer = true)
           }.pipeTo(self)
-      case None => completeWithMatchResult(data, data.resendThisOffer)
+      case None =>
+        completeWithMatchResult(data, data.resendThisOffer)
+        // one offer match is finished. Let's see if we can start an unprocessed offer now.
+        if (offersWanted) startNextUnprocessedOffer()
     }
   }
 
-  private[this] def completeWithMatchResult(data: OfferData, resendThisOffer: Boolean): Unit = {
+  def completeWithMatchResult(data: MatchOfferData, resendThisOffer: Boolean): Unit = {
     data.promise.trySuccess(OfferMatcher.MatchedInstanceOps(data.offer.getId, data.ops, resendThisOffer))
     offerQueues -= data.offer.getId
     metrics.currentOffersGauge.setValue(offerQueues.size.toLong)
@@ -272,6 +348,11 @@ private[impl] class OfferMatcherManagerActor private (
     log.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
       s"${ResourceUtil.displayResources(data.offer.getResourcesList.to[Seq], maxRanges)} left.")
+  }
+
+  def completeWithNoMatch(reason: String, offer: Offer, promise: Promise[MatchedInstanceOps], resendThisOffer: Boolean): Unit = {
+    promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId, resendThisOffer))
+    log.info(s"No match for:${offer.getId.getValue} from:${offer.getHostname} reason:$reason")
   }
 }
 

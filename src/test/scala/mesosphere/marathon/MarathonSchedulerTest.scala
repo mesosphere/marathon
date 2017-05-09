@@ -25,7 +25,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
     val frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository]
     val mesosLeaderInfo: MutableMesosLeaderInfo = new MutableMesosLeaderInfo
     mesosLeaderInfo.onNewMasterInfo(MasterInfo.getDefaultInstance)
-    val config: AllConf = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
+    val config: AllConf = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
     val probe: TestProbe = TestProbe()
     val eventBus: EventStream = system.eventStream
     val taskStatusProcessor: TaskStatusUpdateProcessor = mock[TaskStatusUpdateProcessor]

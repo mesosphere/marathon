@@ -355,12 +355,11 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveProcessOffers: Receive = {
-    case ActorOfferMatcher.MatchOffer(deadline, offer, promise) if clock.now() >= deadline || !shouldLaunchInstances =>
-      val deadlineReached = clock.now() >= deadline
-      log.debug("ignoring offer, offer deadline {}reached. {}", if (deadlineReached) "" else "NOT ", status)
+    case ActorOfferMatcher.MatchOffer(offer, promise) if !shouldLaunchInstances =>
+      log.debug("Ignoring offer {}: {}", offer.getId.getValue, status)
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
-    case ActorOfferMatcher.MatchOffer(deadline, offer, promise) =>
+    case ActorOfferMatcher.MatchOffer(offer, promise) =>
       val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
       instanceOpFactory.matchOfferRequest(matchRequest) match {
