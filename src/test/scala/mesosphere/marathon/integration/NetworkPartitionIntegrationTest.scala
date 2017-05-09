@@ -34,7 +34,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
     "task_lost_expunge_gc" -> "30000",
     "task_lost_expunge_initial_delay" -> "1000",
     "task_lost_expunge_interval" -> "1000",
-    "zk_timeout" -> "2000"
+    "zk_timeout" -> "10000"
   )
 
   before {
@@ -83,11 +83,8 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
 
       And("Marathon is restarted by Systemd")
       // Simulate Systemd rebooting Marathon
-      marathonServer.start()
+      marathonServer.start().futureValue withClue ("Marathon did not come back up")
       waitForSSEConnect()
-      eventually {
-        marathonServer.isRunning should be(true)
-      } withClue ("Marathon did not come back up")
 
       Then("The task reappears as running")
       waitForEventMatching("Task is declared running again") {

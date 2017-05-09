@@ -172,7 +172,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       )
 
       When("we restart the app")
-      val newVersion = restartSuccessfully(app)
+      val newVersion = restartSuccessfully(app) withClue ("The app did not restart.")
       val all = allTasks(PathId(app.id))
 
       log.info("tasks after relaunch: {}", all.mkString(";"))
