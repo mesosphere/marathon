@@ -165,8 +165,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       Then("The pod is created")
       createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
-      // The timeout is 5 minutes because downloading and provisioning the Python image can take some time.
-      waitForDeployment(createResult, 600.seconds)
+      waitForDeployment(createResult)
       waitForPod(podId)
       check.pinged.set(false)
       eventually {
@@ -307,7 +306,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       Then("the deployment should be gone")
       waitForEvent("deployment_failed")
-      WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
+      WaitTestSupport.waitUntil("Deployments get removed from the queue") {
         marathon.listDeploymentsForBaseGroup().value.isEmpty
       }
 
@@ -337,7 +336,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Then("the deployment should be gone")
       waitForEvent("deployment_failed") // ScalePod
       waitForDeployment(deleteResult) // StopPod
-      WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
+      WaitTestSupport.waitUntil("Deployments get removed from the queue") {
         marathon.listDeploymentsForBaseGroup().value.isEmpty
       }
 

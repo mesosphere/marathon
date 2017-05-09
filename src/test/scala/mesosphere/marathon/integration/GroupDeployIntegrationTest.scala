@@ -4,11 +4,11 @@ package integration
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.http.scaladsl.model.DateTime
+import akka.http.scaladsl.model.StatusCodes._
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck }
 import mesosphere.marathon.raml.{ App, GroupUpdate, UpgradeStrategy }
 import mesosphere.marathon.state.{ Group, PathId }
-import akka.http.scaladsl.model.StatusCodes._
 
 import scala.concurrent.duration._
 
@@ -195,7 +195,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       When("A rollback to the first version is initiated")
       v1Checks.pinged.set(false)
-      waitForDeployment(marathon.rollbackGroup(gid, create.value.version), 120.seconds)
+      waitForDeployment(marathon.rollbackGroup(gid, create.value.version))
 
       Then("The rollback will be performed and the old version is available")
       eventually {

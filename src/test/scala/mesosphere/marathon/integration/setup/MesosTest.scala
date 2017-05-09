@@ -38,7 +38,7 @@ case class MesosLocal(
     numSlaves: Int = 1,
     autoStart: Boolean = true,
     config: MesosConfig = MesosConfig(),
-    waitForStart: FiniteDuration = 30.seconds)(implicit
+    waitForStart: FiniteDuration = 5.minutes)(implicit
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
@@ -157,7 +157,7 @@ case class MesosCluster(
     quorumSize: Int = 1,
     autoStart: Boolean = false,
     config: MesosConfig = MesosConfig(),
-    waitForLeaderTimeout: FiniteDuration = 30.seconds)(implicit
+    waitForLeaderTimeout: FiniteDuration = 5.minutes)(implicit
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
@@ -329,7 +329,7 @@ trait MesosTest {
 }
 
 object MesosTest {
-  def clean(client: MesosFacade, cleanTimeout: Duration = 30.seconds)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
+  def clean(client: MesosFacade, cleanTimeout: Duration = 5.minutes)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
     def teardown: Future[Done] =
       Retry("teardown marathon", maxDuration = cleanTimeout, minDelay = 0.25.second, maxDelay = 2.second) {
         Future.fold(client.frameworkIds().value.map(client.teardown(_).map { response =>

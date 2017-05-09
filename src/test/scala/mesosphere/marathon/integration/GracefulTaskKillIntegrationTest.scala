@@ -44,8 +44,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
 
       waitForEventWith(
         "status_update_event",
-        _.info("taskStatus") == "TASK_KILLED",
-        maxWait = taskKillGracePeriod.plus(2.seconds))
+        _.info("taskStatus") == "TASK_KILLED")
 
       val taskKilledReceivedTimestamp = System.currentTimeMillis()
       val waitedForTaskKilledEvent = (taskKilledReceivedTimestamp - taskKillSentTimestamp).milliseconds
@@ -77,8 +76,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
 
       waitForEventWith(
         "status_update_event",
-        _.info("taskStatus") == "TASK_KILLED",
-        maxWait = taskKillGracePeriod.plus(2.seconds))
+        _.info("taskStatus") == "TASK_KILLED")
 
       val taskKilledReceivedTimestamp = System.currentTimeMillis()
       val waitedForTaskKilledEvent = (taskKilledReceivedTimestamp - taskKillSentTimestamp).milliseconds

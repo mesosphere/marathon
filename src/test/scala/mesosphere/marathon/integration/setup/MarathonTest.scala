@@ -124,8 +124,14 @@ case class LocalMarathon(
   private lazy val processBuilder = {
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
-    val memSettings = s"-Xmx${Runtime.getRuntime.maxMemory()}"
-    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
+    val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
+      // lower the memory pressure by limiting threads.
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+      "-Dscala.concurrent.context.minThreads=2",
+      "-Dscala.concurrent.context.maxThreads=32",
+      s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
@@ -138,7 +144,7 @@ case class LocalMarathon(
       marathon = Some(create())
     }
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
-    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 90.seconds) {
+    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 5.minutes) {
       async {
         val result = await(Http().singleRequest(Get(s"http://localhost:$port/v2/leader")))
         result.discardEntityBytes() // forget about the body
@@ -244,7 +250,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
 
       implicit val unmarshal = new FromRequestUnmarshaller[Map[String, Any]] {
         override def apply(value: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[Map[String, Any]] = {
-          value.entity.toStrict(5.seconds)(materializer).map { entity =>
+          value.entity.toStrict(patienceConfig.timeout)(materializer).map { entity =>
             mapper.readValue[Map[String, Any]](entity.data.utf8String)
           }(ec)
         }

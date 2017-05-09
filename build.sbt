@@ -8,6 +8,7 @@ import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
 import sbt.Def
+import sbt.Tests.SubProcess
 
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
@@ -83,14 +84,28 @@ lazy val testSettings =
   parallelExecution in IntegrationTest := true,
   testForkedParallel in IntegrationTest := true,
   concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
-
+  javaOptions in (IntegrationTest, test) ++= Seq(
+    "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+    "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+    "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+    "-Dscala.concurrent.context.minThreads=2",
+    "-Dscala.concurrent.context.maxThreads=32"
+  ),
   fork in UnstableIntegrationTest := true,
   testOptions in UnstableIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable-integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in UnstableIntegrationTest := true,
-  testForkedParallel in UnstableIntegrationTest := true
+  testForkedParallel in UnstableIntegrationTest := true,
+    concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
+  javaOptions in (UnstableIntegrationTest, test) ++= Seq(
+    "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+    "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+    "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+    "-Dscala.concurrent.context.minThreads=2",
+    "-Dscala.concurrent.context.maxThreads=32"
+  )
 )
 
 lazy val commonSettings = testSettings ++

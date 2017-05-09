@@ -121,7 +121,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
 
       And("our app gets a backoff delay")
-      WaitTestSupport.waitUntil("queue item", 10.seconds) {
+      WaitTestSupport.waitUntil("queue item") {
         try {
           val queue: List[ITQueueItem] = marathon.launchQueue().value.queue
           queue should have size 1
@@ -570,7 +570,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val events: Map[String, Seq[CallbackEvent]] = waitForEvents(
         "api_post_event", "group_change_success", "deployment_info",
         "status_update_event", "status_update_event",
-        "deployment_success")(30.seconds)
+        "deployment_success")(patienceConfig.timeout)
 
       val Seq(apiPostEvent) = events("api_post_event")
       apiPostEvent.info("appDefinition").asInstanceOf[Map[String, Any]]("id").asInstanceOf[String] should be(appIdPath.toString)
@@ -648,7 +648,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("the deployment should be gone")
       waitForEvent("deployment_failed")
       waitForDeployment(delete)
-      WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
+      WaitTestSupport.waitUntil("Deployments get removed from the queue") {
         marathon.listDeploymentsForBaseGroup().value.isEmpty
       }
 

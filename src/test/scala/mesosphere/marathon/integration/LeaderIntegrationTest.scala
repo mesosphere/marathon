@@ -40,7 +40,7 @@ class NonDestructiveLeaderIntegrationTest extends LeaderIntegrationTest {
   "NonDestructiveLeader" should {
     "all nodes return the same leader" in {
       Given("a leader has been elected")
-      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+      WaitTestSupport.waitUntil("a leader has been elected") { marathon.leader().code == 200 }
 
       When("calling /v2/leader on all nodes of a cluster")
       val results = marathonFacades.map(marathon => marathon.leader())
@@ -54,7 +54,7 @@ class NonDestructiveLeaderIntegrationTest extends LeaderIntegrationTest {
 
     "all nodes return a redirect on GET /" in {
       Given("a leader has been elected")
-      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+      WaitTestSupport.waitUntil("a leader has been elected") { marathon.leader().code == 200 }
 
       When("get / on all nodes of a cluster")
       val results = marathonFacades.map { marathon =>
@@ -78,7 +78,7 @@ class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with 
   "LeaderAbdicationDeath" should {
     "the leader abdicates and dies when it receives a DELETE" in withMarathon("death-abdication") { (server, f) =>
       Given("a leader")
-      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
+      WaitTestSupport.waitUntil("a leader has been elected") {
         f.marathon.leader().code == 200
       }
       val leader = f.marathon.leader().value
@@ -113,7 +113,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
       for (_ <- 1 to 3) {
         Given("a leader")
-        WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
+        WaitTestSupport.waitUntil("a leader has been elected") { firstRunningProcess.client.leader().code == 200 }
 
         // pick the leader to communicate with because it's the only known survivor
         val leader = firstRunningProcess.client.leader().value
@@ -132,13 +132,13 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
         leadingProcess.stop() // already stopped, but still need to clear old state
 
         And("the leader must have changed")
-        WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+        WaitTestSupport.waitUntil("the leader changes") {
           val result = firstRunningProcess.client.leader()
           result.code == 200 && result.value != leader
         }
 
         And("all instances agree on the leader")
-        WaitTestSupport.waitUntil("all instances agree on the leader", 30.seconds) {
+        WaitTestSupport.waitUntil("all instances agree on the leader") {
           val results = runningServerProcesses.map(_.client.leader())
           results.forall(_.code == 200) && results.map(_.value).distinct.size == 1
         }
@@ -147,7 +147,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
         Thread.sleep((zkTimeout * 2.5).toLong)
 
         And("the old leader should restart just fine")
-        leadingProcess.start().futureValue(Timeout(60.seconds))
+        leadingProcess.start().futureValue
       }
     }
   }
