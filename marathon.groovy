@@ -1,6 +1,5 @@
 /**
- * The meat of a Jenkins build. Master/Release/Submit do use coverage,
- * for speed of development, review jobs do not.
+ * The meat of a Jenkins build.
  */
 
 GITTAG = ""
@@ -15,13 +14,13 @@ def gitTag() {
 
 def gitBranch() {
   if (GITBRANCH == "") {
-    GITBRANCH = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+    GITBRANCH = env.BRANCH_NAME
   }
   return GITBRANCH
 }
 
 def is_phabricator_build() {
-  return (env.REVISION_ID != null && !env.REVISION_ID.isEmpty())
+  return (env.REVISION_ID != null && env.REVISION_ID != "")
 }
 
 def is_submit_request() {
@@ -69,14 +68,6 @@ def phabricator(method, args) {
 // PHID is expected to be set as an environment variable
 def phabricator_test_results(status) {
   sh """jq -s add target/phabricator-test-reports/*.json | jq '{buildTargetPHID: "$PHID", type: "$status", unit: . }' | arc call-conduit harbormaster.sendmessage """
-  return this
-}
-
-// Archive test coverage data on Jenkins. With MARATHON-7271 the data will be
-// archived on S3.
-def archive_test_coverage(name, dir) {
-  archiveArtifacts artifacts: "${dir}/**", allowEmptyArchive: true
-  stash(name: "${name}-scoverage", include: "${dir}/scoverage-report/scoverage.csv")
   return this
 }
 
@@ -282,11 +273,7 @@ def compile_and_test() {
   try {
     withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
       withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-        if (is_master_or_release() || is_submit_request()) {
-          sh "sudo -E sbt clean scapegoat doc coverage testWithCoverageReport"
-        } else {
-          sh "sudo -E sbt clean scapegoat doc test"
-        }
+        sh "sudo -E sbt clean scapegoat doc test"
         sh """if git diff --quiet; then echo 'No format issues detected'; else echo 'Patch has Format Issues'; exit 1; fi"""
       }
     }
@@ -297,11 +284,6 @@ def compile_and_test() {
         },
         test_results: {
           junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
-        },
-        archive_coverage: {
-          if (is_master_or_release() || is_submit_request()) {
-            archive_test_coverage("Test", "target/test-coverage")
-          }
         }
     )
   }
@@ -312,23 +294,12 @@ def integration_test() {
     timeout(time: 60, unit: 'MINUTES') {
       withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
         withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-          if (is_master_or_release() || is_submit_request()) {
-            sh """sudo -E sbt '; clean; coverage; integration:testWithCoverageReport ' """
-          } else {
-            sh "sudo -E sbt integration:test"
-          }
+          sh "sudo -E sbt integration:test"
         }
       }
     }
   } finally {
-    parallel(
-        test_results: { junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml' },
-        coverage: {
-          if (is_master_or_release() || is_submit_request()) {
-            archive_test_coverage("integration test", "target/integration-coverage")
-          }
-        }
-    )
+    junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
   }
 }
 
@@ -342,11 +313,7 @@ def unstable_test() {
     timeout(time: 60, unit: 'MINUTES') {
       withCredentials([file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')]) {
         withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-          if (is_master_or_release() || is_submit_request()) {
-            sh "sudo -E sbt '; clean; coverage; unstable:testWithCoverageReport; unstable-integration:testWithCoverageReport' "
-          } else {
-            sh "sudo -E sbt unstable:test unstable-integration:test"
-          }
+          sh "sudo -E sbt unstable:test unstable-integration:test"
         }
       }
     }
@@ -360,12 +327,6 @@ def unstable_test() {
         },
         unstable_integration_results: {
           junit allowEmptyResults: true, testResults: 'target/test-reports/unstable/*.xml'
-        },
-        unstable_coverage: {
-          if (is_master_or_release() || is_submit_request()) {
-            archive_test_coverage("Unstable Test", "target/unstable-coverage")
-            archive_test_coverage("Unstable Integration Test", "target/unstable-integration-coverage")
-          }
         }
     )
   }
@@ -487,13 +448,7 @@ def publish_artifacts() {
 
 def package_binaries() {
   sh("sudo rm -f target/packages/*")
-  // master, release and submit request builds have coverage turned on.
-  // we don't want to accidentally publish coverage instrumented builds.
-  if (is_master_or_release() || is_submit_request()) {
-    sh("sudo sbt clean packageAll")
-  } else {
-    sh("sudo sbt packageAll")
-  }
+  sh("sudo sbt packageAll")
   return this
 }
 

@@ -5,7 +5,6 @@ properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKe
     [$class: 'GitLabConnectionProperty', gitLabConnection: ''],
     [$class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false],
     parameters([string(defaultValue: 'master', description: 'Branch to locate marathon.groovy from. This facilitates testing changes to the pipeline.', name: 'GROOVY_BRANCH'),
-        string(defaultValue: '', description: 'Branch to build, only used for Multi-branch pipeline builds.', name: 'BRANCH_NAME'),
         string(defaultValue: '', description: 'Phabricator Revision, e.g. D730 => 730, required for Phabricator and Submit Builds', name: 'REVISION_ID'),
         string(defaultValue: '', description: 'Phabricator Harbormaster object ID, required for Phabricator Builds', name: 'PHID'),
         string(defaultValue: '', description: 'Diff ID to build (which diff of D730, for example), required for Phabricator Builds', name: 'DIFF_ID'),
@@ -24,17 +23,5 @@ ansiColor('gnome-terminal') {
       m.checkout_marathon()
     }
     m.build_marathon()
-  }
-}
-if (m.is_master_or_release()) {
-  // We run the post request on a different node because the AWS nodes do not
-  // have access to the PostgREST endpoint. See QUALITY-1433 for request of a
-  // public endpoint.
-  node("ammonite-0.8.2") {
-    stage("Upload") {
-      unstash(name: "Test-scoverage")
-      sh """amm scripts/post_coverage_data.sc "http://postgrest.marathon.l4lb.thisdcos.directory/marathon_test_coverage" """
-      archiveArtifacts artifacts: 'target/test-coverage/scoverage-report/scoverage.csv', allowEmptyArchive: true
-    }
   }
 }
