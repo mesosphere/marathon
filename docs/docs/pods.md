@@ -71,7 +71,7 @@ Containers within a pod share ephemeral storage. Volumes are declared at the pod
 ### Pod Events and State
 
  When you update a pod that has already launched, the new version of the pod will only be available when redeployment is complete. If you query the system to learn which version is deployed before redeployment is complete, you may get the previous version as a response. The same is true for the status of a pod: if you update a pod, the change in status will not be reflected in a query until redeployment is complete.
- 
+
  History is permanently tied to `pod_id`. If you delete a pod and then reuse the ID, even if the details of the pod are different, the new pod will have the previous history (such as version information).
 
 ### Pod Definitions
@@ -141,6 +141,8 @@ Pods also support host volumes. A pod volume parameter can declare a `host` fiel
 	]
 }
 ```
+
+**Note:** Data does not persist if a pod is restarted.
 
 #### Containerizers
 
@@ -257,7 +259,7 @@ curl -X DELETE http://<ip>:<port>/v2/pods/<pod-id>
 ## Example Pod Definitions
 
 ### A Pod with Multiple Containers
-	
+
 The following pod definition specifies a pod with 3 containers.
 
 ```json
@@ -441,7 +443,7 @@ This pod adds a health check that references the “web” endpoint; mesos will 
 }
 ```
 
-### Comprehensive Pod 
+### Comprehensive Pod
 The following pod definition can serve as a reference to create more complicated pods. Information about the different properties can be found in the documentation for Marathon applications.
 
 ```json
@@ -567,4 +569,3 @@ The following pod definition can serve as a reference to create more complicated
 - Pods do not support readiness checks.
 
 - Killing any task of a pod will result in the suicide of the pod executor that owns the task, which means that all of the applications in that pod instance will die.
-
