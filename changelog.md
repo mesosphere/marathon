@@ -7,6 +7,7 @@ Bugfix release
 - [MARATHON-7267](https://jira.mesosphere.com/browse/MARATHON-7267) Enforce validation for pod container names
 - [DCOS-14890] Fix default scheme for HTTP health checks in pods
 - [DCOS-14303] Fix issue in which Marathon would fail to launch if hostname is not resolvable (but still specified from the command line)
+- [MARATHON-7320](https://jira.mesosphere.com/browse/MARATHON-7320) Fix MAX_PER constraint for attributes.
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release
