@@ -50,6 +50,7 @@ case class ITEnrichedTask(
     id: String,
     host: String,
     ports: Option[Seq[Int]],
+    slaveId: Option[String],
     startedAt: Option[Date],
     stagedAt: Option[Date],
     state: String,
@@ -118,11 +119,12 @@ class MarathonFacade(
     (__ \ "id").format[String] ~
     (__ \ "host").format[String] ~
     (__ \ "ports").formatNullable[Seq[Int]] ~
+    (__ \ "slaveId").formatNullable[String] ~
     (__ \ "startedAt").formatNullable[Date] ~
     (__ \ "stagedAt").formatNullable[Date] ~
     (__ \ "state").format[String] ~
     (__ \ "version").formatNullable[String]
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)

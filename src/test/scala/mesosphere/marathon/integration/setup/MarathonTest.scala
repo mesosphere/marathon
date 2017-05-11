@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
@@ -296,7 +296,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       }
     }
     val port = PortAllocator.ephemeralPort()
-    val server = Http().bindAndHandle(route, "localhost", port).futureValue
+    val server = Http().bindAndHandle(route, "0.0.0.0", port).futureValue
     logger.info(s"Listening for health events on $port")
     server
   }
@@ -325,7 +325,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     */
   def healthEndpointFor(appId: PathId, versionId: String): String = {
     val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
-    s"http://127.0.0.1:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId"
+    s"http://$$HOST:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId"
   }
 
   def appProxyHealthCheck(
@@ -375,8 +375,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       container = Some(raml.Container(
         `type` = raml.EngineType.Docker,
         docker = Some(raml.DockerContainer(
-          image = "python:3.4.6-alpine",
-          network = Some(raml.DockerNetwork.Host)
+          image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
           new AppVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
@@ -386,7 +385,8 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       cpus = 0.5,
       mem = 128,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies.map(_.toString)
+      dependencies = dependencies.map(_.toString),
+      networks = Seq(Network(mode = NetworkMode.Host))
     )
   }
 
