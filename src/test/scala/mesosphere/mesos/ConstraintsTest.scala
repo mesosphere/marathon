@@ -583,6 +583,50 @@ class ConstraintsTest extends UnitTest {
       assert(maxPerHostMet4, "Should meet max-per-host constraint.")
     }
 
+    "RackMaxPerConstraints" in {
+      val appId = PathId("/test")
+      val instance1_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 1.0))
+      val instance2_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 2.0))
+
+      var groupRack = Seq.empty[Instance]
+
+      val groupByRack = makeConstraint("rackid", Constraint.Operator.MAX_PER, "2")
+
+      val maxPerFreshRackMet1 = Constraints.meetsConstraint(
+        groupRack,
+        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
+        groupByRack)
+
+      assert(maxPerFreshRackMet1, "Should be able to schedule in fresh rack 1.")
+
+      groupRack ++= Set(instance1_rack1)
+
+      val maxPerFreshRackMet2 = Constraints.meetsConstraint(
+        groupRack,
+        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 2))),
+        groupByRack)
+
+      assert(maxPerFreshRackMet2, "Should be able to schedule in fresh rack 2.")
+
+      groupRack ++= Set(instance2_rack2)
+
+      val maxPerRackMet3 = Constraints.meetsConstraint(
+        groupRack,
+        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
+        groupByRack)
+
+      assert(maxPerRackMet3, "Should be able to schedule in rack 1.")
+
+      groupRack ++= Set(instance1_rack1)
+
+      val maxPerRackNotMet4 = Constraints.meetsConstraint(
+        groupRack,
+        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
+        groupByRack)
+
+      assert(!maxPerRackNotMet4, "Should not meet max_per constraint on rack 1.")
+    }
+
     "AttributesTypes" in {
       val appId = PathId("/test")
       val instance1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("foo" -> "bar"))
