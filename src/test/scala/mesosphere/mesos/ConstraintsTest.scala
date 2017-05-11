@@ -83,7 +83,7 @@ class ConstraintsTest extends UnitTest {
       result should have size 0
     }
 
-    "UniqueHostConstraint" in {
+    "UniqueHostConstraint with empty attributes" in {
       val appId = PathId("/test")
       val task1_host1 = makeInstanceWithHost(appId, "host1")
       val task2_host2 = makeInstanceWithHost(appId, "host2")
@@ -152,6 +152,13 @@ class ConstraintsTest extends UnitTest {
 
       assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
 
+      val clusterFreshRackMetWithMultipleAttributes = Constraints.meetsConstraint(
+        freshRack,
+        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"), TextAttribute("foo","oof"))),
+        clusterByRackId)
+
+      assert(clusterFreshRackMetWithMultipleAttributes, "Should be able to schedule in fresh rack.")
+
       val clusterRackMet = Constraints.meetsConstraint(
         sameRack,
         makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
@@ -207,6 +214,7 @@ class ConstraintsTest extends UnitTest {
       val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("jdk" -> "7"))
       val freshRack = Seq(task1_rack1, task2_rack1)
       val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.LIKE, "7")
+      val `jdk 7 and 8 constraint` = makeConstraint("jdk", Constraint.Operator.LIKE, "7|8")
 
       val likeVersionNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
@@ -214,11 +222,31 @@ class ConstraintsTest extends UnitTest {
         jdk7Constraint)
       assert(!likeVersionNotMet, "Should not meet like-version constraints.")
 
+      val likeVersionNotMetWithMultipleAttributes = Constraints.meetsConstraint(
+        freshRack, // list of tasks register in the cluster
+        makeOffer("foohost", Seq(TextAttribute("jdk", "6"),TextAttribute("jdk","5"))), // slave attributes
+        jdk7Constraint)
+      assert(!likeVersionNotMetWithMultipleAttributes, "Should not meet like-version constraints with multiple same key attributes.")
+
       val likeVersionMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
         makeOffer("foohost", Seq(TextAttribute("jdk", "7"))), // slave attributes
         jdk7Constraint)
       assert(likeVersionMet, "Should meet like-version constraints.")
+
+      val likeVersionMetWithMultipleAttributes  = Constraints.meetsConstraint(
+        freshRack, // list of tasks register in the cluster
+        makeOffer("foohost", Seq(TextAttribute("jdk", "7"),TextAttribute("jdk","8"))), // slave attributes
+        jdk7Constraint)
+      assert(!likeVersionMetWithMultipleAttributes, "Should not meet like-version constraints " +
+        "if there are same attributes with different value that does not satisfy the constraint.")
+
+      val likeVersionMetWithMultipleAttributesSameConstraint  = Constraints.meetsConstraint(
+        freshRack, // list of tasks register in the cluster
+        makeOffer("foohost", Seq(TextAttribute("jdk", "7"),TextAttribute("jdk","8"))), // slave attributes
+        `jdk 7 and 8 constraint`)
+      assert(likeVersionMetWithMultipleAttributesSameConstraint, "Should meet like-version constraints " +
+        "if there are same attributes with different value that does satisfy the constraint.")
 
       val likeNoAttributeNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
@@ -233,6 +261,7 @@ class ConstraintsTest extends UnitTest {
       val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("jdk" -> "7"))
       val freshRack = Seq(task1_rack1, task2_rack1)
       val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.UNLIKE, "7")
+      val `jdk 7 and 8 constraint` = makeConstraint("jdk", Constraint.Operator.UNLIKE, "7|8")
 
       val unlikeVersionMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
@@ -245,6 +274,18 @@ class ConstraintsTest extends UnitTest {
         makeOffer("foohost", Seq(TextAttribute("jdk", "7"))), // slave attributes
         jdk7Constraint)
       assert(!unlikeVersionNotMet, "Should not meet unlike-version constraints.")
+
+      val unlikeVersionNotMettWithMultipleAttributes = Constraints.meetsConstraint(
+        freshRack, // list of tasks register in the cluster
+        makeOffer("foohost", Seq(TextAttribute("jdk", "7"),TextAttribute("jdk","7"))), // slave attributes
+        jdk7Constraint)
+      assert(!unlikeVersionNotMettWithMultipleAttributes, "Should not meet multiple unlike-version constraints.")
+
+      val unlikeVersionNotMettWithMultipleAttributesSameConstraint = Constraints.meetsConstraint(
+        freshRack, // list of tasks register in the cluster
+        makeOffer("foohost", Seq(TextAttribute("jdk", "7"),TextAttribute("jdk", "8"))), // slave attributes
+        `jdk 7 and 8 constraint`)
+      assert(!unlikeVersionNotMettWithMultipleAttributesSameConstraint, "Should not meet unlike-version constraints.")
 
       val unlikeNoAttributeMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
