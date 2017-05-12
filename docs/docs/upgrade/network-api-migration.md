@@ -1,13 +1,15 @@
 ---
-title: Migrate to 1.5 Networking API
+title: Migrating to 1.5 Networking API
 ---
 
-# Overview
+# Migrating to 1.5 Networking API
+
+## Overview
 The networking section of the Marathon API has changed significantly in version 1.5. Marathon can still accept requests using the 1.4 version of the API, but it will always reply with the 1.5 version of the app definition. This WILL likely break applications that consume networking-related fields of the application definition.
 
 This document contains the high-level structural differences between the 1.4 and 1.5 API versions. You can read more details regarding the networking section and the correct values for every field in the [networking documentation]({{ site.baseurl }}/docs/networking.html).
 
-## Important notes
+### Important notes
 
 Marathon now supports applications attached to more than one network. However, additional applies when you specify more than one network:
 
@@ -26,26 +28,61 @@ Marathon now supports applications attached to more than one network. However, a
 ## Container Network (Virtual Network)
 The following table summarizes the API transformations when using the network API in Virtual Network Mode:
 
-| 1.4 API     	                       | 1.5 API     	|
-| ------------------------------------ |-------------	|
-| ```                                  |```                             |
-|  {                                   |{                               |
-|    "container": {                    |  "container": {                |
-|        "docker": {                   |    "portMappings": [           |
-|            "network": "USER",        |      {                         |
-|            "portMappings": [         |        "containerPort": 0,     |
-|              {                       |        "name": "<port-name>"   |
-|                "containerPort": 0,   |      }                         |
-|                "name": "<port-name>" |    ]                           |
-|              }                       |  },                            |
-|            ]                         |  "networks": [                 |
-|        }                             |    {                           |
-|    }                                 |      "mode": "container",      |
-|    "ipAddress": {                    |      "name": "<network-name>"  |
-|        "networkName": "<network-name>"  | }                           |
-|    }                                 |  ]                             |
-|}                                     |}                               |
-|``` 	                                 |```	                            |
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+        "container": {
+            "docker": {
+                "network": "USER",
+                "portMappings": [
+                  {
+                    "containerPort": 0,
+                    "name": "port-name"
+                  }
+                ]
+            }
+        }
+        "ipAddress": {
+            "networkName": "network-name"
+        }
+}
+      </pre>
+  </td>
+
+  <td>
+    <pre>
+{
+    “container”: {
+      "portMappings": [
+        {
+          "containerPort": 0,
+          "name": "port-name"
+        }
+      ]
+    },
+    "networks": [
+        {
+            "mode": "container",
+            "name": "network-name"
+        }
+    ]
+}
+      </pre>
+    </td>
+  </tr>
+  </tbody>
+</table>
 
 **Changes from 1.4 to 1.5**
 
@@ -67,61 +104,134 @@ The following table summarizes the API transformations when using the network AP
 
 The following table summarizes the changes when using single or multiple networks:
 
-| 1.5 API (Single Network)              | 1.5 API (Multiple Networks)           |
-| ------------------------------------- | ------------------------------------- |
-|```                                    |```                                    |
-|{                                      |{ “container”: {                       |
-|     “container”: {                    |   "portMappings": [                   |
-|      "portMappings": [                |     {                                 |
-|        {                              |       "containerPort": 0,             |
-|          "containerPort": 0,          |       "name": "<a-port-name>",        |
-|          "name": "<some port>"        |       “networkNames”: [“<network1>”]  |  
-|        }                              |     },                                |
-|      ]                                |     {                                 |
-|    },                                 |       "containerPort": 0,             |
-|    "networks": [                      |       "name": "<another-port-name>",  |
-|        {                              |       “networkNames”: [“<network2>”]  |
-|            "mode": "container",       |     }                                 |
-|            "name": "<network1>"       |   ]                                   |
-|        }                              | },                                    |
-|    ]                                  | "networks": [                         |
-|}                                      |   {                                   |
-|```                                    |     "mode": "container",              |
-|                                       |     "name": "<network1>"              |
-|                                       |   },                                  |
-|                                       |   {                                   |
-|                                       |     "mode": "container",              |
-|                                       |     "name": "<network2>"              |
-|                                       |   }                                   |
-|                                       |  ]                                    |
-|                                       |}                                      |
-|                                       |```                                    |
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.5 API (Single Network)</b>
+  </th>
+  <th>
+    <b>1.5 API (Multiple Networks)</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+    “container”: {
+      "portMappings": [
+        {
+          "containerPort": 0,
+          "name": "port-name"
+        }
+      ]
+    },
+    "networks": [
+        {
+            "mode": "container",
+            "name": "network-name-1"
+        }
+    ]
+}
+</pre>
+</td>
+
+<td>
+  <pre>
+{
+    “container”: {
+      "portMappings": [
+        {
+          "containerPort": 0,
+          "name": "a-port-name",
+          “networkNames”: [“network-name-1”]
+        },
+        {
+          "containerPort": 0,
+          "name": "another-port-name",
+          “networkNames”: [“network-name-2”]
+        }
+      ]
+    },
+    "networks": [
+        {
+            "mode": "container",
+            "name": "network-name-1"
+        },
+        {
+            "mode": "container",
+            "name": "network-name-2"
+        }
+    ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
 
 ## Bridge Network
 
 The following table summarizes the API transformations when using the network API in Bridge Mode:
 
-| 1.4 API                               | 1.5 API                               |
-| ------------------------------------- | ------------------------------------- |
-|```                                    |```                                    |  
-|{                                      |{                                      |
-|    "container": {                     | “container”: {                        |
-|        "docker": {                    |   "portMappings": [                   |
-|            "network": "BRIDGE",       |     {                                 |
-|            "portMappings": [          |       "containerPort": 0,             |
-|              {                        |       "hostPort": 0,                  |
-|                "containerPort": 0,    |       "name": "<port-name>"           |
-|                “hostPort”: 0,         |     }                                 |
-|                "name": "<port-name>"  |   ]                                   |
-|              }                        | },                                    |
-|            ]                          | "networks": [                         |
-|        }                              |   {                                   |
-|    }                                  |     "mode": "container/bridge"        |
-|    "ipAddress": {                     |   }                                   |
-|        "networkName": "<some name>"   | ]                                     |
-|    }                                  |}                                      |
-|}                                      |```                                    |
-|'''                                    |                                       |
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+    "container": {
+        "docker": {
+            "network": "BRIDGE",
+            "portMappings": [
+              {
+                "containerPort": 0,
+                “hostPort”: 0,
+                "name": "port-name"
+              }
+            ]
+        }
+    }
+    "ipAddress": {
+        "networkName": "network-name"
+    }
+}
+
+</pre>
+</td>
+
+<td>
+ <pre>
+
+ {
+    “container”: {
+      "portMappings": [
+        {
+          "containerPort": 0,
+          “hostPort”: 0,
+          "name": "port-name"
+        }
+      ]
+    },
+    "networks": [
+        {
+            "mode": "container/bridge"
+        }
+    ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
 
 **Changes from 1.4 to 1.5**
 
@@ -141,38 +251,73 @@ The following table summarizes the API transformations when using the network AP
 
 The following table summarizes the API transformations when using the network API in Host Mode:
 
-| 1.4 API                               | 1.5 API                               |
-| ------------------------------------- | ------------------------------------- |
-| ```                                   |```                                    |
-|{                                      |{                                      |
-|    "container": {                     |    “container”: {                     |
-|        “type”: “DOCKER”,              |        “type”: “DOCKER”,              |
-|        "docker": {                    |        “docker”: {                    |
-|            “image”: “foo”,            |            “image”: “foo”             |
-|            "network": "HOST"          |        }                              |
-|        }                              |    },                                 |
-|    }                                  |    "networks": [                      |
-|    "portDefinitions": [               |        {                              |
-|        {                              |            "mode": "host",            |
-|            "name": "<some name>",     |            "name": "<network-name>"   |
-|            "protocol" ...,            |        }                              |
-|            "port": ...                |    ],                                 |
-|        }                              |    "portDefinitions": [               |
-|    ]                                  |        {                              |
-|}                                      |            "name": "<port-name>",     |
-|```                                    |            "protocol" ...,            |
-|                                       |            "port": ...                |
-|                                       |        }                              |
-|                                       |    ]                                  |
-|                                       |}                                      |
-|                                       |```                                    |
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+    "container": {
+        “type”: “DOCKER”,
+        "docker": {
+            “image”: “foo”,
+            "network": "HOST"
+        }
+    }
+    "portDefinitions": [
+        {
+            "name": "port-name",
+            "protocol" ...,
+            "port": ...
+        }
+    ]
+}
+</pre>
+</td>
+
+<td>
+ <pre>
+ {
+    “container”: {
+        “type”: “DOCKER”,
+        “docker”: {
+            “image”: “foo”
+        }
+    },
+    "networks": [
+        {
+            "mode": "host",
+            "name": "network-name"
+        }
+    ],
+    "portDefinitions": [
+        {
+            "name": "port-name",
+            "protocol" ...,
+            "port": ...
+        }
+    ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
 
 **Changes from 1.4 to 1.5**
 
 - `container.docker.network` : Removed.
 - `portDefinitions` : Remains the same.
-- `networks` : Added.
-- `networks[x].mode` : Is “host” for Bridge Network.
+- `networks` : Added. Optional. Default is host mode.
+- `networks[x].mode` : Is `host` for Bridge Network.
 
 ### Important Notes
 
@@ -188,117 +333,229 @@ The following table summarizes the API transformations when using the network AP
 
 The following definitions WILL be accepted by the new API.
 
-| 1.4 API                               | 1.5 API                               |
-| ------------------------------------- | ------------------------------------- |
-|```                                    |```                                    |
-|{                                      |{                                      |
-|  "id": "user-net-old",                |  "id": "user-net-new",                |
-|  "cpus": 1,                           |  "cpus": 1,                           |
-|  "mem": 128,                          |  "mem": 128,                          |
-|  "instances": 1,                      |  "instances": 1,                      |
-|  "container": {                       |  "container": {                       |
-|    "type": "DOCKER",                  |    "type": "DOCKER",                  |
-|    "docker": {                        |    "docker": {                        |
-|      "network": "USER",               |      "image": "nginx"                 |
-|      "image": "nginx",                |    },                                 |
-|      "portMappings": [                |    "portMappings": [                  |
-|        {                              |      {                                |
-|          "containerPort": 80,         |        "containerPort": 80,           |
-|          "protocol": "tcp",           |        "protocol": "tcp",             |
-|          "name": "web"                |        "name": "web"                  |
-|        }                              |      }                                |
-|      ]                                |    ]                                  |
-|    }                                  |  },                                   |
-|  },                                   |  "networks": [                        |
-|  "ipAddress": {                       |    {                                  |
-|    "networkName": "dcos"              |      "mode": "container",             |
-|  }                                    |      "name": "dcos"                   |
-|}                                      |    }                                  |
-|```                                    |  ]                                    |
-|                                       |}                                      |
-|                                       |```                                    |
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+  "id": "user-net-old",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "network": "USER",
+      "image": "nginx",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp",
+          "name": "web"
+        }
+      ]
+    }
+  },
+  "ipAddress": {
+    "networkName": "dcos"
+  }
+}
+</pre>
+</td>
+
+<td>
+ <pre>
+ {
+  "id": "user-net-new",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx"
+    },
+    "portMappings": [
+      {
+        "containerPort": 80,
+        "protocol": "tcp",
+        "name": "web"
+      }
+    ]
+  },
+  "networks": [
+    {
+      "mode": "container",
+      "name": "dcos"
+    }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
 
 #### App with multiple container networks
 
 The following definition is now possible with the new API.
 
-| 1.4 API             | 1.5 API                              |
-| ------------------ | ------------------------------------- |
-| // Not supported.  |```                                    |
-|                    |{                                      |
-|                    |  "id": "user-net-multi",              |
-|                    |  "cpus": 1,                           |
-|                    |  "mem": 128,                          |
-|                    |  "instances": 1,                      |
-|                    |  "container": {                       |
-|                    |    "type": "MESOS",                   |
-|                    |    "docker": {                        |
-|                    |      "image": "nginx"                 |
-|                    |    },                                 |
-|                    |    "portMappings": [                  |
-|                    |      {                                |
-|                    |        "containerPort": 80,           |
-|                    |        "protocol": "tcp",             |
-|                    |        "name": "web",                 |
-|                    |        "networkNames": ["first"]      |
-|                    |      },                               |
-|                    |      {                                |
-|                    |        "containerPort": 81,           |
-|                    |        "protocol": "tcp",             |
-|                    |        "name": "admin",               |
-|                    |        "networkNames": ["second"]     |
-|                    |      }                                |
-|                    |    ]                                  |
-|                    |  },                                   |
-|                    |  "networks": [                        |
-|                    |    {                                  |
-|                    |      "mode": "container",             |
-|                    |      "name": "first"                  |
-|                    |    },                                 |
-|                    |    {                                  |
-|                    |      "mode": "container",             |
-|                    |      "name": "second"                 |
-|                    |     }                                 |
-|                    |  ]                                    |
-|                    |}                                      |
-|                    |```                                    |
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+//not supported
+      </pre>
+</td>
+
+<td>
+ <pre>
+ {
+  "id": "user-net-multi",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "MESOS",
+    "docker": {
+      "image": "nginx"
+    },
+    "portMappings": [
+      {
+        "containerPort": 80,
+        "protocol": "tcp",
+        "name": "web",
+        "networkNames": ["first"]
+      },
+      {
+        "containerPort": 81,
+        "protocol": "tcp",
+        "name": "admin",
+        "networkNames": ["second"]
+      }
+    ]
+  },
+  "networks": [
+    {
+      "mode": "container",
+      "name": "first"
+    },
+    {
+      "mode": "container",
+      "name": "second"
+    }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
 
 #### App with bridge network
 
-| 1.4 API                       | 1.5 API                              |
-| ----------------------------- |------------------------------------- |
-|```                            |```                                   |
-|{                              |{                                     |
-|  "id": "bridge-net-old",      |  "id": "bridge-net-new",             |
-|  "cpus": 1,                   |  "cpus": 1,                          |
-|  "mem": 128,                  |  "mem": 128,                         |
-|  "instances": 1,              |  "instances": 1,                     |
-|  "container": {               |  "container": {                      |
-|    "type": "DOCKER",          |    "type": "DOCKER",                 |
-|    "docker": {                |    "docker": {                       |
-|      "image": "nginx",        |      "image": "nginx"                |
-|      "network": "BRIDGE",     |    },                                |
-|      "portMappings": [        |    "portMappings": [                 |
-|        {                      |      {                               |
-|          "containerPort": 80, |        "containerPort": 80,          |
-|          “hostPort”: 0,       |        "hostPort": 0,                |
-|          "protocol": "tcp",   |        "protocol": "tcp",            |
-|         "name": "web"        }|        "name": "web"                 |
-|      ]                        |      }                               |
-|    }                          |    ]                                 |
-|  }                            |  },                                  |
-|}                              |  "networks": [                       |
-|```                            |    {                                 |
-|                               |      "mode": "container/bridge"      |
-|                               |    }                                 |
-|                               |  ]                                   |
-|                               |}                                     |
-|                               |```                                   |
-
-C.1.4. App with host network
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
+{
+  "id": "bridge-net-old",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          “hostPort”: 0,
+          "protocol": "tcp",
+          "name": "web"        }
+      ]
+    }
+  }
+}
+</pre>
+</td>
 
-1.4 API
-1.5 API
+<td>
+ <pre>
+ {
+  "id": "bridge-net-new",
+  "cpus": 1,
+  "mem": 128,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx"
+    },
+    "portMappings": [
+      {
+        "containerPort": 80,
+        "hostPort": 0,
+        "protocol": "tcp",
+        "name": "web"
+      }
+    ]
+  },
+  "networks": [
+    {
+      "mode": "container/bridge"
+    }
+  ]
+}
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
+
+#### App with host network
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.4 API</b>
+  </th>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
 {
   "id": "host-net-old",
   "cpus": 1,
@@ -319,10 +576,12 @@ C.1.4. App with host network
     }
   ]
 }
+</pre>
+</td>
 
-
-
-{
+<td>
+ <pre>
+ {
   "id": "host-net-new",
   "cpus": 1,
   "mem": 128,
@@ -346,15 +605,27 @@ C.1.4. App with host network
     }
   ]
 }
-
-
-
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
 
-C.2. Invalid Definitions
-C.2.1. Mixed Networks (Invalid)
-It’s not possible to mix network types
+### Invalid Definitions
 
-1.5 API
+#### Mixed Networks (Invalid)
+You cannot combine network types.
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
 {
   "id": "x-mixed-networks",
   "cpus": 1,
@@ -373,18 +644,32 @@ It’s not possible to mix network types
       "name": "web"
     }
   ],
-  "networks": [
+  "networks": [ // Invalid because network modes must be identical
     { "mode": "host" },
     { "mode": "container/bridge" }
   ]
 }
-
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
 
 
-C.2.2. Missing container network name (Invalid)
-It’s not possible to use a container network without giving a “name” property
+#### Missing container network name (Invalid)
 
-1.5 API
+You must supply a `name` property to use a container network unless you have configured Marathon with the `default_network_name` flag set.
+
+<table class="table">
+  <tbody>
+  <tr>
+  <th>
+    <b>1.5 API</b>
+  </th>
+  </tr>
+  <tr>
+    <td>
+      <pre>
 {
   "id": "x-missing-name",
   "cpus": 1,
@@ -403,7 +688,12 @@ It’s not possible to use a container network without giving a “name” prope
       "name": "web"
     }
   ],
-  "networks": [
+  "networks": [ // Invalid because the `networks.name` parameter is not supplied
     { "mode": "container" }
   ]
 }
+</pre>
+</td>
+</tr>
+</tbody>
+</table>
