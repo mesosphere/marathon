@@ -16,13 +16,13 @@ trait LaunchQueueConfig extends ScallopConf {
     "launch_queue_request_timeout",
     descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for requests to the launch queue actor.",
     hidden = true,
-    default = Some(1000))
+    default = Some(3000))
 
   lazy val taskOpNotificationTimeout = opt[Int](
     "task_operation_notification_timeout",
-    descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for matched task opereations to be accepted or rejected.",
+    descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for matched task operations to be accepted or rejected.",
     hidden = true,
-    default = Some(10000))
+    default = Some(30000))
 
   lazy val minimumViableTaskExecutionDuration: FiniteDuration = minimumViableTaskExecutionDurationMillis().millis
 }

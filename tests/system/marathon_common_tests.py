@@ -200,7 +200,7 @@ def test_docker_dns_mapping(marathon_service_name):
     status, output = shakedown.run_command_on_master(bad_cmd)
     assert not status
 
-    @retrying.retry(stop_max_delay=10000)
+    @retrying.retry(stop_max_attempt_number=30)
     def check_dns():
         cmd = 'ping -c 1 {}.{}.mesos'.format(app_id, marathon_service_name)
         shakedown.wait_for_dns('{}.{}.mesos'.format(app_id, marathon_service_name))
@@ -325,7 +325,7 @@ def test_bad_uri():
     client.add_app(app_def)
 
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=retry_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
@@ -528,12 +528,10 @@ def test_health_check_unhealthy():
 
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
     def check_failure_message():
         app = client.get_app('/unhealthy')
-        assert app['tasksRunning'] == 1
-        assert app['tasksHealthy'] == 0
-        assert app['tasksUnhealthy'] == 1
+        assert app['tasksRunning'] == 1 and app['tasksHealthy'] == 0 and app['tasksUnhealthy'] == 1
 
     check_failure_message()
 
@@ -976,38 +974,6 @@ def declined_offer_by_reason(offers, reason):
     return None
 
 
-@pytest.mark.usefixtures("event_fixture")
-def test_event_channel():
-    """ Tests the event channel.  The way events are verified is by streaming the events
-        to a test.txt file.   The fixture ensures the file is removed before and after the test.
-        events checked are connecting, deploying a good task and killing a task.
-    """
-    app_def = common.app_mesos()
-    app_id = app_def['id']
-
-    client = marathon.create_client()
-    client.add_app(app_def)
-    shakedown.deployment_wait()
-
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
-    def check_deployment_message():
-        status, stdout = shakedown.run_command_on_master('cat test.txt')
-        assert 'event_stream_attached' in stdout
-        assert 'deployment_info' in stdout
-        assert 'deployment_step_success' in stdout
-
-    check_deployment_message()
-    client.remove_app(app_id, True)
-    shakedown.deployment_wait()
-
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
-    def check_kill_message():
-        status, stdout = shakedown.run_command_on_master('cat test.txt')
-        assert 'Killed' in stdout
-
-    check_kill_message()
-
-
 def docker_env_set():
     return 'DOCKER_HUB_USERNAME' not in os.environ and 'DOCKER_HUB_PASSWORD' not in os.environ
 
@@ -1087,8 +1053,11 @@ def test_vip_mesos_cmd(marathon_service_name):
     client.add_app(app_def)
     shakedown.deployment_wait()
 
-    common.assert_http_code('{}:{}'.format(fqn, 10000))
+    @retrying.retry
+    def http_output_check(stop_max_attempt_number=30):
+        common.assert_http_code('{}:{}'.format(fqn, 10000))
 
+    http_output_check()
 
 @dcos_1_9
 def test_vip_docker_bridge_mode(marathon_service_name):
@@ -1115,7 +1084,11 @@ def test_vip_docker_bridge_mode(marathon_service_name):
     client.add_app(app_def)
     shakedown.deployment_wait()
 
-    common.assert_http_code('{}:{}'.format(fqn, 10000))
+    @retrying.retry
+    def http_output_check(stop_max_attempt_number=30):
+        common.assert_http_code('{}:{}'.format(fqn, 10000))
+
+    http_output_check()
 
 
 def get_container_pinger_app(name='pinger'):

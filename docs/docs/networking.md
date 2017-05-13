@@ -56,7 +56,9 @@ When using the Docker containerizer, this translates to the Docker "default brid
 
 ### Usage:
 
-* An application may join one or more `container` mode networks. When joining multiple container networks, additional restrictions are imposed on *port-mapping* entries (see *Port Mappings* for details).
+* An application may join one or more `container` mode networks, with caveats:
+    * Docker containerizer **does not support** multiple `container` mode networks (this limitation is imposed by Mesos).
+    * When joining multiple container networks, additional restrictions are imposed on *port-mapping* entries (see *Port Mappings* for details).
 * An application may only join one `host` mode network; this is the default if an app definition does not declare a `networks` field.
 * An application may only join one `container/bridge` network.
 * An application cannot mix networking modes: either specify a single `host` network, or; single `container/bridge` network, or; one or more `container` networks.

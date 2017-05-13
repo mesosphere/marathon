@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-@SerialIntegrationTest
+@IntegrationTest
 class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -121,7 +121,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
 
       And("our app gets a backoff delay")
-      WaitTestSupport.waitUntil("queue item", 10.seconds) {
+      WaitTestSupport.waitUntil("queue item") {
         try {
           val queue: List[ITQueueItem] = marathon.launchQueue().value.queue
           queue should have size 1
@@ -172,7 +172,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app")
       val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck))
-      val check = appProxyCheck(PathId(app.id), "v1", state = true)
+      val check = appProxyHealthCheck(PathId(app.id), "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -181,14 +181,17 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      check.pingSince(5.seconds) should be(true) //make sure, the app has really started
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
     }
 
     "create a simple app with a Mesos HTTP health check" in {
       Given("a new app")
       val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.MesosHttp)))
-      val check = appProxyCheck(app.id.toPath, "v1", state = true)
+      val check = appProxyHealthCheck(app.id.toPath, "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -197,7 +200,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      check.pingSince(5.seconds) should be(true) //make sure, the app has really started
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
     }
 
     "create a simple app with a Marathon HTTP health check using port instead of portIndex" in {
@@ -208,7 +214,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
           requirePorts = true,
           healthChecks = Set(ramlHealthCheck.copy(port = Some(31000), portIndex = None))
         )
-      val check = appProxyCheck(app.id.toPath, "v1", state = true)
+      val check = appProxyHealthCheck(app.id.toPath, "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -217,7 +223,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      check.pingSince(5.seconds) should be(true) //make sure, the app has really started
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
     }
 
     "create a simple app with a Marathon TCP health check" in {
@@ -289,7 +298,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     "an unhealthy app fails to deploy" in {
       Given("a new app that is not healthy")
       val id = appId()
-      appProxyCheck(id, "v1", state = false)
+      appProxyHealthCheck(id, "v1", state = false)
       val app = appProxy(id, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
 
       When("The app is deployed")
@@ -327,14 +336,17 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val before = marathon.tasks(id)
 
       When("The app is updated")
-      val check = appProxyCheck(id, "v2", state = true)
+      val check = appProxyHealthCheck(id, "v2", state = true)
       val update = marathon.updateApp(PathId(v1.id), AppUpdate(cmd = appProxy(id, "v2", 1).cmd))
 
       Then("The app gets updated")
       update.code should be(200)
       waitForDeployment(update)
       waitForTasks(id, before.value.size)
-      check.pingSince(5.seconds) should be(true) //make sure, the new version is alive
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
     }
 
     "update an app through patch request" in {
@@ -347,14 +359,17 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val before = marathon.tasks(appId)
 
       When("The app is updated")
-      val check = appProxyCheck(appId, "v2", state = true)
+      val check = appProxyHealthCheck(appId, "v2", state = true)
       val update = marathon.patchApp(v1.id.toPath, AppUpdate(cmd = appProxy(appId, "v2", 1).cmd))
 
       Then("The app gets updated")
       update.code should be (200)
       waitForDeployment(update)
       waitForTasks(appId, before.value.size)
-      check.pingSince(5.seconds) should be (true) //make sure, the new version is alive
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
 
       Then("Check if healthcheck is not updated")
       val appResult = marathon.app(appId)
@@ -555,7 +570,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val events: Map[String, Seq[CallbackEvent]] = waitForEvents(
         "api_post_event", "group_change_success", "deployment_info",
         "status_update_event", "status_update_event",
-        "deployment_success")(30.seconds)
+        "deployment_success")(patienceConfig.timeout)
 
       val Seq(apiPostEvent) = events("api_post_event")
       apiPostEvent.info("appDefinition").asInstanceOf[Map[String, Any]]("id").asInstanceOf[String] should be(appIdPath.toString)
@@ -633,7 +648,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("the deployment should be gone")
       waitForEvent("deployment_failed")
       waitForDeployment(delete)
-      WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
+      WaitTestSupport.waitUntil("Deployments get removed from the queue") {
         marathon.listDeploymentsForBaseGroup().value.isEmpty
       }
 

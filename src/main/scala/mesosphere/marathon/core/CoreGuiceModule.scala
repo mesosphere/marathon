@@ -146,7 +146,7 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
     coreModule.storageModule.frameworkIdRepository
 
   @Provides @Singleton
-  def RuntimeConfigurationRepository(coreModule: CoreModule): RuntimeConfigurationRepository =
+  def runtimeConfigurationRepository(coreModule: CoreModule): RuntimeConfigurationRepository =
     coreModule.storageModule.runtimeConfigurationRepository
 
   @Provides @Singleton

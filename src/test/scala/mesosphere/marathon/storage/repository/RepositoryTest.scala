@@ -23,7 +23,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   def randomAppId = UUID.randomUUID().toString.toRootPath
   def randomApp = AppDefinition(randomAppId, versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
 
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(10, Seconds))
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(30, Seconds))
 
   def basic(name: String, createRepo: () => Repository[PathId, AppDefinition]): Unit = {
     s"$name:unversioned" should {

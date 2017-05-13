@@ -420,7 +420,7 @@ trait AppValidation {
     */
   val complyWithDockerNetworkingRules: Validator[App] =
     conditional((app: App) => app.container.fold(false)(_.`type` == EngineType.Docker))(
-      isTrue("may only specify a single container network when using the Docker container engine"){
+      isTrue(AppValidationMessages.DockerEngineLimitedToSingleContainerNetwork){
         _.networks.count(_.mode == NetworkMode.Container) <= 1
       }
     )
@@ -515,4 +515,7 @@ object AppValidationMessages {
   // Note: we should keep this in sync with PodsValidationMessages
   val NetworkNameRequiredForMultipleContainerNetworks =
     "networkNames must be a single item list when hostPort is specified and more than 1 container network is defined"
+
+  val DockerEngineLimitedToSingleContainerNetwork =
+    "may only specify a single container network when using the Docker container engine"
 }

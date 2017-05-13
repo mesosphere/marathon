@@ -201,8 +201,7 @@ trait PodsValidation {
 }
 
 object PodsValidation extends PodsValidation {
-  // TODO: Change this value when mesos supports command checks for pods.
-  val MinCommandCheckMesosVersion = SemanticVersion(Int.MaxValue, Int.MaxValue, Int.MaxValue)
+  val MinCommandCheckMesosVersion = SemanticVersion(1, 3, 0)
 }
 
 object PodsValidationMessages {

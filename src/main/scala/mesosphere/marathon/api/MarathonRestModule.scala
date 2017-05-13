@@ -6,6 +6,7 @@ import javax.net.ssl.SSLContext
 
 import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
+import com.google.common.util.concurrent.{ AbstractIdleService, Service }
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer
 import mesosphere.chaos.http._
 import mesosphere.marathon.io.SSLContextUtil
@@ -82,4 +83,17 @@ class MarathonRestModule extends ServletModule {
   def provideRequestsLimiter(conf: MarathonConf): LimitConcurrentRequestsFilter = {
     new LimitConcurrentRequestsFilter(conf.maxConcurrentHttpConnections.get)
   }
+
+  @Provides
+  @Singleton
+  def provideHttpService(httpService: HttpService): MarathonHttpService =
+    /** As a workaround, we delegate to the chaos provided httpService, since we have no control over this type */
+    new AbstractIdleService with MarathonHttpService {
+      override def startUp(): Unit =
+        httpService.startUp()
+      override def shutDown(): Unit =
+        httpService.shutDown()
+    }
 }
+
+trait MarathonHttpService extends Service

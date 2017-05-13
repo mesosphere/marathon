@@ -24,7 +24,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
 
   class Fixture {
     val clock = ConstantClock()
-    val config = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
+    val config = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
     val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
     val taskTracker: InstanceTracker = mock[InstanceTracker]
     val fiveTen = UnreachableEnabled(inactiveAfter = 5.minutes, expungeAfter = 10.minutes)
@@ -51,7 +51,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
     val f = new Fixture
 
     val businessLogic = new ExpungeOverdueLostTasksActorLogic {
-      override val config: TaskJobsConfig = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
+      override val config: TaskJobsConfig = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
       override val clock: Clock = ConstantClock()
       override val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
       override def log = mock[LoggingAdapter]

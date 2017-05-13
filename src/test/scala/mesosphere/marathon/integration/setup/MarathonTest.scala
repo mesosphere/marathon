@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration.setup
 
 import java.io.File
+import java.net.{ URLDecoder, URLEncoder }
 import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -21,7 +22,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
@@ -92,6 +93,7 @@ case class LocalMarathon(
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
+    "zk_connection_timeout" -> 20.seconds.toMillis.toString,
     "zk_session_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
     "access_control_allow_origin" -> "*",
@@ -122,8 +124,14 @@ case class LocalMarathon(
   private lazy val processBuilder = {
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
-    val memSettings = s"-Xmx${Runtime.getRuntime.maxMemory()}"
-    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
+    val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
+      // lower the memory pressure by limiting threads.
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+      "-Dscala.concurrent.context.minThreads=2",
+      "-Dscala.concurrent.context.maxThreads=32",
+      s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
@@ -136,7 +144,7 @@ case class LocalMarathon(
       marathon = Some(create())
     }
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
-    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 90.seconds) {
+    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 5.minutes) {
       async {
         val result = await(Http().singleRequest(Get(s"http://localhost:$port/v2/leader")))
         result.discardEntityBytes() // forget about the body
@@ -228,6 +236,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
 
   protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
   protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
+  protected val readinessChecks = Lock(mutable.ListBuffer.empty[IntegrationReadinessCheck])
 
   /**
     * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
@@ -241,25 +250,41 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
 
       implicit val unmarshal = new FromRequestUnmarshaller[Map[String, Any]] {
         override def apply(value: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[Map[String, Any]] = {
-          value.entity.toStrict(5.seconds)(materializer).map { entity =>
+          value.entity.toStrict(patienceConfig.timeout)(materializer).map { entity =>
             mapper.readValue[Map[String, Any]](entity.data.utf8String)
           }(ec)
         }
       }
 
       get {
-        path("health" / Segments) { uriPath =>
+        path(Segment / Segment / IntNumber / "health") { (uriEncodedAppId, versionId, port) =>
           import PathId._
-          val (path, remaining) = uriPath.splitAt(uriPath.size - 2)
-          val (versionId, port) = (remaining.head, remaining.tail.head.toInt)
-          val appId = path.mkString("/").toRootPath
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
 
           def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId && c.port == port })
+
           def definition = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId && c.port == 0 })
+
           val state = instance.orElse(definition).fold(true)(_.healthy)
 
           logger.info(s"Received health check request: app=$appId, version=$versionId appMockPort=$port reply=$state")
           if (state) {
+            complete(HttpResponse(status = StatusCodes.OK))
+          } else {
+            complete(HttpResponse(status = StatusCodes.InternalServerError))
+          }
+        } ~ path(Segment / Segment / IntNumber / "ready") { (uriEncodedAppId, versionId, port) =>
+          import PathId._
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+
+          def check: Option[IntegrationReadinessCheck] = readinessChecks(_.find { c => c.appId == appId && c.versionId == versionId })
+
+          // An app is not ready by default to avoid race conditions.
+          val isReady = check.fold(false)(_.call)
+
+          logger.info(s"Received readiness check request: app=$appId, version=$versionId appMockPort=$port reply=$isReady")
+
+          if (isReady) {
             complete(HttpResponse(status = StatusCodes.OK))
           } else {
             complete(HttpResponse(status = StatusCodes.InternalServerError))
@@ -271,7 +296,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       }
     }
     val port = PortAllocator.ephemeralPort()
-    val server = Http().bindAndHandle(route, "localhost", port).futureValue
+    val server = Http().bindAndHandle(route, "0.0.0.0", port).futureValue
     logger.info(s"Listening for health events on $port")
     server
   }
@@ -291,8 +316,20 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     def toTestPath: PathId = testBasePath.append(path)
   }
 
+  /**
+    * Constructs the proper health proxy endpoint argument for the Python app mock.
+    *
+    * @param appId The app id whose health is checked
+    * @param versionId The version of the app
+    * @return URL to health check endpoint
+    */
+  def healthEndpointFor(appId: PathId, versionId: String): String = {
+    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
+    s"http://$$HOST:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId"
+  }
+
   def appProxyHealthCheck(
-    gracePeriod: FiniteDuration = 3.seconds,
+    gracePeriod: FiniteDuration = 1.seconds,
     interval: FiniteDuration = 1.second,
     maxConsecutiveFailures: Int = Int.MaxValue,
     portIndex: Option[Int] = Some(0)): AppHealthCheck =
@@ -311,7 +348,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
     val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
-      s"""$$PORT0 $appId $versionId http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$appId/$versionId""")
+      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 
     App(
       id = appId.toString,
@@ -328,8 +365,9 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
 
+    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
     val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-      s"""$$PORT0 $appId $versionId http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$appId/$versionId""")
+      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 
     App(
       id = appId.toString,
@@ -337,8 +375,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       container = Some(raml.Container(
         `type` = raml.EngineType.Docker,
         docker = Some(raml.DockerContainer(
-          image = "python:3.4.6-alpine",
-          network = Some(raml.DockerNetwork.Host)
+          image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
           new AppVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
@@ -348,7 +385,8 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       cpus = 0.5,
       mem = 128,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies.map(_.toString)
+      dependencies = dependencies.map(_.toString),
+      networks = Seq(Network(mode = NetworkMode.Host))
     )
   }
 
@@ -402,7 +440,16 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     logger.info("CLEAN UP finished !!!!!!!!!")
   }
 
-  def appProxyCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
+  /**
+    * Add an integration health check to internal health checks. The integration health check is used to control the
+    * health check replies for our app mock.
+    *
+    * @param appId The app id of the app mock
+    * @param versionId The version of the app mock
+    * @param state The initial health status of the app mock
+    * @return The IntegrationHealthCheck object which is used to control the replies.
+    */
+  def appProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
     val check = new IntegrationHealthCheck(appId, versionId, 0, state)
     healthChecks { checks =>
       checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
@@ -411,8 +458,25 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     check
   }
 
+  /**
+    * Adds an integration readiness check to internal readiness checks. The behaviour is similar to integration health
+    * checks.
+    *
+    * @param appId The app id of the app mock
+    * @param versionId The version of the app mock
+    * @return The IntegrationReadinessCheck object which is used to control replies.
+    */
+  def appProxyReadinessCheck(appId: PathId, versionId: String): IntegrationReadinessCheck = {
+    val check = new IntegrationReadinessCheck(appId, versionId, 0)
+    readinessChecks { checks =>
+      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
+      checks += check
+    }
+    check
+  }
+
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
-    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged }
+    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged.get }
   }
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {

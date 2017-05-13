@@ -3,7 +3,7 @@ package core.matcher.base
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.InstanceOp
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.PathId
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Future
@@ -69,14 +69,8 @@ trait OfferMatcher {
     *
     * The offer matcher can expect either a instanceOpAccepted or a instanceOpRejected call
     * for every returned `org.apache.mesos.Protos.TaskInfo`.
-    *
-    * If the matching cannot be processed within the deadline, an empty
-    * MatchedInstanceOps will be returned
-    *
-    *
-    * TODO(jdef) PODS ... 1:1 ratio between TaskInfo and instanceOpXXX may change?
     */
-  def matchOffer(now: Timestamp, deadline: Timestamp, offer: Mesos.Offer): Future[OfferMatcher.MatchedInstanceOps]
+  def matchOffer(offer: Mesos.Offer): Future[OfferMatcher.MatchedInstanceOps]
 
   /**
     * We can optimize the offer routing for different offer matcher in case there are reserved resources.

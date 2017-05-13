@@ -14,7 +14,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
-@SerialIntegrationTest
+@IntegrationTest
 class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   import Fixture._
@@ -172,7 +172,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       )
 
       When("we restart the app")
-      val newVersion = restartSuccessfully(app)
+      val newVersion = restartSuccessfully(app) withClue ("The app did not restart.")
       val all = allTasks(PathId(app.id))
 
       log.info("tasks after relaunch: {}", all.mkString(";"))

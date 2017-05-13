@@ -11,8 +11,6 @@ import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ ACL, Id }
 import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooDefs, ZooKeeper }
 
-import scala.concurrent.duration._
-
 @IntegrationTest
 class ZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
@@ -22,7 +20,7 @@ class ZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
       val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
       val zooKeeper = new ZooKeeper(zkServer.connectUri, 30 * 1000, watcher)
       try {
-        WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
+        WaitTestSupport.waitUntil("a leader has been elected") {
           marathon.leader().code == 200
         }
 
@@ -59,7 +57,7 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       try {
         Given("a leader has been elected")
-        WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
+        WaitTestSupport.waitUntil("a leader has been elected") {
           marathon.leader().code == 200
         }
 

@@ -165,6 +165,7 @@ class MesosFormatsTest extends UnitTest {
         |    "webui_dir": "/usr/share/mesos/webui",
         |    "work_dir": "/var/lib/mesos",
         |    "zk": "zk://localhost:2181/mesos",
+        |    "zk_connection_timeout": "10secs",
         |    "zk_session_timeout": "10secs"
         |  },
         |  "slaves": [

@@ -3,21 +3,17 @@ package integration
 
 import java.net.URL
 
+import akka.http.scaladsl.model.StatusCodes._
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyFilter }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
 import mesosphere.util.PortAllocator
-import akka.http.scaladsl.model.StatusCodes._
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
-
-import scala.concurrent.duration._
 
 /**
   * Tests forwarding requests.
   */
 @IntegrationTest
-@SerialIntegrationTest
 class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
   def withForwarder[T](testCode: ForwarderService => T): T = {
     val forwarder = new ForwarderService
@@ -30,7 +26,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
 
   "ForwardingToLeader" should {
     "direct ping" in withForwarder { forwarder =>
-      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val helloPort = forwarder.startHelloApp().futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = helloPort).futureValue
       assert(result.response.status.intValue == 200)
@@ -43,8 +39,8 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
     }
 
     "forwarding ping" in withForwarder { forwarder =>
-      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
-      val forwardPort = forwarder.startForwarder(helloPort).futureValue(Timeout(30.seconds))
+      val helloPort = forwarder.startHelloApp().futureValue
+      val forwardPort = forwarder.startForwarder(helloPort).futureValue
 
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort).futureValue
@@ -65,7 +61,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
         "--disable_http",
         "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
         "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-        "--https_address", "localhost")).futureValue(Timeout(30.seconds))
+        "--https_address", "localhost")).futureValue
 
       val pingURL = new URL(s"https://localhost:$helloPort/ping")
       val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.selfSignedSSLContext)
@@ -82,13 +78,13 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
         "--disable_http",
         "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
         "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-        "--https_address", "localhost")).futureValue(Timeout(30.seconds))
+        "--https_address", "localhost")).futureValue
 
       val forwardPort = forwarder.startForwarder(helloPort, "--https_port", args = Seq(
         "--disable_http",
         "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
         "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-        "--https_address", "localhost")).futureValue(Timeout(30.seconds))
+        "--https_address", "localhost")).futureValue
 
       val pingURL = new URL(s"https://localhost:$forwardPort/ping")
       val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.selfSignedSSLContext)
@@ -105,7 +101,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
         "--disable_http",
         "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
         "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-        "--https_address", "localhost")).futureValue(Timeout(30.seconds))
+        "--https_address", "localhost")).futureValue
 
       val forwardPort = forwarder.startForwarder(
         helloPort,
@@ -115,7 +111,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
           "--disable_http",
           "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
           "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-          "--https_address", "localhost")).futureValue(Timeout(30.seconds))
+          "--https_address", "localhost")).futureValue
 
       val pingURL = new URL(s"https://localhost:$forwardPort/ping")
       val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.caSignedSSLContext)
@@ -128,22 +124,22 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
     }
 
     "direct 404" in withForwarder { forwarder =>
-      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val helloPort = forwarder.startHelloApp().futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.custom("/notfound")("localhost", port = helloPort).futureValue
       assert(result.response.status.intValue == 404)
     }
 
     "forwarding 404" in withForwarder { forwarder =>
-      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
-      val forwardPort = forwarder.startForwarder(helloPort).futureValue(Timeout(30.seconds))
+      val helloPort = forwarder.startHelloApp().futureValue
+      val forwardPort = forwarder.startForwarder(helloPort).futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.custom("/notfound")("localhost", port = forwardPort).futureValue
       assert(result.response.status.intValue == 404)
     }
 
     "direct internal server error" in withForwarder { forwarder =>
-      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
+      val helloPort = forwarder.startHelloApp().futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.custom("/hello/crash")("localhost", port = helloPort).futureValue
       assert(result.response.status.intValue == 500)
@@ -151,8 +147,8 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
     }
 
     "forwarding internal server error" in withForwarder { forwarder =>
-      val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
-      val forwardPort = forwarder.startForwarder(helloPort).futureValue(Timeout(30.seconds))
+      val helloPort = forwarder.startHelloApp().futureValue
+      val forwardPort = forwarder.startForwarder(helloPort).futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.custom("/hello/crash")("localhost", port = forwardPort).futureValue
       assert(result.response.status.intValue == 500)
@@ -160,15 +156,15 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
     }
 
     "forwarding connection failed" in withForwarder { forwarder =>
-      val forwardPort = forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue(Timeout(30.seconds))
+      val forwardPort = forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort).futureValue
       assert(result.response.status.intValue == BadGateway.intValue)
     }
 
     "forwarding loop" in withForwarder { forwarder =>
-      val forwardPort1 = forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue(Timeout(30.seconds))
-      forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue(Timeout(30.seconds))
+      val forwardPort1 = forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue
+      forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue
 
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort1).futureValue

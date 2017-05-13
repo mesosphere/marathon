@@ -70,6 +70,47 @@ Please find our [API documentation](https://mesosphere.github.io/marathon/api-co
 The events subscribers endpoint (`/v2/eventSubscribers`) was deprecated in Marathon 1.4 and is removed in this version.
 Please move to the `/v2/events` endpoint instead.
 
+#### Removed command line parameters
+- The command line flag `max_tasks_per_offer` has been deprecated since 1.4 and is removed now. Please use `max_instances_per_offer`.
+
+#### Deprecated command line parameters
+- The command line flag `save_tasks_to_launch_timeout` is deprecated and has no effect any longer.
+
+### New Features
+
+#### Networking Improvements Involving Multiple Container Networks
+
+The field `networkNames` has been added to [app container's ContainerPortMapping](docs/docs/rest-api/public/api/v2/types/appContainer.raml) and [pod's Endpoint](docs/docs/rest-api/public/api/v2/types/network.raml). Using the field, an app or pod participating in multiple container networks can now forward ports by specifying a single item `networkNames`. For more information, see the [networking documentation](./docs/docs/networking.md).
+
+Additionally container port discovery has been improved, with a pod or app being able specify with which container network(s) a port name/protocol/etc is associated. Discovery labels are now generated for container networks associated with ports.
+
+#### Mesos Bridge Network Name Configurable
+
+The CNI network used for Mesos containers when bridge networking is now configurable via the command-line argument `--mesos_bridge_name`. As with other command-line-args, this can also be specified via `MARATHON_MESOS_BRIDGE_NAME`, as well.
+
+#### Backup and Restore Operations
+
+You can now backup and restore Marathon's internal state via the [DELETE /v2/leader](./docs/docs/rest-api/public/api/v2/leader.raml) API endpoint.
+
+See [MARATHON-7041](https://jira.mesosphere.com/browse/MARATHON-7041)
+
+#### TTY support
+
+You can now specify that a TTY should be allocated for app or pod containers. See the [TTY definition](./docs/docs/rest-api/public/api/v2/types/containerCommons.raml). An example can be found in [v2/examples/app.json](./docs/docs/rest-api/public/api/v2/examples/app.json).
+
+See [MARATHON-7062](https://jira.mesosphere.com/browse/MARATHON-7062)
+
+#### Improved Validation Error Messages
+
+All validation specified in the RAML is now programatically enforced, leading to more consistent, descriptive, and legible error messages.
+
+#### Security improvements
+
+Marathon is in better compliance with various security best-practices. An example of this is that Marathon no longer responds to the directory listing request.
+
+### Fixed issues
+- [MARATHON-7320](https://jira.mesosphere.com/browse/MARATHON-7320) Fix MAX_PER constraint for attributes.
+
 ------------------------------------------------------------
 
 ## Changes from 1.4.1 to 1.4.2

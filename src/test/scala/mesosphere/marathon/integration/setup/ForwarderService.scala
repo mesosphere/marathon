@@ -66,7 +66,14 @@ class ForwarderService {
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val uuid = UUID.randomUUID().toString
     uuids(_ += uuid)
-    val cmd = Seq(java, s"-DforwarderUuid:$uuid", "-classpath", cp, "-Xmx256M", "-client") ++ trustStore ++ Seq("mesosphere.marathon.integration.setup.ForwarderService") ++ args
+    val cmd = Seq(java, "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
+      // lower the memory pressure by limiting threads.
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+      "-Dscala.concurrent.context.minThreads=2",
+      "-Dscala.concurrent.context.maxThreads=32",
+      s"-DforwarderUuid:$uuid", "-classpath", cp, "-Xmx256M", "-client") ++ trustStore ++ Seq("mesosphere.marathon.integration.setup.ForwarderService") ++ args
     val up = Promise[Done]()
     val log = new ProcessLogger {
       def checkUp(s: String) = {

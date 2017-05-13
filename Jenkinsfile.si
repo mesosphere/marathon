@@ -46,7 +46,7 @@ node('shakedown') {
                 --timeout ${timeout} \
                 --pytest-option "--junitxml=shakedown.xml" \
                 --ssh-key-file \"${CLI_TEST_SSH_KEY}\" \
-                --dcos-url $params.dcos_url tests/system
+                --dcos-url $params.dcos_url tests/system/test_marathon_root.py tests/system/test_marathon_universe.py
                """
           } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'

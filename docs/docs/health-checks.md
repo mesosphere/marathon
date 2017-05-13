@@ -121,6 +121,9 @@ the reachability from the current Marathon leader. `MESOS_HTTP`,
 `MESOS_HTTPS`, `MESOS_TCP` and `COMMAND` health checks are locally
 executed by Mesos on the agent running the corresponding task.
 
+**Note:** We strongly recommend Mesos-based health checks over Marathon-based health checks.
+Marathon-based health checks are deprecated and will be removed in a future version. See the [1.4.0 release notes](https://github.com/mesosphere/marathon/releases/tag/v1.4.0) for more information.
+
 Options applicable to every protocol:
 
 * `gracePeriodSeconds` (Optional. Default: 300): Health check failures are

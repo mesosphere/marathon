@@ -123,7 +123,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val containerDir = "/opt/marathon"
 
       def appMockCommand(port: String) = """echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-        s"""$port $podId v1 http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$podId/v1"""
+        s"""$port $podId v1 ${healthEndpointFor(podId, "v1")}"""
 
       val pod = PodDefinition(
         id = podId,
@@ -158,17 +158,19 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         instances = 1
       )
 
-      val check = appProxyCheck(pod.id, "v1", state = true)
+      val check = appProxyHealthCheck(pod.id, "v1", state = true)
 
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)
 
       Then("The pod is created")
       createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
-      // The timeout is 5 minutes because downloading and provisioning the Python image can take some time.
-      waitForDeployment(createResult, 600.seconds)
+      waitForDeployment(createResult)
       waitForPod(podId)
-      check.pingSince(20.seconds) should be(true) //make sure, the app has really started
+      check.pinged.set(false)
+      eventually {
+        check.pinged.get should be(true) withClue "App did not start"
+      }
 
       When("The pod definition is changed")
       val updatedPod = pod.copy(
@@ -304,7 +306,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       Then("the deployment should be gone")
       waitForEvent("deployment_failed")
-      WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
+      WaitTestSupport.waitUntil("Deployments get removed from the queue") {
         marathon.listDeploymentsForBaseGroup().value.isEmpty
       }
 
@@ -334,7 +336,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Then("the deployment should be gone")
       waitForEvent("deployment_failed") // ScalePod
       waitForDeployment(deleteResult) // StopPod
-      WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
+      WaitTestSupport.waitUntil("Deployments get removed from the queue") {
         marathon.listDeploymentsForBaseGroup().value.isEmpty
       }
 
