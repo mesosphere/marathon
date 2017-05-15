@@ -9,7 +9,7 @@ import scala.util.control.NonFatal
  * and installs it.
  */
 @main
-def main(): Unit = {
+def installMesos(): Unit = {
   // Find Mesos version
   val versionPattern = """.*MesosDebian = "(.*)"""".r
   val maybeVersion =
@@ -32,5 +32,36 @@ def main(): Unit = {
       }
       println(s"Successfully installed Mesos $version!")
     case None => throw new IllegalStateException("Could not determine Mesos version.")
+  }
+}
+
+/**
+ * Kill stale processes from previous pipeline runs.
+ */
+@main
+def killStaleTestProcesses(): Unit = {
+  val stuffToKill = %%('ps, 'aux).out.lines.filter { proc =>
+    (proc.contains("app_mock") || proc.contains("mesos") || proc.contains("java")) &&
+      !(proc.contains("slave.jar") || proc.contains("grep") || proc.contains("amm"))
+  }
+
+
+
+  if (stuffToKill.isEmpty) {
+    println("No junk processes detected")
+  } else {
+    println("This requires root permissions. If you run this on a workstation it'll kill more than you expect.")
+    println()
+    println(s"Will kill:")
+    stuffToKill.foreach( p => println(s"  $p"))
+
+    val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
+
+    val pids = stuffToKill.map {
+      case pidPattern(_, pid) => pid
+    }
+
+    println(s"Running 'sudo kill -9 ${pids.mkString(" ")}")
+    %('sudo, 'kill, "-9", pids)
   }
 }

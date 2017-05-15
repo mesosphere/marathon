@@ -1,0 +1,26 @@
+#!/usr/bin/env amm
+
+import ammonite.ops._
+import ammonite.ops.ImplicitWd._
+
+import $file.provision
+
+/**
+ * The pipeline target for Phabricator builds. It triggers the Jenkins target
+ * and does some additional reporting to Phabricator.
+ */
+@main
+def phabricator(): Unit = {
+  jenkins()
+}
+
+/**
+ * The main pipeline target for builds on Jekins.
+ */
+@main
+def jenkins(): Unit = {
+  provision.killStaleTestProcesses()
+  provision.installMesos()
+
+  %('sbt, 'clean, 'test)
+}
