@@ -123,6 +123,7 @@ object ForwarderService {
       val electionService = new ElectionService {
         override def isLeader: Boolean = elected
         override def leaderHostPort: Option[String] = leader
+        override def localHostPort: String = ???
 
         def offerLeadership(candidate: ElectionCandidate): Unit = ???
         def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = ???

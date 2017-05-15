@@ -37,6 +37,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       ) {
         override protected def offerLeadershipImpl(): Unit = ???
         override def leaderHostPortImpl: Option[String] = ???
+        override def localHostPort: String = ???
       }
 
       electionService.state should equal(Idle(candidate = None))
@@ -49,6 +50,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       ) {
         override protected def offerLeadershipImpl(): Unit = ()
         override def leaderHostPortImpl: Option[String] = ???
+        override def localHostPort: String = ???
       }
 
       Given("leadership is offered")
@@ -70,6 +72,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       ) {
         override protected def offerLeadershipImpl(): Unit = ()
         override def leaderHostPortImpl: Option[String] = ???
+        override def localHostPort: String = ???
       }
 
       Given("leadership is offered")
@@ -85,6 +88,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       ) {
         override protected def offerLeadershipImpl(): Unit = ()
         override def leaderHostPortImpl: Option[String] = ???
+        override def localHostPort: String = ???
       }
 
       Given("leadership is abdicated while not being leader")
@@ -122,6 +126,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       ) {
         override protected def offerLeadershipImpl(): Unit = ()
         override def leaderHostPortImpl: Option[String] = ???
+        override def localHostPort: String = ???
       }
 
       Given("leadership is offered, immediately abdicated and then offered again")
@@ -144,6 +149,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
           startLeadership(_ => stopLeadership())
         }
         override def leaderHostPortImpl: Option[String] = ???
+        override def localHostPort: String = ???
       }
 
       Given("this instance is becoming leader")
@@ -171,6 +177,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       ) {
         override protected def offerLeadershipImpl(): Unit = () // do not call startLeadership here
         override def leaderHostPortImpl: Option[String] = ???
+        override def localHostPort: String = ???
       }
 
       Given("this instance is becoming leader and then abdicating with reoffer=true")
@@ -194,6 +201,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
           startLeadership(_ => stopLeadership())
         }
         override def leaderHostPortImpl: Option[String] = ???
+        override def localHostPort: String = ???
       }
 
       Mockito.when(f.candidate.startLeadership()).thenAnswer(new Answer[Unit] {
@@ -229,6 +237,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
         override def leaderHostPortImpl: Option[String] = {
           throw new Exception("leaderHostPortImpl exception")
         }
+        override def localHostPort: String = ???
       }
 
       When("querying for leaderHostPort")
