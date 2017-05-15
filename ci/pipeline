@@ -5,6 +5,11 @@ import ammonite.ops.ImplicitWd._
 
 import $file.provision
 
+@main
+def compileAndTest(): Unit = {
+  %('sbt, 'clean, 'test, "integration:test", 'scapegoat)
+}
+
 /**
  * The pipeline target for Phabricator builds. It triggers the Jenkins target
  * and does some additional reporting to Phabricator.
@@ -22,5 +27,5 @@ def jenkins(): Unit = {
   provision.killStaleTestProcesses()
   provision.installMesos()
 
-  %('sbt, 'clean, 'test)
+  compileAndTest()
 }
