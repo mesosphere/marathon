@@ -2,9 +2,14 @@
 
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
+import scala.util.control.NonFatal
 
+import $file.phabricatorClient
 import $file.provision
 
+/**
+ * Compile Marathon and run unit and integration tests followed by scapegoat.
+ */
 @main
 def compileAndTest(): Unit = {
   %('sbt, 'clean, 'test, "integration:test", 'scapegoat)
@@ -16,7 +21,19 @@ def compileAndTest(): Unit = {
  */
 @main
 def phabricator(): Unit = {
-  jenkins()
+  val diffId: String = sys.env.getOrElse("DIFF_ID", throw new IllegalArgumentException("No DIFF_ID was defined."))
+  val revisionId: String = sys.env.getOrElse("REVISION_ID", throw new IllegalArgumentException("No REVISION_ID was defined."))
+  val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
+  val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
+
+  try {
+    jenkins()
+    phabricatorClient.reportSuccess(diffId, revisionId, buildUrl, buildTag)
+  } catch {
+    case NonFatal(e) =>
+      phabricatorClient.reportFailure(diffId, revisionId, buildUrl, buildTag, e.getMessage())
+      throw e
+  }
 }
 
 /**
