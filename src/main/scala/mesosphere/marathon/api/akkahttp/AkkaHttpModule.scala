@@ -5,6 +5,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.AbstractModule
 import com.google.inject.{ Provides, Scopes, Singleton }
+import com.typesafe.config.Config
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.MarathonHttpService
 import mesosphere.marathon.core.appinfo._
@@ -25,6 +26,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
   @SuppressWarnings(Array("MaxParameters"))
   def provideAkkaHttpMarathonService(
     clock: Clock,
+    config: Config,
     eventBus: EventStream,
     appInfoService: AppInfoService,
     groupManager: GroupManager,
@@ -47,9 +49,12 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
       groupManager = groupManager,
       pluginManager = pluginManager)
 
+    val systemController = new SystemController(config)
+
     val v2Controller = new V2Controller(appsController)
     new AkkaHttpMarathonService(
       conf,
+      systemController,
       v2Controller)
   }
 }
