@@ -14,7 +14,7 @@ import akka.stream.alpakka.s3.impl.MetaHeaders
 import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.scaladsl.{ FileIO, Source, Sink => ScalaSink }
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
+import akka.Done
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord.Validator
@@ -47,18 +47,18 @@ object UriIO extends StrictLogging {
     * @param uri the uri to read from
     * @return A source for reading the specified uri.
     */
-  def reader(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer): Source[ByteString, NotUsed] = {
+  def reader(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext): Source[ByteString, Future[Done]] = {
     uri.getScheme match {
       case "file" =>
         FileIO
           .fromPath(Paths.get(uri.getPath))
-          .mapMaterializedValue(_ => NotUsed)
+          .mapMaterializedValue(_.map(res => res.status.getOrElse(throw res.getError)))
       case "s3" =>
         s3Client(uri)
           .download(uri.getHost, uri.getPath.substring(1))
+          .mapMaterializedValue(_ => Future.successful(Done))
       case unknown => throw new RuntimeException(s"Scheme not supported: $unknown")
     }
-
   }
 
   /**
@@ -71,7 +71,7 @@ object UriIO extends StrictLogging {
       case "file" =>
         FileIO
           .toPath(Paths.get(uri.getPath))
-          .mapMaterializedValue(_.map(_ => Done))
+          .mapMaterializedValue(_.map(res => res.status.getOrElse(throw res.getError)))
       case "s3" =>
         logger.info(s"s3location: bucket:${uri.getHost}, path:${uri.getPath}")
 
