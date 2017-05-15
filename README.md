@@ -231,6 +231,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [VANAD Enovation](http://www.vanadenovation.nl/)
 * [Viadeo](http://www.viadeo.com)
 * [Wikia](http://www.wikia.com/Wikia)
+* [William Hill](https://www.williamhill.com)
 * [WooRank](https://www.woorank.com/)
 * [Yelp](http://www.yelp.com/)
 
