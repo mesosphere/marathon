@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 
 class AkkaHttpMarathonService(
     config: MarathonConf with HttpConf,
+    systemController: SystemController,
     v2Controller: V2Controller
 )(
     implicit
@@ -50,9 +51,10 @@ class AkkaHttpMarathonService(
       }
 
   val route: Route = {
-    pathPrefix("v2") {
-      v2Controller.route
-    }
+    systemController.route ~
+      pathPrefix("v2") {
+        v2Controller.route
+      }
   }
 
   override def startUp(): Unit = synchronized {

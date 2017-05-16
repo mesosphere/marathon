@@ -52,6 +52,8 @@ class CuratorElectionService(
     }
   }
 
+  override def localHostPort: String = hostPort
+
   override def leaderHostPortImpl: Option[String] = synchronized {
     if (client.getState() == CuratorFrameworkState.STOPPED) None
     else {

@@ -51,6 +51,7 @@ object Dependencies {
     akkaHttpPlayJson % "compile",
     alpakkaS3 % "compile",
     commonsCompress % "compile", // used for tar flow
+    akkaSse % "compile",
 
 
     // test
@@ -62,7 +63,6 @@ object Dependencies {
     Test.scalacheck % "test",
     Test.wixAccordScalatest % "test",
     Test.curatorTest % "test",
-    Test.akkaSse % "test",
     Test.commonsIO % "test"
   ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
@@ -88,6 +88,7 @@ object Dependency {
     val MesosDebian = "1.2.0-2.0.6"
     val OpenJDK = "openjdk:8u121-jdk"
     val Akka = "2.4.17"
+    val AkkaSSE = "2.0.0"
     val ApacheCommonsCompress = "1.13"
     val ApacheCommonsIO = "2.4"
     val AsyncAwait = "0.9.6"
@@ -157,6 +158,7 @@ object Dependency {
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
+  val akkaSse = "de.heikoseeberger" %% "akka-sse" % V.AkkaSSE
 
   object Kamon {
     val Version = "0.6.5"
@@ -188,7 +190,6 @@ object Dependency {
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
     val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
-    val akkaSse = "de.heikoseeberger" %% "akka-sse" % "2.0.0"
     val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   }
 }
