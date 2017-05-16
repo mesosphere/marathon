@@ -193,3 +193,51 @@ def test_external_volume():
         # and the volume should be cleaned up manually later.
         if not result:
             print('WARNING: Failed to remove external volume with name={}: {}'.format(volume_name, output))
+
+
+# Backup and restore meeting is done with only one master since new master has to be able
+# to read the backup file that was created by the previous master and the easiest way to
+# test it is when there is 1 master
+@pytest.mark.skipif('common.multi_master()')
+def test_marathon_backup_and_restore_leader(marathon_service_name):
+
+    backup_file = 'backup.tar'
+    backup_dir = '/tmp'
+    backup_url = 'file://{}/{}'.format(backup_dir, backup_file)
+
+    # Deploy a simple test app. It is expected to be there after leader reelection
+    client = marathon.create_client()
+    app_def = {
+        "id": "/sleep",
+        "instances": 1,
+        "cpus": 0.01,
+        "mem": 32,
+        "cmd": "sleep 100000"
+    }
+
+    app_id = app_def['id']
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 1
+    task_id = app['tasks'][0]['id']
+
+    # Abdicate the leader with backup and restore
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+    url = 'v2/leader?backup={}&restore={}'.format(backup_url, backup_url)
+    print('DELETE {}'.format(url))
+    common.delete_marathon_path(url)
+
+    # Wait for new leader (but same master server) to be up and ready
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 1
+    assert task_id == app['tasks'][0]['id'], "Task has a different Id after restore"
+
+    # Check if the backup file exits and is valid
+    cmd = 'tar -tf {}/{} | wc -l'.format(backup_dir, backup_file)
+    run, data = shakedown.run_command_on_master(cmd)
+    assert run, 'Failed to validate backup file {}'.format(backup_url)
+    assert int(data.rstrip()) > 0, "Backup file is empty"

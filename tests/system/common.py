@@ -122,31 +122,31 @@ def python_http_app():
 def nginx_with_ssl_support():
     return {
         "id": "/web-server",
-		"instances": 1,
-		"cpus": 1,
-		"mem": 128,
-		"container": {
-			"type": "DOCKER",
-			"docker": {
-				"image": "mesosphere/simple-docker:with-ssl",
-				"network": "BRIDGE",
-				"portMappings": [
-					{
-						"containerPort": 80,
-						"hostPort": 0,
-						"protocol": "tcp",
-						"name": "http"
-					},
-					{
-						"containerPort": 443,
-						"hostPort": 0,
-						"protocol": "tcp",
-						"name": "https"
-					}
-				]
-			}
-		}
-	}
+  "instances": 1,
+  "cpus": 1,
+  "mem": 128,
+  "container": {
+   "type": "DOCKER",
+   "docker": {
+    "image": "mesosphere/simple-docker:with-ssl",
+    "network": "BRIDGE",
+    "portMappings": [
+     {
+      "containerPort": 80,
+      "hostPort": 0,
+      "protocol": "tcp",
+      "name": "http"
+     },
+     {
+      "containerPort": 443,
+      "hostPort": 0,
+      "protocol": "tcp",
+      "name": "https"
+     }
+    ]
+   }
+  }
+ }
 
 
 def fake_framework_app():
@@ -650,7 +650,7 @@ def restart_master_node():
 
 
 def systemctl_master(command='restart'):
-        run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
+    run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
 
 
 def save_iptables(host):
@@ -998,6 +998,15 @@ def delete_marathon_path(name, marathon_name='marathon'):
     url = get_marathon_endpoint(name, marathon_name)
     return http.delete(url)
 
+
+def multi_master():
+    """ Returns True if this is a multi master cluster. This is useful in
+    using pytest skipif when testing single master clusters such as:
+    `pytest.mark.skipif('multi_master')` which will skip the test if
+    the number of masters is > 1.
+    """
+    # reverse logic (skip if multi master cluster)
+    return len(get_all_masters()) > 1
 
 #############
 # moving to shakedown  END
