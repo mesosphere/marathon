@@ -14,7 +14,8 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.api.akkahttp.v2.{ AppsController, EventsController }
+import mesosphere.marathon.api.akkahttp.v2.{ AppsController, EventsController, PluginsController }
+import mesosphere.marathon.plugin.http.HttpRequestHandler
 
 class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
   override def configure(): Unit = {
@@ -51,7 +52,8 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
 
     val systemController = new SystemController(config)
     val eventsController = new EventsController(conf, eventBus)
-    val v2Controller = new V2Controller(appsController, eventsController)
+    val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
+    val v2Controller = new V2Controller(appsController, eventsController, pluginsController)
 
     new AkkaHttpMarathonService(
       conf,

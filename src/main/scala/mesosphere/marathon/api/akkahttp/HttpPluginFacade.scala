@@ -13,13 +13,13 @@ object HttpPluginFacade {
   /**
     * Provides a PluginRequest that uses an underlying akka http request.
     */
-  def request(request: HttpRequest, remoteAddress: RemoteAddress): PluginRequest = new PluginRequest {
+  def request(request: HttpRequest, remoteAddress: RemoteAddress, overridePath: Option[String] = None): PluginRequest = new PluginRequest {
     override def method: String = request.method.value
     override def cookie(name: String): Option[String] = request.cookies.find(_.name == name).map(_.value)
     override def remotePort: Int = remoteAddress.getPort()
     override def header(name: String): Seq[String] = request.headers.filter(_.name == name).map(_.value())
     override def queryParam(name: String): Seq[String] = request.uri.query().filter(_._1 == name).map(_._2)
-    override def requestPath: String = request.uri.path.toString()
+    override def requestPath: String = overridePath.getOrElse(request.uri.path.toString())
     override def remoteAddr: String = remoteAddress.toString()
     override def localAddr: String = request.uri.authority.host.toString()
     override def localPort: Int = request.uri.authority.port

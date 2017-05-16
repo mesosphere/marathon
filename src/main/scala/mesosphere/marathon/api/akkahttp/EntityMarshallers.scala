@@ -12,6 +12,7 @@ import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.raml.{ LoggerChange, Metrics }
+import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.state.AppDefinition
 import play.api.libs.json._
 
@@ -99,6 +100,7 @@ object EntityMarshallers {
   implicit val loggerChangeMarshaller = playJsonMarshaller[LoggerChange]
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[LoggerChange]
   implicit val stringMapMarshaller = playJsonMarshaller[Map[String, String]]
+  implicit val pluginDefinitionsMarshaller = playJsonMarshaller[PluginDefinitions]
 
   private def validEntityRaml[A, B](um: FromEntityUnmarshaller[A])(
     implicit
