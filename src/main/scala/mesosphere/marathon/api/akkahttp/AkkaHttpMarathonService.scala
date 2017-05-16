@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 
 class AkkaHttpMarathonService(
     config: MarathonConf with HttpConf,
+    resourceController: ResourceController,
     systemController: SystemController,
     v2Controller: V2Controller
 )(
@@ -52,6 +53,7 @@ class AkkaHttpMarathonService(
 
   val route: Route = {
     systemController.route ~
+      resourceController.route ~
       pathPrefix("v2") {
         v2Controller.route
       }
