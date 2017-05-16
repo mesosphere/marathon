@@ -11,13 +11,13 @@ This document contains the high-level structural differences between the 1.4 and
 
 ### Important notes
 
-Marathon now supports applications attached to more than one network. However, additional applies when you specify more than one network:
+Marathon now supports applications attached to more than one network. However, additional rules apply when you specify more than one network:
 
-- If a portMapping has defined a hostPort, the networkNames array must be defined with the name(s) of the networks it's referring to.
+- If a `portMapping` has defined a `hostPort`, the `networkNames` array must be defined with the name(s) of the `networks` it's referring to.
 
 - An application can join one or more container mode networks. When joining multiple container networks, there are additional restrictions on port mapping entries (see Port Mappings for details).
 
-- An application can only join one host mode network. This is the default if an app definition does not declare a networks field.
+- An application can only join one host mode network. This is the default if an app definition does not declare a `networks` field.
 
 - An application can only join one container/bridge network.
 
@@ -64,6 +64,9 @@ The following table summarizes the API transformations when using the network AP
     <pre>
 {
     “container”: {
+      "docker": {
+        "image": "foo"
+      },
       "portMappings": [
         {
           "containerPort": 0,
@@ -90,17 +93,17 @@ The following table summarizes the API transformations when using the network AP
 - `container.docker.network` : Removed.
 - `container.docker.portMappings` : Moved to `container.portMappings`.
 - `networks` : Added.
-- `networks[x].mode` : Is “container” for virtual network.
+- `networks[x].mode` : Is `container` for virtual network.
 
 ### Important Notes
 
-**Breaking Feature:** Starting from the 1.5 API, you can specify multiple container networks. There are a few things to consider in this case:
+**Breaking Feature:** Starting from the 1.5 API, you can specify multiple `container` networks. There are a few things to consider in this case:
 
 - An application can join only join multiple networks using the Mesos containerizer (`MESOS`). Although Docker itself supports multiple networks per container, the Docker containerizer implementation within Mesos does not support multiple networks.
 
 - When more than one network is specified, every `containerPort` MUST include a `networkNames` array with the name(s) of the network(s) it is associated with.
 
-- An application cannot mix networking modes: you must specify a single host network, a single container/bridge network, or one or more container networks.
+- An application cannot mix networking modes: you must specify a single `host` network, a single `container/bridge` network, or one or more `container` networks.
 
 The following table summarizes the changes when using single or multiple networks:
 
@@ -213,6 +216,9 @@ The following table summarizes the API transformations when using the network AP
 
  {
     “container”: {
+      "docker": {
+        "image": "image-name"
+      },
       "portMappings": [
         {
           "containerPort": 0,
@@ -239,12 +245,12 @@ The following table summarizes the API transformations when using the network AP
 - `container.docker.network` : Removed.
 - `container.docker.portMappings` : Moved to `container.portMappings`.
 - `networks` : Added.
-- `networks[x].mode` : Is “container/bridge” for bridge network.
+- `networks[x].mode` : Is `container/bridge` for bridge network.
 
 ### Important Notes
 
-- An application cannot use more than one “container/bridge” network.
-- An application cannot mix networking modes: you must specify a single host network, a single container/bridge network, or one or more container networks.
+- An application cannot use more than one `container/bridge` network.
+- An application cannot mix networking modes: you must specify a single `host` network, a single `container/bridge` network, or one or more `container` networks.
 
 
 ## Host Network
@@ -268,7 +274,7 @@ The following table summarizes the API transformations when using the network AP
     "container": {
         “type”: “DOCKER”,
         "docker": {
-            “image”: “foo”,
+            “image”: “image-name”,
             "network": "HOST"
         }
     }
@@ -295,7 +301,6 @@ The following table summarizes the API transformations when using the network AP
     "networks": [
         {
             "mode": "host",
-            "name": "network-name"
         }
     ],
     "portDefinitions": [
@@ -316,13 +321,13 @@ The following table summarizes the API transformations when using the network AP
 
 - `container.docker.network` : Removed.
 - `portDefinitions` : Remains the same.
-- `networks` : Added. Optional. Default is host mode.
+- `networks` : Added. Optional (in this instancef). Default is host mode.
 - `networks[x].mode` : Is `host` for Bridge Network.
 
 ### Important Notes
 
-- An application cannot use more than one “host” networks.
-- An application cannot mix networking modes: You must specify a single host network, a single container/bridge network, or one or more container networks.
+- An application cannot use more than one `host` networks.
+- An application cannot mix networking modes: You must specify a single `host` network, a single `container/bridge` network, or one or more `container` networks.
 
 
 ## Example Definitions
@@ -644,7 +649,7 @@ You cannot combine network types.
       "name": "web"
     }
   ],
-  "networks": [ // Invalid because network modes must be identical
+  "networks": [ // Invalid because network modes cannot be mixed. Only multiple container networks are allowed.
     { "mode": "host" },
     { "mode": "container/bridge" }
   ]
@@ -658,7 +663,7 @@ You cannot combine network types.
 
 #### Missing container network name (Invalid)
 
-You must supply a `name` property to use a container network unless you have configured Marathon with the `default_network_name` flag set.
+You must supply a `name` property to use a container network unless you set the `default_network_name` flag when configuring Marathon. [Learn more about command line flags](http://mesosphere.github.io/marathon/docs/command-line-flags.html).
 
 <table class="table">
   <tbody>
@@ -688,7 +693,7 @@ You must supply a `name` property to use a container network unless you have con
       "name": "web"
     }
   ],
-  "networks": [ // Invalid because the `networks.name` parameter is not supplied
+  "networks": [ // Possibly invalid because the `networks[x].name` parameter is not supplied
     { "mode": "container" }
   ]
 }

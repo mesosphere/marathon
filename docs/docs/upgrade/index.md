@@ -60,7 +60,7 @@ Release Notes: https://github.com/mesosphere/marathon/releases/tag/v0.13.0
 
 Tasks keys and storage format in ZooKeeper changed in a backward incompatible fashion.
 Zookeeper compression is implemented and enabled by default. Older versions will not be able to read compressed entities.
-Marathon nowuses logback as logging backend. If you are using custom log4j properties, you will have to migrate them to a logback configuration.
+Marathon now uses logback as logging backend. If you are using custom log4j properties, you will have to migrate them to a logback configuration.
 
 ## Upgrading to 0.11
 
