@@ -112,7 +112,7 @@ lazy val commonSettings = testSettings ++
   aspectjSettings ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.11.8",
+  scalaVersion := "2.11.11",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
