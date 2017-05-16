@@ -16,7 +16,7 @@ from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait)
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
-                       marthon_version_less_than, mom_version_less_than, marathon_1_4)
+                       marthon_version_less_than, mom_version_less_than, marathon_1_4, ee_version)
 from urllib.parse import urljoin
 from utils import fixture_dir, get_resource
 
@@ -271,7 +271,7 @@ def test_task_failure_recovers():
 
     check_new_task_id()
 
-
+@pytest.mark.skipif("ee_version() == 'strict'")
 def test_good_user():
     """ Test changes an app from the non-specified (default user) to another
         good user.  This works on coreOS.
@@ -289,6 +289,7 @@ def test_good_user():
     assert tasks[0]['id'] != app_def['id'], "Good user `core` didn't launch.  This only works on a coreOS or a system with a core user."
 
 
+@pytest.mark.skipif("ee_version() == 'strict'")
 def test_bad_user():
     """ Test changes the default user to a bad user and confirms that task will
         not launch.

@@ -113,6 +113,7 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents()
 
 
+@pytest.mark.skipif("ee_version() == 'strict'")
 @pytest.mark.skipif('marthon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
@@ -146,6 +147,7 @@ def test_event_channel():
     check_kill_message()
 
 
+@pytest.mark.skipif("ee_version() == 'strict'")
 @dcos_1_9
 def test_external_volume():
     volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
