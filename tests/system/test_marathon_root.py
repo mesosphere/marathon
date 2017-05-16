@@ -5,7 +5,7 @@
     tests round dcos services registration and control and security.
 """
 import common
-import os
+import shakedown
 
 # this is intentional import *
 # it imports all the common test_ methods which are to be tested on root and mom
@@ -14,7 +14,9 @@ from marathon_common_tests import *
 from marathon_auth_common_tests import *
 from marathon_pods_tests import *
 
-from shakedown import (masters, required_masters, public_agents, required_public_agents)
+from shakedown import (masters, required_masters, public_agents, required_public_agents,
+                        dcos_1_9, marthon_version_less_than)
+
 from datetime import timedelta
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
@@ -22,7 +24,9 @@ pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
 @pytest.fixture(scope="function")
 def marathon_service_name():
+    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
     yield 'marathon'
+    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
     clear_marathon()
 
 
@@ -109,6 +113,7 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents()
 
 
+@pytest.mark.skipif('marthon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
     """ Tests the event channel.  The way events are verified is by streaming the events
@@ -136,11 +141,12 @@ def test_event_channel():
     @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
     def check_kill_message():
         status, stdout = shakedown.run_command_on_master('cat test.txt')
-        assert 'Killed' in stdout
+        assert 'KILLED' in stdout
 
     check_kill_message()
 
 
+@dcos_1_9
 def test_external_volume():
     volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
     app_def = common.external_volume_mesos_app(volume_name)

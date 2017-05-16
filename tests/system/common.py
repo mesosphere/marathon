@@ -591,7 +591,7 @@ def stop_all_deployments(noisy=False):
 
 def delete_all_apps_wait():
     delete_all_apps()
-    deployment_wait()
+    deployment_wait(timedelta(minutes=5).total_seconds())
 
 
 def ip_other_than_mom():
