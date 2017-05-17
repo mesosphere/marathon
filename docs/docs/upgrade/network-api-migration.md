@@ -44,28 +44,28 @@ The following table summarizes the API transformations when using the network AP
     <td>
       <pre>
 {
-        "container": {
-            "docker": {
-                "network": "USER",
-                "portMappings": [
-                  {
-                    "containerPort": 0,
-                    "name": "port-name"
-                  }
-                ]
-            }
-        }
-        "ipAddress": {
-            "networkName": "network-name"
-        }
+    "container": {
+      "docker": {
+        "network": "USER",
+        "portMappings": [
+          {
+          "containerPort": 0,
+          "name": "port-name"
+          }
+        ]
+      }
+    }
+    "ipAddress": {
+      "networkName": "network-name"
+    }
 }
-      </pre>
+    </pre>
   </td>
 
   <td>
     <pre>
 {
-    “container”: {
+    "container": {
       "docker": {
         "image": "foo"
       },
@@ -121,22 +121,22 @@ The following table summarizes the changes when using single or multiple network
   </tr>
   <tr>
     <td>
-      <pre>
+<pre>
 {
-    “container”: {
-      "portMappings": [
-        {
-          "containerPort": 0,
-          "name": "port-name"
-        }
-      ]
-    },
-    "networks": [
-        {
-            "mode": "container",
-            "name": "network-name-1"
-        }
+  "container": {
+    "portMappings": [
+      {
+        "containerPort": 0,
+        "name": "port-name"
+      }
     ]
+  },
+  "networks": [
+    {
+      "mode": "container",
+      "name": "network-name-1"
+    }
+  ]
 }
 </pre>
 </td>
@@ -144,17 +144,17 @@ The following table summarizes the changes when using single or multiple network
 <td>
   <pre>
 {
-    “container”: {
+    "container": {
       "portMappings": [
         {
           "containerPort": 0,
           "name": "a-port-name",
-          “networkNames”: [“network-name-1”]
+          "networkNames": ["network-name-1"]
         },
         {
           "containerPort": 0,
           "name": "another-port-name",
-          “networkNames”: [“network-name-2”]
+          "networkNames": ["network-name-2"]
         }
       ]
     },
@@ -199,7 +199,7 @@ The following table summarizes the API transformations when using the network AP
             "portMappings": [
               {
                 "containerPort": 0,
-                “hostPort”: 0,
+                "hostPort": 0,
                 "name": "port-name"
               }
             ]
@@ -215,16 +215,15 @@ The following table summarizes the API transformations when using the network AP
 
 <td>
  <pre>
-
  {
-    “container”: {
+    "container": {
       "docker": {
         "image": "image-name"
       },
       "portMappings": [
         {
           "containerPort": 0,
-          “hostPort”: 0,
+          "hostPort": 0,
           "name": "port-name"
         }
       ]
@@ -274,9 +273,9 @@ The following table summarizes the API transformations when using the network AP
       <pre>
 {
     "container": {
-        “type”: “DOCKER”,
+        "type": "DOCKER",
         "docker": {
-            “image”: “image-name”,
+            "image": "image-name",
             "network": "HOST"
         }
     }
@@ -294,10 +293,10 @@ The following table summarizes the API transformations when using the network AP
 <td>
  <pre>
  {
-    “container”: {
-        “type”: “DOCKER”,
-        “docker”: {
-            “image”: “foo”
+    "container": {
+        "type": "DOCKER",
+        "docker": {
+            "image": "foo"
         }
     },
     "networks": [
@@ -505,7 +504,7 @@ The following definition is now possible with the new API.
       "portMappings": [
         {
           "containerPort": 80,
-          “hostPort”: 0,
+          "hostPort": 0,
           "protocol": "tcp",
           "name": "web"        }
       ]
