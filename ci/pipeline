@@ -6,6 +6,8 @@ import scala.util.control.NonFatal
 
 import $file.phabricatorClient
 import $file.provision
+import $file.fileUtil
+
 
 /**
  * Compile Marathon and run unit and integration tests followed by scapegoat.
@@ -14,6 +16,26 @@ import $file.provision
 def compileAndTest(): Unit = {
   %('sbt, 'clean, 'test, "integration:test", 'scapegoat)
 }
+
+/**
+ * Creates SHA-1 for all files in the package directory
+ */
+def createPackageSha1s(): Unit = {
+  val packageDir: Path = pwd /'target /'universal
+  (ls! packageDir |? (file => file.ext == "tgz" || file.ext == "txz"))
+    .foreach(fileUtil.writeSha1ForFile)
+}
+
+/**
+ * Creates the zip and txz files of the Marathon runnable package with their
+ * associated sha1
+ */
+@main
+def createPackages(): Unit = {
+  %('sbt, "universal:packageZipTarball", "universal:packageXzTarball")
+  createPackageSha1s()
+}
+
 
 /**
  * The pipeline target for Phabricator builds. It triggers the Jenkins target
@@ -45,4 +67,6 @@ def jenkins(): Unit = {
   provision.installMesos()
 
   compileAndTest()
+
+  createPackages()
 }
