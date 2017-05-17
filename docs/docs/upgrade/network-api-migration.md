@@ -1,13 +1,15 @@
 ---
-title: Migrating to 1.5 Networking API
+title: Migrating to the 1.5 Networking API
 ---
 
-# Migrating to 1.5 Networking API
+# Migrating to the 1.5 Networking API
 
 ## Overview
 The networking section of the Marathon API has changed significantly in version 1.5. Marathon can still accept requests using the 1.4 version of the API, but it will always reply with the 1.5 version of the app definition. This WILL likely break applications that consume networking-related fields of the application definition.
 
 This document contains the high-level structural differences between the 1.4 and 1.5 API versions. You can read more details regarding the networking section and the correct values for every field in the [networking documentation]({{ site.baseurl }}/docs/networking.html).
+
+Support for deprecated networking API fields will be dropped completely in some future release according to Marathon's official API deprecation policy [MARATHON-7165](https://jira.mesosphere.com/browse/MARATHON-7165).
 
 ### Important notes
 
