@@ -4,25 +4,25 @@ title: Backup & Restore
 
 # Backup & Restore
 
-Marathon 1.5 and later has backup and restore functionality built in.
-The complete state from the persistent data store can be backed up to an external file on the local disk or to an external storage provider.
-A backup can be restored again and will bring back the exact same state as it was available at the time of backup creation.  
+As of version 1.5, Marathon has built-in backup and restore functionality.
+The complete state of Marathon, which is kept in the persistent data store, 
+can be backed up to an external file or to an external storage provider.
+Restoring from a backup brings Marathon to the exact state it was in at the time of backup creation.
 
 ## Limitations
 
-Marathon is only able to backup the internal state of Marathon itself. 
-A backup will **not** capture the state of any other external system.
-This is specifically true for Mesos, which has its own backup & restore functionality.
-To create a backup of your cluster, a backup of all the system components is needed.
+Marathon backups only capture the state of Marathon itself. 
+A Marathon backup will **not** capture the state of any other system component. 
+To create a full backup of your cluster, you must back up all system components.
 
 Restoring a backup in Marathon without restoring state in other system components can lead to unwanted behavior.
-Tasks that have been started by Marathon after the backup has been created, will be unknown to Marathon after restoring and will be killed.
-Tasks that have been killed by Marathon after the backup has been created, will be expunged during the next reconciliation.
+Tasks that Marathon has started after the backup was created will be unknown to Marathon after a restore operation and will be killed.
+Tasks that Marathon has killed after the backup was created will be expunged during the next reconciliation.
 All changes to apps, groups, and pods after the backup has been created, are lost if this backup is restored.
 
 ## Backup
 
-A backup operation reads the existing state from Marathon in zk and writes this data to a storage location.
+A backup operation reads the existing state from Marathon in ZooKeeper and writes this data to a storage location.
 This data contains all entities under `zk://host:port/path/state/`. 
 It will not backup the state of the leader election: `zk://host:port/path/leader/`
 
@@ -34,20 +34,18 @@ There are multiple ways to create a backup:
 
 - cmd line flag `--backup_location {URI}`
 Marathon can be started with the command line option: `--backup_location` to a configurable URI. 
-This option is especially useful and strongly recommended to set, since it will create a backup 
-of the Marathon internal state, whenever Marathon performs a migration. 
+This option is strongly recommended because it will automatically create a backup of Marathon's state each time Marathon performs a migration.
 A migration usually happens during an upgrade of Marathon.
 
 - API endpoint `DELETE /v2/leader?backup={URI}` (experimental)
-It is possible to create a backup at any point in time using the leader endpoint.
-Using this endpoint will force the current running leader to abdicate.
-The next elected leader will create a backup before this instance takes over the leadership.
-This method is marked experimental - the API endpoint may change in the future.
+You can create a backup at any time using the leader endpoint.
+The API call above will force the current leader to abdicate. The next leader will create a backup before it takes over leadership.
+This method is experimental: the API endpoint may change in the future.
 
 - Executable packaged with Marathon
-The marathon native package ships with a start-script that can be used to create a backup.
-Please note: this command will connect directly to zk and backup the state from the defined location. 
-Use this method only, if there is no Marathon instance running!
+The default Marathon package ships with a start script you can use to make a backup. </br>
+**Note**: This command connects directly to ZooKeeper and backs up state from the location you defined. 
+Only use this method if there is no Marathon instance running.
 
 
 ```
@@ -58,25 +56,27 @@ $> marathon -main mesosphere.marathon.core.storage.backup.Backup --backup_locati
 
 ## Restore
 
-A backup that has been created, can be restored. Every restore operation will perform the following steps:
-- the current state in zk under the defined path will be removed
-- the state from the backup will be restored to the defined zk path 
-- the next Marathon leader will migrate this state to the current version
+You can restore Marathon to a backup you have created. 
+
+Every restore operation will perform the following steps:
+- Remove the current state in ZooKeeper under the defined path.
+- Restore the state from the backup to the defined ZooKeeper path.
+- The next Marathon leader migrates this state to the current version.
 
 ### Options to restore from a backup 
 
 There are multiple ways to restore a backup:
 
 - API endpoint `DELETE /v2/leader?restore={URI}` (experimental)
-It is possible to instruct a running marathon instance to restore its state from a backup.
-Using this endpoint will force the current running leader to abdicate.
-The newly elected leader will perform a clean and restore operation, do a migration (if needed) and start up.
-This method is marked experimental - the API endpoint may change in the future.
+You can use the `leader` endpoint to instruct a running Marathon instance to restore its state from backup.
+The API call above will force the current leader to abdicate. 
+The next leader will perform a clean and restore operation, do a migration (if needed), and start up.
+This method is experimental: the API endpoint may change in the future.
 
 - Executable packaged with Marathon
-The marathon native package ships with a start-script that can be used to restore a backup.
-Please note: this command will connect directly to zk and restore the state from the defined location. 
-Use this method only, if there is no Marathon instance running!
+The default Marathon package ships with a start script you can use to restore from a backup.
+**Note:** This command connects directly to ZooKeepter and restores the state from the location you defined. 
+Only use this method if there is no Marathon instance running.
  
  
 ```
@@ -85,7 +85,7 @@ $> marathon -main mesosphere.marathon.core.storage.backup.Restore --backup_locat
 ```
 
 
-## Available Backup Storage Provider
+## Backup Storage Provider
 
 The backup & restore functionality allows different storage providers to save and load a backup.
 Currently, `file` and `s3` providers are implemented. 
@@ -102,15 +102,15 @@ The backup and restore operation could be performed on different machines and th
 Use a shared file system to use the file storage provider in such a setup.
 
 ### S3 storage
-This provider will use the Amazon S3 storage to store and load a backup.
-An S3 location is defined with this URI syntax (Also see [s3tools](http://s3tools.org/s3_about))
+This provider will use Amazon S3 to store and load a backup.
+Define an S3 location with the following URI syntax. See [S3 tools](http://s3tools.org/s3_about) for more information.
 
 Example: `s3://bucket-name/key/in/bucket`
 
-Following query parameter are allowed:
+The following query parameters are supported:
 - `region` - the s3 region. Defaults to `us-east-1`
 - `access_key` and `secret_key` - to define the s3 credentials in the URI.
-  Define those parameters only in a fully secured environment, since those parameters would be stored in zk as well as be visible in the logs.
+  Only define these parameters in a fully secured environment: they will be stored in ZooKeeper and also visible in the logs.
   See the provider chain to make credentials available without defining them in the URI. 
 
 Provider chain:
