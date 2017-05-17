@@ -4,10 +4,13 @@ title: Networking
 
 # Networking
 
-Marathon continues to support the [legacy ports API](ports.html) that was shipped in versions 1.4.x and prior.
-All new applications should be declared using the new, non-deprecated networking API fields that are documented here.
-Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x.
-Support for deprecated networking API fields will be dropped completely in some future release according to Marathon's official API deprecation policy [MARATHON-7165](https://jira.mesosphere.com/browse/MARATHON-7165).
+This document describes the networking API released as of Marathon 1.5.
+
+While Marathon continues to support the [legacy ports API](ports.html) that was shipped in versions 1.4.x and prior, all new applications should be declared using the new, non-deprecated networking API fields that are documented here.
+
+Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x. See the [Migrating to the 1.5 Networking API]({{ site.baseurl }}/docs/upgrade/network-api-migration.html) for more information on changes you may need to make to your applications.
+
+### VIPs
 
 If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started), you can use [virtual addresses (VIPs)](https://dcos.io/docs/1.8/usage/service-discovery/virtual-ip-addresses/) to make ports management easier.
 VIPs simplify inter-app communication and implement a reliable service-oriented architecture.
@@ -19,15 +22,6 @@ Several [command-line flags](command-line-flags.html) determine Marathon's behav
 
 * `default_network_name` is injected as the `name` of a `container` mode network when left blank by an application.
 * `local_port_min` and `local_port_max` define a port range from which Marathon automatically allocates *service-port*s.
-
-### Environment
-
-* `MIGRATION_1_5_0_MARATHON_DEFAULT_NETWORK_NAME` is used when upgrading Marathon from a version prior to v1.5.
-    * older MESOS IP/CT app definitions were not required to declare an `ipAddress/networkName`; Marathon 1.5 requires a resolvable network name.
-    * migration automatically configures `container` networking mode for each migrated legacy MESOS IP/CT app.
-    * at migration time, legacy MESOS IP/CT app definitions are configured to use the network name defined by the migration-specific environment variable above.
-    * if the environment variable is **unset**, migration uses the network name defined by the `--default_network_name` flag.
-        * if both the environment variable and flag are **unset**, app migration will fail.
 
 ## Networking Modes
 
@@ -87,7 +81,7 @@ Specifies a port to allocate from the resources offered by a Mesos agent.
 
 When you create a new application in Marathon (either through the REST API or the front end), you may assign one or more service ports to it.
 You can specify all valid port numbers as service ports or you can use `0` to indicate that Marathon should allocate free service ports to the app automatically.
-Marathon allocates service ports from the range defined by the `--local_port_min` and `--local_port_max` command line flags. 
+Marathon allocates service ports from the range defined by the `--local_port_min` and `--local_port_max` command line flags.
 If you do choose your own service port, you have to ensure yourself that it is unique across all of your applications.
 See [#port-definition].
 Pods (endpoints) do not support service ports.
