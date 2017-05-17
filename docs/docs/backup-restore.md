@@ -4,7 +4,7 @@ title: Backup & Restore
 
 # Backup & Restore
 
-Marathon 1.5 and later has backup and restore functionality build in.
+Marathon 1.5 and later has backup and restore functionality built in.
 The complete state from the persistent data store can be backed up to an external file on the local disk or to an external storage provider.
 A backup can be restored again and will bring back the exact same state as it was available at the time of backup creation.  
 
@@ -70,7 +70,7 @@ There are multiple ways to restore a backup:
 - API endpoint `DELETE /v2/leader?restore={URI}` (experimental)
 It is possible to instruct a running marathon instance to restore its state from a backup.
 Using this endpoint will force the current running leader to abdicate.
-The next elected leader will perform a clean and restore operation, do a migration (if needed) and start up.
+The newly elected leader will perform a clean and restore operation, do a migration (if needed) and start up.
 This method is marked experimental - the API endpoint may change in the future.
 
 - Executable packaged with Marathon
