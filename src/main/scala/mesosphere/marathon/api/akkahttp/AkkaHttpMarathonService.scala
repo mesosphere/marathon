@@ -52,11 +52,19 @@ class AkkaHttpMarathonService(
       }
 
   val route: Route = {
-    systemController.route ~
-      resourceController.route ~
-      pathPrefix("v2") {
-        v2Controller.route
+    val corsOrPass = config.accessControlAllowOrigin.get.map(corsResponse).getOrElse(pass)
+    val compressOrPass = if (config.httpCompression()) encodeResponse else pass
+    compressOrPass {
+      noCache {
+        corsOrPass {
+          systemController.route ~
+            resourceController.route ~
+            pathPrefix("v2") {
+              v2Controller.route
+            }
+        }
       }
+    }
   }
 
   override def startUp(): Unit = synchronized {

@@ -15,7 +15,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
-import org.rogach.scallop.ScallopConf
+import org.rogach.scallop.{ ScallopConf, ScallopOption }
 
 import scala.sys.SystemProperties
 
@@ -135,13 +135,13 @@ trait MarathonConf
     default = None
   )
 
-  lazy val accessControlAllowOrigin = opt[String](
+  lazy val accessControlAllowOrigin: ScallopOption[Seq[String]] = opt[String](
     "access_control_allow_origin",
     descr = "The origin(s) to allow in Marathon. Not set by default. " +
       "Example values are \"*\", or " +
       "\"http://localhost:8888, http://domain.com\"",
     noshort = true,
-    default = None)
+    default = None).map(_.split(",").map(_.trim).toVector)
 
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
