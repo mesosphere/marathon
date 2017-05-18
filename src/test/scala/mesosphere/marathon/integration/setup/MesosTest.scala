@@ -432,11 +432,19 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
 
 object IP {
   import sys.process._
-  import scala.language.postfixOps
 
-  lazy val routableIPv4: String = sys.env.getOrElse("MESOSTEST_IP_ADDRESS", inferRoutableIPLinux)
+  lazy val routableIPv4: String =
+    sys.env.getOrElse("MESOSTEST_IP_ADDRESS", inferRoutableIP)
 
-  private def inferRoutableIPLinux: String = {
-    "ip -o addr" #| "egrep -v inet6|/32" #| "grep global" #| "head -1" #| Seq("awk", "{print $4;}") #| "cut -f1 -d/" !!
-  }.trim()
+  private def detectIpScript = {
+    val resource = getClass.getClassLoader.getResource("detect-routable-ip.sh")
+    Option(resource).flatMap { f => Option(f.getFile) }.getOrElse {
+      throw new RuntimeException(
+        s"Couldn't find file for detect-routable-ip.sh resource; is ${resource}. Are you running from a JAR?")
+    }
+  }
+
+  private def inferRoutableIP: String = {
+    Seq("bash", detectIpScript).!!.trim
+  }
 }
