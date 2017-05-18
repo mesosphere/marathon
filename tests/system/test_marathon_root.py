@@ -15,7 +15,7 @@ from marathon_auth_common_tests import *
 from marathon_pods_tests import *
 
 from shakedown import (masters, required_masters, public_agents, required_public_agents,
-                        dcos_1_9, marthon_version_less_than)
+                        dcos_1_9, marthon_version_less_than, marthon_version_less_than)
 
 from datetime import timedelta
 
@@ -198,7 +198,7 @@ def test_external_volume():
 # Backup and restore meeting is done with only one master since new master has to be able
 # to read the backup file that was created by the previous master and the easiest way to
 # test it is when there is 1 master
-@pytest.mark.skipif('common.multi_master()')
+@pytest.mark.skipif('common.multi_master() or marthon_version_less_than("1.5")')
 def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     backup_file = 'backup.tar'
