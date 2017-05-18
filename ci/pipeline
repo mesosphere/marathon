@@ -4,11 +4,13 @@ import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import scala.util.control.NonFatal
 
+import $file.awsClient
 import $file.phabricatorClient
 import $file.provision
 import $file.fileUtil
 
 
+val PACKAGE_DIR: Path = pwd / 'target / 'universal
 /**
  * Compile Marathon and run unit and integration tests followed by scapegoat.
  */
@@ -17,12 +19,24 @@ def compileAndTest(): Unit = {
   %('sbt, 'clean, 'test, "integration:test", 'scapegoat)
 }
 
+@main
+def uploadPackagesToS3(): Unit = {
+  // || file.ext == "sha1" removed, separated out
+  (ls! PACKAGE_DIR |? (file => file.ext == "tgz" || file.ext == "txz" ))
+    .foreach(awsClient.archiveArtifact)
+}
+
+@main
+def createAndUploadPackages(): Unit = {
+  createPackages()
+  uploadPackagesToS3()
+}
+
 /**
  * Creates SHA-1 for all files in the package directory
  */
 def createPackageSha1s(): Unit = {
-  val packageDir: Path = pwd /'target /'universal
-  (ls! packageDir |? (file => file.ext == "tgz" || file.ext == "txz"))
+  (ls! PACKAGE_DIR |? (file => file.ext == "tgz" || file.ext == "txz"))
     .foreach(fileUtil.writeSha1ForFile)
 }
 
@@ -35,7 +49,6 @@ def createPackages(): Unit = {
   %('sbt, "universal:packageZipTarball", "universal:packageXzTarball")
   createPackageSha1s()
 }
-
 
 /**
  * The pipeline target for Phabricator builds. It triggers the Jenkins target
@@ -69,5 +82,5 @@ def jenkins(): Unit = {
 
   compileAndTest()
 
-  createPackages()
+  createAndUploadPackages()
 }
