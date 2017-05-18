@@ -3,7 +3,7 @@
   "scheduling": {"placement": {"constraints": [], "acceptedResourceRoles": []}},
   "containers": [
     {
-      "name": "healthApp1",
+      "name": "healthapp1",
       "exec": {
         "command": {
           "shell": "/opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT"
@@ -26,7 +26,7 @@
       }
     },
     {
-      "name": "healthApp2",
+      "name": "healthapp2",
       "exec": {
         "command": {
           "shell": "/opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT2"

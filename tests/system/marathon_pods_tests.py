@@ -90,7 +90,7 @@ def test_create_pod():
 
 @dcos_1_9
 @pytest.mark.usefixtures("event_fixture")
-def test_event_channel():
+def test_event_channel_for_pods():
     """ Tests the Marathon event channnel specific to pod events.
     """
     client = marathon.create_client()
@@ -360,7 +360,7 @@ def test_pin_pod():
 
 
 @dcos_1_9
-def test_health_check():
+def test_pod_health_check():
     """ Tests that health checks work in pods.
     """
     client = marathon.create_client()
@@ -383,7 +383,7 @@ def test_health_check():
 
 @dcos_1_9
 @private_agents(2)
-def test_health_failed_check():
+def test_pod_health_failed_check():
     """ Deploys a pod with good health checks, then partitions the network and verifies
         the tasks return with new task ids.
     """
