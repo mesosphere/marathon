@@ -2,7 +2,7 @@
 title: Backup & Restore
 ---
 
-# Backup & Restore
+# Backup and Restore
 
 As of version 1.5, Marathon has built-in backup and restore functionality.
 The complete state of Marathon, which is kept in the persistent data store, 
