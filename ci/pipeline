@@ -5,22 +5,22 @@ import ammonite.ops.ImplicitWd._
 import scala.util.control.NonFatal
 
 import $file.awsClient
+import $file.fileUtil
 import $file.phabricatorClient
 import $file.provision
-import $file.fileUtil
-
+import $file.utils
 
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
 /**
  * Compile Marathon and run unit and integration tests followed by scapegoat.
  */
 @main
-def compileAndTest(): Unit = {
+def compileAndTest(): Unit = utils.stage("Compile and Test") {
   %('sbt, 'clean, 'test, "integration:test", 'scapegoat)
 }
 
 @main
-def uploadPackagesToS3(): Unit = {
+def uploadPackagesToS3(): Unit = utils.stage("Upload Packages") {
   // || file.ext == "sha1" removed, separated out
   (ls! PACKAGE_DIR |? (file => file.ext == "tgz" || file.ext == "txz" ))
     .foreach(awsClient.archiveArtifact)
@@ -45,7 +45,7 @@ def createPackageSha1s(): Unit = {
  * associated sha1
  */
 @main
-def createPackages(): Unit = {
+def createPackages(): Unit = utils.stage("Package") {
   %('sbt, "universal:packageZipTarball", "universal:packageXzTarball")
   createPackageSha1s()
 }
@@ -77,8 +77,10 @@ def phabricator(): Unit = {
  */
 @main
 def jenkins(): Unit = {
-  provision.killStaleTestProcesses()
-  provision.installMesos()
+  utils.stage("Provision") {
+    provision.killStaleTestProcesses()
+    provision.installMesos()
+  }
 
   compileAndTest()
 
