@@ -30,6 +30,7 @@ def uploadPackagesToS3(): Unit = utils.stage("Upload Packages") {
 def createAndUploadPackages(): Unit = {
   createPackages()
   uploadPackagesToS3()
+  createLinuxPackages()
 }
 
 /**
@@ -48,6 +49,14 @@ def createPackageSha1s(): Unit = {
 def createPackages(): Unit = utils.stage("Package") {
   %('sbt, "universal:packageZipTarball", "universal:packageXzTarball")
   createPackageSha1s()
+}
+
+/**
+ * Create Docker, rpm and deb packages.
+ */
+@main
+def createLinuxPackages(): Unit = utils.stage("Package Docker Image, Debian and RedHat Packages") {
+  %('sbt, "docker:publishLocal", "packageDebian", "packageRpm")
 }
 
 /**
