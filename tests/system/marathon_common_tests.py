@@ -1071,6 +1071,14 @@ def test_vip_mesos_cmd(marathon_service_name):
 
     http_output_check()
 
+
+def test_metric_endpoint(marathon_service_name):
+    response = http.get("{}/metrics/".format(
+        shakedown.dcos_service_url(marathon_service_name)))
+    assert response.status_code == 200
+    assert response.json()['gauges']['jvm.memory.heap.max']['value'] is not None
+
+
 @dcos_1_9
 def test_vip_docker_bridge_mode(marathon_service_name):
     """ Tests the creation of a VIP from a python command in a docker image using bridge mode.
