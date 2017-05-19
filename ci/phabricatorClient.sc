@@ -122,10 +122,25 @@ def reportSuccess(
   buildUrl: String,
   buildTag: String): Unit = {
 
+  // Construct message
+  val marathonPackage: Path = ((ls! pwd / 'target / 'universal) |? (_.ext == "tgz")).head
+  val marathonPackageChecksum = read! pwd / 'target / 'universal / s"${marathonPackage.last}.sha1"
+
+  val msg = s"""
+    | \u2714 Build of $diffId completed [[ $buildUrl | $buildTag ]].
+    |
+    | You can create a DC/OS with your patched Marathon by creating a new pull
+    | request with the following changes in [[ https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json | buildinfo.json ]]:
+    |
+    |   lang=json
+    |   "url": "https://downloads.mesosphere.io/marathon/snapshots/${marathonPackage.last}",
+    |   "sha1"" "${marathonPackageChecksum}"
+    |""".stripMargin
+
   // We accept and comment in two different calls because Phabriactor won't
   // apply the comment if the diff is already accepted.
   accept(revisionId)
-  comment(revisionId, s"\u2714 Build of $diffId completed [[ $buildUrl | $buildTag ]].")
+  comment(revisionId, msg)
   reportTestResults(phId, "pass")
 }
 
