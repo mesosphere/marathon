@@ -15,6 +15,13 @@ trait ElectionService {
   def isLeader: Boolean
 
   /**
+    * localHostPort return a host:port pair of this running instance that is used for discovery.
+    *
+    * @return host:port of this instance.
+    */
+  def localHostPort: String
+
+  /**
     * leaderHostPort return a host:port pair of the leader, if it is elected.
     *
     * @return Some(host:port) of the leader, or None if no leader exists or is known

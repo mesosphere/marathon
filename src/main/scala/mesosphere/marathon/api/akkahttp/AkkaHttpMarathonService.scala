@@ -20,6 +20,8 @@ import play.api.libs.json.Json
 
 class AkkaHttpMarathonService(
     config: MarathonConf with HttpConf,
+    resourceController: ResourceController,
+    systemController: SystemController,
     v2Controller: V2Controller
 )(
     implicit
@@ -50,8 +52,18 @@ class AkkaHttpMarathonService(
       }
 
   val route: Route = {
-    pathPrefix("v2") {
-      v2Controller.route
+    val corsOrPass = config.accessControlAllowOrigin.get.map(corsResponse).getOrElse(pass)
+    val compressOrPass = if (config.httpCompression()) encodeResponse else pass
+    compressOrPass {
+      noCache {
+        corsOrPass {
+          systemController.route ~
+            resourceController.route ~
+            pathPrefix("v2") {
+              v2Controller.route
+            }
+        }
+      }
     }
   }
 

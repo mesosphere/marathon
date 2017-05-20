@@ -273,6 +273,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       When("Delete is triggered with force, while the deployment is not completed")
       val force = marathon.deleteGroup(gid, force = true)
+      force.success should be(true) withClue (s"Could not force delete $gid: Response: code=${force.code} body=${force.entityString}")
 
       Then("The delete is performed")
       waitForDeployment(force)
@@ -313,7 +314,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       appProxyHealthCheck(PathId(db.id), "v1", state = true).withHealthAction(storeFirst)
       appProxyHealthCheck(PathId(service.id), "v1", state = true).withHealthAction(storeFirst)
       appProxyHealthCheck(PathId(frontend.id), "v1", state = true).withHealthAction(storeFirst)
-      waitForDeployment(marathon.createGroup(group))
+
+      val response = marathon.createGroup(group)
+      response.success should be(true) withClue (s"Could create group $gid: Response: code=${response.code} body=${response.entityString}")
+      waitForDeployment(response)
 
       Then("The correct order is maintained")
       ping should have size 3

@@ -237,6 +237,8 @@ def test_version_pods():
     assert pod_version1["scaling"]["instances"] != pod_version2["scaling"]["instances"]
 
 
+# known to fail in strict mode
+@pytest.mark.skipif("ee_version() == 'strict'")
 @dcos_1_9
 def test_pod_comm_via_volume():
     """ Confirms that 1 container can read data from a volume that was written

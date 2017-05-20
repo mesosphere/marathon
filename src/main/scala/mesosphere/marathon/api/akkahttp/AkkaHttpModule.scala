@@ -5,6 +5,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.AbstractModule
 import com.google.inject.{ Provides, Scopes, Singleton }
+import com.typesafe.config.Config
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.MarathonHttpService
 import mesosphere.marathon.core.appinfo._
@@ -13,7 +14,8 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
-import v2.AppsController
+import mesosphere.marathon.api.akkahttp.v2.{ AppsController, EventsController, PluginsController }
+import mesosphere.marathon.plugin.http.HttpRequestHandler
 
 class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
   override def configure(): Unit = {
@@ -25,6 +27,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
   @SuppressWarnings(Array("MaxParameters"))
   def provideAkkaHttpMarathonService(
     clock: Clock,
+    config: Config,
     eventBus: EventStream,
     appInfoService: AppInfoService,
     groupManager: GroupManager,
@@ -47,9 +50,16 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
       groupManager = groupManager,
       pluginManager = pluginManager)
 
-    val v2Controller = new V2Controller(appsController)
+    val resourceController = new ResourceController
+    val systemController = new SystemController(config)
+    val eventsController = new EventsController(conf, eventBus)
+    val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
+    val v2Controller = new V2Controller(appsController, eventsController, pluginsController)
+
     new AkkaHttpMarathonService(
       conf,
+      resourceController,
+      systemController,
       v2Controller)
   }
 }
