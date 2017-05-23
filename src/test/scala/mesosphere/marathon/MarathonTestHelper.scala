@@ -457,10 +457,10 @@ object MarathonTestHelper {
       .withStatus((status: Task.Status) =>
         status.copy(
           startedAt = Some(Timestamp(startedAt)),
-          mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_RUNNING))
+          mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_RUNNING)),
+          taskStatus = MarathonTaskStatus.Running
         )
       )
-
   }
 
   def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Task.Id.forRunSpec(appId).idString)

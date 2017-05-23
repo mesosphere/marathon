@@ -91,7 +91,7 @@ class TasksResource @Inject() (
   @Timed
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     ok(EndpointsHelper.appsToEndpointString(
-      taskTracker,
+      taskTracker.tasksByAppSync,
       result(groupManager.rootGroup()).transitiveApps.toSeq.filter(app => isAuthorized(ViewRunSpec, app)),
       "\t"
     ))

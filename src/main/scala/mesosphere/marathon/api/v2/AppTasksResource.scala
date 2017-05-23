@@ -74,7 +74,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { app =>
-      ok(EndpointsHelper.appsToEndpointString(taskTracker, Seq(app), "\t"))
+      ok(EndpointsHelper.appsToEndpointString(taskTracker.tasksByAppSync, Seq(app), "\t"))
     }
   }
 
