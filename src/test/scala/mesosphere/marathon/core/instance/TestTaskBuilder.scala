@@ -387,6 +387,7 @@ object TestTaskBuilder {
       startingTask(taskId, appVersion, stagedAt)
         .withStatus((status: Task.Status) =>
           status.copy(
+            condition = Condition.Running,
             startedAt = Some(Timestamp(startedAt)),
             mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_RUNNING))
           )

@@ -90,7 +90,9 @@ case class TestInstanceBuilder(
     task.asInstanceOf[T]
   }
 
-  def getInstance() = instance
+  def getInstance() = {
+    instance
+  }
 
   def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
 
