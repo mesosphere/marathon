@@ -142,6 +142,8 @@ Pods also support host volumes. A pod volume parameter can declare a `host` fiel
 }
 ```
 
+**Note:** Data does not persist if pods are restarted.
+
 #### Containerizers
 
 Marathon pods support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer [supports multiple images, such as Docker](http://mesos.apache.org/documentation/latest/container-image/). [Learn more about running Docker containers on Marathon]({{ site.baseurl }}/docs/native-docker.html).
