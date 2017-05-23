@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
 /**
   * Resolves AppInfo.Embed and GroupInfo.Embed from query parameters.
   */
-private[v2] object InfoEmbedResolver {
+private[api] object InfoEmbedResolver {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   private[this] val EmbedAppsPrefixes = Set("group.apps.", "apps.", "app.")

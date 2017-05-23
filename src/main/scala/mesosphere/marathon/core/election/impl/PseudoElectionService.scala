@@ -16,6 +16,8 @@ class PseudoElectionService(
 ) {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
+  override def localHostPort: String = hostPort
+
   override def leaderHostPortImpl: Option[String] = if (isLeader) Some(hostPort) else None
 
   override def offerLeadershipImpl(): Unit = synchronized {

@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
@@ -257,23 +257,21 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       }
 
       get {
-        path(Segment / Segment / IntNumber / "health") { (uriEncodedAppId, versionId, port) =>
+        path(Segment / Segment / "health") { (uriEncodedAppId, versionId) =>
           import PathId._
           val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
 
-          def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId && c.port == port })
+          def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId })
 
-          def definition = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId && c.port == 0 })
+          val state = instance.fold(true)(_.healthy)
 
-          val state = instance.orElse(definition).fold(true)(_.healthy)
-
-          logger.info(s"Received health check request: app=$appId, version=$versionId appMockPort=$port reply=$state")
+          logger.info(s"Received health check request: app=$appId, version=$versionId reply=$state")
           if (state) {
             complete(HttpResponse(status = StatusCodes.OK))
           } else {
             complete(HttpResponse(status = StatusCodes.InternalServerError))
           }
-        } ~ path(Segment / Segment / IntNumber / "ready") { (uriEncodedAppId, versionId, port) =>
+        } ~ path(Segment / Segment / "ready") { (uriEncodedAppId, versionId) =>
           import PathId._
           val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
 
@@ -282,7 +280,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
           // An app is not ready by default to avoid race conditions.
           val isReady = check.fold(false)(_.call)
 
-          logger.info(s"Received readiness check request: app=$appId, version=$versionId appMockPort=$port reply=$isReady")
+          logger.info(s"Received readiness check request: app=$appId, version=$versionId reply=$isReady")
 
           if (isReady) {
             complete(HttpResponse(status = StatusCodes.OK))
@@ -296,7 +294,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       }
     }
     val port = PortAllocator.ephemeralPort()
-    val server = Http().bindAndHandle(route, "localhost", port).futureValue
+    val server = Http().bindAndHandle(route, "0.0.0.0", port).futureValue
     logger.info(s"Listening for health events on $port")
     server
   }
@@ -325,7 +323,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     */
   def healthEndpointFor(appId: PathId, versionId: String): String = {
     val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
-    s"http://127.0.0.1:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId"
+    s"http://$$HOST:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId"
   }
 
   def appProxyHealthCheck(
@@ -375,8 +373,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       container = Some(raml.Container(
         `type` = raml.EngineType.Docker,
         docker = Some(raml.DockerContainer(
-          image = "python:3.4.6-alpine",
-          network = Some(raml.DockerNetwork.Host)
+          image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
           new AppVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
@@ -386,7 +383,8 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       cpus = 0.5,
       mem = 128,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies.map(_.toString)
+      dependencies = dependencies.map(_.toString),
+      networks = Seq(Network(mode = NetworkMode.Host))
     )
   }
 
@@ -450,7 +448,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     * @return The IntegrationHealthCheck object which is used to control the replies.
     */
   def appProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
-    val check = new IntegrationHealthCheck(appId, versionId, 0, state)
+    val check = new IntegrationHealthCheck(appId, versionId, state)
     healthChecks { checks =>
       checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
       checks += check
@@ -467,7 +465,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     * @return The IntegrationReadinessCheck object which is used to control replies.
     */
   def appProxyReadinessCheck(appId: PathId, versionId: String): IntegrationReadinessCheck = {
-    val check = new IntegrationReadinessCheck(appId, versionId, 0)
+    val check = new IntegrationReadinessCheck(appId, versionId)
     readinessChecks { checks =>
       checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
       checks += check

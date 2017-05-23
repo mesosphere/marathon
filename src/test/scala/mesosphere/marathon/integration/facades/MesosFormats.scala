@@ -29,6 +29,11 @@ object MesosFormats {
     }
   )
 
+  implicit lazy val ITAttributesFormat: Format[ITAttributes] = Format(
+    Reads.of[Map[String, ITResourceValue]].map(ITAttributes(_)),
+    Writes[ITAttributes](a => Json.toJson(a.attributes))
+  )
+
   implicit lazy val ITResourcesFormat: Format[ITResources] = Format(
     Reads.of[Map[String, ITResourceValue]].map(ITResources(_)),
     Writes[ITResources](resources => Json.toJson(resources.resources))
@@ -36,6 +41,7 @@ object MesosFormats {
 
   implicit lazy val ITAgentFormat: Format[ITAgent] = (
     (__ \ "id").format[String] ~
+    (__ \ "attributes").formatNullable[ITAttributes].withDefault(ITAttributes.empty) ~
     (__ \ "resources").formatNullable[ITResources].withDefault(ITResources.empty) ~
     (__ \ "used_resources").formatNullable[ITResources].withDefault(ITResources.empty) ~
     (__ \ "offered_resources").formatNullable[ITResources].withDefault(ITResources.empty) ~

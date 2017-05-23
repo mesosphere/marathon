@@ -67,7 +67,11 @@ object ContainerSerializer {
         builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
       case dd: Container.Docker =>
         builder.setType(mesos.Protos.ContainerInfo.Type.DOCKER)
-        builder.setDocker(DockerSerializer.toMesos(dd))
+        builder.setDocker(DockerSerializer.toMesos(dd, networks))
+        // docker user network names are the only things passed in the NetworkInfo
+        networks.collectFirst {
+          case n: ContainerNetwork => mesos.Protos.NetworkInfo.newBuilder.setName(n.name)
+        }.foreach(builder.addNetworkInfos)
       case md: Container.MesosDocker =>
         builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
         builder.setMesos(MesosDockerSerializer.toMesos(md))
@@ -82,29 +86,33 @@ object ContainerSerializer {
       case dv: DockerVolume => builder.addVolumes(VolumeSerializer.toMesos(dv))
     }
 
-    networks.toIterator
-      .filter(_ != HostNetwork)
-      .map { network =>
-        val (networkName, networkLabels) = network match {
-          case cnet: ContainerNetwork => cnet.name -> cnet.labels.toMesosLabels
-          case bnet: BridgeNetwork => mesosBridgeName -> bnet.labels.toMesosLabels
-          case unsupported => throw new IllegalStateException(s"unsupported networking mode $unsupported")
-        }
+    // only UCR containers have NetworkInfo's generated this way
+    if (container.docker.isEmpty) {
+      networks.toIterator
+        .filter(_ != HostNetwork)
+        .map { network =>
+          val (networkName, networkLabels) = network match {
+            case cnet: ContainerNetwork => cnet.name -> cnet.labels.toMesosLabels
+            case bnet: BridgeNetwork => mesosBridgeName -> bnet.labels.toMesosLabels
+            case unsupported => throw new IllegalStateException(s"unsupported networking mode $unsupported")
+          }
 
-        val portMappings = container.portMappings.withFilter(_.hostPort.nonEmpty).withFilter { mapping =>
           // if hostPort is specified, a SINGLE networkName is required.
           // If it is empty then we've already validated that there is only one container network
-          mapping.networkNames.forall(_ == networkName)
-        }
+          def qualifiedPortMapping(mapping: Container.PortMapping) =
+            mapping.hostPort.nonEmpty && mapping.networkNames.forall(_ == networkName)
 
-        mesos.Protos.NetworkInfo.newBuilder()
-          .addIpAddresses(mesos.Protos.NetworkInfo.IPAddress.getDefaultInstance)
-          .setLabels(networkLabels)
-          .setName(networkName)
-          .addAllPortMappings(portMappings.map(portMappingToMesos))
-          .build
-      }
-      .foreach(builder.addNetworkInfos)
+          val portMappings = container.portMappings.withFilter(qualifiedPortMapping)
+
+          mesos.Protos.NetworkInfo.newBuilder()
+            .addIpAddresses(mesos.Protos.NetworkInfo.IPAddress.getDefaultInstance)
+            .setLabels(networkLabels)
+            .setName(networkName)
+            .addAllPortMappings(portMappings.map(portMappingToMesos))
+            .build
+        }
+        .foreach(builder.addNetworkInfos)
+    }
 
     builder.build
   }
@@ -204,14 +212,21 @@ object DockerSerializer {
       .build
   }
 
-  def toMesos(docker: Container.Docker): mesos.Protos.ContainerInfo.DockerInfo = {
-    val builder = mesos.Protos.ContainerInfo.DockerInfo.newBuilder
+  def toMesos(docker: Container.Docker, networks: Seq[Network]): mesos.Protos.ContainerInfo.DockerInfo = {
+    import mesos.Protos.ContainerInfo.DockerInfo
+    val builder = DockerInfo.newBuilder
 
     builder.setImage(docker.image)
     docker.portMappings.foreach(mapping => builder.addAllPortMappings(PortMappingSerializer.toMesos(mapping)))
     builder.setPrivileged(docker.privileged)
     builder.addAllParameters(docker.parameters.map(ParameterSerializer.toMesos))
     builder.setForcePullImage(docker.forcePullImage)
+    networks.collect {
+      case _: ContainerNetwork => DockerInfo.Network.USER
+      case _: BridgeNetwork => DockerInfo.Network.BRIDGE
+      case HostNetwork => DockerInfo.Network.HOST // it's the default, but we include here for posterity
+      case unsupported => throw SerializationFailedException(s"unsupported docker network type $unsupported")
+    }.foreach(builder.setNetwork)
     builder.build
   }
 }
@@ -265,7 +280,7 @@ object PortMappingSerializer {
     * @param name The Port Mapping name
     * @param labels The labels to be attached to the Port proto
     * @param protocol The labels to be attached to the Port proto
-    * @param effectiveHostPort the effective Mesos Agent port allocated for
+    * @param effectivePort the effective Mesos Agent port allocated for
     *                          this port mapping.
     * @return the representation of provided input to be included in the task's DiscoveryInfo
     */

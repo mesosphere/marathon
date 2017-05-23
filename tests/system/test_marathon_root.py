@@ -5,7 +5,7 @@
     tests round dcos services registration and control and security.
 """
 import common
-import os
+import shakedown
 
 # this is intentional import *
 # it imports all the common test_ methods which are to be tested on root and mom
@@ -14,7 +14,9 @@ from marathon_common_tests import *
 from marathon_auth_common_tests import *
 from marathon_pods_tests import *
 
-from shakedown import (masters, required_masters, public_agents, required_public_agents)
+from shakedown import (masters, required_masters, public_agents, required_public_agents,
+                        dcos_1_9, marthon_version_less_than, marthon_version_less_than)
+
 from datetime import timedelta
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
@@ -22,7 +24,9 @@ pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
 @pytest.fixture(scope="function")
 def marathon_service_name():
+    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
     yield 'marathon'
+    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
     clear_marathon()
 
 
@@ -109,6 +113,8 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents()
 
 
+@pytest.mark.skipif("ee_version() == 'strict'")
+@pytest.mark.skipif('marthon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
     """ Tests the event channel.  The way events are verified is by streaming the events
@@ -136,11 +142,13 @@ def test_event_channel():
     @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
     def check_kill_message():
         status, stdout = shakedown.run_command_on_master('cat test.txt')
-        assert 'Killed' in stdout
+        assert 'KILLED' in stdout
 
     check_kill_message()
 
 
+@pytest.mark.skipif("ee_version() == 'strict'")
+@dcos_1_9
 def test_external_volume():
     volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
     app_def = common.external_volume_mesos_app(volume_name)
@@ -185,3 +193,51 @@ def test_external_volume():
         # and the volume should be cleaned up manually later.
         if not result:
             print('WARNING: Failed to remove external volume with name={}: {}'.format(volume_name, output))
+
+
+# Backup and restore meeting is done with only one master since new master has to be able
+# to read the backup file that was created by the previous master and the easiest way to
+# test it is when there is 1 master
+@pytest.mark.skipif('common.multi_master() or marthon_version_less_than("1.5")')
+def test_marathon_backup_and_restore_leader(marathon_service_name):
+
+    backup_file = 'backup.tar'
+    backup_dir = '/tmp'
+    backup_url = 'file://{}/{}'.format(backup_dir, backup_file)
+
+    # Deploy a simple test app. It is expected to be there after leader reelection
+    client = marathon.create_client()
+    app_def = {
+        "id": "/sleep",
+        "instances": 1,
+        "cpus": 0.01,
+        "mem": 32,
+        "cmd": "sleep 100000"
+    }
+
+    app_id = app_def['id']
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 1
+    task_id = app['tasks'][0]['id']
+
+    # Abdicate the leader with backup and restore
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+    url = 'v2/leader?backup={}&restore={}'.format(backup_url, backup_url)
+    print('DELETE {}'.format(url))
+    common.delete_marathon_path(url)
+
+    # Wait for new leader (but same master server) to be up and ready
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 1
+    assert task_id == app['tasks'][0]['id'], "Task has a different Id after restore"
+
+    # Check if the backup file exits and is valid
+    cmd = 'tar -tf {}/{} | wc -l'.format(backup_dir, backup_file)
+    run, data = shakedown.run_command_on_master(cmd)
+    assert run, 'Failed to validate backup file {}'.format(backup_url)
+    assert int(data.rstrip()) > 0, "Backup file is empty"

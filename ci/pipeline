@@ -1,0 +1,97 @@
+#!/usr/bin/env amm
+
+import ammonite.ops._
+import ammonite.ops.ImplicitWd._
+import scala.util.control.NonFatal
+
+import $file.awsClient
+import $file.fileUtil
+import $file.phabricatorClient
+import $file.provision
+import $file.utils
+
+val PACKAGE_DIR: Path = pwd / 'target / 'universal
+/**
+ * Compile Marathon and run unit and integration tests followed by scapegoat.
+ */
+@main
+def compileAndTest(): Unit = utils.stage("Compile and Test") {
+  %('sbt, 'clean, 'test, "integration:test", 'scapegoat)
+}
+
+@main
+def uploadPackagesToS3(): Unit = utils.stage("Upload Packages") {
+  // || file.ext == "sha1" removed, separated out
+  (ls! PACKAGE_DIR |? (file => file.ext == "tgz" || file.ext == "txz" ))
+    .foreach(awsClient.archiveArtifact)
+}
+
+@main
+def createAndUploadPackages(): Unit = {
+  createPackages()
+  uploadPackagesToS3()
+  createLinuxPackages()
+}
+
+/**
+ * Creates SHA-1 for all files in the package directory
+ */
+def createPackageSha1s(): Unit = {
+  (ls! PACKAGE_DIR |? (file => file.ext == "tgz" || file.ext == "txz"))
+    .foreach(fileUtil.writeSha1ForFile)
+}
+
+/**
+ * Creates the zip and txz files of the Marathon runnable package with their
+ * associated sha1
+ */
+@main
+def createPackages(): Unit = utils.stage("Package") {
+  %('sbt, "universal:packageZipTarball", "universal:packageXzTarball")
+  createPackageSha1s()
+}
+
+/**
+ * Create Docker, rpm and deb packages.
+ */
+@main
+def createLinuxPackages(): Unit = utils.stage("Package Docker Image, Debian and RedHat Packages") {
+  %('sbt, "docker:publishLocal", "packageDebian", "packageRpm")
+}
+
+/**
+ * The pipeline target for Phabricator builds. It triggers the Jenkins target
+ * and does some additional reporting to Phabricator.
+ */
+@main
+def phabricator(): Unit = {
+  val diffId: String = sys.env.getOrElse("DIFF_ID", throw new IllegalArgumentException("No DIFF_ID was defined."))
+  val phId: String = sys.env.getOrElse("PHID", throw new IllegalArgumentException("No PHID was defined."))
+  val revisionId: String = sys.env.getOrElse("REVISION_ID", throw new IllegalArgumentException("No REVISION_ID was defined."))
+  val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
+  val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
+
+  try {
+    jenkins()
+    phabricatorClient.reportSuccess(diffId, phId, revisionId, buildUrl, buildTag)
+  } catch {
+    case NonFatal(e) =>
+      phabricatorClient.reportFailure(diffId, phId, revisionId, buildUrl, buildTag, e.getMessage())
+      throw e
+  }
+}
+
+/**
+ * The main pipeline target for builds on Jekins.
+ */
+@main
+def jenkins(): Unit = {
+  utils.stage("Provision") {
+    provision.killStaleTestProcesses()
+    provision.installMesos()
+  }
+
+  compileAndTest()
+
+  createAndUploadPackages()
+}

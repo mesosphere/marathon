@@ -33,7 +33,7 @@ else:
         return response.getcode()
 
 
-def make_handler(appId, version, base_url):
+def make_handler(app_id, version, base_url):
     """
     Factory method that creates a handler class.
     """
@@ -123,16 +123,16 @@ if __name__ == "__main__":
     logging.debug(sys.argv)
 
     port = int(sys.argv[1])
-    appId = sys.argv[2]
+    app_id = sys.argv[2]
     version = sys.argv[3]
-    url = "{}/{}".format(sys.argv[4], port)
-    taskId = os.getenv("MESOS_TASK_ID", "<UNKNOWN>")
+    base_url = sys.argv[4]
+    task_id = os.getenv("MESOS_TASK_ID", "<UNKNOWN>")
 
     HTTPServer.allow_reuse_address = True
-    httpd = HTTPServer(("", port), make_handler(appId, version, url))
+    httpd = HTTPServer(("", port), make_handler(app_id, version, base_url))
     msg = "AppMock[%s %s]: %s has taken the stage at port %d. "\
           "Will query %s for health and readiness status."
-    logging.info(msg, appId, version, taskId, port, url)
+    logging.info(msg, app_id, version, task_id, port, base_url)
 
     try:
         httpd.serve_forever()
