@@ -6,7 +6,7 @@ title: Migrating Apps to the 1.5 Networking API
 
 When you upgrade to Marathon 1.5, your apps will also be automatically modified to conform to the new networking API. However, support for deprecated networking API fields will be dropped completely in some future release according to Marathon's official API deprecation policy [MARATHON-7165](https://jira.mesosphere.com/browse/MARATHON-7165).
 
-There are two ways to enable your apps to be modified for the networking API.
+Use the options below to finely tune automatic app migration:
 
 - Set the `MIGRATION_1_5_0_MARATHON_DEFAULT_NETWORK_NAME` environment variable.
     * Older MESOS IP/CT app definitions were not required to declare an `ipAddress/networkName`; Marathon 1.5 requires a resolvable network name.
