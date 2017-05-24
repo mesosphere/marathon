@@ -1,3 +1,9 @@
+## Changes from 1.3.11 to 1.3.12
+
+### Changes
+
+- [MARATHON-7397](https://jira.mesosphere.com/browse/MARATHON-7397) Include USER networked docker containers in /v2/tasks text/plain output. If no host port is specified, specify address as `{containerIp}:{containerPort}`. If host port is specified, `{agentIp}:{hostPort}`.
+
 ## Changes from 1.3.5 to 1.3.6
 
 
