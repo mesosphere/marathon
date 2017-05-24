@@ -11,10 +11,12 @@ types:
       Endpoints accept connections from outside of a pod.
       Endpoints may also be advertised outside of a cluster.
     properties:
-      name:
+      name?:
         type: strings.Name
         description: |
           Name of this port. Should be unique in the context of the pod.
+          Required if the network mode is container and  `default_network_name`
+          command line arg isn't specified.
       containerPort?:
         type: numbers.Port
         description: |
