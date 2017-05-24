@@ -322,7 +322,7 @@ The following table summarizes the API transformations when using the network AP
 
 - `container.docker.network` : Removed.
 - `portDefinitions` : Remains the same.
-- `networks` : Added. Optional (in this instancef). Default is host mode.
+- `networks` : Added. Optional (in this instance). Default is host mode.
 - `networks[x].mode` : Is `host` for Bridge Network.
 
 ### Important Notes
