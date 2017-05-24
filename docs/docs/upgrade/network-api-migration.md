@@ -15,7 +15,7 @@ This document contains the high-level structural differences between the 1.4 and
 
 Marathon now supports applications attached to more than one network. However, additional rules apply when you specify more than one network:
 
-- If a `portMapping` has defined a `hostPort`, the `networkNames` array must be defined with the name(s) of the `networks` it's referring to.
+- If a *portMapping* has defined a `hostPort`, the `networkNames` array must be defined with the name(s) of the `networks` it's referring to.
 
 - An application can join one or more container mode networks. When joining multiple container networks, there are additional restrictions on port mapping entries (see Port Mappings for details).
 
@@ -46,6 +46,7 @@ The following table summarizes the API transformations when using the network AP
 {
     "container": {
       "docker": {
+        "image": "image-name",
         "network": "USER",
         "portMappings": [
           {
@@ -67,7 +68,7 @@ The following table summarizes the API transformations when using the network AP
 {
     "container": {
       "docker": {
-        "image": "foo"
+        "image": "image-name"
       },
       "portMappings": [
         {
@@ -195,6 +196,7 @@ The following table summarizes the API transformations when using the network AP
 {
     "container": {
         "docker": {
+            "image": "image-name",
             "network": "BRIDGE",
             "portMappings": [
               {
@@ -296,7 +298,7 @@ The following table summarizes the API transformations when using the network AP
     "container": {
         "type": "DOCKER",
         "docker": {
-            "image": "foo"
+            "image": "image-name"
         }
     },
     "networks": [
