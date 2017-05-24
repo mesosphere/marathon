@@ -21,6 +21,7 @@ object EndpointsHelper {
     * apps' tasks.  The data columns in the result are separated by
     * the supplied delimiter string.
     */
+  //scalastyle:off cyclomatic.complexity
   def appsToEndpointString(
     tasksMap: TaskTracker.TasksByApp,
     apps: Seq[AppDefinition],
