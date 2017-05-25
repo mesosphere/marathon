@@ -10,12 +10,12 @@ As of Marathon 1.5, you can upload your private Docker registry credentials to a
 
 1. Log in to your private registry manually. This will create a `~/.docker` directory and a `~/.docker/config.json` file.
 
-  ```bash
-  $ docker login some.docker.host.com
-  Username: foo
-  Password:
-  Email: foo@bar.com
-  ```
+    ```bash
+    $ docker login some.docker.host.com
+    Username: foo
+    Password:
+    Email: foo@bar.com
+    ```
 
 1. Check that you have the `~/.docker/config.json` file.
 
@@ -30,7 +30,7 @@ As of Marathon 1.5, you can upload your private Docker registry credentials to a
     {
       "auths": {
           "https://index.docker.io/v1/": {
-              "auth": "XXXXXX"
+              "auth": "XXXXX"
           }
       }
     }
