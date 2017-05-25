@@ -15,7 +15,7 @@ This document contains the high-level structural differences between the 1.4 and
 
 Marathon now supports applications attached to more than one network. However, additional rules apply when you specify more than one network:
 
-- If a *portMapping* has defined a `hostPort`, the `networkNames` array must be defined with the name(s) of the `networks` it's referring to.
+- If a *portMapping* has defined a `hostPort` and more than one container network is declared, the `networkNames` array must be defined with the name of the `networks` it's referring to.
 
 - An application can join one or more container mode networks. When joining multiple container networks, there are additional restrictions on port mapping entries (see Port Mappings for details).
 
@@ -103,8 +103,6 @@ The following table summarizes the API transformations when using the network AP
 **Breaking Feature:** Starting from the 1.5 API, you can specify multiple `container` networks. There are a few things to consider in this case:
 
 - An application can join only join multiple networks using the Mesos containerizer (`MESOS`). Although Docker itself supports multiple networks per container, the Docker containerizer implementation within Mesos does not support multiple networks.
-
-- When more than one network is specified, every `containerPort` MUST include a `networkNames` array with the name(s) of the network(s) it is associated with.
 
 - An application cannot mix networking modes: you must specify a single `host` network, a single `container/bridge` network, or one or more `container` networks.
 
