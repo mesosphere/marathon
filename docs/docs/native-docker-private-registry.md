@@ -8,7 +8,8 @@ As of Marathon 1.5, you can upload your private Docker registry credentials to a
 
 ## Step 1: Create a Credentials File
 
-1. Log in to your private registry manually. This will create a `.docker` folder and a `.docker/config.json` file.
+1. Log in to your private registry manually. This will create a `~/.docker` directory and a `~/.docker/config.json` file.
+
   ```bash
   $ docker login some.docker.host.com
   Username: foo
@@ -16,20 +17,20 @@ As of Marathon 1.5, you can upload your private Docker registry credentials to a
   Email: foo@bar.com
   ```
 
-1. Check that you have the `.docker/config.json` file.
+1. Check that you have the `~/.docker/config.json` file.
 
     ```bash
-    $ ls .docker
+    $ ls ~/.docker
     config.json
     ```
 
-    Your `config.json` file should look like this.
+    Your `config.json` file should look like this, where value of `auth` is a based64-encoded `username:password` string.
 
     ```json
     {
       "auths": {
           "https://index.docker.io/v1/": {
-              "auth": "aWNoZXJuZXRza3k6YlIoKW5TME4jZG8="
+              "auth": "XXXXXX"
           }
       }
     }
@@ -45,21 +46,23 @@ As of Marathon 1.5, you can upload your private Docker registry credentials to a
 Add the following two parameters to your app definition.
 
 1. A location for the secret in the `secrets` parameter:
-    ```json
-    "secrets": {
-          "pullConfigSecret": {
-              "source": "/mesos-docker/pullConfig"
-          }
-      }
-    ```
+
+  ```json
+  "secrets": {
+    "pullConfigSecret": {
+      "source": "/mesos-docker/pullConfig"
+    }
+  }
+  ```
 
 1. A reference to the secret in the `docker.pullConfig` parameter:
+
     ```json
     "docker": {
-            "image": "mesosphere/inky",
-            "pullConfig": {
-                "secret": "pullConfigSecret"
-              }
+      "image": "mesosphere/inky",
+      "pullConfig": {
+        "secret": "pullConfigSecret"
+      }
     }
     ```
 
@@ -67,29 +70,29 @@ Add the following two parameters to your app definition.
 
 1. A complete example:
 
-      ```json
-      {
-        "id": "/mesos-docker",
-        "container": {
-          "docker": {
-              "image": "mesosphere/inky",
-              "pullConfig": {
-                  "secret": "pullConfigSecret"
-              }
-            },
-            "type": "MESOS"
-          },
-          "secrets": {
-            "pullConfigSecret": {
-              "source": "/mesos-docker/pullConfig"
-            }
-          },
-          "args": ["hello"],
-          "cpus": 0.2,
-          "mem": 16.0,
-          "instances": 1
+  ```json
+  {
+    "id": "/mesos-docker",
+    "container": {
+      "docker": {
+        "image": "mesosphere/inky",
+        "pullConfig": {
+          "secret": "pullConfigSecret"
+        }
+      },
+      "type": "MESOS"
+    },
+    "secrets": {
+      "pullConfigSecret": {
+        "source": "/mesos-docker/pullConfig"
       }
-      ```
+    },
+    "args": ["hello"],
+    "cpus": 0.2,
+    "mem": 16.0,
+    "instances": 1
+  }
+  ```
 
 1. The Docker image will now pull using the provided security credentials given.
 
@@ -98,24 +101,28 @@ Add the following two parameters to your app definition.
 Add the following two parameters to your pod definition.
 
 1. A location for the secret in the `secrets` parameter:
-    ```json
-    "secrets": {
-      "pullConfigSecret": {
-        "source": "/pod/pullConfig"
-      }
+
+  ```json
+  "secrets": {
+    "pullConfigSecret": {
+      "source": "/pod/pullConfig"
     }
-    ```
+  }
+  ```
 
 1. A reference to the secret in the `containers.image.pullConfig` parameter:
 
-  ```
+  ```json
   "containers": [
     {
       "image": {
+        "id": "nginx",
         "pullConfig": {
           "secret": "pullConfigSecret"
         },
         "kind": "DOCKER"
+      }
+    }
   ]
   ```
 
@@ -160,11 +167,11 @@ config file.
 ## Registry  2.0 - Docker 1.6 and up
 
 To supply credentials to pull from a private registry, add a `docker.tar.gz` file to
-the `uris` field of your app. The `docker.tar.gz` file should include the `.docker` folder and the contained `.docker/config.json`
+the `uris` field of your app. The `docker.tar.gz` file should include the `.docker` directory and the contained `.docker/config.json`
 
 ### Step 1: Compress Docker credentials
 
-1. Log in to the private registry manually. Login creates a .docker folder and a .docker/config.json file in your home directory.
+1. Log in to the private registry manually. Login creates a `~/.docker` directory and a `~/.docker/config.json` file in your home directory.
 
     ```bash
     $ docker login some.docker.host.com
@@ -173,13 +180,13 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
       Email: foo@bar.com
     ```
 
-1. Compress the .docker folder and its contents.
+1. Compress the `~/.docker` directory and its contents.
 
     ```bash
     $ cd ~
-    $ tar czf docker.tar.gz .docker
+    $ tar -czf docker.tar.gz .docker
     ```
-1. Check you have both files in the tar
+1. Verify that both files are in the archive.
 
     ```bash
     $ tar -tvf ~/docker.tar.gz
@@ -188,7 +195,7 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
       -rw------- root/root       114 2015-07-28 01:31 .docker/config.json
     ```
 
-1. Put the gziped file in location which can be retrieved via mesos/marathon (optional).
+1. Put the archive file in a location that is accessible to your application definition.
 
     ```bash
     $ cp docker.tar.gz /etc/
@@ -196,16 +203,13 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
       <div class="alert alert-info">
         <strong>Note:</strong>
-       The URI must be accessible by all nodes that may start your application.
-       Approaches may include distributing the file to the local filesystem of all nodes, for example via RSYNC/SCP, or
-       storing it on a shared network drive, for example [Amazon S3](http://aws.amazon.com/s3/).
-       It is worth considering the security implications of your chosen approach.
+       The URI must be accessible by all nodes that will start your application. You can distribute the file to the local filesystem of all nodes, for example via RSYNC/SCP, or store it on a shared network drive like [Amazon S3](http://aws.amazon.com/s3/). Consider the security implications of your chosen approach carefully.
       </div>
 
 
 ### Step 2:  Add URI path to app definition
 
-1. Add the path to the archive file login credentials to your app definition.
+1. Add the path to the archive file login credentials to the `uris` parameter of your app definition.
 
     ```bash
     "uris": [
