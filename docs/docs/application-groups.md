@@ -29,13 +29,15 @@ The definition could look like this:
       "id": "/product/service",
       "dependencies": ["/product/database"],
       "apps": [
-         { "id": "/product/service/rails-app", ... },
-         { "id": "/product/service/play-app", ... }
+         { "id": "rails-app", ... },
+         { "id": "play-app", ... }
       ]
     }
   ]
 }
 ```
+
+**Note:** The `apps:id` parameter cannot be a nested path.
 
 ## Dependencies 
 
