@@ -172,7 +172,10 @@ case class MesosCluster(
   }
 
   lazy val agents = 0.until(numSlaves).map { i =>
-    Mesos(master = false, Seq(s"--hostname=$i"))
+    // uniquely identify each agent node, useful for constraint matching
+    Mesos(master = false, Seq(
+      s"--attributes=node:$i"
+    ))
   }
 
   if (autoStart) {
@@ -186,7 +189,7 @@ case class MesosCluster(
   }
 
   def waitForLeader(): Future[String] = async {
-    val firstMaster = s"http://localhost:${masters.head.port}"
+    val firstMaster = s"http://${masters.head.ip}:${masters.head.port}"
     val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDelay = waitForLeaderTimeout) {
       Http().singleRequest(Get(firstMaster + "/redirect")).map { result =>
         result.discardEntityBytes() // forget about the body
@@ -272,13 +275,15 @@ case class MesosCluster(
   }
 
   case class Mesos(master: Boolean, extraArgs: Seq[String]) extends AutoCloseable {
+    val ip = IP.routableIPv4
     val port = PortAllocator.ephemeralPort()
     private val workDir = Files.createTempDirectory(s"mesos-master$port").toFile
     private val processBuilder = Process(
       command = Seq(
       "mesos",
       if (master) "master" else "slave",
-      "--ip=127.0.0.1",
+      s"--ip=$ip",
+      s"--hostname=$ip",
       s"--port=$port",
       if (master) s"--zk=$masterUrl" else s"--master=$masterUrl",
       s"--work_dir=${workDir.getAbsolutePath}") ++ extraArgs,
@@ -308,6 +313,8 @@ case class MesosCluster(
       Try(FileUtils.deleteDirectory(workDir))
     }
   }
+
+  def state = new MesosFacade(Await.result(waitForLeader(), waitForLeaderTimeout)).state
 
   def clean(): Unit = {
     val client = new MesosFacade(Await.result(waitForLeader(), waitForLeaderTimeout))
@@ -420,5 +427,24 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   abstract override def afterAll(): Unit = {
     localMesosUrl.fold(mesosCluster.close())(_ => ())
     super.afterAll()
+  }
+}
+
+object IP {
+  import sys.process._
+
+  lazy val routableIPv4: String =
+    sys.env.getOrElse("MESOSTEST_IP_ADDRESS", inferRoutableIP)
+
+  private def detectIpScript = {
+    val resource = getClass.getClassLoader.getResource("detect-routable-ip.sh")
+    Option(resource).flatMap { f => Option(f.getFile) }.getOrElse {
+      throw new RuntimeException(
+        s"Couldn't find file for detect-routable-ip.sh resource; is ${resource}. Are you running from a JAR?")
+    }
+  }
+
+  private def inferRoutableIP: String = {
+    Seq("bash", detectIpScript).!!.trim
   }
 }

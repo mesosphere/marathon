@@ -148,9 +148,9 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("The app count metric should increase")
       result.code should be(201) // Created
-      // need to wait a little bit for the metrics cycle
-      Thread.sleep(system.settings.config.getDuration("kamon.metric.tick-interval", TimeUnit.MILLISECONDS) * 2L)
-      (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "max").as[Double] should be > appCount
+      eventually {
+        (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "max").as[Double] should be > appCount
+      }
     }
 
     // OK

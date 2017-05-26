@@ -155,7 +155,16 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[ServiceMock].getName
-    val run = s"""$javaExecutable -DappProxyId=$uuid -DtestSuite=$suiteName -Xmx64m -classpath $classPath $main"""
+    val limitThreads = Seq(
+      "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
+      // lower the memory pressure by limiting threads.
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+      "-Dscala.concurrent.context.minThreads=2",
+      "-Dscala.concurrent.context.maxThreads=32"
+    ).mkString(" ")
+    val run = s"""$javaExecutable $limitThreads -DappProxyId=$uuid -DtestSuite=$suiteName -Xmx64m -classpath $classPath $main"""
     val file = File.createTempFile("serviceProxy", ".sh")
     file.deleteOnExit()
 

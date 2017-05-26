@@ -14,7 +14,8 @@ class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
     with AppConfiguration
     with EventConf
     with DebugConf
-    with PluginManagerConfiguration {
+    with PluginManagerConfiguration
+    with FeaturesConf {
   verify()
 }
 

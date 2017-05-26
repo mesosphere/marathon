@@ -13,18 +13,23 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
   "network validation" when {
     implicit val basicValidator = AppValidation.validateCanonicalAppAPI(Set.empty)
 
-    def networkedApp(portMappings: Seq[ContainerPortMapping], networks: Seq[Network]) = {
+    def networkedApp(portMappings: Seq[ContainerPortMapping], networks: Seq[Network], docker: Boolean = false) = {
       App(
         id = "/foo",
         cmd = Some("bar"),
         networks = networks,
-        container = Some(Container(`type` = EngineType.Mesos, portMappings = Some(portMappings))))
+        container = Some(Container(
+          portMappings = Some(portMappings),
+          `type` = if (docker) EngineType.Docker else EngineType.Mesos,
+          docker = if (docker) Some(DockerContainer(image = "foo")) else None
+        )))
     }
 
-    def containerNetworkedApp(portMappings: Seq[ContainerPortMapping], networkCount: Int = 1) =
+    def containerNetworkedApp(portMappings: Seq[ContainerPortMapping], networkCount: Int = 1, docker: Boolean = false) =
       networkedApp(
         portMappings,
-        networks = 1.to(networkCount).map { i => Network(mode = NetworkMode.Container, name = Some(i.toString)) })
+        networks = 1.to(networkCount).map { i => Network(mode = NetworkMode.Container, name = Some(i.toString)) },
+        docker = docker)
 
     "multiple container networks are specified for an app" should {
 
@@ -37,18 +42,26 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
             AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks)
       }
 
+      "limit docker containers to a single network" in {
+        val app = containerNetworkedApp(
+          Seq(ContainerPortMapping()), networkCount = 2, true)
+        basicValidator(app).normalize should failWith(
+          "/" -> AppValidationMessages.DockerEngineLimitedToSingleContainerNetwork
+        )
+      }
+
       "allow portMappings that don't declare hostPort nor networkNames" in {
-        val badApp = containerNetworkedApp(
+        val app = containerNetworkedApp(
           Seq(ContainerPortMapping()), networkCount = 2)
-        basicValidator(badApp) shouldBe (aSuccess)
+        basicValidator(app) shouldBe (aSuccess)
       }
 
       "allow portMappings that both declare a hostPort and a networkNames" in {
-        val badApp = containerNetworkedApp(Seq(
+        val app = containerNetworkedApp(Seq(
           ContainerPortMapping(
             hostPort = Option(0),
             networkNames = List("1"))), networkCount = 2)
-        basicValidator(badApp) shouldBe (aSuccess)
+        basicValidator(app) shouldBe (aSuccess)
       }
     }
 
