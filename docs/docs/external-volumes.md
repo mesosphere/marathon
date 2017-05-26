@@ -18,12 +18,14 @@ An external storage service enables your apps to be more fault-tolerant. If a ho
 
 You can specify an external volume in your Marathon app definition. [Learn more about Marathon application definitions][5].
 
+The `cmd` in this app definition appends the output of the `date` command to `test.txt`. You can verify that the external volume is being used correctly if you see that the logs of successive runs of the application show more and more lines of `date` output.
+
     {
       "id": "hello",
       "instances": 1,
       "cpus": 0.1,
       "mem": 32,
-      "cmd": "mkdir my-test-vol && touch my-test-vol/test.txt && ls my-test-vol/",
+      "cmd": "date >> test-rexray-volume/test.txt; cat test-rexray-volume/test.txt",
       "container": {
         "type": "MESOS",
         "volumes": [
@@ -65,14 +67,16 @@ In the app definition above:
 <a name="docker-extvol"></a>
 ### Using a Docker Container
 
-Below is a sample app definition that uses a Docker container and specifies first an external volume, second a sandbox-relative host-volume:
+Below is a sample app definition that uses a Docker container and specifies first an external volume, second a sandbox-relative host-volume.
+
+The `cmd` in this app definition appends the output of the `date` command to `test.txt`. You can verify that the external volume is being used correctly if you see that the logs of successive runs of the application show more and more lines of `date` output.
 
     {
       "id": "/test-docker",
       "instances": 1,
       "cpus": 0.1,
       "mem": 32,
-      "cmd": "mkdir my-test-vol && touch my-test-vol/test.txt && ls my-test-vol/",
+      "cmd": "date >> /data/test-rexray-volume/test.txt; cat /data/test-rexray-volume/test.txt",
       "container": {
         "type": "DOCKER",
         "docker": {
