@@ -2,28 +2,32 @@
 title: Provisioning Containers
 ---
 
+# Provisioning Containers
+
 A containerizer is a Mesos agent component responsible for launching containers, within which you can run a Marathon app. Running apps in containers offers a number of benefits, including the ability to isolate tasks from one another and control task resources programmatically.
 
 Marathon enables users to run container images with two different runtimes:
 
 1. Mesos containerizer using the [Universal Container Runtime](#ucr).
-1. [Docker containerizer](#docker-containerizer)) using the native Docker Engine as runtime.
+1. [Docker containerizer](#docker-containerizer) using the native Docker Engine as runtime.
 
 <a name="ucr"></a>
+
 # Universal Container Runtime
-The [Universal Container Runtime](http://mesos.apache.org/documentation/latest/container-image)(UCR) extends the Mesos containerizer to support provisioning [Docker](https://docker.com/) container images ([AppC](https://github.com/appc/spec) coming soon). This means that you can use both the Mesos containerizer and other container image types in DC/OS. You can still use the Docker container runtime directly ([instructions are below](#docker-containerizer)), but the Universal Container Runtime supports running Docker images without depending on the Docker Engine, which allows for better integration with Mesos.
+
+The [Universal Container Runtime](http://mesos.apache.org/documentation/latest/container-image) (UCR) extends the Mesos containerizer to support provisioning [Docker](https://docker.com/) container images ([AppC](https://github.com/appc/spec) coming soon). This means that you can use both the Mesos containerizer and other container image types. You can still use the Docker container runtime directly ([instructions are below](#docker-containerizer)), but the Universal Container Runtime supports running Docker images without depending on the Docker Engine, which allows for better integration with Mesos.
 
 The following Marathon features _only_ work with the UCR:
 
-- [Pods]({{ site.baseurl }}/docs/pods.html)
-- GPUs
-- [Authentication to a private Docker registry using a secret store]({{ site.baseurl }}/docs/native-docker-private-registry,html)
+- [Pods]({{ site.baseurl }}/docs/pods.html).
+- GPUs.
+- [Authentication to a private Docker registry using a secret store]({{ site.baseurl }}/docs/native-docker-private-registry,html).
 
-## Provision Containers with the UCR
+## Provisioning Containers with the UCR
 
 To provision containers with the UCR, specify the container type `MESOS` and a the appropriate object in your application definition. Here, we specify a Docker container with the `docker` object.
 
-The Mesos containerizer provides a `credential`, with a `principal` and an optional `secret` field to authenticate when downloading the Docker image. <!-- I think this has changed -->
+The Mesos containerizer provides a `credential`, with a `principal` and an optional `secret` field to authenticate when downloading the Docker image.
 
 ```json
 {  
@@ -53,7 +57,8 @@ The Mesos containerizer provides a `credential`, with a `principal` and an optio
 - The UCR does not support the following: runtime privileges, Docker options, force pull, named ports, numbered ports, bridge networking, port mapping.
 
 <a name="docker-containerizer"></a>
-# Provision Containers with the Docker Containerizer
+
+# Provisioning Containers with the Docker Containerizer
 
 The Docker containerizer relies on the external Docker engine runtime to provision the containers.
 
@@ -331,4 +336,4 @@ the future, as Mesos may not always interact with Docker via the CLI.
 
 - [Mesos Docker Containerizer](http://mesos.apache.org/documentation/latest/docker-containerizer)
 - [Supporting Container Images in Mesos Containerizer]
-  (https://github.com/apache/mesos/blob/master/docs/container-image.md)
+  (http://mesos.apache.org/documentation/latest/container-image/)
