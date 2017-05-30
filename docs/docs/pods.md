@@ -42,7 +42,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 1. Verify the status of your new pod:
 
-        curl GET http://<ip>:<port>/v2/pods/simplepod::status
+        curl -X GET http://<ip>:<port>/v2/pods/simplepod::status
 
 1. Delete your pod:
 
