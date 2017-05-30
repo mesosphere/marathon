@@ -23,21 +23,6 @@ from utils import fixture_dir, get_resource
 
 def test_launch_mesos_container():
     """ Test the successful launch of a mesos container on Marathon.
-    """
-    client = marathon.create_client()
-    app_id = uuid.uuid4().hex
-    client.add_app(app_mesos(app_id))
-    shakedown.deployment_wait()
-
-    tasks = client.get_tasks(app_id)
-    app = client.get_app(app_id)
-
-    assert len(tasks) == 1
-    assert app['container']['type'] == 'MESOS'
-
-
-def test_launch_mesos_container():
-    """ Test the successful launch of a mesos container on Marathon.
         This is a UCR test with a standard command.
     """
     client = marathon.create_client()
@@ -221,23 +206,6 @@ def test_launch_app_timed():
     time.sleep(3)
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1
-
-
-def test_ui_registration_requirement():
-    """ Testing the UI is a challenge with this toolchain.  The UI team has the
-        best tooling for testing it.   This test verifies that the required configurations
-        for the service endpoint and ability to launch to the service UI are present.
-    """
-    tasks = mesos.get_master().tasks()
-    for task in tasks:
-        if task['name'] == 'marathon-user':
-            for label in task['labels']:
-                if label['key'] == 'DCOS_PACKAGE_NAME':
-                    assert label['value'] == 'marathon'
-                if label['key'] == 'DCOS_PACKAGE_IS_FRAMEWORK':
-                    assert label['value'] == 'true'
-                if label['key'] == 'DCOS_SERVICE_NAME':
-                    assert label['value'] == 'marathon-user'
 
 
 def test_ui_available(marathon_service_name):
