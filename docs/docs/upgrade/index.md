@@ -60,14 +60,14 @@ Release Notes: https://github.com/mesosphere/marathon/releases/tag/v0.13.0
 
 Tasks keys and storage format in ZooKeeper changed in a backward incompatible fashion.
 Zookeeper compression is implemented and enabled by default. Older versions will not be able to read compressed entities.
-Marathon nowuses logback as logging backend. If you are using custom log4j properties, you will have to migrate them to a logback configuration. 
+Marathon now uses logback as logging backend. If you are using custom log4j properties, you will have to migrate them to a logback configuration.
 
 ## Upgrading to 0.11
 
 Release Notes: https://github.com/mesosphere/marathon/releases/tag/v0.11.0
 
 Java 8 or higher is needed to run Marathon, since Java 6 and 7 support has reached end of life.
-`--revive_offers_for_new_apps` is now the default. 
+`--revive_offers_for_new_apps` is now the default.
 If you want to avoid resetting filters if new tasks need to be started, you can disable this by `--disable_revive_offers_for_new_apps`.
 
 ## Upgrading to 0.10
