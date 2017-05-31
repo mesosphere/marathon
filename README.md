@@ -150,10 +150,10 @@ Test it:
 
 You have to set the Mesos test IP and disable Docker tests on Mac:
 
-   MESOSTEST_IP_ADDRESS="127.0.0.1" \
-   RUN_DOCKER_INTEGRATION_TESTS=false \
-   RUN_MESOS_INTEGRATION_TESTS=false \
-   sbt test integration:test
+    MESOSTEST_IP_ADDRESS="127.0.0.1" \
+    RUN_DOCKER_INTEGRATION_TESTS=false \
+    RUN_MESOS_INTEGRATION_TESTS=false \
+    sbt test integration:test
 
 The Docker integration tests are not supported on Mac.
 
