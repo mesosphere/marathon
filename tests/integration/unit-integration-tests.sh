@@ -11,6 +11,8 @@ fi
 export DOCKER_HUB_USERNAME
 export DOCKER_HUB_PASSWORD
 export DOCKER_HUB_EMAIL
+echo $DOCKER_HUB_PASSWORD
+echo $DOCKER_HUB_EMAIL
 TAGGED_IMAGE=$($WORKSPACE/bin/build-base-image.sh)
 
 if [[ -z ${RUN_DOCKER_INTEGRATION_TESTS+x} ]]; then
