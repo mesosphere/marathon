@@ -139,7 +139,7 @@
           "properties": {
             "credential": {
               "type": "object",
-              "description": "Credential to authenticate with the docker registry.",
+              "description": "Credential to authenticate with the docker registry. It is deprecated since Marathon v1.5",
               "additionalProperties": false,
               "properties": {
                 "principal": {
@@ -152,6 +152,19 @@
                 }
               },
               "required": [ "principal" ]
+            },
+            "pullConfig": {
+              "type": "object",
+              "description": "Docker's config.json",
+              "additionalProperties": false,
+              "properties": {
+                "secret" : {
+                  "type": "string",
+                  "description": "A secret whose value is a stringified JSON object in a Secret Store.",
+                  "minLength": 1
+                }
+              },
+              "required": [ "secret" ]
             },
             "forcePullImage": {
               "type": "boolean",

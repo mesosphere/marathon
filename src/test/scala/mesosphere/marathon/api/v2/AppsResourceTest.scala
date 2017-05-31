@@ -14,7 +14,8 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
-import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkConversionMessages, NetworkMode, Raml, SecretDef }
+import mesosphere.marathon.raml.{ Container => RamlContainer }
+import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkConversionMessages, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -162,6 +163,70 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
             throw th
         }
       }
+    }
+
+    "Create a new app with w/ Mesos containerizer and a Docker config.json" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+      Given("An app with a Docker config.json")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(
+          image = "private/image",
+          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
+      val app = App(
+        id = "/app", cmd = Some("cmd"), container = Option(container),
+        secrets = Map("pullConfigSecret" -> SecretDef("/config")))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+      val result = Try(prepareApp(app, groupManager))
+
+      Then("It is successful")
+      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
+    }
+
+    "Creating a new app with w/ Docker containerizer and a Docker config.json should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+      Given("An app with a Docker config.json")
+      val container = RamlContainer(
+        `type` = EngineType.Docker,
+        docker = Option(DockerContainer(
+          image = "private/image",
+          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
+      val app = App(
+        id = "/app", cmd = Some("cmd"), container = Option(container),
+        secrets = Map("pullConfigSecret" -> SecretDef("/config")))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+      val result = Try(prepareApp(app, groupManager))
+
+      Then("It fails")
+      assert(response.getStatus == 422, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
+      response.getEntity.toString should include("pullConfig is not supported with Docker containerizer")
+    }
+
+    "Creating a new app with non-existing Docker config.json secret should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+      Given("An app with a Docker config.json")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(
+          image = "private/image",
+          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
+      val app = App(
+        id = "/app", cmd = Some("cmd"), container = Option(container))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+      val result = Try(prepareApp(app, groupManager))
+
+      Then("It fails")
+      assert(response.getStatus == 422, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
+      response.getEntity.toString should include("pullConfig.secret must refer to an existing secret")
     }
 
     "Do partial update with patch methods" in new Fixture {

@@ -979,25 +979,31 @@ def test_private_repository_docker_app():
     common.assert_app_tasks_running(client, app_def)
 
 
-@pytest.mark.skip(reason="Not yet implemented in mesos")
+@pytest.mark.skipif("docker_env_set()")
+@dcos_1_10
 def test_private_repository_mesos_app():
-    """ Test private docker registry with mesos containerizer using "credentials" container field.
-        Note: Despite of what DC/OS docmentation states this feature is not yet implemented:
-        https://issues.apache.org/jira/browse/MESOS-7088
-    """
+    """ Test private docker registry with mesos containerizer using "config" container's image field."""
+
+    username = os.environ['DOCKER_HUB_USERNAME']
+    password = os.environ['DOCKER_HUB_PASSWORD']
+
+    secret_name = "dockerPullConfig"
+    secret_value_json = common.create_docker_pull_config_json(username, password)
+
+    import json
+    secret_value = json.dumps(secret_value_json)
 
     client = marathon.create_client()
-    assert 'DOCKER_HUB_USERNAME' in os.environ, "Couldn't find docker hub username. $DOCKER_HUB_USERNAME is not set"
-    assert 'DOCKER_HUB_PASSWORD' in os.environ, "Couldn't find docker hub password. $DOCKER_HUB_PASSWORD is not set"
+    common.create_secret(secret_name, secret_value)
 
-    principal = os.environ['DOCKER_HUB_USERNAME']
-    secret = os.environ['DOCKER_HUB_PASSWORD']
+    try:
+        app_def = common.private_mesos_container_app(secret_name)
+        client.add_app(app_def)
+        shakedown.deployment_wait()
 
-    app_def = common.private_mesos_container_app(principal, secret)
-    client.add_app(app_def)
-    shakedown.deployment_wait()
-
-    common.assert_app_tasks_running(client, app_def)
+        common.assert_app_tasks_running(client, app_def)
+    finally:
+        common.delete_secret(secret_name)
 
 
 def test_ping(marathon_service_name):
