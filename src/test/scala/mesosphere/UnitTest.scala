@@ -38,11 +38,12 @@ object IntegrationTag extends Tag("mesosphere.marathon.IntegrationTest")
 /**
   * Tag that will conditionally enable a specific test case if an environment variable is set.
   * @param envVarName The name of the environment variable to check if it is set to "true"
+  * @param default The default value of the variable.
   * {{{
   *   "Something" should "do something" taggedAs WhenEnvSet("ABC") in {...}
   * }}}
   */
-case class WhenEnvSet(envVarName: String) extends Tag(if (sys.env.getOrElse(envVarName, "false") == "true") "" else classOf[Ignore].getName)
+case class WhenEnvSet(envVarName: String, default: String = "false") extends Tag(if (sys.env.getOrElse(envVarName, default) == "true") "" else classOf[Ignore].getName)
 
 trait ValidationTestLike extends Validation {
   this: Assertions =>

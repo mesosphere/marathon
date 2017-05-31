@@ -144,6 +144,22 @@ If you want to inspect the contents of the Docker container:
 
     docker run -it --entrypoint=/bin/bash marathon:{version} -s
 
+Test it:
+
+    sbt test integration:test
+
+You have to set the Mesos test IP and disable Docker tests on Mac:
+
+   MESOSTEST_IP_ADDRESS="127.0.0.1" \
+   RUN_DOCKER_INTEGRATION_TESTS=false \
+   RUN_MESOS_INTEGRATION_TESTS=false \
+   sbt test integration:test
+
+The Docker integration tests are not supported on Mac.
+
+Also see the [CI instructions](ci/README.md) on running specfic build pipeline
+targets.
+
 ### Marathon UI
 
 To develop on the web UI look into the instructions of the [Marathon UI](https://github.com/mesosphere/marathon-ui) repository.
