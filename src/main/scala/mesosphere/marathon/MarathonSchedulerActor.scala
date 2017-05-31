@@ -4,6 +4,7 @@ import akka.Done
 import akka.actor._
 import akka.event.{ EventStream, LoggingReceive }
 import akka.stream.Materializer
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
@@ -24,7 +25,6 @@ import mesosphere.mesos.Constraints
 import org.apache.mesos
 import org.apache.mesos.Protos.{ Status, TaskState }
 import org.apache.mesos.SchedulerDriver
-import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
@@ -280,8 +280,9 @@ class MarathonSchedulerActor private (
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
     log.error(reason, s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} failed")
-    plan.affectedRunSpecIds.foreach(runSpecId => launchQueue.purge(runSpecId))
-    eventBus.publish(DeploymentFailed(plan.id, plan))
+    Future.sequence(plan.affectedRunSpecIds.map(launchQueue.asyncPurge))
+      .recover { case NonFatal(error) => log.warning(s"Error during async purge: planId=${plan.id}", error); Done }
+      .foreach { _ => eventBus.publish(DeploymentFailed(plan.id, plan)) }
   }
 }
 
@@ -360,36 +361,40 @@ class SchedulerActions(
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
-    val killService: KillService)(implicit ec: ExecutionContext) {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
+    val killService: KillService)(implicit ec: ExecutionContext) extends StrictLogging {
 
   // TODO move stuff below out of the scheduler
 
   def startRunSpec(runSpec: RunSpec): Unit = {
-    log.info(s"Starting runSpec ${runSpec.id}")
+    logger.info(s"Starting runSpec ${runSpec.id}")
     scale(runSpec)
   }
 
-  def stopRunSpec(runSpec: RunSpec): Future[_] = {
+  @SuppressWarnings(Array("all")) // async/await
+  def stopRunSpec(runSpec: RunSpec): Future[Done] = {
     healthCheckManager.removeAllFor(runSpec.id)
 
-    log.info(s"Stopping runSpec ${runSpec.id}")
-    instanceTracker.specInstances(runSpec.id).map { tasks =>
-      tasks.foreach {
-        instance =>
-          if (instance.isLaunched) {
-            log.info("Killing {}", instance.instanceId)
-            killService.killInstance(instance, KillReason.DeletingApp)
-          }
+    logger.info(s"Stopping runSpec ${runSpec.id}")
+    async {
+      val tasks = await(instanceTracker.specInstances(runSpec.id))
+
+      tasks.foreach { instance =>
+        if (instance.isLaunched) {
+          logger.info("Killing {}", instance.instanceId)
+          killService.killInstance(instance, KillReason.DeletingApp)
+        }
       }
-      launchQueue.purge(runSpec.id)
+      await(launchQueue.asyncPurge(runSpec.id))
+      Done
+    }.recover {
+      case NonFatal(error) => logger.warn(s"Error in stopping runSpec ${runSpec.id}", error); Done
+    }.map { _ =>
       launchQueue.resetDelay(runSpec)
 
       // The tasks will be removed from the InstanceTracker when their termination
       // was confirmed by Mesos via a task update.
-
       eventBus.publish(AppTerminatedEvent(runSpec.id))
+      Done
     }
   }
 
@@ -416,18 +421,18 @@ class SchedulerActions(
         }
 
         (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
-          log.warn(
+          logger.warn(
             s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
               "The run spec was likely terminated. Will now expunge."
           )
           instances.specInstances(unknownId).foreach { orphanTask =>
-            log.info(s"Killing ${orphanTask.instanceId}")
+            logger.info(s"Killing ${orphanTask.instanceId}")
             killService.killInstance(orphanTask, KillReason.Orphaned)
           }
         }
 
-        log.info("Requesting task reconciliation with the Mesos master")
-        log.debug(s"Tasks to reconcile: $knownTaskStatuses")
+        logger.info("Requesting task reconciliation with the Mesos master")
+        logger.debug(s"Tasks to reconcile: $knownTaskStatuses")
         if (knownTaskStatuses.nonEmpty)
           driver.reconcileTasks(knownTaskStatuses)
 
@@ -449,7 +454,7 @@ class SchedulerActions(
   // FIXME: extract computation into a function that can be easily tested
   @SuppressWarnings(Array("all")) // async/await
   def scale(runSpec: RunSpec): Future[Done] = async {
-    log.debug("Scale for run spec {}", runSpec)
+    logger.debug("Scale for run spec {}", runSpec)
 
     val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.state.condition.isActive)
 
@@ -463,29 +468,35 @@ class SchedulerActions(
       runningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
 
     instancesToKill.foreach { instances: Seq[Instance] =>
-      log.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
+      logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
 
-      launchQueue.purge(runSpec.id)
+      launchQueue.asyncPurge(runSpec.id)
+        .recover {
+          case NonFatal(e) =>
+            logger.warn("Async purge failed: {}", e)
+            Done
+        }.foreach { _ =>
+          logger.info(s"Killing instances ${instances.map(_.instanceId)}")
+          killService.killInstances(instances, KillReason.OverCapacity)
+        }
 
-      log.info("Killing instances {}", instances.map(_.instanceId))
-      killService.killInstances(instances, KillReason.OverCapacity)
     }
 
     instancesToStart.foreach { toStart: Int =>
-      log.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
+      logger.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
       val leftToLaunch = launchQueue.get(runSpec.id).fold(0)(_.instancesLeftToLaunch)
       val toAdd = toStart - leftToLaunch
 
       if (toAdd > 0) {
-        log.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
+        logger.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
         launchQueue.add(runSpec, toAdd)
       } else {
-        log.info(s"Already queued or started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
+        logger.info(s"Already queued or started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
       }
     }
 
     if (instancesToKill.isEmpty && instancesToStart.isEmpty) {
-      log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
+      logger.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }
 
     Done
@@ -498,7 +509,7 @@ class SchedulerActions(
       case Some(runSpec) =>
         await(scale(runSpec))
       case _ =>
-        log.warn(s"RunSpec $runSpecId does not exist. Not scaling.")
+        logger.warn(s"RunSpec $runSpecId does not exist. Not scaling.")
         Done
     }
   }

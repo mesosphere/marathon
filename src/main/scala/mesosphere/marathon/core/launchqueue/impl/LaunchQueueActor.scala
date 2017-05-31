@@ -87,10 +87,10 @@ private[impl] class LaunchQueueActor(
           suspendedLaunchersMessages += actorRef -> deferredMessages
           suspendedLauncherPathIds += runSpecId
           actorRef ! TaskLauncherActor.Stop
-        case None => sender() ! (())
+        case None => sender() ! Done
       }
 
-    case ConfirmPurge => sender() ! (())
+    case ConfirmPurge => sender() ! Done
 
     case Terminated(actorRef) =>
       launcherRefs.get(actorRef) match {
