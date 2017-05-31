@@ -90,6 +90,9 @@ types:
       protocol?:
         type: strings.NetworkProtocol
         default: tcp
+      labels?:
+        type: label.KVLabels
+        (pragma.omitEmpty):
   IpDiscovery:
     type: object
     description: Information useful for service discovery

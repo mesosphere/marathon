@@ -78,7 +78,8 @@ object AppNormalization {
             containerPort = port.number,
             hostPort = None, // the old IP/CT api didn't let users map container ports to host ports
             name = Some(port.name),
-            protocol = port.protocol
+            protocol = port.protocol,
+            labels = port.labels
           )
         }
         container.copy(portMappings = Option(portMappings))

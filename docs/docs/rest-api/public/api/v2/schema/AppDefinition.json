@@ -568,6 +568,13 @@
                   "protocol": {
                     "enum": ["tcp", "udp"],
                     "description": "Protocol of the port (one of ['tcp', 'udp'])."
+                  },
+                  "labels": {
+                    "type": "object",
+                    "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   }
                 }
               }

@@ -271,7 +271,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
     IpDiscoveryPort(
       number = port.whenOrElse(_.hasNumber, _.getNumber, IpDiscoveryPort.DefaultNumber),
       name = port.getName,
-      protocol = port.when(_.hasProtocol, _.getProtocol).flatMap(NetworkProtocol.fromString).getOrElse(IpDiscoveryPort.DefaultProtocol)
+      protocol = port.when(_.hasProtocol, _.getProtocol).flatMap(NetworkProtocol.fromString).getOrElse(IpDiscoveryPort.DefaultProtocol),
+      labels = port.getLabels.getLabelsList.map { label => label.getKey -> label.getValue }(collection.breakOut)
     )
   }
 

@@ -609,7 +609,7 @@ class AppNormalizationTest extends UnitTest {
       ipAddress = Option(IpAddress(
         networkName = Option("someUserNetwork"),
         discovery = Option(IpDiscovery(
-          ports = Seq(IpDiscoveryPort(34, "port1", NetworkProtocol.Udp))
+          ports = Seq(IpDiscoveryPort(34, "port1", NetworkProtocol.Udp, labels = Map("VIP_0" -> "/namedvip:34")))
         ))
       ))
     )
@@ -620,7 +620,10 @@ class AppNormalizationTest extends UnitTest {
         `type` = EngineType.Mesos,
         docker = Option(DockerContainer(image = "image0")),
         portMappings = Option(Seq(ContainerPortMapping(
-          containerPort = 34, name = Option("port1"), protocol = NetworkProtocol.Udp
+          containerPort = 34,
+          name = Option("port1"),
+          protocol = NetworkProtocol.Udp,
+          labels = Map("VIP_0" -> "/namedvip:34")
         )))
       )),
       networks = Seq(Network(name = Option("someUserNetwork"))),

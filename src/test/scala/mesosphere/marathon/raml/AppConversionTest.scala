@@ -106,6 +106,8 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
               .setNumber(234)
               .setName("port1")
               .setProtocol("udp")
+              .setLabels(
+                Mesos.Labels.newBuilder.addLabels(Mesos.Label.newBuilder.setKey("VIP_0").setValue("named:234")))
             )
           )
         )
@@ -126,7 +128,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
         ipAddress = Option(IpAddress(
           discovery = Option(IpDiscovery(
             ports = Seq(
-              IpDiscoveryPort(234, "port1", NetworkProtocol.Udp)
+              IpDiscoveryPort(234, "port1", NetworkProtocol.Udp, Map("VIP_0" -> "named:234"))
             )
           )),
           groups = Set("group1", "group2"),
