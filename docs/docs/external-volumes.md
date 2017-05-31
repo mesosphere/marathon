@@ -95,6 +95,7 @@ The `cmd` in this app definition appends the output of the `date` command to `te
             "mode": "RW"
           },
           {
+            "hostPath": "var-log",
             "containerPath": "/var/log/myapp",
             "mode": "RW"
           }
