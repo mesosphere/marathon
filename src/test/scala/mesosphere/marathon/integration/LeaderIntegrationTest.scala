@@ -4,7 +4,6 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade
 import mesosphere.marathon.integration.setup._
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.concurrent.duration._
 

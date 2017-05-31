@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration
 
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._

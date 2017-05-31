@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
@@ -29,11 +30,12 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val f = new Fixture
       val app = AppDefinition(id = PathId("/myapp"))
 
+      f.queue.asyncPurge(eq(app.id)) returns Future.successful(Done)
       f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty[Instance])
 
       f.scheduler.stopRunSpec(app).futureValue(1.second)
 
-      verify(f.queue).purge(app.id)
+      verify(f.queue).asyncPurge(app.id)
       verify(f.queue).resetDelay(app)
       verifyNoMoreInteractions(f.queue)
     }
@@ -184,12 +186,13 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance()
       )
 
+      f.queue.asyncPurge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).purge(app.id)
+      verify(f.queue, times(1)).asyncPurge(app.id)
 
       And("the youngest STAGED tasks are killed")
       verify(f.killService).killInstances(List(staged_3, staged_2), KillReason.OverCapacity)
@@ -221,12 +224,13 @@ class SchedulerActionsTest extends AkkaUnitTest {
       )
 
       f.queue.get(app.id) returns None
+      f.queue.asyncPurge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).purge(app.id)
+      verify(f.queue, times(1)).asyncPurge(app.id)
 
       And("the youngest RUNNING tasks are killed")
       verify(f.killService).killInstances(List(running_7, running_6), KillReason.OverCapacity)
@@ -261,12 +265,14 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
+      f.queue.asyncPurge(app.id) returns Future.successful(Done)
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
+
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
-      verify(f.queue, times(1)).purge(app.id)
+      verify(f.queue, times(1)).asyncPurge(app.id)
 
       And("all STAGED tasks plus the youngest RUNNING tasks are killed")
       verify(f.killService).killInstances(List(staged_1, running_4), KillReason.OverCapacity)

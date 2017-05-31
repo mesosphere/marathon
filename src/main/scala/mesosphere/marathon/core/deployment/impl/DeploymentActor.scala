@@ -123,7 +123,7 @@ private class DeploymentActor(
   @SuppressWarnings(Array("all")) /* async/await */
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
-    status: DeploymentStatus): Future[Unit] = {
+    status: DeploymentStatus): Future[Done] = {
     logger.debug("Scale runnable {}", runnableSpec)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
@@ -136,22 +136,22 @@ private class DeploymentActor(
       val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
-      def killTasksIfNeeded: Future[Unit] = {
+      def killTasksIfNeeded: Future[Done] = {
         logger.debug("Kill tasks if needed")
-        tasksToKill.fold(Future.successful(())) { tasks =>
+        tasksToKill.fold(Future.successful(Done)) { tasks =>
           logger.debug("Kill tasks {}", tasks)
-          killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => ())
+          killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => Done)
         }
       }
       await(killTasksIfNeeded)
 
-      def startTasksIfNeeded: Future[Unit] = {
-        tasksToStart.fold(Future.successful(())) { tasksToStart =>
+      def startTasksIfNeeded: Future[Done] = {
+        tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
           context.actorOf(TaskStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker, eventBus,
             readinessCheckExecutor, runnableSpec, scaleTo, promise))
-          promise.future
+          promise.future.map(_ => Done)
         }
       }
       await(startTasksIfNeeded)
@@ -159,22 +159,27 @@ private class DeploymentActor(
   }
 
   @SuppressWarnings(Array("all")) /* async/await */
-  def stopRunnable(runnableSpec: RunSpec): Future[Unit] = async {
+  def stopRunnable(runnableSpec: RunSpec): Future[Done] = async {
     val instances = await(instanceTracker.specInstances(runnableSpec.id))
     val launchedInstances = instances.filter(_.isLaunched)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
+
+    // Note: This is an asynchronous call. We do NOT wait for the run spec to stop. If we do, the DeploymentActorTest
+    // fails.
     scheduler.stopRunSpec(runnableSpec)
+
+    Done
   }
 
-  def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Unit] = {
+  def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Done] = {
     if (run.instances == 0) {
-      Future.successful(())
+      Future.successful(Done)
     } else {
       val promise = Promise[Unit]()
       context.actorOf(TaskReplaceActor.props(deploymentManager, status, killService,
         launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise))
-      promise.future
+      promise.future.map(_ => Done)
     }
   }
 }
