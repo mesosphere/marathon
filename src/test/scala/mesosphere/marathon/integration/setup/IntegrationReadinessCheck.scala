@@ -8,7 +8,7 @@ import mesosphere.marathon.state.PathId
 /**
   * Readiness check helper to define readiness behaviour of launched applications
   */
-class IntegrationReadinessCheck(val appId: PathId, val versionId: String) extends StrictLogging {
+class IntegrationReadinessCheck(val appId: PathId, val versionId: String, val taskId: Option[String]) extends StrictLogging {
 
   val isReady = new AtomicBoolean(false)
   val wasCalled = new AtomicBoolean(false)
@@ -23,4 +23,6 @@ class IntegrationReadinessCheck(val appId: PathId, val versionId: String) extend
     logger.info(s"Got readiness check call from: app=$appId -> $state")
     state
   }
+
+  override def toString(): String = s"IntegrationReadinessCheck(appId=$appId, versionId=$versionId, taskId=$taskId)"
 }
