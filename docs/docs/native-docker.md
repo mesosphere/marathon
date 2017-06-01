@@ -6,7 +6,7 @@ title: Provisioning Containers
 
 A containerizer is a Mesos agent component responsible for launching containers, within which you can run a Marathon app. Running apps in containers offers a number of benefits, including the ability to isolate tasks from one another and control task resources programmatically.
 
-Marathon enables users to run container images with two different runtimes:
+Marathon enables users to launch containers with container images using two different runtimes:
 
 1. Mesos containerizer using the [Universal Container Runtime](#ucr).
 1. [Docker containerizer](#docker-containerizer) using the native Docker Engine as runtime.
@@ -21,13 +21,15 @@ The following Marathon features _only_ work with the UCR:
 
 - [Pods]({{ site.baseurl }}/docs/pods.html).
 - GPUs.
-- [Authentication to a private Docker registry using a secret store]({{ site.baseurl }}/docs/native-docker-private-registry,html).
+- [Authentication to a private Docker registry using a secret store]({{ site.baseurl }}/docs/native-docker-private-registry.html).
 
 ## Provisioning Containers with the UCR
 
 To provision containers with the UCR, specify the container type `MESOS` and a the appropriate object in your application definition. Here, we specify a Docker container with the `docker` object.
 
-The Mesos containerizer provides a `credential`, with a `principal` and an optional `secret` field to authenticate when downloading the Docker image.
+The UCR containerizer provides a `pullConfig` parameter with a `secret` field for [authentication with a private Docker registry]({{ site.baseurl }}/docs/native-docker-private-registry.html). 
+
+`credential`, with a `principal` and an optional `secret` field to authenticate when downloading the Docker image.
 
 ```json
 {  
@@ -35,13 +37,16 @@ The Mesos containerizer provides a `credential`, with a `principal` and an optio
    "container":{  
       "docker":{  
          "image":"mesosphere/inky",
-         "credential":{  
-            "principal":"<my-principal>",
-            "secret":"<my-secret>"
-         }
+         "pullConfig": {
+                "secret": "pullConfigSecret"
+          }
       },
       "type":"MESOS"
    },
+   "secrets": {
+        "pullConfigSecret": {
+            "source": "/mesos-docker/pullConfig"
+        }
    "args":[  
       "<my-arg>"
    ],
