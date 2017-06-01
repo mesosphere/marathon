@@ -45,6 +45,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                    |     "exec": { "command": { "shell": "sleep 1" } } } ] }
                  """.stripMargin
 
+  val podSpecJsonWithBridgeNetwork = """
+                   | { "id": "/mypod", "networks": [ { "mode": "container/bridge" } ], "containers": [
+                   |   { "name": "webapp",
+                   |     "resources": { "cpus": 0.03, "mem": 64 },
+                   |     "image": { "kind": "DOCKER", "id": "busybox" },
+                   |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                 """.stripMargin
+
   val podSpecJsonWithContainerNetworking = """
                    | { "id": "/mypod", "networks": [ { "mode": "container" } ], "containers": [
                    |   { "name": "webapp",
@@ -89,6 +97,31 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         maybePod should be (defined) // validate that we DID get back a pod definition
         val pod = maybePod.get
         pod.networks(0).mode should be (NetworkMode.Host)
+        pod.networks(0).name should not be (defined)
+        pod.executorResources should be (defined) // validate that executor resources are defined
+        pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values
+
+        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+      }
+    }
+
+    "be able to create a simple single-container pod with bride network" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithBridgeNetwork.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_CREATED)
+
+        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+        parsedResponse should be (defined)
+        val maybePod = parsedResponse.map(_.as[Pod])
+        maybePod should be (defined) // validate that we DID get back a pod definition
+        val pod = maybePod.get
+        pod.networks(0).mode should be (NetworkMode.ContainerBridge)
         pod.networks(0).name should not be (defined)
         pod.executorResources should be (defined) // validate that executor resources are defined
         pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values

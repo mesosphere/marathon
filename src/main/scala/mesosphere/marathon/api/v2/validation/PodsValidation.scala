@@ -86,9 +86,9 @@ trait PodsValidation {
     val normalValidation = validator[Endpoint] { endpoint =>
       endpoint.networkNames is every(oneOf(networkNamess: _*))
 
-      // host-mode networking implies that hostPort is required
-      endpoint.hostPort is isTrue("is required when using host-mode networking") { hp =>
-        if (networks.exists(_.mode == NetworkMode.Host)) hp.nonEmpty
+      // host-mode and container-bridge networking implies that hostPort is required
+      endpoint.hostPort is isTrue("is required when using host-mode or container-bridge networking") { hp =>
+        if (networks.exists(n => n.mode == NetworkMode.Host || n.mode == NetworkMode.ContainerBridge)) hp.nonEmpty
         else true
       }
 

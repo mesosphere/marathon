@@ -27,7 +27,8 @@ object TaskGroupBuilder extends StrictLogging {
 
   case class BuilderConfig(
     acceptedResourceRoles: Set[String],
-    envVarsPrefix: Option[String])
+    envVarsPrefix: Option[String],
+    mesosBridgeName: String)
 
   def build(
     podDefinition: PodDefinition,
@@ -41,7 +42,7 @@ object TaskGroupBuilder extends StrictLogging {
 
     val allEndpoints = podDefinition.containers.flatMap(_.endpoints)
 
-    val mesosNetworks = buildMesosNetworks(podDefinition.networks, allEndpoints, resourceMatch.hostPorts)
+    val mesosNetworks = buildMesosNetworks(podDefinition.networks, allEndpoints, resourceMatch.hostPorts, config.mesosBridgeName)
 
     val executorInfo = computeExecutorInfo(
       podDefinition,
@@ -81,7 +82,8 @@ object TaskGroupBuilder extends StrictLogging {
   private[mesos] def buildMesosNetworks(
     networks: Seq[Network],
     endpoints: Seq[raml.Endpoint],
-    hostPorts: Seq[Option[Int]]): Seq[mesos.NetworkInfo] = {
+    hostPorts: Seq[Option[Int]],
+    mesosBridgeName: String): Seq[mesos.NetworkInfo] = {
 
     assume(
       endpoints.size == hostPorts.size,
@@ -125,6 +127,12 @@ object TaskGroupBuilder extends StrictLogging {
               b.addPortMappings(pm)
         }
         b.build
+      case bridgeNetwork: BridgeNetwork =>
+        val b = mesos.NetworkInfo.newBuilder
+          .setName(mesosBridgeName)
+          .setLabels(bridgeNetwork.labels.toMesosLabels)
+        portMappings.foreach{ case (_, pm) => b.addPortMappings(pm) }
+        b.build()
     }
   }
 
