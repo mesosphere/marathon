@@ -23,21 +23,6 @@ from utils import fixture_dir, get_resource
 
 def test_launch_mesos_container():
     """ Test the successful launch of a mesos container on Marathon.
-    """
-    client = marathon.create_client()
-    app_id = uuid.uuid4().hex
-    client.add_app(app_mesos(app_id))
-    shakedown.deployment_wait()
-
-    tasks = client.get_tasks(app_id)
-    app = client.get_app(app_id)
-
-    assert len(tasks) == 1
-    assert app['container']['type'] == 'MESOS'
-
-
-def test_launch_mesos_container():
-    """ Test the successful launch of a mesos container on Marathon.
         This is a UCR test with a standard command.
     """
     client = marathon.create_client()
@@ -221,23 +206,6 @@ def test_launch_app_timed():
     time.sleep(3)
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1
-
-
-def test_ui_registration_requirement():
-    """ Testing the UI is a challenge with this toolchain.  The UI team has the
-        best tooling for testing it.   This test verifies that the required configurations
-        for the service endpoint and ability to launch to the service UI are present.
-    """
-    tasks = mesos.get_master().tasks()
-    for task in tasks:
-        if task['name'] == 'marathon-user':
-            for label in task['labels']:
-                if label['key'] == 'DCOS_PACKAGE_NAME':
-                    assert label['value'] == 'marathon'
-                if label['key'] == 'DCOS_PACKAGE_IS_FRAMEWORK':
-                    assert label['value'] == 'true'
-                if label['key'] == 'DCOS_SERVICE_NAME':
-                    assert label['value'] == 'marathon-user'
 
 
 def test_ui_available(marathon_service_name):
@@ -1011,25 +979,31 @@ def test_private_repository_docker_app():
     common.assert_app_tasks_running(client, app_def)
 
 
-@pytest.mark.skip(reason="Not yet implemented in mesos")
+@pytest.mark.skipif("docker_env_set()")
+@dcos_1_10
 def test_private_repository_mesos_app():
-    """ Test private docker registry with mesos containerizer using "credentials" container field.
-        Note: Despite of what DC/OS docmentation states this feature is not yet implemented:
-        https://issues.apache.org/jira/browse/MESOS-7088
-    """
+    """ Test private docker registry with mesos containerizer using "config" container's image field."""
+
+    username = os.environ['DOCKER_HUB_USERNAME']
+    password = os.environ['DOCKER_HUB_PASSWORD']
+
+    secret_name = "dockerPullConfig"
+    secret_value_json = common.create_docker_pull_config_json(username, password)
+
+    import json
+    secret_value = json.dumps(secret_value_json)
 
     client = marathon.create_client()
-    assert 'DOCKER_HUB_USERNAME' in os.environ, "Couldn't find docker hub username. $DOCKER_HUB_USERNAME is not set"
-    assert 'DOCKER_HUB_PASSWORD' in os.environ, "Couldn't find docker hub password. $DOCKER_HUB_PASSWORD is not set"
+    common.create_secret(secret_name, secret_value)
 
-    principal = os.environ['DOCKER_HUB_USERNAME']
-    secret = os.environ['DOCKER_HUB_PASSWORD']
+    try:
+        app_def = common.private_mesos_container_app(secret_name)
+        client.add_app(app_def)
+        shakedown.deployment_wait()
 
-    app_def = common.private_mesos_container_app(principal, secret)
-    client.add_app(app_def)
-    shakedown.deployment_wait()
-
-    common.assert_app_tasks_running(client, app_def)
+        common.assert_app_tasks_running(client, app_def)
+    finally:
+        common.delete_secret(secret_name)
 
 
 def test_ping(marathon_service_name):

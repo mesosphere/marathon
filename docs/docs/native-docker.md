@@ -101,6 +101,7 @@ DC/OS users do not need to follow the configuration steps below.
 #### Configure Marathon
 
 Increase the Marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
+
 `--task_launch_timeout` to at least the executor timeout, in milliseconds,
 you set on your agent nodes in the previous step.
 

@@ -24,7 +24,8 @@ import scala.collection.breakOut
 class TaskGroupBuilderTest extends UnitTest with Inside {
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
     acceptedResourceRoles = Set(ResourceRole.Unreserved),
-    envVarsPrefix = None)
+    envVarsPrefix = None,
+    mesosBridgeName = raml.Networks.DefaultMesosBridgeName)
 
   "A TaskGroupBuilder" must {
 
@@ -38,7 +39,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             Endpoint("port-2", containerPort = Some(2002), networkNames = List("2"))),
           List(
             Some(1001),
-            Some(1002)))
+            Some(1002)),
+          defaultBuilderConfig.mesosBridgeName)
 
         network1.getName shouldBe "1"
         inside(network1.getPortMappingsList.asScala.toList) {
@@ -656,6 +658,64 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
 
       assert(task2HealthCheck.getType == mesos.HealthCheck.Type.TCP)
       assert(task2HealthCheck.getTcp.getPort == 1235)
+    }
+
+    "create pod with container-mode bridge networking" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 1200, endPort = 1300).build
+
+      val podSpec = PodDefinition(
+        id = "/product/frontend".toPath,
+        networks = Seq(BridgeNetwork()),
+        containers = Seq(
+          MesosContainer(
+            name = "Foo1",
+            resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+            endpoints = Seq(
+              raml.Endpoint(
+                name = "foo1",
+                hostPort = Some(1201),
+                containerPort = Some(1211)
+              )
+            )
+          ),
+          MesosContainer(
+            name = "Foo2",
+            resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+            endpoints = Seq(
+              raml.Endpoint(
+                name = "foo2",
+                hostPort = Some(0),
+                containerPort = Some(1212)
+              )
+            )
+          )
+        )
+      )
+
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty, defaultBuilderConfig.acceptedResourceRoles)
+
+      val (executorInfo, taskGroupInfo, _, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+      )
+
+      assert(taskGroupInfo.getTasksCount == 2)
+
+      val task1 = taskGroupInfo.getTasksList.find(_.getName == "Foo1").get
+
+      val networkInfo = executorInfo.getContainer.getNetworkInfosList.get(0)
+      assert(networkInfo.getName() == defaultBuilderConfig.mesosBridgeName)
+
+      val portMappings = networkInfo.getPortMappingsList
+
+      assert(portMappings.count(_.getContainerPort == 1211) == 1)
+      assert(portMappings.count(_.getContainerPort == 1212) == 1)
+      assert(portMappings.find(_.getContainerPort == 1211).get.getHostPort == 1201)
+      assert(portMappings.find(_.getContainerPort == 1212).get.getHostPort != 0)
     }
 
     "support URL artifacts" in {

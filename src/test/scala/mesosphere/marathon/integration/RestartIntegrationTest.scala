@@ -3,11 +3,14 @@ package integration
 
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId
 import org.apache.commons.io.FileUtils
+import org.scalatest.Inspectors
+import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable
 
@@ -16,7 +19,7 @@ import scala.collection.immutable
   * while deploying)
   */
 @IntegrationTest
-class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonFixture {
+class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonFixture with Inspectors with Eventually {
   import PathId._
 
   "Restarting Marathon" when {
@@ -50,23 +53,72 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
     "readiness" should {
       "deployment with 1 ready and 1 not ready instance is continued properly after a restart" in withMarathon("readiness") { (server, f) =>
-        val readinessCheck = raml.ReadinessCheck(
-          "ready",
+        val ramlReadinessCheck = raml.ReadinessCheck(
+          name = "ready",
           portName = "http",
-          path = "/v1/plan",
+          path = "/ready",
           intervalSeconds = 2,
           timeoutSeconds = 1,
-          preserveLastResponse = true)
+          preserveLastResponse = true
+        )
 
-        val appId = f.testBasePath / "app"
-        val create = f.appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
+        Given("a new simple app with 2 instances")
+        val appId = nextAppId(f)
+        val createApp = f.appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
 
-        val plan = "phase(block1)"
-        val update = raml.AppUpdate(
-          cmd = Some(s"""${serviceMockScript(f)} '$plan'"""),
+        createApp.instances shouldBe 2 withClue (s"${appId} has ${createApp.instances} instances running but there should be 2.")
+
+        val created = f.marathon.createAppV2(createApp)
+        created.code should be (201) withClue (s"Response ${created.code}: ${created.entityString}")
+        f.waitForDeployment(created)
+
+        When("updating the app")
+        val updateApp = raml.AppUpdate(
+          cmd = f.appProxy(appId, versionId = "v2", instances = 2).cmd,
           portDefinitions = Some(immutable.Seq(raml.PortDefinition(name = Some("http")))),
-          readinessChecks = Some(Seq(readinessCheck)))
-        testDeployments(server, f, appId, create, update)
+          readinessChecks = Some(Seq(ramlReadinessCheck)))
+        val appV2 = f.marathon.updateApp(appId, updateApp)
+
+        Then("new tasks are launched")
+        //make sure there are 2 additional tasks
+        val updated = f.waitForTasks(appId, 4) withClue (s"The new tasks for ${appId} did not start running.")
+
+        val newVersion = appV2.value.version.toString
+        val updatedTasks = updated.filter(_.version.contains(newVersion))
+        val updatedTaskIds: List[String] = updatedTasks.map(_.id)
+        updatedTaskIds should have size 2 withClue (s"${appId} has ${updatedTaskIds.size} updated tasks but there should be 2.")
+        eventually {
+          forAll (updatedTasks) { _.state should be("TASK_RUNNING") }
+        }
+
+        When("The first task is ready")
+        val firstTaskReadinessCheck :: otherTaskReadinessChecks =
+          updatedTaskIds.map(taskId => f.registerProxyReadinessCheck(appId, "v2", Some(taskId)))
+        firstTaskReadinessCheck.isReady.set(true)
+
+        And("we force the leader to abdicate to simulate a failover")
+        server.restart().futureValue
+        f.waitForSSEConnect()
+
+        Then("There is still one ongoing deployment")
+        val deployments = f.marathon.listDeploymentsForBaseGroup().value
+        deployments should have size 1 withClue (s"Expected 1 ongoing deployment but found ${deployments}")
+
+        When("second updated task becomes healthy")
+        otherTaskReadinessChecks.foreach(_.isReady.set(true))
+
+        Then("the app should eventually have only 2 tasks launched")
+        f.waitForTasks(appId, 2) should have size 2
+
+        And("app was deployed successfully")
+        f.waitForDeployment(appV2)
+
+        val after = f.marathon.tasks(appId)
+        val afterTaskIds = after.value.map(_.id)
+
+        And("taskIds after restart should be equal to the updated taskIds (not started ones)")
+        afterTaskIds.sorted should equal (updatedTaskIds.sorted) withClue (s"App after restart: ${f.marathon.app(appId).entityPrettyJsonString}")
+
       }
     }
     "health checks" should {
@@ -146,6 +198,8 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     afterTaskIds.sorted should equal (updatedTaskIds.sorted)
   }
 
+  val appIdCount = new AtomicInteger()
+  def nextAppId(f: MarathonTest): PathId = f.testBasePath / s"app-${appIdCount.getAndIncrement()}"
   /**
     * Create a shell script that can start a service mock
     */

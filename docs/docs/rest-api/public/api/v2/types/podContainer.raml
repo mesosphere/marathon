@@ -11,6 +11,7 @@ uses:
   strings: stringTypes.raml
   volumes: volumes.raml
   containerCommons: containerCommons.raml
+  docker: docker.raml
 
 types:
   ImageType:
@@ -24,6 +25,11 @@ types:
         type: strings.Path
         description: address/identifier of the file system image
         example: mesosphere/marathon:1.3.0
+      pullConfig?:
+        type: docker.DockerPullConfig
+        description: |
+          Name of a secret whose value contains a stringified
+          Docker config.json
       forcePull?:
         type: boolean
         description: true if the image should always be pulled

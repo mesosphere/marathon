@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+syntax = "proto2";
+
 package mesos;
 
 option java_package = "org.apache.mesos";
@@ -94,12 +96,19 @@ message ContainerID {
 
 
 /**
+ * A unique ID assigned to a resource provider. Currently, a resource
+ * provider gets a new ID whenever it (re)registers with Mesos.
+ */
+message ResourceProviderID {
+  required string value = 1;
+}
+
+
+/**
  * Represents time since the epoch, in nanoseconds.
  */
 message TimeInfo {
   required int64 nanoseconds = 1;
-
-  // TODO(josephw): Add time zone information, if necessary.
 }
 
 
@@ -253,11 +262,8 @@ message FrameworkInfo {
   // `roles` and the default unset `role`, we require that
   // frameworks set the `MULTI_ROLE` capability if
   // setting the `roles` field.
-  //
-  // NOTE: The implmentation for supporting `roles`
-  // is not complete, DO NOT USE the `roles` field.
   optional string role = 6 [default = "*", deprecated=true];
-  repeated string roles = 12; // EXPERIMENTAL.
+  repeated string roles = 12;
 
   // Used to indicate the current host from which the scheduler is
   // registered in the Mesos Web UI. If set to an empty string Mesos
@@ -372,10 +378,11 @@ message CheckInfo {
     UNKNOWN = 0;
     COMMAND = 1;
     HTTP = 2;
+    TCP = 3;
 
-    // TODO(alexr): Consider supporting TCP checks and custom user checks.
-    // The latter should probably be paired with a `data` field and
-    // complemented by a `data` response in `CheckStatusInfo`.
+    // TODO(alexr): Consider supporting custom user checks. They should
+    // probably be paired with a `data` field and complemented by a
+    // `data` response in `CheckStatusInfo`.
   }
 
   // Describes a command check. If applicable, enters mount and/or network
@@ -404,6 +411,13 @@ message CheckInfo {
     // validation, TLS version.
   }
 
+  // Describes a TCP check, i.e. based on establishing a TCP connection to
+  // the specified port. Note that <host> is not configurable and is resolved
+  // automatically to 127.0.0.1.
+  message Tcp {
+    required uint32 port = 1;
+  }
+
   // The type of the check.
   optional Type type = 1;
 
@@ -412,6 +426,9 @@ message CheckInfo {
 
   // HTTP check.
   optional Http http = 3;
+
+  // TCP check.
+  optional Tcp tcp = 7;
 
   // Amount of time to wait to start checking the task after it
   // transitions to `TASK_RUNNING` or `TASK_STARTING` if the latter
@@ -867,19 +884,21 @@ message Attribute {
 
 
 /**
- * Describes a resource on a machine. The `name` field is a string
- * like "cpus" or "mem" that indicates which kind of resource this is;
- * the rest of the fields describe the properties of the resource. A
- * resource can take on one of three types: scalar (double), a list of
- * finite and discrete ranges (e.g., [1-10, 20-30]), or a set of
- * items. A resource is described using the standard protocol buffer
- * "union" trick.
+ * Describes a resource from a resource provider. The `name` field is
+ * a string like "cpus" or "mem" that indicates which kind of resource
+ * this is; the rest of the fields describe the properties of the
+ * resource. A resource can take on one of three types: scalar
+ * (double), a list of finite and discrete ranges (e.g., [1-10,
+ * 20-30]), or a set of items. A resource is described using the
+ * standard protocol buffer "union" trick.
  *
  * Note that "disk" and "mem" resources are scalar values expressed in
  * megabytes. Fractional "cpus" values are allowed (e.g., "0.5"),
  * which correspond to partial shares of a CPU.
  */
 message Resource {
+  optional ResourceProviderID provider_id = 12;
+
   required string name = 1;
   required Value.Type type = 2;
   optional Value.Scalar scalar = 3;
@@ -983,6 +1002,7 @@ message Resource {
     // TODO(jmlvanre): Add support for BLOCK devices.
     message Source {
       enum Type {
+        UNKNOWN = 0;
         PATH = 1;
         MOUNT = 2;
       }
@@ -991,7 +1011,7 @@ message Resource {
       // can be shared and carved up as necessary between frameworks.
       message Path {
         // Path to the folder (e.g., /mnt/raid/disk0).
-        required string root = 1;
+        optional string root = 1;
       }
 
       // A mounted file-system set up by the Agent administrator. This
@@ -999,7 +1019,7 @@ message Resource {
       // partial amount of this disk.
       message Mount {
         // Path to mount point (e.g., /mnt/raid/disk0).
-        required string root = 1;
+        optional string root = 1;
       }
 
       required Type type = 1;
@@ -1031,6 +1051,7 @@ message Resource {
   // persistent volumes can be shared currently.
   optional SharedInfo shared = 10;
 }
+
 
 /**
  * When the network bandwidth caps are enabled and the container
@@ -1164,6 +1185,14 @@ message SNMPStatistics {
 }
 
 
+message DiskStatistics {
+  optional Resource.DiskInfo.Source source = 1;
+  optional Resource.DiskInfo.Persistence persistence = 2;
+  optional uint64 limit_bytes = 3;
+  optional uint64 used_bytes = 4;
+}
+
+
 /**
  * A snapshot of resource usage statistics.
  */
@@ -1237,6 +1266,9 @@ message ResourceStatistics {
   // Disk Usage Information for executor working directory.
   optional uint64 disk_limit_bytes = 26;
   optional uint64 disk_used_bytes = 27;
+
+  // Per disk (resource) statistics.
+  repeated DiskStatistics disk_statistics = 43;
 
   // Perf statistics.
   optional PerfStatistics perf = 13;
@@ -1736,13 +1768,20 @@ enum TaskState {
 */
 message CheckStatusInfo {
   message Command {
-    // Exit code of a command check.
+    // Exit code of a command check. It is the result of calling
+    // `WEXITSTATUS()` on `waitpid()` termination information on
+    // Posix and calling `GetExitCodeProcess()` on Windows.
     optional int32 exit_code = 1;
   }
 
   message Http {
     // HTTP status code of an HTTP check.
     optional uint32 status_code = 1;
+  }
+
+  message Tcp {
+    // Whether a TCP connection succeeded.
+    optional bool succeeded = 1;
   }
 
   // TODO(alexr): Consider adding a `data` field, which can contain, e.g.,
@@ -1759,6 +1798,9 @@ message CheckStatusInfo {
 
   // Status of an HTTP check.
   optional Http http = 3;
+
+  // Status of a TCP check.
+  optional Tcp tcp = 4;
 
   // TODO(alexr): Consider introducing a "last changed at" timestamp, since
   // task status update's timestamp may not correspond to the last check's
@@ -1896,15 +1938,29 @@ message Filters {
 /**
 * Describes a collection of environment variables. This is used with
 * CommandInfo in order to set environment variables before running a
-* command.
+* command. The contents of each variable may be specified as a string
+* or a Secret; only one of `value` and `secret` must be set.
 */
 message Environment {
   message Variable {
     required string name = 1;
-    // NOTE: The `value` field was made optional in Mesos 1.2 but it
-    // is currently enforced to be set. This constraint will be
-    // removed in a future version.
+
+    enum Type {
+      UNKNOWN = 0;
+      VALUE = 1;
+      SECRET = 2;
+    }
+
+    // In Mesos 1.2, the `Environment.variables.value` message was made
+    // optional. The default type for `Environment.variables.type` is now VALUE,
+    // which requires `value` to be set, maintaining backward compatibility.
+    //
+    // TODO(greggomann): The default can be removed in Mesos 2.1 (MESOS-7134).
+    optional Type type = 3 [default = VALUE];
+
+    // Only one of `value` and `secret` must be set.
     optional string value = 2;
+    optional Secret secret = 4;
   }
 
   repeated Variable variables = 1;
@@ -1950,6 +2006,53 @@ message Credential {
  */
 message Credentials {
   repeated Credential credentials = 1;
+}
+
+
+/**
+ * Secret used to pass privileged information. It is designed to provide
+ * pass-by-value or pass-by-reference semantics, where the REFERENCE type can be
+ * used by custom modules which interact with a secure back-end.
+ */
+message Secret
+{
+  enum Type {
+    UNKNOWN = 0;
+    REFERENCE = 1;
+    VALUE = 2;
+  }
+
+  // Can be used by modules to refer to a secret stored in a secure back-end.
+  // The `key` field is provided to permit reference to a single value within a
+  // secret containing arbitrary key-value pairs.
+  //
+  // For example, given a back-end secret store with a secret named
+  // "my-secret" containing the following key-value pairs:
+  //
+  //   {
+  //     "username": "my-user",
+  //     "password": "my-password
+  //   }
+  //
+  // the username could be referred to in a `Secret` by specifying
+  // "my-secret" for the `name` and "username" for the `key`.
+  message Reference
+  {
+    required string name = 1;
+    optional string key = 2;
+  }
+
+  // Used to pass the value of a secret.
+  message Value
+  {
+    required bytes data = 1;
+  }
+
+  optional Type type = 1;
+
+  // Only one of `reference` and `value` must be set.
+  optional Reference reference = 2;
+  optional Value value = 3;
 }
 
 
@@ -2033,7 +2136,18 @@ message Image {
     // Credential to authenticate with docker registry.
     // NOTE: This is not encrypted, therefore framework and operators
     // should enable SSL when passing this information.
-    optional Credential credential = 2;
+    //
+    // This is field is never used in Mesos before and is deprecated
+    // since Mesos 1.3. Please use the `Secret::Value` field `config`
+    // below (see MESOS-7088 for details).
+    optional Credential credential = 2 [deprecated = true]; // Since 1.3.
+
+    // The UTF-8 character encoded byte data, which is expected as
+    // a docker config file in JSON format. This field is used for
+    // supporting docker private registry credential per container.
+    // Users can specify different docker config files for pulling
+    // their private images from different registries.
+    optional Secret config = 3;
   }
 
   required Type type = 1;
@@ -2092,6 +2206,7 @@ message Volume {
       // TODO(gyliu513): Add HOST_PATH and IMAGE as volume source type.
       DOCKER_VOLUME = 1;
       SANDBOX_PATH = 2;
+      SECRET = 3;
     }
 
     message DockerVolume {
@@ -2134,6 +2249,10 @@ message Volume {
     optional DockerVolume docker_volume = 2;
 
     optional SandboxPath sandbox_path = 3;
+
+    // The volume/secret isolator uses the secret-fetcher module (third-party or
+    // internal) downloads the secret and makes it available at container_path.
+    optional Secret secret = 4;
   }
 
   optional Source source = 5;
@@ -2632,4 +2751,31 @@ message FileInfo {
 
   // Group ID of owner.
   optional string gid = 7;
+}
+
+
+/**
+ * Describes information abount a device.
+ */
+message Device {
+  required string path = 1;
+}
+
+
+/**
+ * Describes a device whitelist entry that expose from host to container.
+ */
+message DeviceAccess {
+  message Access {
+    optional bool read = 1;
+    optional bool write = 2;
+    optional bool mknod = 3;
+  }
+  required Device device = 1;
+  required Access access = 2;
+}
+
+
+message DeviceWhitelist {
+   repeated DeviceAccess allowed_devices = 1;
 }

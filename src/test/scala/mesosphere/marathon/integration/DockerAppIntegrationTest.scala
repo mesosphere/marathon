@@ -19,7 +19,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
   after(cleanUp())
 
   def healthyDockerApp(testName: String, f: (App) => App = (x) => x) =
-    testName taggedAs WhenEnvSet(envVar) in {
+    testName taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new app")
       val app = f(dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, healthCheck = Some(appProxyHealthCheck())))
       val check = appProxyHealthCheck(app.id.toPath, "v1", state = true)
@@ -37,7 +37,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
   "DockerApp" should {
-    "deploy a simple Docker app" taggedAs WhenEnvSet(envVar) in {
+    "deploy a simple Docker app" taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new Docker app")
       val app = App(
         id = (testBasePath / "dockerapp").toString,

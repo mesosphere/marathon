@@ -53,6 +53,24 @@ def teardown_module(module):
 ###########
 
 
+def test_ui_registration_requirement():
+    """ Testing the UI is a challenge with this toolchain.  The UI team has the
+        best tooling for testing it.   This test verifies that the required configurations
+        for the service endpoint and ability to launch to the service UI are present.
+    """
+    tasks = mesos.get_master().tasks()
+    for task in tasks:
+        if task['name'] == 'marathon-user':
+            for label in task['labels']:
+                if label['key'] == 'DCOS_PACKAGE_NAME':
+                    assert label['value'] == 'marathon'
+                if label['key'] == 'DCOS_PACKAGE_IS_FRAMEWORK':
+                    assert label['value'] == 'true'
+                if label['key'] == 'DCOS_SERVICE_NAME':
+                    assert label['value'] == 'marathon-user'
+
+
+
 @private_agents(2)
 def test_mom_when_mom_agent_bounced():
     """ Launch an app from MoM and restart the node MoM is on.

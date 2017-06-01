@@ -1,5 +1,6 @@
 """Marathon pod acceptance tests for DC/OS."""
 
+import common
 import os
 import pytest
 import uuid
@@ -13,7 +14,7 @@ from urllib.parse import urljoin
 from common import (block_port, cluster_info, event_fixture, get_pod_tasks, ip_other_than_mom,
                     pin_pod_to_host, restore_iptables, save_iptables)
 from dcos import marathon, util, http
-from shakedown import dcos_1_9, dcos_version_less_than, private_agents, required_private_agents
+from shakedown import dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents
 from utils import fixture_dir, get_resource, parse_json
 
 
@@ -35,7 +36,6 @@ def _clear_pods():
         shakedown.deployment_wait()
     except:
         pass
-
 
 def _pods_url(path=""):
     return "v2/pods/" + path
@@ -86,6 +86,31 @@ def test_create_pod():
     shakedown.deployment_wait()
     pod = client.show_pod(pod_id)
     assert pod is not None
+
+
+@pytest.mark.skipif("docker_env_set()")
+@dcos_1_10
+def test_create_pod_with_private_image():
+    username = os.environ['DOCKER_HUB_USERNAME']
+    password = os.environ['DOCKER_HUB_PASSWORD']
+
+    secret_name = "dockerPullConfig"
+    secret_value_json = common.create_docker_pull_config_json(username, password)
+
+    import json
+    secret_value = json.dumps(secret_value_json)
+
+    client = marathon.create_client()
+    common.create_secret(secret_name, secret_value)
+
+    try:
+        pod_def = common.private_docker_pod(secret_name)
+        client.add_pod(pod_def)
+        shakedown.deployment_wait()
+        pod = client.show_pod(pod_def["id"])
+        assert pod is not None
+    finally:
+        client.delete_secret(secret_name)
 
 
 @dcos_1_9

@@ -219,7 +219,7 @@ case class MesosCluster(
   }
 
   private def defaultContainerizers: String = {
-    if (sys.env.getOrElse("RUN_DOCKER_INTEGRATION_TESTS", "false") == "true") {
+    if (sys.env.getOrElse("RUN_DOCKER_INTEGRATION_TESTS", "true") == "true") {
       "docker,mesos"
     } else {
       "mesos"

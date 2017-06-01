@@ -10,6 +10,58 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
 
   import Normalization._
 
+  "Docker image pull config validation" when {
+    implicit val basicValidator = AppValidation.validateCanonicalAppAPI(Set("secrets"))
+
+    "pull config when the Mesos containerizer is used and the corresponding secret is provided" should {
+      "be accepted" in {
+        val app = App(
+          id = "/foo",
+          cmd = Some("bar"),
+          container = Some(Container(
+            `type` = EngineType.Mesos,
+            docker = Some(DockerContainer(
+              image = "xyz", pullConfig = Some(DockerPullConfig("aSecret")))))),
+          secrets = Map("aSecret" -> SecretDef("/secret")))
+
+        basicValidator(app) shouldBe (aSuccess)
+      }
+    }
+
+    "pull config when the Mesos containerizer is used and the corresponding secret is not provided" should {
+      "fail" in {
+        val app = App(
+          id = "/foo",
+          cmd = Some("bar"),
+          container = Some(Container(
+            `type` = EngineType.Mesos,
+            docker = Some(DockerContainer(
+              image = "xyz", pullConfig = Some(DockerPullConfig("aSecret")))))))
+
+        basicValidator(app).normalize should failWith(
+          "/container/docker/pullConfig" ->
+            "pullConfig.secret must refer to an existing secret")
+      }
+    }
+
+    "pull config when the Docker containerizer is used and the corresponding secret is provided" should {
+      "fail" in {
+        val app = App(
+          id = "/foo",
+          cmd = Some("bar"),
+          container = Some(Container(
+            `type` = EngineType.Docker,
+            docker = Some(DockerContainer(
+              image = "xyz", pullConfig = Some(DockerPullConfig("aSecret")))))),
+          secrets = Map("aSecret" -> SecretDef("/secret")))
+
+        basicValidator(app).normalize should failWith(
+          "/container/docker" ->
+            "pullConfig is not supported with Docker containerizer")
+      }
+    }
+  }
+
   "network validation" when {
     implicit val basicValidator = AppValidation.validateCanonicalAppAPI(Set.empty)
 
