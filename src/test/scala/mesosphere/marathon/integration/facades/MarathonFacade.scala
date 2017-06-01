@@ -456,7 +456,8 @@ class MarathonFacade(
   }
 
   def ping(): RestResult[HttpResponse] = {
-    result(request(Get(s"$url/ping")), waitTime)
+    val pipeline = marathonSendReceive ~> responseResult
+    result(pipeline(Get(s"$url/ping")), waitTime)
   }
 
   //leader ----------------------------------------------
