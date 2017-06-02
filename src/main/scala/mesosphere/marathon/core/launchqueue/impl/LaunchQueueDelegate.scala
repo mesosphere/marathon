@@ -47,7 +47,7 @@ private[launchqueue] class LaunchQueueDelegate(
   override def listRunSpecs: Seq[RunSpec] = list.map(_.runSpec)
 
   override def purge(runSpecId: PathId): Unit = {
-    askQueueActor[LaunchQueueDelegate.Request, Unit]("purge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
+    askQueueActor[LaunchQueueDelegate.Request, Done]("purge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
   }
 
   override def asyncPurge(runSpecId: PathId): Future[Done] = {
