@@ -158,7 +158,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         instances = 1
       )
 
-      val check = appProxyHealthCheck(pod.id, "v1", state = true)
+      val check = registerAppProxyHealthCheck(pod.id, "v1", state = true)
 
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)

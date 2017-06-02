@@ -171,7 +171,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app")
       val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck))
-      val check = appProxyHealthCheck(PathId(app.id), "v1", state = true)
+      val check = registerAppProxyHealthCheck(PathId(app.id), "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -190,7 +190,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app")
       val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.MesosHttp)))
-      val check = appProxyHealthCheck(app.id.toPath, "v1", state = true)
+      val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -213,7 +213,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
           requirePorts = true,
           healthChecks = Set(ramlHealthCheck.copy(port = Some(31000), portIndex = None))
         )
-      val check = appProxyHealthCheck(app.id.toPath, "v1", state = true)
+      val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -297,7 +297,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     "an unhealthy app fails to deploy" in {
       Given("a new app that is not healthy")
       val id = appId()
-      appProxyHealthCheck(id, "v1", state = false)
+      registerAppProxyHealthCheck(id, "v1", state = false)
       val app = appProxy(id, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
 
       When("The app is deployed")
@@ -335,7 +335,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val before = marathon.tasks(id)
 
       When("The app is updated")
-      val check = appProxyHealthCheck(id, "v2", state = true)
+      val check = registerAppProxyHealthCheck(id, "v2", state = true)
       val update = marathon.updateApp(PathId(v1.id), AppUpdate(cmd = appProxy(id, "v2", 1).cmd))
 
       Then("The app gets updated")
@@ -358,7 +358,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val before = marathon.tasks(appId)
 
       When("The app is updated")
-      val check = appProxyHealthCheck(appId, "v2", state = true)
+      val check = registerAppProxyHealthCheck(appId, "v2", state = true)
       val update = marathon.patchApp(v1.id.toPath, AppUpdate(cmd = appProxy(appId, "v2", 1).cmd))
 
       Then("The app gets updated")

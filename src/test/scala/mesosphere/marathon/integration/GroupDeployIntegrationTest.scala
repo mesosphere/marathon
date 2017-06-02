@@ -161,7 +161,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val proxy = appProxy(appId, "v1", 1)
       val group = GroupUpdate(Some(id.toString), Some(Set(proxy)))
       waitForDeployment(marathon.createGroup(group))
-      val check = appProxyHealthCheck(PathId(proxy.id), "v1", state = true)
+      val check = registerAppProxyHealthCheck(PathId(proxy.id), "v1", state = true)
 
       When("The group is updated")
       check.afterDelay(1.second, state = false)
@@ -182,13 +182,13 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val create = marathon.createGroup(group)
       waitForDeployment(create)
       waitForTasks(PathId(proxy.id), proxy.instances)
-      val v1Checks = appProxyHealthCheck(appId, "v1", state = true)
+      val v1Checks = registerAppProxyHealthCheck(appId, "v1", state = true)
 
       When("The group is updated")
       waitForDeployment(marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2))))))
 
       Then("The new version is deployed")
-      val v2Checks = appProxyHealthCheck(appId, "v2", state = true)
+      val v2Checks = registerAppProxyHealthCheck(appId, "v2", state = true)
       eventually {
         v2Checks.pinged.get should be(true) withClue "v2 apps did not come up"
       }
@@ -213,10 +213,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val create = marathon.createGroup(group)
       waitForDeployment(create)
       waitForTasks(appId, proxy.instances)
-      val v1Check = appProxyHealthCheck(appId, "v1", state = true)
+      val v1Check = registerAppProxyHealthCheck(appId, "v1", state = true)
 
       When("The new application is not healthy")
-      val v2Check = appProxyHealthCheck(appId, "v2", state = false) //will always fail
+      val v2Check = registerAppProxyHealthCheck(appId, "v2", state = false) //will always fail
       val update = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
 
       Then("All v1 applications are kept alive")
@@ -238,7 +238,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val group = GroupUpdate(Some(gid.toString), Some(Set(proxy)))
       val create = marathon.createGroup(group)
       waitForDeployment(create)
-      appProxyHealthCheck(appId, "v2", state = false) //will always fail
+      registerAppProxyHealthCheck(appId, "v2", state = false) //will always fail
       marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
 
       When("Another upgrade is triggered, while the old one is not completed")
@@ -260,7 +260,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       Given(s"A group with one application with id $appId with an upgrade in progress")
       val proxy = appProxy(appId, "v1", 2)
-      appProxyHealthCheck(appId, "v1", state = false) //will always fail
+      registerAppProxyHealthCheck(appId, "v1", state = false) //will always fail
       val group = GroupUpdate(Some(gid.toString), Some(Set(proxy)))
       marathon.createGroup(group)
 
@@ -311,9 +311,9 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       def storeFirst(health: IntegrationHealthCheck): Unit = {
         if (!ping.contains(health.appId.toString)) ping += health.appId.toString -> DateTime.now
       }
-      appProxyHealthCheck(PathId(db.id), "v1", state = true).withHealthAction(storeFirst)
-      appProxyHealthCheck(PathId(service.id), "v1", state = true).withHealthAction(storeFirst)
-      appProxyHealthCheck(PathId(frontend.id), "v1", state = true).withHealthAction(storeFirst)
+      registerAppProxyHealthCheck(PathId(db.id), "v1", state = true).withHealthAction(storeFirst)
+      registerAppProxyHealthCheck(PathId(service.id), "v1", state = true).withHealthAction(storeFirst)
+      registerAppProxyHealthCheck(PathId(frontend.id), "v1", state = true).withHealthAction(storeFirst)
 
       val response = marathon.createGroup(group)
       response.success should be(true) withClue (s"Could create group $gid: Response: code=${response.code} body=${response.entityString}")
@@ -346,9 +346,9 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       def storeFirst(health: IntegrationHealthCheck): Unit = {
         if (!ping.contains(health.appId.toString)) ping += health.appId.toString -> DateTime.now
       }
-      appProxyHealthCheck(PathId(db.id), "v1", state = true).withHealthAction(storeFirst)
-      appProxyHealthCheck(PathId(service.id), "v1", state = true).withHealthAction(storeFirst)
-      appProxyHealthCheck(PathId(frontend.id), "v1", state = true).withHealthAction(storeFirst)
+      registerAppProxyHealthCheck(PathId(db.id), "v1", state = true).withHealthAction(storeFirst)
+      registerAppProxyHealthCheck(PathId(service.id), "v1", state = true).withHealthAction(storeFirst)
+      registerAppProxyHealthCheck(PathId(frontend.id), "v1", state = true).withHealthAction(storeFirst)
       waitForDeployment(marathon.createGroup(group))
 
       Then("The correct order is maintained")

@@ -22,7 +22,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     testName taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new app")
       val app = f(dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, healthCheck = Some(appProxyHealthCheck())))
-      val check = appProxyHealthCheck(app.id.toPath, "v1", state = true)
+      val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)

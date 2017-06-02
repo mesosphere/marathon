@@ -276,7 +276,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
     * @param state The initial health status of the app mock
     * @return The IntegrationHealthCheck object which is used to control the replies.
     */
-  def appProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
+  def registerAppProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
     val check = new IntegrationHealthCheck(appId, versionId, state)
     healthChecks { checks =>
       checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
