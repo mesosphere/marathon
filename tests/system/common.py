@@ -496,7 +496,7 @@ def private_mesos_container_app(secret_name, app_id=None):
         },
         "secrets": {
             "pullConfigSecret": {
-                "source": secret_name
+                "source": '/{}'.format(secret_name)
             }
         }
     }
@@ -536,7 +536,7 @@ def private_docker_pod(secret_name, pod_id=None):
         "networks": [ {"mode": "host"} ],
         "secrets": {
             "pullConfigSecret": {
-                "source": secret_name
+                "source": '/{}'.format(secret_name)
             }
         }
     }
