@@ -149,7 +149,7 @@ class CuratorElectionService(
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
           logger.error("ZooKeeper access failed - Committing suicide to avoid invalidating ZooKeeper state")
-          Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+          suicide()
           false
         }
       })
@@ -167,6 +167,10 @@ class CuratorElectionService(
     client.start()
     client.blockUntilConnected(config.zkTimeoutDuration.toMillis.toInt, TimeUnit.MILLISECONDS)
     client
+  }
+
+  private[impl] def suicide(): Unit = {
+    Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
   }
 
   private object twitterCommonsTombstone {
@@ -210,7 +214,7 @@ class CuratorElectionService(
     }
 
     @SuppressWarnings(Array("SwallowedException"))
-    def delete(onlyMyself: Boolean = false): Unit = {
+    def delete(onlyMyself: Boolean = false): Unit = try {
       Option(client.checkExists().forPath(path)).foreach { tombstone =>
         try {
           if (!onlyMyself ||
@@ -223,6 +227,11 @@ class CuratorElectionService(
           case _: KeeperException.BadVersionException =>
         }
       }
+    } catch {
+      case NonFatal(e) =>
+        logger.error("Unexpected exception while deleting the old twitter Commons leader election tombstone; " +
+          "Commit suicide", e)
+        suicide()
     }
   }
 }
