@@ -8,13 +8,15 @@ import retrying
 import shakedown
 import time
 
+from datetime import timedelta
 from distutils.version import LooseVersion
 from urllib.parse import urljoin
 
 from common import (block_port, cluster_info, event_fixture, get_pod_tasks, ip_other_than_mom,
-                    pin_pod_to_host, restore_iptables, save_iptables)
+                    pin_pod_to_host, restore_iptables, save_iptables, docker_env_set, clear_pods)
 from dcos import marathon, util, http
-from shakedown import dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents
+from shakedown import (dcos_1_9, marathon_1_5, dcos_version_less_than, marthon_version_less_than,
+                       private_agents, required_private_agents)
 from utils import fixture_dir, get_resource, parse_json
 
 
@@ -25,17 +27,6 @@ DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME) + "/"
 def _pods_json(file="simple-pods.json"):
     return get_resource(os.path.join(fixture_dir(), file))
 
-
-def _clear_pods():
-    # clearing doesn't cause
-    try:
-        client = marathon.create_client()
-        pods = client.list_pod()
-        for pod in pods:
-            client.remove_pod(pod["id"], True)
-        shakedown.deployment_wait()
-    except:
-        pass
 
 def _pods_url(path=""):
     return "v2/pods/" + path
@@ -87,9 +78,9 @@ def test_create_pod():
     pod = client.show_pod(pod_id)
     assert pod is not None
 
-
+# TODO: D729 will provide a secrets fixture to use here
 @pytest.mark.skipif("docker_env_set()")
-@dcos_1_10
+@marathon_1_5
 def test_create_pod_with_private_image():
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
@@ -106,11 +97,11 @@ def test_create_pod_with_private_image():
     try:
         pod_def = common.private_docker_pod(secret_name)
         client.add_pod(pod_def)
-        shakedown.deployment_wait()
+        shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
         pod = client.show_pod(pod_def["id"])
         assert pod is not None
     finally:
-        client.delete_secret(secret_name)
+        common.delete_secret(secret_name)
 
 
 @dcos_1_9
@@ -444,7 +435,7 @@ def test_pod_health_failed_check():
 
 
 def setup_function(function):
-    _clear_pods()
+    clear_pods()
 
 
 def setup_module(module):
@@ -452,4 +443,4 @@ def setup_module(module):
 
 
 def teardown_module(module):
-    _clear_pods()
+    clear_pods()
