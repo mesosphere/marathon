@@ -82,7 +82,6 @@ The `make install` will install libmesos (libmesos.so on Linux and libmesos.dyli
 
 ##### Using the Mesos Version Manager
 **NOTE:** *Choose this option only if building Marathon from source, else there might be version incompatibility between pre-packaged releases of Marathon and Mesos built from source.*  
-**NOTE:** *This option is currently only supported on macOS*
 
 The Mesos Version Manager (mvm) compiles, configures, and manages multiple versions of Apache Mesos.
 It allows switching between versions quickly, making it easy to test Marathon against different versions of Mesos.
@@ -92,13 +91,19 @@ It allows switching between versions quickly, making it easy to test Marathon ag
 The Mesos Version Manager assumes that all dependencies of Apache Mesos are readily installed.  
 Please refer to the [Apache Mesos getting started docs](http://mesos.apache.org/gettingstarted/) for instructions on how to set up the build environment.
 
+MVM compiles Mesos with SSL support by default, which requires openssl and libevent to be installed.  
+On macOS, the packages can be installed using brew: `brew install openssl libevent`  
+On CentOS, the packages can be installed using yum: `sudo yum install -y libevent-devel openssl-devel`
+
 ###### Usage
 
 The script can be run as follows:
 
         cd marathon
         cd scripts
-        ./mvm.sh <VERSION>
+        ./mvm.sh <VERSION> [SHELL]
+
+The following command will launch a bash shell configured for Mesos 1.2.0: `./mvm.sh 1.2.0 bash`
 
 You should consider placing the script into a folder in your shell's `PATH` if you are using it regularly.
 
@@ -113,6 +118,7 @@ It will then spawn a new bash shell with the chosen version of Mesos activated.
 For more information see `./mvm.sh --help`.
 
 **Note**: You will have to re-run the script if you wish to use Mesos after closing the shell.
+See `./mvm.sh --help` information on how to  permanently configure your shell for mvm to avoid this.
 
 #### Install Marathon
 
