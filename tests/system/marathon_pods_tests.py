@@ -398,6 +398,29 @@ def test_pod_health_check():
 
 
 @dcos_1_9
+def test_pod_container_network():
+    """ Tests using "container" network (using default network "dcos")
+    """
+    client = marathon.create_client()
+    pod_id = "/pod-container-net-{}".format(uuid.uuid4().hex)
+    pod_json = _pods_json('pod-container-net.json')
+    pod_json["id"] = pod_id
+
+    client.add_pod(pod_json)
+    shakedown.deployment_wait()
+
+    tasks = get_pod_tasks(pod_id)
+
+    network_info = tasks[0]['statuses'][0]['container_status']['network_infos'][0]
+    assert network_info['name'] == "dcos"
+    container_ip = network_info['ip_addresses'][0]['ip_address']
+    assert container_ip is not None
+
+    url = "http://{}:80/".format(container_ip)
+    common.assert_http_code(url)
+
+
+@dcos_1_9
 @private_agents(2)
 def test_pod_health_failed_check():
     """ Deploys a pod with good health checks, then partitions the network and verifies
