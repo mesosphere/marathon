@@ -90,7 +90,7 @@ Instructions on how to install prepackaged releases are available [in the Marath
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
-        sbt run --master localhost:5050 --zk zk://localhost:2181/marathon
+        sbt 'run --master localhost:5050 --zk zk://localhost:2181/marathon'
 
 1.  Run `sbt universal:packageXzTarball` to package Marathon as an txz file
     containing bin/marathon fully packaged.
