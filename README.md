@@ -125,7 +125,25 @@ Instructions on how to install prepackaged releases are available [in the Marath
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
         sbt 'run --master localhost:5050 --zk zk://localhost:2181/marathon'
-
+    
+    **Troubleshooting**
+    1. Failure in retrieval of IP address of the local machine will result in an error and may look like this:
+    
+        `Failed to obtain the IP address for '<local-machine>'; the DNS service may not be able to resolve it: nodename nor servname provided, or not known`
+        
+        Make sure that `LIBPROCESS_IP` environment variable is set.
+        ```
+        export LIBPROCESS_IP="127.0.0.1"
+        ```
+    1. When the `MESOS_NATIVE_JAVA_LIBRARY` environment variable is not set, the following error may occur,
+        
+        `java.lang.UnsatisfiedLinkError: no mesos in java.library.path...`
+        
+        Make sure that `MESOS_NATIVE_JAVA_LIBRARY` environment variable is set.
+        ```
+        export MESOS_NATIVE_JAVA_LIBRARY="/path/to/mesos/lib/libmesos.dylib"
+        ```
+   
 1.  Run `sbt universal:packageXzTarball` to package Marathon as an txz file
     containing bin/marathon fully packaged.
 
