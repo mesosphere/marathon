@@ -1,3 +1,13 @@
+## Changes from 1.4.3 to 1.4.4
+
+### Changes
+
+- [MARATHON-7411](https://jira.mesosphere.com/browse/MARATHON-7411) Include USER networked docker containers in /v2/tasks text/plain output. If no host port is specified, specify address as `{containerIp}:{containerPort}`. If host port is specified, `{agentIp}:{hostPort}`.
+
+### Fixed issues
+
+- [MARATHON-7396](https://jira.mesosphere.com/browse/MARATHON-7396) Marathon leader would become a zombie process in certain Zookeper failure scenarios.
+- Marathon would not load authentication plugins in certain situations. This has been addressed.
 
 ## Changes from 1.4.2 to 1.4.3
 Bugfix release
