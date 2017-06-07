@@ -362,6 +362,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
+    f.queue.asyncPurge(app.id) returns Future.successful(Done)
     f.instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
     f.instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
     system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
@@ -373,7 +374,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       expectMsg(DeploymentStarted(plan))
 
-      verify(f.queue, timeout(1000)).purge(app.id)
+      verify(f.queue, timeout(1000)).asyncPurge(app.id)
       verify(f.queue, timeout(1000)).resetDelay(app.copy(instances = 0))
 
       system.eventStream.unsubscribe(probe.ref)
