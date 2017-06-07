@@ -8,6 +8,9 @@
 
 - [MARATHON-7396](https://jira.mesosphere.com/browse/MARATHON-7396) Marathon leader would become a zombie process in certain Zookeper failure scenarios.
 - Marathon would not load authentication plugins in certain situations. This has been addressed.
+- [MARATHON-7322](https://jira.mesosphere.com/browse/MARATHON-7322) /ping endpoint returns the correct content type
+- [MARATHON-7320](https://jira.mesosphere.com/browse/MARATHON-7320) Fix MAX_PER constraint for attributes.
+- Fix issue related to Marathon plugins and authorization for the endpoint `v2/tasks`
 
 ## Changes from 1.4.2 to 1.4.3
 Bugfix release
@@ -17,7 +20,6 @@ Bugfix release
 - [MARATHON-7267](https://jira.mesosphere.com/browse/MARATHON-7267) Enforce validation for pod container names
 - [DCOS-14890] Fix default scheme for HTTP health checks in pods
 - [DCOS-14303] Fix issue in which Marathon would fail to launch if hostname is not resolvable (but still specified from the command line)
-- [MARATHON-7320](https://jira.mesosphere.com/browse/MARATHON-7320) Fix MAX_PER constraint for attributes.
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release
