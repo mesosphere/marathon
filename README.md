@@ -64,7 +64,7 @@ For run-time, Marathon has the following dependencies:
 The by far easiest way to get Marathon running is to use [DC/OS](https://dcos.io/get-started/#marathon). Marathon is pre-bundled into [DC/OS](https://dcos.io/get-started/#marathon).
 
 #### Install Mesos
-Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos.
+Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are three options for installing Apache Mesos.
 
 ##### Installing Mesos from prepackaged releases
 Instructions on how to install prepackaged releases of Mesos are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/).
@@ -79,6 +79,40 @@ You can find the instructions for compiling Mesos from source in the [Apache Mes
 ```
 
 The `make install` will install libmesos (libmesos.so on Linux and libmesos.dylib on Mac OS X) in the install directory.
+
+##### Using the Mesos Version Manager
+**NOTE:** *Choose this option only if building Marathon from source, else there might be version incompatibility between pre-packaged releases of Marathon and Mesos built from source.*  
+**NOTE:** *This option is currently only supported on macOS*
+
+The Mesos Version Manager (mvm) compiles, configures, and manages multiple versions of Apache Mesos.
+It allows switching between versions quickly, making it easy to test Marathon against different versions of Mesos.
+
+###### Prerequisites
+
+The Mesos Version Manager assumes that all dependencies of Apache Mesos are readily installed.  
+Please refer to the [Apache Mesos getting started docs](http://mesos.apache.org/gettingstarted/) for instructions on how to set up the build environment.
+
+###### Usage
+
+The script can be run as follows:
+
+        cd marathon
+        cd scripts
+        ./mvm.sh <VERSION>
+
+You should consider placing the script into a folder in your shell's `PATH` if you are using it regularly.
+
+The mvm script accepts three different formats as version name:
+
+1. Version tags from the Mesos repository. Use `./mvm.sh --tags` in order to obtain a list of available tags.
+2. Commit hashes from the Mesos repository.
+3. The `--latest` flag, which automatically chooses the latest development version: `./mvm.sh --latest`.
+
+MVM Will automatically download & compile Apache Mesos if necessary.
+It will then spawn a new bash shell with the chosen version of Mesos activated.  
+For more information see `./mvm.sh --help`.
+
+**Note**: You will have to re-run the script if you wish to use Mesos after closing the shell.
 
 #### Install Marathon
 
