@@ -187,11 +187,11 @@ def test_external_volume():
         # Clean up after the test: external volumes are not destroyed by marathon or dcos
         # and have to be cleaned manually.
         agent = shakedown.get_private_agents()[0]
-        result, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))  # NOQA
+        status, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))  # NOQA
         # Note: Removing the volume might fail sometimes because EC2 takes some time (~10min) to recognize that
         # the volume is not in use anymore hence preventing it's removal. This is a known pitfall: we log the error
         # and the volume should be cleaned up manually later.
-        if not result:
+        if not status:
             print('WARNING: Failed to remove external volume with name={}: {}'.format(volume_name, output))
 
 
@@ -238,6 +238,246 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     # Check if the backup file exits and is valid
     cmd = 'tar -tf {}/{} | wc -l'.format(backup_dir, backup_file)
-    run, data = shakedown.run_command_on_master(cmd)
-    assert run, 'Failed to validate backup file {}'.format(backup_url)
+    status, data = shakedown.run_command_on_master(cmd)
+    assert status, 'Failed to validate backup file {}'.format(backup_url)
     assert int(data.rstrip()) > 0, "Backup file is empty"
+
+
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+def test_app_file_based_secret(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    # if not common.is_enterprise_cli_package_installed():
+    # common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+    secret_normalized_name = secret_name.replace('/', '')
+    secret_container_path = 'mysecretpath'
+
+    app_id = uuid.uuid4().hex
+    # In case you're wondering about the `cmd`: secrets are mounted via tmpfs inside
+    # the container and are not visible outside, hence the intermediate file
+    app_def = {
+        "id": app_id,
+        "instances": 1,
+        "cpus": 0.1,
+        "mem": 64,
+        "cmd": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $PORT_API".
+            format(secret_container_path, secret_container_path),
+        "container": {
+            "type": "MESOS",
+            "volumes": [{
+                "containerPath": secret_container_path,
+                "secret": "secret1"
+            }]
+        },
+        "portDefinitions": [{
+            "port": 0,
+            "protocol": "tcp",
+            "name": "api",
+            "labels": {}
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    assert len(tasks) == 1, 'Failed to start the file based secret app'
+
+    port = tasks[0]['ports'][0]
+    host = tasks[0]['host']
+    # The secret by default is saved in $MESOS_SANDBOX/.secrets/path/to/secret
+    cmd = "curl {}:{}/{}_file".format(host, port, secret_container_path)
+    status, data = shakedown.run_command_on_master(cmd)
+
+    assert status, "{} did not succeed".format(cmd)
+    assert data == secret_value
+
+
+def test_app_secret_env_var(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+
+    app_id = uuid.uuid4().hex
+    app_def = {
+        "id": app_id,
+        "instances": 1,
+        "cpus": 0.1,
+        "mem": 64,
+        "cmd": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $PORT_API",
+        "env": {
+            "SECRET_ENV": {
+                "secret": "secret1"
+            }
+        },
+        "portDefinitions": [{
+            "port": 0,
+            "protocol": "tcp",
+            "name": "api",
+            "labels": {}
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    assert len(tasks) == 1, 'Failed to start the secret environment variable app'
+
+    port = tasks[0]['ports'][0]
+    host = tasks[0]['host']
+    cmd = "curl {}:{}/secret-env".format(host, port)
+    status, data = shakedown.run_command_on_master(cmd)
+
+    assert status, "{} did not succeed".format(cmd)
+    assert data.rstrip() == secret_value
+
+
+def test_pod_secret_env_var(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+
+    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_def = {
+        "id": pod_id,
+        "containers": [{
+            "name": "container-1",
+            "resources": {
+                "cpus": 0.1,
+                "mem": 64
+            },
+            "endpoints": [{
+                "name": "http",
+                "hostPort": 0,
+                "protocol": [
+                    "tcp"
+                ]}
+            ],
+            "exec": {
+                "command": {
+                    "shell": "echo $SECRET_ENV && echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTP"
+                }
+            }
+        }],
+        "environment": {
+            "SECRET_ENV": {
+                "secret": "secret1"
+            }
+        },
+        "networks": [{
+            "mode": "host"
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    shakedown.deployment_wait()
+
+    instances = client.show_pod(pod_id)['instances']
+    assert len(instances) == 1, 'Failed to start the secret environment variable pod'
+
+    port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
+    host = instances[0]['networks'][0]['addresses'][0]
+    cmd = "curl {}:{}/secret-env".format(host, port)
+    status, data = shakedown.run_command_on_master(cmd)
+
+    assert status, "{} did not succeed".format(cmd)
+    assert data.rstrip() == secret_value
+
+
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+def test_pod_file_based_secret(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+    secret_normalized_name = secret_name.replace('/', '')
+
+    pod_id = '/{}'.format(uuid.uuid4().hex)
+
+    pod_def = {
+        "id": pod_id,
+        "containers": [{
+            "name": "container-1",
+            "resources": {
+                "cpus": 0.1,
+                "mem": 64
+            },
+            "endpoints": [{
+                "name": "http",
+                "hostPort": 0,
+                "protocol": [
+                    "tcp"
+                ]}
+            ],
+            "exec": {
+                "command": {
+                    "shell": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTP".format(secret_normalized_name, secret_normalized_name),
+                }
+            },
+            "volumeMounts": [{
+                "name": "vol",
+                "mountPath": secret_name
+            }],
+        }],
+        "networks": [{
+            "mode": "host"
+        }],
+        "volumes": [{
+            "name": "vol",
+            "secret": "secret1"
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    shakedown.deployment_wait()
+
+    instances = client.show_pod(pod_id)['instances']
+    assert len(instances) == 1, 'Failed to start the file based secret pod'
+
+    port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
+    host = instances[0]['networks'][0]['addresses'][0]
+    cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
+    status, data = shakedown.run_command_on_master(cmd)
+
+    assert status, "{} did not succeed".format(cmd)
+    assert data.rstrip() == secret_value
+
+
+@pytest.fixture(scope="function")
+def secret_fixture():
+    secret_name = '/mysecret'
+    secret_value = 'super_secret_password'
+    common.create_secret(secret_name, secret_value)
+    yield secret_name, secret_value
+    common.delete_secret(secret_name)

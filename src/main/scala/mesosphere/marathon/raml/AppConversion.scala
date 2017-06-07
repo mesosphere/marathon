@@ -128,8 +128,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
     val selectedStrategy = ResidencyAndUpgradeStrategy(
       app.residency.map(Raml.fromRaml(_)),
       app.upgradeStrategy.map(Raml.fromRaml(_)),
-      app.container.exists(_.volumes.exists(_.persistent.nonEmpty)),
-      app.container.exists(_.volumes.exists(_.external.nonEmpty))
+      hasPersistentVolumes = app.container.exists(_.volumes.existsAn[AppPersistentVolume]),
+      hasExternalVolumes = app.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
 
     val backoffStrategy = BackoffStrategy(

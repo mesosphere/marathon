@@ -3,6 +3,7 @@ package api.v2
 
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ FetchUri, PathId }
+import mesosphere.marathon.stream.Implicits._
 
 object AppNormalization {
 
@@ -264,7 +265,7 @@ object AppNormalization {
 
     // cheating: we know that this is invoked before canonical validation so we provide a default here.
     // it would be nice to use RAML "object" default values here but our generator isn't that smart yet.
-    val residency: Option[AppResidency] = app.container.find(_.volumes.exists(_.persistent.nonEmpty))
+    val residency: Option[AppResidency] = app.container.find(_.volumes.existsAn[AppPersistentVolume])
       .fold(app.residency)(_ => app.residency.orElse(DefaultAppResidency))
 
     app.copy(
@@ -307,7 +308,7 @@ object AppNormalization {
     val container = NetworkedContainer(Some(networks), app.container).normalize.container
 
     val defaultUnreachable: UnreachableStrategy = {
-      val hasPersistentVols = app.container.exists(_.volumes.exists(_.persistent.nonEmpty))
+      val hasPersistentVols = app.container.exists(_.volumes.existsAn[AppPersistentVolume])
       state.UnreachableStrategy.default(hasPersistentVols).toRaml
     }
 

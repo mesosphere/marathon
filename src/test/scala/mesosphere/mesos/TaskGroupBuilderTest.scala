@@ -392,11 +392,11 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
             volumeMounts = Seq(
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume1",
                 mountPath = "/mnt/path1"
               ),
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume2",
                 mountPath = "/mnt/path2",
                 readOnly = Some(true)
@@ -407,7 +407,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             name = "Foo2",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
             volumeMounts = Seq(
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume1",
                 mountPath = "/mnt/path2",
                 readOnly = Some(false)

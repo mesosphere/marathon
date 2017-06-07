@@ -932,22 +932,6 @@ def copy_docker_credentials_file(agents, file_name='docker.tar.gz'):
         os.remove(file_name)
 
 
-def create_secret(secret_name, secret_value):
-    """ Create a secret with a given name and a value.
-        This method uses `dcos security secrets` command and assumes that `dcos-enterprise-cli`
-        package is installed.
-
-        :param secret_name: secret name
-        :type secret_name: str
-        :param secret_value: secret_value
-        :type secret_value: str
-    """
-    escaped_secret_value = escape_cli_arg(secret_value)
-    stdout, stderr, return_code = run_dcos_command(
-        'security secrets create --value="{}" {}'.format(escaped_secret_value, secret_name), print_output=False)
-    assert return_code == 0, "Failed to create a secret: {}".format(secret_name)
-
-
 def has_secret(secret_name):
     """ Returns `True` if the secret with given name exists in the vault.
         This method uses `dcos security secrets` command and assumes that `dcos-enterprise-cli`
@@ -976,8 +960,32 @@ def delete_secret(secret_name):
     assert return_code == 0, "Failed to remove existing secret"
 
 
+def create_secret(name, value = None, description = None):
+    """ Create a secret with a passed `{name}` and optional `{value}`.
+        This method uses `dcos security secrets` command and assumes that `dcos-enterprise-cli`
+        package is installed.
+
+        :param name: secret name
+        :type name: str
+        :param value: optional secret value
+        :type value: str
+        :param description: option secret description
+        :type description: str
+    """
+    print('Creating new secret {}:{}'.format(name, value))
+
+    value_opt = '-v "{}"'.format(escape_cli_arg(value)) if value else ''
+    description_opt = '-d "{}"'.format(description) if description else ''
+
+    stdout, stderr, return_code = run_dcos_command('security secrets create {} {} "{}"'.format(
+        value_opt,
+        description_opt,
+        name), print_output=False)
+    assert return_code == 0, "Failed to create a secret"
+
+
 def create_sa_secret(secret_name, service_account, strict=False, private_key_filename='private-key.pem'):
-    """ Create a secret with a given private key file for passed service account in the vault. Both
+    """ Create an sa-secret with a given private key file for passed service account in the vault. Both
         (service account and secret) should share the same key pair. `{strict}` parameter should be
         `True` when creating a secret in a `strict` secure cluster. Private key file will be removed
         after secret is successfully created.
@@ -995,7 +1003,7 @@ def create_sa_secret(secret_name, service_account, strict=False, private_key_fil
     """
     assert os.path.isfile(private_key_filename), "Failed to create secret: private key not found"
 
-    print('Creating new secret {}'.format(secret_name))
+    print('Creating new sa-secret {} for service-account: {}'.format(secret_name, service_account))
     strict_opt = '--strict' if strict else ''
     stdout, stderr, return_code = run_dcos_command('security secrets create-sa-secret {} {} {} {}'.format(
         strict_opt,

@@ -791,7 +791,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         cmd = Some("sleep 30"),
         env = Map[String, raml.EnvVarValueOrSecret](
           "FOO" -> raml.EnvVarValue("bar"),
-          "QAZ" -> raml.EnvVarSecretRef("james")
+          "QAZ" -> raml.EnvVarSecret("james")
         ),
         secrets = Map("james" -> SecretDef("somesource"))
       )

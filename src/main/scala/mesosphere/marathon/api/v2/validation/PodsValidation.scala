@@ -6,10 +6,10 @@ package api.v2.validation
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Endpoint, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, Resources, SecretDef, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
+import mesosphere.marathon.raml._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
-
+import mesosphere.marathon.stream.Implicits._
 // scalastyle:on
 
 /**
@@ -17,10 +17,10 @@ import mesosphere.marathon.util.SemanticVersion
   */
 @SuppressWarnings(Array("all")) // wix breaks stuff
 trait PodsValidation {
-  import PodsValidationMessages._
   import EnvVarValidation._
   import NameValidation._
   import NetworkValidation._
+  import PodsValidationMessages._
   import SchedulingValidation._
   import SecretValidation._
   import Validation._
@@ -133,12 +133,18 @@ trait PodsValidation {
     }
   }
 
-  def volumeMountValidator(volumes: Seq[Volume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
+  def volumeMountValidator(volumes: Seq[PodVolume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
     volumeMount.name.length is between(1, 63)
     volumeMount.name should matchRegexFully(NamePattern)
     volumeMount.mountPath.length is between(1, 1024)
     volumeMount.name is isTrue("Referenced Volume in VolumeMount should exist") { name =>
-      volumes.exists(_.name == name)
+      volumeNames(volumes).contains(name)
+    }
+  }
+
+  def secretVolumesValidator(secrets: Map[String, SecretDef]): Validator[PodSecretVolume] = validator[PodSecretVolume] { vol =>
+    vol.secret is isTrue(SecretVolumeMustReferenceSecret) {
+      secrets.contains(_)
     }
   }
 
@@ -162,11 +168,10 @@ trait PodsValidation {
       container.artifacts is every(artifactValidator)
     }
 
-  def volumeValidator(containers: Seq[PodContainer]): Validator[Volume] = validator[Volume] { volume =>
-    volume.host is optional(notEmpty)
-  } and isTrue[Volume]("volume must be referenced by at least one container") { v =>
-    containers.exists(_.volumeMounts.exists(_.name == v.name))
-  }
+  def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] =
+    isTrue[PodVolume]("volume must be referenced by at least one container") { v =>
+      containers.exists(_.volumeMounts.exists(_.name == volumeName(v)))
+    }
 
   val fixedPodScalingPolicyValidator = validator[FixedPodScalingPolicy] { f =>
     f.instances should be >= 0
@@ -198,8 +203,10 @@ trait PodsValidation {
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
-    pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[Volume] =>
-      val names = volumes.map(_.name)
+    pod.volumes.filterPF { case sv: PodSecretVolume => true } is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+    pod.volumes.collect { case sv: PodSecretVolume => sv } is empty or every(secretVolumesValidator(pod.secrets))
+    pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[PodVolume] =>
+      val names = volumeNames(volumes)
       names.distinct.size == names.size
     }
     pod.containers is notEmpty and every(containerValidator(pod, enabledFeatures, mesosMasterVersion))
@@ -213,6 +220,13 @@ trait PodsValidation {
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
   }
+
+  def volumeNames(volumes: Seq[PodVolume]) = volumes.map(volumeName)
+  def volumeName(volume: PodVolume): String = volume match {
+    case EphemeralVolume(name) => name
+    case HostVolume(name, _) => name
+    case PodSecretVolume(name, _) => name
+  }
 }
 
 object PodsValidation extends PodsValidation {
@@ -225,6 +239,7 @@ object PodsValidationMessages {
   val HostPortsMustBeUnique = "host ports must be unique across all containers"
   val VolumeNamesMustBeUnique = "volume names must be unique"
   val ContainerNamesMustBeUnique = "container names must be unique"
+  val SecretVolumeMustReferenceSecret = "volume.secret must refer to an existing secret"
   // Note: we should keep this in sync with AppValidationMessages
   val NetworkNameRequiredForMultipleContainerNetworks =
     "networkNames must be a single item list when hostPort is specified and more than 1 container network is defined"

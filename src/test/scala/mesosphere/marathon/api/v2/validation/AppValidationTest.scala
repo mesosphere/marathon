@@ -2,13 +2,51 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.raml._
-import mesosphere.UnitTest
+import mesosphere.{UnitTest, ValidationTestLike}
 
 class AppValidationTest extends UnitTest with ResultMatchers with ValidationTestLike {
 
   import Normalization._
+
+  "File based secrets validation" when {
+    implicit val basicValidator = AppValidation.validateCanonicalAppAPI(Set.empty)
+    implicit val withSecretsValidator = AppValidation.validateCanonicalAppAPI(Set("secrets"))
+
+    "file based secret is used when secret feature is not enabled" should {
+      "fail" in {
+        val app = App(id = "/app", cmd = Some("cmd"),
+          container = Option(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "bar"))))
+        )
+        val validation = basicValidator(app)
+        validation.isFailure shouldBe true
+        // Here and below: stringifying validation is admittedly not the best way but it's a nested Set(GroupViolation...) and not easy to test.
+        validation.toString should include ("Feature secrets is not enabled. Enable with --enable_features secrets")
+      }
+    }
+
+    "file based secret is used when corresponding secret is missing" should {
+      "fail" in {
+        val app = App(id = "/app", cmd = Some("cmd"),
+          secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
+          container = Option(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "baz"))))
+        )
+        val validation = withSecretsValidator(app)
+        validation.isFailure shouldBe true
+        validation.toString should include ("volume.secret must refer to an existing secret")
+      }
+    }
+
+    "a valid file based secret" should {
+      "succeed" in {
+        val app = App(id = "/app", cmd = Some("cmd"),
+          secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
+          container = Option(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo"))))
+        )
+        withSecretsValidator(app) shouldBe (aSuccess)
+      }
+    }
+  }
 
   "Docker image pull config validation" when {
     implicit val basicValidator = AppValidation.validateCanonicalAppAPI(Set("secrets"))

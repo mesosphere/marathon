@@ -6,7 +6,7 @@ import mesosphere.marathon.api.v2.{ AppNormalization, Validation }
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.{ EnvVarSecret, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
@@ -562,6 +562,27 @@ class AppDefinitionFormatsTest extends UnitTest
       app.secrets("secret1").source should equal("/foo")
       app.secrets("secret2").source should equal("/foo")
       app.secrets("secret3").source should equal("/foo2")
+    }
+
+    "FromJSON should parse all different kinds of environment variables and secrets" in {
+      val app = Json.parse(
+        """{
+          |  "id": "test",
+          |  "secrets": {
+          |     "secret1": { "source": "/foo" }
+          |  },
+          |  "env": {
+          |    "env1": "value",
+          |    "env2": {
+          |      "secret": "secret1"
+          |    }
+          |  }
+          |}""".stripMargin).as[raml.App]
+
+      app.secrets("secret1").source should equal("/foo")
+      app.env("env1") shouldBe a[raml.EnvVarValue]
+      app.env("env2") shouldBe a[raml.EnvVarSecret]
+      app.env("env2").asInstanceOf[EnvVarSecret].secret should equal("secret1")
     }
 
     "ToJSON should serialize secrets" in {
