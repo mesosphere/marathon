@@ -965,7 +965,7 @@ class TaskBuilderTest extends UnitTest {
       assert(cmd.getShell)
       assert(cmd.hasValue)
       assert(cmd.getArgumentsList.isEmpty)
-      assert(cmd.getValue == "chmod ug+rx '/custom/executor' && exec '/custom/executor' foo")
+      assert(cmd.getValue == "/custom/executor")
     }
 
     "BuildIfMatchesWithArgsAndExecutor" in {
@@ -988,7 +988,7 @@ class TaskBuilderTest extends UnitTest {
       val cmd = taskInfo.getExecutor.getCommand
 
       assert(!taskInfo.hasCommand)
-      assert(cmd.getValue == "chmod ug+rx '/custom/executor' && exec '/custom/executor' a b c")
+      assert(cmd.getValue == "/custom/executor")
     }
 
     "BuildIfMatchesWithRole" in {
