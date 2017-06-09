@@ -86,6 +86,11 @@ case class AppDefinition(
   override val killSelection: KillSelection = KillSelection.DefaultKillSelection) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
+  /**
+    * As an optimization, we precompute and cache the hash of this object
+    * This is done to speed up deployment plan computation.
+    */
+  override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
   import mesosphere.mesos.protos.Implicits._
 
   require(
