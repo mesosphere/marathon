@@ -83,6 +83,11 @@ case class AppDefinition(
   tty: Option[TTY] = AppDefinition.DefaultTTY) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
+  /**
+    * As an optimization, we precompute and cache the hash of this object
+    * This is done to speed up deployment plan computation.
+    */
+  override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
   import mesosphere.mesos.protos.Implicits._
 
   /* The following requirements are either validated at the API layer, or precluded by our normalization layer.

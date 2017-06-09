@@ -6,25 +6,25 @@ import javax.inject.Provider
 
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
-import akka.{Done, NotUsed}
+import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import mesosphere.marathon.core.event.{GroupChangeFailed, GroupChangeSuccess}
-import mesosphere.marathon.core.group.{GroupManager, GroupManagerConfig}
+import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.upgrade.GroupVersioningUtil
-import mesosphere.marathon.util.{LockedVar, WorkQueue}
+import mesosphere.marathon.util.{ LockedVar, WorkQueue }
 
 import scala.async.Async._
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class GroupManagerImpl(
     config: GroupManagerConfig,
