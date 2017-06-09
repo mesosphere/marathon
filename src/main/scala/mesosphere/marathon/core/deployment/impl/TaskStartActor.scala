@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.actor.{ Actor, ActorRef, Props }
 import akka.event.EventStream
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -21,7 +22,7 @@ class TaskStartActor(
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
     val scaleTo: Int,
-    promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
+    promise: Promise[Unit]) extends Actor with StrictLogging with StartingBehavior {
 
   val nrToStart: Int = Math.max(
     0,
@@ -36,7 +37,7 @@ class TaskStartActor(
   }
 
   override def success(): Unit = {
-    log.info(s"Successfully started $nrToStart instances of ${runSpec.id}")
+    logger.info(s"Successfully started $nrToStart instances of ${runSpec.id}")
     promise.success(())
     context.stop(self)
   }

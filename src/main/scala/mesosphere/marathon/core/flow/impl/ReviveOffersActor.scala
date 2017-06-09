@@ -1,15 +1,17 @@
 package mesosphere.marathon
 package core.flow.impl
 
-import akka.actor.{ Cancellable, Actor, ActorLogging, Props }
+import akka.actor.{ Actor, Cancellable, Props }
 import akka.event.{ EventStream, LoggingReceive }
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.OffersWanted
-import mesosphere.marathon.core.event.{ SchedulerReregisteredEvent, SchedulerRegisteredEvent }
+import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.state.Timestamp
 import rx.lang.scala.{ Observable, Subscription }
+
 import scala.annotation.tailrec
 import scala.concurrent.duration._
 
@@ -32,7 +34,7 @@ private[impl] class ReviveOffersActor(
     clock: Clock, conf: ReviveOffersConfig,
     marathonEventStream: EventStream,
     offersWanted: Observable[Boolean],
-    driverHolder: MarathonSchedulerDriverHolder) extends Actor with ActorLogging {
+    driverHolder: MarathonSchedulerDriverHolder) extends Actor with StrictLogging {
 
   private[impl] var subscription: Subscription = _
   private[impl] var offersCurrentlyWanted: Boolean = false
@@ -59,7 +61,7 @@ private[impl] class ReviveOffersActor(
     val nextRevive = lastRevive + conf.minReviveOffersInterval().milliseconds
 
     if (nextRevive <= now) {
-      log.info("=> revive offers NOW, canceling any scheduled revives")
+      logger.info("=> revive offers NOW, canceling any scheduled revives")
       nextReviveCancellableOpt.foreach(_.cancel())
       nextReviveCancellableOpt = None
 
@@ -68,26 +70,22 @@ private[impl] class ReviveOffersActor(
 
       revivesNeeded -= 1
       if (revivesNeeded > 0) {
-        log.info(
-          "{} further revives still needed. Repeating reviveOffers according to --{} {}",
-          revivesNeeded, conf.reviveOffersRepetitions.name, conf.reviveOffersRepetitions())
+        logger.info(s"$revivesNeeded further revives still needed. Repeating reviveOffers according to --${conf.reviveOffersRepetitions.name} ${conf.reviveOffersRepetitions()}")
         reviveOffers()
       }
     } else {
       lazy val untilNextRevive = now until nextRevive
       if (nextReviveCancellableOpt.isEmpty) {
-        log.info(
-          "=> Schedule next revive at {} in {}, adhering to --{} {} (ms)",
-          nextRevive, untilNextRevive, conf.minReviveOffersInterval.name, conf.minReviveOffersInterval())
+        logger.info(s"=> Schedule next revive at $nextRevive in $untilNextRevive, adhering to --${conf.minReviveOffersInterval.name} ${conf.minReviveOffersInterval()} (ms)")
         nextReviveCancellableOpt = Some(schedulerCheck(untilNextRevive))
-      } else if (log.isDebugEnabled) {
-        log.info("=> Next revive already scheduled at {} not yet due for {}", nextRevive, untilNextRevive)
+      } else {
+        logger.info("=> Next revive already scheduled at {} not yet due for {}", nextRevive, untilNextRevive)
       }
     }
   }
 
   private[this] def suppressOffers(): Unit = {
-    log.info("=> Suppress offers NOW")
+    logger.info("=> Suppress offers NOW")
     driverHolder.driver.foreach(_.suppressOffers())
   }
 
@@ -100,12 +98,12 @@ private[impl] class ReviveOffersActor(
 
   private[this] def receiveOffersWantedNotifications: Receive = {
     case OffersWanted(true) =>
-      log.info("Received offers WANTED notification")
+      logger.info("Received offers WANTED notification")
       offersCurrentlyWanted = true
       initiateNewSeriesOfRevives()
 
     case OffersWanted(false) =>
-      log.info("Received offers NOT WANTED notification, canceling {} revives", revivesNeeded)
+      logger.info("Received offers NOT WANTED notification, canceling {} revives", revivesNeeded)
       offersCurrentlyWanted = false
       revivesNeeded = 0
       nextReviveCancellableOpt.foreach(_.cancel())
@@ -127,18 +125,18 @@ private[impl] class ReviveOffersActor(
     case msg @ (_: SchedulerRegisteredEvent | _: SchedulerReregisteredEvent | OfferReviverDelegate.ReviveOffers) =>
 
       if (offersCurrentlyWanted) {
-        log.info(s"Received reviveOffers notification: ${msg.getClass.getSimpleName}")
+        logger.info(s"Received reviveOffers notification: ${msg.getClass.getSimpleName}")
         initiateNewSeriesOfRevives()
       } else {
-        log.info(s"Ignoring ${msg.getClass.getSimpleName} because no one is currently interested in offers")
+        logger.info(s"Ignoring ${msg.getClass.getSimpleName} because no one is currently interested in offers")
       }
 
     case ReviveOffersActor.TimedCheck =>
-      log.info("Received TimedCheck")
+      logger.info("Received TimedCheck")
       if (revivesNeeded > 0) {
         reviveOffers()
       } else {
-        log.info("=> no revives needed right now")
+        logger.info("=> no revives needed right now")
       }
   }
 

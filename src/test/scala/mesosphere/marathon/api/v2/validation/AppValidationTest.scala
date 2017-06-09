@@ -3,7 +3,7 @@ package api.v2.validation
 
 import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.marathon.raml._
-import mesosphere.{UnitTest, ValidationTestLike}
+import mesosphere.{ UnitTest, ValidationTestLike }
 
 class AppValidationTest extends UnitTest with ResultMatchers with ValidationTestLike {
 

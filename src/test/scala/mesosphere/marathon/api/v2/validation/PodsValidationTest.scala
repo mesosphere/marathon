@@ -3,8 +3,8 @@ package api.v2.validation
 
 import com.wix.accord.Validator
 import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.{UnitTest, ValidationTestLike}
-import mesosphere.marathon.raml.{Constraint, ConstraintOperator, Endpoint, EnvVarSecret, EphemeralVolume, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount}
+import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, EnvVarSecret, EphemeralVolume, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
