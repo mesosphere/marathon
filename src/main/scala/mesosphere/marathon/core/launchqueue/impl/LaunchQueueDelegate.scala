@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
@@ -32,25 +33,46 @@ private[launchqueue] class LaunchQueueDelegate(
     askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
   }
 
+  override def listAsync: Future[Seq[QueuedInstanceInfo]] =
+    askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
+
   override def listWithStatistics: Seq[QueuedInstanceInfoWithStatistics] = {
     askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
   }
 
+  override def listWithStatisticsAsync: Future[Seq[QueuedInstanceInfoWithStatistics]] =
+    askQueueActorFuture[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
+
   override def get(runSpecId: PathId): Option[QueuedInstanceInfo] =
     askQueueActor[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
+
+  override def getAsync(runSpecId: PathId): Future[Option[QueuedInstanceInfo]] =
+    askQueueActorFuture[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
 
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
 
   override def count(runSpecId: PathId): Int = get(runSpecId).map(_.instancesLeftToLaunch).getOrElse(0)
 
+  override def countAsync(runSpecId: PathId): Future[Int] =
+    getAsync(runSpecId).map {
+      case Some(i) => i.instancesLeftToLaunch
+      case None => 0
+    }(ExecutionContexts.global)
+
   override def listRunSpecs: Seq[RunSpec] = list.map(_.runSpec)
 
-  override def asyncPurge(runSpecId: PathId): Future[Done] = {
-    askQueueActorFuture[LaunchQueueDelegate.Request, Done]("asyncPurge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
-  }
+  override def listRunSpecsAsync: Future[Seq[RunSpec]] =
+    listAsync.map(_.map(_.runSpec))(ExecutionContexts.global)
 
-  override def add(runSpec: RunSpec, count: Int): Unit = askQueueActor[LaunchQueueDelegate.Request, Unit]("add")(LaunchQueueDelegate.Add(runSpec, count))
+  override def asyncPurge(runSpecId: PathId): Future[Done] =
+    askQueueActorFuture[LaunchQueueDelegate.Request, Done]("asyncPurge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
+
+  override def add(runSpec: RunSpec, count: Int): Done =
+    askQueueActor[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
+
+  override def addAsync(runSpec: RunSpec, count: Int): Future[Done] =
+    askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
 
   private[this] def askQueueActor[T, R: ClassTag](
     method: String,

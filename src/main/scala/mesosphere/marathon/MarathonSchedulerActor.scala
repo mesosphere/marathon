@@ -375,7 +375,7 @@ class SchedulerActions(
 
   // TODO move stuff below out of the scheduler
 
-  def startRunSpec(runSpec: RunSpec): Unit = {
+  def startRunSpec(runSpec: RunSpec): Future[Done] = {
     logger.info(s"Starting runSpec ${runSpec.id}")
     scale(runSpec)
   }

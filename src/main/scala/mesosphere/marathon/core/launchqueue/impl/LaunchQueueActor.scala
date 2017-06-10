@@ -188,13 +188,13 @@ private[impl] class LaunchQueueActor(
           val actorRef = createAppTaskLauncher(app, count)
           val eventualCount: Future[QueuedInstanceInfo] =
             (actorRef ? TaskLauncherActor.GetCount).mapTo[QueuedInstanceInfo]
-          eventualCount.map(_ => ()).pipeTo(sender())
+          eventualCount.map(_ => Done).pipeTo(sender())
 
         case Some(actorRef) =>
           import context.dispatcher
           val eventualCount: Future[QueuedInstanceInfo] =
             (actorRef ? TaskLauncherActor.AddInstances(app, count)).mapTo[QueuedInstanceInfo]
-          eventualCount.map(_ => ()).pipeTo(sender())
+          eventualCount.map(_ => Done).pipeTo(sender())
       }
 
     case msg @ RateLimiterActor.DelayUpdate(app, _) =>
