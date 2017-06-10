@@ -272,5 +272,7 @@ class DeploymentManagerTest
     deploymentRepo.store(any[DeploymentPlan]) returns Future.successful(Done)
     deploymentRepo.delete(any[String]) returns Future.successful(Done)
     deploymentRepo.all() returns Source.empty
+    launchQueue.getAsync(any) returns Future.successful(None)
+    launchQueue.addAsync(any, any) returns Future.successful(Done)
   }
 }

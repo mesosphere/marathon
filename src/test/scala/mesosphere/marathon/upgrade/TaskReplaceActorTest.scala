@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package upgrade
 
+import akka.Done
 import akka.actor.{ Actor, Props }
 import akka.testkit.TestActorRef
 import mesosphere.marathon.core.condition.Condition
@@ -14,18 +15,15 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.MarathonActorSupport
-import org.mockito.Matchers.any
-import org.mockito.Mockito
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
 import rx.lang.scala.Observable
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{ Await, Future, Promise }
 
 class TaskReplaceActorTest
     extends MarathonActorSupport
@@ -33,7 +31,7 @@ class TaskReplaceActorTest
     with Matchers
     with Eventually
     with BeforeAndAfter
-    with MockitoSugar {
+    with Mockito {
 
   test("Replace without health checks") {
     val f = new Fixture
@@ -45,10 +43,13 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+    f.tracker.specInstancesSync(app.id) returns (Seq(instanceA, instanceB))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+
+    f.queue.addAsync(newApp, 5) returns Future.successful(Done)
+
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
@@ -76,9 +77,11 @@ class TaskReplaceActorTest
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
 
+    f.queue.addAsync(eq(newApp), any) returns Future.successful(Done)
+
     val instanceC = f.runningInstance(newApp)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceC))
+    f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceC)
 
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
@@ -110,6 +113,9 @@ class TaskReplaceActorTest
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+
+    f.queue.addAsync(newApp, 5) returns Future.successful(Done)
+
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
@@ -139,6 +145,8 @@ class TaskReplaceActorTest
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+    f.queue.addAsync(newApp, 1) returns Future.successful(Done)
+
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
@@ -148,7 +156,7 @@ class TaskReplaceActorTest
     eventually { f.killService.numKilled should be (2) }
 
     ref ! f.instanceChanged(newApp, Running)
-    eventually { app: AppDefinition => verify(f.queue, times(2)).add(app) }
+    eventually { app: AppDefinition => verify(f.queue, times(2)).addAsync(app) }
 
     Await.result(promise.future, 5.seconds)
 
@@ -172,15 +180,16 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+    f.queue.addAsync(newApp, 3) returns Future.successful(Done)
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
     // all new tasks are queued directly
-    eventually { app: AppDefinition => verify(f.queue, times(3)).add(app) }
+    eventually { app: AppDefinition => verify(f.queue, times(3)).addAsync(app) }
 
     // ceiling(minimumHealthCapacity * 3) = 2 are left running
     assert(f.killService.numKilled == 1)
@@ -221,16 +230,19 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+    f.queue.addAsync(newApp, 1) returns Future.successful(Done)
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
     // only one task is queued directly
     val queueOrder = org.mockito.Mockito.inOrder(f.queue)
-    eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
+    eventually {
+      queueOrder.verify(f.queue).addAsync(_: AppDefinition, 1)
+    }
 
     // ceiling(minimumHealthCapacity * 3) = 2 are left running
     assert(f.killService.numKilled == 1)
@@ -238,12 +250,16 @@ class TaskReplaceActorTest
     // first new task becomes healthy and another old task is killed
     ref ! f.healthChanged(newApp, healthy = true)
     eventually { f.killService.numKilled should be(2) }
-    eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
+    eventually {
+      queueOrder.verify(f.queue).addAsync(_: AppDefinition, 1)
+    }
 
     // second new task becomes healthy and the last old task is killed
     ref ! f.healthChanged(newApp, healthy = true)
     eventually { f.killService.numKilled should be(3) }
-    eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
+    eventually {
+      queueOrder.verify(f.queue).addAsync(_: AppDefinition, 1)
+    }
 
     // third new task becomes healthy
     ref ! f.healthChanged(newApp, healthy = true)
@@ -274,10 +290,11 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+    f.queue.addAsync(newApp, 1) returns Future.successful(Done)
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
@@ -299,7 +316,7 @@ class TaskReplaceActorTest
     // third new task becomes healthy and last old task is killed
     ref ! f.healthChanged(newApp, healthy = true)
     eventually { f.killService.numKilled should be(3) }
-    queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
+    queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
     Await.result(promise.future, 5.seconds)
 
@@ -325,10 +342,11 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+    f.queue.addAsync(eq(newApp), any) returns Future.successful(Done)
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
@@ -345,12 +363,12 @@ class TaskReplaceActorTest
     // second new task becomes healthy and another old task is killed
     ref ! f.healthChanged(newApp, healthy = true)
     eventually { f.killService.numKilled should be(2) }
-    queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
+    queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
     // third new task becomes healthy and last old task is killed
     ref ! f.healthChanged(newApp, healthy = true)
     eventually { f.killService.numKilled should be(3) }
-    queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
+    queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
     Await.result(promise.future, 5.seconds)
 
@@ -377,35 +395,43 @@ class TaskReplaceActorTest
     val instanceC = f.runningInstance(app)
     val instanceD = f.runningInstance(app)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC, instanceD))
-
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+
+    f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC, instanceD)
+    f.queue.addAsync(newApp, 1) returns Future.successful(Done)
+
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
     // one task is killed directly because we are over capacity
-    val order = org.mockito.Mockito.inOrder(f.queue)
-    f.killService.killed should contain (instanceA.instanceId)
+    eventually {
+      f.killService.killed should contain(instanceA.instanceId)
+    }
 
     // the kill is confirmed (see answer above) and the first new task is queued
-    eventually { order.verify(f.queue).add(newApp, 1) }
+    eventually {
+      verify(f.queue, times(1)).addAsync(newApp, 1)
+    }
     assert(f.killService.numKilled == 1)
 
     // first new task becomes healthy and another old task is killed
     ref ! f.healthChanged(newApp, healthy = true)
     eventually { f.killService.numKilled should be(2) }
-    eventually { order.verify(f.queue).add(newApp, 1) }
+    eventually {
+      verify(f.queue, times(2)).addAsync(newApp, 1)
+    }
 
     // second new task becomes healthy and another old task is killed
     ref ! f.healthChanged(newApp, healthy = true)
     eventually { f.killService.numKilled should be(3) }
-    eventually { order.verify(f.queue).add(newApp, 1) }
+    eventually {
+      verify(f.queue, times(3)).addAsync(newApp, 1)
+    }
 
     // third new task becomes healthy and last old task is killed
     ref ! f.healthChanged(newApp, healthy = true)
     eventually { f.killService.numKilled should be(4) }
-    eventually { order.verify(f.queue, never()).add(newApp, 1) }
 
     Await.result(promise.future, 5.seconds)
 
@@ -413,6 +439,8 @@ class TaskReplaceActorTest
     f.killService.killed should contain (instanceB.instanceId)
     f.killService.killed should contain (instanceC.instanceId)
     f.killService.killed should contain (instanceD.instanceId)
+
+    verify(f.queue, times(3)).addAsync(newApp, 1)
 
     expectTerminated(ref)
   }
@@ -423,7 +451,7 @@ class TaskReplaceActorTest
     val app = AppDefinition(id = "/myApp".toPath, instances = 2)
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+    f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
     val promise = Promise[Unit]()
 
     When("The replace actor is started")
@@ -442,9 +470,9 @@ class TaskReplaceActorTest
     val port = PortDefinition(0, name = Some(check.portName))
     val app = AppDefinition(id = "/myApp".toPath, instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
     val instance = f.runningInstance(app)
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance))
+    f.tracker.specInstancesSync(app.id) returns Seq(instance)
     val readyCheck = Observable.from(instance.tasksMap.values.map(task => ReadinessCheckResult(check.name, task.taskId, ready = true, None)))
-    when(f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec])).thenReturn(readyCheck)
+    f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec]) returns readyCheck
     val promise = Promise[Unit]()
 
     When("The replace actor is started")
@@ -470,9 +498,9 @@ class TaskReplaceActorTest
       healthChecks = Set(MarathonHttpHealthCheck())
     )
     val instance = f.runningInstance(app)
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance))
+    f.tracker.specInstancesSync(app.id) returns Seq(instance)
     val readyCheck = Observable.from(instance.tasksMap.values.map(task => ReadinessCheckResult(ready.name, task.taskId, ready = true, None)))
-    when(f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec])).thenReturn(readyCheck)
+    f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec]) returns readyCheck
     val promise = Promise[Unit]()
 
     When("The replace actor is started")
@@ -489,9 +517,10 @@ class TaskReplaceActorTest
     val f = new Fixture
     val app = AppDefinition(id = "/myApp".toPath, instances = 2)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq.empty)
+    f.tracker.specInstancesSync(app.id) returns (Seq.empty)
 
     val promise = Promise[Unit]()
+    f.queue.addAsync(any, any) returns Future.successful(Done)
 
     val ref = f.replaceActor(app, promise)
     watch(ref)
@@ -515,17 +544,19 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+    f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+    f.queue.addAsync(newApp, 5) returns Future.successful(Done)
+
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
     for (_ <- 0 until newApp.instances)
       ref.receive(f.instanceChanged(newApp, Running))
 
-    verify(f.queue, Mockito.timeout(1000)).resetDelay(newApp)
+    verify(f.queue, org.mockito.Mockito.timeout(1000)).resetDelay(newApp)
     f.killService.killed should contain (instanceA.instanceId)
     f.killService.killed should contain (instanceB.instanceId)
 
@@ -546,10 +577,11 @@ class TaskReplaceActorTest
 
     val instance = f.runningInstance(app)
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance))
+    f.tracker.specInstancesSync(app.id) returns Seq(instance)
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+    f.queue.addAsync(newApp, 1) returns Future.successful(Done)
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 

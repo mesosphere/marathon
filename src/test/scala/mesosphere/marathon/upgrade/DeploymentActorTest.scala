@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package upgrade
 
+import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.TestProbe
 import akka.util.Timeout
@@ -88,17 +89,18 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
+    f.scheduler.startRunSpec(any) returns Future.successful(Done)
     f.tracker.specInstances(eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
-    when(f.tracker.specInstancesSync(app2.id)).thenReturn(Seq(instance2_1))
+    f.tracker.specInstancesSync(app2.id) returns Seq(instance2_1)
     f.tracker.specInstances(eq(app2.id))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
     f.tracker.specInstances(eq(app3.id))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
     f.tracker.specInstances(eq(app4.id))(any[ExecutionContext]) returns Future.successful(Seq(instance4_1))
 
-    when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
-      def answer(invocation: InvocationOnMock): Boolean = {
+    when(f.queue.addAsync(same(app2New), any[Int])).thenAnswer(new Answer[Future[Done]] {
+      def answer(invocation: InvocationOnMock): Future[Done] = {
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           system.eventStream.publish(f.instanceChanged(app2New, Condition.Running))
-        true
+        Future.successful(Done)
       }
     })
 
@@ -137,19 +139,18 @@ class DeploymentActorTest
     val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
     val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance1_1, instance1_2))
+    f.tracker.specInstancesSync(app.id) returns Seq(instance1_1, instance1_2)
+    f.tracker.specInstances(same(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(f.queue.count(appNew.id)).thenAnswer(new Answer[Int] {
-      override def answer(p1: InvocationOnMock): Int = appNew.instances
-    })
+    f.queue.countAsync(appNew.id) returns Future.successful(appNew.instances)
 
-    when(f.queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Boolean] {
-      def answer(invocation: InvocationOnMock): Boolean = {
+    when(f.queue.addAsync(same(appNew), any[Int])).thenAnswer(new Answer[Future[Done]] {
+      def answer(invocation: InvocationOnMock): Future[Done] = {
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           system.eventStream.publish(f.instanceChanged(appNew, Condition.Running))
-        true
+        Future.successful(Done)
       }
     })
 
@@ -160,7 +161,7 @@ class DeploymentActorTest
 
       f.killService.killed should contain(instance1_1.instanceId)
       f.killService.killed should contain(instance1_2.instanceId)
-      verify(f.queue).add(appNew, 2)
+      verify(f.queue).addAsync(appNew, 2)
     } finally {
       Await.result(system.terminate(), Duration.Inf)
     }
@@ -181,7 +182,8 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq.empty[Instance])
+    f.tracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+    f.queue.addAsync(app, 2) returns Future.successful(Done)
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)

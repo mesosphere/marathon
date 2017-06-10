@@ -1,8 +1,10 @@
 package mesosphere.marathon.upgrade
 
+import akka.Done
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon._
+import akka.pattern.pipe
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
@@ -16,7 +18,7 @@ import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.slf4j.LoggerFactory
 
 import scala.collection.{ SortedSet, mutable }
-import scala.concurrent.Promise
+import scala.concurrent.{ Future, Promise, ExecutionContext }
 
 class TaskReplaceActor(
     val deploymentManager: ActorRef,
@@ -100,8 +102,7 @@ class TaskReplaceActor(
     // Old instance successfully killed
     case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
       oldInstanceIds -= id
-      launchInstances()
-      checkFinished()
+      launchInstances().foreach(_ => checkFinished())(context.dispatcher)
 
     // Ignore change events, that are not handled in parent receives
     case _: InstanceChanged =>
@@ -112,6 +113,15 @@ class TaskReplaceActor(
           new TaskUpgradeCanceledException(
             "The task upgrade has been cancelled"))
       context.stop(self)
+
+    case Status.Failure(e) =>
+      // This is the result of failed launchQueue.addAsync(...) call. Log the message and
+      // restart this actor. Next reincarnation should try to start from the beginning.
+      log.warning("Failed to launch instances: ", e)
+      throw e
+
+    case Done => // This is the result of successful launchQueue.addAsync(...) call. Nothing to do here
+
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
@@ -125,14 +135,19 @@ class TaskReplaceActor(
     instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
 
-  def launchInstances(): Unit = {
+  // Careful not to make this method completely asynchronous - it changes local actor's state `instancesStarted`.
+  // Only launching new instances needs to be asynchronous.
+  def launchInstances(): Future[Done] = {
     val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldInstanceIds.size - instancesStarted)
     val instancesNotStartedYet = math.max(0, runSpec.instances - instancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
       log.info(s"Reconciling instances during app $pathId restart: queuing $instancesToStartNow new instances")
-      launchQueue.add(runSpec, instancesToStartNow)
       instancesStarted += instancesToStartNow
+      import ExecutionContext.Implicits.global
+      launchQueue.addAsync(runSpec, instancesToStartNow).pipeTo(self)
+    } else {
+      Future.successful(Done)
     }
   }
 
@@ -154,7 +169,7 @@ class TaskReplaceActor(
   def checkFinished(): Unit = {
     if (targetCountReached(runSpec.instances) && oldInstanceIds.isEmpty) {
       log.info(s"All new instances for $pathId are ready and all old instances have been killed")
-      promise.success(())
+      promise.trySuccess(())
       context.stop(self)
     } else if (log.isDebugEnabled) {
       log.debug(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +

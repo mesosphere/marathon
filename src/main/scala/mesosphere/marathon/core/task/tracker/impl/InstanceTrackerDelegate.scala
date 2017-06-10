@@ -52,6 +52,11 @@ private[tracker] class InstanceTrackerDelegate(
   override def countLaunchedSpecInstancesSync(appId: PathId, filter: Instance => Boolean): Int =
     instancesBySpecSync.specInstances(appId).count { t => t.isLaunched && filter(t) }
 
+  override def countLaunchedSpecInstances(appId: PathId): Future[Int] = {
+    import ExecutionContext.Implicits.global
+    instancesBySpec().map(_.specInstances(appId).count(_.isLaunched))
+  }
+
   override def countSpecInstancesSync(appId: PathId, filter: Instance => Boolean): Int =
     instancesBySpecSync.specInstances(appId).count(filter)
 
