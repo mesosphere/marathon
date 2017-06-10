@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 
-import scala.concurrent.Promise
+import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 class AppStartActor(
@@ -28,14 +28,13 @@ class AppStartActor(
     currentInstances: Seq[Instance],
     promise: Promise[Unit]) extends Actor with StartingBehavior with StrictLogging {
 
-  override val nrToStart: Int = scaleTo
+  override val nrToStart = Future.successful(scaleTo)
 
-  override def initializeStart(): Unit = {
+  override def initializeStart(): Future[Done] = {
     // In case we already have running instances (can happen on master abdication during deployment)
     // with the correct version those will not be killed.
     val runningInstances = currentInstances.count(_.isActive)
-    scheduler.startRunSpec(runSpec.withInstances(Math.max(runningInstances, nrToStart)))
-    Done
+    scheduler.startRunSpec(runSpec.withInstances(Math.max(runningInstances, scaleTo)))
   }
 
   override def postStop(): Unit = {
@@ -45,7 +44,9 @@ class AppStartActor(
 
   def success(): Unit = {
     logger.info(s"Successfully started $scaleTo instances of ${runSpec.id}")
-    promise.success(())
+    // Since a lot of StartingBehavior and this actor's code happens asynchronously now
+    // it can happen that this promise might succeed twice.
+    promise.trySuccess(())
     context.stop(self)
   }
 
