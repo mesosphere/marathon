@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 
 from common import (block_port, cluster_info, event_fixture, get_pod_tasks, ip_other_than_mom,
                     pin_pod_to_host, restore_iptables, save_iptables, docker_env_set, clear_pods)
-from dcos import marathon, util, http
+from dcos import marathon, util, http, mesos
 from shakedown import (dcos_1_9, marathon_1_5, dcos_version_less_than, marthon_version_less_than,
                        private_agents, required_private_agents)
 from utils import fixture_dir, get_resource, parse_json
@@ -77,6 +77,7 @@ def test_create_pod():
     shakedown.deployment_wait()
     pod = client.show_pod(pod_id)
     assert pod is not None
+
 
 # TODO: D729 will provide a secrets fixture to use here
 @pytest.mark.skipif("docker_env_set()")
@@ -417,6 +418,39 @@ def test_pod_container_network():
     assert container_ip is not None
 
     url = "http://{}:80/".format(container_ip)
+    common.assert_http_code(url)
+
+
+@marathon_1_5
+def test_pod_container_bridge():
+    """ Tests using "container" network (using default network "dcos")
+    """
+    client = marathon.create_client()
+    pod_id = "/pod-container-bridge-{}".format(uuid.uuid4().hex)
+    pod_json = _pods_json('pod-container-bridge.json')
+    pod_json["id"] = pod_id
+
+    client.add_pod(pod_json)
+    shakedown.deployment_wait()
+
+    task = get_pod_tasks(pod_id)[0]
+
+    network_info = task['statuses'][0]['container_status']['network_infos'][0]
+    assert network_info['name'] == "mesos-bridge"
+
+    # port on the host
+    port = task['discovery']['ports']['ports'][0]['number']
+    # the agent IP:port will be routed to the bridge IP:port
+    # test against the agent_ip, however it is hard to get.. translating from
+    # slave_id
+    agent_ip = common.agent_hostname_by_id(task['slave_id'])
+    assert agent_ip is not None
+    container_ip = network_info['ip_addresses'][0]['ip_address']
+    assert agent_ip != container_ip
+
+    # assert container_ip is not None
+    #
+    url = "http://{}:{}/".format(agent_ip, port)
     common.assert_http_code(url)
 
 

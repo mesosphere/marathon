@@ -3,6 +3,7 @@ from shakedown import *
 from shakedown import http
 
 from utils import *
+from dcos import mesos
 from dcos.errors import DCOSException
 from distutils.version import LooseVersion
 from urllib.parse import urljoin
@@ -17,6 +18,7 @@ import shakedown
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
+
 
 def escape_cli_arg(arg):
     acc = []
@@ -533,7 +535,7 @@ def private_docker_pod(secret_name, pod_id=None):
                 }
             }
         }],
-        "networks": [ {"mode": "host"} ],
+        "networks": [{"mode": "host"}],
         "secrets": {
             "pullConfigSecret": {
                 "source": '/{}'.format(secret_name)
@@ -960,7 +962,7 @@ def delete_secret(secret_name):
     assert return_code == 0, "Failed to remove existing secret"
 
 
-def create_secret(name, value = None, description = None):
+def create_secret(name, value=None, description=None):
     """ Create a secret with a passed `{name}` and optional `{value}`.
         This method uses `dcos security secrets` command and assumes that `dcos-enterprise-cli`
         package is installed.
@@ -1121,6 +1123,24 @@ def multi_master():
     """
     # reverse logic (skip if multi master cluster)
     return len(get_all_masters()) > 1
+
+
+def __get_all_agents():
+    """Provides all agent json in the cluster which can be used for filtering"""
+
+    client = mesos.DCOSClient()
+    agents = client.get_state_summary()['slaves']
+    return agents
+
+
+def agent_hostname_by_id(agent_id):
+    """Given a agent_id provides the agent ip"""
+    for agent in __get_all_agents():
+        if agent['id'] == agent_id:
+            return agent['hostname']
+
+    return None
+
 
 #############
 # moving to shakedown  END
