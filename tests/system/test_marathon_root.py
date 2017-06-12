@@ -6,6 +6,7 @@
 """
 import common
 import shakedown
+import uuid
 
 # this is intentional import *
 # it imports all the common test_ methods which are to be tested on root and mom
@@ -59,6 +60,62 @@ def test_marathon_delete_leader(marathon_service_name):
         assert original_leader != current_leader
 
     marathon_leadership_changed()
+
+@masters(3)
+def test_marathon_delete_leader_and_check_apps(marathon_service_name):
+
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+
+    # start an app
+    app_def = common.app(id=uuid.uuid4().hex)
+    app_id = app_def['id']
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 1
+
+    # abdicate leader after app was started successfully
+    common.delete_marathon_path('v2/leader')
+
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def marathon_leadership_changed():
+        current_leader = shakedown.marathon_leader_ip()
+        print('leader: {}'.format(current_leader))
+        assert original_leader != current_leader
+
+    # wait until leader changed
+    marathon_leadership_changed()
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def check_app_existence(expected_instances):
+        app = client.get_app(app_id)
+        assert app['tasksRunning'] == expected_instances
+
+    # check if app definition is still there and one instance is still running after new leader was elected
+    check_app_existence(1)
+
+    client.remove_app(app_id)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 0
+
+    # abdicate leader after app was started successfully
+    common.delete_marathon_path('v2/leader')
+
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+
+    # wait until leader changed
+    marathon_leadership_changed()
+
+    # check if app definition is still not there and no instance is running after new leader was elected
+    check_app_existence(0)
 
 
 @masters(3)
