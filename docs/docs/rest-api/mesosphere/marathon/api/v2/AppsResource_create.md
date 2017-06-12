@@ -4,14 +4,14 @@ Create and start a new application.
 
 Here is an example of an application JSON which includes all fields.
 
-```javascript
+```JavaScript
 {
-    "id": "/product/service/myApp",
+    "id": "/product/service/my-app",
     "cmd": "env && sleep 300",
     "cpus": 1.5,
     "mem": 256.0,
     "portDefinitions": [
-        { "port": 8080, "protocol": "tcp", "name": "http", labels: { "VIP_0": "10.0.0.1:80" } },
+        { "port": 8080, "protocol": "tcp", "name": "http", "labels": { "VIP_0": "10.0.0.1:80" } },
         { "port": 9000, "protocol": "tcp", "name": "admin" }
     ],
     "requirePorts": false,
