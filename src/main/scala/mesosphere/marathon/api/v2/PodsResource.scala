@@ -20,10 +20,11 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{ NetworkMode, Pod, Raml }
+import mesosphere.marathon.raml.{ Pod, Raml }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json.Json
+import Normalization._
 
 @Path("v2/pods")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -43,28 +44,14 @@ class PodsResource @Inject() (
 
   import PodsResource._
   implicit def podDefValidator: Validator[Pod] =
-    PodsValidation.podDefValidator(
+    PodsValidation.podValidator(
       config.availableFeatures,
       scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)))
 
   // If we change/add/upgrade the notion of a Pod and can't do it purely in the internal model,
   // update the json first
-  private def normalize(pod: Pod): Pod = {
-    if (pod.networks.exists(_.name.isEmpty)) {
-      val networks = pod.networks.map { network =>
-        if (network.mode == NetworkMode.Container && network.name.isEmpty) {
-          config.defaultNetworkName.get.fold(network) { name =>
-            network.copy(name = Some(name))
-          }
-        } else {
-          network
-        }
-      }
-      pod.copy(networks = networks)
-    } else {
-      pod
-    }
-  }
+  private implicit val normalizer = PodNormalization.apply(PodNormalization.Configuration(
+    config.defaultNetworkName.get))
 
   // If we can normalize using the internal model, do that instead.
   // The version of the pod is changed here to make sure, the user has not send a version.
@@ -75,7 +62,8 @@ class PodsResource @Inject() (
   private def marshal(pod: PodDefinition): String = marshal(Raml.toRaml(pod))
 
   private def unmarshal(bytes: Array[Byte]): Pod = {
-    normalize(Json.parse(bytes).as[Pod])
+    // no normalization or validation here, that happens elsewhere and in a precise order
+    Json.parse(bytes).as[Pod]
   }
 
   /**
@@ -98,7 +86,7 @@ class PodsResource @Inject() (
     @Context req: HttpServletRequest): Response = {
     authenticated(req) { implicit identity =>
       withValid(unmarshal(body)) { podDef =>
-        val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        val pod = normalize(Raml.fromRaml(podDef.normalize))
         withAuthorization(CreateRunSpec, pod) {
           val deployment = result(podSystem.create(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
@@ -130,7 +118,7 @@ class PodsResource @Inject() (
           """.stripMargin
         ).build()
       } else {
-        val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        val pod = normalize(Raml.fromRaml(podDef.normalize))
         withAuthorization(UpdateRunSpec, pod) {
           val deployment = result(podSystem.update(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))

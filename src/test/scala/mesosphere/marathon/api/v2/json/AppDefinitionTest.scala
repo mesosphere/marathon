@@ -26,7 +26,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   private[this] def appNormalization(app: raml.App): raml.App =
     AppsResource.appNormalization(
       AppsResource.NormalizationConfig(
-        enabledFeatures, AppNormalization.Configure(None, "mesos-bridge-name"))).normalized(app)
+        enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name"))).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]

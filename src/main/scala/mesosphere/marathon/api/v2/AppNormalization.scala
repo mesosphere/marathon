@@ -8,6 +8,7 @@ import mesosphere.marathon.stream.Implicits._
 object AppNormalization {
 
   import Apps._
+  import NetworkNormalization.Networks
   import Normalization._
 
   /**
@@ -36,7 +37,7 @@ object AppNormalization {
         case (Some(uris), fetch) if uris.nonEmpty && fetch.fold(true)(_.isEmpty) =>
           n.copy(fetch = Some(uris.map(uri => Artifact(uri = uri, extract = FetchUri.isExtract(uri)))))
         case (Some(uris), Some(fetch)) if uris.nonEmpty && fetch.nonEmpty =>
-          throw SerializationFailedException("cannot specify both uris and fetch fields")
+          throw NormalizationException("cannot specify both uris and fetch fields")
         case _ => n
       }
     }
@@ -49,7 +50,7 @@ object AppNormalization {
     def translatePortMappings(dockerPortMappings: Seq[ContainerPortMapping]): Option[Seq[ContainerPortMapping]] =
       (container.portMappings.isEmpty, dockerPortMappings.isEmpty) match {
         case (false, false) =>
-          throw SerializationFailedException("cannot specify both portMappings and docker.portMappings")
+          throw NormalizationException("cannot specify both portMappings and docker.portMappings")
         case (false, true) =>
           container.portMappings
         case (true, _) =>
@@ -73,7 +74,7 @@ object AppNormalization {
     (container.`type`, maybeDiscovery) match {
       case (EngineType.Mesos, Some(discovery)) if discovery.ports.nonEmpty =>
         if (container.portMappings.nonEmpty)
-          throw SerializationFailedException("container.portMappings and ipAddress.discovery.ports must not both be set")
+          throw NormalizationException("container.portMappings and ipAddress.discovery.ports must not both be set")
         val portMappings = discovery.ports.map { port =>
           ContainerPortMapping(
             containerPort = port.number,
@@ -85,7 +86,7 @@ object AppNormalization {
         }
         container.copy(portMappings = Option(portMappings))
       case (t, Some(discovery)) if discovery.ports.nonEmpty =>
-        throw SerializationFailedException(s"ipAddress.discovery.ports do not apply for container type $t")
+        throw NormalizationException(s"ipAddress.discovery.ports do not apply for container type $t")
       case _ =>
         container
     }
@@ -179,6 +180,7 @@ object AppNormalization {
 
   def forUpdates(config: Config): Normalization[AppUpdate] = Normalization { update =>
     val networks = Networks(config, update.networks).normalize.networks
+    networks.foreach(NetworkNormalization.requireContainerNetworkNameResolution)
     val container = NetworkedContainer(update.networks, update.container).normalize.container
     update.copy(
       container = container,
@@ -289,22 +291,9 @@ object AppNormalization {
     )
   }
 
-  case class Networks(config: Config, networks: Option[Seq[Network]])
-
-  object Networks {
-    implicit val normalizedNetworks: Normalization[Networks] = Normalization { n =>
-      // IMPORTANT: only evaluate config.defaultNetworkName if we actually need it
-      n.copy(networks = n.networks.map{ networks =>
-        networks.map {
-          case x: Network if x.name.isEmpty && x.mode == NetworkMode.Container => x.copy(name = n.config.defaultNetworkName)
-          case x => x
-        }
-      })
-    }
-  }
-
   def apply(config: Config): Normalization[App] = Normalization { app =>
     val networks = Networks(config, Some(app.networks)).normalize.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
+    NetworkNormalization.requireContainerNetworkNameResolution(networks)
     val container = NetworkedContainer(Some(networks), app.container).normalize.container
 
     val defaultUnreachable: UnreachableStrategy = {
@@ -324,15 +313,19 @@ object AppNormalization {
   }
 
   /** dynamic app normalization configuration, useful for migration and/or testing */
-  trait Config {
-    def defaultNetworkName: Option[String]
+  trait Config extends NetworkNormalization.Config {
     def mesosBridgeName: String
   }
 
   /** static app normalization configuration */
-  case class Configure(
-    override val defaultNetworkName: Option[String],
-    override val mesosBridgeName: String) extends Config
+  case class Configuration(nc: NetworkNormalization.Config, override val mesosBridgeName: String) extends Config {
+    override val defaultNetworkName: Option[String] = nc.defaultNetworkName
+  }
+
+  object Configuration {
+    def apply(defaultNetworkName: Option[String], mesosBridgeName: String): Config =
+      Configuration(NetworkNormalization.Configure(defaultNetworkName), mesosBridgeName)
+  }
 
   /**
     * attempt to translate an older app API (that uses ipAddress and container.docker.network) to the new API
@@ -362,7 +355,7 @@ object AppNormalization {
           case Bridge =>
             Some(Seq(Network(mode = NetworkMode.ContainerBridge, labels = ipAddress.labels)))
           case unsupported =>
-            throw SerializationFailedException(s"unsupported docker network type $unsupported")
+            throw NormalizationException(s"unsupported docker network type $unsupported")
         }
       case NetworkTranslation(Some(ipAddress), None, None, config) =>
         // wants ip/ct with some network mode.
@@ -381,13 +374,13 @@ object AppNormalization {
           case User => Some(Seq(Network(mode = NetworkMode.Container)))
           case Bridge => Some(Seq(Network(mode = NetworkMode.ContainerBridge)))
           case unsupported =>
-            throw SerializationFailedException(s"unsupported docker network type $unsupported")
+            throw NormalizationException(s"unsupported docker network type $unsupported")
         }
       case NetworkTranslation(None, None, networks, _) =>
         // no deprecated APIs used! awesome, so use the canonical networks field
         networks
       case _ =>
-        throw SerializationFailedException("cannot mix deprecated and canonical network APIs")
+        throw NormalizationException("cannot mix deprecated and canonical network APIs")
     }
   }
   @SuppressWarnings(Array("AsInstanceOf"))
@@ -402,6 +395,6 @@ object AppNormalization {
         id = PathId(app.id).canonicalPath(base).toString,
         dependencies = app.dependencies.map(dep => PathId(dep).canonicalPath(base).toString)
       ).asInstanceOf[T]
-    case _ => throw SerializationFailedException("withCanonizedIds only applies for App and AppUpdate")
+    case _ => throw NormalizationException("withCanonizedIds only applies for App and AppUpdate")
   }
 }

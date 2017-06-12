@@ -138,7 +138,7 @@ class AppsController(
     }
   }
 
-  private val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get, config.mesosBridgeName())
+  private val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.get, config.mesosBridgeName())
   private implicit val normalizeApp: Normalization[raml.App] =
     appNormalization(NormalizationConfig(config.availableFeatures, normalizationConfig))(AppNormalization.withCanonizedIds())
 }

@@ -148,7 +148,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       }
     }
 
-    "be able to create a simple single-container pod with bride network" in {
+    "be able to create a simple single-container pod with bridge network" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
 
@@ -276,6 +276,18 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
+    }
+
+    "create a pod w/ container networking w/o default network name" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val ex = intercept[NormalizationException] {
+        f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
+      }
+      ex.msg shouldBe NetworkNormalizationMessages.ContainerNetworkNameUnresolved
     }
 
     "create a pod with custom executor resource declaration" in {

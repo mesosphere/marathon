@@ -13,7 +13,7 @@ class AppUpdateFormatTest extends UnitTest {
     AppsResource.appUpdateNormalization(
       AppsResource.NormalizationConfig(
         Set.empty,
-        AppNormalization.Configure(None, "mesos-bridge-name"))).normalized(appUpdate)
+        AppNormalization.Configuration(None, "mesos-bridge-name"))).normalized(appUpdate)
 
   def fromJson(json: String): AppUpdate =
     normalizedAndValidated(Json.parse(json).as[AppUpdate])

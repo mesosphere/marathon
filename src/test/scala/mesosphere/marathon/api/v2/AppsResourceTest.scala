@@ -15,7 +15,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.raml.{ Container => RamlContainer }
-import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkConversionMessages, NetworkMode, Raml, SecretDef }
+import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -52,7 +52,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       PluginManager.None
     )(auth.auth, auth.auth)
 
-    val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get, config.mesosBridgeName())
+    val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.get, config.mesosBridgeName())
 
     def normalize(app: App): App = {
       val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
@@ -256,8 +256,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         cmd = Some("cmd"),
         networks = Seq(Network(mode = NetworkMode.Container))
       )
-      val result = Try(prepareApp(app, groupManager))
-      assert(result.isFailure && result.failed.get.getMessage.contains("network must specify a name"))
+      the[NormalizationException] thrownBy {
+        prepareApp(app, groupManager)
+      } should have message NetworkNormalizationMessages.ContainerNetworkNameUnresolved
     }
     "Create a new app with IP/CT on virtual network foo" in new Fixture {
       Given("An app and group")
@@ -354,10 +355,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
 
       Then("the update should fail")
-      val caught = intercept[SerializationFailedException] {
+      the[NormalizationException] thrownBy {
         appsResource.replace(updatedApp.id, updatedBody, force = false, partialUpdate = false, auth.request)
-      }
-      caught.getMessage() should be(NetworkConversionMessages.ContainerNetworkRequiresName)
+      } should have message NetworkNormalizationMessages.ContainerNetworkNameUnresolved
     }
 
     "Create a new app without IP/CT when default virtual network is bar" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
@@ -595,7 +595,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         ))
       )
       // mixing ipAddress with Docker containers is not allowed by validation; API migration fails it too
-      a[SerializationFailedException] shouldBe thrownBy(prepareApp(app, groupManager))
+      a[NormalizationException] shouldBe thrownBy(prepareApp(app, groupManager))
     }
 
     "Create a new app (that uses secret ref) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {

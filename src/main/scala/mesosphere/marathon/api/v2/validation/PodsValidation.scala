@@ -86,12 +86,6 @@ trait PodsValidation {
     val normalValidation = validator[Endpoint] { endpoint =>
       endpoint.networkNames is every(oneOf(networkNamess: _*))
 
-      // host-mode and container-bridge networking implies that hostPort is required
-      endpoint.hostPort is isTrue("is required when using host-mode or container-bridge networking") { hp =>
-        if (networks.exists(n => n.mode == NetworkMode.Host || n.mode == NetworkMode.ContainerBridge)) hp.nonEmpty
-        else true
-      }
-
       // host-mode networking implies that containerPort is disallowed
       endpoint.containerPort is isTrue("is not allowed when using host-mode networking") { cp =>
         if (networks.exists(_.mode == NetworkMode.Host)) cp.isEmpty
@@ -190,7 +184,7 @@ trait PodsValidation {
   }
 
   val endpointContainerPortsUnique: Validator[Pod] = isTrue(ContainerPortsMustBeUnique) { pod: Pod =>
-    val containerPorts = pod.containers.flatMap(_.endpoints.flatMap(_.containerPort))
+    val containerPorts = pod.containers.flatMap(_.endpoints.flatMap(_.containerPort)).filter(_ != 0)
     containerPorts.distinct.size == containerPorts.size
   }
 
@@ -199,7 +193,7 @@ trait PodsValidation {
     hostPorts.distinct.size == hostPorts.size
   }
 
-  def podDefValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)

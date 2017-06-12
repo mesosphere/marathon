@@ -43,7 +43,7 @@ class AppDefinitionFormatsTest extends UnitTest
   }
 
   def normalizeAndConvert(app: raml.App): AppDefinition = {
-    val config = AppNormalization.Configure(None, "mesos-bridge-name")
+    val config = AppNormalization.Configuration(None, "mesos-bridge-name")
     Raml.fromRaml(
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
