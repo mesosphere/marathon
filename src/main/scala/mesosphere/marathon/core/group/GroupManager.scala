@@ -3,15 +3,15 @@ package core.group
 
 import java.time.OffsetDateTime
 
-import akka.NotUsed
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
-import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.Future
 import scala.collection.immutable.Seq
+import akka.{ Done, NotUsed }
+import mesosphere.marathon.upgrade.DeploymentPlan
 
 /**
   * The group manager is the facade for all group related actions.
@@ -128,4 +128,12 @@ trait GroupManager {
     force: Boolean = false,
     toKill: Seq[Instance] = Seq.empty
   ): Future[DeploymentPlan]
+
+  /**
+    * Refresh the internal root group cache. When calling this function, the internal hold cached root group will be dropped
+    * and loaded when accessing the next time.
+    *
+    * @return Done if refresh was successful
+    */
+  def refreshGroupCache(): Future[Done]
 }

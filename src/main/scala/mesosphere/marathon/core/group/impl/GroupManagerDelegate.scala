@@ -3,11 +3,12 @@ package core.group.impl
 
 import java.time.OffsetDateTime
 
-import akka.NotUsed
+import akka.{ Done, NotUsed }
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
+import mesosphere.marathon.core.group.impl.GroupManagerActor.InvalidateGroupCache
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
@@ -182,5 +183,9 @@ private[group] class GroupManagerDelegate(
 
     val answerFuture = actorRef ? message
     answerFuture
+  }
+
+  override def refreshGroupCache(): Future[Done] = {
+    askGroupManagerActor(InvalidateGroupCache).mapTo[Done]
   }
 }

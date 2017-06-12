@@ -36,6 +36,9 @@ private[group] object GroupManagerActor {
   // Replies with Option[AppDefinition]
   case class GetAppWithId(id: PathId) extends Request
 
+  // Replies with Done
+  case class InvalidateGroupCache() extends Request
+
   // Replies with Option[PodDefinition]
   case class GetPodWithId(id: PathId) extends Request
 
@@ -106,6 +109,7 @@ private[impl] class GroupManagerActor(
     case GetUpgrade(gid, change, version, force, toKill) =>
       getUpgrade(gid, change, version, force, toKill).pipeTo(sender())
     case GetAllVersions(id) => getVersions(id).pipeTo(sender())
+    case InvalidateGroupCache => groupRepo.refreshGroupCache().pipeTo(sender())
   }
 
   private[this] def getRunSpec(id: PathId): Future[Option[RunSpec]] = {
