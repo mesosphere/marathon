@@ -103,7 +103,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Format: `zk://host1:port1,host2:port2,.../path`
     - <span class="label label-default">v1.1.2</span> Format: `zk://user@pass:host1:port1,user@pass:host2:port2,.../path`.
     When authentication is enabled the default ACL will be changed and all subsequent reads must be done using the same auth.
-* `--zk_max_versions` (Optional. Default: None): Limit the number of versions
+* `--zk_max_versions` (Optional. Default: 50): Limit the number of versions
     stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)):
     Timeout for ZooKeeper operations in milliseconds.
