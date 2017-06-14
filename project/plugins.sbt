@@ -21,7 +21,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.1.1")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
-addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.15")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.25")
 
 libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.0",
