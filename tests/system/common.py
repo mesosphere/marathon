@@ -13,20 +13,12 @@ import random
 import retrying
 import pytest
 import shakedown
+import shlex
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
-
-
-def escape_cli_arg(arg):
-    acc = []
-    for char in arg:
-        if char in ('"', '\\'):
-            acc.append('\\')
-        acc.append(char)
-    return ''.join(acc)
 
 
 def app(id=1, instances=1):
@@ -976,7 +968,7 @@ def create_secret(name, value=None, description=None):
     """
     print('Creating new secret {}:{}'.format(name, value))
 
-    value_opt = '-v "{}"'.format(escape_cli_arg(value)) if value else ''
+    value_opt = '-v {}'.format(shlex.quote(value)) if value else ''
     description_opt = '-d "{}"'.format(description) if description else ''
 
     stdout, stderr, return_code = run_dcos_command('security secrets create {} {} "{}"'.format(
