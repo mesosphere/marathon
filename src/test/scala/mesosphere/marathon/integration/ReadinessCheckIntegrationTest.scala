@@ -47,7 +47,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
       When("The app is created")
       val result = marathon.createAppV2(app)
-      result.code should be (201) withClue (result.entityString)
+      result should be (Created)
 
       (1 to 3).foreach { _ =>
 
@@ -87,7 +87,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
       When("The app is created")
       val result = marathon.createAppV2(app)
-      result.code should be (201) withClue (result.entityString)
+      result should be(Created)
 
       (1 to 3).foreach { _ =>
 
@@ -124,7 +124,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
       When("The app is created")
       val result = marathon.createAppV2(appV1)
-      result.code should be (201) withClue (result.entityString)
+      result should be (Created)
 
       And("There is one ongoing deployment")
       val deployments = marathon.listDeploymentsForBaseGroup().value

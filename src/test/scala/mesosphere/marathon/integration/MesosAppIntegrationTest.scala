@@ -61,7 +61,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) withClue s"Response: ${result.entityString}" // Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1) // The app has really started
@@ -81,7 +81,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) withClue s"Response: ${result.entityString}" // Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1) // The app has really started
@@ -95,7 +95,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val createResult = marathon.createPodV2(pod)
 
       Then("The pod is created")
-      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" // Created
+      createResult should be(Created)
       waitForDeployment(createResult)
       waitForPod(pod.id)
 
@@ -104,14 +104,14 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val updateResult = marathon.updatePod(pod.id, scaledPod)
 
       Then("The pod is scaled")
-      updateResult.code should be(200)
+      updateResult should be(OK)
       waitForDeployment(updateResult)
 
       When("The pod should be deleted")
       val deleteResult = marathon.deletePod(pod.id)
 
       Then("The pod is deleted")
-      deleteResult.code should be(202) // Deleted
+      deleteResult should be(Deleted)
       waitForDeployment(deleteResult)
     }
 
@@ -164,7 +164,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val createResult = marathon.createPodV2(pod)
 
       Then("The pod is created")
-      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
+      createResult should be(Created)
       waitForDeployment(createResult)
       waitForPod(podId)
       check.pinged.set(false)
@@ -190,7 +190,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val deleteResult = marathon.deletePod(pod.id)
 
       Then("The pod is deleted")
-      deleteResult.code should be(202) // Deleted
+      deleteResult should be(Deleted)
       waitForDeployment(deleteResult)
     }
 
@@ -208,7 +208,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val createResult = marathon.createPodV2(pod)
 
       Then("The pod is created")
-      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" // Created
+      createResult should be(Created)
       waitForDeployment(createResult)
       waitForPod(pod.id)
     }
@@ -217,18 +217,18 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Given("a deployed pod")
       val pod = simplePod("simplepod")
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
+      createResult should be(Created)
       waitForDeployment(createResult)
       waitForPod(pod.id)
       marathon.listPodsInBaseGroup.value should have size 1
 
       Then("The pod should show up as a group")
       val groupResult = marathon.group(testBasePath)
-      groupResult.code should be(200)
+      groupResult should be(OK)
 
       When("The pod group is deleted")
       val deleteResult = marathon.deleteGroup(testBasePath)
-      deleteResult.code should be(200)
+      deleteResult should be(OK)
       waitForDeployment(deleteResult)
 
       Then("The pod is deleted")
@@ -239,7 +239,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Given("a new pod")
       val pod = simplePod("simplepod")
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
+      createResult should be(Created)
       waitForDeployment(createResult)
       waitForPod(pod.id)
 
@@ -247,7 +247,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val podVersions = marathon.listPodVersions(pod.id)
 
       Then("The response should contain all the versions")
-      podVersions.code should be(200)
+      podVersions should be(OK)
       podVersions.value should have size 1
       podVersions.value.head should be(createResult.value.version)
     }
@@ -256,7 +256,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Given("a new pod")
       val pod = simplePod("simplepod")
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201)
+      createResult should be(Created)
       //Created
       val originalVersion = createResult.value.version
       waitForDeployment(createResult)
@@ -271,17 +271,17 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       )
       )
       val updateResult = marathon.updatePod(pod.id, updatedPod)
-      updateResult.code should be(200)
+      updateResult should be(OK)
       val updatedVersion = updateResult.value.version
       waitForDeployment(updateResult)
 
       Then("It should create a new version with the right data")
       val originalVersionResult = marathon.podVersion(pod.id, originalVersion)
-      originalVersionResult.code should be(200)
+      originalVersionResult should be(OK)
       originalVersionResult.value.containers should have size 1
 
       val updatedVersionResult = marathon.podVersion(pod.id, updatedVersion)
-      updatedVersionResult.code should be(200)
+      updatedVersionResult should be(OK)
       updatedVersionResult.value.containers should have size 2
     }
 
@@ -293,7 +293,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       )
 
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
+      createResult should be(Created)
       val deploymentId = createResult.originalResponse.headers.find(_.name == "Marathon-Deployment-Id").map(_.value)
       deploymentId shouldBe defined
 
@@ -302,7 +302,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       When("the deployment is deleted")
       val deleteResult = marathon.deleteDeployment(deploymentId.get, force = true)
-      deleteResult.code should be(202)
+      deleteResult should be(Deleted)
 
       Then("the deployment should be gone")
       waitForEvent("deployment_failed")
@@ -311,7 +311,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       }
 
       Then("the pod should still be there")
-      marathon.pod(pod.id).code should be(200)
+      marathon.pod(pod.id) should be(OK)
     }
 
     "rollback a pod deployment" taggedAs WhenEnvSet(envVar, default = "true") in {
@@ -331,7 +331,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       When("the deployment is rolled back")
       val deleteResult = marathon.deleteDeployment(deploymentId.get)
-      deleteResult.code should be(200)
+      deleteResult should be(OK)
 
       Then("the deployment should be gone")
       waitForEvent("deployment_failed") // ScalePod
@@ -341,7 +341,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       }
 
       Then("the pod should also be gone")
-      marathon.pod(pod.id).code should be(404)
+      marathon.pod(pod.id) should be(NotFound)
     }
 
     "delete pod instances" taggedAs WhenEnvSet(envVar, default = "true") in {
@@ -352,24 +352,24 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       When("The pod is created")
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201) //Created
+      createResult should be(Created)
       waitForDeployment(createResult)
       waitForPod(pod.id)
 
       Then("Three instances should be running")
       val status1 = marathon.status(pod.id)
-      status1.code should be(200)
+      status1 should be(OK)
       status1.value.instances should have size 3
 
       When("An instance is deleted")
       val instanceId = status1.value.instances.head.id
       val deleteResult1 = marathon.deleteInstance(pod.id, instanceId)
-      deleteResult1.code should be(200)
+      deleteResult1 should be(OK)
 
       Then("The deleted instance should be restarted")
       waitForStatusUpdates("TASK_KILLED", "TASK_RUNNING")
       val status2 = marathon.status(pod.id)
-      status2.code should be(200)
+      status2 should be(OK)
       status2.value.instances.filter(_.status == raml.PodInstanceState.Stable) should have size 3
     }
   }

@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.task.jobs
 
 import akka.actor.{ ActorRef, PoisonPill, Terminated }
-import akka.event.LoggingAdapter
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }

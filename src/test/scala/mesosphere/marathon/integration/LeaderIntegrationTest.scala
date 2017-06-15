@@ -179,7 +179,7 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
 
       val app = App("/keepappsrunningduringabdicationintegrationtest", cmd = Some("sleep 1000"))
       val result = marathon.createAppV2(app)
-      result.code should be(201) //Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1 withClue "Deployment was not triggered"
       waitForDeployment(result)
       val oldInstances = client.tasks(app.id.toPath).value
@@ -189,7 +189,7 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       val abdicateResult = client.abdicate()
 
       Then("the request should be successful")
-      abdicateResult.code should be (200) withClue "Leader was not abdicated"
+      abdicateResult should be (OK) withClue "Leader was not abdicated"
       (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
       And("the leader must have died")
@@ -210,7 +210,7 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       newClient.app(app.id.toPath).value.app.instances should be(1) withClue "Previously started app did not survive the abdication"
       val newInstances = newClient.tasks(app.id.toPath).value
       newInstances should have size 1 withClue "Previously started one instance did not survive the abdication"
-      newInstances(0).id should be (oldInstances(0).id) withClue "During abdication we started a new instance, instead keeping the old one."
+      newInstances.head.id should be (oldInstances.head.id) withClue "During abdication we started a new instance, instead keeping the old one."
 
       // allow ZK session for former leader to timeout before proceeding
       Thread.sleep((zkTimeout * 2.5).toLong)

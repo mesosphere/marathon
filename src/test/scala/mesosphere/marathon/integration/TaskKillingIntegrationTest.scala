@@ -19,14 +19,14 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val createResult = marathon.createAppV2(app)
 
       Then("The app is created")
-      createResult.code should be (201) //Created
+      createResult should be(Created)
       extractDeploymentIds(createResult) should have size 1
       waitForDeployment(createResult)
       waitForTasks(app.id.toPath, 1) //make sure, the app has really started
 
       When("the task is killed")
       val killResult = marathon.killAllTasksAndScale(app.id.toPath)
-      killResult.code should be (200) withClue (killResult.entityString) //OK
+      killResult should be(OK)
       waitForStatusUpdates("TASK_KILLING")
     }
   }

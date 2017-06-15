@@ -4,7 +4,6 @@ package integration
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.http.scaladsl.model.DateTime
-import akka.http.scaladsl.model.StatusCodes._
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck }
 import mesosphere.marathon.raml.{ App, GroupUpdate, UpgradeStrategy }
@@ -44,7 +43,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.createGroup(group)
 
       Then("The group is created. A success event for this group is send.")
-      result.code should be(201) //created
+      result should be(Created)
       waitForDeployment(result)
     }
 
@@ -60,7 +59,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       Then("The group is updated")
       val result = marathon.group("test2".toRootTestPath)
-      result.code should be(200)
+      result should be(OK)
       result.value.dependencies should be(dependencies)
     }
 
@@ -74,7 +73,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForDeployment(result)
 
       Then("The group is deleted")
-      result.code should be(200)
+      result should be(OK)
       // only expect the test base group itself
       marathon.listGroupsInBaseGroup.value.filter { group => group.id != testBasePath } should be('empty)
     }
@@ -84,7 +83,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.deleteGroup("does_not_exist".toRootTestPath)
 
       Then("We get a 404 http response code")
-      result.code should be(404)
+      result should be(NotFound)
     }
 
     "create a group with applications to start" in {
@@ -245,7 +244,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v3", 2)))))
 
       Then("An error is indicated")
-      result.code should be (Conflict.intValue)
+      result should be (Conflict)
       waitForEvent("group_change_failed")
 
       When("Another upgrade is triggered with force, while the old one is not completed")
@@ -268,7 +267,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val deleteResult = marathon.deleteGroup(gid)
 
       Then("An error is indicated")
-      deleteResult.code should be(Conflict.intValue) withClue s"Response code is ${deleteResult.code}: ${deleteResult.entityString}"
+      deleteResult should be(Conflict)
       waitForEvent("group_change_failed")
 
       When("Delete is triggered with force, while the deployment is not completed")

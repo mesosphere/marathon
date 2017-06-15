@@ -33,7 +33,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) //Created
+      result should be(Created)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
       //make sure, the app has really started
@@ -65,7 +65,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) //Created
+      result should be(Created)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
       //make sure, the app has really started
@@ -84,7 +84,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
 
       // the task_killed event should occur instantly or at least smaller as taskKillGracePeriod,
       // because the app terminates shortly
-      waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis withClue s"the task kill event took longer than the task kill grace period"
+      waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis withClue "the task kill event took longer than the task kill grace period"
     }
   }
 }
