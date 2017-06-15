@@ -2,18 +2,15 @@ package mesosphere.marathon
 package upgrade
 
 import java.util.concurrent.TimeUnit
-import mesosphere.marathon.core.pod.{ MesosContainer, BridgeNetwork }
-import mesosphere.marathon.raml.{ Endpoint, Image, ImageType, Resources }
-import mesosphere.marathon.state.Container
+import scala.collection.breakOut
 
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.raml.{ Endpoint, Image, ImageType, Resources }
 import mesosphere.marathon.state._
-import mesosphere.marathon.core.deployment.DeploymentPlan
-import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.state.PathId._
+import org.apache.mesos.Protos.ContainerInfo
 import org.openjdk.jmh.annotations.{ Group => _, _ }
 import org.openjdk.jmh.infra.Blackhole
-
-import scala.collection.breakOut
 
 @State(Scope.Benchmark)
 object FlatDependencyBenchmark {
@@ -25,15 +22,16 @@ object FlatDependencyBenchmark {
       id = path,
       labels = Map("ID" -> path.toString),
       versionInfo = version,
-      networks = Seq(BridgeNetwork()),
       container = Some(
-        Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
+        Container.Docker(Nil, "alpine",
+          network = Some(ContainerInfo.DockerInfo.Network.BRIDGE),
+          portMappings = List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
     )
 
   def makePod(path: PathId) =
     PodDefinition(
       id = path,
-      networks = Seq(BridgeNetwork()),
+      networks = Seq(ContainerNetwork("bridge")),
       labels = Map("ID" -> path.toString),
       version = version.lastConfigChangeAt,
 
