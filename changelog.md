@@ -1,3 +1,9 @@
+## Changes from 1.4.4 to 1.4.5
+
+### Fixed issues
+
+- [MARATHON-7479](https://jira.mesosphere.com/browse/MARATHON-7479) Fixes major deployment plan computation performance regression for Marathon instances containing a large number of apps (500+).
+
 ## Changes from 1.4.3 to 1.4.4
 
 ### Changes
