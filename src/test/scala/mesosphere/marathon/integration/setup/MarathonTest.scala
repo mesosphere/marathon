@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppDockerVolume, Network, NetworkMode, AppHealthCheck, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppDockerVolume, AppHealthCheck, Group, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
