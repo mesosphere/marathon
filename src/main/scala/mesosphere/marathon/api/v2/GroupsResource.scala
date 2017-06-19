@@ -310,6 +310,9 @@ class GroupsResource @Inject() (
     newVersion: Timestamp)(implicit identity: Identity): RootGroup = {
     val group = rootGroup.group(groupId).getOrElse(Group.empty(groupId))
 
+    /**
+      * roll back to a previous group version
+      */
     def versionChange: Option[RootGroup] = groupUpdate.version.map { version =>
       val targetVersion = Timestamp(version)
       checkAuthorization(UpdateGroup, group)

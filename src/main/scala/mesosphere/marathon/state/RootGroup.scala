@@ -113,8 +113,8 @@ class RootGroup(
             groupsById = oldParent.groupsById + (result.id -> result),
             dependencies = oldParent.dependencies,
             version = version,
-            transitiveAppsById = oldParent.transitiveAppsById -- oldGroup.apps.keys ++ newGroup.apps,
-            transitivePodsById = oldParent.transitivePodsById -- oldGroup.pods.keys ++ newGroup.pods)
+            transitiveAppsById = oldParent.transitiveAppsById -- oldGroup.transitiveAppsById.keys ++ newGroup.transitiveAppsById,
+            transitivePodsById = oldParent.transitivePodsById -- oldGroup.transitivePodsById.keys ++ newGroup.transitivePodsById)
           rebuildTree(tail, newParent)
       }
     }
