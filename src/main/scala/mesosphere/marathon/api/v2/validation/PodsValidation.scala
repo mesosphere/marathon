@@ -108,9 +108,10 @@ trait PodsValidation {
     normalValidation and implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
   }
 
-  def imageValidator(secrets: Map[String, SecretDef]): Validator[Image] = new Validator[Image] {
+  def imageValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Image] = new Validator[Image] {
     override def apply(image: Image): Result = {
       val dockerImageValidator: Validator[Image] = validator[Image] { image =>
+        image.pullConfig is empty or featureEnabled(enabledFeatures, Features.SECRETS)
         image.pullConfig is optional(
           isTrue("pullConfig.secret must refer to an existing secret")(
             config => secrets.contains(config.secret)))
@@ -155,7 +156,7 @@ trait PodsValidation {
     validator[PodContainer] { container =>
       container.resources is valid(resourceValidator)
       container.endpoints is every(endpointValidator(pod.networks))
-      container.image is optional(imageValidator(pod.secrets))
+      container.image is optional(imageValidator(enabledFeatures, pod.secrets))
       container.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
       container.healthCheck is optional(healthCheckValidator(container.endpoints, mesosMasterVersion))
       container.volumeMounts is every(volumeMountValidator(pod.volumes))

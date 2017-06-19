@@ -554,6 +554,48 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       }
     }
 
+    "Create a new pod with w/ Docker image and config.json, but with secrets disabled" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podJson =
+        """
+          |{
+          |    "id": "/pod",
+          |    "containers": [{
+          |        "name": "container0",
+          |        "resources": {
+          |            "cpus": 0.1,
+          |            "mem": 32
+          |        },
+          |        "image": {
+          |            "kind": "DOCKER",
+          |            "id": "private/image",
+          |            "pullConfig": {
+          |                "secret": "pullConfigSecret"
+          |            }
+          |        },
+          |        "exec": {
+          |            "command": {
+          |                "shell": "sleep 1"
+          |            }
+          |        }
+          |    }]
+          |}
+        """.stripMargin
+
+      val response = f.podsResource.create(podJson.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("must be empty")
+        response.getEntity.toString should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
+        response.getEntity.toString should include("pullConfig.secret must refer to an existing secret")
+      }
+    }
+
     "support versions" when {
       implicit val ctx = ExecutionContexts.global
 

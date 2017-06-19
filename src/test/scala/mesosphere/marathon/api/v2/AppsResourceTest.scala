@@ -229,6 +229,30 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("pullConfig.secret must refer to an existing secret")
     }
 
+    "Creation of an app with valid pull config should fail if secrets feature is disabled" in new Fixture {
+      Given("An app with a Docker config.json")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(
+          image = "private/image",
+          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+      val result = Try(prepareApp(app, groupManager))
+
+      Then("It is successful")
+      response.getStatus should be (422) withClue s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}"
+
+      val responseStr = response.getEntity.toString
+      responseStr should include("/container/docker/pullConfig")
+      responseStr should include("must be empty")
+      responseStr should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
+    }
+
     "Do partial update with patch methods" in new Fixture {
       Given("An app")
       val id = "/app"

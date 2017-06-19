@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.Validator
+import com.wix.accord.{ Result, Validator }
 import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, EnvVarSecret, EphemeralVolume, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, EphemeralVolume, Image, ImageType, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
@@ -27,7 +27,6 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
     }
 
     "be accepted if secrets defined" in new Fixture {
-      val secretValidator: Validator[Pod] = podValidator(Set(Features.SECRETS), SemanticVersion.zero)
       private val valid = validPod.copy(secrets = Map("secret1" -> SecretDef(source = "/foo")), environment = Map("TEST" -> EnvVarSecret("secret1")))
       secretValidator(valid) shouldBe aSuccess
     }
@@ -86,6 +85,41 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       // Here and below: stringifying validation is admittedly not the best way but it's a nested Set(GroupViolation...) and not easy to test.
       validator(invalid).toString should include(PodsValidationMessages.SecretVolumeMustReferenceSecret)
     }
+
+    "be accepted if it is a valid pod with a Docker pull config" in new Fixture {
+      secretValidator(pullConfigPod) shouldBe aSuccess
+    }
+
+    "be rejected if a pull config pod is provided when secrets features is disabled" in new Fixture {
+      val validationResult: Result = validator(pullConfigPod)
+      validationResult shouldBe aFailure
+      val validationResultString: String = validationResult.toString
+      validationResultString should include("must be empty")
+      validationResultString should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
+    }
+
+    "be rejected if a pull config pod doesn't have secrets" in new Fixture {
+      private val invalid = pullConfigPod.copy(secrets = Map.empty)
+      secretValidator(invalid) should failWith(
+        GroupViolationMatcher(
+          description = "containers",
+          constraint = "contains elements, which are not valid.",
+          violations = Set(group("(0)", "not valid",
+            "image" -> "pullConfig.secret must refer to an existing secret"))))
+    }
+
+    "be rejected if a pull config image is not Docker" in new Fixture {
+      private val invalid = pullConfigPod.copy(
+        containers = Seq(pullConfigContainer.copy(
+          image = Some(pullConfigContainer.image.get.copy(kind = ImageType.Appc))
+        )))
+      secretValidator(invalid) should failWith(
+        GroupViolationMatcher(
+          description = "containers",
+          constraint = "contains elements, which are not valid.",
+          violations = Set(group("(0)", "not valid",
+            "image" -> "pullConfig is supported only with Docker images"))))
+    }
   }
 
   "A constraint definition" should {
@@ -109,7 +143,20 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       containers = Seq(validContainer),
       networks = Seq(Network(mode = NetworkMode.Host))
     )
+
+    val pullConfigContainer = PodContainer(
+      name = "pull-config-container",
+      resources = Resources(),
+      image = Some(Image(kind = ImageType.Docker, id = "some/image", pullConfig = Some(DockerPullConfig("aSecret"))))
+    )
+    val pullConfigPod = Pod(
+      id = "/pull/config/pod",
+      containers = Seq(pullConfigContainer),
+      secrets = Map("aSecret" -> SecretDef("/pull/config"))
+    )
+
     val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero)
+    val secretValidator: Validator[Pod] = podValidator(Set(Features.SECRETS), SemanticVersion.zero)
   }
 
   "network validation" when {

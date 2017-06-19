@@ -61,12 +61,14 @@ trait AppValidation {
     }
   }
 
-  def mesosDockerContainerValidator(secrets: Map[String, SecretDef]): Validator[Container] = {
-    val validPullConfigSpec: Validator[DockerPullConfig] =
-      isTrue("pullConfig.secret must refer to an existing secret")(
+  def mesosDockerContainerValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Container] = {
+    val validPullConfigSpec: Validator[DockerPullConfig] = validator[DockerPullConfig] { pullConfig =>
+      pullConfig is isTrue("pullConfig.secret must refer to an existing secret")(
         config => secrets.contains(config.secret))
+    }
     val validMesosEngineSpec: Validator[DockerContainer] = validator[DockerContainer] { docker =>
       docker.image is notEmpty
+      docker.pullConfig is empty or featureEnabled(enabledFeatures, Features.SECRETS)
       docker.pullConfig is optional(valid(validPullConfigSpec))
     }
     validator { (container: Container) =>
@@ -143,7 +145,7 @@ trait AppValidation {
     val mesosContainerImageValidator = new Validator[Container] {
       override def apply(container: Container): Result = {
         (container.docker, container.appc, container.`type`) match {
-          case (Some(_), None, EngineType.Mesos) => validate(container)(mesosDockerContainerValidator(secrets))
+          case (Some(_), None, EngineType.Mesos) => validate(container)(mesosDockerContainerValidator(enabledFeatures, secrets))
           case (None, Some(_), EngineType.Mesos) => validate(container)(mesosAppcContainerValidator)
           case (None, None, EngineType.Mesos) => validate(container)(mesosImagelessContainerValidator)
           case _ => Failure(Set(RuleViolation(container, "mesos containers should specify, at most, a single image type", None)))
