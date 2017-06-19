@@ -325,6 +325,37 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       marathon.listAppsInBaseGroup.value should have size 0
     }
 
+    "an unhealthy app fails to deploy because health checks takes too long to pass" in {
+      Given("a new app that is not healthy")
+      val id = appId()
+      registerAppProxyHealthCheck(id, "v1", state = true).withHealthAction(_ => Thread.sleep(20000))
+      val app = appProxy(id, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck().copy(timeoutSeconds = 2)))
+
+      When("The app is deployed")
+      val create = marathon.createAppV2(app)
+
+      Then("We receive a deployment created confirmation")
+      create should be(Created)
+      extractDeploymentIds(create) should have size 1
+
+      And("a number of failed health events but the deployment does not succeed")
+
+      def interestingEvent() = waitForEventMatching("failed_health_check_event or deployment_success")(callbackEvent =>
+        callbackEvent.eventType == "deployment_success" ||
+          callbackEvent.eventType == "failed_health_check_event"
+      )
+
+      for (event <- Iterator.continually(interestingEvent()).take(10)) {
+        event.eventType should be("failed_health_check_event")
+      }
+
+      When("The app is deleted")
+      val delete = marathon.deleteApp(id, force = true)
+      delete should be(OK)
+      waitForDeployment(delete)
+      marathon.listAppsInBaseGroup.value should have size 0
+    }
+
     "update an app" in {
       Given("a new app")
       val id = appId()
