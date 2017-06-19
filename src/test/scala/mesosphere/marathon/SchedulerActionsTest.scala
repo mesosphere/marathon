@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
-import mesosphere.marathon.state.{ AppDefinition, RootGroup, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
@@ -177,7 +177,9 @@ class SchedulerActionsTest
     val f = new Fixture
 
     Given("an active queue, staged tasks and 5 overCapacity")
-    val app = MarathonTestHelper.makeBasicApp().copy(instances = 5)
+    import PathId._
+    val appId = "/app-correct-order".toPath
+    val app = MarathonTestHelper.makeBasicApp().copy(id = appId, instances = 5)
 
     def stagedInstance(stagedAt: Long) = TestInstanceBuilder.newBuilder(app.id).addTaskStaged(Timestamp.apply(stagedAt)).getInstance()
     def runningInstance() = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
@@ -194,16 +196,16 @@ class SchedulerActionsTest
       runningInstance()
     )
 
-    f.queue.asyncPurge(app.id) returns Future.successful(Done)
-    f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
+    f.instanceTracker.specInstances(appId) returns Future.successful(tasks)
+    f.queue.asyncPurge(appId) returns Future.successful(Done)
     When("the app is scaled")
     Await.ready(f.scheduler.scale(app), atMost)
 
     Then("the queue is purged")
-    verify(f.queue, times(1)).asyncPurge(app.id)
+    verify(f.queue, times(1)).asyncPurge(appId)
 
     And("the youngest STAGED tasks are killed")
-    verify(f.killService).killInstances(List(staged_3, staged_2), KillReason.OverCapacity)
+    verify(f.killService, timeout(1000)).killInstances(Seq(staged_3, staged_2), KillReason.OverCapacity)
     verifyNoMoreInteractions(f.driver)
     verifyNoMoreInteractions(f.killService)
   }
