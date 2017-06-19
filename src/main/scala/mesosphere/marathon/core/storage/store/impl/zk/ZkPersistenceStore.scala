@@ -209,7 +209,8 @@ class ZkPersistenceStore(
         await(client.setData(id.path, v.bytes).asTry) match {
           case Success(_) =>
             Done
-          case Failure(_: NoNodeException) =>
+          case Failure(e: NoNodeException) =>
+            logger.debug(s"Node for $id not found. Creating node now", e)
             await(limitRequests(client.create(
               id.path,
               creatingParentContainersIfNeeded = true, data = Some(v.bytes))).asTry) match {
@@ -227,8 +228,10 @@ class ZkPersistenceStore(
             }
 
           case Failure(e: KeeperException) =>
+            logger.warn(s"Could not store under $id", e)
             throw new StoreCommandFailedException(s"Unable to store $id", e)
           case Failure(e) =>
+            logger.warn(s"Could not store under $id", e)
             throw e
         }
       }
