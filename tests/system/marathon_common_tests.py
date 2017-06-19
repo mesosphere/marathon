@@ -1045,7 +1045,7 @@ def test_vip_mesos_cmd(marathon_service_name):
 
 
 def test_metric_endpoint(marathon_service_name):
-    response = http.get("{}/metrics/".format(
+    response = http.get("{}metrics".format(
         shakedown.dcos_service_url(marathon_service_name)))
     assert response.status_code == 200
     assert response.json()['gauges']['jvm.memory.heap.max']['value'] is not None
