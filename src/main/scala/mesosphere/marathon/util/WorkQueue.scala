@@ -2,6 +2,7 @@ package mesosphere.marathon
 package util
 
 import com.typesafe.scalalogging.StrictLogging
+import scala.collection.concurrent.TrieMap
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
@@ -77,10 +78,6 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
     }
   }
 
-  def blocking[T](f: => T)(implicit ctx: ExecutionContext): Future[T] = synchronized {
-    apply(Future(concurrent.blocking(f)))
-  }
-
   /**
     * Put work into the queue.
     *
@@ -115,13 +112,17 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
   * Does not block any threads.
   */
 case class KeyedLock[K](name: String, maxQueueLength: Int) {
-  private val queues = Lock(mutable.HashMap.empty[K, WorkQueue])
+  private val queues = TrieMap.empty[K, WorkQueue]
 
-  def blocking[T](key: K)(f: => T)(implicit ctx: ExecutionContext): Future[T] = {
-    apply(key)(Future(concurrent.blocking(f)))
-  }
-
+  /**
+    * Create a WorkQueue by the provided key if it does not exist
+    *
+    * May create an additional workQueue that isn't used in the event of collision
+    *
+    * WorkQueues are not removed when empty
+    */
   def apply[T](key: K)(f: => Future[T])(implicit ctx: ExecutionContext): Future[T] = {
-    queues(_.getOrElseUpdate(key, WorkQueue(s"$name-$key", maxConcurrent = 1, maxQueueLength))(f))
+    val workQueue = queues.getOrElseUpdate(key, WorkQueue(s"$name-$key", maxConcurrent = 1, maxQueueLength))
+    workQueue(f)
   }
 }
