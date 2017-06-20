@@ -8,19 +8,23 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.async.ExecutionContexts.global
 
 import scala.concurrent.duration._
+import scala.concurrent.Future
 
 class WorkQueueTest extends UnitTest {
-
   "WorkQueue" should {
     "cap the maximum number of concurrent operations" in {
       val queue = WorkQueue("test", maxConcurrent = 1, maxQueueLength = Int.MaxValue)
       val sem = new Semaphore(0)
       val counter = new AtomicInteger(0)
-      queue.blocking {
-        sem.acquire()
+      queue {
+        Future {
+          sem.acquire()
+        }
       }
-      val blocked = queue.blocking {
-        counter.incrementAndGet()
+      val blocked = queue {
+        Future {
+          counter.incrementAndGet()
+        }
       }
       counter.get() should equal(0)
       blocked.isReadyWithin(1.millis) should be(false)
@@ -32,13 +36,17 @@ class WorkQueueTest extends UnitTest {
     "complete the future with a failure if the queue is capped" in {
       val queue = WorkQueue("abc", maxConcurrent = 1, maxQueueLength = 0)
       val semaphore = new Semaphore(0)
-      queue.blocking {
-        semaphore.acquire()
+      queue {
+        Future {
+          semaphore.acquire()
+        }
       }
 
       intercept[IllegalStateException] {
-        throw queue.blocking {
-          semaphore.acquire()
+        throw queue {
+          Future {
+            semaphore.acquire()
+          }
         }.failed.futureValue
       }
 
@@ -46,12 +54,8 @@ class WorkQueueTest extends UnitTest {
 
     "continue executing even when the previous job failed" in {
       val queue = WorkQueue("failures", 1, Int.MaxValue)
-      queue.blocking {
-        throw new Exception("Expected")
-      }.failed.futureValue.getMessage should equal("Expected")
-      queue.blocking {
-        7
-      }.futureValue should be(7)
+      queue(Future.failed(new Exception("Expected"))).failed.futureValue.getMessage should equal("Expected")
+      queue(Future.successful(7)).futureValue should be(7)
     }
 
     "run all tasks asked" in {
@@ -59,9 +63,11 @@ class WorkQueueTest extends UnitTest {
       val counter = new AtomicInteger()
       val latch = new CountDownLatch(100)
       0.until(100).foreach { _ =>
-        queue.blocking {
-          counter.incrementAndGet()
-          latch.countDown()
+        queue {
+          Future {
+            counter.incrementAndGet()
+            latch.countDown()
+          }
         }
       }
       latch.await()
@@ -74,12 +80,16 @@ class WorkQueueTest extends UnitTest {
       val lock = KeyedLock[String]("abc", Int.MaxValue)
       val sem = new Semaphore(0)
       val counter = new AtomicInteger(0)
-      val notBlocked = lock.blocking("1") {
-        sem.acquire()
-        counter.incrementAndGet()
+      val notBlocked = lock("1") {
+        Future {
+          sem.acquire()
+          counter.incrementAndGet
+        }
       }
-      val blocked = lock.blocking("1") {
-        counter.incrementAndGet()
+      val blocked = lock("1") {
+        Future {
+          counter.incrementAndGet()
+        }
       }
 
       counter.get() should equal(0)
@@ -95,12 +105,12 @@ class WorkQueueTest extends UnitTest {
     "allow two work items on different keys" in {
       val lock = KeyedLock[String]("abc", Int.MaxValue)
       val sem = new Semaphore(0)
-      lock.blocking("1") {
-        sem.acquire()
+      lock("1") {
+        Future {
+          sem.acquire()
+        }
       }
-      lock.blocking("2") {
-        "done"
-      }.futureValue should equal("done")
+      lock("2")(Future.successful("done")).futureValue should equal("done")
       sem.release()
     }
     "run everything asked" in {
@@ -108,9 +118,11 @@ class WorkQueueTest extends UnitTest {
       val counter = new AtomicInteger()
       val latch = new CountDownLatch(100)
       0.until(100).foreach { i =>
-        lock.blocking(s"abc-${i % 2}") {
-          counter.incrementAndGet()
-          latch.countDown()
+        lock(s"abc-${i % 2}") {
+          Future {
+            counter.incrementAndGet()
+            latch.countDown()
+          }
         }
       }
       latch.await()
