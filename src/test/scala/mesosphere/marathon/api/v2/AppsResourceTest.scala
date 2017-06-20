@@ -22,7 +22,7 @@ import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonS
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.{ JsDefined, JsNumber, JsObject, JsResultException, JsString, Json }
+import play.api.libs.json.{ JsBoolean, JsDefined, JsNumber, JsObject, JsResultException, JsString, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -1304,6 +1304,44 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     Then("A 404 is returned")
     val exception = intercept[AppNotFoundException] { appsResource.delete(false, "/foo", req) }
     exception.getMessage should be ("App '/foo' does not exist")
+  }
+
+  test("Creating an app with artifacts to fetch specified should succeed and return all the artifact properties passed") {
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    prepareApp(app)
+
+    Given("An app with artifacts to fetch provided")
+    val body =
+      """
+         |{
+         |  "id": "/fetch",
+         |  "cmd": "sleep 600",
+         |  "cpus": 0.1,
+         |  "mem": 10,
+         |  "instances": 1,
+         |  "fetch": [
+         |    {
+         |      "uri": "file:///bin/bash",
+         |      "extract": false,
+         |      "executable": true,
+         |      "cache": false,
+         |      "destPath": "bash.copy"
+         |    }
+         |  ]
+         |}
+      """.stripMargin
+
+    When("The request is processed")
+    val response = appsResource.create(body.getBytes("UTF-8"), false, auth.request)
+
+    Then("The response has no error and it is valid")
+    response.getStatus should be(201)
+    val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+    (appJson \ "fetch" \ 0 \ "uri" get) should be (JsString("file:///bin/bash"))
+    (appJson \ "fetch" \ 0 \ "extract" get) should be(JsBoolean(false))
+    (appJson \ "fetch" \ 0 \ "executable" get) should be(JsBoolean(true))
+    (appJson \ "fetch" \ 0 \ "cache" get) should be(JsBoolean(false))
+    (appJson \ "fetch" \ 0 \ "destPath" get) should be(JsString("bash.copy"))
   }
 
   var clock: ConstantClock = _

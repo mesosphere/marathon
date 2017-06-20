@@ -15,7 +15,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ Pod, Raml, Resources, KillSelection }
+import mesosphere.marathon.raml.{ KillSelection, Pod, Raml, Resources }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -894,7 +894,7 @@ trait FetchUriFormats {
       (__ \ "extract").formatNullable[Boolean].withDefault(true) ~
       (__ \ "executable").formatNullable[Boolean].withDefault(false) ~
       (__ \ "cache").formatNullable[Boolean].withDefault(false) ~
-      (__ \ "outputFile").formatNullable[String]
+      (__ \ "destPath").formatNullable[String]
     )(FetchUri(_, _, _, _, _), unlift(FetchUri.unapply))
   }
 }

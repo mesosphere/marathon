@@ -11,7 +11,7 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Secr
   implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
 
   implicit val artifactWrites: Writes[FetchUri, Artifact] = Writes { fetch =>
-    Artifact(fetch.uri, Some(fetch.extract), Some(fetch.executable), Some(fetch.cache))
+    Artifact(fetch.uri, Some(fetch.extract), Some(fetch.executable), Some(fetch.cache), fetch.outputFile)
   }
 
   implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, UpgradeStrategy] = Writes { strategy =>
