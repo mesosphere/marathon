@@ -5,12 +5,13 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.{ Answer, OngoingStubbing }
 import org.mockito.verification.VerificationMode
 import org.mockito.{ Mockito => M }
+import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.mockito.MockitoSugar
 
 /**
   * ScalaTest mockito support is quite limited and ugly.
   */
-trait Mockito extends MockitoSugar {
+trait Mockito extends MockitoSugar with PatienceConfiguration {
 
   def equalTo[T](t: T) = org.mockito.Matchers.eq(t)
   def eq[T](t: T) = org.mockito.Matchers.eq(t)
@@ -21,6 +22,7 @@ trait Mockito extends MockitoSugar {
   def verify[T](t: T, mode: VerificationMode = times(1)) = M.verify(t, mode)
   def times(num: Int) = M.times(num)
   def timeout(millis: Int) = M.timeout(millis.toLong)
+  def withinTimeout() = M.timeout(patienceConfig.timeout.millisPart)
   def atLeastOnce = M.atLeastOnce()
   def once = M.times(1)
   def atLeast(num: Int) = M.atLeast(num)
