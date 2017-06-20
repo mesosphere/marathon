@@ -1508,5 +1508,43 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       )
       assert(updatedApp.versionInfo == app.versionInfo)
     }
+
+    "Creating an app with artifacts to fetch specified should succeed and return all the artifact properties passed" in new Fixture {
+      val app = App(id = "/app", cmd = Some("foo"))
+      prepareApp(app, groupManager)
+
+      Given("An app with artifacts to fetch provided")
+      val body =
+        """
+           |{
+           |  "id": "/fetch",
+           |  "cmd": "sleep 600",
+           |  "cpus": 0.1,
+           |  "mem": 10,
+           |  "instances": 1,
+           |  "fetch": [
+           |    {
+           |      "uri": "file:///bin/bash",
+           |      "extract": false,
+           |      "executable": true,
+           |      "cache": false,
+           |      "destPath": "bash.copy"
+           |    }
+           |  ]
+           |}
+      """.stripMargin
+
+      When("The request is processed")
+      val response = appsResource.create(body.getBytes("UTF-8"), false, auth.request)
+
+      Then("The response has no error and it is valid")
+      response.getStatus should be(201)
+      val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+      (appJson \ "fetch" \ 0 \ "uri" get) should be (JsString("file:///bin/bash"))
+      (appJson \ "fetch" \ 0 \ "extract" get) should be(JsBoolean(false))
+      (appJson \ "fetch" \ 0 \ "executable" get) should be(JsBoolean(true))
+      (appJson \ "fetch" \ 0 \ "cache" get) should be(JsBoolean(false))
+      (appJson \ "fetch" \ 0 \ "destPath" get) should be(JsString("bash.copy"))
+    }
   }
 }

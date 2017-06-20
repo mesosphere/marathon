@@ -16,7 +16,7 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
   implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
 
   implicit val artifactWrites: Writes[FetchUri, Artifact] = Writes { fetch =>
-    Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache)
+    Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache, fetch.outputFile)
   }
 
   implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, UpgradeStrategy] = Writes { strategy =>

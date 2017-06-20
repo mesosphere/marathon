@@ -417,7 +417,7 @@
             "description": "Cache fetched artifact if supported by Mesos fetcher module",
             "default": false
           },
-          "outputFile": {
+          "destPath": {
             "type": "string",
             "description": "Rename fetched artifact with the given name"
           }
