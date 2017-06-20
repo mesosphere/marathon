@@ -246,7 +246,7 @@
           "type": "string",
           "description": "Container engine type. Supported engine types at the moment are DOCKER and MESOS.",
           "enum": ["MESOS", "DOCKER"],
-	  "default": "DOCKER"
+          "default": "DOCKER"
         },
         "portMappings": {
           "$ref": "#/definitions/containerPortMappings",
@@ -405,17 +405,17 @@
           "executable": {
             "type": "boolean",
             "description": "Set fetched artifact as executable",
-	    "default": false
+            "default": false
           },
           "extract": {
             "type": "boolean",
             "description": "Extract fetched artifact if supported by Mesos fetcher module",
-	    "default": true
+            "default": true
           },
           "cache": {
             "type": "boolean",
             "description": "Cache fetched artifact if supported by Mesos fetcher module",
-	    "default": false
+            "default": false
           },
           "outputFile": {
             "type": "string",
