@@ -267,7 +267,11 @@ class ZkPersistenceStore(
     val versions: Source[ZkId, NotUsed] = ids.flatMapConcat(id => rawVersions(id).map(v => id.copy(version = Some(v))))
     val combined = Source.combine(ids, versions)(Merge(_))
     combined.mapAsync(maxConcurrent) { id =>
-      rawGet(id).filter(_.isDefined).map(ser => BackupItem(id.category, id.id, id.version, ser.get.bytes))
+      rawGet(id).map { maybeSerialized =>
+        maybeSerialized.map(serialized => BackupItem(id.category, id.id, id.version, serialized.bytes))
+      }
+    }.collect {
+      case Some(backupItem) => backupItem
     }.concat {
       Source.fromFuture(storageVersion()).map { storedVersion =>
         val version = storedVersion.getOrElse(StorageVersions.current)
