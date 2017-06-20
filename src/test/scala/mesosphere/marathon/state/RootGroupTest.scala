@@ -526,5 +526,66 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       protoGroup should be(group)
       protoRootGroup should be(rootGroup)
     }
+
+    it("properly propagate transitiveAppsById") {
+      Given("A non-root group with nested groups")
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain/developers"),
+        groups = Set(
+          createGroup(
+            PathId("/domain/developers/gitlab"),
+            apps = Map(appPath -> app))))
+
+      val newVersion = Timestamp.now()
+
+      When("updating")
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+
+      Then("The app path is in the transitiveApps key set ")
+      updated.transitiveAppsById.keySet should contain(appPath)
+    }
+
+    it("properly propagate transitiveAppsById2") {
+      Given("A non-root group with nested groups")
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain"),
+        groups = Set(createGroup(
+          PathId("/domain/developers"),
+          groups = Set(
+            createGroup(
+              PathId("/domain/developers/gitlab"),
+              apps = Map(appPath -> app))))))
+
+      val newVersion = Timestamp.now()
+      When("updating")
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+
+      Then("The app path is in the transitiveApps key set ")
+      updated.transitiveAppsById.keySet should contain(appPath)
+    }
+
+    it("properly propagate transitiveAppsById3") {
+      Given("A non-root group without nested groups")
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain/developers/gitlab"),
+        apps = Map(appPath -> app))
+
+      val newVersion = Timestamp.now()
+
+      When("updating")
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+
+      Then("The app path is in the transitiveApps key set ")
+      updated.transitiveAppsById.keySet should contain(appPath)
+    }
   }
 }
