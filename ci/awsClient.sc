@@ -49,8 +49,7 @@ def skip(file: Path): Unit = println(s"Skipping File: ${file.last} already exist
  *  However, our artifact names are unique for each commit.
  */
 def archiveArtifact(uploadFile: Path): Unit = {
-  // is already uploaded.
-  if(doesS3FileExist(uploadFile)) skip(uploadFile)
+  if(doesS3FileExist(DEFAULT_BUCKET, getDefaultFileKey(uploadFile.last))) skip(uploadFile)
   else uploadFileAndSha(uploadFile)
 }
 
