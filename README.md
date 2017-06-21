@@ -130,6 +130,7 @@ Marathon is managing applications on more than 100,000 nodes at these companies,
 * [Artirix](http://www.artirix.com/)
 * [bol.com](https://www.bol.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
+* [China Mobile] (http://www.chinamobileltd.com/en/global/home.php)
 * [China Unicom](http://eng.chinaunicom.com/index/index.html)
 * [Daemon](http://www.daemon.com.au/)
 * [DHL Parcel](http://www.dhlparcel.nl)
