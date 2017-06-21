@@ -118,7 +118,7 @@ object Dependency {
     val ScalaTest = "3.0.3"
     val JUnit = "4.12"
     val JUnitBenchmarks = "0.7.2"
-    val JMH = "1.14"
+    val JMH = "1.19"
     val ScalaCheck = "1.13.5"
   }
 

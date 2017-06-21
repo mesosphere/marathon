@@ -6,7 +6,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.validation.SchedulingValidation
 import mesosphere.marathon.core.externalvolume.impl.providers.OptionSupport._
 import mesosphere.marathon.core.externalvolume.impl.{ ExternalVolumeProvider, ExternalVolumeValidations }
-import mesosphere.marathon.raml.{ App, AppVolume, EngineType, ReadMode, Container => AppContainer }
+import mesosphere.marathon.raml.{ App, AppExternalVolume, EngineType, ReadMode, Container => AppContainer }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Volume.Mode
@@ -154,7 +154,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     val validContainer = {
       import PathPatterns._
 
-      val validMesosVolume = validator[AppVolume] {
+      val validMesosVolume = validator[AppExternalVolume] {
         volume =>
           volume.mode is equalTo(ReadMode.Rw)
           volume.containerPath is notOneOf(DotPaths: _*)
@@ -165,20 +165,20 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
       }
 
-      val validDockerVolume = validator[AppVolume] { volume =>
-        volume.external is valid(definedAnd(validDockerExternalVolume))
+      val validDockerVolume = validator[AppExternalVolume] { volume =>
+        volume.external is valid(validDockerExternalVolume)
         volume.containerPath is notOneOf(DotPaths: _*)
       }
 
-      def ifDVDIVolume(vtor: Validator[AppVolume]): Validator[AppVolume] = conditional(matchesProviderRaml)(vtor)
+      def ifDVDIVolume(vtor: Validator[AppExternalVolume]): Validator[AppExternalVolume] = conditional(matchesProviderRaml)(vtor)
 
-      def volumeValidator(container: EngineType): Validator[AppVolume] = container match {
+      def volumeValidator(container: EngineType): Validator[AppExternalVolume] = container match {
         case EngineType.Mesos => validMesosVolume
         case EngineType.Docker => validDockerVolume
       }
 
       validator[AppContainer] { ct =>
-        ct.volumes.filter(_.external.nonEmpty) as "volumes" is
+        ct.volumes.collect{ case v: AppExternalVolume => v } as "volumes" is
           every(ifDVDIVolume(volumeValidator(ct.`type`)))
       }
     }
@@ -284,7 +284,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     import PathPatterns._
     import VolumeOptions._
 
-    val validMesosVolume = validator[AppVolume] {
+    val validMesosVolume = validator[AppExternalVolume] {
       volume =>
         volume.mode is valid(equalTo(ReadMode.Rw))
         volume.containerPath is valid(notOneOf(DotPaths: _*))
@@ -293,9 +293,9 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       v.options is isTrue(s"must only contain $driverOption")(_.filterKeys(_ != driverOption).isEmpty)
       v.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
     }
-    val validDockerVolume = validator[AppVolume] { volume =>
+    val validDockerVolume = validator[AppExternalVolume] { volume =>
       volume.containerPath is valid(notOneOf(DotPaths: _*))
-      volume.external is valid(definedAnd(valid(dockerVolumeInfo)))
+      volume.external is valid(valid(dockerVolumeInfo))
     }
     val volumeInfo = validator[raml.ExternalVolume] { v =>
       v.name is valid(definedAnd(notEmpty))
@@ -304,8 +304,8 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       v.options is valid(conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions))
     }
     forAll(
-      validator[AppVolume] { v =>
-        v.external is valid(definedAnd(valid(volumeInfo)))
+      validator[AppExternalVolume] { v =>
+        v.external is valid(valid(volumeInfo))
       },
       implied(container.`type` == EngineType.Mesos)(validMesosVolume),
       implied(container.`type` == EngineType.Docker)(validDockerVolume)
@@ -316,12 +316,12 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     * @return true if volume has a provider name that matches ours exactly
     */
   private[this] def matchesProvider(volume: ExternalVolume): Boolean = volume.external.provider == name
-  private[this] def matchesProviderRaml(volume: AppVolume): Boolean = volume.external.exists(_.provider.contains(name))
+  private[this] def matchesProviderRaml(volume: AppExternalVolume): Boolean = volume.external.provider.contains(name)
 
   private[this] def namesOfMatchingVolumes(app: AppDefinition): Seq[String] =
     app.externalVolumes.withFilter(matchesProvider).map(_.external.name)
 
   private[this] def namesOfMatchingVolumes(app: App): Seq[String] =
-    app.container.fold(Seq.empty[AppVolume])(_.volumes.filter(_.external.isDefined)).withFilter(matchesProviderRaml).flatMap(_.external.flatMap(_.name))
-
+    app.container.fold(Seq.empty[AppExternalVolume])(_.volumes.collect{ case v: AppExternalVolume => v })
+      .withFilter(matchesProviderRaml).flatMap(_.external.name)
 }

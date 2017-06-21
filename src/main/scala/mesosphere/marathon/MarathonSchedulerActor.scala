@@ -416,34 +416,34 @@ class SchedulerActions(
     *
     * @param driver scheduler driver
     */
-  def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
-    groupRepository.root().flatMap { root =>
-      val runSpecIds = root.transitiveRunSpecsById.keySet
-      instanceTracker.instancesBySpec().map { instances =>
-        val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
-          TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
-        }
+  @SuppressWarnings(Array("all")) // async/await
+  def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
+    val root = await(groupRepository.root())
 
-        (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
-          logger.warn(
-            s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
-              "The run spec was likely terminated. Will now expunge."
-          )
-          instances.specInstances(unknownId).foreach { orphanTask =>
-            logger.info(s"Killing ${orphanTask.instanceId}")
-            killService.killInstance(orphanTask, KillReason.Orphaned)
-          }
-        }
+    val runSpecIds = root.transitiveRunSpecsById.keySet
+    val instances = await(instanceTracker.instancesBySpec())
 
-        logger.info("Requesting task reconciliation with the Mesos master")
-        logger.debug(s"Tasks to reconcile: $knownTaskStatuses")
-        if (knownTaskStatuses.nonEmpty)
-          driver.reconcileTasks(knownTaskStatuses)
+    val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
+      TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
+    }
 
-        // in addition to the known statuses send an empty list to get the unknown
-        driver.reconcileTasks(java.util.Arrays.asList())
+    (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
+      logger.warn(
+        s"RunSpec $unknownId exists in InstanceTracker, but not store. " +
+          "The run spec was likely terminated. Will now expunge."
+      )
+      instances.specInstances(unknownId).foreach { orphanTask =>
+        logger.info(s"Killing ${orphanTask.instanceId}")
+        killService.killInstance(orphanTask, KillReason.Orphaned)
       }
     }
+
+    logger.info("Requesting task reconciliation with the Mesos master")
+    logger.debug(s"Tasks to reconcile: $knownTaskStatuses")
+    if (knownTaskStatuses.nonEmpty) driver.reconcileTasks(knownTaskStatuses)
+
+    // in addition to the known statuses send an empty list to get the unknown
+    driver.reconcileTasks(java.util.Arrays.asList())
   }
 
   def reconcileHealthChecks(): Unit = {

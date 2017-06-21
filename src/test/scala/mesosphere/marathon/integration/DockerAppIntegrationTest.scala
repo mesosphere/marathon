@@ -28,7 +28,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) //Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       eventually {
@@ -51,7 +51,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) // Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1) // The app has really started

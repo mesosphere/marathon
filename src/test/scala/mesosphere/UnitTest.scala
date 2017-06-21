@@ -14,11 +14,12 @@ import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
-import org.scalatest.matchers.{ Matcher, MatchResult }
+import org.scalatest.matchers.{ BeMatcher, MatchResult, Matcher }
 import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
 import org.scalatest.time.{ Minute, Minutes, Seconds, Span }
 import mesosphere.marathon.api.v2.ValidationHelper
+import mesosphere.marathon.integration.setup.RestResult
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -145,6 +146,26 @@ trait IntegrationTestLike extends UnitTestLike {
   override val timeLimit = Span(15, Minutes)
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(300, Seconds))
+
+  /**
+    * Custom matcher for HTTP responses that print response body.
+    * @param status The expected status code.
+    */
+  class HttpResponseMatcher(status: Int) extends BeMatcher[RestResult[_]] {
+    def apply(left: RestResult[_]) =
+      MatchResult(
+        left.code == status,
+        s"Response code was not $status but ${left.code} with body '${left.entityString}'",
+        s"Response code was $status with body '${left.entityString}'"
+      )
+  }
+
+  def Accepted = new HttpResponseMatcher(202)
+  def Created = new HttpResponseMatcher(201)
+  def Conflict = new HttpResponseMatcher(409)
+  def Deleted = new HttpResponseMatcher(202)
+  def OK = new HttpResponseMatcher(200)
+  def NotFound = new HttpResponseMatcher(404)
 }
 
 abstract class IntegrationTest extends WordSpec with IntegrationTestLike

@@ -651,7 +651,7 @@ def is_mom_version(version):
     while not check_complete:
         try:
             max_times == 1
-            with shakedown.marathon_on_marathon()::
+            with shakedown.marathon_on_marathon():
                 client = marathon.create_client()
                 about = client.get_about()
                 same_version = version == about.get("version")

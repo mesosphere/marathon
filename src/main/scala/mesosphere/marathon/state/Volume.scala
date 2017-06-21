@@ -8,6 +8,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.plugin.AppSecretVolumeSpec
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Volume.Mode
@@ -15,47 +16,12 @@ import org.apache.mesos.{ Protos => Mesos }
 
 import scala.util.Try
 
-sealed trait Volume {
-  def containerPath: String
-  def mode: Mesos.Volume.Mode
+sealed trait Volume extends plugin.AppVolumeSpec {
+  val containerPath: String
+  val mode: Mesos.Volume.Mode
 }
 
 object Volume {
-  def apply(
-    containerPath: String,
-    hostPath: Option[String],
-    mode: Mesos.Volume.Mode,
-    persistent: Option[PersistentVolumeInfo],
-    external: Option[ExternalVolumeInfo]): Volume = {
-
-    persistent match {
-      case Some(persistentVolumeInfo) =>
-        if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
-        if (external.isDefined) throw new IllegalArgumentException("external may not be set with persistent")
-        PersistentVolume(
-          containerPath = containerPath,
-          persistent = persistentVolumeInfo,
-          mode = mode
-        )
-      case None =>
-        external match {
-          case Some(externalVolumeInfo) =>
-            if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
-            ExternalVolume(
-              containerPath = containerPath,
-              external = externalVolumeInfo,
-              mode = mode
-            )
-          case None =>
-            DockerVolume(
-              containerPath = containerPath,
-              hostPath = hostPath.getOrElse(""),
-              mode = mode
-            )
-        }
-    }
-  }
-
   def apply(proto: Protos.Volume): Volume = {
     if (proto.hasPersistent)
       PersistentVolume(
@@ -77,22 +43,12 @@ object Volume {
       )
   }
 
-  type TupleV = (String, Option[String], Mesos.Volume.Mode, Option[PersistentVolumeInfo], Option[ExternalVolumeInfo])
-  def unapply(volume: Volume): Option[TupleV] =
-    volume match {
-      case persistentVolume: PersistentVolume =>
-        Some((persistentVolume.containerPath, None, persistentVolume.mode, Some(persistentVolume.persistent), None))
-      case ev: ExternalVolume =>
-        Some((ev.containerPath, None, ev.mode, None, Some(ev.external)))
-      case dockerVolume: DockerVolume =>
-        Some((dockerVolume.containerPath, Some(dockerVolume.hostPath), dockerVolume.mode, None, None))
-    }
-
   def validVolume(enabledFeatures: Set[String]): Validator[Volume] = new Validator[Volume] {
     override def apply(volume: Volume): Result = volume match {
       case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
       case dv: DockerVolume => validate(dv)(DockerVolume.validDockerVolume)
       case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
+      case _: SecretVolume => Success // validation is done in raml
     }
   }
 }
@@ -369,4 +325,10 @@ object ExternalVolume {
     ev.containerPath is notEmpty
     ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
   } and ExternalVolumes.validExternalVolume
+}
+
+case class SecretVolume(
+    containerPath: String,
+    secret: String) extends Volume with AppSecretVolumeSpec {
+  override val mode: Mesos.Volume.Mode = Mesos.Volume.Mode.RO
 }

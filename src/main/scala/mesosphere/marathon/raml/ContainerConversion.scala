@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package raml
 
+import mesosphere.marathon.core.pod
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.state.Parameter
 import mesosphere.marathon.stream.Implicits._
@@ -19,7 +20,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       environment = Raml.toRaml(c.env),
       user = c.user,
       healthCheck = c.healthCheck.toRaml[Option[HealthCheck]],
-      volumeMounts = c.volumeMounts,
+      volumeMounts = c.volumeMounts.map(Raml.toRaml(_)),
       artifacts = c.artifacts,
       labels = c.labels,
       lifecycle = c.lifecycle,
@@ -37,7 +38,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       env = Raml.fromRaml(c.environment),
       user = c.user,
       healthCheck = c.healthCheck.map(Raml.fromRaml(_)),
-      volumeMounts = c.volumeMounts,
+      volumeMounts = c.volumeMounts.map(Raml.fromRaml(_)),
       artifacts = c.artifacts,
       labels = c.labels,
       lifecycle = c.lifecycle,
@@ -230,6 +231,14 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
           container.getPortMappingsList.map(_.toRaml)(collection.breakOut)
       }
     )
+  }
+
+  implicit val volumeMountRamlReads: Reads[raml.VolumeMount, pod.VolumeMount] = Reads { volMnt =>
+    pod.VolumeMount(volMnt.name, volMnt.mountPath, volMnt.readOnly)
+  }
+
+  implicit val volumeMountRamlWrites: Writes[pod.VolumeMount, raml.VolumeMount] = Writes { volMnt =>
+    raml.VolumeMount(volMnt.name, volMnt.mountPath, volMnt.readOnly)
   }
 }
 

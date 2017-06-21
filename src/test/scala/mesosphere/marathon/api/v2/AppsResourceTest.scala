@@ -15,7 +15,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.raml.{ Container => RamlContainer }
-import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkConversionMessages, NetworkMode, Raml, SecretDef }
+import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -52,7 +52,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       PluginManager.None
     )(auth.auth, auth.auth)
 
-    val normalizationConfig = AppNormalization.Configure(config.defaultNetworkName.get, config.mesosBridgeName())
+    val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.get, config.mesosBridgeName())
 
     def normalize(app: App): App = {
       val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
@@ -229,6 +229,30 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("pullConfig.secret must refer to an existing secret")
     }
 
+    "Creation of an app with valid pull config should fail if secrets feature is disabled" in new Fixture {
+      Given("An app with a Docker config.json")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(
+          image = "private/image",
+          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+      val result = Try(prepareApp(app, groupManager))
+
+      Then("It is successful")
+      response.getStatus should be (422) withClue s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}"
+
+      val responseStr = response.getEntity.toString
+      responseStr should include("/container/docker/pullConfig")
+      responseStr should include("must be empty")
+      responseStr should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
+    }
+
     "Do partial update with patch methods" in new Fixture {
       Given("An app")
       val id = "/app"
@@ -256,8 +280,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         cmd = Some("cmd"),
         networks = Seq(Network(mode = NetworkMode.Container))
       )
-      val result = Try(prepareApp(app, groupManager))
-      assert(result.isFailure && result.failed.get.getMessage.contains("network must specify a name"))
+      the[NormalizationException] thrownBy {
+        prepareApp(app, groupManager)
+      } should have message NetworkNormalizationMessages.ContainerNetworkNameUnresolved
     }
     "Create a new app with IP/CT on virtual network foo" in new Fixture {
       Given("An app and group")
@@ -354,10 +379,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
 
       Then("the update should fail")
-      val caught = intercept[SerializationFailedException] {
+      the[NormalizationException] thrownBy {
         appsResource.replace(updatedApp.id, updatedBody, force = false, partialUpdate = false, auth.request)
-      }
-      caught.getMessage() should be(NetworkConversionMessages.ContainerNetworkRequiresName)
+      } should have message NetworkNormalizationMessages.ContainerNetworkNameUnresolved
     }
 
     "Create a new app without IP/CT when default virtual network is bar" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
@@ -595,16 +619,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         ))
       )
       // mixing ipAddress with Docker containers is not allowed by validation; API migration fails it too
-      a[SerializationFailedException] shouldBe thrownBy(prepareApp(app, groupManager))
+      a[NormalizationException] shouldBe thrownBy(prepareApp(app, groupManager))
     }
 
-    "Create a new app (that uses secrets) successfully" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app (that uses secret ref) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecretRef("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -626,12 +650,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
-    "Create a new app (that uses undefined secrets) and fails" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app (that uses undefined secret ref) and fails" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
       Given("The secrets feature is enabled")
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecretRef("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -644,7 +668,35 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("references an undefined secret")
     }
 
-    "Create the secrets feature is NOT enabled an app (that uses secrets) fails" in new Fixture(configArgs = Seq()) {
+    "Create a new app (that uses file based secret) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
+      Given("The secrets feature is enabled")
+
+      And("An app with a secret and an envvar secret-ref")
+      val app = App(id = "/app", cmd = Some("cmd"),
+        secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
+        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It is successful")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+
+      And("the JSON is as expected, including a newly generated version")
+      import mesosphere.marathon.api.v2.json.Formats._
+      val expected = AppInfo(
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        maybeTasks = Some(immutable.Seq.empty),
+        maybeCounts = Some(TaskCounts.zero),
+        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      )
+      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+    }
+
+    "The secrets feature is NOT enabled and create app (that uses secret refs) fails" in new Fixture(configArgs = Seq()) {
       Given("The secrets feature is NOT enabled")
 
       config.isFeatureSet(Features.SECRETS) should be(false)
@@ -652,7 +704,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecretRef("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -662,6 +714,29 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       Then("It fails")
       response.getStatus should be(422)
       response.getEntity.toString should include("Feature secrets is not enabled")
+    }
+
+    "The secrets feature is NOT enabled and create app (that uses file base secrets) fails" in new Fixture(configArgs = Seq()) {
+      Given("The secrets feature is NOT enabled")
+
+      config.isFeatureSet(Features.SECRETS) should be(false)
+
+      And("An app with an envvar secret-def")
+      val secretVolume = AppSecretVolume("/path", "bar")
+      val containers = raml.Container(`type` = EngineType.Mesos, volumes = Seq(secretVolume))
+      val app = App(id = "/app", cmd = Some("cmd"),
+        container = Option(containers),
+        secrets = Map("bar" -> SecretDef("foo"))
+      )
+      val (body, _) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It fails")
+      response.getStatus should be(422)
+      response.getEntity.toString should include("Feature secrets is not enabled.")
     }
 
     "Create a new app fails with Validation errors for negative resources" in new Fixture {
@@ -825,7 +900,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       // although the wrong field should fail
       response.getStatus should be(422)
       response.getEntity.toString should include("/container/volumes(0)/hostPath")
-      response.getEntity.toString should include("not defined")
+      response.getEntity.toString should include("undefined")
     }
 
     "Creating an app with an external volume for an illegal provider should fail" in new Fixture {
@@ -1432,6 +1507,44 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         partialUpdate = true
       )
       assert(updatedApp.versionInfo == app.versionInfo)
+    }
+
+    "Creating an app with artifacts to fetch specified should succeed and return all the artifact properties passed" in new Fixture {
+      val app = App(id = "/app", cmd = Some("foo"))
+      prepareApp(app, groupManager)
+
+      Given("An app with artifacts to fetch provided")
+      val body =
+        """
+           |{
+           |  "id": "/fetch",
+           |  "cmd": "sleep 600",
+           |  "cpus": 0.1,
+           |  "mem": 10,
+           |  "instances": 1,
+           |  "fetch": [
+           |    {
+           |      "uri": "file:///bin/bash",
+           |      "extract": false,
+           |      "executable": true,
+           |      "cache": false,
+           |      "destPath": "bash.copy"
+           |    }
+           |  ]
+           |}
+      """.stripMargin
+
+      When("The request is processed")
+      val response = appsResource.create(body.getBytes("UTF-8"), false, auth.request)
+
+      Then("The response has no error and it is valid")
+      response.getStatus should be(201)
+      val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+      (appJson \ "fetch" \ 0 \ "uri" get) should be (JsString("file:///bin/bash"))
+      (appJson \ "fetch" \ 0 \ "extract" get) should be(JsBoolean(false))
+      (appJson \ "fetch" \ 0 \ "executable" get) should be(JsBoolean(true))
+      (appJson \ "fetch" \ 0 \ "cache" get) should be(JsBoolean(false))
+      (appJson \ "fetch" \ 0 \ "destPath" get) should be(JsString("bash.copy"))
     }
   }
 }

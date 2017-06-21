@@ -2,8 +2,9 @@ package mesosphere.marathon
 package core.task.termination.impl
 
 import akka.Done
-import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
+import akka.actor.{ Actor, Cancellable, Props }
 import akka.stream.ActorMaterializer
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
@@ -43,7 +44,7 @@ private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
     config: KillConfig,
-    clock: Clock) extends Actor with ActorLogging {
+    clock: Clock) extends Actor with StrictLogging {
   import KillServiceActor._
   import context.dispatcher
 
@@ -68,9 +69,7 @@ private[impl] class KillServiceActor(
     retryTimer.cancel()
     context.system.eventStream.unsubscribe(self)
     if (instancesToKill.nonEmpty) {
-      log.warning(
-        "Stopping {}, but not all tasks have been killed. Remaining: {}, inFlight: {}",
-        self, instancesToKill.keySet.mkString(","), inFlight.keySet.mkString(","))
+      logger.warn(s"Stopping $self, but not all tasks have been killed. Remaining: ${instancesToKill.keySet.mkString(", ")}, inFlight: ${inFlight.keySet.mkString(", ")}")
     }
   }
 
@@ -93,14 +92,14 @@ private[impl] class KillServiceActor(
   }
 
   def killUnknownTaskById(taskId: Task.Id): Unit = {
-    log.debug("Received KillUnknownTaskById({})", taskId)
+    logger.debug(s"Received KillUnknownTaskById($taskId)")
     instancesToKill.update(taskId.instanceId, ToKill(taskId.instanceId, Seq(taskId), maybeInstance = None, attempts = 0))
     processKills()
   }
 
   def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
     val instanceIds = instances.map(_.instanceId)
-    log.debug("Adding instances {} to queue; setting up child actor to track progress", instanceIds)
+    logger.debug(s"Adding instances $instanceIds to queue; setting up child actor to track progress")
     promise.completeWith(watchForKilledInstances(instanceIds))
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
@@ -128,7 +127,7 @@ private[impl] class KillServiceActor(
     val killCount = config.killChunkSize - inFlight.size
     val toKillNow = instancesToKill.take(killCount)
 
-    log.info("processing {} kills for {}", toKillNow.size, toKillNow.keys: Any)
+    logger.info(s"processing ${toKillNow.size} kills for ${toKillNow.keys}")
     toKillNow.foreach {
       case (instanceId, data) => processKill(data)
     }
@@ -166,7 +165,7 @@ private[impl] class KillServiceActor(
   def handleTerminal(instanceId: Instance.Id): Unit = {
     instancesToKill.remove(instanceId)
     inFlight.remove(instanceId)
-    log.debug("{} is terminal. ({} kills queued, {} in flight)", instanceId, instancesToKill.size, inFlight.size)
+    logger.debug(s"$instanceId is terminal. (${instancesToKill.size} kills queued, ${inFlight.size} in flight)")
     processKills()
   }
 
@@ -175,7 +174,7 @@ private[impl] class KillServiceActor(
 
     inFlight.foreach {
       case (instanceId, toKill) if (toKill.issued + config.killRetryTimeout) < now =>
-        log.warning("No kill ack received for {}, retrying ({} attempts so far)", instanceId, toKill.attempts)
+        logger.warn(s"No kill ack received for $instanceId, retrying (${toKill.attempts} attempts so far)")
         processKill(toKill)
 
       case _ => // ignore

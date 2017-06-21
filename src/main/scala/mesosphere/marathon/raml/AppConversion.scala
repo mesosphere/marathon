@@ -16,7 +16,7 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
   implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
 
   implicit val artifactWrites: Writes[FetchUri, Artifact] = Writes { fetch =>
-    Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache)
+    Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache, fetch.outputFile)
   }
 
   implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, UpgradeStrategy] = Writes { strategy =>
@@ -128,8 +128,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
     val selectedStrategy = ResidencyAndUpgradeStrategy(
       app.residency.map(Raml.fromRaml(_)),
       app.upgradeStrategy.map(Raml.fromRaml(_)),
-      app.container.exists(_.volumes.exists(_.persistent.nonEmpty)),
-      app.container.exists(_.volumes.exists(_.external.nonEmpty))
+      hasPersistentVolumes = app.container.exists(_.volumes.existsAn[AppPersistentVolume]),
+      hasExternalVolumes = app.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
 
     val backoffStrategy = BackoffStrategy(

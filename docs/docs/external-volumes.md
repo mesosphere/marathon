@@ -2,7 +2,7 @@
 title: Stateful Applications Using External Persistent Volumes
 ---
 
-<div class="alert alert-danger" role="alert">		
+<div class="alert alert-danger" role="alert">
 <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 1.0 <br/>
 **Important:** This feature is considered beta. Use this feature at your own risk. We might add, change, or delete any functionality described in this document.
   This functionality is *disabled by default* but can be turned on by including `external_volumes` in the value of the `--enable_features` command-line flag.

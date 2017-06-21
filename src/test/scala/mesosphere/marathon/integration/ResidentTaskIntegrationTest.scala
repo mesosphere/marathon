@@ -6,7 +6,7 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
-import mesosphere.marathon.raml.{ App, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolume, PortDefinition, PortDefinitions, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolume, PortDefinition, PortDefinitions, ReadMode, UnreachableDisabled, UpgradeStrategy }
 import mesosphere.marathon.state.PathId
 import org.slf4j.LoggerFactory
 
@@ -275,9 +275,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
       val appId: PathId = PathId(s"/$testBasePath/app-${IdGenerator.generate()}")
 
-      val persistentVolume: AppVolume = AppVolume(
+      val persistentVolume: AppVolume = AppPersistentVolume(
         containerPath = containerPath,
-        persistent = Some(PersistentVolume(size = persistentVolumeSize)),
+        persistent = PersistentVolume(size = persistentVolumeSize),
         mode = ReadMode.Rw
       )
 
@@ -311,14 +311,14 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     def createAsynchronously(app: App): RestResult[App] = {
       val result = marathon.createAppV2(app)
-      result.code should be(201) withClue (result.entityString) //Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       result
     }
 
     def scaleToSuccessfully(appId: PathId, instances: Int): Seq[ITEnrichedTask] = {
       val result = marathon.updateApp(appId, AppUpdate(instances = Some(instances)))
-      result.code should be (200) withClue (result.entityString) // OK
+      result should be(OK)
       waitForDeployment(result)
       waitForTasks(appId, instances)
     }
@@ -327,14 +327,14 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     def updateSuccessfully(appId: PathId, update: AppUpdate): VersionString = {
       val result = marathon.updateApp(appId, update)
-      result.code shouldBe 200
+      result should be(OK)
       waitForDeployment(result)
       result.value.version.toString
     }
 
     def restartSuccessfully(app: App): VersionString = {
       val result = marathon.restartApp(PathId(app.id))
-      result.code shouldBe 200
+      result should be(OK)
       waitForDeployment(result)
       result.value.version.toString
     }

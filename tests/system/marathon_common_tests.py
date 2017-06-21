@@ -13,10 +13,11 @@ from datetime import timedelta
 from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     health_check, ip_of_mom, ip_other_than_mom, pin_to_host,
                     persistent_volume_app, python_http_app, readiness_and_health_app,
-                    restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait)
+                    restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait,
+                    docker_env_set)
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
-                       marthon_version_less_than, mom_version_less_than, marathon_1_4, ee_version)
+                       marathon_1_5, marthon_version_less_than, mom_version_less_than, marathon_1_4, ee_version)
 from urllib.parse import urljoin
 from utils import fixture_dir, get_resource
 
@@ -164,7 +165,7 @@ def test_docker_port_mappings():
     assert output == "200"
 
 
-def retry_on_exception(exc):
+def ignore_on_exception(exc):
     return isinstance(exc, Exception)
 
 
@@ -269,7 +270,7 @@ def test_bad_user():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
@@ -294,7 +295,7 @@ def test_bad_uri():
     client.add_app(app_def)
 
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=ignore_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
@@ -817,7 +818,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     common.systemctl_master()
     shakedown.wait_for_service_endpoint(marathon_service_name)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_task_recovery():
         tasks = client.get_tasks('/master-failure')
         tasks[0]['id'] == original_task_id
@@ -928,7 +929,7 @@ def _test_declined_offer(app_id, app_def, reason):
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def verify_declined_offer():
         deployments = client.get_deployments(app_id)
         assert len(deployments) == 1
@@ -954,10 +955,6 @@ def declined_offer_by_reason(offers, reason):
     return None
 
 
-def docker_env_set():
-    return 'DOCKER_HUB_USERNAME' not in os.environ and 'DOCKER_HUB_PASSWORD' not in os.environ
-
-
 @pytest.mark.skipif("docker_env_set()")
 def test_private_repository_docker_app():
     # Create and copy docker credentials to all private agents
@@ -979,8 +976,9 @@ def test_private_repository_docker_app():
     common.assert_app_tasks_running(client, app_def)
 
 
+# TODO: D729 will provide a secrets fixture to use here
 @pytest.mark.skipif("docker_env_set()")
-@dcos_1_10
+@marathon_1_5
 def test_private_repository_mesos_app():
     """ Test private docker registry with mesos containerizer using "config" container's image field."""
 
@@ -1047,7 +1045,7 @@ def test_vip_mesos_cmd(marathon_service_name):
 
 
 def test_metric_endpoint(marathon_service_name):
-    response = http.get("{}/metrics/".format(
+    response = http.get("{}metrics".format(
         shakedown.dcos_service_url(marathon_service_name)))
     assert response.status_code == 200
     assert response.json()['gauges']['jvm.memory.heap.max']['value'] is not None
@@ -1158,6 +1156,7 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
 def clear_marathon():
     try:
         common.stop_all_deployments()
+        common.clear_pods()
         common.delete_all_apps_wait()
     except Exception as e:
         print(e)

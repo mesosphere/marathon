@@ -66,7 +66,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         createApp.instances shouldBe 2 withClue (s"${appId} has ${createApp.instances} instances running but there should be 2.")
 
         val created = f.marathon.createAppV2(createApp)
-        created.code should be (201) withClue (s"Response ${created.code}: ${created.entityString}")
+        created should be(Created)
         f.waitForDeployment(created)
 
         When("updating the app")
@@ -133,7 +133,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         val appId = nextAppId(f)
         val createApp = f.appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
         val created = f.marathon.createAppV2(createApp)
-        created.code should be (201) withClue (s"Response ${created.code}: ${created.entityString}")
+        created should be(Created)
         f.waitForDeployment(created)
 
         logger.debug(s"Started app: ${f.marathon.app(appId).entityPrettyJsonString}")

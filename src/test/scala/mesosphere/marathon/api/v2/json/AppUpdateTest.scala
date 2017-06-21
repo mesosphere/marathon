@@ -27,7 +27,7 @@ class AppUpdateTest extends UnitTest {
     */
   private[this] def fromJsonString(json: String): AppUpdate = {
     val update: AppUpdate = Json.fromJson[AppUpdate](Json.parse(json)).get
-    AppNormalization.forDeprecatedUpdates(AppNormalization.Configure(None, "bridge-name"))
+    AppNormalization.forDeprecatedUpdates(AppNormalization.Configuration(None, "bridge-name"))
       .normalized(validateOrThrow(update)(AppValidation.validateOldAppUpdateAPI))
   }
 

@@ -20,7 +20,7 @@ import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, Raml, Resources }
+import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, PodSecretVolume, Raml, Resources }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
 import mesosphere.marathon.test.Mockito
@@ -70,6 +70,49 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                       |     "executorResources": { "cpus": 100, "mem": 100 } }
                     """.stripMargin
 
+  val podSpecJsonWithFileBasedSecret = """
+                      | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                      |   [
+                      |     { "name": "webapp",
+                      |       "resources": { "cpus": 0.03, "mem": 64 },
+                      |       "image": { "kind": "DOCKER", "id": "busybox" },
+                      |       "exec": { "command": { "shell": "sleep 1" } },
+                      |       "volumeMounts": [ { "name": "vol", "mountPath": "mnt2" } ]
+                      |     }
+                      |   ],
+                      |   "volumes": [ { "name": "vol", "secret": "secret1" } ],
+                      |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                      |  }
+                    """.stripMargin
+
+  val podSpecJsonWithEnvRefSecretOnContainerLevel = """
+                      | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                      |   [
+                      |     { "name": "webapp",
+                      |       "resources": { "cpus": 0.03, "mem": 64 },
+                      |       "image": { "kind": "DOCKER", "id": "busybox" },
+                      |       "exec": { "command": { "shell": "sleep 1" } },
+                      |       "environment": { "vol": { "secret": "secret1" } }
+                      |     }
+                      |   ],
+                      |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                      |  }
+                    """.stripMargin
+
+  val podSpecJsonWithEnvRefSecret = """
+                      | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                      |   [
+                      |     { "name": "webapp",
+                      |       "resources": { "cpus": 0.03, "mem": 64 },
+                      |       "image": { "kind": "DOCKER", "id": "busybox" },
+                      |       "exec": { "command": { "shell": "sleep 1" } }
+                      |     }
+                      |   ],
+                      |   "environment": { "vol": { "secret": "secret1" } },
+                      |   "secrets": { "secret1": { "source": "/foo" } }
+                      |  }
+                    """.stripMargin
+
   "PodsResource" should {
     "support pods" in {
       val f = Fixture()
@@ -105,7 +148,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       }
     }
 
-    "be able to create a simple single-container pod with bride network" in {
+    "be able to create a simple single-container pod with bridge network" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
 
@@ -127,6 +170,86 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+      }
+    }
+
+    "The secrets feature is NOT enabled and create pod (that uses file base secrets) fails" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("Feature secrets is not enabled")
+      }
+    }
+
+    "The secrets feature is NOT enabled and create pod (that uses env secret refs) fails" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithEnvRefSecret.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("Feature secrets is not enabled")
+      }
+    }
+
+    "The secrets feature is NOT enabled and create pod (that uses env secret refs on container level) fails" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("Feature secrets is not enabled")
+      }
+    }
+
+    "The secrets feature is enabled and create pod (that uses env secret refs on container level) succeeds" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(201)
+        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+        parsedResponse should be (defined)
+        val maybePod = parsedResponse.map(_.as[Pod])
+        maybePod should be (defined) // validate that we DID get back a pod definition
+        val pod = maybePod.get
+        pod.containers(0).environment("vol") shouldBe EnvVarSecret("secret1")
+      }
+    }
+
+    "The secrets feature is enabled and create pod (that uses file based secrets) succeeds" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(201)
+        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+        parsedResponse should be (defined)
+        val maybePod = parsedResponse.map(_.as[Pod])
+        maybePod should be (defined) // validate that we DID get back a pod definition
+        val pod = maybePod.get
+        pod.volumes(0) shouldBe PodSecretVolume("vol", "secret1")
       }
     }
 
@@ -153,6 +276,18 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
+    }
+
+    "create a pod w/ container networking w/o default network name" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val ex = intercept[NormalizationException] {
+        f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
+      }
+      ex.msg shouldBe NetworkNormalizationMessages.ContainerNetworkNameUnresolved
     }
 
     "create a pod with custom executor resource declaration" in {
@@ -415,6 +550,48 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
+        response.getEntity.toString should include("pullConfig.secret must refer to an existing secret")
+      }
+    }
+
+    "Create a new pod with w/ Docker image and config.json, but with secrets disabled" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podJson =
+        """
+          |{
+          |    "id": "/pod",
+          |    "containers": [{
+          |        "name": "container0",
+          |        "resources": {
+          |            "cpus": 0.1,
+          |            "mem": 32
+          |        },
+          |        "image": {
+          |            "kind": "DOCKER",
+          |            "id": "private/image",
+          |            "pullConfig": {
+          |                "secret": "pullConfigSecret"
+          |            }
+          |        },
+          |        "exec": {
+          |            "command": {
+          |                "shell": "sleep 1"
+          |            }
+          |        }
+          |    }]
+          |}
+        """.stripMargin
+
+      val response = f.podsResource.create(podJson.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("must be empty")
+        response.getEntity.toString should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
         response.getEntity.toString should include("pullConfig.secret must refer to an existing secret")
       }
     }
