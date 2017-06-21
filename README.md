@@ -259,6 +259,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [bol.com](https://www.bol.com/)
 * [Brand24](https://brand24.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
+* [China Mobile](http://www.chinamobileltd.com/en/global/home.php)
 * [China Unicom](http://eng.chinaunicom.com/index/index.html)
 * [Corvisa](https://www.corvisa.com/)
 * [Criteo](http://www.criteo.com/)
