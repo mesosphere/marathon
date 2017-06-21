@@ -183,7 +183,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val updateResult = marathon.updatePod(pod.id, updatedPod)
 
       Then("The pod is updated")
-      updateResult.code should be(200)
+      updateResult should be(OK)
       waitForDeployment(updateResult)
 
       When("The pod should be deleted")
@@ -322,7 +322,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       )
 
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
+      createResult should be(Created)
       val deploymentId = createResult.originalResponse.headers.find(_.name == "Marathon-Deployment-Id").map(_.value)
       deploymentId shouldBe defined
 

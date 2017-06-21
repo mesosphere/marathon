@@ -24,7 +24,7 @@ class SystemResourceIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       val result = marathon.ping()
 
       Then("The system responses with a http 200 pong")
-      result.code should be(200)
+      result should be(OK)
       result.entityString should be("pong")
 
       And("The content type is text/plain")

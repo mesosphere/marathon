@@ -92,7 +92,7 @@ class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with 
       val result = f.marathon.abdicate()
 
       Then("the request should be successful")
-      result.code should be(200)
+      result should be(OK)
       (result.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")

@@ -311,14 +311,14 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     def createAsynchronously(app: App): RestResult[App] = {
       val result = marathon.createAppV2(app)
-      result.code should be(201) withClue (result.entityString) //Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       result
     }
 
     def scaleToSuccessfully(appId: PathId, instances: Int): Seq[ITEnrichedTask] = {
       val result = marathon.updateApp(appId, AppUpdate(instances = Some(instances)))
-      result.code should be (200) withClue (result.entityString) // OK
+      result should be(OK)
       waitForDeployment(result)
       waitForTasks(appId, instances)
     }
@@ -327,14 +327,14 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     def updateSuccessfully(appId: PathId, update: AppUpdate): VersionString = {
       val result = marathon.updateApp(appId, update)
-      result.code shouldBe 200
+      result should be(OK)
       waitForDeployment(result)
       result.value.version.toString
     }
 
     def restartSuccessfully(app: App): VersionString = {
       val result = marathon.restartApp(PathId(app.id))
-      result.code shouldBe 200
+      result should be(OK)
       waitForDeployment(result)
       result.value.version.toString
     }

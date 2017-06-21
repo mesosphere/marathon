@@ -40,7 +40,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       val taskId = marathon.tasks(app.id.toPath).value.head.id
 
       When("a task of an app is killed")
-      marathon.killTask(app.id.toPath, taskId).code should be(200)
+      marathon.killTask(app.id.toPath, taskId) should be(OK)
       val taskKillSentTimestamp = Timestamp.now()
 
       val taskKilledEvent = waitForEventWith(
@@ -72,7 +72,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       val taskId = marathon.tasks(app.id.toPath).value.head.id
 
       When("a task of an app is killed")
-      marathon.killTask(app.id.toPath, taskId).code should be(200)
+      marathon.killTask(app.id.toPath, taskId) should be(OK)
       val taskKillSentTimestamp = Timestamp.now()
 
       val taskKilledEvent = waitForEventWith(

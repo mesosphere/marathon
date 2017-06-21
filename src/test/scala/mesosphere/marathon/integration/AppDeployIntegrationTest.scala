@@ -44,7 +44,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("an deployed app")
       val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
       val result = marathon.createAppV2(app)
-      result.code should be(201) //Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       val taskBeforeRedeployment = waitForTasks(app.id.toPath, 1) //make sure, the app has really started
@@ -471,7 +471,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app")
       val v1 = appProxy(appId(), "v1", instances = 1, healthCheck = None)
       val createResponse = marathon.createAppV2(v1)
-      createResponse.code should be(201)
+      createResponse should be(Created)
       val originalVersion = createResponse.value.version
       waitForDeployment(createResponse)
 
@@ -521,7 +521,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val taskId = marathon.tasks(app.id.toPath).value.head.id
 
       When("a task of an app is killed and scaled")
-      marathon.killTask(app.id.toPath, taskId, scale = true).code should be(200)
+      marathon.killTask(app.id.toPath, taskId, scale = true) should be(OK)
       waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 
       Then("All instances of the app get restarted")
