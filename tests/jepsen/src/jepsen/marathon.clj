@@ -30,9 +30,9 @@
   (let [[mesos zk] [(mesos/db mesos-version) (zk/db zookeeper-version)]]
     (reify db/DB
       (setup! [_ test node]
+        (db/setup! zk test node)
         (info node "starting setting mesos")
         (db/setup! mesos test node)
-        (db/setup! zk test node)
         (install! test node)
         (configure test node))
       (teardown! [_ test node]
