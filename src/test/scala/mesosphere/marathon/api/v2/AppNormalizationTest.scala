@@ -90,21 +90,21 @@ class AppNormalizationTest extends UnitTest {
         fetchEmptyUris should be(expected)
       }
       "fetch and uris are both non-empty" in {
-        assertThrows[SerializationFailedException] {
+        a[NormalizationException] should be thrownBy {
           AppNormalization.Artifacts(Option(Seq("u")), Option(Seq(Artifact("a")))).normalize
         }
       }
     }
 
     def normalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
-      val config = AppNormalization.Configure(defaultNetworkName, mesosBridgeName)
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName)
       Normalization[App] { app =>
         AppNormalization(config).normalized(AppNormalization.forDeprecated(config).normalized(app))
       }
     }
 
     def updateNormalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
-      val config = AppNormalization.Configure(defaultNetworkName, mesosBridgeName)
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName)
       Normalization[AppUpdate] { app =>
         AppNormalization.forUpdates(config)
           .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(app))
@@ -166,7 +166,7 @@ class AppNormalizationTest extends UnitTest {
       }
 
       "fails when ipAddress discovery ports and container port mappings are both specified" in new Fixture {
-        assertThrows[SerializationFailedException] {
+        a[NormalizationException] should be thrownBy {
           legacyMesosApp.copy(container = legacyMesosApp.container.map(_.copy(portMappings = Some(Nil)))).normalize
         }
       }
@@ -262,7 +262,7 @@ class AppNormalizationTest extends UnitTest {
       }
 
       "legacy docker app specifies NONE networking, with or without ipAddress" in {
-        assertThrows[SerializationFailedException] {
+        a[NormalizationException] should be thrownBy {
           App(
             "/foo",
             container = Some(Container(
@@ -272,7 +272,7 @@ class AppNormalizationTest extends UnitTest {
             ipAddress = Some(IpAddress())
           ).normalize
         }
-        assertThrows[SerializationFailedException] {
+        a[NormalizationException] should be thrownBy {
           App(
             "/foo",
             container = Some(Container(
@@ -283,7 +283,7 @@ class AppNormalizationTest extends UnitTest {
         }
       }
       "legacy docker app specifies both legacy and canonical networking modes" in {
-        assertThrows[SerializationFailedException] {
+        a[NormalizationException] should be thrownBy {
           App(
             "/foo",
             container = Some(Container(
@@ -293,7 +293,7 @@ class AppNormalizationTest extends UnitTest {
             networks = Seq(Network(mode = NetworkMode.Host))
           ).normalize
         }
-        assertThrows[SerializationFailedException] {
+        a[NormalizationException] should be thrownBy {
           App(
             "/foo",
             container = Some(Container(
@@ -303,7 +303,7 @@ class AppNormalizationTest extends UnitTest {
             networks = Seq(Network(mode = NetworkMode.ContainerBridge))
           ).normalize
         }
-        assertThrows[SerializationFailedException] {
+        a[NormalizationException] should be thrownBy {
           App(
             "/foo",
             container = Some(Container(
@@ -325,12 +325,14 @@ class AppNormalizationTest extends UnitTest {
       }
 
       "using legacy docker networking API, without a named network" in new Fixture {
-        val normalized = legacyDockerApp.copy(ipAddress = Option(IpAddress())).normalize
-        normalized should be(normalizedDockerApp.copy(networks = Seq(Network())))
+        val ex = intercept[NormalizationException] {
+          legacyDockerApp.copy(ipAddress = Option(IpAddress())).normalize
+        }
+        ex.msg shouldBe NetworkNormalizationMessages.ContainerNetworkNameUnresolved
       }
 
       "using legacy docker networking API w/ extraneous ipAddress discovery ports" in new Fixture {
-        val ex = intercept[SerializationFailedException] {
+        val ex = intercept[NormalizationException] {
           legacyDockerApp.copy(ipAddress = legacyDockerApp.ipAddress.map(_.copy(discovery =
             Option(IpDiscovery(
               ports = Seq(IpDiscoveryPort(34, "port1"))
@@ -345,8 +347,11 @@ class AppNormalizationTest extends UnitTest {
       }
 
       "using legacy IP/CT networking API without a named network" in new Fixture {
-        legacyMesosApp.copy(ipAddress = legacyMesosApp.ipAddress.map(_.copy(
-          networkName = None))).normalize should be(normalizedMesosApp.copy(networks = Seq(Network())))
+        val ex = intercept[NormalizationException] {
+          legacyMesosApp.copy(ipAddress = legacyMesosApp.ipAddress.map(_.copy(
+            networkName = None))).normalize
+        }
+        ex.msg shouldBe NetworkNormalizationMessages.ContainerNetworkNameUnresolved
       }
     }
 
@@ -366,7 +371,7 @@ class AppNormalizationTest extends UnitTest {
               image = "image0"
             ))
           )),
-          networks = Option(Seq(Network()))
+          networks = Option(Seq(Network(name = Some("whatever"))))
         )
         raw.normalize should be(raw)
       }
@@ -485,7 +490,7 @@ class AppNormalizationTest extends UnitTest {
       }
 
       "prevent a legacy docker bridge mode app from mixing empty and non-empty port mappings" in {
-        assertThrows[SerializationFailedException] {
+        a[NormalizationException] should be thrownBy {
           App(
             id = "/foo",
             cmd = Option("sleep"),

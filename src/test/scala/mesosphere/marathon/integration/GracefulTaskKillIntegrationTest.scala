@@ -5,6 +5,7 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.Timestamp
 
 import scala.concurrent.duration._
 
@@ -32,22 +33,22 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) //Created
+      result should be(Created)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
       //make sure, the app has really started
       val taskId = marathon.tasks(app.id.toPath).value.head.id
 
       When("a task of an app is killed")
-      val taskKillSentTimestamp = System.currentTimeMillis()
-      marathon.killTask(app.id.toPath, taskId).code should be(200)
+      marathon.killTask(app.id.toPath, taskId) should be(OK)
+      val taskKillSentTimestamp = Timestamp.now()
 
-      waitForEventWith(
+      val taskKilledEvent = waitForEventWith(
         "status_update_event",
         _.info("taskStatus") == "TASK_KILLED")
 
-      val taskKilledReceivedTimestamp = System.currentTimeMillis()
-      val waitedForTaskKilledEvent = (taskKilledReceivedTimestamp - taskKillSentTimestamp).milliseconds
+      val taskKilledReceivedTimestamp = Timestamp(taskKilledEvent.info("timestamp").toString)
+      val waitedForTaskKilledEvent = taskKillSentTimestamp until taskKilledReceivedTimestamp
 
       // the task_killed event should occur at least 10 seconds after sending it
       waitedForTaskKilledEvent.toMillis should be >= taskKillGracePeriod.toMillis
@@ -64,26 +65,26 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) //Created
+      result should be(Created)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
       //make sure, the app has really started
       val taskId = marathon.tasks(app.id.toPath).value.head.id
 
       When("a task of an app is killed")
-      val taskKillSentTimestamp = System.currentTimeMillis()
-      marathon.killTask(app.id.toPath, taskId).code should be(200)
+      marathon.killTask(app.id.toPath, taskId) should be(OK)
+      val taskKillSentTimestamp = Timestamp.now()
 
-      waitForEventWith(
+      val taskKilledEvent = waitForEventWith(
         "status_update_event",
         _.info("taskStatus") == "TASK_KILLED")
 
-      val taskKilledReceivedTimestamp = System.currentTimeMillis()
-      val waitedForTaskKilledEvent = (taskKilledReceivedTimestamp - taskKillSentTimestamp).milliseconds
+      val taskKilledReceivedTimestamp = Timestamp(taskKilledEvent.info("timestamp").toString)
+      val waitedForTaskKilledEvent = taskKillSentTimestamp until taskKilledReceivedTimestamp
 
       // the task_killed event should occur instantly or at least smaller as taskKillGracePeriod,
       // because the app terminates shortly
-      waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis
+      waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis withClue "the task kill event took longer than the task kill grace period"
     }
   }
 }

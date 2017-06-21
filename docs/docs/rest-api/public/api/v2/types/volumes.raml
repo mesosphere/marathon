@@ -4,15 +4,16 @@ uses:
   label: label.raml
   strings: stringTypes.raml
   pragma: pragma.raml
+  secrets: secrets.raml
 
 types:
-  Volume:
+  HostVolume:
     type: object
     properties:
       name:
         type: strings.Name
         description: The name of the volume to reference.
-      host?:
+      host:
         type: string
         description: |
           Absolute path of the file or directory on the agent, or else the relative
@@ -20,6 +21,12 @@ types:
           Host volumes are useful for mapping directories that exist on the agent apriori,
           or within the executor sandbox. No resources (Mesos or otherwise) are allocated for
           these types of volumes.
+  EphemeralVolume:
+    type: object
+    properties:
+      name:
+        type: strings.Name
+        description: The name of the volume to reference.
   VolumeMount:
     type: object
     properties:
@@ -75,19 +82,65 @@ types:
         type: label.KVLabels
         (pragma.omitEmpty):
         description: Provider specific volume configuration options
-  AppVolume:
+  AppDockerVolume:
     type: object
     properties:
       containerPath:
         type: string
         minLength: 1
         description: The path of the volume in the container
-      hostPath?:
+      hostPath:
         type: string
         minLength: 1
         description: The path of the volume on the host
-      persistent?: PersistentVolume
-      external?: ExternalVolume
       mode:
         type: strings.ReadMode
         description: Possible values are RO for ReadOnly and RW for Read/Write
+  AppPersistentVolume:
+    type: object
+    properties:
+      containerPath:
+        type: string
+        minLength: 1
+        description: The path of the volume in the container
+      persistent: PersistentVolume
+      mode:
+        type: strings.ReadMode
+        description: Possible values are RO for ReadOnly and RW for Read/Write
+  AppExternalVolume:
+    type: object
+    properties:
+      containerPath:
+        type: string
+        minLength: 1
+        description: The path of the volume in the container
+      external: ExternalVolume
+      mode:
+        type: strings.ReadMode
+        description: Possible values are RO for ReadOnly and RW for Read/Write
+  AppSecretVolume:
+    type: object
+    properties:
+      containerPath:
+        type: string
+        minLength: 1
+        description: The path of the secret in the container
+      secret:
+        type: string
+        minLength: 1
+        description: References the secret that is used by this volume
+  AppVolume:
+    type: AppPersistentVolume | AppExternalVolume | AppSecretVolume | AppDockerVolume
+  PodSecretVolume:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        description: Name of the pod level volume
+      secret:
+        type: string
+        minLength: 1
+        description: References the secret that is used by this volume
+  PodVolume:
+    type: PodSecretVolume | HostVolume | EphemeralVolume

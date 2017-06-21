@@ -1,6 +1,7 @@
 package mesosphere.mesos
 
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.serialization.SecretSerializer
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHealthCheck }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod._
@@ -342,6 +343,8 @@ object TaskGroupBuilder extends StrictLogging {
               ))
 
           containerInfo.addVolumes(volume)
+
+        case _: SecretVolume => // Is handled in the plugins
       }
     }
 
@@ -353,7 +356,9 @@ object TaskGroupBuilder extends StrictLogging {
       im.kind match {
         case raml.ImageType.Docker =>
           val docker = mesos.Image.Docker.newBuilder.setName(im.id)
-
+          im.pullConfig.foreach { pullConfig =>
+            docker.setConfig(SecretSerializer.toSecretReference(pullConfig.secret))
+          }
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
         case raml.ImageType.Appc =>
           val appcLabels = (LinuxAmd64 ++ im.labels).toMesosLabels

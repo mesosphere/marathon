@@ -116,7 +116,7 @@ types:
         description: |
           The credentials to fetch this container.
           Please note: this property is supported only with the Mesos containerizer, not the docker containerizer.
-        (pragma.deprecated): Deprecated in favor of pullConfig
+        (pragma.deprecated): Deprecated since Marathon v1.5 in favor of pullConfig
       pullConfig?:
         type: docker.DockerPullConfig
         description: |
@@ -185,7 +185,9 @@ types:
         default: DOCKER
       docker?: DockerContainer
       appc?: AppCContainer
-      volumes?: volumes.AppVolume[]
+      volumes?:
+        type: array
+        items: volumes.AppVolume
       portMappings?:
         type: ContainerPortMapping[]
         description: |

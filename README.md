@@ -64,7 +64,7 @@ For run-time, Marathon has the following dependencies:
 The by far easiest way to get Marathon running is to use [DC/OS](https://dcos.io/get-started/#marathon). Marathon is pre-bundled into [DC/OS](https://dcos.io/get-started/#marathon).
 
 #### Install Mesos
-Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos.
+Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are three options for installing Apache Mesos.
 
 ##### Installing Mesos from prepackaged releases
 Instructions on how to install prepackaged releases of Mesos are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/).
@@ -80,6 +80,46 @@ You can find the instructions for compiling Mesos from source in the [Apache Mes
 
 The `make install` will install libmesos (libmesos.so on Linux and libmesos.dylib on Mac OS X) in the install directory.
 
+##### Using the Mesos Version Manager
+**NOTE:** *Choose this option only if building Marathon from source, else there might be version incompatibility between pre-packaged releases of Marathon and Mesos built from source.*  
+
+The Mesos Version Manager (mvm) compiles, configures, and manages multiple versions of Apache Mesos.
+It allows switching between versions quickly, making it easy to test Marathon against different versions of Mesos.
+
+###### Prerequisites
+
+The Mesos Version Manager assumes that all dependencies of Apache Mesos are readily installed.  
+Please refer to the [Apache Mesos getting started docs](http://mesos.apache.org/gettingstarted/) for instructions on how to set up the build environment.
+
+MVM compiles Mesos with SSL support by default, which requires openssl and libevent to be installed.  
+On macOS, the packages can be installed using brew: `brew install openssl libevent`  
+On CentOS, the packages can be installed using yum: `sudo yum install -y libevent-devel openssl-devel`
+
+###### Usage
+
+The script can be run as follows:
+
+        cd marathon
+        cd scripts
+        ./mvm.sh <VERSION> [SHELL]
+
+The following command will launch a bash shell configured for Mesos 1.2.0: `./mvm.sh 1.2.0 bash`
+
+You should consider placing the script into a folder in your shell's `PATH` if you are using it regularly.
+
+The mvm script accepts three different formats as version name:
+
+1. Version tags from the Mesos repository. Use `./mvm.sh --tags` in order to obtain a list of available tags.
+2. Commit hashes from the Mesos repository.
+3. The `--latest` flag, which automatically chooses the latest development version: `./mvm.sh --latest`.
+
+MVM Will automatically download & compile Apache Mesos if necessary.
+It will then spawn a new bash shell with the chosen version of Mesos activated.  
+For more information see `./mvm.sh --help`.
+
+**Note**: You will have to re-run the script if you wish to use Mesos after closing the shell.
+See `./mvm.sh --help` information on how to  permanently configure your shell for mvm to avoid this.
+
 #### Install Marathon
 
 Instructions on how to install prepackaged releases are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/). Alternatively, you can build Marathon from source.
@@ -90,8 +130,26 @@ Instructions on how to install prepackaged releases are available [in the Marath
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
-        sbt run --master localhost:5050 --zk zk://localhost:2181/marathon
-
+        sbt 'run --master localhost:5050 --zk zk://localhost:2181/marathon'
+    
+    **Troubleshooting**
+    1. Failure in retrieval of IP address of the local machine will result in an error and may look like this:
+    
+        `Failed to obtain the IP address for '<local-machine>'; the DNS service may not be able to resolve it: nodename nor servname provided, or not known`
+        
+        Make sure that `LIBPROCESS_IP` environment variable is set.
+        ```
+        export LIBPROCESS_IP="127.0.0.1"
+        ```
+    1. When the `MESOS_NATIVE_JAVA_LIBRARY` environment variable is not set, the following error may occur,
+        
+        `java.lang.UnsatisfiedLinkError: no mesos in java.library.path...`
+        
+        Make sure that `MESOS_NATIVE_JAVA_LIBRARY` environment variable is set.
+        ```
+        export MESOS_NATIVE_JAVA_LIBRARY="/path/to/mesos/lib/libmesos.dylib"
+        ```
+   
 1.  Run `sbt universal:packageXzTarball` to package Marathon as an txz file
     containing bin/marathon fully packaged.
 
@@ -201,8 +259,10 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [bol.com](https://www.bol.com/)
 * [Brand24](https://brand24.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
+* [China Mobile](http://www.chinamobileltd.com/en/global/home.php)
+* [China Unicom](http://eng.chinaunicom.com/index/index.html)
 * [Corvisa](https://www.corvisa.com/)
-* [Criteo] (http://www.criteo.com/)
+* [Criteo](http://www.criteo.com/)
 * [Daemon](http://www.daemon.com.au/)
 * [DataMan](http://www.shurenyun.com/)
 * [DHL Parcel](https://www.dhlparcel.nl/)

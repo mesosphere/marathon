@@ -3,7 +3,7 @@ package core.deployment.impl
 
 import akka.actor._
 import akka.event.EventStream
-import mesosphere.marathon.core.deployment.impl.TaskReplaceActor._
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
@@ -13,7 +13,6 @@ import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.consi
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
-import org.slf4j.LoggerFactory
 
 import scala.collection.{ SortedSet, mutable }
 import scala.concurrent.Promise
@@ -27,7 +26,8 @@ class TaskReplaceActor(
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
-    promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
+    promise: Promise[Unit]) extends Actor with ReadinessBehavior with StrictLogging {
+  import TaskReplaceActor._
 
   // compute all values ====================================================================================
 
@@ -75,7 +75,7 @@ class TaskReplaceActor(
     launchInstances()
 
     // reset the launch queue delay
-    log.info("Resetting the backoff delay before restarting the runSpec")
+    logger.info("Resetting the backoff delay before restarting the runSpec")
     launchQueue.resetDelay(runSpec)
 
     // it might be possible, that we come here, but nothing is left to do
@@ -92,7 +92,7 @@ class TaskReplaceActor(
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
     case InstanceChanged(id, `version`, `pathId`, condition, instance) if !oldInstanceIds(id) && considerTerminal(condition) =>
-      log.error(s"New instance $id failed on agent ${instance.agentInfo.agentId} during app $pathId restart")
+      logger.error(s"New instance $id failed on agent ${instance.agentInfo.agentId} during app $pathId restart")
       instanceTerminated(id)
       instancesStarted -= 1
       launchInstances()
@@ -114,7 +114,7 @@ class TaskReplaceActor(
   }
 
   def reconcileAlreadyStartedInstances(): Unit = {
-    log.info(s"reconcile: found ${instancesAlreadyStarted.size} already started instances " +
+    logger.info(s"reconcile: found ${instancesAlreadyStarted.size} already started instances " +
       s"and ${oldInstanceIds.size} old instances")
     instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
@@ -124,7 +124,7 @@ class TaskReplaceActor(
     val instancesNotStartedYet = math.max(0, runSpec.instances - instancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
-      log.info(s"Reconciling instances during app $pathId restart: queuing $instancesToStartNow new instances")
+      logger.info(s"Reconciling instances during app $pathId restart: queuing $instancesToStartNow new instances")
       launchQueue.add(runSpec, instancesToStartNow)
       instancesStarted += instancesToStartNow
     }
@@ -136,9 +136,9 @@ class TaskReplaceActor(
 
       maybeNewInstanceId match {
         case Some(newInstanceId: Instance.Id) =>
-          log.info(s"Killing old ${nextOldInstance.instanceId} because $newInstanceId became reachable")
+          logger.info(s"Killing old ${nextOldInstance.instanceId} because $newInstanceId became reachable")
         case _ =>
-          log.info(s"Killing old ${nextOldInstance.instanceId}")
+          logger.info(s"Killing old ${nextOldInstance.instanceId}")
       }
 
       killService.killInstance(nextOldInstance, KillReason.Upgrading)
@@ -147,19 +147,18 @@ class TaskReplaceActor(
 
   def checkFinished(): Unit = {
     if (targetCountReached(runSpec.instances) && oldInstanceIds.isEmpty) {
-      log.info(s"All new instances for $pathId are ready and all old instances have been killed")
+      logger.info(s"All new instances for $pathId are ready and all old instances have been killed")
       promise.success(())
       context.stop(self)
-    } else if (log.isDebugEnabled) {
-      log.debug(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
+    } else {
+      logger.debug(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
         s"[${readyInstances.size}] ready new instances and " +
         s"[${oldInstanceIds.size}] old instances.")
     }
   }
 }
 
-object TaskReplaceActor {
-  private[this] val log = LoggerFactory.getLogger(getClass)
+object TaskReplaceActor extends StrictLogging {
 
   //scalastyle:off
   def props(
@@ -193,17 +192,17 @@ object TaskReplaceActor {
         // Kill enough instances so that we end up with one instance below minHealthy.
         // TODO: We need to do this also while restarting, since the kill could get lost.
         nrToKillImmediately = runningInstancesCount - minHealthy + 1
-        log.info(
+        logger.info(
           "maxCapacity == minHealthy for resident app: " +
             s"adjusting nrToKillImmediately to $nrToKillImmediately in order to prevent over-capacity for resident app"
         )
       } else {
-        log.info("maxCapacity == minHealthy: Allow temporary over-capacity of one instance to allow restarting")
+        logger.info("maxCapacity == minHealthy: Allow temporary over-capacity of one instance to allow restarting")
         maxCapacity += 1
       }
     }
 
-    log.info(s"For minimumHealthCapacity ${runSpec.upgradeStrategy.minimumHealthCapacity} of ${runSpec.id.toString} leave " +
+    logger.info(s"For minimumHealthCapacity ${runSpec.upgradeStrategy.minimumHealthCapacity} of ${runSpec.id.toString} leave " +
       s"$minHealthy instances running, maximum capacity $maxCapacity, killing $nrToKillImmediately of " +
       s"$runningInstancesCount running instances immediately. (RunSpec version ${runSpec.version})")
 

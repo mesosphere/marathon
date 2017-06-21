@@ -13,7 +13,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
   val noEnabledFeatures = Set.empty[String]
   val appConversionFunc: (App => AppDefinition) = { app =>
     // assume canonical form and that the app is valid
-    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configure(None, "bridge-name")).normalized(app))
+    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name")).normalized(app))
   }
   implicit val groupUpdateRamlReader = raml.GroupConversion.groupUpdateRamlReads // HACK: workaround bogus compiler error?!
 

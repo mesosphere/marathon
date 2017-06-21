@@ -148,7 +148,8 @@ types:
         type: secrets.Secrets
         (pragma.omitEmpty):
       volumes?:
-        type: volumes.Volume[]
+        type: array
+        items: volumes.PodVolume
         (pragma.omitEmpty):
         description: Volumes defined on a pod level that are mounted into containers
       networks?:

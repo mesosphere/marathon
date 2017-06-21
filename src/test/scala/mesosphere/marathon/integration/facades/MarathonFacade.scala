@@ -386,6 +386,10 @@ class MarathonFacade(
     result(Retry("abdicate") { request(Delete(s"$url/v2/leader")) }, waitTime)
   }
 
+  def abdicateWithBackup(file: String): RestResult[HttpResponse] = {
+    result(Retry("abdicate") { request(Delete(s"$url/v2/leader?backup=file://$file")) }, waitTime)
+  }
+
   //info --------------------------------------------------
   def info: RestResult[HttpResponse] = {
     result(request(Get(s"$url/v2/info")), waitTime)

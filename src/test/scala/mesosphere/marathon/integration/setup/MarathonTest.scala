@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, Network, NetworkMode, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppDockerVolume, Network, NetworkMode, AppHealthCheck, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
@@ -276,7 +276,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
     * @param state The initial health status of the app mock
     * @return The IntegrationHealthCheck object which is used to control the replies.
     */
-  def appProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
+  def registerAppProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
     val check = new IntegrationHealthCheck(appId, versionId, state)
     healthChecks { checks =>
       checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
@@ -422,7 +422,7 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
           image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
-          new AppVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+          new AppDockerVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,

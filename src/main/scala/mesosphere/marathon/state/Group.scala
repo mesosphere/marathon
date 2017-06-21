@@ -67,7 +67,7 @@ class Group(
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
-  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version)"
+  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version, ${transitiveAppsById}, ${transitivePodsById})"
 }
 
 object Group {

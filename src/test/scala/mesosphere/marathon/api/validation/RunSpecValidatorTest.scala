@@ -601,7 +601,7 @@ class RunSpecValidatorTest extends UnitTest {
 
       val f = new Fixture
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
-      val config = AppNormalization.Configure(None, "bridge-name")
+      val config = AppNormalization.Configuration(None, "bridge-name")
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -614,7 +614,7 @@ class RunSpecValidatorTest extends UnitTest {
       val f = new Fixture
       val base = Json.parse(f.cassandraWithoutResidency).as[App]
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
-      val config = AppNormalization.Configure(None, "bridge-name")
+      val config = AppNormalization.Configuration(None, "bridge-name")
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(

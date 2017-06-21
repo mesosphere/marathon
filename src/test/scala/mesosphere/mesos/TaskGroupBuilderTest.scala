@@ -392,11 +392,11 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
             volumeMounts = Seq(
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume1",
                 mountPath = "/mnt/path1"
               ),
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume2",
                 mountPath = "/mnt/path2",
                 readOnly = Some(true)
@@ -407,7 +407,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             name = "Foo2",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
             volumeMounts = Seq(
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume1",
                 mountPath = "/mnt/path2",
                 readOnly = Some(false)
@@ -523,6 +523,48 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         .getTasksList.find(_.getName == "Foo3").get
 
       assert(!task3.hasContainer)
+    }
+
+    "create a pod of one container with Docker pull config" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 6.1, mem = 1568.0, disk = 10.0).build
+
+      val podSpec = PodDefinition(
+        id = "/product/frontend".toPath,
+        containers = Seq(
+          MesosContainer(
+            name = "Foo1",
+            resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+            image = Some(
+              raml.Image(
+                kind = raml.ImageType.Docker,
+                id = "alpine",
+                pullConfig = Some(raml.DockerPullConfig("aSecret")),
+                forcePull = Some(true)
+              ))
+          )))
+
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty, defaultBuilderConfig.acceptedResourceRoles)
+
+      val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+      )
+
+      assert(taskGroupInfo.getTasksCount == 1)
+
+      val taskContainer = taskGroupInfo
+        .getTasksList.find(_.getName == "Foo1").get.getContainer
+
+      assert(taskContainer.getType == mesos.ContainerInfo.Type.MESOS)
+      assert(taskContainer.getMesos.getImage.getType == mesos.Image.Type.DOCKER)
+      assert(taskContainer.getMesos.getImage.getDocker.getName == "alpine")
+      assert(taskContainer.getMesos.getImage.getDocker.getConfig.getType == mesos.Secret.Type.REFERENCE)
+      assert(taskContainer.getMesos.getImage.getDocker.getConfig.getReference.getName == "aSecret")
+      assert(!taskContainer.getMesos.getImage.getCached)
     }
 
     "create health check definitions with host-mode networking" in {

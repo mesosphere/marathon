@@ -469,5 +469,25 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       maybeStatus3 should be ('empty)
     }
+
+    "pod status for instances already removed from the group repo doesn't throw an exception" in { //DCOS-16151
+      implicit val f = new Fixture
+
+      Given("a pod definition")
+      val instance1 = fakeInstance(pod)
+
+      import mesosphere.marathon.core.async.ExecutionContexts.global
+      f.instanceTracker.instancesBySpec() returns
+        Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(pod.id, Seq(instance1))))
+
+      And("with no instances in the repo")
+      f.groupManager.podVersion(any, any) returns Future.successful(None)
+      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
+
+      When("requesting pod status")
+      val status = f.baseData.podStatus(pod).futureValue
+
+      Then("no exception was thrown so status was successfully fetched")
+    }
   }
 }
