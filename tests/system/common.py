@@ -974,7 +974,7 @@ def create_secret(name, value=None, description=None):
     stdout, stderr, return_code = run_dcos_command('security secrets create {} {} "{}"'.format(
         value_opt,
         description_opt,
-        name), print_output=False)
+        name), print_output=True)
     assert return_code == 0, "Failed to create a secret"
 
 

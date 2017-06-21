@@ -357,10 +357,8 @@ def test_app_file_based_secret(secret_fixture):
     assert data == secret_value
 
 
+@dcos_1_9
 def test_app_secret_env_var(secret_fixture):
-    # Install enterprise-cli since it's needed to create secrets
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
 
     secret_name, secret_value = secret_fixture
 
@@ -405,6 +403,7 @@ def test_app_secret_env_var(secret_fixture):
     assert data.rstrip() == secret_value
 
 
+@dcos_1_9
 def test_pod_secret_env_var(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
     if not common.is_enterprise_cli_package_installed():
@@ -533,6 +532,10 @@ def test_pod_file_based_secret(secret_fixture):
 
 @pytest.fixture(scope="function")
 def secret_fixture():
+    # Install enterprise-cli since it's needed to create secrets
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
     secret_name = '/mysecret'
     secret_value = 'super_secret_password'
     common.create_secret(secret_name, secret_value)
