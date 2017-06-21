@@ -4,6 +4,11 @@ title: Marathon Web Interface
 
 # Marathon Web Interface
 
+<div class="alert alert-danger" role="alert">		
+<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+**Important:** The Marathon web interface is no longer actively maintained. Use the Marathon REST API to access the latest Marathon features.
+</div>
+
 The **Marathon UI** source code repository lives at [https://github.com/mesosphere/marathon-ui](https://github.com/mesosphere/marathon-ui).
 For issues and feature requests related to the web UI, please refer to the [Support]({{ site.baseurl }}/support.html) page.
 
@@ -62,7 +67,7 @@ Marathon is waiting for offers from Mesos. True whenever an app has
 #### Delayed
 An app is considered `delayed` whenever too many tasks of the application failed
  in a short amount of time. Marathon will pause this deployment and retry later.
-True if the `queue` endpoint returns the following JSON condition: 
+True if the `queue` endpoint returns the following JSON condition:
 `queueEntry.delay.overdue === false`
 
 ## Application Health Reference
@@ -116,5 +121,3 @@ matching offer has been received, or Marathon throttles starting new tasks to
 prevent overwhelming Mesos.
 
 -----------
-
-
