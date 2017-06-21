@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import org.apache.mesos.{ Protos => mesos }
 
@@ -6,7 +7,7 @@ case class Parameter(
     key: String,
     value: String) {
 
-  def toProto(): mesos.Parameter =
+  def toProto: mesos.Parameter =
     mesos.Parameter.newBuilder
       .setKey(key)
       .setValue(value)

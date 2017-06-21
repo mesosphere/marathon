@@ -1,0 +1,28 @@
+{
+  "id": "/pod-container-net",
+  "containers": [
+    {
+      "name": "simple-docker",
+      "resources": {
+        "cpus": 1,
+        "mem": 128,
+        "disk": 0,
+        "gpus": 0
+      },
+      "image": {
+        "kind": "DOCKER",
+        "id": "nginx"
+      },
+      "endpoints": [
+        {
+          "name": "web",
+          "containerPort": 80,
+          "protocol": [
+            "http"
+          ]
+        }
+      ]
+    }
+  ],
+"networks": [ { "mode": "container"} ]
+}

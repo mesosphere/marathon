@@ -1,11 +1,15 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
-import scala.concurrent.duration.FiniteDuration
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{ Milliseconds, Span }
+
+import scala.concurrent.duration._
 
 /**
   * Helpers which wait for conditions.
   */
-object WaitTestSupport {
+object WaitTestSupport extends Eventually {
   def validFor(description: String, until: FiniteDuration)(valid: => Boolean): Boolean = {
     val deadLine = until.fromNow
     def checkValid(): Boolean = {
@@ -18,21 +22,15 @@ object WaitTestSupport {
     checkValid()
   }
 
-  def waitUntil(description: String, maxWait: FiniteDuration)(fn: => Boolean) = {
-    waitFor(description, maxWait) {
-      if (fn) Some(true) else None
+  def waitUntil(description: String, maxWait: FiniteDuration)(fn: => Boolean): Unit = {
+    eventually(timeout(Span(maxWait.toMillis, Milliseconds))) {
+      if (!fn) throw new RuntimeException(s"$description not satisfied")
     }
   }
 
-  def waitFor[T](description: String, maxWait: FiniteDuration)(fn: => Option[T]): T = {
-    val deadLine = maxWait.fromNow
-    def next(): T = {
-      if (deadLine.isOverdue()) throw new AssertionError(s"Waiting for $description took longer than $maxWait. Give up.")
-      fn match {
-        case Some(t) => t
-        case None    => Thread.sleep(100); next()
-      }
+  def waitUntil(description: String)(fn: => Boolean)(implicit patienceConfig: PatienceConfig): Unit = {
+    eventually {
+      if (!fn) throw new RuntimeException(s"$description not satisfied")
     }
-    next()
   }
 }

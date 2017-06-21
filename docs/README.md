@@ -19,7 +19,8 @@ following the instructions.
 
     * On Linux:
 
-            $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev
+            $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev npm
+
     * On Mac OS X:
 
             $ brew install node
@@ -28,15 +29,15 @@ following the instructions.
 
 3. Change into the "docs" directory where docs live
 
-        $ cd docs
-
+        $ cd docs/
+        
 4. Install Bundler
 
         $ gem install bundler
 
 5. Install the bundle's dependencies
 
-        $ bundle install
+        $ bundle install --path vendor/bundle
 
 6. Start the web server
 
@@ -57,14 +58,16 @@ following the instructions.
         $ cd /path/to/marathon-gh-pages
         $ git checkout gh-pages
 
-3. Copy the contents of the "docs" directory in master to the root of your
+3. Check out the appropriate release branch, then copy the contents of the "docs" directory in master to the root of your
    marathon-gh-pages directory.
-
+        
         $ cd /path/to/marathon
+        $ git checkout releases/1.x
         $ cp -r docs/** ../marathon-gh-pages
 
 4. Change to the marathon-gh-pages directory, commit, and push the changes
 
         $ cd /path/to/marathon-gh-pages
-        $ git commit . -m "Syncing docs with master branch"
+        $ git commit . -m "Syncing docs with release branch"
         $ git push
+

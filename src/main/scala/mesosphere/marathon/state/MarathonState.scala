@@ -1,8 +1,9 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
-import com.google.protobuf.Message
+import com.google.protobuf.MessageLite
 
-trait MarathonState[M <: Message, T <: MarathonState[M, _]] {
+trait MarathonState[M <: MessageLite, T <: MarathonState[M, _]] {
 
   def mergeFromProto(message: M): T
 
@@ -12,4 +13,5 @@ trait MarathonState[M <: Message, T <: MarathonState[M, _]] {
 
   def toProtoByteArray: Array[Byte] = toProto.toByteArray
 
+  def version: Timestamp
 }

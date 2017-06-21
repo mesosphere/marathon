@@ -3,128 +3,261 @@ layout: default
 ---
 
 <div class="row">
-  <div class="col-sm-3">
-    <h5>Welcome</h5>
-    <ul class="list-unstyled">
-      <li>
-        <a href="{{ site.baseurl }}/docs/">
-          Getting Started
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/contributing.html">
-          Contributing
-        </a>
-      </li>
-    </ul>
-    <hr>
-    <h5>Guides</h5>
-    <ul class="list-unstyled">
-      <li>
-        <a href="{{ site.baseurl }}/docs/application-basics.html">
-          Application Basics
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/service-discovery-load-balancing.html">
-          Discovery &amp; Load Balancing
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/ssl-basic-access-authentication.html">
-          SSL &amp; Basic Authentication
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/developing-vm.html">
-          Developing Marathon in a VM
-        </a>
-      </li>
-    </ul>
-    <hr>
-    <h5>Reference</h5>
-    <ul class="list-unstyled">
-      <li>
-        <a href="{{ site.baseurl }}/docs/application-groups.html">
-            Application Groups
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/artifact-store.html">
-          Artifact Store
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/command-line-flags.html">
-          Command Line Flags
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/constraints.html">
-          Constraints
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/deployments.html">
-          Deployments
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/native-docker.html">
-          Docker Containers
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/event-bus.html">
-          Event Bus
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/health-checks.html">
-          Health Checks
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/high-availability.html">
-          High Availability
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/recipes.html">
-          Recipes
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/rest-api.html">
-          REST API
-        </a>
-      </li>
-      <li>
-        <a href="{{ site.baseurl }}/docs/task-environment-vars.html">
-          Task Environment Variables
-        </a>
-      </li>
-    </ul>
-    <hr>
-    <h5>Resources</h5>
-    <ul class="list-unstyled">
-      <li>
-        <a href="{{ site.baseurl }}/docs/deployment-design-doc.html">
-          Deployment Design
-        </a>
-      </li>
-    </ul>
-    <hr>
-    <h5>Upgrading</h5>
-    <ul class="list-unstyled">
-      <li>
-        <a href="{{ site.baseurl }}/docs/upgrade/06xto070.html">
-          0.6.x to 0.7.0
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div class="col-sm-9">
-    {{ content }}
-  </div>
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="{{ site.baseurl }}/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="{{ site.baseurl }}/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="{{ site.baseurl }}/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="{{ site.baseurl }}/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="{{ site.baseurl }}/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="{{ site.baseurl }}/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="{{ site.baseurl }}/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="{{ site.baseurl }}/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="{{ site.baseurl }}/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="{{ site.baseurl }}/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        {{ content }}
+    </div>
 </div>

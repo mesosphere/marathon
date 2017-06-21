@@ -1,207 +1,165 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
+
+import com.wix.accord._
+import com.wix.accord.dsl._
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.pod.Network
 
 import scala.collection.immutable.Seq
-import scala.collection.JavaConverters._
-import scala.util.Try
-import java.lang.{ Integer => JInt }
-import org.apache.mesos.{ Protos => mesos }
-import mesosphere.marathon.Protos
 
-case class Container(
-    `type`: mesos.ContainerInfo.Type = mesos.ContainerInfo.Type.DOCKER,
-    volumes: Seq[Container.Volume] = Nil,
-    docker: Option[Container.Docker] = None) {
+sealed trait Container extends Product with Serializable {
 
-  def toProto(): Protos.ExtendedContainerInfo = {
-    val builder = Protos.ExtendedContainerInfo.newBuilder
-      .setType(`type`)
-      .addAllVolumes(volumes.map(_.toProto).asJava)
-    docker.foreach { d => builder.setDocker(d.toProto) }
-    builder.build
+  import Container.{ Docker, PortMapping }
+
+  def portMappings: Seq[PortMapping]
+  val volumes: Seq[Volume]
+
+  // TODO(nfnt): Remove this field and use type matching instead.
+  def docker: Option[Docker] = {
+    this match {
+      case docker: Docker => Some(docker)
+      case _ => None
+    }
   }
 
-  def toMesos(): mesos.ContainerInfo = {
-    val builder = mesos.ContainerInfo.newBuilder
-      .setType(`type`)
-      .addAllVolumes(volumes.map(_.toProto).asJava)
-    docker.foreach { d => builder.setDocker(d.toMesos) }
-    builder.build
-  }
+  def hostPorts: Seq[Option[Int]] =
+    portMappings.map(_.hostPort)
+
+  def servicePorts: Seq[Int] =
+    portMappings.map(_.servicePort)
+
+  def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes): Container
 }
 
 object Container {
 
-  object Empty extends Container
+  case class Mesos(
+      volumes: Seq[Volume] = Seq.empty,
+      override val portMappings: Seq[PortMapping] = Nil
+  ) extends Container {
 
-  def apply(proto: Protos.ExtendedContainerInfo): Container =
-    Container(
-      `type` = proto.getType,
-      volumes = proto.getVolumesList.asScala.map(Container.Volume(_)).to[Seq],
-      docker = Try(Docker(proto.getDocker)).toOption
-    )
-
-  /**
-    * Lossy conversion for backwards compatibility with deprecated
-    * container representation.
-    */
-  def apply(proto: mesos.CommandInfo.ContainerInfo): Container =
-    Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
-      docker = Some(Docker(proto.getImage))
-    )
-
-  /**
-    * Lossy conversion for backwards compatibility with deprecated
-    * container representation.
-    */
-  def apply(proto: Protos.ContainerInfo): Container =
-    Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
-      docker = Some(Docker(proto.getImage.toStringUtf8))
-    )
-
-  /**
-    * A volume mapping either from host to container or vice versa.
-    * Both paths can either refer to a directory or a file.  Paths must be
-    * absolute.
-    */
-  case class Volume(
-      containerPath: String,
-      hostPath: String,
-      mode: mesos.Volume.Mode) {
-    def toProto(): mesos.Volume =
-      mesos.Volume.newBuilder
-        .setContainerPath(containerPath)
-        .setHostPath(hostPath)
-        .setMode(mode)
-        .build
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes) =
+      copy(portMappings = portMappings, volumes = volumes)
   }
 
-  object Volume {
-    def apply(proto: mesos.Volume): Volume =
-      Volume(
-        containerPath = proto.getContainerPath,
-        hostPath = Option(proto.getHostPath).getOrElse(""),
-        mode = proto.getMode
-      )
-  }
-
-  /**
-    * Docker-specific container parameters.
-    */
   case class Docker(
+      volumes: Seq[Volume] = Seq.empty,
       image: String = "",
-      network: Option[mesos.ContainerInfo.DockerInfo.Network] = None,
-      portMappings: Option[Seq[Docker.PortMapping]] = None,
+      override val portMappings: Seq[PortMapping] = Nil,
       privileged: Boolean = false,
       parameters: Seq[Parameter] = Nil,
-      forcePullImage: Boolean = false) {
+      forcePullImage: Boolean = false) extends Container {
 
-    def toProto(): Protos.ExtendedContainerInfo.DockerInfo = {
-      val builder = Protos.ExtendedContainerInfo.DockerInfo.newBuilder
-
-      builder.setImage(image)
-
-      network foreach builder.setNetwork
-
-      portMappings.foreach { pms =>
-        builder.addAllPortMappings(pms.map(_.toProto).asJava)
-      }
-
-      builder.setPrivileged(privileged)
-
-      builder.addAllParameters(parameters.map(_.toProto).asJava)
-
-      builder.setForcePullImage(forcePullImage)
-
-      builder.build
-    }
-
-    def toMesos(): mesos.ContainerInfo.DockerInfo = {
-      val builder = mesos.ContainerInfo.DockerInfo.newBuilder
-
-      builder.setImage(image)
-
-      network foreach builder.setNetwork
-
-      portMappings.foreach { pms =>
-        builder.addAllPortMappings(pms.map(_.toMesos).asJava)
-      }
-
-      builder.setPrivileged(privileged)
-
-      builder.addAllParameters(parameters.map(_.toProto).asJava)
-
-      builder.setForcePullImage(forcePullImage)
-
-      builder.build
-    }
-
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes) =
+      copy(portMappings = portMappings, volumes = volumes)
   }
 
   object Docker {
-    def apply(proto: Protos.ExtendedContainerInfo.DockerInfo): Docker =
-      Docker(
-        image = proto.getImage,
-
-        network = if (proto.hasNetwork) Some(proto.getNetwork) else None,
-
-        portMappings = {
-          val pms = proto.getPortMappingsList.asScala
-
-          if (pms.isEmpty) None
-          else Some(pms.map(PortMapping(_)).to[Seq])
-        },
-
-        privileged = proto.getPrivileged,
-
-        parameters = proto.getParametersList.asScala.map(Parameter(_)).to[Seq],
-
-        forcePullImage = if (proto.hasForcePullImage) proto.getForcePullImage else false
-      )
-
-    /**
-      * @param containerPort The container port to expose
-      * @param hostPort      The host port to bind
-      * @param servicePort   The well-known port for this service
-      * @param protocol      Layer 4 protocol to expose (i.e. tcp, udp).
-      */
-    case class PortMapping(
-        containerPort: JInt = 0,
-        hostPort: JInt = 0,
-        servicePort: JInt = 0,
-        protocol: String = "tcp") {
-
-      require(protocol == "tcp" || protocol == "udp", "protocol can only be 'tcp' or 'udp'")
-
-      def toProto(): Protos.ExtendedContainerInfo.DockerInfo.PortMapping = {
-        Protos.ExtendedContainerInfo.DockerInfo.PortMapping.newBuilder
-          .setContainerPort(containerPort)
-          .setHostPort(hostPort)
-          .setProtocol(protocol)
-          .setServicePort(servicePort)
-          .build
-      }
-
-      def toMesos(): mesos.ContainerInfo.DockerInfo.PortMapping = {
-        mesos.ContainerInfo.DockerInfo.PortMapping.newBuilder
-          .setContainerPort(containerPort)
-          .setHostPort(hostPort)
-          .setProtocol(protocol)
-          .build
-      }
+    implicit val validDockerContainer: Validator[Docker] = validator[Docker] { docker =>
+      docker.image is notEmpty
     }
-
-    object PortMapping {
-      def apply(proto: Protos.ExtendedContainerInfo.DockerInfo.PortMapping): PortMapping =
-        PortMapping(
-          proto.getContainerPort,
-          proto.getHostPort,
-          proto.getServicePort,
-          proto.getProtocol
-        )
-    }
-
   }
 
+  /**
+    * @param containerPort The container port to expose
+    * @param hostPort      The host port to bind
+    * @param servicePort   The well-known port for this service
+    * @param protocol      Layer 4 protocol to expose (i.e. "tcp", "udp" or "udp,tcp" for both).
+    * @param name          Name of the service hosted on this port.
+    * @param labels        This can be used to decorate the message with metadata to be
+    *                      interpreted by external applications such as firewalls.
+    * @param networkNames  Specifies one or more container networks, by name, for which this PortMapping applies.
+    */
+  case class PortMapping(
+    containerPort: Int = AppDefinition.RandomPortValue,
+    hostPort: Option[Int] = None, // defaults to HostPortDefault for BRIDGE mode, None for USER mode
+    servicePort: Int = AppDefinition.RandomPortValue,
+    protocol: String = PortMapping.TCP,
+    name: Option[String] = None,
+    labels: Map[String, String] = Map.empty[String, String],
+    networkNames: Seq[String] = Nil
+  )
+
+  object PortMapping {
+    val TCP = raml.NetworkProtocol.Tcp.value
+    val UDP = raml.NetworkProtocol.Udp.value
+    val UDP_TCP = raml.NetworkProtocol.UdpTcp.value
+    val defaultInstance = PortMapping(name = Option("default"))
+
+    val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
+  }
+
+  case class Credential(
+    principal: String,
+    secret: Option[String] = None)
+
+  case class DockerPullConfig(secret: String)
+
+  case class MesosDocker(
+      volumes: Seq[Volume] = Seq.empty,
+      image: String = "",
+      override val portMappings: Seq[PortMapping] = Nil,
+      credential: Option[Credential] = None,
+      pullConfig: Option[DockerPullConfig] = None,
+      forcePullImage: Boolean = false) extends Container {
+
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes) =
+      copy(portMappings = portMappings, volumes = volumes)
+  }
+
+  object MesosDocker {
+    val validMesosDockerContainer = validator[MesosDocker] { docker =>
+      docker.image is notEmpty
+    }
+  }
+
+  case class MesosAppC(
+      volumes: Seq[Volume] = Seq.empty,
+      image: String = "",
+      override val portMappings: Seq[PortMapping] = Nil,
+      id: Option[String] = None,
+      labels: Map[String, String] = Map.empty[String, String],
+      forcePullImage: Boolean = false) extends Container {
+
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[Volume] = volumes) =
+      copy(portMappings = portMappings, volumes = volumes)
+  }
+
+  object MesosAppC {
+    val prefix = "sha512-"
+
+    val validId: Validator[String] =
+      isTrue[String](s"id must begin with '$prefix',") { id =>
+        id.startsWith(prefix)
+      } and isTrue[String](s"id must contain non-empty digest after '$prefix'.") { id =>
+        id.length > prefix.length
+      }
+
+    val validMesosAppCContainer = validator[MesosAppC] { appc =>
+      appc.image is notEmpty
+      appc.id is optional(validId)
+    }
+  }
+
+  def validContainer(networks: Seq[Network], enabledFeatures: Set[String]): Validator[Container] = {
+    import Network._
+    val validGeneralContainer = validator[Container] { container =>
+      container.volumes is every(Volume.validVolume(enabledFeatures))
+    }
+
+    new Validator[Container] {
+      override def apply(container: Container): Result = container match {
+        case _: Mesos => Success
+        case dd: Docker => validate(dd)(Docker.validDockerContainer)
+        case md: MesosDocker => validate(md)(MesosDocker.validMesosDockerContainer)
+        case ma: MesosAppC => validate(ma)(MesosAppC.validMesosAppCContainer)
+      }
+    } and
+      validGeneralContainer and
+      implied(networks.hasBridgeNetworking)(validator[Container] { container =>
+        container.portMappings is every(isTrue("hostPort is required for BRIDGE mode.")(_.hostPort.nonEmpty))
+      })
+  }
 }
+

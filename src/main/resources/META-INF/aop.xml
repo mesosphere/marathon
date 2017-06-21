@@ -1,0 +1,15 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+    <aspects>
+        <aspect name="mesosphere.marathon.metrics.ServletTracing" />
+        <aspect name="akka.dispatch.WeaveActorReceive" />
+    </aspects>
+    <weaver options="-Xlint:default">
+        <include within="kamon..*"/>
+        <include within="akka.dispatch.WeaveActorReceive" />
+        <include within="akka.actor..*" />
+        <include within="mesosphere..*"/>
+        <exclude within="org.aspectj.*"/>
+    </weaver>
+</aspectj>

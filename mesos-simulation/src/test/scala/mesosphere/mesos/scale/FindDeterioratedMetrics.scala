@@ -4,7 +4,7 @@ import java.net.URL
 
 import mesosphere.mesos.scale.MetricsFormat._
 
-import scala.collection.immutable.Iterable
+import scala.collection.immutable.Seq
 
 /**
   * Compare Metrics Samples and find all metrics, that get deteriorated by given factor.
@@ -40,14 +40,14 @@ object FindDeterioratedMetrics {
     *
     * @param args three args expected: baseFile sampleFile factor
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     def printSlope(metrics: Map[Metric, Metric]): Unit = {
       import DisplayHelpers._
       val header = Vector("Metric", "Base", "Sample", "Increase in %")
-      val rows: Iterable[Vector[String]] = metrics.map {
-        case (a, b) => Vector(a.name, a.mean, b.mean, (b.mean / a.mean * 100).toInt - 100).map(_.toString)
-      }
-      printTable(Seq(left, right, right, right), withUnderline(header) ++ rows.toSeq)
+      val rows: Seq[IndexedSeq[String]] = metrics.map {
+        case (a, b) => IndexedSeq(a.name, a.mean, b.mean, (b.mean / a.mean * 100).toInt - 100).map(_.toString)
+      }(collection.breakOut)
+      printTable(Seq(left, right, right, right), withUnderline(header) ++ rows)
     }
 
     if (args.length == 3) {
@@ -59,8 +59,7 @@ object FindDeterioratedMetrics {
         printSlope(deteriorated)
         throw new IllegalStateException(s"Sample is deteriorated according to deterioration factor")
       }
-    }
-    else {
+    } else {
       println(
         """Usage:
           | FindDeterioratedMetrics <file_base> <file_sample> <deterioration_factor>"

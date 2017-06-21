@@ -1,70 +1,62 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import javax.inject.Inject
+import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
-import javax.ws.rs.core.{ MediaType, Response }
+import javax.ws.rs.core.{ Context, MediaType, Response }
 
-import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.state.GroupManager
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
-import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentPlan }
+import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.util.Logging
 
 @Path("v2/deployments")
 @Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MediaType.APPLICATION_JSON))
+@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class DeploymentsResource @Inject() (
   service: MarathonSchedulerService,
   groupManager: GroupManager,
+  val authenticator: Authenticator,
+  val authorizer: Authorizer,
   val config: MarathonConf)
-    extends RestResource
+    extends AuthResource
     with Logging {
 
   @GET
-  def running(): Response = ok(result(service.listRunningDeployments()).map {
-    case (plan, currentStep) => toInfo(plan, currentStep)
-  })
+  def running(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val infos = result(service.listRunningDeployments())
+      .filter(_.plan.affectedRunSpecs.exists(isAuthorized(ViewRunSpec, _)))
+    ok(infos)
+  }
 
   @DELETE
   @Path("{id}")
   def cancel(
     @PathParam("id") id: String,
-    @DefaultValue("false")@QueryParam("force") force: Boolean): Response =
-    result(service.listRunningDeployments())
-      .find(_._1.id == id)
-      .fold(notFound(s"DeploymentPlan $id does not exist")) {
-        case (plan, _) if force =>
-          // do not create a new deployment to return to the previous state
-          log.info(s"Canceling deployment [$id]")
-          service.cancelDeployment(id)
-          status(ACCEPTED) // 202: Accepted
-        case (plan, _) =>
-          // create a new deployment to return to the previous state
-          deploymentResult(result(groupManager.update(
-            plan.original.id,
-            plan.revert,
-            force = true
-          )))
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val plan = result(service.listRunningDeployments()).find(_.plan.id == id).map(_.plan)
+    plan.fold(notFound(s"DeploymentPlan $id does not exist")) { deployment =>
+      deployment.affectedRunSpecs.foreach(checkAuthorization(UpdateRunSpec, _))
+
+      if (force) {
+        // do not create a new deployment to return to the previous state
+        log.info(s"Canceling deployment [$id]")
+        service.cancelDeployment(deployment)
+        status(ACCEPTED) // 202: Accepted
+      } else {
+        // create a new deployment to return to the previous state
+        deploymentResult(result(groupManager.updateRoot(
+          PathId.empty,
+          deployment.revert,
+          force = true
+        )))
       }
-
-  private def toInfo(
-    deployment: DeploymentPlan,
-    currentStepInfo: DeploymentStepInfo): Map[String, Any] =
-    Map(
-      "id" -> deployment.id,
-      "version" -> deployment.version,
-      "affectedApps" -> deployment.affectedApplicationIds.map(_.toString),
-      "steps" -> deployment.steps.map(step => step.actions.map(actionToMap)),
-      "currentActions" -> currentStepInfo.step.actions.map(actionToMap),
-      "currentStep" -> currentStepInfo.nr,
-      "totalSteps" -> deployment.steps.size
-    )
-
-  def actionToMap(action: DeploymentAction): Map[String, String] =
-    Map(
-      "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id.toString
-    )
+    }
+  }
 }

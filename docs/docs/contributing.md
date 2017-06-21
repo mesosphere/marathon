@@ -5,11 +5,47 @@ title: Contributor Guidelines
 
 # Contributor Guidelines
 
-## Getting Started
+## Contributing Documentation Changes
+
+You were confused about our documentation? You ran into a
+pitfall that others also might run into? Help us making the Marathon documentation great.
+ 
+The documentation that is published [here](https://mesosphere.github.io/marathon/) actually gets
+generated from what is found in the docs directory.
+
+If you simply want to correct a spelling mistake or improve the wording of a sentence, you can browse
+the mark down files [here](https://github.com/mesosphere/marathon/tree/master/docs) and use the edit
+button above the markup. That will make it easy to create a pull request that will be reviewed by us.
+
+If want to contribute a larger improvement to our documentation: 
+
+* Edit the files in the docs directory.
+* Check the rendered result as described in the 
+  [docs/README.md](https://github.com/mesosphere/marathon/blob/master/docs/README.md).
+* If you are feeling perfectionistic, check if there is already an issue about this documentation deficiency
+  [here](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3Adocs).
+  Prefix your commit message with with "Fixes #1234 - " where #1234 is the number of the issue.
+* Create a pull request against master.
+
+Please rebase your pull requests on top of the current master using
+  `git fetch origin && git rebase origin/master`, and squash your changes to a single commit as
+  described [here](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
+  Yes, we want you to rewrite history - the branch on which you are
+  implementing your changes is only meant for this pull request. You can
+  either rebase before or after you squash your commits, depending on how
+  you'd like to resolve potential merge conflicts. The idea behind is that we
+  don't want an arbitrary number of commits for one pull request, but exactly
+  one commit. This commit should be easy to merge onto master, therefore we
+  ask you to rebase to master.
+    
+After you pull request has been accepted, there is still some manual work that we need to do to publish that 
+documentation. But don't worry, we will do that for you.
+
+## Getting Started with Code Changes
 
 Maybe you already have a bugfix or enhancement in mind.  If not, there are a
 number of relatively approachable issues with the label
-["good first bug"](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+bug%22).
+["good first issue"](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
 
 <!--
 ## License Agreement
@@ -17,10 +53,23 @@ number of relatively approachable issues with the label
 _TODO_: Do we need a CLA?
 -->
 
-## Submitting Changes to Marathon
+## Submitting Code Changes to Marathon
 
-- A GitHub pull request is the preferred way of submitting patch sets. Please rebase your
-  pull requests on top of the current master and squash your changes to a single commit.
+- A GitHub pull request is the preferred way of submitting patch sets. Please
+  rebase your pull requests on top of the current master using
+  `git fetch origin && git rebase origin/master`, and squash your changes to a single commit as
+  described [here](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
+  Yes, we want you to rewrite history - the branch on which you are
+  implementing your changes is only meant for this pull request. You can
+  either rebase before or after you squash your commits, depending on how
+  you'd like to resolve potential merge conflicts. The idea behind is that we
+  don't want an arbitrary number of commits for one pull request, but exactly
+  one commit. This commit should be easy to merge onto master, therefore we
+  ask you to rebase to master.
+  
+- Please start your commit message with "Fixes #1234 - " where #1234 is the github issue number
+  that your pull request relates to. Github will automatically link this PR to the issue and make it more
+  visible to others.
 
 - Any changes in the public API or behavior must be reflected in the project
   documentation.
@@ -34,24 +83,43 @@ _TODO_: Do we need a CLA?
 
 - Run all tests via the supplied `./bin/run-tests.sh` script (requires docker).
 
+## Test Guidelines
+
+### General guidelines
+
+- Tests should extend `mesosphere.UnitTest`
+- Tests should avoid testing more behavior than necessary; IE - don't test other libs or services if a mock/stub
+  suffices.
+
+### Fixtures
+
+Our testing guidelines regarding fixtures are as follows:
+
+- DO NOT use `var thing: Type = _` with `before` / `after`.
+- Fixture instantiation and tear down should be defined and handled in the same module.
+- When testing actor systems, we instantiate an actor system for the entire suite. It's acceptable to let the actors get
+  cleaned up when the suite finishes. Use either unique actor names or use the loan-fixtures technique to get a unique
+  `ActorRefFactory` per test.
+- When teardown-per-test is desired, use the
+  [loan-fixtures methods](http://www.scalatest.org/user_guide/sharing_fixtures#loanFixtureMethods). Otherwise, prefer
+  parameterized case classes or traits.
+
 ## Source Files
 
 - Public classes should be defined in a file of the same name, except for
   trivial subtypes of a _sealed trait_.  In that case, the file name must be
   the plural form of the trait, and it must begin with a lowercase letter.
 
+- Some of the source files have diagrams as part of the comments using the [PlantUML](http://plantuml.com) language.  
+  To see a rendered diagram use the [online version](http://plantuml.com) or install locally.
+
 ## Style
 
 ### Style Checker
 
-Executing the `test` task in SBT also invokes the style checker
-([scalastyle](http://www.scalastyle.org/)).  Some basic style issues will
-cause the build to fail:
-
-- Public methods that lack an explicit return type annotation.
-- Source code lines that exceed 120 columns.
-
-Other potential problems are output as warnings.
+Executing the ``test`` task in SBT also invokes the style checker.
+Some basic style issues will cause the build to fail: While you should fix all of these, you can disable them
+if it is a false positive with `// linter:ignore Arg` as listed here: [Linter](https://github.com/HairyFotr/linter).
 
 ### Type Annotations
 

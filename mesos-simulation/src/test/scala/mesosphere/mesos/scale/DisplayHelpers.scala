@@ -26,7 +26,7 @@ object DisplayHelpers {
 
     val maxColumnLengths: IndexedSeq[Int] = for {
       column <- 0 until columns
-    } yield rows.iterator.map(_(column).length).max
+    } yield rows.map(_(column).length).max
 
     for (row <- rows) {
       val formatted = columnFormats.zipWithIndex.zip(row).map {
