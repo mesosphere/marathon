@@ -1,0 +1,17 @@
+#!/usr/bin/env expect -f
+# Use:  expect ./cli-login.expect bootstrapuser deleteme
+
+set username [lindex $argv 0]
+set password [lindex $argv 1]
+
+if { $username == "" || $password == "" } {
+  puts "Usage: expect this-script.expect <username> <password>"
+  exit 1
+}
+
+spawn dcos auth login
+expect "username:"
+send "$username\n"
+expect "password:"
+send "$password\n"
+expect eof

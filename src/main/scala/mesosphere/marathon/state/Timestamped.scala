@@ -1,6 +1,7 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
-trait Timestamped { val version: Timestamp }
+trait Timestamped { def version: Timestamp }
 
 object Timestamped {
 

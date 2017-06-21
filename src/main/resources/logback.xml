@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration>
+    <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%date] %highlight(%-5level) %message \(%logger:%thread\)%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="stdout" />
+        <queueSize>1024</queueSize>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="async"/>
+    </root>
+</configuration>

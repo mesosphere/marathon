@@ -1,15 +1,20 @@
+sudo: false
 language: scala
-before_install:
-  - git submodule update --init --recursive
-before_script:
-  - npm install -g npm@2.0.2
-  - npm cache clear
-  - npm install -g broccoli-cli
 jdk:
-  - openjdk6
+  - oraclejdk8
 scala:
-  - 2.11.5
-script: pushd src/main/resources/assets && npm install && npm run dist && popd && sbt assembly doc
+  - 2.11.8
+cache:
+  directories:
+    - $HOME/.sbt
+    - $HOME/.ivy2
+script:
+  - sbt "set parallelExecution in Test := false" clean coverage doc assembly
+before_script: # the automated download fails sometimes
+    - mkdir -p $HOME/.sbt/launchers/0.13.11/
+    - test -r $HOME/.sbt/launchers/0.13.11/sbt-launch.jar || curl -L -o $HOME/.sbt/launchers/0.13.11/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.11/sbt-launch.jar
+after_success:
+  - sbt coverageReport coveralls
 notifications:
   slack:
     secure: apUObVUa/OhaTEvoYw3oM1ZTTT0LtYolofJYqnWiBOusc6qgMlK2rfk5kod7vDn33cSKwGhFcyVrrFCn2qxuvYUWCpK4Yo6Hj7KIjoqMi9yHLHXAAWIfAFNMlCdaUGjlHLWn757rBkbuQUDVH8HmB6Vc3J3sybTbiFmMDP1cEVo=

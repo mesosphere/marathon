@@ -1,37 +1,38 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
-import akka.actor.ActorSystem
-import org.slf4j.LoggerFactory
-import spray.client.pipelining._
+import akka.actor.{ ActorSystem, Scheduler }
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.model.HttpResponse
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.Materializer
+import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.util.Retry
 
+import scala.async.Async._
+import scala.concurrent.Future
 import scala.concurrent.duration.{ Duration, _ }
-import scala.util.control.NonFatal
 
-class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem) {
-  import mesosphere.util.ThreadPoolContext.context
+case class AppMockResponse(asString: String, response: HttpResponse)
 
-  private[this] val log = LoggerFactory.getLogger(getClass)
+class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem, mat: Materializer) extends StrictLogging {
+  import mesosphere.marathon.core.async.ExecutionContexts.global
 
-  private[this] def retry[T](retries: Int = 50, waitForNextTry: Duration = 50.milliseconds)(block: => T): T = {
-    try {
-      block
-    }
-    catch {
-      case NonFatal(e) =>
-        log.info("will retry after {}", waitForNextTry: Any, e: Any)
-        Thread.sleep(waitForNextTry.toMillis)
-        retry(retries = retries - 1, waitForNextTry = waitForNextTry)(block)
-    }
-  }
+  implicit val scheduler: Scheduler = system.scheduler
 
-  val pipeline = sendReceive
-  def ping(host: String, port: Int): RestResult[String] = custom("/ping")(host, port)
+  def ping(host: String, port: Int): Future[AppMockResponse] = custom("/ping")(host, port)
 
-  def scheme: String = if (https) "https" else "http"
+  val scheme: String = if (https) "https" else "http"
 
-  def custom(uri: String)(host: String, port: Int): RestResult[String] = {
-    retry() {
-      RestResult.await(pipeline(Get(s"$scheme://$host:$port$uri")), waitTime).map(_.entity.asString)
+  def custom(uri: String)(host: String, port: Int): Future[AppMockResponse] = {
+    val url = s"$scheme://$host:$port$uri"
+    Retry(s"query$url", Int.MaxValue, maxDuration = waitTime) {
+      async {
+        val response = await(Http().singleRequest(RequestBuilding.Get(url)))
+        val body = await(Unmarshal(response.entity).to[String])
+        AppMockResponse(body, response)
+      }
     }
   }
 }

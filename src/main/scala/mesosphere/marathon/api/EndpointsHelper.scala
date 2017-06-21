@@ -1,43 +1,54 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.TaskTracker
-import org.apache.mesos.Protos.TaskState
-import scala.collection.JavaConverters._
 
 object EndpointsHelper {
-
   /**
     * Produces a script-friendly string representation of the supplied
     * apps' tasks.  The data columns in the result are separated by
     * the supplied delimiter string.
+    *
+    * Generated line format is: * <pre>{app-id}{d}{service-port}{d}{address-list}</pre>.
+    * `{service-port}` is `" "` for apps without service ports.
+    * `{address-list}` is either `{host-list}` (for apps without service ports), or `{host-address-list}`.
+    * `{host-list}` is a delimited list of agents that are running the task.
+    * `{host-address-list}` is a delimited list of `{agent}:{hostPort}` tuples.
+    * The contents of `{address-list}` are sorted for deterministic output.
     */
   def appsToEndpointString(
-    taskTracker: TaskTracker,
+    instancesMap: InstancesBySpec,
     apps: Seq[AppDefinition],
-    delimiter: String): String = {
+    delimiter: String = "\t"): String = {
+
     val sb = new StringBuilder
-    for (app <- apps) {
-      val cleanId = app.id.safePath.replaceAll("\\s+", "_")
-      val tasks = taskTracker.get(app.id)
+    apps.foreach { app =>
+      val instances = instancesMap.specInstances(app.id)
+      val cleanId = app.id.safePath
 
       val servicePorts = app.servicePorts
 
       if (servicePorts.isEmpty) {
-        sb.append(s"${cleanId}$delimiter $delimiter")
-        for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
-          sb.append(s"${task.getHost} ")
+        sb.append(cleanId).append(delimiter).append(' ').append(delimiter)
+        instances.withFilter(_.isRunning).map(_.agentInfo.host).sorted.foreach { hostname =>
+          sb.append(hostname).append(delimiter)
         }
-        sb.append(s"\n")
-      }
-      else {
-        for ((port, i) <- servicePorts.zipWithIndex) {
-          sb.append(s"$cleanId$delimiter$port$delimiter")
-          for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
-            val ports = task.getPortsList.asScala.lift
-            sb.append(s"${task.getHost}:${ports(i).getOrElse(0)}$delimiter")
-          }
-          sb.append("\n")
+        sb.append('\n')
+      } else {
+        servicePorts.zipWithIndex.foreach {
+          case (port, i) =>
+            sb.append(cleanId).append(delimiter).append(port).append(delimiter)
+            instances.withFilter(_.isRunning).flatMap { instance =>
+              instance.tasksMap.map {
+                case (_, task) =>
+                  val taskPort = task.status.networkInfo.hostPorts.drop(i).headOption.getOrElse(0)
+                  s"${instance.agentInfo.host}:$taskPort"
+              }
+            }.sorted.foreach { address =>
+              sb.append(address).append(delimiter)
+            }
+            sb.append('\n')
         }
       }
     }

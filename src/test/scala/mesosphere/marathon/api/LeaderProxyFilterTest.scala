@@ -1,191 +1,202 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
-import java.net.URL
+import java.io.IOException
+import java.net.{ HttpURLConnection, URL }
 import javax.servlet.FilterChain
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
+import mesosphere.UnitTest
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.MarathonSpec
-import org.apache.http.HttpStatus
+import mesosphere.marathon.core.election.ElectionService
+import akka.http.scaladsl.model.StatusCodes._
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf
 
-class LeaderProxyFilterTest extends MarathonSpec {
+class LeaderProxyFilterTest extends UnitTest {
 
   def httpConf(args: String*): HttpConf = {
-    val conf = new ScallopConf(args) with HttpConf {
+    new ScallopConf(args) with HttpConf {
       // scallop will trigger sys exit
       override protected def onError(e: Throwable): Unit = throw e
+      verify()
     }
-    conf.afterInit()
-    conf
   }
 
-  var leaderInfo: LeaderInfo = _
-  var forwarder: RequestForwarder = _
-  var filter: LeaderProxyFilter = _
-  var request: HttpServletRequest = _
-  var response: HttpServletResponse = _
-  var chain: FilterChain = _
-
-  def init(conf: HttpConf = httpConf()) {
-    leaderInfo = mock[LeaderInfo]("leaderInfo")
-    forwarder = mock[RequestForwarder]("forwarder")
-    filter = new LeaderProxyFilter(conf, leaderInfo, "host:10000", forwarder) {
+  case class Fixture(
+      conf: HttpConf = httpConf(),
+      electionService: ElectionService = mock[ElectionService]("electionService"),
+      forwarder: RequestForwarder = mock[RequestForwarder]("forwarder"),
+      request: HttpServletRequest = mock[HttpServletRequest]("request"),
+      response: HttpServletResponse = mock[HttpServletResponse]("response"),
+      chain: FilterChain = mock[FilterChain]("chain")) {
+    val filter = new LeaderProxyFilter(conf, electionService, "host:10000", forwarder) {
       override def sleep() = {}
     }
-    request = mock[HttpServletRequest]("request")
-    response = mock[HttpServletResponse]("response")
-    chain = mock[FilterChain]("chain")
+
+    def verifyClean(): Unit = verifyNoMoreInteractions(electionService, forwarder, request, response, chain)
   }
 
-  after {
-    verifyNoMoreInteractions(leaderInfo, forwarder, request, response, chain)
-    leaderInfo = null
-    forwarder = null
-    filter = null
-    request = null
-    response = null
-    chain = null
-  }
+  "LeaderProxyFilter" should {
+    "we are leader" in new Fixture {
+      // When we are leader
+      when(electionService.isLeader).thenReturn(true)
 
-  test("we are leader") {
-    // When we are leader
-    init()
-    when(leaderInfo.elected).thenReturn(true)
+      // And doFilter is called
+      filter.doFilter(request, response, chain)
 
-    // And doFilter is called
-    filter.doFilter(request, response, chain)
+      // we pass that request down the chain
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, "http://host:10000")
+      verify(electionService, times(1)).isLeader
+      verify(chain, times(1)).doFilter(request, response)
+      verifyClean()
+    }
 
-    // we pass that request down the chain
-    verify(leaderInfo, times(1)).elected
-    verify(chain, times(1)).doFilter(request, response)
-  }
+    "try to wait for leadership info then give up" in new Fixture {
+      // When we are leader but there are not other options
+      when(electionService.isLeader).thenReturn(false)
+      when(electionService.leaderHostPort).thenReturn(None)
 
-  test("try to wait for leadership info then give up") {
-    // When we are leader but there are not other options
-    init()
-    when(leaderInfo.elected).thenReturn(false)
-    when(leaderInfo.currentLeaderHostPort()).thenReturn(None)
+      // And doFilter is called
+      filter.doFilter(request, response, chain)
 
-    // And doFilter is called
-    filter.doFilter(request, response, chain)
+      // we pass that request down the chain
+      verify(electionService, times(12)).isLeader
+      verify(electionService, times(12)).leaderHostPort
+      verify(response, times(1))
+        .sendError(ServiceUnavailable.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
+      verifyClean()
+    }
 
-    // we pass that request down the chain
-    verify(leaderInfo, times(12)).elected
-    verify(leaderInfo, times(12)).currentLeaderHostPort()
-    verify(response, times(1))
-      .sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
-  }
+    "forward to leader without query string" in new Fixture {
+      // When someone else is leader
+      when(electionService.isLeader).thenReturn(false)
+      when(electionService.leaderHostPort).thenReturn(Some("otherhost:9999"))
+      when(request.getRequestURI).thenReturn("/test")
+      when(request.getQueryString).thenReturn(null)
 
-  test("forward to leader without query string") {
-    // When someone else is leader
-    init()
-    when(leaderInfo.elected).thenReturn(false)
-    when(leaderInfo.currentLeaderHostPort()).thenReturn(Some("otherhost:9999"))
-    when(request.getRequestURI).thenReturn("/test")
-    when(request.getQueryString).thenReturn(null)
+      // And doFilter is called
+      filter.doFilter(request, response, chain)
 
-    // And doFilter is called
-    filter.doFilter(request, response, chain)
+      // we pass that request down the chain
+      verify(electionService, times(1)).isLeader
+      verify(electionService, times(1)).leaderHostPort
+      verify(request, atLeastOnce).getRequestURI
+      verify(request, atLeastOnce).getQueryString
+      verify(forwarder, times(1)).forward(new URL("http://otherhost:9999/test"), request, response)
+      verifyClean()
+    }
 
-    // we pass that request down the chain
-    verify(leaderInfo, times(1)).elected
-    verify(leaderInfo, times(1)).currentLeaderHostPort()
-    verify(request, atLeastOnce()).getRequestURI
-    verify(request, atLeastOnce()).getQueryString
-    verify(forwarder, times(1)).forward(new URL("http://otherhost:9999/test"), request, response)
-  }
+    "forward to leader with query string" in new Fixture {
+      // When someone else is leader
+      when(electionService.isLeader).thenReturn(false)
+      when(electionService.leaderHostPort).thenReturn(Some("otherhost:9999"))
+      when(request.getRequestURI).thenReturn("/test")
+      when(request.getQueryString).thenReturn("argument=blieh")
 
-  test("forward to leader with query string") {
-    // When someone else is leader
-    init()
-    when(leaderInfo.elected).thenReturn(false)
-    when(leaderInfo.currentLeaderHostPort()).thenReturn(Some("otherhost:9999"))
-    when(request.getRequestURI).thenReturn("/test")
-    when(request.getQueryString).thenReturn("argument=blieh")
+      // And doFilter is called
+      filter.doFilter(request, response, chain)
 
-    // And doFilter is called
-    filter.doFilter(request, response, chain)
+      // we pass that request down the chain
+      verify(electionService, times(1)).isLeader
+      verify(electionService, times(1)).leaderHostPort
+      verify(request, atLeastOnce).getRequestURI
+      verify(request, atLeastOnce).getQueryString
+      verify(forwarder, times(1)).forward(new URL("http://otherhost:9999/test?argument=blieh"), request, response)
+      verifyClean()
+    }
 
-    // we pass that request down the chain
-    verify(leaderInfo, times(1)).elected
-    verify(leaderInfo, times(1)).currentLeaderHostPort()
-    verify(request, atLeastOnce()).getRequestURI
-    verify(request, atLeastOnce()).getQueryString
-    verify(forwarder, times(1)).forward(new URL("http://otherhost:9999/test?argument=blieh"), request, response)
-  }
+    "use https if http is disabled" in new Fixture(conf = httpConf("--disable_http")) {
+      when(electionService.isLeader).thenReturn(false)
+      when(electionService.leaderHostPort).thenReturn(Some("otherhost:9999"))
+      when(request.getRequestURI).thenReturn("/test")
+      when(request.getQueryString).thenReturn(null)
 
-  test("use https if http is disabled") {
-    // When someone else is leader
-    init(conf = httpConf("--disable_http"))
-    when(leaderInfo.elected).thenReturn(false)
-    when(leaderInfo.currentLeaderHostPort()).thenReturn(Some("otherhost:9999"))
-    when(request.getRequestURI).thenReturn("/test")
-    when(request.getQueryString).thenReturn(null)
+      // And doFilter is called
+      filter.doFilter(request, response, chain)
 
-    // And doFilter is called
-    filter.doFilter(request, response, chain)
+      // we pass that request down the chain
+      verify(electionService, times(1)).isLeader
+      verify(electionService, times(1)).leaderHostPort
+      verify(request, atLeastOnce).getRequestURI
+      verify(request, atLeastOnce).getQueryString
+      verify(forwarder, times(1)).forward(new URL("https://otherhost:9999/test"), request, response)
+      verifyClean()
+    }
 
-    // we pass that request down the chain
-    verify(leaderInfo, times(1)).elected
-    verify(leaderInfo, times(1)).currentLeaderHostPort()
-    verify(request, atLeastOnce()).getRequestURI
-    verify(request, atLeastOnce()).getQueryString
-    verify(forwarder, times(1)).forward(new URL("https://otherhost:9999/test"), request, response)
-  }
+    "successfully wait for consistent leadership info, then someone else is the leader" in new Fixture {
+      // When we have inconsistent leadership info
+      when(electionService.isLeader).thenReturn(false)
+      when(electionService.leaderHostPort).thenReturn(Some("host:10000"), Some("host:10000"), Some("otherhost:9999"))
+      when(request.getRequestURI).thenReturn("/test")
+      when(request.getQueryString).thenReturn(null)
 
-  test("successfully wait for consistent leadership info, then someone else is the leader") {
-    // When we have inconsistent leadership info
-    init()
-    when(leaderInfo.elected).thenReturn(false)
-    when(leaderInfo.currentLeaderHostPort()).thenReturn(Some("host:10000"), Some("host:10000"), Some("otherhost:9999"))
-    when(request.getRequestURI).thenReturn("/test")
-    when(request.getQueryString).thenReturn(null)
+      // And doFilter is called
+      filter.doFilter(request, response, chain)
 
-    // And doFilter is called
-    filter.doFilter(request, response, chain)
+      // we pass that request down the chain
+      verify(electionService, times(4)).isLeader
+      verify(electionService, times(4)).leaderHostPort
+      verify(forwarder, times(1)).forward(new URL("http://otherhost:9999/test"), request, response)
+      verify(request, atLeastOnce).getRequestURI
+      verify(request, atLeastOnce).getQueryString
+      verifyClean()
+    }
 
-    // we pass that request down the chain
-    verify(leaderInfo, times(4)).elected
-    verify(leaderInfo, times(4)).currentLeaderHostPort()
-    verify(forwarder, times(1)).forward(new URL("http://otherhost:9999/test"), request, response)
-    verify(request, atLeastOnce()).getRequestURI
-    verify(request, atLeastOnce()).getQueryString
-  }
+    "successfully wait for consistent leadership info, then we are leader" in new Fixture {
+      // When we have inconsistent leadership info
+      when(electionService.isLeader).thenReturn(false, false, true)
+      when(electionService.leaderHostPort).thenReturn(Some("host:10000"))
+      when(request.getRequestURI).thenReturn("/test")
+      when(request.getQueryString).thenReturn(null)
 
-  test("successfully wait for consistent leadership info, then we are leader") {
-    // When we have inconsistent leadership info
-    init()
-    when(leaderInfo.elected).thenReturn(false, false, true)
-    when(leaderInfo.currentLeaderHostPort()).thenReturn(Some("host:10000"))
-    when(request.getRequestURI).thenReturn("/test")
-    when(request.getQueryString).thenReturn(null)
+      // And doFilter is called
+      filter.doFilter(request, response, chain)
 
-    // And doFilter is called
-    filter.doFilter(request, response, chain)
+      // we pass that request down the chain
+      verify(electionService, times(4)).isLeader
+      verify(electionService, times(3)).leaderHostPort
+      verify(response, times(1)).addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, "http://host:10000")
+      verify(chain, times(1)).doFilter(request, response)
+      verifyClean()
+    }
 
-    // we pass that request down the chain
-    verify(leaderInfo, times(4)).elected
-    verify(leaderInfo, times(3)).currentLeaderHostPort()
-    verify(chain, times(1)).doFilter(request, response)
-  }
+    "give up waiting for consistent leadership info" in new Fixture {
+      // When we have inconsistent leadership info
+      when(electionService.isLeader).thenReturn(false)
+      when(electionService.leaderHostPort).thenReturn(Some("host:10000"))
+      when(request.getRequestURI).thenReturn("/test")
+      when(request.getQueryString).thenReturn(null)
 
-  test("give up waiting for consistent leadership info") {
-    // When we have inconsistent leadership info
-    init()
-    when(leaderInfo.elected).thenReturn(false)
-    when(leaderInfo.currentLeaderHostPort()).thenReturn(Some("host:10000"))
-    when(request.getRequestURI).thenReturn("/test")
-    when(request.getQueryString).thenReturn(null)
+      // And doFilter is called
+      filter.doFilter(request, response, chain)
 
-    // And doFilter is called
-    filter.doFilter(request, response, chain)
+      // we pass that request down the chain
+      verify(electionService, times(12)).isLeader
+      verify(electionService, times(12)).leaderHostPort
+      verify(response, times(1))
+        .sendError(ServiceUnavailable.intValue, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
+      verifyClean()
+    }
 
-    // we pass that request down the chain
-    verify(leaderInfo, times(12)).elected
-    verify(leaderInfo, times(12)).currentLeaderHostPort()
-    verify(response, times(1))
-      .sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
+    "bad proxy connection, drops partially complete response after status code has already been sent" in new Fixture {
+      val urlConnection = mock[HttpURLConnection]
+
+      when(urlConnection.getResponseCode).thenReturn(200)
+
+      JavaUrlConnectionRequestForwarder.copyConnectionResponse(response)(
+        () => {
+          response.setStatus(200)
+          scala.util.Failure(new IOException("foo"))
+        },
+        () => {}
+      )
+
+      verify(response, times(1)).setStatus(200)
+      verify(response, times(1))
+        .sendError(BadGateway.intValue, JavaUrlConnectionRequestForwarder.ERROR_STATUS_BAD_CONNECTION)
+      verifyNoMoreInteractions(response)
+      verifyClean()
+    }
   }
 }

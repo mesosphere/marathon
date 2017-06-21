@@ -1,4 +1,6 @@
 bin/run-tests-config.sh
+.cache
+.ensime*
 .idea
 *.iml
 docker-volumes
@@ -11,3 +13,9 @@ node_modules
 .settings
 .Rproj.user
 start.sh
+.DS_Store
+*.ipr
+*.iws
+__pycache__
+.history
+native/

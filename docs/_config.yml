@@ -16,10 +16,11 @@ sass:
   style: :compressed
 
 baseurl: "/marathon"
-highlighter: pygments
+highlighter: rouge
 lsi: false
-markdown: redcarpet
-redcarpet:
+markdown: kramdown
+kramdown:
   extensions: [with_toc_data, tables]
 safe: true
 source: .
+exclude: [vendor/bundle]

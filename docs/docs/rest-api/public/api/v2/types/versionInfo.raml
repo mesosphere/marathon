@@ -1,0 +1,12 @@
+#%RAML 1.0 Library
+types:
+  VersionInfo:
+    type: object
+    description: Detailed version information
+    properties:
+      lastScalingAt:
+        type: datetime
+        description: Contains the timestamp of the last change to this pod which was not simply a scaling or restarting configuration
+      lastConfigChangeAt:
+        type: datetime
+        description: Contains the timestamp of the last change including changes like scaling or restarting.

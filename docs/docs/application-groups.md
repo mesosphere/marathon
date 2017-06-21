@@ -22,15 +22,15 @@ The definition could look like this:
     {
       "id": "/product/database",
       "apps": [
-         { "id": "/product/mongo", ... },
-         { "id": "/product/mysql", ... }
+         { "id": "/product/database/mongo", ... },
+         { "id": "/product/database/mysql", ... }
        ]
     },{
       "id": "/product/service",
       "dependencies": ["/product/database"],
       "apps": [
-         { "id": "/product/rails-app", ... },
-         { "id": "/product/play-app", ... }
+         { "id": "/product/service/rails-app", ... },
+         { "id": "/product/service/play-app", ... }
       ]
     }
   ]
@@ -66,17 +66,12 @@ If defined on the application group service, all 3 definitions have the same mea
 A whole group can be scaled.
 The instance count of all transitive applications is changed accordingly.
 
-{% highlight http %}
+```http
 PUT /v2/groups/product HTTP/1.1
 Content-Length: 21
 Host: localhost:8080
 User-Agent: HTTPie/0.7.2
 { "scaleBy": 2 }
-{% endhighlight %}
+```
 
 The instance count of each application is doubled after that operation.
-
-
-
-
-

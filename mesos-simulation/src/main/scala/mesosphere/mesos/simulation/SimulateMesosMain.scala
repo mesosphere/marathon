@@ -7,7 +7,7 @@ import mesosphere.marathon._
 /**
   * Start marathon with a simulated mesos driver.
   */
-object SimulateMesosMain extends MarathonApp {
+class MarathonWithSimulatedMesos(args: Seq[String]) extends MarathonApp(args) {
   private[this] def simulatedDriverModule: Module = {
     new AbstractModule {
       override def configure(): Unit = {
@@ -16,9 +16,14 @@ object SimulateMesosMain extends MarathonApp {
     }
   }
 
-  override def modules(): Seq[Module] = {
-    Seq(Modules.`override`(super.modules(): _*).`with`(simulatedDriverModule))
+  override val modules: Seq[Module] = {
+    Seq(Modules.`override`(super.modules: _*).`with`(simulatedDriverModule))
   }
+}
 
-  runDefault()
+object SimulateMesosMain {
+  def main(args: Array[String]): Unit = {
+    val main = new MarathonWithSimulatedMesos(args.toIndexedSeq)
+    main.start()
+  }
 }

@@ -5,7 +5,7 @@
   "cpus": 1.0,
   "instances": 1,
   "uris": [
-    "http://www.gtlib.gatech.edu/pub/apache/tomcat/tomcat-7/v7.0.55/bin/apache-tomcat-7.0.55.tar.gz",
+    "http://www-us.apache.org/dist/tomcat/tomcat-7/v7.0.69/bin/apache-tomcat-7.0.69.tar.gz",
     "https://gwt-examples.googlecode.com/files/Calendar.war"
   ]
 }
