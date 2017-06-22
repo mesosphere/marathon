@@ -6,10 +6,16 @@ default:
 clean:
 	@lein clean
 
+check-indent:
+	@lein cljfmt check
+
 indent:
 	@echo "Indenting the clojure files in this project..."
-	@echo "[Requires node-cljfmt utility: https://github.com/snoe/node-cljfmt]"
-	@for i in `find . -type f -name '*.clj'`;do echo $$i; cljfmt $$i; done
+	@lein cljfmt fix
+
+indent-file:
+	@echo "Indenting $(file)"
+	@lein cljfmt fix $(file)
 
 clean-diff: indent
 	@lein clean

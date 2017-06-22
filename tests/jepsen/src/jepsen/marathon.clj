@@ -9,7 +9,10 @@
             [jepsen.control.util :as cu]
             [jepsen.os.debian :as debian]
             [jepsen.mesos :as mesos]
-            [jepsen.zookeeper :as zk]))
+            [jepsen.zookeeper :as zk]
+            [jepsen.util :as util :refer [meh timeout]]))
+
+(def marathon-pidfile "~/marathon/master.pid")
 
 (defn install!
   [test node]
@@ -24,6 +27,38 @@
   [test node]
   (info node "Code for uninstalling marathon goes here"))
 
+(defn start-marathon!
+  [test node]
+  (info node "Starting Marathon framework")
+  (c/su
+   (c/exec :start-stop-daemon :--start
+           :--background
+           :--make-pidfile
+           :--pidfile        marathon-pidfile
+           :--no-close
+           :--oknodo
+           :--exec           "~/marathon/bin"
+           :--
+           (str "--disable_ha")
+           (str "--framework_name marathon-dev")
+           (str "--hostname localhost")
+           (str "--http_address 127.0.0.1")
+           (str "--http_port 5051")
+           (str "--https_address 127.0.0.1")
+           (str "--https_port 8443")
+           (str "--master zk://localhost:2181/mesos"))))
+
+(defn stop-marathon!
+  [node]
+  (info node "Stopping Marathon framework")
+  (meh (c/exec :kill
+               :-KILL
+               (str "`")
+               (str "cat")
+               marathon-pidfile
+               (str "`")))
+  (meh (c/exec :rm :-rf marathon-pidfile)))
+
 (defn db
   "Setup and teardown marathon, mesos and zookeeper"
   [mesos-version zookeeper-version]
@@ -34,11 +69,13 @@
         (info node "starting setting mesos")
         (db/setup! mesos test node)
         (install! test node)
-        (configure test node))
+        (configure test node)
+        (start-marathon! test node))
       (teardown! [_ test node]
         (info node "stopping mesos")
         (db/teardown! mesos test node)
         (db/teardown! zk test node)
+        (stop-marathon! node)
         (uninstall! test node)))))
 
 (defn marathon-test

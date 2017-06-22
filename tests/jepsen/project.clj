@@ -3,4 +3,6 @@
   :url "https://github.com/mesosphere/marathon"
   :main jepsen.marathon
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [jepsen "0.1.6-SNAPSHOT"]])
+                 [jepsen "0.1.6-SNAPSHOT"]]
+  :plugins [[lein-cljfmt "0.5.6"]]
+  :cljfmt {})
