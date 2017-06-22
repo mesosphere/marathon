@@ -3,7 +3,8 @@
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 
-import $file.aws
+import $ivy.`com.amazonaws:aws-java-sdk-s3:1.11.129`
+
 import $file.fileUtil
 
 import com.amazonaws.services.s3._
@@ -13,9 +14,15 @@ import com.amazonaws.services.s3.transfer.Transfer.TransferState
 import com.amazonaws.services.s3.model.{PutObjectRequest, CannedAccessControlList}
 import scala.collection.JavaConversions._
 
+case class S3Path(bucket: String, path: Path) {
+  override def toString(): String = s"s3://${bucket}${path}"
+  def /(component: String): S3Path = copy(path = path / component)
+  def key: String = path.relativeTo(Path("/")).toString
+}
 
-val DEFAULT_BUCKET = "downloads.mesosphere.io"
-val DEFAULT_FOLDER = "marathon/snapshots"
+val S3_PREFIX = S3Path(
+  sys.env.getOrElse("S3_BUCKET", "downloads.mesosphere.io"),
+  Path(sys.env.getOrElse("S3_PATH" , "/marathon/snapshots")))
 
 /**
  *  Returns AWS S3 client.
@@ -27,19 +34,10 @@ def createS3Client(): AmazonS3Client = {
 /**
  *  Returns True if the key is in the bucket
  */
-def doesS3FileExist(bucket: String, key: String): Boolean = {
+def doesS3FileExist(path: S3Path): Boolean = {
   val s3client = createS3Client()
-  s3client.doesObjectExist(bucket, key)
+  s3client.doesObjectExist(path.bucket, path.key)
 }
-
-/**
- *  Returns the default folder for the filekey
- */
-def getDefaultFileKey(fileName: String): String = {
-  return s"${DEFAULT_FOLDER}/${fileName}"
-}
-
-def skip(file: Path): Unit = println(s"Skipping File: ${file.last} already exists on S3 at ${getDefaultFileKey(file.last)}.")
 
 /**
  *  Uploads marathon artifacts to the default bucket, using the env var credentials.
@@ -49,8 +47,11 @@ def skip(file: Path): Unit = println(s"Skipping File: ${file.last} already exist
  *  However, our artifact names are unique for each commit.
  */
 def archiveArtifact(uploadFile: Path): Unit = {
-  if(doesS3FileExist(DEFAULT_BUCKET, getDefaultFileKey(uploadFile.last))) skip(uploadFile)
-  else uploadFileAndSha(uploadFile)
+  // is already uploaded.
+  if(doesS3FileExist(S3_PREFIX / uploadFile.last))
+    println(s"Skipping File: ${uploadFile.last} already exists on S3 at ${S3_PREFIX / uploadFile.last}")
+  else
+    uploadFileAndSha(uploadFile)
 }
 
 /**
@@ -58,34 +59,30 @@ def archiveArtifact(uploadFile: Path): Unit = {
  *  Upload process creates the sha1 file
  */
 def uploadFileAndSha(uploadFile: Path): Unit = {
-
-  val fileKey: String = getDefaultFileKey(uploadFile.last)
   val shaFile = fileUtil.writeSha1ForFile(uploadFile)
-  val shaFileKey: String = getDefaultFileKey(shaFile.last)
 
-  println(s"${fileKey} uploading to S3")
-  uploadFileToS3(DEFAULT_BUCKET, fileKey, uploadFile)
-
-  println(s"${shaFileKey} uploading to S3")
-  uploadFileToS3(DEFAULT_BUCKET, shaFileKey, shaFile)
+  uploadFileToS3(uploadFile, S3_PREFIX / uploadFile.last)
+  uploadFileToS3(shaFile, S3_PREFIX / shaFile.last)
 }
 
 
 /**
  *  Uploads a file to the S3 bucket
  */
-def uploadFileToS3(bucket: String, fileName: String, uploadFile: Path): Unit = {
+def uploadFileToS3(localFile: Path, remotePath: S3Path): Unit = {
   val transfer: TransferManager = TransferManagerBuilder.standard().withS3Client(createS3Client()).build()
-  val request = new PutObjectRequest(bucket, fileName, uploadFile.toIO)
+  val request = new PutObjectRequest(remotePath.bucket, remotePath.key, localFile.toIO)
   request.withCannedAcl(CannedAccessControlList.PublicRead)
   val upload: Upload = transfer.upload(request)
 
+  println(s"Uploading ${localFile} -> ${remotePath}")
   while(!upload.isDone()) {
     val progress = upload.getProgress()
-    println(s"Uploading (${fileName}): ${progress.getPercentTransferred()} % ${upload.getState()}")
+    println(s"Uploading ${localFile} -> ${remotePath}: ${progress.getPercentTransferred()} % ${upload.getState()}")
     Thread.sleep(2000)
   }
 
   transfer.shutdownNow(true)
   assert(upload.getState() == TransferState.Completed, s"Upload finished with ${upload.getState()}")
+  println(s"Uploading ${localFile} -> ${remotePath}: Finished")
 }
