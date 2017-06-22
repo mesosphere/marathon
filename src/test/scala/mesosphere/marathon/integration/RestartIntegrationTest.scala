@@ -100,8 +100,10 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         f.waitForSSEConnect()
 
         Then("There is still one ongoing deployment")
-        val deployments = f.marathon.listDeploymentsForBaseGroup().value
-        deployments should have size 1 withClue (s"Expected 1 ongoing deployment but found ${deployments}")
+        eventually {
+          val deployments = f.marathon.listDeploymentsForBaseGroup().value
+          deployments should have size 1 withClue (s"Expected 1 ongoing deployment but found ${deployments.size}")
+        }
 
         When("second updated task becomes healthy")
         otherTaskReadinessChecks.foreach(_.isReady.set(true))
@@ -140,11 +142,12 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
         And("an update with health checks enabled")
         val updateApp = raml.AppUpdate(
+          cmd = f.appProxy(appId, versionId = "v2", instances = 2).cmd,
           portDefinitions = Some(immutable.Seq(raml.PortDefinition(name = Some("http")))),
           healthChecks = Some(Set(ramlHealthCheck)))
 
         And("both new task will be unhealthy")
-        val healthCheck = f.registerAppProxyHealthCheck(appId, "v1", state = false)
+        val healthCheck = f.registerAppProxyHealthCheck(appId, "v2", state = false)
 
         When("updating the app")
         val appV2 = f.marathon.updateApp(appId, updateApp)
@@ -169,8 +172,10 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         f.waitForSSEConnect()
 
         Then("there is still one ongoing deployment")
-        val deployments = f.marathon.listDeploymentsForBaseGroup().value
-        deployments should have size 1 withClue (s"Expected 1 ongoing deployment but found ${deployments}")
+        eventually {
+          val deployments = f.marathon.listDeploymentsForBaseGroup().value
+          deployments should have size 1 withClue (s"Expected 1 ongoing deployment but found ${deployments.size}")
+        }
 
         When("both updated task become healthy")
         healthCheck.state = true
