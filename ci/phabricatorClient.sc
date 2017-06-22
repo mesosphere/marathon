@@ -134,7 +134,7 @@ def reportSuccess(
     |
     |   lang=json
     |   "url": "https://downloads.mesosphere.io/marathon/snapshots/${marathonPackage.last}",
-    |   "sha1"" "${marathonPackageChecksum}"
+    |   "sha1": "${marathonPackageChecksum}"
     |
     |= ＼\\ ٩( ᐛ )و /／ =
     |""".stripMargin
