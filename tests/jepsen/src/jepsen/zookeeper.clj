@@ -14,6 +14,7 @@
 (defn install!
   [test node version]
   (c/su
+   (debian/update!)
    (debian/install ["zookeeper"])))
 
 (defn configure
