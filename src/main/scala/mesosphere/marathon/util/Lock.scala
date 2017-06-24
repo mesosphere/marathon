@@ -27,7 +27,8 @@ class Lock[T](private val value: T, fair: Boolean = true) extends StrictLogging 
     f(value)
   }
 
-  /** Previously, this method was too smart and had a serious flaw. Given lock a and lock b, the following could
+  /**
+    * Previously, this method was too smart and had a serious flaw. Given lock a and lock b, the following could
     * deadlock:
     *
     *     Future { a == b }

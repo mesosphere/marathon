@@ -505,7 +505,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
           groups = Set(
             createGroup(
               PathId("/domain/developers/gitlab"),
-              apps = Map(appPath -> app)))) ))
+              apps = Map(appPath -> app))))))
 
       val newVersion = Timestamp.now()
       val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
