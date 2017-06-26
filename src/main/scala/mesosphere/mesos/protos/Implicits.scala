@@ -1,7 +1,6 @@
 package mesosphere.mesos.protos
 
 import com.google.protobuf.{ ByteString, Message }
-import mesosphere.marathon.raml.TTY
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos
 
@@ -70,19 +69,11 @@ trait Implicits {
     )
   }
 
-  implicit def ttyToProto(tty: TTY): Protos.TTYInfo = {
-    Protos.TTYInfo.newBuilder().setWindowSize(
-      Protos.TTYInfo.WindowSize.newBuilder()
-        .setColumns(tty.columns)
-        .setRows(tty.rows)).build()
-  }
+  // As indicator that mesos should enable tty functionality for a container, mesos only needs an empty TTYInfo send in
+  // the task info. Therefore: If this is called, the tty configuration is set to `true`, therefore return an empty TTYInfo.
+  implicit def ttyToProto(tty: Boolean): Protos.TTYInfo = Protos.TTYInfo.newBuilder().build()
 
-  implicit def protoToTTY(proto: Protos.TTYInfo): TTY = {
-    TTY(
-      proto.getWindowSize.getRows,
-      proto.getWindowSize.getColumns
-    )
-  }
+  implicit def protoToTTY(proto: Protos.TTYInfo): Boolean = true // if anything as tty is configured in the proto, we return true
 
   implicit def resourceToProto(resource: Resource): Protos.Resource = {
     resource match {

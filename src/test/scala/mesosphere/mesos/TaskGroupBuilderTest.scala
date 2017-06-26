@@ -8,7 +8,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.raml
-import mesosphere.marathon.raml.{ Resources, Endpoint, TTY }
+import mesosphere.marathon.raml.{ Resources, Endpoint }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -1020,14 +1020,12 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
     }
 
     "tty defined in a pod container will render ContainerInfo correctly" in {
-      val tty = TTY(rows = 50, columns = 120)
-      val container = MesosContainer(name = "withTTY", resources = Resources(), tty = Some(tty))
+      val container = MesosContainer(name = "withTTY", resources = Resources(), tty = Some(true))
       val pod = PodDefinition(id = PathId("/tty"), containers = Seq(container))
       val containerInfo = TaskGroupBuilder.computeContainerInfo(pod, container)
       containerInfo should be(defined)
       containerInfo.get.hasTtyInfo should be(true)
-      containerInfo.get.getTtyInfo.getWindowSize.getColumns should be(tty.columns)
-      containerInfo.get.getTtyInfo.getWindowSize.getRows should be(tty.rows)
+      containerInfo.get.getTtyInfo.hasWindowSize should be(false)
     }
 
     "no tty defined in a pod container will render ContainerInfo without tty" in {

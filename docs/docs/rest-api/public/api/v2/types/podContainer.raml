@@ -10,7 +10,6 @@ uses:
   resources: resources.raml
   strings: stringTypes.raml
   volumes: volumes.raml
-  containerCommons: containerCommons.raml
   docker: docker.raml
 
 types:
@@ -116,6 +115,6 @@ types:
       lifecycle?:
         type: Lifecycle
       tty?:
-        type: containerCommons.TTY
+        type: boolean
         description: |
-          Describes the information about (pseudo) TTY that can be attached to the process of this container.
+          Describes if (pseudo) TTY sould be allocated for the process of this container.

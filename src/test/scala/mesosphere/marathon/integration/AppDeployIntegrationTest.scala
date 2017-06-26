@@ -784,6 +784,34 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       updatedApp.value.app.container.flatMap(_.portMappings).exists(_.nonEmpty) should be(true)
       updatedApp.value.app.container.flatMap(_.portMappings).flatMap(_.headOption.map(_.containerPort)) should contain(4000)
     }
+
+    "create a simple app with tty configured should succeed" in {
+      Given("a new app")
+      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).copy(tty = Some(true), cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
+
+      When("The app is deployed")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created")
+      result should be(Created)
+      extractDeploymentIds(result) should have size 1
+      waitForDeployment(result)
+      waitForStatusUpdates("TASK_RUNNING")
+    }
+
+    "create a simple app with tty configured should fail" in {
+      Given("a new app")
+      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).copy(cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
+
+      When("The app is deployed")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created")
+      result should be(Created)
+      extractDeploymentIds(result) should have size 1
+      waitForDeployment(result)
+      waitForStatusUpdates("TASK_FAILED")
+    }
   }
 
   private val ramlHealthCheck = AppHealthCheck(

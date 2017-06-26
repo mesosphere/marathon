@@ -371,7 +371,7 @@ object TaskGroupBuilder extends StrictLogging {
     }
 
     // attach a tty if specified
-    container.tty.foreach(containerInfo.setTtyInfo(_))
+    container.tty.filter(tty => tty).foreach(containerInfo.setTtyInfo(_))
 
     // Only create a 'ContainerInfo' when some of it's fields are set.
     // If no fields other than the type have been set, then we shouldn't pass the container info

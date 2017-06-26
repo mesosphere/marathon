@@ -163,7 +163,7 @@ class TaskBuilder(
       }
 
       // attach a tty if specified
-      runSpec.tty.foreach(builder.setTtyInfo(_))
+      runSpec.tty.filter(tty => tty).foreach(builder.setTtyInfo(_))
 
       // Set container type to MESOS by default (this is a required field)
       if (!builder.hasType)

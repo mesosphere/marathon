@@ -131,8 +131,5 @@
     "secret3": { "source": "/foo2" }
   },
   "taskKillGracePeriodSeconds": 30,
-  "tty": {
-    "columns": 80,
-    "rows": 25
-  }
+  "tty": true
 }

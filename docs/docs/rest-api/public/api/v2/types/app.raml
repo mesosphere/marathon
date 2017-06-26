@@ -18,7 +18,6 @@ uses:
   pragma: pragma.raml
   unreachableStrategy: unreachableStrategy.raml
   killSelection: killSelection.raml
-  containerCommons: containerCommons.raml
 
 types:
   AppResidency:
@@ -311,9 +310,9 @@ types:
         default: YOUNGEST_FIRST
       unreachableStrategy?: unreachableStrategy.UnreachableStrategy
       tty?:
-        type: containerCommons.TTY
+        type: boolean
         description: |
-          Describes the information about (pseudo) TTY that can be attached to the process of this container.
+          Describes if (pseudo) TTY sould be allocated for the process of this container.
   AppList:
     type: object
     properties:

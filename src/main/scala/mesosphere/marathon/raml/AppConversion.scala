@@ -347,7 +347,7 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
       versionInfo = versionInfo, // we restore this but App-to-AppDefinition conversion drops it...
       killSelection = service.whenOrElse(_.hasKillSelection, _.getKillSelection.toRaml, App.DefaultKillSelection),
       unreachableStrategy = service.when(_.hasUnreachableStrategy, _.getUnreachableStrategy.toRaml).orElse(App.DefaultUnreachableStrategy),
-      tty = service.when(_.hasTty, _.getTty: TTY).orElse(App.DefaultTty)
+      tty = service.when(_.hasTty, _.getTty: Boolean).orElse(App.DefaultTty)
     )
     // special ports normalization when converting from protobuf, because the protos don't allow us to distinguish
     // between "I specified an empty set of ports" and "I specified a null set of ports" (for definitions and mappings).
