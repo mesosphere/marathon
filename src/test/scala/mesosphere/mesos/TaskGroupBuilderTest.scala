@@ -310,7 +310,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       assert(envVars("MESOS_EXECUTOR_ID") == instanceId.executorIdString)
       assert(envVars("MESOS_TASK_ID") == Task.Id.forInstanceId(instanceId, Some(mesosContainer)).idString)
       assert(envVars("MARATHON_APP_ID") == instanceIdStr)
-      assert(envVars.containsKey("MARATHON_APP_VERSION"))
+      assert(envVars.contains("MARATHON_APP_VERSION"))
       assert(envVars("MARATHON_CONTAINER_ID") == containerIdStr)
     }
 

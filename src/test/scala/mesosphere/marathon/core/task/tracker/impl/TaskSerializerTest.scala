@@ -71,7 +71,7 @@ class TaskSerializerTest extends UnitTest {
       val samplePorts = Seq(80, 81)
       val taskProto =
         f.completeTask.toBuilder
-          .addAllPorts(samplePorts.map(Integer.valueOf(_)))
+          .addAllPorts(samplePorts.map(Integer.valueOf(_)).asJava)
           .build()
 
       When("we convert it to task")
@@ -103,7 +103,7 @@ class TaskSerializerTest extends UnitTest {
             MesosProtos.TaskStatus.newBuilder()
               .setTaskId(f.taskId.mesosTaskId)
               .setState(MesosProtos.TaskState.TASK_RUNNING)
-              .setContainerStatus(MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(f.sampleNetworks))
+              .setContainerStatus(MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(f.sampleNetworks.asJava))
           )
           .build()
 
@@ -257,7 +257,7 @@ class TaskSerializerTest extends UnitTest {
         .setCondition(MarathonTask.Condition.Reserved)
         .setVersion(appVersion.toString)
         .setReservation(MarathonTask.Reservation.newBuilder()
-          .addAllLocalVolumeIds(localVolumeIds.map(_.idString))
+          .addAllLocalVolumeIds(localVolumeIds.map(_.idString).asJava)
           .setState(MarathonTask.Reservation.State.newBuilder()
             .setType(MarathonTask.Reservation.State.Type.New)
             .setTimeout(MarathonTask.Reservation.State.Timeout.newBuilder()
@@ -282,12 +282,12 @@ class TaskSerializerTest extends UnitTest {
         .setStartedAt(startedAt.millis)
         .setStatus(mesosStatus)
         .setCondition(MarathonTask.Condition.Running)
-        .addAllPorts(hostPorts.map(Integer.valueOf))
+        .addAllPorts(hostPorts.map(Integer.valueOf).asJava)
         .build()
 
       def launchedOnReservationProto = launchedEphemeralProto.toBuilder
         .setReservation(MarathonTask.Reservation.newBuilder()
-          .addAllLocalVolumeIds(localVolumeIds.map(_.idString))
+          .addAllLocalVolumeIds(localVolumeIds.map(_.idString).asJava)
           .setState(MarathonTask.Reservation.State.newBuilder()
             .setType(MarathonTask.Reservation.State.Type.Launched)))
         .build()

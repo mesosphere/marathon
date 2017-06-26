@@ -454,7 +454,7 @@ object PodStatusConversionTest {
             Protos.NetworkInfo.newBuilder().addIpAddresses(
               Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ipAddress)
             ).setName(networkName).build()
-          }).build()
+          }.asJava).build()
         ).build()
       }
 
@@ -500,7 +500,7 @@ object PodStatusConversionTest {
           .setTaskId(taskId.mesosTaskId)
           .setState(Protos.TaskState.TASK_UNKNOWN)
           .setContainerStatus(Protos.ContainerStatus.newBuilder()
-            .addAllNetworkInfos(networks).build())
+            .addAllNetworkInfos(networks.asJava).build())
           .build()),
         condition = Condition.Finished,
         networkInfo = NetworkInfoPlaceholder()

@@ -58,11 +58,13 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
-      verify(f.driver, withinTimeout()).reconcileTasks(Set(
+      val statuses = Set(
         runningInstance,
         stagedInstance,
         stagedInstanceWithSlaveId
-      ).flatMap(_.tasksMap.values).flatMap(_.status.mesosStatus))
+      ).flatMap(_.tasksMap.values).flatMap(_.status.mesosStatus)
+
+      verify(f.driver, withinTimeout()).reconcileTasks(statuses.asJavaCollection)
       verify(f.driver).reconcileTasks(java.util.Arrays.asList())
     }
 

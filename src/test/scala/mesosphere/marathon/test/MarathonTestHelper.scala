@@ -382,13 +382,13 @@ object MarathonTestHelper {
     MarathonTestHelper.makeBasicOffer(
       reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
       role = "test"
-    ).addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*)).build()
+    ).addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
-      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*))
+      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
       .build()
   }
 
@@ -462,7 +462,7 @@ object MarathonTestHelper {
 
       def withNetworkInfo(hostName: Option[String] = None, hostPorts: Seq[Int] = Nil, networkInfos: scala.collection.Seq[NetworkInfo] = Nil): Task = {
         def containerStatus(networkInfos: scala.collection.Seq[NetworkInfo]) = {
-          Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos)
+          Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
         }
         def mesosStatus(taskId: Task.Id, mesosStatus: Option[TaskStatus], networkInfos: scala.collection.Seq[NetworkInfo]): Option[TaskStatus] = {
           val taskState = mesosStatus.fold(TaskState.TASK_STAGING)(_.getState)

@@ -28,8 +28,8 @@ object ContainerSerializer {
 
   def toProto(container: Container): Protos.ExtendedContainerInfo = {
     val builder = Protos.ExtendedContainerInfo.newBuilder
-      .addAllVolumes(container.volumes.map(VolumeSerializer.toProto))
-      .addAllPortMappings(container.portMappings.map(PortMappingSerializer.toProto))
+      .addAllVolumes(container.volumes.map(VolumeSerializer.toProto).asJava)
+      .addAllPortMappings(container.portMappings.map(PortMappingSerializer.toProto).asJava)
 
     container match {
       case _: Container.Mesos =>
@@ -109,7 +109,7 @@ object ContainerSerializer {
             .addIpAddresses(mesos.Protos.NetworkInfo.IPAddress.getDefaultInstance)
             .setLabels(networkLabels)
             .setName(networkName)
-            .addAllPortMappings(portMappings.map(portMappingToMesos))
+            .addAllPortMappings(portMappings.map(portMappingToMesos).asJava)
             .build
         }
         .foreach(builder.addNetworkInfos)
@@ -176,7 +176,7 @@ object PersistentVolumeInfoSerializer {
       case DiskType.Mount =>
         builder.setType(mesos.Protos.Resource.DiskInfo.Source.Type.MOUNT)
     }
-    builder.addAllConstraints(info.constraints)
+    builder.addAllConstraints(info.constraints.asJava)
     info.maxSize.foreach(builder.setMaxSize)
 
     builder.build()
@@ -217,7 +217,7 @@ object DockerSerializer {
     Protos.ExtendedContainerInfo.DockerInfo.newBuilder
       .setImage(docker.image)
       .setPrivileged(docker.privileged)
-      .addAllParameters(docker.parameters.map(ParameterSerializer.toMesos))
+      .addAllParameters(docker.parameters.map(ParameterSerializer.toMesos).asJava)
       .setForcePullImage(docker.forcePullImage)
       .build
   }
@@ -227,9 +227,9 @@ object DockerSerializer {
     val builder = DockerInfo.newBuilder
 
     builder.setImage(docker.image)
-    docker.portMappings.foreach(mapping => builder.addAllPortMappings(PortMappingSerializer.toMesos(mapping)))
+    docker.portMappings.foreach(mapping => builder.addAllPortMappings(PortMappingSerializer.toMesos(mapping).asJava))
     builder.setPrivileged(docker.privileged)
-    builder.addAllParameters(docker.parameters.map(ParameterSerializer.toMesos))
+    builder.addAllParameters(docker.parameters.map(ParameterSerializer.toMesos).asJava)
     builder.setForcePullImage(docker.forcePullImage)
     networks.collect {
       case _: ContainerNetwork => DockerInfo.Network.USER

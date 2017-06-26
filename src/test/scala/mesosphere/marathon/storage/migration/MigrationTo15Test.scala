@@ -383,7 +383,7 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
         ScalarResource.disk(10),
         ScalarResource.gpus(0),
         RangesResource.ports(Seq(Range(80)))
-      ).map(resourceToProto))
+      ).map(resourceToProto).asJava)
       .addPortDefinitions(Mesos.Port.newBuilder().setNumber(80))
       .setVersion(serviceVersion.toString)
       .build
@@ -414,7 +414,7 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
                 setLabels(
                   Mesos.Labels.newBuilder.addLabels(Mesos.Label.newBuilder.setKey("VIP_0").setValue("namedvip:123"))).
                   build
-          })
+          }.asJava)
         )
       networkName.map(ipAddress.setNetworkName)
       sd.toBuilder.setOBSOLETEIpAddress(ipAddress).clearPortDefinitions().build

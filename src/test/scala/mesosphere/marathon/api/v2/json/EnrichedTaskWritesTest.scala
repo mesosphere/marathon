@@ -44,7 +44,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         .setTaskId(taskId.mesosTaskId)
         .setState(MesosProtos.TaskState.TASK_STAGING)
         .setContainerStatus(
-          MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos)
+          MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
         ).build
     }
 

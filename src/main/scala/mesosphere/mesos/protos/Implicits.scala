@@ -88,7 +88,7 @@ trait Implicits {
     resource match {
       case RangesResource(name, ranges, role) =>
         val rangesProto = Protos.Value.Ranges.newBuilder
-          .addAllRange(ranges.map(rangeToProto))
+          .addAllRange(ranges.map(rangeToProto).asJava)
           .build
         Protos.Resource.newBuilder
           .setType(Protos.Value.Type.RANGES)
@@ -105,7 +105,7 @@ trait Implicits {
           .build
       case SetResource(name, items, role) =>
         val set = Protos.Value.Set.newBuilder
-          .addAllItem(items)
+          .addAllItem(items.asJava)
           .build
         Protos.Resource.newBuilder
           .setType(Protos.Value.Type.SET)
@@ -247,9 +247,9 @@ trait Implicits {
       .setFrameworkId(offer.frameworkId)
       .setSlaveId(offer.slaveId)
       .setHostname(offer.hostname)
-      .addAllResources(offer.resources.map(resourceToProto))
-      .addAllAttributes(offer.attributes.map(attributeToProto))
-      .addAllExecutorIds(offer.executorIds.map(executorIDToProto))
+      .addAllResources(offer.resources.map(resourceToProto).asJava)
+      .addAllAttributes(offer.attributes.map(attributeToProto).asJava)
+      .addAllExecutorIds(offer.executorIds.map(executorIDToProto).asJava)
       .build
   }
 

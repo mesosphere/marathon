@@ -79,12 +79,12 @@ object Network {
       case br: BridgeNetwork =>
         builder
           .setMode(NetworkDefinition.Mode.BRIDGE)
-          .addAllLabels(br.labels.map{ case (k, v) => Mesos.Label.newBuilder().setKey(k).setValue(v).build() })
+          .addAllLabels(br.labels.map{ case (k, v) => Mesos.Label.newBuilder().setKey(k).setValue(v).build() }.asJava)
       case ct: ContainerNetwork =>
         builder
           .setMode(NetworkDefinition.Mode.CONTAINER)
           .setName(ct.name)
-          .addAllLabels(ct.labels.map{ case (k, v) => Mesos.Label.newBuilder().setKey(k).setValue(v).build() })
+          .addAllLabels(ct.labels.map{ case (k, v) => Mesos.Label.newBuilder().setKey(k).setValue(v).build() }.asJava)
     }
     builder.build()
   }

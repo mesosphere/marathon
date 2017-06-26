@@ -54,7 +54,7 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
         // semantically different than an empty one.
         dv.clearDriverOptions
       } else {
-        dv.setDriverOptions(Parameters.newBuilder.addAllParameter(opts))
+        dv.setDriverOptions(Parameters.newBuilder.addAllParameter(opts.asJava))
       }
     }
 

@@ -112,7 +112,7 @@ object TaskSerializer {
       builder.setStagedAt(status.stagedAt.millis)
       status.startedAt.foreach(startedAt => builder.setStartedAt(startedAt.millis))
       status.mesosStatus.foreach(status => builder.setStatus(status))
-      builder.addAllPorts(hostPorts.map(Integer.valueOf))
+      builder.addAllPorts(hostPorts.map(Integer.valueOf).asJava)
     }
     def setVersion(appVersion: Timestamp): Unit = {
       builder.setVersion(appVersion.toString)
@@ -260,7 +260,7 @@ private[marathon] object ReservationSerializer {
 
   def toProto(reservation: Task.Reservation): Protos.MarathonTask.Reservation = {
     Protos.MarathonTask.Reservation.newBuilder()
-      .addAllLocalVolumeIds(reservation.volumeIds.map(_.idString))
+      .addAllLocalVolumeIds(reservation.volumeIds.map(_.idString).asJava)
       .setState(StateSerializer.toProto(reservation.state))
       .build()
   }

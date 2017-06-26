@@ -55,7 +55,7 @@ class QueueResourceTest extends UnitTest {
       )
 
       //when
-      val response = queueResource.index(auth.request, Set("lastUnusedOffers"))
+      val response = queueResource.index(auth.request, Set("lastUnusedOffers").asJava)
 
       //then
       response.getStatus should be(200)
@@ -92,7 +92,7 @@ class QueueResourceTest extends UnitTest {
         )
       )
       //when
-      val response = queueResource.index(auth.request, Set.empty[String])
+      val response = queueResource.index(auth.request, Set.empty[String].asJava)
 
       //then
       response.getStatus should be(200)
@@ -141,7 +141,7 @@ class QueueResourceTest extends UnitTest {
       val req = auth.request
 
       When("the index is fetched")
-      val index = queueResource.index(req, Set.empty[String])
+      val index = queueResource.index(req, Set.empty[String].asJava)
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
