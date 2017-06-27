@@ -2,6 +2,10 @@
 
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
+
+import $file.utils
+
+import scala.util.control.NonFatal
 import scalaj.http._
 import upickle._
 
@@ -86,23 +90,28 @@ def comment(revisionId: String, msg: String): Unit = {
 def reportTestResults(phid: String, status: String): Unit = {
   require("fail" == status || "pass" == status)
 
-  // Join all results
-  val testResults = ls! pwd / 'target / "phabricator-test-reports" |? ( _.ext == "json")
-  val joinedTestResults: Js.Arr = testResults.view.map(read!)
-    .map(upickle.json.read)
-    .collect { case a: Js.Arr => a }
-    .reduce { (l: Js.Arr, r: Js.Arr) =>
-      val n = l.arr ++ r.arr
-      Js.Arr(n :_*)
-    }
+  try {
+    // Join all results
+    val testResults = ls! pwd / 'target / "phabricator-test-reports" |? ( _.ext == "json")
+    val joinedTestResults: Js.Arr = testResults.view.map(read!)
+      .map(upickle.json.read)
+      .collect { case a: Js.Arr => a }
+      .reduce { (l: Js.Arr, r: Js.Arr) =>
+        val n = l.arr ++ r.arr
+        Js.Arr(n :_*)
+      }
 
-  // Add PHID and status
-  val parameters = Js.Obj(
-    "buildTargetPHID" -> Js.Str(phid),
-    "type" -> Js.Str(status.toString),
-    "unit" -> joinedTestResults
-  )
-  execute("harbormaster.sendmessage", parameters)
+    // Add PHID and status
+    val parameters = Js.Obj(
+      "buildTargetPHID" -> Js.Str(phid),
+      "type" -> Js.Str(status.toString),
+      "unit" -> joinedTestResults
+    )
+    execute("harbormaster.sendmessage", parameters)
+  } catch {
+    case NonFatal(e) =>
+      utils.println(s"Could not upload test results: ${e.getMessage}", utils.Colors.BrightRed)
+  }
 }
 
 /**

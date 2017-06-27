@@ -15,6 +15,9 @@ def printWithColor(text: String, color: String): Unit = {
   print(Colors.Reset)
 }
 
+def println(text: String): Unit = println(text)
+def println(text: String, color: String): Unit = printWithColor(s"$text\n", color)
+
 def printHr(color: String, character: String = "*", length: Int = 80): Unit = {
   printWithColor(s"${character * length}\n", color)
 }
@@ -27,7 +30,10 @@ def printStageTitle(name: String): Unit = {
   printHr(Colors.BrightBlue)
 }
 
-case class StageException(private val message: String = "", private val cause: Throwable = None.orNull) extends Exception(message, cause)
+case class BuildException(val cmd: String, val exitValue: Int, private val cause: Throwable = None.orNull)
+  extends Exception(s"'$cmd' exited with $exitValue", cause)
+case class StageException(private val message: String = "", private val cause: Throwable = None.orNull)
+  extends Exception(message, cause)
 def stage[T](name: String)(block: => T): T = {
   printStageTitle(name)
 

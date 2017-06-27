@@ -40,12 +40,15 @@ def installMesos(): Unit = {
  */
 @main
 def killStaleTestProcesses(): Unit = {
-  val stuffToKill = %%('ps, 'aux).out.lines.filter { proc =>
-    (proc.contains("app_mock") || proc.contains("mesos") || proc.contains("java")) &&
-      !(proc.contains("slave.jar") || proc.contains("grep") || proc.contains("amm")
-        || proc.contains("ci/pipeline"))
-  }
+  def protectedProcess(proc: String): Boolean =
+    Vector("slave.jar", "grep", "amm", "ci/pipeline").exists(proc.contains)
 
+  def eligibleProcess(proc: String): Boolean =
+    Vector("app_mock", "mesos", "java").exists(proc.contains)
+
+  val stuffToKill = %%('ps, 'aux).out.lines.filter { proc =>
+      eligibleProcess(proc) && !protectedProcess(proc)
+  }
 
 
   if (stuffToKill.isEmpty) {
@@ -63,6 +66,8 @@ def killStaleTestProcesses(): Unit = {
     }
 
     println(s"Running 'sudo kill -9 ${pids.mkString(" ")}")
-    %('sudo, 'kill, "-9", pids)
+
+    // We use %% to avoid exceptions. It is not important if the kill fails.
+    %%('sudo, 'kill, "-9", pids)
   }
 }

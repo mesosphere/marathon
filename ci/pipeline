@@ -3,6 +3,7 @@
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import scala.util.control.NonFatal
+import scala.collection.JavaConverters._
 
 import $file.awsClient
 import $file.fileUtil
@@ -11,12 +12,37 @@ import $file.provision
 import $file.utils
 
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
+
 /**
  * Compile Marathon and run unit and integration tests followed by scapegoat.
  */
 @main
 def compileAndTest(): Unit = utils.stage("Compile and Test") {
-  %('sbt, 'clean, 'test, "integration:test", 'scapegoat)
+  val builder = new java.lang.ProcessBuilder()
+  val buildProcess = builder
+    .directory(new java.io.File(pwd.toString))
+    .command("sbt", "clean", "test", "integration:test", "scapegoat")
+    .inheritIO()
+    .start()
+
+  try {
+    val exited = buildProcess.waitFor(1, java.util.concurrent.TimeUnit.HOURS)
+
+    if (exited) {
+      val exitValue = buildProcess.exitValue
+      if(buildProcess.exitValue != 0) {
+        val cmd = builder.command().asScala.mkString(" ")
+        throw new utils.BuildException(cmd, exitValue)
+      }
+    } else {
+      // The process timed out. Try to kill it.
+      buildProcess.destroyForcibly().waitFor()
+      throw new java.util.concurrent.TimeoutException("Compile and test timed out.")
+    }
+  } finally {
+    // This also cleans forked SBT processes.
+    provision.killStaleTestProcesses()
+  }
 }
 
 @main
