@@ -17,10 +17,6 @@
    (debian/update!)
    (debian/install ["zookeeper"])))
 
-(defn configure
-  [test node version]
-  (info node "Code for configuring zookeeper goes here"))
-
 (defn start-zookeeper!
   [test node]
   (info "Starting Zookeeper..")
@@ -45,9 +41,7 @@
     (setup! [_ test node]
       (info node "setting up zookeeper..")
       (install! test node version)
-      (configure test node version)
       (start-zookeeper! test node))
-
     (teardown! [_ test node]
       (info node "tearing down zookeeper..")
       (stop-zookeeper! test node)

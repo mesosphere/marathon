@@ -12,8 +12,12 @@
 
 (def master-pidfile "/var/run/mesos/master.pid")
 (def agent-pidfile  "/var/run/mesos/agent.pid")
-(def master-bin     "/usr/sbin/mesos-master")
-(def slave-bin      "/usr/sbin/mesos-agent")
+(def master-dir     "/usr/sbin/")
+(def master-bin     "mesos-master")
+(def agent-dir      "/usr/sbin/")
+(def agent-bin      "mesos-agent")
+(def master-log-dir "~/master.log")
+(def agent-log-dir  "~/agent.log")
 
 (defn install!
   [test node version]
@@ -34,44 +38,34 @@
 
 (defn start-master!
   [test node]
-  (info node "Starting mesos-master")
   (c/su
-   (c/exec :start-stop-daemon :--start
-           :--background
-           :--make-pidfile
-           :--pidfile        master-pidfile
-           :--no-close
-           :--oknodo
-           :--exec           "/usr/bin/env"
-           :--
-           "GLOG_v=1"
-           :mesos-master
-           (str "--cluster=marathon-dev")
-           (str "--hostname=localhost")
-           (str "--ip=127.0.0.1")
-           (str "--port=5051")
-           (str "--registry=in_memory")
-           (str "--zk=zk://localhost:2181/mesos")
-           (str "--work_dir=\"${data_dir}\""))))
+   (cu/start-daemon! {:logfile master-log-dir
+                      :make-pidfile? true
+                      :pidfile master-pidfile
+                      :chdir master-dir}
+                     master-bin
+                     (str "--cluster=marathon-dev")
+                     (str "--hostname=localhost")
+                     (str "--ip=127.0.0.1")
+                     (str "--port=5050")
+                     (str "--registry=in_memory")
+                     (str "--zk=zk://localhost:2181/mesos")
+                     (str "--work_dir=\"${data_dir}\""))))
 
 (defn start-agent!
   [test node]
-  (info node "Starting mesos-agent")
   (c/su
-   (c/exec :start-stop-daemon :--start
-           :--background
-           :--make-pidfile
-           :--pidfile        agent-pidfile
-           :--exec           slave-bin
-           :--no-close
-           :--oknodo
-           :--
-           (str "--containerizers=mesos")
-           (str "--hostname=localhost")
-           (str "--ip=127.0.0.1")
-           (str "--master=zk://localhost:2181/mesos")
-           (str "--port=5051")
-           (str "--work_dir=\"${data_dir}\""))))
+   (cu/start-daemon! {:logfile agent-log-dir
+                      :make-pidfile? true
+                      :pidfile agent-pidfile
+                      :chdir agent-dir}
+                     agent-bin
+                     (str "--containerizers=mesos")
+                     (str "--hostname=localhost")
+                     (str "--ip=127.0.0.1")
+                     (str "--master=zk://localhost:2181/mesos")
+                     (str "--port=5051")
+                     (str "--work_dir=\"${data_dir}\""))))
 
 (defn stop-master!
   [node]

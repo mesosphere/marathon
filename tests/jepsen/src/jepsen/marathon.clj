@@ -2,7 +2,13 @@
   (:gen-class)
   (:require [clojure.tools.logging :refer :all]
             [clojure.string :as str]
+            [clj-http.client :as http]
+            [clj-time.core :as time]
+            [clj-time.format :as time.format]
+            [cheshire.core :as json]
             [jepsen.control :as c]
+            [jepsen.generator :as gen]
+            [jepsen.client :as client]
             [jepsen.db :as db]
             [jepsen.cli :as cli]
             [jepsen.tests :as tests]
@@ -13,15 +19,14 @@
             [jepsen.util :as util :refer [meh timeout]]))
 
 (def marathon-pidfile "~/marathon/master.pid")
+(def marathon-dir     "~/marathon/bin/")
+(def marathon-bin     "marathon")
+(def marathon-run-log "~/marathon-log-file.log")
 
 (defn install!
   [test node]
   (c/su
    (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-586-g2a75b8e.tgz" "/home/vagrant/marathon")))
-
-(defn configure
-  [test node]
-  (info node "Code for marathon configuration"))
 
 (defn uninstall!
   [test node]
@@ -29,24 +34,20 @@
 
 (defn start-marathon!
   [test node]
-  (info node "Starting Marathon framework")
   (c/su
-   (c/exec :start-stop-daemon :--start
-           :--background
-           :--make-pidfile
-           :--pidfile        marathon-pidfile
-           :--no-close
-           :--oknodo
-           :--exec           "~/marathon/bin"
-           :--
-           (str "--disable_ha")
-           (str "--framework_name marathon-dev")
-           (str "--hostname localhost")
-           (str "--http_address 127.0.0.1")
-           (str "--http_port 5051")
-           (str "--https_address 127.0.0.1")
-           (str "--https_port 8443")
-           (str "--master zk://localhost:2181/mesos"))))
+   (cu/start-daemon! {:logfile marathon-run-log
+                      :make-pidfile? true
+                      :pidfile marathon-pidfile
+                      :chdir marathon-dir}
+                     marathon-bin
+                     :--disable_ha
+                     :--framework_name "marathon-dev"
+                     :--hostname "localhost"
+                     :--http_address "127.0.0.1"
+                     :--http_port "8080"
+                     :--https_address "127.0.0.1"
+                     :--https_port "8443"
+                     :--master "zk://localhost:2181/mesos")))
 
 (defn stop-marathon!
   [node]
@@ -59,6 +60,36 @@
                (str "`")))
   (meh (c/exec :rm :-rf marathon-pidfile)))
 
+(defn ping-marathon!
+  [node]
+  (http/post "http://localhost:8080/ping"))
+
+(defrecord Client [node]
+  client/Client
+  (setup! [this test node]
+    (assoc this :node node))
+
+  (invoke! [this test op]
+    (timeout 10000 (assoc op :type :info, :value :timed-out)
+             (try
+               (case (:f op)
+                 :add-job (do (info "Adding job")
+                              (assoc op :type :ok)))
+               (catch java.net.ConnectException e
+                 (assoc op :type :fail, :value (.getMessage e))))))
+
+  (teardown! [_ test]))
+
+(defn add-job
+  "Generator for creating new jobs."
+  []
+  (let [id (atom 0)]
+    (reify gen/Generator
+      (op [_ test process]
+        {:type   :invoke
+         :f      :add-job
+         :value  {:id     (swap! id inc)}}))))
+
 (defn db
   "Setup and teardown marathon, mesos and zookeeper"
   [mesos-version zookeeper-version]
@@ -69,13 +100,12 @@
         (info node "starting setting mesos")
         (db/setup! mesos test node)
         (install! test node)
-        (configure test node)
         (start-marathon! test node))
       (teardown! [_ test node]
+        (stop-marathon! node)
         (info node "stopping mesos")
         (db/teardown! mesos test node)
         (db/teardown! zk test node)
-        (stop-marathon! node)
         (uninstall! test node)))))
 
 (defn marathon-test
@@ -83,9 +113,23 @@
    :concurrency, ...), constructs a test map."
   [opts]
   (merge tests/noop-test
-         {:name "marathon"
-          :os debian/os
-          :db (db "1.2.0" "zookeeper-version")}
+         {:name      "marathon"
+          :os        debian/os
+          :db        (db "1.3.0" "zookeeper-version")
+          :client (->Client nil)
+          :generator (gen/phases
+                      (->> (add-job)
+                           (gen/delay 5)
+                           (gen/stagger 5)
+                           (gen/nemesis
+                            (gen/seq (cycle [(gen/sleep 10)
+                                             {:type :info, :f :start}
+                                             (gen/sleep 10)
+                                             {:type :info, :f :stop}])))
+                           (gen/time-limit 30))
+                      (gen/nemesis (gen/once {:type :info, :f :stop}))
+                      (gen/log "Waiting for job executions")
+                      (gen/sleep 5))}
          opts))
 
 (defn -main
