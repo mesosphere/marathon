@@ -300,6 +300,84 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
     assert int(data.rstrip()) > 0, "Backup file is empty"
 
 
+# Regression for MARATHON-7525, introduced in MARATHON-7538
+@masters(3)
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+def test_marathon_backup_and_check_apps(marathon_service_name):
+
+    backup_file1 = 'backup1.tar'
+    backup_file2 = 'backup2.tar'
+    backup_dir = '/tmp'
+    backup_url1 = 'file://{}/{}'.format(backup_dir, backup_file1)
+    backup_url2 = 'file://{}/{}'.format(backup_dir, backup_file2)
+
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+
+    # start an app
+    app_def = common.app(id=uuid.uuid4().hex)
+    app_id = app_def['id']
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 1
+
+    # Abdicate the leader with backup
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+    url = 'v2/leader?backup={}'.format(backup_url1)
+    print('DELETE {}'.format(url))
+    common.delete_marathon_path(url)
+
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def marathon_leadership_changed():
+        current_leader = shakedown.marathon_leader_ip()
+        print('leader: {}'.format(current_leader))
+        assert original_leader != current_leader
+
+    # wait until leader changed
+    marathon_leadership_changed()
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def check_app_existence(expected_instances):
+        app = client.get_app(app_id)
+        assert app['tasksRunning'] == expected_instances
+
+    # check if app definition is still there and one instance is still running after new leader was elected
+    check_app_existence(1)
+
+    # then remove
+    client.remove_app(app_id)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 0
+
+    # Do a second backup. Before MARATHON-7525 we had the problem, that doing a backup after an app was deleted
+    # leads to the state that marathon was not able to re-start, because the second backup failed constantly.
+
+    # Abdicate the leader with backup
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+    url = 'v2/leader?backup={}'.format(backup_url2)
+    print('DELETE {}'.format(url))
+    common.delete_marathon_path(url)
+
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+
+    # wait until leader changed
+    # if leader changed, this means that marathon was able to start again, which is great :-).
+    marathon_leadership_changed()
+
+    # check if app definition is still not there and no instance is running after new leader was elected
+    check_app_existence(0)
+
+
 @pytest.mark.skipif('marthon_version_less_than("1.5")')
 def test_app_file_based_secret(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
