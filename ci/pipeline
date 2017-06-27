@@ -98,6 +98,7 @@ def phabricator(): Unit = {
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
 
   try {
+    phabricatorClient.reject(revisionId)
     jenkins()
     phabricatorClient.reportSuccess(diffId, phId, revisionId, buildUrl, buildTag)
   } catch {
