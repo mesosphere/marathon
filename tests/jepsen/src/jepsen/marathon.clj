@@ -41,13 +41,13 @@
                       :chdir marathon-dir}
                      marathon-bin
                      :--disable_ha
-                     :--framework_name "marathon-dev"
-                     :--hostname "localhost"
-                     :--http_address "127.0.0.1"
-                     :--http_port "8080"
-                     :--https_address "127.0.0.1"
-                     :--https_port "8443"
-                     :--master "zk://localhost:2181/mesos")))
+                     :--framework_name          "marathon-dev"
+                     :--hostname                 node
+                     :--http_address             node
+                     :--http_port                "8080"
+                     :--https_address            node
+                     :--https_port               "8443"
+                     :--master                   (str "zk://" node ":2181/mesos"))))
 
 (defn stop-marathon!
   [node]
@@ -62,7 +62,7 @@
 
 (defn ping-marathon!
   [node]
-  (http/post "http://localhost:8080/ping"))
+  (http/get (str "http://" node ":8080/ping")))
 
 (defrecord Client [node]
   client/Client
@@ -73,21 +73,24 @@
     (timeout 10000 (assoc op :type :info, :value :timed-out)
              (try
                (case (:f op)
-                 :add-job (do (info "Adding job")
-                              (assoc op :type :ok)))
+                 :ping-marathon (do (info "Pinging Marathon Framework")
+                                    (ping-marathon! node)
+                                    (assoc op :type :ok)))
+               (catch org.apache.http.ConnectionClosedException e
+                 (assoc op :type :fail, :value (.getMessage e)))
                (catch java.net.ConnectException e
                  (assoc op :type :fail, :value (.getMessage e))))))
 
   (teardown! [_ test]))
 
-(defn add-job
+(defn ping-marathon
   "Generator for creating new jobs."
   []
   (let [id (atom 0)]
     (reify gen/Generator
       (op [_ test process]
         {:type   :invoke
-         :f      :add-job
+         :f      :ping-marathon
          :value  {:id     (swap! id inc)}}))))
 
 (defn db
@@ -118,7 +121,7 @@
           :db        (db "1.3.0" "zookeeper-version")
           :client (->Client nil)
           :generator (gen/phases
-                      (->> (add-job)
+                      (->> (ping-marathon)
                            (gen/delay 5)
                            (gen/stagger 5)
                            (gen/nemesis
@@ -126,7 +129,7 @@
                                              {:type :info, :f :start}
                                              (gen/sleep 10)
                                              {:type :info, :f :stop}])))
-                           (gen/time-limit 30))
+                           (gen/time-limit 100))
                       (gen/nemesis (gen/once {:type :info, :f :stop}))
                       (gen/log "Waiting for job executions")
                       (gen/sleep 5))}

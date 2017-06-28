@@ -39,17 +39,17 @@
 (defn start-master!
   [test node]
   (c/su
-   (cu/start-daemon! {:logfile master-log-dir
-                      :make-pidfile? true
-                      :pidfile master-pidfile
-                      :chdir master-dir}
+   (cu/start-daemon! {:logfile        master-log-dir
+                      :make-pidfile?  true
+                      :pidfile        master-pidfile
+                      :chdir          master-dir}
                      master-bin
                      (str "--cluster=marathon-dev")
-                     (str "--hostname=localhost")
-                     (str "--ip=127.0.0.1")
+                     (str "--hostname=" node)
+                     (str "--ip=" node)
                      (str "--port=5050")
                      (str "--registry=in_memory")
-                     (str "--zk=zk://localhost:2181/mesos")
+                     (str "--zk=zk://" node ":2181/mesos")
                      (str "--work_dir=\"${data_dir}\""))))
 
 (defn start-agent!
@@ -61,9 +61,9 @@
                       :chdir agent-dir}
                      agent-bin
                      (str "--containerizers=mesos")
-                     (str "--hostname=localhost")
-                     (str "--ip=127.0.0.1")
-                     (str "--master=zk://localhost:2181/mesos")
+                     (str "--hostname=" node)
+                     (str "--ip=" node)
+                     (str "--master=zk://" node ":2181/mesos")
                      (str "--port=5051")
                      (str "--work_dir=\"${data_dir}\""))))
 
