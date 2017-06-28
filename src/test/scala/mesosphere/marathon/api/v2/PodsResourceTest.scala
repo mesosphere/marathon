@@ -284,10 +284,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val ex = intercept[NormalizationException] {
-        f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
-      }
-      ex.msg shouldBe NetworkNormalizationMessages.ContainerNetworkNameUnresolved
+      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
+      response.getStatus shouldBe 422
+      response.getEntity.toString should include("network name must be specified")
     }
 
     "create a pod with custom executor resource declaration" in {

@@ -3,6 +3,7 @@ package api.v2.validation
 
 import com.wix.accord.Validator
 import com.wix.accord.scalatest.ResultMatchers
+import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.raml._
 import mesosphere.{ UnitTest, ValidationTestLike }
 
@@ -10,8 +11,11 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
 
   import Normalization._
 
-  implicit val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty)
-  implicit val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"))
+  val config = AppNormalization.Configuration(None, "mesos-bridge-name")
+  val configWithDefaultNetworkName = AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name")
+  implicit val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, config)
+  implicit val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), config)
+  implicit val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, configWithDefaultNetworkName)
 
   "File based secrets validation" when {
     "file based secret is used when secret feature is not enabled" should {
@@ -182,6 +186,17 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
                 hostPort = Some(80),
                 containerPort = 80,
                 networkNames = List("1"))))) shouldBe (aSuccess)
+      }
+
+      "consider a container network without name to be invalid" in {
+        val result = basicValidator(
+          networkedApp(Seq.empty, networks = Seq(Network(mode = NetworkMode.Container)), false))
+        result.isFailure shouldBe true
+      }
+
+      "consider a container network without name but with a default name from config valid" in {
+        withDefaultNetworkNameValidator(
+          networkedApp(Seq.empty, networks = Seq(Network(mode = NetworkMode.Container)), false)) shouldBe (aSuccess)
       }
 
       "consider a portMapping with a hostPort and two valid networkNames as invalid" in {

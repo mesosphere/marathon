@@ -5,7 +5,7 @@ import com.wix.accord._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
-import mesosphere.marathon.api.v2.validation.AppValidation
+import mesosphere.marathon.api.v2.validation.{ AppValidation, AppValidationMessages }
 import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, PortDefinition, PortDefinitions, Raml, SecretDef, UpgradeStrategy }
@@ -18,7 +18,7 @@ import scala.collection.immutable.Seq
 
 class AppUpdateTest extends UnitTest {
 
-  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(Set("secrets"))
+  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(Set("secrets"), AppNormalization.Configuration(None, "mesos-bridge-name"))
 
   val runSpecId = PathId("/test")
 
@@ -83,6 +83,7 @@ class AppUpdateTest extends UnitTest {
       shouldViolate(update.copy(cpus = Some(-3.0)), "/cpus", "error.min")
       shouldViolate(update.copy(disk = Some(-3.0)), "/disk", "error.min")
       shouldViolate(update.copy(instances = Some(-3)), "/instances", "error.min")
+      shouldViolate(update.copy(networks = Some(Seq(Network(mode = NetworkMode.Container)))), "/", AppValidationMessages.NetworkNameMustBeSpecified)
     }
 
     "Validate secrets" in {

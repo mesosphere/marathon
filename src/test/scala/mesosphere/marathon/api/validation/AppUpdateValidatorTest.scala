@@ -12,7 +12,7 @@ import org.scalatest.Matchers
 import play.api.libs.json.Json
 
 class AppUpdateValidatorTest extends UnitTest with Matchers {
-  implicit val appUpdateValidator = AppValidation.validateCanonicalAppUpdateAPI(Set.empty)
+  implicit val appUpdateValidator = AppValidation.validateCanonicalAppUpdateAPI(Set.empty, AppNormalization.Configuration(None, "mesos-bridge-name"))
   implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
 
   "validation that considers container types" should {

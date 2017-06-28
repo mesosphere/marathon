@@ -10,6 +10,7 @@ import mesosphere.marathon.raml._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.marathon.stream.Implicits._
+import org.rogach.scallop.ScallopOption
 // scalastyle:on
 
 /**
@@ -194,7 +195,7 @@ trait PodsValidation {
     hostPorts.distinct.size == hostPorts.size
   }
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: ScallopOption[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -211,6 +212,9 @@ trait PodsValidation {
     }
     pod.secrets is empty or (valid(secretValidator) and featureEnabled(enabledFeatures, Features.SECRETS))
     pod.networks is valid(ramlNetworksValidator)
+    pod.networks is isTrue[Seq[Network]]("network name must be specified when container network is selected") { nets =>
+      nets.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || defaultNetworkName.isDefined)
+    }
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique

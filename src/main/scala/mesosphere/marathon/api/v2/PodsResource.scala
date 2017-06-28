@@ -46,7 +46,7 @@ class PodsResource @Inject() (
   implicit def podDefValidator: Validator[Pod] =
     PodsValidation.podValidator(
       config.availableFeatures,
-      scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)))
+      scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName)
 
   // If we change/add/upgrade the notion of a Pod and can't do it purely in the internal model,
   // update the json first

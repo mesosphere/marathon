@@ -51,7 +51,7 @@ class AppDefinitionFormatsTest extends UnitTest
         AppNormalization.apply(config)
           .normalized(Validation.validateOrThrow(
             AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
-          AppValidation.validateCanonicalAppAPI(Set.empty)
+          AppValidation.validateCanonicalAppAPI(Set.empty, config)
         )
     )
   }
@@ -682,6 +682,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail for empty container (#4978)" in {
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name")
       val json = Json.parse(
         """{
           |  "id": "/docker-compose-demo",
@@ -689,7 +690,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "container": {}
           |}""".stripMargin)
       val ramlApp = json.as[raml.App]
-      AppValidation.validateCanonicalAppAPI(Set.empty)(ramlApp) should failWith(
+      AppValidation.validateCanonicalAppAPI(Set.empty, config)(ramlApp) should failWith(
         group("container", "is invalid", "docker" -> "not defined")
       )
     }
