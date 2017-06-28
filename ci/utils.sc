@@ -15,8 +15,7 @@ def printWithColor(text: String, color: String): Unit = {
   print(Colors.Reset)
 }
 
-def println(text: String): Unit = println(text)
-def println(text: String, color: String): Unit = printWithColor(s"$text\n", color)
+def printlnWithColor(text: String, color: String): Unit = printWithColor(s"$text\n", color)
 
 def printHr(color: String, character: String = "*", length: Int = 80): Unit = {
   printWithColor(s"${character * length}\n", color)

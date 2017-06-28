@@ -110,7 +110,7 @@ def reportTestResults(phid: String, status: String): Unit = {
     execute("harbormaster.sendmessage", parameters)
   } catch {
     case NonFatal(e) =>
-      utils.println(s"Could not upload test results: ${e.getMessage}", utils.Colors.BrightRed)
+      utils.printlnWithColor(s"Could not upload test results: ${e.getMessage}", utils.Colors.BrightRed)
   }
 }
 
