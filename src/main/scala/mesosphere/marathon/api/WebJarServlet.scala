@@ -65,6 +65,14 @@ class WebJarServlet extends HttpServlet {
     else sendResourceNormalized(resourceURI, mime)
   }
 
+  override def doTrace(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
+    resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED)
+  }
+
+  override def doOptions(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
+    resp.setHeader("Allow", "GET, HEAD, OPTIONS")
+  }
+
   private[this] def mimeType(mediaType: String): String = {
     mediaType.toLowerCase match {
       case "eot" => "application/vnd.ms-fontobject"

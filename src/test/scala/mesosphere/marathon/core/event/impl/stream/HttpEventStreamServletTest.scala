@@ -39,6 +39,21 @@ class HttpEventStreamServletTest extends MarathonSpec with Matchers with Mockito
     verify(response).setStatus(f.auth.UnauthorizedStatus)
   }
 
+  test("Have TRACE disabled for /v2/events") {
+    Given("A request response mock")
+    val f = new Fixture
+    val resource = f.streamServlet()
+    val response = mock[HttpServletResponse]
+    f.auth.authenticated = true
+    f.auth.authorized = true
+
+    When("TRACE is fired for /v2/events")
+    resource.doTrace(f.auth.request, response)
+
+    Then("TRACE is not allowed")
+    verify(response, atLeastOnce).sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED)
+  }
+
   class Fixture {
     val actor = mock[ActorRef]
     val auth = new TestAuthFixture
