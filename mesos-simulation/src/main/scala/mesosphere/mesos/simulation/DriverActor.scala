@@ -117,7 +117,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
               .newBuilder()
               .addRange(Value.Range.newBuilder().setBegin(10000).setEnd(20000)))
           .build()
-      ))
+      ).asJava)
       .build()
   }
   private[this] def offers: ResourceOffers =
