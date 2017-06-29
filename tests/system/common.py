@@ -1094,7 +1094,8 @@ def http_get_marathon_path(name, marathon_name='marathon'):
         ex.  name='ping'  http GET {dcos_url}/service/marathon/ping
     """
     url = get_marathon_endpoint(name, marathon_name)
-    return http.get(url)
+    headers = {'Accept': '*/*'}
+    return http.get(url, headers=headers)
 
 
 # PR added to dcos-cli (however it takes weeks)

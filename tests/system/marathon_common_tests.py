@@ -17,7 +17,7 @@ from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     docker_env_set)
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
-                       marathon_1_5, marthon_version_less_than, mom_version_less_than, marathon_1_4, ee_version)
+                       marthon_version_less_than, mom_version_less_than, marathon_1_4, ee_version)
 from urllib.parse import urljoin
 from utils import fixture_dir, get_resource
 
@@ -477,8 +477,7 @@ def test_https_health_check_healthy(protocol='MESOS_HTTPS'):
         SSL (using self-signed certificate) and listens on 443
     """
     # marathon version captured here will work for root and mom
-    if marthon_version_less_than('1.4.2'):
-        pytest.skip()
+    requires_marathon_version('1.4.2')
 
     client = marathon.create_client()
 
@@ -543,7 +542,7 @@ def test_health_failed_check():
     shakedown.deployment_wait()
 
     # after network failure is restored.  The task returns and is a new task ID
-    @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=3000, retry_on_exception=ignore_on_exception)
     def check_health_message():
         new_tasks = client.get_tasks('/healthy')
         assert new_tasks[0]['id'] != tasks[0]['id']
@@ -697,7 +696,7 @@ def test_launch_container_with_persistent_volume():
     client.restart_app(app_id)
     shakedown.deployment_wait()
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_task_recovery():
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1
@@ -888,7 +887,8 @@ def test_default_user():
     client.add_app(application_json)
     shakedown.deployment_wait()
     app = client.get_app(application_json['id'])
-    assert app['user'] is None
+    user = app.get('user')
+    assert user is None
 
     # wait for deployment to finish
     tasks = client.get_tasks("unique-sleep")
@@ -978,9 +978,11 @@ def test_private_repository_docker_app():
 
 # TODO: D729 will provide a secrets fixture to use here
 @pytest.mark.skipif("docker_env_set()")
-@marathon_1_5
 def test_private_repository_mesos_app():
     """ Test private docker registry with mesos containerizer using "config" container's image field."""
+
+    # marathon version captured here will work for root and mom
+    requires_marathon_version('1.5')
 
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
@@ -1048,7 +1050,8 @@ def test_metric_endpoint(marathon_service_name):
     response = http.get("{}metrics".format(
         shakedown.dcos_service_url(marathon_service_name)))
     assert response.status_code == 200
-    assert response.json()['gauges']['jvm.memory.heap.max']['value'] is not None
+    print(response.json()['gauges'])
+    assert response.json()['gauges']['service.mesosphere.marathon.app.count'] is not None
 
 
 @dcos_1_9
@@ -1102,6 +1105,20 @@ def add_container_network(app_def, network, port=7777):
     del app_def['portDefinitions']
     del app_def['requirePorts']
     return app_def
+
+
+def requires_marathon_version(version):
+    """ This python module is for testing root and MoM marathons.   The @marathon_1_5
+        annotation works only for the root marathon.   The context switching necessary
+        for switching the marathons occurs after the evaluation of the pytestmark.
+        This function is used to ensure the correct version of marathon regardless
+        of root or mom.
+    """
+    # marathon version captured here will work for root and mom
+    if marthon_version_less_than(version):
+        pytest.skip()
+
+
 
 
 @pytest.mark.parametrize("test_type, get_pinger_app, dns_format", [

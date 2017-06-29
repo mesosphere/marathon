@@ -149,7 +149,7 @@ def test_mom_with_network_failure():
     reconnect_agent(task_ip)
 
     time.sleep(timedelta(minutes=1).total_seconds())
-    shakedown.wait_for_service_endpoint('marathon-user')
+    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=5).total_seconds())
     shakedown.wait_for_task("marathon-user", "sleep")
 
     with shakedown.marathon_on_marathon():
