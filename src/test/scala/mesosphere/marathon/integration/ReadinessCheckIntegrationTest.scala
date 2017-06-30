@@ -31,11 +31,13 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
     preserveLastResponse = true
   )
 
+  def appId(suffix: String): PathId = testBasePath / s"app-$suffix"
+
   "ReadinessChecks" should {
     "A deployment of an application with readiness checks (no health) does finish when the app is ready" in {
 
       Given("An application service")
-      val app = appProxy("/readynohealth".toTestPath, "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId("with-readiness-no-health-finish-when-ready"), "v1", instances = 1, healthCheck = None)
         .copy(
           portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
           readinessChecks = Seq(ramlReadinessCheck)
@@ -71,7 +73,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
     "A deployment of an application with readiness checks and health does finish when health checks succeed and plan is ready" in {
       Given("An application service")
-      val app = appProxy("/readyhealth".toTestPath, "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId("with-readiness-and-health-finish-when-healthy-ready"), "v1", instances = 1, healthCheck = None)
         .copy(
           healthChecks = Set(ramlHealthCheck),
           portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
@@ -112,7 +114,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
     "An upgrade of an application will wait for the readiness checks" in {
 
       Given("An application service")
-      val appV1 = appProxy("/readyhealth".toTestPath, "v1", instances = 1, healthCheck = None)
+      val appV1 = appProxy(appId("upgrade-will-wait-for-readiness-checks"), "v1", instances = 1, healthCheck = None)
         .copy(
           portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
           readinessChecks = Seq(ramlReadinessCheck)

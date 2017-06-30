@@ -1,16 +1,13 @@
-import java.time.ZoneOffset
+import java.time.{LocalDate, ZoneOffset}
 import java.time.format.DateTimeFormatter
-import java.time.LocalDate
 
 import com.amazonaws.auth.{EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
-import sbt.Def
-import sbt.Tests.SubProcess
 
-import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
+import scalariform.formatter.preferences._
 
 lazy val IntegrationTest = config("integration") extend Test
 
@@ -21,6 +18,8 @@ resolvers ++= loadM2Resolvers(sLog.value)
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
+
+cleanFiles <+= baseDirectory { base => base / "sandboxes" }
 
 lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
   ScalariformKeys.preferences := FormattingPreferences()

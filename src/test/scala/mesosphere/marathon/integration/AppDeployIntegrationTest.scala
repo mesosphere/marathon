@@ -23,12 +23,12 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
   //clean up state before running the test case
   before(cleanUp())
 
-  def appId(): PathId = testBasePath / s"app-${UUID.randomUUID}"
+  def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
   "AppDeploy" should {
     "create a simple app without health checks" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId(Some("without-health-checks")), "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -42,7 +42,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "redeploying an app without changes should not cause restarts" in {
       Given("an deployed app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId(Some("without-changes-should-not-restart")), "v1", instances = 1, healthCheck = None)
       val result = marathon.createAppV2(app)
       result should be(Created)
       extractDeploymentIds(result) should have size 1
@@ -59,7 +59,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are reset on configuration changes" in {
-      val app: App = createAFailingAppResultingInBackOff()
+      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-with-backoff-dealays-is-reset-on-conf-changes"))
 
       When("we force deploy a working configuration")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(cmd = Some("sleep 120; true")), force = true)
@@ -73,7 +73,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are NOT reset on scaling changes" in {
-      val app: App = createAFailingAppResultingInBackOff()
+      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-with-backoff-delays-is-not-reset-on-scheduling-changes"))
 
       When("we force deploy a scale change")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(instances = Some(3)), force = true)
@@ -88,7 +88,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "restarting an app with backoff delay starts immediately" in {
-      val app: App = createAFailingAppResultingInBackOff()
+      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-restart-with-backoff"))
 
       When("we force a restart")
       val deployment2 = marathon.restartApp(app.id.toPath, force = true)
@@ -100,10 +100,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
     }
 
-    def createAFailingAppResultingInBackOff(): App = {
+    def createAFailingAppResultingInBackOff(id: Option[PathId] = None): App = {
       Given("a new app")
       val app =
-        appProxy(appId(), "v1", instances = 1, healthCheck = None)
+        appProxy(id.getOrElse(appId()), "v1", instances = 1, healthCheck = None)
           .copy(
             cmd = Some("false"),
             backoffSeconds = 1.hour.toSeconds.toInt,
@@ -138,7 +138,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     // OK
     "increase the app count metric when an app is created" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId(Some("with-increased-count-when-an-app-created")), "v1", instances = 1, healthCheck = None)
 
       val appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "mean").as[Double]
 
@@ -155,7 +155,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     // OK
     "create a simple app without health checks via secondary (proxying)" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId(Some("without-health-checks-via-secondary")), "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -169,7 +169,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Marathon HTTP health check" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
+      val app = appProxy(appId(Some("with-marathon-http-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck))
       val check = registerAppProxyHealthCheck(PathId(app.id), "v1", state = true)
 
@@ -188,7 +188,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Mesos HTTP health check" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
+      val app = appProxy(appId(Some("with-mesos-http-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.MesosHttp)))
       val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
 
@@ -207,11 +207,12 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Marathon HTTP health check using port instead of portIndex" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
+      val port = mesosCluster.randomAgentPort()
+      val app = appProxy(appId(Some("with-marathon-http-health-check-using-port")), "v1", instances = 1, healthCheck = None).
         copy(
-          portDefinitions = Option(raml.PortDefinitions(31000)),
+          portDefinitions = Option(raml.PortDefinitions(port)),
           requirePorts = true,
-          healthChecks = Set(ramlHealthCheck.copy(port = Some(31000), portIndex = None))
+          healthChecks = Set(ramlHealthCheck.copy(port = Some(port), portIndex = None))
         )
       val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
 
@@ -230,7 +231,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Marathon TCP health check" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
+      val app = appProxy(appId(Some("with-marathon-tcp-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.Tcp)))
 
       When("The app is deployed")
@@ -244,7 +245,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Mesos TCP healh check" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
+      val app = appProxy(appId(Some("with-mesos-tcp-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.Tcp)))
 
       When("The app is deployed")
@@ -258,7 +259,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a COMMAND health check" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).
+      val app = appProxy(appId(Some("with-command-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(AppHealthCheck(
           protocol = AppHealthCheckProtocol.Command,
           command = Some(CommandCheck("true")))))
@@ -275,7 +276,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     // OK
     "list running apps and tasks" in {
       Given("a new app is deployed")
-      val app = appProxy(appId(), "v1", instances = 2, healthCheck = None)
+      val app = appProxy(appId(Some("listing-running-apps-and-tasks")), "v1", instances = 2, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
 
@@ -296,7 +297,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "an unhealthy app fails to deploy" in {
       Given("a new app that is not healthy")
-      val id = appId()
+      val id = appId(Some("unhealthy-fails-to-deploy"))
       registerAppProxyHealthCheck(id, "v1", state = false)
       val app = appProxy(id, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
 
@@ -327,7 +328,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "an unhealthy app fails to deploy because health checks takes too long to pass" in {
       Given("a new app that is not healthy")
-      val id = appId()
+      val id = appId(Some("unhealthy-fails-to-deploy-because-health-check-takes-too-long"))
       registerAppProxyHealthCheck(id, "v1", state = true).withHealthAction(_ => Thread.sleep(20000))
       val app = appProxy(id, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck().copy(timeoutSeconds = 2)))
 
@@ -358,7 +359,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "update an app" in {
       Given("a new app")
-      val id = appId()
+      val id = appId(Some("with-update-test"))
       val v1 = appProxy(id, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
       val create = marathon.createAppV2(v1)
       create should be(Created)
@@ -381,35 +382,35 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "update an app through patch request" in {
       Given("a new app")
-      val appId = testBasePath / "app"
-      val v1 = appProxy(appId, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
+      val id = appId(Some("update-through-patch-request"))
+      val v1 = appProxy(id, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
       val create = marathon.createAppV2(v1)
       create should be(Created)
       waitForDeployment(create)
-      val before = marathon.tasks(appId)
+      val before = marathon.tasks(id)
 
       When("The app is updated")
-      val check = registerAppProxyHealthCheck(appId, "v2", state = true)
-      val update = marathon.patchApp(v1.id.toPath, AppUpdate(cmd = appProxy(appId, "v2", 1).cmd))
+      val check = registerAppProxyHealthCheck(id, "v2", state = true)
+      val update = marathon.patchApp(v1.id.toPath, AppUpdate(cmd = appProxy(id, "v2", 1).cmd))
 
       Then("The app gets updated")
       update should be(OK)
       waitForDeployment(update)
-      waitForTasks(appId, before.value.size)
+      waitForTasks(id, before.value.size)
       check.pinged.set(false)
       eventually {
         check.pinged.get should be(true) withClue "App did not start"
       }
 
       Then("Check if healthcheck is not updated")
-      val appResult = marathon.app(appId)
+      val appResult = marathon.app(id)
       appResult should be(OK)
       appResult.value.app.healthChecks
     }
 
     "scale an app up and down" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId(Some("scale-up-and-down")), "v1", instances = 1, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
@@ -433,7 +434,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "restart an app" in {
       Given("a new app")
-      val id = appId()
+      val id = appId(Some("testing-restart-an-app"))
       val v1 = appProxy(id, "v1", instances = 1, healthCheck = None)
       val create = marathon.createAppV2(v1)
       create should be(Created)
@@ -453,7 +454,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "list app versions" in {
       Given("a new app")
-      val v1 = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val v1 = appProxy(appId(Some("list-app-versions")), "v1", instances = 1, healthCheck = None)
       val createResponse = marathon.createAppV2(v1)
       createResponse should be(Created)
       waitForDeployment(createResponse)
@@ -467,9 +468,9 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       list.value.versions.headOption should be(createResponse.value.version.map(Timestamp(_)))
     }
 
-    "correctly version apps" in {
+    "correctly version apps on update" in {
       Given("a new app")
-      val v1 = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val v1 = appProxy(appId(Some("correctly-version-app-on-update")), "v1", instances = 1, healthCheck = None)
       val createResponse = marathon.createAppV2(v1)
       createResponse should be(Created)
       val originalVersion = createResponse.value.version
@@ -495,7 +496,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "kill a task of an App" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId(Some("kill-a-task-of-an-app")), "v1", instances = 1, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
@@ -514,7 +515,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "kill a task of an App with scaling" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 2, healthCheck = None)
+      val app = appProxy(appId(Some("kill-a-task-of-an-app-with-scaling")), "v1", instances = 2, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
@@ -531,7 +532,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "kill all tasks of an App" in {
       Given("a new app with multiple tasks")
-      val app = appProxy(appId(), "v1", instances = 2, healthCheck = None)
+      val app = appProxy(appId(Some("kill-all-tasks-of-an-app")), "v1", instances = 2, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
@@ -548,7 +549,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "kill all tasks of an App with scaling" in {
       Given("a new app with multiple tasks")
-      val app = appProxy(appId(), "v1", instances = 2, healthCheck = None)
+      val app = appProxy(appId(Some("kill-all-tasks-of-an-app-with-scaling")), "v1", instances = 2, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
@@ -567,7 +568,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "delete an application" in {
       Given("a new app with one task")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId(Some("delete-an-application")), "v1", instances = 1, healthCheck = None)
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
@@ -583,7 +584,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create and deploy an app with two tasks" in {
       Given("a new app")
-      val appIdPath: PathId = appId()
+      val appIdPath: PathId = appId(Some("create-and-deploy-an-app-with-two-tasks"))
       val app = appProxy(appIdPath, "v1", instances = 2, healthCheck = None)
 
       When("the app gets posted")
@@ -634,7 +635,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     "stop (forcefully delete) a deployment" in {
       Given("a new app with constraints that cannot be fulfilled")
       val c = Seq("nonExistent", "CLUSTER", "na")
-      val id = appId()
+      val id = appId(Some("stop-and-force-delete-a-deployment"))
       val app = App(id.toString, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = None)
 
       val create = marathon.createAppV2(app)
@@ -660,7 +661,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     "rollback a deployment" in {
       Given("a new app with constraints that cannot be fulfilled")
       val c = Seq("nonExistent", "CLUSTER", "na")
-      val id = appId()
+      val id = appId(Some("rollback-a-deployment"))
       val app = App(id.toString, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = None)
 
       val create = marathon.createAppV2(app)
@@ -688,7 +689,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "Docker info is not automagically created" in {
       Given("An app with MESOS container")
-      val id = appId()
+      val id = appId(Some("docker-info-is-not-automagically-created"))
       val app = App(
         id = id.toString,
         cmd = Some("sleep 1"),
@@ -737,7 +738,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a docker container and update it" in {
       Given("a new app")
-      val id = appId()
+      val id = appId(Some("with-docker-container-and-update-it"))
 
       val app = App(
         id = id.toString,
@@ -787,7 +788,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with tty configured should succeed" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).copy(tty = Some(true), cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
+      val app = appProxy(appId(Some("with-tty-configured-should-succeed")), "v1", instances = 1, healthCheck = None).copy(tty = Some(true), cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -801,7 +802,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with tty configured should fail" in {
       Given("a new app")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None).copy(cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
+      val app = appProxy(appId(Some("with-tty-configured-should-fail")), "v1", instances = 1, healthCheck = None).copy(cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)

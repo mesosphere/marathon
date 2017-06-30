@@ -45,8 +45,7 @@ def make_handler(app_id, version, task_id, base_url):
             self.send_header('Content-type', 'text/html')
             self.end_headers()
 
-            marathonId = os.getenv("MARATHON_APP_ID", "NO_MARATHON_APP_ID_SET")
-            msg = "Pong {}".format(marathonId)
+            msg = "Pong {}".format(app_id)
 
             self.wfile.write(byte_type(msg, "UTF-8"))
             return

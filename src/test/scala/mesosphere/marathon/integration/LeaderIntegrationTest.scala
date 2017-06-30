@@ -9,7 +9,6 @@ import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentI
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId._
-import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.duration._
 

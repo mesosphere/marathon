@@ -31,6 +31,11 @@ def compileAndTest(): Unit = utils.stage("Compile and Test") {
 }
 
 @main
+def zipSandboxLogs(): Unit = {
+  %("tar", "-zcvf", "sandboxes.tar.gz", "sandboxes")
+}
+
+@main
 def uploadPackagesToS3(): Unit = utils.stage("Upload Packages") {
   // || file.ext == "sha1" removed, separated out
   (ls! PACKAGE_DIR |? (file => file.ext == "tgz" || file.ext == "txz" ))
@@ -104,6 +109,8 @@ def jenkins(): Unit = {
   }
 
   compileAndTest()
+
+  zipSandboxLogs()
 
   createAndUploadPackages()
 }

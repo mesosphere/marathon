@@ -19,3 +19,5 @@ start.sh
 __pycache__
 .history
 native/
+sandboxes/
+sandboxes.tar.gz
