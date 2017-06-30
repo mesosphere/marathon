@@ -86,4 +86,9 @@ class MesosFacade(url: String, waitTime: Duration = 30.seconds)(implicit val sys
     val pipeline = sendReceive
     result(pipeline(Post(s"$url/terminate", s"frameworkId=$frameworkId")), waitTime)
   }
+
+  def teardown(frameworkId: String): HttpResponse = {
+    val pipeline = sendReceive
+    result(pipeline(Post(s"$url/teardown", s"frameworkId=$frameworkId")), waitTime)
+  }
 }

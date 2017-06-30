@@ -654,7 +654,7 @@ trait LocalMarathonTest
   *
   * This should be used for simple tests that do not require multiple masters.
   */
-trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest
+trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
 
 /**
   * Trait that has one Marathon instance, zk, and a Mesos cluster ready to go.
@@ -669,7 +669,7 @@ trait EmbeddedMarathonMesosClusterTest extends Suite with StrictLogging with Zoo
   *
   * It provides multiple Marathon instances. This allows e.g. leadership rotation.
   */
-trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest {
+trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
   val numAdditionalMarathons = 2
   lazy val additionalMarathons = 0.until(numAdditionalMarathons).map { _ =>
     LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
