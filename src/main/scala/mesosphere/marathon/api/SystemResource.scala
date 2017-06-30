@@ -34,7 +34,7 @@ class SystemResource @Inject() (metrics: MetricRegistry, val config: MarathonCon
   @GET
   @Path("ping")
   @Timed
-  @Produces(Array(MediaType.TEXT_PLAIN))
+  @Produces(Array(MediaType.WILDCARD))
   def ping(): Response = {
     ok("pong")
   }
