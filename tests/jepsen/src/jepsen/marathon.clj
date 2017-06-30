@@ -22,15 +22,21 @@
 (def marathon-dir     "~/marathon/bin/")
 (def marathon-bin     "marathon")
 (def marathon-run-log "~/marathon-log-file.log")
+(def app-dir          "/tmp/marathon-test/")
+(def test-duration    200)
 
 (defn install!
   [test node]
   (c/su
-   (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-586-g2a75b8e.tgz" "/home/vagrant/marathon")))
+   (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-586-g2a75b8e.tgz" "/home/vagrant/marathon")
+   (c/exec :mkdir :-p app-dir)))
 
 (defn uninstall!
   [test node]
-  (info node "Code for uninstalling marathon goes here"))
+  (c/su
+   (c/exec :rm :-rf
+           (c/lit "~/marathon")
+           (c/lit app-dir))))
 
 (defn start-marathon!
   [test node]
@@ -64,6 +70,23 @@
   [node]
   (http/get (str "http://" node ":8080/ping")))
 
+(defn app-cmd
+  [app-id]
+  (str "LOG=$(mktemp -p " app-dir "); "
+       "echo \"" app-id "\" >> $LOG; "
+       "date -u -Ins >> $LOG; "
+       "sleep " (* test-duration 10) ";"
+       "date -u -Ins >> $LOG;"))
+
+(defn add-app!
+  [node app-id]
+  (http/post (str "http://" node ":8080/v2/apps")
+             {:form-params   {:id    app-id
+                              :cmd   (app-cmd app-id)
+                              :cpus  0.001
+                              :mem   10.0}
+              :content-type   :json}))
+
 (defrecord Client [node]
   client/Client
   (setup! [this test node]
@@ -73,9 +96,9 @@
     (timeout 10000 (assoc op :type :info, :value :timed-out)
              (try
                (case (:f op)
-                 :ping-marathon (do (info "Pinging Marathon Framework")
-                                    (ping-marathon! node)
-                                    (assoc op :type :ok)))
+                 :add-app (do (info "Adding app:" (:id (:value op)))
+                              (add-app! node (:id (:value op)))
+                              (assoc op :type :ok)))
                (catch org.apache.http.ConnectionClosedException e
                  (assoc op :type :fail, :value (.getMessage e)))
                (catch java.net.ConnectException e
@@ -83,15 +106,14 @@
 
   (teardown! [_ test]))
 
-(defn ping-marathon
-  "Generator for creating new jobs."
+(defn add-app
   []
   (let [id (atom 0)]
     (reify gen/Generator
       (op [_ test process]
         {:type   :invoke
-         :f      :ping-marathon
-         :value  {:id     (swap! id inc)}}))))
+         :f      :add-app
+         :value  {:id    (str "basic-app-" (swap! id inc))}}))))
 
 (defn db
   "Setup and teardown marathon, mesos and zookeeper"
@@ -106,9 +128,9 @@
         (start-marathon! test node))
       (teardown! [_ test node]
         (stop-marathon! node)
+        (db/teardown! zk test node)
         (info node "stopping mesos")
         (db/teardown! mesos test node)
-        (db/teardown! zk test node)
         (uninstall! test node)))))
 
 (defn marathon-test
@@ -121,17 +143,16 @@
           :db        (db "1.3.0" "zookeeper-version")
           :client (->Client nil)
           :generator (gen/phases
-                      (->> (ping-marathon)
-                           (gen/delay 5)
-                           (gen/stagger 5)
+                      (->> (add-app)
+                           (gen/stagger 10)
                            (gen/nemesis
                             (gen/seq (cycle [(gen/sleep 10)
                                              {:type :info, :f :start}
                                              (gen/sleep 10)
                                              {:type :info, :f :stop}])))
-                           (gen/time-limit 100))
+                           (gen/time-limit test-duration))
                       (gen/nemesis (gen/once {:type :info, :f :stop}))
-                      (gen/log "Waiting for job executions")
+                      (gen/log "Waiting for app executions")
                       (gen/sleep 5))}
          opts))
 

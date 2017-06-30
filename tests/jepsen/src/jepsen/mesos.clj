@@ -18,11 +18,11 @@
 (def agent-bin      "mesos-agent")
 (def master-log-dir "~/master.log")
 (def agent-log-dir  "~/agent.log")
+(def mesos-data-dir "/var/lib/mesos/data")
 
 (defn install!
   [test node version]
   (c/su
-   (debian/install-jdk8!)
    (debian/add-repo! :mesosphere "deb http://repos.mesosphere.com/ubuntu trusty main" "keyserver.ubuntu.com" "E56151BF")
    (debian/install ["mesos"])
    (c/exec :mkdir :-p "/var/run/mesos")))
@@ -34,7 +34,10 @@
 
 (defn uninstall!
   [test node version]
-  (info node "Code for uninstalling mesos goes here"))
+  (c/su
+   (debian/uninstall! ["mesos"])
+   (c/exec :rm :-rf
+           (c/lit "var/lib/mesos"))))
 
 (defn start-master!
   [test node]
@@ -50,7 +53,7 @@
                      (str "--port=5050")
                      (str "--registry=in_memory")
                      (str "--zk=zk://" node ":2181/mesos")
-                     (str "--work_dir=\"${data_dir}\""))))
+                     (str "--work_dir=" mesos-data-dir))))
 
 (defn start-agent!
   [test node]
@@ -65,7 +68,7 @@
                      (str "--ip=" node)
                      (str "--master=zk://" node ":2181/mesos")
                      (str "--port=5051")
-                     (str "--work_dir=\"${data_dir}\""))))
+                     (str "--work_dir=" mesos-data-dir))))
 
 (defn stop-master!
   [node]

@@ -9,12 +9,14 @@
             [jepsen.control.util :as cu]
             [jepsen.os.debian :as debian]))
 
-(def zookeeper-lib "/usr/share/zookeeper/bin/zkServer.sh")
+(def zookeeper-bin "/usr/share/zookeeper/bin/zkServer.sh")
+(def zookeeper-lib "/usr/lib/zookeeper")
 
 (defn install!
   [test node version]
   (c/su
    (debian/update!)
+   (debian/install-jdk8!)
    (debian/install ["zookeeper"])))
 
 (defn start-zookeeper!
@@ -22,18 +24,21 @@
   (info "Starting Zookeeper..")
   (c/su
    (c/exec
-    zookeeper-lib :start)))
+    zookeeper-bin :start)))
 
 (defn stop-zookeeper!
   [test node]
   (info "Stopping Zookeeper..")
   (c/su
    (c/exec
-    zookeeper-lib :stop)))
+    zookeeper-bin :stop)))
 
 (defn uninstall!
   [test node version]
-  (info node "Code for uninstalling zookeeper goes here"))
+  (c/su
+   (debian/uninstall! ["zookeeper"])
+   (c/exec :rm :-rf
+           (c/lit "/usr/lib/zookeeper"))))
 
 (defn db
   [version]
