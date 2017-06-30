@@ -1,14 +1,12 @@
 package mesosphere.marathon
 package streams
 
-import java.util
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.stream.Implicits._
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-import scala.collection.JavaConverters._
+import scala.collection.convert.DecorateAsJava
 
 @State(Scope.Benchmark)
 object ScalaConversions {
@@ -21,54 +19,46 @@ object ScalaConversions {
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
 @Fork(1)
-class ScalaConversions {
+class ScalaConversions extends DecorateAsJava {
   import ScalaConversions._
 
   @Benchmark
   def smallAsJavaStream(hole: Blackhole): Unit = {
-    val asJava: util.List[Int] = small
-    hole.consume(asJava)
+    hole.consume(small.asJava)
   }
 
   @Benchmark
   def smallConverted(hole: Blackhole): Unit = {
-    val asJava = small.asJava
-    hole.consume(asJava)
+    hole.consume(small.asJava)
   }
 
   @Benchmark
   def mediumAsJavaStream(hole: Blackhole): Unit = {
-    val asJava: util.List[Int] = medium
-    hole.consume(asJava)
+    hole.consume(medium.asJava)
   }
 
   @Benchmark
   def mediumConverted(hole: Blackhole): Unit = {
-    val asJava = medium.asJava
-    hole.consume(asJava)
+    hole.consume(medium.asJava)
   }
 
   @Benchmark
   def largeAsJavaStream(hole: Blackhole): Unit = {
-    val asJava: util.List[Int] = large
-    hole.consume(asJava)
+    hole.consume(large.asJava)
   }
 
   @Benchmark
   def largeConverted(hole: Blackhole): Unit = {
-    val asJava = large.asJava
-    hole.consume(asJava)
+    hole.consume(large.asJava)
   }
 
   @Benchmark
   def veryLargeAsJavaStream(hole: Blackhole): Unit = {
-    val asJava: util.List[Int] = veryLarge
-    hole.consume(asJava)
+    hole.consume(veryLarge.asJava)
   }
 
   @Benchmark
   def veryLargeConverted(hole: Blackhole): Unit = {
-    val asJava = veryLarge.asJava
-    hole.consume(asJava)
+    hole.consume(veryLarge.asJava)
   }
 }
