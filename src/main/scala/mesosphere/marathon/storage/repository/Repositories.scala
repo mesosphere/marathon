@@ -34,7 +34,7 @@ trait GroupRepository {
   /** Fetch a previous version of the root */
   def rootVersion(version: OffsetDateTime): Future[Option[RootGroup]]
   /** Resets cached root group */
-  def refreshGroupCache(): Future[Done]
+  def invalidateGroupCache(): Future[Done]
 
   /**
     * Store the root, new/updated apps and delete apps. fails if it could not

@@ -76,7 +76,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
     val mockTimer: Timer = mock[Timer]
     val deploymentManager: DeploymentManager = mock[DeploymentManager]
 
-    groupManager.refreshGroupCache() returns Future.successful(Done)
+    groupManager.invalidateGroupCache() returns Future.successful(Done)
   }
 
   def driverFactory[T](provide: => SchedulerDriver): SchedulerDriverFactory = {

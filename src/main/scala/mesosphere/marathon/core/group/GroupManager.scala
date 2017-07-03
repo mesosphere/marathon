@@ -156,5 +156,5 @@ trait GroupManager {
     *
     * @return Done if refresh was successful
     */
-  def refreshGroupCache(): Future[Done]
+  def invalidateGroupCache(): Future[Done]
 }

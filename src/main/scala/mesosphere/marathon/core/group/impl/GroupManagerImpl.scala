@@ -194,10 +194,10 @@ class GroupManagerImpl(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  override def refreshGroupCache(): Future[Done] = async {
+  override def invalidateGroupCache(): Future[Done] = async {
     // propagation of reset group caches on repository is needed,
     // because manager and repository are holding own caches
-    await(groupRepository.refreshGroupCache())
+    await(groupRepository.invalidateGroupCache())
     val currentRoot = await(groupRepository.root())
     root := currentRoot
     Done
