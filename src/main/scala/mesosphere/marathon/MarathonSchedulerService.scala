@@ -204,11 +204,7 @@ class MarathonSchedulerService @Inject() (
   override def startLeadership(): Unit = synchronized {
     log.info("As new leader running the driver")
 
-    // refresh group repository cache
-    Await.result(groupManager.refreshGroupCache(), Duration.Inf)
-
-    // execute tasks, only the leader is allowed to
-    migration.migrate()
+    refreshCachesAndDoMigration()
 
     // run all pre-driver callbacks
     log.info(s"""Call preDriverStarts callbacks on ${prePostDriverCallbacks.mkString(", ")}""")
@@ -258,6 +254,27 @@ class MarathonSchedulerService @Inject() (
         log.info("Finished postDriverRuns callbacks")
       }
     }
+  }
+
+  private def refreshCachesAndDoMigration(): Unit = {
+    // GroupManager and GroupRepository are holding in memory caches of the root group. The cache is loaded when it is accessed the first time.
+    // Actually this is really bad, because each marathon will log the amount of groups during startup through Kamon.
+    // Therefore the root group state is loaded from zk when the marathon instance is started.
+    // When the marathon instance is elected as leader, this cache is still in the same state as the time marathon started.
+    // Therefore we need to re-load the root group from zk again from zookeeper when becoming leader.
+    // The same is true after doing the migration. A migration or a restore also affects the state of zookeeper, but does not
+    // update the internal hold caches. Therefore we need to refresh the internally loaded caches after the migration.
+    // Actually we need to do the fresh twice, before the migration, to perform the migration on the current zk state and after
+    // the migration to have marathon loaded the current valid state to the internal caches.
+
+    // refresh group repository cache
+    Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
+
+    // execute tasks, only the leader is allowed to
+    migration.migrate()
+
+    // refresh group repository again - migration or restore might changed zk state, this needs to be re-loaded
+    Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
   }
 
   override def stopLeadership(): Unit = synchronized {

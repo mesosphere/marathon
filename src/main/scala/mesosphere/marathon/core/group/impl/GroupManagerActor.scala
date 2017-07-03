@@ -109,7 +109,7 @@ private[impl] class GroupManagerActor(
     case GetUpgrade(gid, change, version, force, toKill) =>
       getUpgrade(gid, change, version, force, toKill).pipeTo(sender())
     case GetAllVersions(id) => getVersions(id).pipeTo(sender())
-    case InvalidateGroupCache => groupRepo.refreshGroupCache().pipeTo(sender())
+    case InvalidateGroupCache => groupRepo.invalidateGroupCache().pipeTo(sender())
   }
 
   private[this] def getRunSpec(id: PathId): Future[Option[RunSpec]] = {

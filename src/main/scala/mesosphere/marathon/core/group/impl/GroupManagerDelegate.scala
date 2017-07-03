@@ -185,7 +185,7 @@ private[group] class GroupManagerDelegate(
     answerFuture
   }
 
-  override def refreshGroupCache(): Future[Done] = {
+  override def invalidateGroupCache(): Future[Done] = {
     askGroupManagerActor(InvalidateGroupCache).mapTo[Done]
   }
 }

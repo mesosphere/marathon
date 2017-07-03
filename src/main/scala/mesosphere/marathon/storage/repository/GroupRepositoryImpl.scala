@@ -242,9 +242,11 @@ class StoredGroupRepositoryImpl[K, C, S](
       }
     }
 
-  override def refreshGroupCache(): Future[Done] = {
-    rootFuture = rootNotLoaded
-    Future.successful(Done)
+  override def invalidateGroupCache(): Future[Done] = {
+    lock {
+      rootFuture = rootNotLoaded
+      Future.successful(Done)
+    }
   }
 
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =

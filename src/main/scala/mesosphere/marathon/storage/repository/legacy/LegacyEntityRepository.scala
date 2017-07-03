@@ -291,7 +291,7 @@ class GroupEntityRepository(
   }
 
   /** Resets cached root group */
-  override def refreshGroupCache(): Future[Done] = {
+  override def invalidateGroupCache(): Future[Done] = {
     // no implementation needed at this point, no cache invalidation needed
     Future.successful(Done)
   }

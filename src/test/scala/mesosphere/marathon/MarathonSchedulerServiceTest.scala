@@ -97,7 +97,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
     heartbeatActor = heartbeatProbe.ref
     prePostDriverCallbacks = scala.collection.immutable.Seq.empty
     mockTimer = mock[Timer]
-    groupManager.refreshGroupCache() returns Future.successful(Done)
+    groupManager.invalidateGroupCache() returns Future.successful(Done)
   }
 
   def driverFactory[T](provide: => SchedulerDriver): SchedulerDriverFactory = {
