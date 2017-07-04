@@ -163,6 +163,8 @@ Bugfix release
 
 ## Changes from 1.3.10 to 1.4.0
 
+### Recommended Mesos version is 1.1.0
+
 ### Breaking Changes
 
 #### Plugin API has changed
