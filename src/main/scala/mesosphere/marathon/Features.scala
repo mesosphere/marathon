@@ -17,12 +17,16 @@ object Features {
   //enable GPUs
   lazy val GPU_RESOURCES = "gpu_resources"
 
+  //enable Mesos HealthChecks
+  lazy val MESOS_HEALTHCHECKS = "mesos_healthchecks"
+
   lazy val availableFeatures = Map(
     VIPS -> "Enable networking VIPs UI",
     TASK_KILLING -> "Enable the optional TASK_KILLING state, available in Mesos 0.28 and later",
     EXTERNAL_VOLUMES -> "Enable external volumes support in Marathon",
     SECRETS -> "Enable support for secrets in Marathon (experimental)",
-    GPU_RESOURCES -> "Enable support for GPU in Marathon (experimental)"
+    GPU_RESOURCES -> "Enable support for GPU in Marathon (experimental)",
+    MESOS_HEALTHCHECKS -> "Enable support for Mesos Native Healthchecks in Marathon (require Mesos version >= 1.1.0)"
   )
 
   def description: String = {

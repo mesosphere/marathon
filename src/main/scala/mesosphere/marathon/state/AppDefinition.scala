@@ -606,6 +606,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithUpgradeStrategyRules
     appDef must complyWithGpuRules
     appDef.constraints.each must complyWithConstraintRules
+    appDef must complyWithMesosHealthChecks
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
@@ -768,6 +769,13 @@ object AppDefinition extends GeneralPurposeCombinators {
       }
     }
   }
+
+  private val complyWithMesosHealthChecks: Validator[AppDefinition] =
+    conditional[AppDefinition](appDef =>
+      (appDef.healthChecks.count(_.isInstanceOf[MesosHealthCheck]) -
+        appDef.healthChecks.count(_.isInstanceOf[MesosCommandHealthCheck])) > 0) {
+      featureEnabled(Features.MESOS_HEALTHCHECKS)
+    }
 
   private val haveAtMostOneMesosHealthCheck: Validator[AppDefinition] =
     isTrue[AppDefinition]("AppDefinition can contain at most one Mesos health check") { appDef =>
