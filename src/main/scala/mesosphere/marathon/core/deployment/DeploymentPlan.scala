@@ -303,8 +303,7 @@ object DeploymentPlan {
 
     // applications that are either new or the specs are different should be considered for the dependency graph
     val addedOrChanged: Set[PathId] = targetRuns.collect {
-      case (runSpecId, spec) if (!originalRuns.contains(runSpecId) ||
-        (originalRuns.contains(runSpecId) && originalRuns(runSpecId) != spec)) =>
+      case (runSpecId, spec) if (!originalRuns.get(runSpecId).contains(spec)) =>
         // the above could be optimized/refined further by checking the version info. The tests are actually
         // really bad about structuring this correctly though, so for now, we just make sure that
         // the specs are different (or brand new)
