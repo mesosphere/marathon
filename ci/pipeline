@@ -5,6 +5,7 @@ import ammonite.ops.ImplicitWd._
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
+import scala.util.Try
 
 import $file.awsClient
 import $file.fileUtil
@@ -32,7 +33,7 @@ def compileAndTest(): Unit = utils.stage("Compile and Test") {
 
 @main
 def zipSandboxLogs(): Unit = {
-  %("tar", "-zcvf", "sandboxes.tar.gz", "sandboxes")
+  Try(%("tar", "-zcvf", "sandboxes.tar.gz", "sandboxes"))
 }
 
 @main
@@ -108,9 +109,11 @@ def jenkins(): Unit = {
     provision.installMesos()
   }
 
-  compileAndTest()
-
-  zipSandboxLogs()
+  try {
+    compileAndTest()
+  } finally {
+    zipSandboxLogs()    // Try to archive logs in any case
+  }
 
   createAndUploadPackages()
 }
