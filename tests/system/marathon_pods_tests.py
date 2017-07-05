@@ -276,9 +276,9 @@ def test_pod_comm_via_volume():
     client.add_pod(pod_json)
     shakedown.deployment_wait()
     tasks = get_pod_tasks(pod_id)
-    assert len(tasks) == 2
+    assert len(tasks) == 2, "Num of tasks: {} is not 2 after deployment".format(len(tasks))
     time.sleep(4)
-    assert len(tasks) == 2
+    assert len(tasks) == 2, "Num of tasks: {} is not 2 after sleeping".format(len(tasks))
 
 
 @dcos_1_9
@@ -351,7 +351,7 @@ def test_pod_port_communication():
     shakedown.deployment_wait()
 
     tasks = get_pod_tasks(pod_id)
-    assert len(tasks) == 2
+    assert len(tasks) == 2, "Num of tasks: {} is not 2 after deployment".format(len(tasks))
 
 
 @dcos_1_9
@@ -372,7 +372,7 @@ def test_pin_pod():
     shakedown.deployment_wait()
 
     tasks = get_pod_tasks(pod_id)
-    assert len(tasks) == 2
+    assert len(tasks) == 2, "Num of tasks: {} is not 2 after deployment".format(len(tasks))
 
     pod = client.list_pod()[0]
     assert pod['instances'][0]['agentHostname'] == host

@@ -35,8 +35,8 @@ def test_launch_mesos_container():
     tasks = client.get_tasks(app_id)
     app = client.get_app(app_id)
 
-    assert len(tasks) == 1
-    assert app['container']['type'] == 'MESOS'
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
+    assert app['container']['type'] == 'MESOS', "Container type is NOT MESOS"
 
 
 def test_launch_docker_container():
@@ -50,8 +50,8 @@ def test_launch_docker_container():
     tasks = client.get_tasks(app_id)
     app = client.get_app(app_id)
 
-    assert len(tasks) == 1
-    assert app['container']['type'] == 'DOCKER'
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
+    assert app['container']['type'] == 'DOCKER', "Container type is NOT DOCKER"
 
 
 def test_launch_mesos_container_with_docker_image():
@@ -66,8 +66,8 @@ def test_launch_mesos_container_with_docker_image():
     tasks = client.get_tasks(app_id)
     app = client.get_app(app_id)
 
-    assert len(tasks) == 1
-    assert app['container']['type'] == 'MESOS'
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
+    assert app['container']['type'] == 'MESOS', "Container type is NOT MESOS"
 
 
 # this fails on 1.7, it is likely the version of marathon in universe for 1.7
@@ -163,7 +163,7 @@ def test_docker_port_mappings():
     status, output = shakedown.run_command_on_agent(host, cmd)
 
     assert status
-    assert output == "200"
+    assert output == "200", "HTTP status: {} is NOT 200".format(output)
 
 
 def ignore_on_exception(exc):
@@ -207,7 +207,7 @@ def test_launch_app_timed():
     # if not launched in 3 sec fail
     time.sleep(3)
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
 
 
 def test_ui_available(marathon_service_name):
@@ -217,7 +217,7 @@ def test_ui_available(marathon_service_name):
 
     response = http.get("{}/ui/".format(
         shakedown.dcos_service_url(marathon_service_name)))
-    assert response.status_code == 200
+    assert response.status_code == 200, "HTTP code: {} is NOT 200".format(response.status_code)
 
 
 def test_task_failure_recovers():
@@ -237,7 +237,7 @@ def test_task_failure_recovers():
     @retrying.retry(stop_max_delay=10000)
     def check_new_task_id():
         new_tasks = client.get_tasks(app_id)
-        assert tasks[0]['id'] != new_tasks[0]['id']
+        assert tasks[0]['id'] != new_tasks[0]['id'], "id: {} is NOT {}".format(tasks[0]['id'], new_tasks[0]['id'])
 
     check_new_task_id()
 
@@ -321,7 +321,7 @@ def test_launch_group():
 
     group_apps = client.get_group('/test-group/sleep')
     apps = group_apps['apps']
-    assert len(apps) == 2
+    assert len(apps) == 2, "Num of tasks: {} is not 2 after deployment".format(len(tasks))
 
 
 def test_scale_group():
@@ -339,19 +339,19 @@ def test_scale_group():
 
     group_apps = client.get_group('/test-group/sleep')
     apps = group_apps['apps']
-    assert len(apps) == 2
+    assert len(apps) == 2, "Num of Apps: {} is not 2".format(len(apps))
     tasks1 = client.get_tasks('/test-group/sleep/goodnight')
     tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
-    assert len(tasks1) == 1
-    assert len(tasks2) == 1
+    assert len(tasks1) == 1, "Num of tasks 1: {} is not 1 after deployment".format(len(tasks1))
+    assert len(tasks2) == 1, "Num of tasks 2: {} is not 1 after deployment".format(len(tasks2))
 
     # scale by 2 for the entire group
     client.scale_group('/test-group/sleep', 2)
     shakedown.deployment_wait()
     tasks1 = client.get_tasks('/test-group/sleep/goodnight')
     tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
-    assert len(tasks1) == 2
-    assert len(tasks2) == 2
+    assert len(tasks1) == 2, "Num of tasks 1: {} is not 2 after scale".format(len(tasks1))
+    assert len(tasks2) == 2, "Num of tasks 2: {} is not 2 after scale".format(len(tasks2))
 
 
 # required_cpus
@@ -371,19 +371,19 @@ def test_scale_app_in_group():
 
     group_apps = client.get_group('/test-group/sleep')
     apps = group_apps['apps']
-    assert len(apps) == 2
+    assert len(apps) == 2, "Num of Apps: {} is not 2".format(len(apps))
     tasks1 = client.get_tasks('/test-group/sleep/goodnight')
     tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
-    assert len(tasks1) == 1
-    assert len(tasks2) == 1
+    assert len(tasks1) == 1, "Num of tasks 1: {} is not 1 after deployment".format(len(tasks1))
+    assert len(tasks2) == 1, "Num of tasks 2: {} is not 1 after deployment".format(len(tasks2))
 
     # scaling just an app in the group
     client.scale_app('/test-group/sleep/goodnight', 2)
     shakedown.deployment_wait()
     tasks1 = client.get_tasks('/test-group/sleep/goodnight')
     tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
-    assert len(tasks1) == 2
-    assert len(tasks2) == 1
+    assert len(tasks1) == 2, "Num of tasks 1: {} is not 2 after scale".format(len(tasks1))
+    assert len(tasks2) == 1, "Num of tasks 2: {} is not 1 after scale".format(len(tasks2))
 
 
 @private_agents(2)
@@ -402,19 +402,19 @@ def test_scale_app_in_group_then_group():
 
     group_apps = client.get_group('/test-group/sleep')
     apps = group_apps['apps']
-    assert len(apps) == 2
+    assert len(apps) == 2, "Num of Apps: {} is not 2".format(len(apps))
     tasks1 = client.get_tasks('/test-group/sleep/goodnight')
     tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
-    assert len(tasks1) == 1
-    assert len(tasks2) == 1
+    assert len(tasks1) == 1, "Num of tasks 1: {} is not 1 after deployment".format(len(tasks1))
+    assert len(tasks2) == 1, "Num of tasks 2: {} is not 1 after deployment".format(len(tasks2))
 
     # scaling just an app
     client.scale_app('/test-group/sleep/goodnight', 2)
     shakedown.deployment_wait()
     tasks1 = client.get_tasks('/test-group/sleep/goodnight')
     tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
-    assert len(tasks1) == 2
-    assert len(tasks2) == 1
+    assert len(tasks1) == 2, "Num of tasks 1: {} is not 2 after scale".format(len(tasks1))
+    assert len(tasks2) == 1, "Num of tasks 2: {} is not 1 after scale".format(len(tasks2))
 
     # scaling the group after 1 app in the group was scaled.
     client.scale_group('/test-group/sleep', 2)
@@ -422,8 +422,8 @@ def test_scale_app_in_group_then_group():
     time.sleep(1)
     tasks1 = client.get_tasks('/test-group/sleep/goodnight')
     tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
-    assert len(tasks1) == 4
-    assert len(tasks2) == 2
+    assert len(tasks1) == 4, "Num of tasks 1: {} is not 4 after scale".format(len(tasks1))
+    assert len(tasks2) == 2, "Num of tasks 2: {} is not 2 after scale".format(len(tasks2))
 
 
 @dcos_1_9
@@ -587,14 +587,14 @@ def test_pinned_task_scales_on_host_only():
     shakedown.deployment_wait()
 
     tasks = client.get_tasks('/pinned')
-    assert len(tasks) == 1
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
     assert tasks[0]['host'] == host
 
     client.scale_app('pinned', 10)
     shakedown.deployment_wait()
 
     tasks = client.get_tasks('/pinned')
-    assert len(tasks) == 10
+    assert len(tasks) == 10, "Num of tasks: {} is not 10 after scale".format(len(tasks))
     for task in tasks:
         assert task['host'] == host
 
@@ -647,8 +647,8 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     tasks = client.get_tasks('/pinned')
 
     # still deploying
-    assert len(deployments) == 1
-    assert len(tasks) == 1
+    assert len(deployments) == 1, "Num of deployments: {} is not 1 ".format(len(deployments))
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
 
 
 @private_agents(2)
@@ -669,7 +669,7 @@ def test_pinned_task_does_not_find_unknown_host():
     time.sleep(10)
 
     tasks = client.get_tasks('/pinned')
-    assert len(tasks) == 0
+    assert len(tasks) == 0, "Num of tasks: {} is not 0".format(len(tasks))
 
 
 @dcos_1_8
@@ -684,7 +684,7 @@ def test_launch_container_with_persistent_volume():
     shakedown.deployment_wait()
 
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
 
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
@@ -700,7 +700,7 @@ def test_launch_container_with_persistent_volume():
     @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_task_recovery():
         tasks = client.get_tasks(app_id)
-        assert len(tasks) == 1
+        assert len(tasks) == 1, "Num of tasks: {} is not 1 after recovery".format(len(tasks))
 
     check_task_recovery()
 
@@ -723,7 +723,7 @@ def test_update_app():
     shakedown.deployment_wait()
 
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
 
     app_def['cpus'] = 1
     app_def['instances'] = 2
@@ -731,7 +731,7 @@ def test_update_app():
     shakedown.deployment_wait()
 
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 2
+    assert len(tasks) == 2, "Num of tasks: {} is not 2 after update".format(len(tasks))
 
 
 def test_update_app_rollback():
@@ -747,7 +747,7 @@ def test_update_app_rollback():
 
     # start with 1
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
 
     app_def['instances'] = 2
     client.update_app(app_id, app_def)
@@ -755,7 +755,7 @@ def test_update_app_rollback():
 
     # update works to 2
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 2
+    assert len(tasks) == 2, "Num of tasks: {} is not 2 after update".format(len(tasks))
 
     # provides a testing delay to rollback from
     app_def['readinessChecks'][0]['intervalSeconds'] = 30
@@ -766,7 +766,7 @@ def test_update_app_rollback():
     shakedown.deployment_wait()
     # update to 1 instance is rollback to 2
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 2
+    assert len(tasks) == 2, "Num of tasks: {} is not 2 after rollback".format(len(tasks))
 
 
 def test_update_app_poor_health():
@@ -782,7 +782,7 @@ def test_update_app_poor_health():
 
     # start with 1
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after deployment".format(len(tasks))
 
     # provides a testing delay to rollback from
     app_def['healthChecks'][0]['path'] = '/non-existant'
@@ -796,7 +796,7 @@ def test_update_app_poor_health():
         shakedown.deployment_wait()
 
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    assert len(tasks) == 1, "Num of tasks: {} is not 1 after rollback".format(len(tasks))
 
 
 @private_agents(2)
@@ -821,7 +821,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_task_recovery():
         tasks = client.get_tasks('/master-failure')
-        tasks[0]['id'] == original_task_id
+        assert tasks[0]['id'] == original_task_id
 
     check_task_recovery()
 
@@ -847,10 +847,10 @@ def test_marathon_when_disconnected_from_zk():
         time.sleep(10)
 
     # after access to zk is restored.
-    @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=3000, retry_on_exception=ignore_on_exception)
     def check_task_is_back():
         tasks = client.get_tasks('/zk-failure')
-        tasks[0]['id'] == original_task_id
+        assert tasks[0]['id'] == original_task_id
 
     check_task_is_back()
 
@@ -870,10 +870,10 @@ def test_marathon_when_task_agent_bounced():
     original_task_id = tasks[0]['id']
     shakedown.restart_agent(host)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=3000, retry_on_exception=ignore_on_exception)
     def check_task_is_back():
         tasks = client.get_tasks('/agent-failure')
-        tasks[0]['id'] == original_task_id
+        assert tasks[0]['id'] == original_task_id
 
     check_task_is_back()
 
@@ -1011,7 +1011,7 @@ def test_ping(marathon_service_name):
         This isn't provided by the client object and will need to create the url to test
     """
     response = common.http_get_marathon_path('ping', marathon_service_name)
-    assert response.status_code == 200
+    assert response.status_code == 200, "HTTP Code {} is NOT 200".format(response.status_code)
     assert 'pong' in response.text
 
 

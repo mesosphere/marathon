@@ -5,9 +5,11 @@ import uuid
 import shakedown
 
 from common import fake_framework_app
+from datetime import timedelta
 from dcos import marathon
 from dcos.errors import DCOSException
 
+from datetime import timedelta
 
 def test_deploy_custom_framework():
     """ Launches an app that has elements necessary to create a service endpoint in DCOS.
@@ -16,9 +18,9 @@ def test_deploy_custom_framework():
 
     client = marathon.create_client()
     client.add_app(fake_framework_app())
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
 
-    assert shakedown.wait_for_service_endpoint('pyfw')
+    assert shakedown.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds())
 
 
 def test_readiness_time_check():
