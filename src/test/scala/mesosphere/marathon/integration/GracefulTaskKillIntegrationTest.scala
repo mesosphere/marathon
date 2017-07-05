@@ -38,16 +38,16 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with Embedd
     val taskId = marathon.tasks(app.id).value.head.id
 
     When("a task of an app is killed")
-    val taskKillSentTimestamp = System.currentTimeMillis()
+    val taskKillSentTimestamp = Timestamp.now()
     marathon.killTask(app.id, taskId).code should be (200)
 
-    waitForEventWith(
+    val taskKilledEvent = waitForEventWith(
       "status_update_event",
       _.info("taskStatus") == "TASK_KILLED",
       maxWait = taskKillGracePeriod.plus(2.seconds))
 
-    val taskKilledReceivedTimestamp = System.currentTimeMillis()
-    val waitedForTaskKilledEvent = (taskKilledReceivedTimestamp - taskKillSentTimestamp).milliseconds
+    val taskKilledReceivedTimestamp = Timestamp(taskKilledEvent.info("timestamp").toString)
+    val waitedForTaskKilledEvent = taskKillSentTimestamp until taskKilledReceivedTimestamp
 
     // the task_killed event should occur at least 10 seconds after sending it
     waitedForTaskKilledEvent.toMillis should be >= taskKillGracePeriod.toMillis
@@ -70,20 +70,20 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with Embedd
     val taskId = marathon.tasks(app.id).value.head.id
 
     When("a task of an app is killed")
-    val taskKillSentTimestamp = System.currentTimeMillis()
     marathon.killTask(app.id, taskId).code should be (200)
+    val taskKillSentTimestamp = Timestamp.now()
 
-    waitForEventWith(
+    val taskKilledEvent = waitForEventWith(
       "status_update_event",
       _.info("taskStatus") == "TASK_KILLED",
       maxWait = taskKillGracePeriod.plus(2.seconds))
 
-    val taskKilledReceivedTimestamp = System.currentTimeMillis()
-    val waitedForTaskKilledEvent = (taskKilledReceivedTimestamp - taskKillSentTimestamp).milliseconds
+    val taskKilledReceivedTimestamp = Timestamp(taskKilledEvent.info("timestamp").toString)
+    val waitedForTaskKilledEvent = taskKillSentTimestamp until taskKilledReceivedTimestamp
 
     // the task_killed event should occur instantly or at least smaller as taskKillGracePeriod,
     // because the app terminates shortly
-    waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis
+    waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis withClue s"the task kill event took longer than the task kill grace period"
   }
 
   def healthCheck = MarathonHttpHealthCheck(
