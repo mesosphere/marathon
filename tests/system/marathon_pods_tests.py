@@ -17,7 +17,7 @@ from common import (block_port, cluster_info, event_fixture, get_pod_tasks, ip_o
                     pin_pod_to_host, restore_iptables, save_iptables, docker_env_set, clear_pods)
 from dcos import marathon, util, http, mesos
 from shakedown import (dcos_1_9, marathon_1_5, dcos_version_less_than, marthon_version_less_than,
-                       private_agents, required_private_agents)
+                       private_agents, required_private_agents, ee_version)
 from utils import fixture_dir, get_resource, parse_json
 
 

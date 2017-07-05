@@ -196,6 +196,7 @@ def test_docker_dns_mapping(marathon_service_name):
 
     check_dns()
 
+
 def test_launch_app_timed():
     """ Most tests wait until a task is launched with no reference to time.
     This simple test verifies that if a app is launched on marathon that within 3 secs
@@ -240,6 +241,7 @@ def test_task_failure_recovers():
         assert tasks[0]['id'] != new_tasks[0]['id'], "id: {} is NOT {}".format(tasks[0]['id'], new_tasks[0]['id'])
 
     check_new_task_id()
+
 
 @pytest.mark.skipif("ee_version() == 'strict'")
 def test_good_user():
@@ -1117,8 +1119,6 @@ def requires_marathon_version(version):
     # marathon version captured here will work for root and mom
     if marthon_version_less_than(version):
         pytest.skip()
-
-
 
 
 @pytest.mark.parametrize("test_type, get_pinger_app, dns_format", [
