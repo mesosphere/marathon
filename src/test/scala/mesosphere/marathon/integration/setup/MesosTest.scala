@@ -3,7 +3,6 @@ package integration.setup
 
 import java.io.File
 import java.nio.file.{ Files, Paths }
-import java.util.concurrent.atomic.AtomicInteger
 
 import akka.Done
 import akka.actor.{ ActorSystem, Scheduler }
