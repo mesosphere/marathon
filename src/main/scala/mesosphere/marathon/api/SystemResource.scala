@@ -3,7 +3,7 @@ package api
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, MediaType, Response }
+import javax.ws.rs.core.{ Context, MediaType, Request, Response, Variant }
 
 import akka.actor.ActorSystem
 import ch.qos.logback.classic.{ Level, Logger, LoggerContext }
@@ -28,20 +28,56 @@ import scala.concurrent.duration._
   * All system resources can be protected via ACLs.
   */
 @Path("")
-@Consumes(Array(MediaType.APPLICATION_JSON))
-@Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
   val authenticator: Authenticator,
     val authorizer: Authorizer,
     actorSystem: ActorSystem) extends RestResource with AuthResource with StrictLogging {
 
+  private[this] val TEXT_WILDCARD_TYPE = MediaType.valueOf("text/*")
+
+  /**
+    * ping sends a pong to a client.
+    *
+    * ping doesn't use the `Produces` or `Consumes` tags because those do specific checking for a client
+    * Accept header that may or may not exist. In the interest of compatibility we dynamically generate
+    * a "pong" content object depending on the client's preferred Content-Type, or else assume `text/plain`
+    * if the client specifies an Accept header compatible with `text/{wildcard}`. Otherwise no entity is
+    * returned and status is set to "no content" (HTTP 204).
+    */
   @GET
   @Path("ping")
-  @Produces(Array(MediaType.WILDCARD))
-  def ping(): Response = ok("pong")
+  def ping(@Context req: Request): Response = {
+    import MediaType._
+
+    val v = Variant.mediaTypes(
+      TEXT_PLAIN_TYPE, // first, in case client accepts */* or text/*
+      TEXT_HTML_TYPE,
+      APPLICATION_JSON_TYPE,
+      TEXT_WILDCARD_TYPE
+    ).add.build
+
+    Option[Variant](req.selectVariant(v)).map(variant => variant -> variant.getMediaType).collect {
+      case (variant, mediaType) if mediaType.isCompatible(APPLICATION_JSON_TYPE) =>
+        // return a properly formatted JSON object
+        "\"pong\"" -> APPLICATION_JSON_TYPE
+      case (variant, mediaType) if mediaType.isCompatible(TEXT_WILDCARD_TYPE) =>
+        // otherwise we send back plain text
+        "pong" -> {
+          if (mediaType.isWildcardType() || mediaType.isWildcardSubtype()) {
+            TEXT_PLAIN_TYPE // never return a Content-Type w/ a wildcard
+          } else {
+            mediaType
+          }
+        }
+    }.map { case (obj, mediaType) => Response.ok(obj).`type`(mediaType.toString).build }.getOrElse {
+      Response.noContent().build
+    }
+  }
 
   @GET
   @Path("metrics")
+  @Consumes(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def metrics(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, SystemMetrics){
       ok(jsonString(Raml.toRaml(Metrics.snapshot())))
@@ -50,6 +86,8 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
 
   @GET
   @Path("config")
+  @Consumes(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def config(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, SystemConfig) {
       ok(cfg.root().render(ConfigRenderOptions.defaults().setJson(true)))
@@ -58,6 +96,8 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
 
   @GET
   @Path("logging")
+  @Consumes(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def showLoggers(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(ViewResource, SystemConfig) {
       LoggerFactory.getILoggerFactory match {
@@ -71,6 +111,8 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
 
   @POST
   @Path("logging")
+  @Consumes(Array(MediaType.APPLICATION_JSON))
+  @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def changeLogger(body: Array[Byte], @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(UpdateResource, SystemConfig) {
       withValid(Json.parse(body).as[LoggerChange]) { change =>
