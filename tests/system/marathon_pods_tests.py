@@ -1,6 +1,7 @@
 """Marathon pod acceptance tests for DC/OS."""
 
 import common
+import json
 import os
 import pytest
 import uuid
@@ -79,17 +80,18 @@ def test_create_pod():
     assert pod is not None
 
 
-# TODO: D729 will provide a secrets fixture to use here
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.skipif("docker_env_set()")
-@marathon_1_5
 def test_create_pod_with_private_image():
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
 
     secret_name = "dockerPullConfig"
     secret_value_json = common.create_docker_pull_config_json(username, password)
-
-    import json
     secret_value = json.dumps(secret_value_json)
 
     client = marathon.create_client()

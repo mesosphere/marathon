@@ -1,6 +1,7 @@
 """ This is a set of tests which are expected to run on root Marathon and marathon on marathon (MoM).
 """
 import common
+import json
 import os
 import pytest
 import retrying
@@ -976,21 +977,20 @@ def test_private_repository_docker_app():
     common.assert_app_tasks_running(client, app_def)
 
 
-# TODO: D729 will provide a secrets fixture to use here
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+@pytest.mark.skipif("ee_version() is None")
 @pytest.mark.skipif("docker_env_set()")
 def test_private_repository_mesos_app():
     """ Test private docker registry with mesos containerizer using "config" container's image field."""
 
-    # marathon version captured here will work for root and mom
-    requires_marathon_version('1.5')
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
 
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
 
     secret_name = "dockerPullConfig"
     secret_value_json = common.create_docker_pull_config_json(username, password)
-
-    import json
     secret_value = json.dumps(secret_value_json)
 
     client = marathon.create_client()
