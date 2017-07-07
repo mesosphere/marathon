@@ -398,6 +398,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       val leader2 = firstRunningProcess.client.leader().value
       val leadingProcess2: LocalMarathon = leadingServerProcess(leader2.leader)
       val client2 = leadingProcess2.client
+      waitForSSEConnect()
 
       And("delete the app")
       val delete = client2.deleteApp(app.id.toPath)
@@ -427,6 +428,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       val leader3 = firstRunningProcess.client.leader().value
       val leadingProcess3: LocalMarathon = leadingServerProcess(leader3.leader)
       val client3 = leadingProcess3.client
+      waitForSSEConnect()
 
       And("app should not be available")
       client3.app(app.id.toPath) should be(NotFound)
