@@ -30,14 +30,14 @@ As of Marathon 1.5, you can upload your private Docker registry credentials to a
     {
       "auths": {
           "https://index.docker.io/v1/": {
-              "auth": "XXXXX"
+              "auth": "XXXXX",
+              "email": "<your-email>"
           }
       }
     }
     ```
 
 1.  Add the `config.json` file to a secret store. If you are using Enterprise DC/OS, [follow these instructions to add the file to the DC/OS secret store](https://docs.mesosphere.com/1.9/security/secrets/create-secrets/#api).
-  **Note:** As of DC/OS version 10.0, you can only add a file to the secret store via the API or the DC/OS CLI.
 
 ### Step 2: Add the Secret to your App or Pod Definition
 
@@ -75,7 +75,7 @@ Add the following two parameters to your app definition.
       "id": "/mesos-docker",
       "container": {
         "docker": {
-          "image": "mesosphere/inky",
+          "image": "your/private/image",
           "pullConfig": {
             "secret": "pullConfigSecret"
           }
