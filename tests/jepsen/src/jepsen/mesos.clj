@@ -8,7 +8,8 @@
             [jepsen.tests :as tests]
             [jepsen.control.util :as cu]
             [jepsen.os.debian :as debian]
-            [jepsen.util :as util :refer [meh timeout]]))
+            [jepsen.util :as util :refer [meh timeout]]
+            [jepsen.zookeeper :as zk]))
 
 (def master-pidfile "/var/run/mesos/master.pid")
 (def agent-pidfile  "/var/run/mesos/agent.pid")
@@ -52,7 +53,7 @@
                      (str "--ip=" node)
                      (str "--port=5050")
                      (str "--registry=in_memory")
-                     (str "--zk=zk://" node ":2181/mesos")
+                     (str "--zk=zk://" (zk/zk-url test) "/mesos")
                      (str "--work_dir=" mesos-data-dir))))
 
 (defn start-agent!
@@ -66,7 +67,7 @@
                      (str "--containerizers=mesos")
                      (str "--hostname=" node)
                      (str "--ip=" node)
-                     (str "--master=zk://" node ":2181/mesos")
+                     (str "--master=zk://" (zk/zk-url test) "/mesos")
                      (str "--port=5051")
                      (str "--work_dir=" mesos-data-dir))))
 

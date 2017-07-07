@@ -16,7 +16,8 @@
             [jepsen.os.debian :as debian]
             [jepsen.mesos :as mesos]
             [jepsen.zookeeper :as zk]
-            [jepsen.util :as util :refer [meh timeout]]))
+            [jepsen.util :as util :refer [meh timeout]]
+            [jepsen.nemesis :as nemesis]))
 
 (def marathon-pidfile "~/marathon/master.pid")
 (def marathon-dir     "~/marathon/bin/")
@@ -46,14 +47,14 @@
                       :pidfile marathon-pidfile
                       :chdir marathon-dir}
                      marathon-bin
-                     :--disable_ha
-                     :--framework_name          "marathon-dev"
+                     :--framework_name          "marathon"
                      :--hostname                 node
                      :--http_address             node
                      :--http_port                "8080"
                      :--https_address            node
                      :--https_port               "8443"
-                     :--master                   (str "zk://" node ":2181/mesos"))))
+                     :--master                   (str "zk://" (zk/zk-url test) "/mesos")
+                     :--zk                       (str "zk://" (zk/zk-url test) "/marathon"))))
 
 (defn stop-marathon!
   [node]
@@ -131,6 +132,7 @@
         (db/teardown! zk test node)
         (info node "stopping mesos")
         (db/teardown! mesos test node)
+        (info node "stopping Marathon framework")
         (uninstall! test node)))))
 
 (defn marathon-test
@@ -141,7 +143,7 @@
          {:name      "marathon"
           :os        debian/os
           :db        (db "1.3.0" "zookeeper-version")
-          :client (->Client nil)
+          :client    (->Client nil)
           :generator (gen/phases
                       (->> (add-app)
                            (gen/stagger 10)
@@ -152,13 +154,12 @@
                                              {:type :info, :f :stop}])))
                            (gen/time-limit test-duration))
                       (gen/nemesis (gen/once {:type :info, :f :stop}))
-                      (gen/log "Waiting for app executions")
+                      (gen/log "Done generating and launching apps.")
                       (gen/sleep 5))}
          opts))
 
 (defn -main
-  "Handles command line arguments. Can either run a test, or a web server for
-   browsing results."
+  "Handles command line arguments. This will run marathon-test"
   [& args]
   (cli/run! (cli/single-test-cmd {:test-fn marathon-test})
             args))
