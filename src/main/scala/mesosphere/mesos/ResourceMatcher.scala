@@ -196,7 +196,11 @@ object ResourceMatcher {
       badConstraints.isEmpty
     }
 
-    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches) && meetsAllConstraints) {
+    val checkAvailability: Boolean = {
+      Availability.offerAvailable(offer)
+    }
+
+    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches) && meetsAllConstraints && checkAvailability) {
       portsMatchOpt match {
         case Some(portsMatch) =>
           Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch))
