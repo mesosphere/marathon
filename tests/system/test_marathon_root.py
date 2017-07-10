@@ -6,6 +6,8 @@
 """
 import common
 import shakedown
+import uuid
+import pytest
 
 # this is intentional import *
 # it imports all the common test_ methods which are to be tested on root and mom
@@ -15,7 +17,10 @@ from marathon_auth_common_tests import *
 from marathon_pods_tests import *
 
 from shakedown import (masters, required_masters, public_agents, required_public_agents,
-                        dcos_1_9, marthon_version_less_than, marthon_version_less_than)
+                       dcos_1_9, marthon_version_less_than, marthon_version_less_than,
+                       ee_version)
+
+from dcos import marathon
 
 from datetime import timedelta
 
@@ -59,6 +64,63 @@ def test_marathon_delete_leader(marathon_service_name):
         assert original_leader != current_leader
 
     marathon_leadership_changed()
+
+
+@masters(3)
+def test_marathon_delete_leader_and_check_apps(marathon_service_name):
+
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+
+    # start an app
+    app_def = common.app(id=uuid.uuid4().hex)
+    app_id = app_def['id']
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 1
+
+    # abdicate leader after app was started successfully
+    common.delete_marathon_path('v2/leader')
+
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def marathon_leadership_changed():
+        current_leader = shakedown.marathon_leader_ip()
+        print('leader: {}'.format(current_leader))
+        assert original_leader != current_leader
+
+    # wait until leader changed
+    marathon_leadership_changed()
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def check_app_existence(expected_instances):
+        app = client.get_app(app_id)
+        assert app['tasksRunning'] == expected_instances
+
+    # check if app definition is still there and one instance is still running after new leader was elected
+    check_app_existence(1)
+
+    client.remove_app(app_id)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 0
+
+    # abdicate leader after app was started successfully
+    common.delete_marathon_path('v2/leader')
+
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+
+    # wait until leader changed
+    marathon_leadership_changed()
+
+    # check if app definition is still not there and no instance is running after new leader was elected
+    check_app_existence(0)
 
 
 @masters(3)
@@ -187,11 +249,11 @@ def test_external_volume():
         # Clean up after the test: external volumes are not destroyed by marathon or dcos
         # and have to be cleaned manually.
         agent = shakedown.get_private_agents()[0]
-        result, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))  # NOQA
+        status, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))  # NOQA
         # Note: Removing the volume might fail sometimes because EC2 takes some time (~10min) to recognize that
         # the volume is not in use anymore hence preventing it's removal. This is a known pitfall: we log the error
         # and the volume should be cleaned up manually later.
-        if not result:
+        if not status:
             print('WARNING: Failed to remove external volume with name={}: {}'.format(volume_name, output))
 
 
@@ -238,6 +300,333 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     # Check if the backup file exits and is valid
     cmd = 'tar -tf {}/{} | wc -l'.format(backup_dir, backup_file)
-    run, data = shakedown.run_command_on_master(cmd)
-    assert run, 'Failed to validate backup file {}'.format(backup_url)
+    status, data = shakedown.run_command_on_master(cmd)
+    assert status, 'Failed to validate backup file {}'.format(backup_url)
     assert int(data.rstrip()) > 0, "Backup file is empty"
+
+
+# Regression for MARATHON-7525, introduced in MARATHON-7538
+@masters(3)
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+def test_marathon_backup_and_check_apps(marathon_service_name):
+
+    backup_file1 = 'backup1.tar'
+    backup_file2 = 'backup2.tar'
+    backup_dir = '/tmp'
+    backup_url1 = 'file://{}/{}'.format(backup_dir, backup_file1)
+    backup_url2 = 'file://{}/{}'.format(backup_dir, backup_file2)
+
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+
+    # start an app
+    app_def = common.app(id=uuid.uuid4().hex)
+    app_id = app_def['id']
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 1
+
+    # Abdicate the leader with backup
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+    url = 'v2/leader?backup={}'.format(backup_url1)
+    print('DELETE {}'.format(url))
+    common.delete_marathon_path(url)
+
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def marathon_leadership_changed():
+        current_leader = shakedown.marathon_leader_ip()
+        print('leader: {}'.format(current_leader))
+        assert original_leader != current_leader
+
+    # wait until leader changed
+    marathon_leadership_changed()
+
+    @retrying.retry(stop_max_attempt_number=30)
+    def check_app_existence(expected_instances):
+        app = client.get_app(app_id)
+        assert app['tasksRunning'] == expected_instances
+
+    # check if app definition is still there and one instance is still running after new leader was elected
+    check_app_existence(1)
+
+    # then remove
+    client.remove_app(app_id)
+    shakedown.deployment_wait()
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == 0
+
+    # Do a second backup. Before MARATHON-7525 we had the problem, that doing a backup after an app was deleted
+    # leads to the state that marathon was not able to re-start, because the second backup failed constantly.
+
+    # Abdicate the leader with backup
+    original_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(original_leader))
+    url = 'v2/leader?backup={}'.format(backup_url2)
+    print('DELETE {}'.format(url))
+    common.delete_marathon_path(url)
+
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+
+    # wait until leader changed
+    # if leader changed, this means that marathon was able to start again, which is great :-).
+    marathon_leadership_changed()
+
+    # check if app definition is still not there and no instance is running after new leader was elected
+    check_app_existence(0)
+
+
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+@pytest.mark.skipif("ee_version() is None")
+def test_app_file_based_secret(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    # if not common.is_enterprise_cli_package_installed():
+    # common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+    secret_normalized_name = secret_name.replace('/', '')
+    secret_container_path = 'mysecretpath'
+
+    app_id = uuid.uuid4().hex
+    # In case you're wondering about the `cmd`: secrets are mounted via tmpfs inside
+    # the container and are not visible outside, hence the intermediate file
+    app_def = {
+        "id": app_id,
+        "instances": 1,
+        "cpus": 0.1,
+        "mem": 64,
+        "cmd": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $PORT_API".
+            format(secret_container_path, secret_container_path),
+        "container": {
+            "type": "MESOS",
+            "volumes": [{
+                "containerPath": secret_container_path,
+                "secret": "secret1"
+            }]
+        },
+        "portDefinitions": [{
+            "port": 0,
+            "protocol": "tcp",
+            "name": "api",
+            "labels": {}
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    assert len(tasks) == 1, 'Failed to start the file based secret app'
+
+    port = tasks[0]['ports'][0]
+    host = tasks[0]['host']
+    # The secret by default is saved in $MESOS_SANDBOX/.secrets/path/to/secret
+    cmd = "curl {}:{}/{}_file".format(host, port, secret_container_path)
+    status, data = shakedown.run_command_on_master(cmd)
+
+    assert status, "{} did not succeed".format(cmd)
+    assert data == secret_value
+
+
+@dcos_1_9
+@pytest.mark.skipif("ee_version() is None")
+def test_app_secret_env_var(secret_fixture):
+
+    secret_name, secret_value = secret_fixture
+
+    app_id = uuid.uuid4().hex
+    app_def = {
+        "id": app_id,
+        "instances": 1,
+        "cpus": 0.1,
+        "mem": 64,
+        "cmd": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $PORT_API",
+        "env": {
+            "SECRET_ENV": {
+                "secret": "secret1"
+            }
+        },
+        "portDefinitions": [{
+            "port": 0,
+            "protocol": "tcp",
+            "name": "api",
+            "labels": {}
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    assert len(tasks) == 1, 'Failed to start the secret environment variable app'
+
+    port = tasks[0]['ports'][0]
+    host = tasks[0]['host']
+    cmd = "curl {}:{}/secret-env".format(host, port)
+    status, data = shakedown.run_command_on_master(cmd)
+
+    assert status, "{} did not succeed".format(cmd)
+    assert data.rstrip() == secret_value
+
+
+@pytest.mark.skip('need: https://github.com/mesosphere/dcos-enterprise/pull/1124')
+@dcos_1_9
+@pytest.mark.skipif("ee_version() is None")
+def test_pod_secret_env_var(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+
+    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_def = {
+        "id": pod_id,
+        "containers": [{
+            "name": "container-1",
+            "resources": {
+                "cpus": 0.1,
+                "mem": 64
+            },
+            "endpoints": [{
+                "name": "http",
+                "hostPort": 0,
+                "protocol": [
+                    "tcp"
+                ]}
+            ],
+            "exec": {
+                "command": {
+                    "shell": "echo $SECRET_ENV && echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTP"
+                }
+            }
+        }],
+        "environment": {
+            "SECRET_ENV": {
+                "secret": "secret1"
+            }
+        },
+        "networks": [{
+            "mode": "host"
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    shakedown.deployment_wait()
+
+    instances = client.show_pod(pod_id)['instances']
+    assert len(instances) == 1, 'Failed to start the secret environment variable pod'
+
+    port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
+    host = instances[0]['networks'][0]['addresses'][0]
+    cmd = "curl {}:{}/secret-env".format(host, port)
+    status, data = shakedown.run_command_on_master(cmd)
+
+    assert status, "{} did not succeed".format(cmd)
+    assert data.rstrip() == secret_value
+
+
+@pytest.mark.skip('need: https://github.com/mesosphere/dcos-enterprise/pull/1124')
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+@pytest.mark.skipif("ee_version() is None")
+def test_pod_file_based_secret(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+    secret_normalized_name = secret_name.replace('/', '')
+
+    pod_id = '/{}'.format(uuid.uuid4().hex)
+
+    pod_def = {
+        "id": pod_id,
+        "containers": [{
+            "name": "container-1",
+            "resources": {
+                "cpus": 0.1,
+                "mem": 64
+            },
+            "endpoints": [{
+                "name": "http",
+                "hostPort": 0,
+                "protocol": [
+                    "tcp"
+                ]}
+            ],
+            "exec": {
+                "command": {
+                    "shell": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTP".format(secret_normalized_name, secret_normalized_name),
+                }
+            },
+            "volumeMounts": [{
+                "name": "vol",
+                "mountPath": secret_name
+            }],
+        }],
+        "networks": [{
+            "mode": "host"
+        }],
+        "volumes": [{
+            "name": "vol",
+            "secret": "secret1"
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    shakedown.deployment_wait()
+
+    instances = client.show_pod(pod_id)['instances']
+    assert len(instances) == 1, 'Failed to start the file based secret pod'
+
+    port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
+    host = instances[0]['networks'][0]['addresses'][0]
+    cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
+    status, data = shakedown.run_command_on_master(cmd)
+
+    assert status, "{} did not succeed".format(cmd)
+    assert data.rstrip() == secret_value
+
+
+@pytest.fixture(scope="function")
+def secret_fixture():
+    # Install enterprise-cli since it's needed to create secrets
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
+    secret_name = '/mysecret'
+    secret_value = 'super_secret_password'
+    common.create_secret(secret_name, secret_value)
+    yield secret_name, secret_value
+    common.delete_secret(secret_name)

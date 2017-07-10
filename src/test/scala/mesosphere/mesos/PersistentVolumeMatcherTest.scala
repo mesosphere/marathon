@@ -73,8 +73,8 @@ class PersistentVolumeMatcherTest extends UnitTest {
       val offer =
         f.offerWithVolumes(unknownInstance, localVolumeId1)
           .toBuilder
-          .addAllResources(MarathonTestHelper.persistentVolumeResources(instances.head.appTask.taskId, localVolumeId2))
-          .addAllResources(MarathonTestHelper.persistentVolumeResources(instances(1).appTask.taskId, localVolumeId3))
+          .addAllResources(MarathonTestHelper.persistentVolumeResources(instances.head.appTask.taskId, localVolumeId2).asJava)
+          .addAllResources(MarathonTestHelper.persistentVolumeResources(instances(1).appTask.taskId, localVolumeId3).asJava)
           .build()
 
       When("We ask for a volume match")

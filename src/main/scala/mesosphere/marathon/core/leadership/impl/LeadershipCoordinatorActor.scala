@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package core.leadership.impl
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props, Stash, Status, Terminated }
+import akka.actor.{ Actor, ActorRef, Props, Stash, Status, Terminated }
 import akka.event.LoggingReceive
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.leadership.PreparationMessages
 import mesosphere.marathon.core.leadership.impl.WhenLeaderActor.Stop
 
@@ -13,7 +14,7 @@ private[leadership] object LeadershipCoordinatorActor {
 }
 
 private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[ActorRef])
-    extends Actor with ActorLogging with Stash {
+    extends Actor with StrictLogging with Stash {
 
   override def preStart(): Unit = {
     whenLeaderActors.foreach(context.watch)
@@ -24,11 +25,11 @@ private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[A
   override def receive: Receive = suspended
 
   private[impl] def suspended: Receive = {
-    log.info("All actors suspended:\n{}", whenLeaderActors.map(actorRef => s"* $actorRef").mkString("\n"))
+    logger.info(s"All actors suspended:\n${whenLeaderActors.map(actorRef => s"* $actorRef").mkString("\n")}")
 
     LoggingReceive.withLabel("suspended") {
       case Terminated(actorRef) =>
-        log.error("unexpected death of {}", actorRef)
+        logger.error(s"unexpected death of $actorRef")
         whenLeaderActors -= actorRef
 
       case PreparationMessages.PrepareForStart =>
@@ -56,7 +57,7 @@ private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[A
           context.become(preparingForStart(ackStartRefs, whenLeaderActorsWithoutAck - whenLeaderRef))
 
         case Terminated(actorRef) =>
-          log.error("unexpected death of {}", actorRef)
+          logger.error(s"unexpected death of $actorRef")
           whenLeaderActors -= actorRef
           context.become(preparingForStart(ackStartRefs - actorRef, whenLeaderActorsWithoutAck - actorRef))
 
@@ -71,11 +72,11 @@ private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[A
   }
 
   private[impl] def active: Receive = LoggingReceive.withLabel("active") {
-    log.info("All actors active:\n{}", whenLeaderActors.map(actorRef => s"* $actorRef").mkString("\n"))
+    logger.info(s"All actors active:\n${whenLeaderActors.map(actorRef => s"* $actorRef").mkString("\n")}")
 
     LoggingReceive.withLabel("active") {
       case Terminated(actorRef) =>
-        log.error("unexpected death of {}", actorRef)
+        logger.error(s"unexpected death of $actorRef")
         whenLeaderActors -= actorRef
 
       case PreparationMessages.PrepareForStart => sender() ! PreparationMessages.Prepared(self)

@@ -41,7 +41,7 @@ class SchedulerActor(scheduler: Scheduler) extends Actor with Stash {
       scheduler.registered(driver, frameworkId, masterInfo)
 
     case ResourceOffers(offers) =>
-      scheduler.resourceOffers(driver, offers)
+      scheduler.resourceOffers(driver, offers.asJava)
 
     case status: TaskStatus =>
       scheduler.statusUpdate(driver, status)

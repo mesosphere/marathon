@@ -140,7 +140,7 @@ object DVDIProviderVolumeToUnifiedMesosVolumeTest {
         else Volume.Source.DockerVolume.newBuilder
       if (opts.isEmpty) dv.clearDriverOptions()
       else dv.setDriverOptions(Parameters.newBuilder.addAllParameter(
-        opts.map { case (k, v) => Parameter.newBuilder.setKey(k).setValue(v).build }))
+        opts.map { case (k, v) => Parameter.newBuilder.setKey(k).setValue(v).build }.asJava))
       sb.setDockerVolume(dv)
       v.setSource(sb)
       options(old)

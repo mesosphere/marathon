@@ -1,20 +1,15 @@
-import java.time.ZoneOffset
+import java.time.{LocalDate, ZoneOffset}
 import java.time.format.DateTimeFormatter
-import java.time.LocalDate
 
 import com.amazonaws.auth.{EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
-import sbt.Def
-import sbt.Tests.SubProcess
 
-import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
+import scalariform.formatter.preferences._
 
 lazy val IntegrationTest = config("integration") extend Test
-lazy val UnstableTest = config("unstable") extend Test
-lazy val UnstableIntegrationTest = config("unstable-integration") extend Test
 
 def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
 
@@ -23,6 +18,8 @@ resolvers ++= loadM2Resolvers(sLog.value)
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
+
+cleanFiles <+= baseDirectory { base => base / "sandboxes" }
 
 lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
   ScalariformKeys.preferences := FormattingPreferences()
@@ -47,39 +44,24 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
 
 lazy val testSettings =
   inConfig(IntegrationTest)(Defaults.testTasks) ++
-  inConfig(UnstableTest)(Defaults.testTasks) ++
-  inConfig(UnstableIntegrationTest)(Defaults.testTasks) ++
   Seq(
   (coverageDir in Test) := target.value / "test-coverage",
   (coverageDir in IntegrationTest) := target.value / "integration-coverage",
   (coverageMinimum in IntegrationTest) := 58,
   testWithCoverageReport in IntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(IntegrationTest).value,
-  (coverageDir in UnstableTest) := target.value / "unstable-coverage",
-  (coverageDir in UnstableIntegrationTest) := target.value / "unstable-integration-coverage",
-  testWithCoverageReport in UnstableTest := TestWithCoveragePlugin.runTestsWithCoverage(UnstableTest).value,
-  testWithCoverageReport in UnstableIntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(UnstableIntegrationTest).value,
 
   testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"),
     Tests.Argument("-l", "mesosphere.marathon.IntegrationTest",
-      "-l", "mesosphere.marathon.UnstableTest",
       "-y", "org.scalatest.WordSpec")),
   fork in Test := true,
-
-  parallelExecution in UnstableTest := true,
-  testForkedParallel in UnstableTest := true,
-  testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument(
-    "-l", "mesosphere.marathon.IntegrationTest",
-    "-y", "org.scalatest.WordSpec")),
-  fork in UnstableTest := true,
 
   fork in IntegrationTest := true,
   testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
-      "-l", "mesosphere.marathon.UnstableTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in IntegrationTest := true,
   testForkedParallel in IntegrationTest := true,
@@ -91,21 +73,7 @@ lazy val testSettings =
     "-Dscala.concurrent.context.minThreads=2",
     "-Dscala.concurrent.context.maxThreads=32"
   ),
-  fork in UnstableIntegrationTest := true,
-  testOptions in UnstableIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable-integration"),
-    Tests.Argument(
-      "-n", "mesosphere.marathon.IntegrationTest",
-      "-y", "org.scalatest.WordSpec")),
-  parallelExecution in UnstableIntegrationTest := true,
-  testForkedParallel in UnstableIntegrationTest := true,
-    concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
-  javaOptions in (UnstableIntegrationTest, test) ++= Seq(
-    "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
-    "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
-    "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
-    "-Dscala.concurrent.context.minThreads=2",
-    "-Dscala.concurrent.context.maxThreads=32"
-  )
+  concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2)))
 )
 
 lazy val commonSettings = testSettings ++
@@ -282,8 +250,6 @@ addCommandAlias("packageRpm",  ";set serverLoading in Rpm := com.typesafe.sbt.pa
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
     .configs(IntegrationTest)
-    .configs(UnstableTest)
-    .configs(UnstableIntegrationTest)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
     .settings(
@@ -293,8 +259,6 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
 
 lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
-  .configs(UnstableTest)
-  .configs(UnstableIntegrationTest)
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, DebianPlugin, RpmPlugin, JDebPackaging,
     CopyPasteDetector, RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, TestWithCoveragePlugin)
   .dependsOn(`plugin-interface`)
@@ -316,8 +280,6 @@ lazy val marathon = (project in file("."))
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .configs(IntegrationTest)
-  .configs(UnstableTest)
-  .configs(UnstableIntegrationTest)
   .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -329,8 +291,6 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
   .configs(IntegrationTest)
-  .configs(UnstableTest)
-  .configs(UnstableIntegrationTest)
   .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)

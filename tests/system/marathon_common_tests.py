@@ -13,27 +13,13 @@ from datetime import timedelta
 from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     health_check, ip_of_mom, ip_other_than_mom, pin_to_host,
                     persistent_volume_app, python_http_app, readiness_and_health_app,
-                    restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait)
+                    restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait,
+                    docker_env_set)
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
                        marthon_version_less_than, mom_version_less_than, marathon_1_4, ee_version)
 from urllib.parse import urljoin
 from utils import fixture_dir, get_resource
-
-
-def test_launch_mesos_container():
-    """ Test the successful launch of a mesos container on Marathon.
-    """
-    client = marathon.create_client()
-    app_id = uuid.uuid4().hex
-    client.add_app(app_mesos(app_id))
-    shakedown.deployment_wait()
-
-    tasks = client.get_tasks(app_id)
-    app = client.get_app(app_id)
-
-    assert len(tasks) == 1
-    assert app['container']['type'] == 'MESOS'
 
 
 def test_launch_mesos_container():
@@ -179,7 +165,7 @@ def test_docker_port_mappings():
     assert output == "200"
 
 
-def retry_on_exception(exc):
+def ignore_on_exception(exc):
     return isinstance(exc, Exception)
 
 
@@ -221,23 +207,6 @@ def test_launch_app_timed():
     time.sleep(3)
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1
-
-
-def test_ui_registration_requirement():
-    """ Testing the UI is a challenge with this toolchain.  The UI team has the
-        best tooling for testing it.   This test verifies that the required configurations
-        for the service endpoint and ability to launch to the service UI are present.
-    """
-    tasks = mesos.get_master().tasks()
-    for task in tasks:
-        if task['name'] == 'marathon-user':
-            for label in task['labels']:
-                if label['key'] == 'DCOS_PACKAGE_NAME':
-                    assert label['value'] == 'marathon'
-                if label['key'] == 'DCOS_PACKAGE_IS_FRAMEWORK':
-                    assert label['value'] == 'true'
-                if label['key'] == 'DCOS_SERVICE_NAME':
-                    assert label['value'] == 'marathon-user'
 
 
 def test_ui_available(marathon_service_name):
@@ -301,7 +270,7 @@ def test_bad_user():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
@@ -326,7 +295,7 @@ def test_bad_uri():
     client.add_app(app_def)
 
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=ignore_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
@@ -508,8 +477,7 @@ def test_https_health_check_healthy(protocol='MESOS_HTTPS'):
         SSL (using self-signed certificate) and listens on 443
     """
     # marathon version captured here will work for root and mom
-    if marthon_version_less_than('1.4.2'):
-        pytest.skip()
+    requires_marathon_version('1.4.2')
 
     client = marathon.create_client()
 
@@ -574,7 +542,7 @@ def test_health_failed_check():
     shakedown.deployment_wait()
 
     # after network failure is restored.  The task returns and is a new task ID
-    @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=3000, retry_on_exception=ignore_on_exception)
     def check_health_message():
         new_tasks = client.get_tasks('/healthy')
         assert new_tasks[0]['id'] != tasks[0]['id']
@@ -728,7 +696,7 @@ def test_launch_container_with_persistent_volume():
     client.restart_app(app_id)
     shakedown.deployment_wait()
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_task_recovery():
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1
@@ -849,7 +817,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     common.systemctl_master()
     shakedown.wait_for_service_endpoint(marathon_service_name)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_task_recovery():
         tasks = client.get_tasks('/master-failure')
         tasks[0]['id'] == original_task_id
@@ -919,7 +887,8 @@ def test_default_user():
     client.add_app(application_json)
     shakedown.deployment_wait()
     app = client.get_app(application_json['id'])
-    assert app['user'] is None
+    user = app.get('user')
+    assert user is None
 
     # wait for deployment to finish
     tasks = client.get_tasks("unique-sleep")
@@ -960,7 +929,7 @@ def _test_declined_offer(app_id, app_def, reason):
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def verify_declined_offer():
         deployments = client.get_deployments(app_id)
         assert len(deployments) == 1
@@ -986,10 +955,6 @@ def declined_offer_by_reason(offers, reason):
     return None
 
 
-def docker_env_set():
-    return 'DOCKER_HUB_USERNAME' not in os.environ and 'DOCKER_HUB_PASSWORD' not in os.environ
-
-
 @pytest.mark.skipif("docker_env_set()")
 def test_private_repository_docker_app():
     # Create and copy docker credentials to all private agents
@@ -1011,25 +976,34 @@ def test_private_repository_docker_app():
     common.assert_app_tasks_running(client, app_def)
 
 
-@pytest.mark.skip(reason="Not yet implemented in mesos")
+# TODO: D729 will provide a secrets fixture to use here
+@pytest.mark.skipif("docker_env_set()")
 def test_private_repository_mesos_app():
-    """ Test private docker registry with mesos containerizer using "credentials" container field.
-        Note: Despite of what DC/OS docmentation states this feature is not yet implemented:
-        https://issues.apache.org/jira/browse/MESOS-7088
-    """
+    """ Test private docker registry with mesos containerizer using "config" container's image field."""
+
+    # marathon version captured here will work for root and mom
+    requires_marathon_version('1.5')
+
+    username = os.environ['DOCKER_HUB_USERNAME']
+    password = os.environ['DOCKER_HUB_PASSWORD']
+
+    secret_name = "dockerPullConfig"
+    secret_value_json = common.create_docker_pull_config_json(username, password)
+
+    import json
+    secret_value = json.dumps(secret_value_json)
 
     client = marathon.create_client()
-    assert 'DOCKER_HUB_USERNAME' in os.environ, "Couldn't find docker hub username. $DOCKER_HUB_USERNAME is not set"
-    assert 'DOCKER_HUB_PASSWORD' in os.environ, "Couldn't find docker hub password. $DOCKER_HUB_PASSWORD is not set"
+    common.create_secret(secret_name, secret_value)
 
-    principal = os.environ['DOCKER_HUB_USERNAME']
-    secret = os.environ['DOCKER_HUB_PASSWORD']
+    try:
+        app_def = common.private_mesos_container_app(secret_name)
+        client.add_app(app_def)
+        shakedown.deployment_wait()
 
-    app_def = common.private_mesos_container_app(principal, secret)
-    client.add_app(app_def)
-    shakedown.deployment_wait()
-
-    common.assert_app_tasks_running(client, app_def)
+        common.assert_app_tasks_running(client, app_def)
+    finally:
+        common.delete_secret(secret_name)
 
 
 def test_ping(marathon_service_name):
@@ -1073,10 +1047,11 @@ def test_vip_mesos_cmd(marathon_service_name):
 
 
 def test_metric_endpoint(marathon_service_name):
-    response = http.get("{}/metrics/".format(
+    response = http.get("{}metrics".format(
         shakedown.dcos_service_url(marathon_service_name)))
     assert response.status_code == 200
-    assert response.json()['gauges']['jvm.memory.heap.max']['value'] is not None
+    print(response.json()['gauges'])
+    assert response.json()['gauges']['service.mesosphere.marathon.app.count'] is not None
 
 
 @dcos_1_9
@@ -1132,6 +1107,20 @@ def add_container_network(app_def, network, port=7777):
     return app_def
 
 
+def requires_marathon_version(version):
+    """ This python module is for testing root and MoM marathons.   The @marathon_1_5
+        annotation works only for the root marathon.   The context switching necessary
+        for switching the marathons occurs after the evaluation of the pytestmark.
+        This function is used to ensure the correct version of marathon regardless
+        of root or mom.
+    """
+    # marathon version captured here will work for root and mom
+    if marthon_version_less_than(version):
+        pytest.skip()
+
+
+
+
 @pytest.mark.parametrize("test_type, get_pinger_app, dns_format", [
         ('localhost', common.pinger_localhost_app, '{}.{}.mesos'),
         ('bridge', common.pinger_bridge_app, '{}.{}.mesos'),
@@ -1184,6 +1173,7 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
 def clear_marathon():
     try:
         common.stop_all_deployments()
+        common.clear_pods()
         common.delete_all_apps_wait()
     except Exception as e:
         print(e)

@@ -62,7 +62,8 @@ class InstanceOpFactoryImpl(
   protected def inferPodInstanceOp(request: InstanceOpFactory.Request, pod: PodDefinition): OfferMatchResult = {
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
-      config.envVarsPrefix.get)
+      config.envVarsPrefix.get,
+      config.mesosBridgeName())
 
     val matchedOffer =
       RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances, builderConfig.acceptedResourceRoles)

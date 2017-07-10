@@ -1,0 +1,17 @@
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  (1..3).each do |i|
+    nodename = "n#{i}"
+    config.vm.box = "ubuntu/trusty64"
+    config.vm.define nodename do |node|
+      node.vm.hostname = nodename
+      node.vm.network :private_network, ip: "10.20.30.#{i+1}"
+      node.vm.provider :virtualbox do |vb|
+        vb.name = nodename
+        vb.customize ["modifyvm", :id, "--memory", 2048, "--natdnshostresolver1", "on"]
+      end
+    end
+  end
+end

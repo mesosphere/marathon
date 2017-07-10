@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, Network, NetworkMode, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppDockerVolume, Network, NetworkMode, AppHealthCheck, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
@@ -195,10 +195,119 @@ case class LocalMarathon(
   }
 }
 
+trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
+
+  protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
+  val registeredReadinessChecks = Lock(mutable.ListBuffer.empty[IntegrationReadinessCheck])
+
+  implicit val system: ActorSystem
+  implicit val mat: Materializer
+
+  /**
+    * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
+    * We initialize it during the before hook and wait for Marathon to respond.
+    */
+  protected[setup] lazy val healthEndpoint = {
+    val route = {
+      import akka.http.scaladsl.server.Directives._
+      val mapper = new ObjectMapper() with ScalaObjectMapper
+      mapper.registerModule(DefaultScalaModule)
+
+      implicit val unmarshal = new FromRequestUnmarshaller[Map[String, Any]] {
+        override def apply(value: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[Map[String, Any]] = {
+          value.entity.toStrict(patienceConfig.timeout)(materializer).map { entity =>
+            mapper.readValue[Map[String, Any]](entity.data.utf8String)
+          }(ec)
+        }
+      }
+
+      get {
+        path(Segment / Segment / "health") { (uriEncodedAppId, versionId) =>
+          import PathId._
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+
+          def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId })
+
+          val state = instance.fold(true)(_.healthy)
+
+          logger.info(s"Received health check request: app=$appId, version=$versionId reply=$state")
+          if (state) {
+            complete(HttpResponse(status = StatusCodes.OK))
+          } else {
+            complete(HttpResponse(status = StatusCodes.InternalServerError))
+          }
+        } ~ path(Segment / Segment / Segment / "ready") { (uriEncodedAppId, versionId, taskId) =>
+          import PathId._
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+
+          // Find a fitting registred readiness check. If the check has no task id set we ignore it.
+          def check: Option[IntegrationReadinessCheck] = registeredReadinessChecks(_.find { c =>
+            c.appId == appId && c.versionId == versionId && c.taskId.fold(true)(_ == taskId)
+          })
+
+          // An app is not ready by default to avoid race conditions.
+          val isReady = check.fold(false)(_.call)
+
+          logger.info(s"Received readiness check request: app=$appId, version=$versionId taskId=$taskId reply=$isReady")
+
+          if (isReady) {
+            complete(HttpResponse(status = StatusCodes.OK))
+          } else {
+            complete(HttpResponse(status = StatusCodes.InternalServerError))
+          }
+        } ~ path(Remaining) { path =>
+          require(false, s"$path was unmatched!")
+          complete(HttpResponse(status = StatusCodes.InternalServerError))
+        }
+      }
+    }
+    val port = PortAllocator.ephemeralPort()
+    val server = Http().bindAndHandle(route, "0.0.0.0", port).futureValue
+    logger.info(s"Listening for health events on $port")
+    server
+  }
+
+  /**
+    * Add an integration health check to internal health checks. The integration health check is used to control the
+    * health check replies for our app mock.
+    *
+    * @param appId The app id of the app mock
+    * @param versionId The version of the app mock
+    * @param state The initial health status of the app mock
+    * @return The IntegrationHealthCheck object which is used to control the replies.
+    */
+  def registerAppProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
+    val check = new IntegrationHealthCheck(appId, versionId, state)
+    healthChecks { checks =>
+      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
+      checks += check
+    }
+    check
+  }
+
+  /**
+    * Adds an integration readiness check to internal readiness checks. The behaviour is similar to integration health
+    * checks.
+    *
+    * @param appId The app id of the app mock
+    * @param versionId The version of the app mock
+    * @param taskId Optional task id to identify the task of the app mock.
+    * @return The IntegrationReadinessCheck object which is used to control replies.
+    */
+  def registerProxyReadinessCheck(appId: PathId, versionId: String, taskId: Option[String] = None): IntegrationReadinessCheck = {
+    val check = new IntegrationReadinessCheck(appId, versionId, taskId)
+    registeredReadinessChecks { checks =>
+      checks.filter(c => c.appId == appId && c.versionId == versionId && c.taskId == taskId).foreach(checks -= _)
+      checks += check
+    }
+    check
+  }
+}
+
 /**
   * Base trait for tests that need a marathon
   */
-trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
+trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutures with Eventually {
   def marathonUrl: String
   def marathon: MarathonFacade
   def leadingMarathon: Future[LocalMarathon]
@@ -235,69 +344,6 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
   }
 
   protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
-  protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
-  protected val readinessChecks = Lock(mutable.ListBuffer.empty[IntegrationReadinessCheck])
-
-  /**
-    * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
-    * We initialize it during the before hook and wait for Marathon to respond.
-    */
-  protected[setup] lazy val healthEndpoint = {
-    val route = {
-      import akka.http.scaladsl.server.Directives._
-      val mapper = new ObjectMapper() with ScalaObjectMapper
-      mapper.registerModule(DefaultScalaModule)
-
-      implicit val unmarshal = new FromRequestUnmarshaller[Map[String, Any]] {
-        override def apply(value: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[Map[String, Any]] = {
-          value.entity.toStrict(patienceConfig.timeout)(materializer).map { entity =>
-            mapper.readValue[Map[String, Any]](entity.data.utf8String)
-          }(ec)
-        }
-      }
-
-      get {
-        path(Segment / Segment / "health") { (uriEncodedAppId, versionId) =>
-          import PathId._
-          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
-
-          def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId })
-
-          val state = instance.fold(true)(_.healthy)
-
-          logger.info(s"Received health check request: app=$appId, version=$versionId reply=$state")
-          if (state) {
-            complete(HttpResponse(status = StatusCodes.OK))
-          } else {
-            complete(HttpResponse(status = StatusCodes.InternalServerError))
-          }
-        } ~ path(Segment / Segment / "ready") { (uriEncodedAppId, versionId) =>
-          import PathId._
-          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
-
-          def check: Option[IntegrationReadinessCheck] = readinessChecks(_.find { c => c.appId == appId && c.versionId == versionId })
-
-          // An app is not ready by default to avoid race conditions.
-          val isReady = check.fold(false)(_.call)
-
-          logger.info(s"Received readiness check request: app=$appId, version=$versionId reply=$isReady")
-
-          if (isReady) {
-            complete(HttpResponse(status = StatusCodes.OK))
-          } else {
-            complete(HttpResponse(status = StatusCodes.InternalServerError))
-          }
-        } ~ path(Remaining) { path =>
-          require(false, s"$path was unmatched!")
-          complete(HttpResponse(status = StatusCodes.InternalServerError))
-        }
-      }
-    }
-    val port = PortAllocator.ephemeralPort()
-    val server = Http().bindAndHandle(route, "0.0.0.0", port).futureValue
-    logger.info(s"Listening for health events on $port")
-    server
-  }
 
   protected[setup] def killAppProxies(): Unit = {
     val PIDRE = """^\s*(\d+)\s+(.*)$""".r
@@ -376,7 +422,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
           image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
-          new AppVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+          new AppDockerVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,
@@ -397,80 +443,40 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     }
   }
 
+  // We shouldn't eat exceptions in clenaUp() methods: it's a source of hard to find bugs if
+  // we just move on to the next test, that expects a "clean state". We should fail loud and
+  // proud here and find out why the clean-up fails.
   def cleanUp(): Unit = {
-    logger.info("Starting to CLEAN UP !!!!!!!!!!")
+    logger.info(">>> Starting to CLEAN UP...")
     events.clear()
 
-    try {
-      // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
-      logger.info("Clean Marathon State")
-      lazy val group = marathon.group(testBasePath).value
-      lazy val deployments = marathon.listDeploymentsForBaseGroup().value
-      if (deployments.nonEmpty || group.apps.nonEmpty || group.pods.nonEmpty || group.groups.nonEmpty) {
-        //do not fail here, since the require statements will ensure a correct setup and fail otherwise
-        Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
+    // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
+    logger.info("Clean Marathon State")
+    //do not fail here, since the require statements will ensure a correct setup and fail otherwise
+    Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
+
+    WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
+      val occupiedAgents = mesos.state.value.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
+      occupiedAgents.foreach { agent =>
+        import mesosphere.marathon.integration.facades.MesosFormats._
+        val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
+        val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
+        logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
       }
-
-      WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
-        val occupiedAgents = mesos.state.value.agents.filter { agent => !agent.usedResources.isEmpty && agent.reservedResourcesByRole.nonEmpty }
-        occupiedAgents.foreach { agent =>
-          import mesosphere.marathon.integration.facades.MesosFormats._
-          val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
-          val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
-          logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
-        }
-        occupiedAgents.isEmpty
-      }
-
-      val apps = marathon.listAppsInBaseGroup
-      require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
-      val pods = marathon.listPodsInBaseGroup
-      require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
-      val groups = marathon.listGroupsInBaseGroup
-      require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
-      events.clear()
-      healthChecks(_.clear())
-      killAppProxies()
-    } catch {
-      case NonFatal(e) => logger.error("Clean up failed with", e)
+      occupiedAgents.isEmpty
     }
 
-    logger.info("CLEAN UP finished !!!!!!!!!")
-  }
+    val apps = marathon.listAppsInBaseGroup
+    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+    val pods = marathon.listPodsInBaseGroup
+    require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
+    val groups = marathon.listGroupsInBaseGroup
+    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
+    events.clear()
+    healthChecks(_.clear())
+    killAppProxies()
 
-  /**
-    * Add an integration health check to internal health checks. The integration health check is used to control the
-    * health check replies for our app mock.
-    *
-    * @param appId The app id of the app mock
-    * @param versionId The version of the app mock
-    * @param state The initial health status of the app mock
-    * @return The IntegrationHealthCheck object which is used to control the replies.
-    */
-  def appProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
-    val check = new IntegrationHealthCheck(appId, versionId, state)
-    healthChecks { checks =>
-      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
-      checks += check
-    }
-    check
-  }
-
-  /**
-    * Adds an integration readiness check to internal readiness checks. The behaviour is similar to integration health
-    * checks.
-    *
-    * @param appId The app id of the app mock
-    * @param versionId The version of the app mock
-    * @return The IntegrationReadinessCheck object which is used to control replies.
-    */
-  def appProxyReadinessCheck(appId: PathId, versionId: String): IntegrationReadinessCheck = {
-    val check = new IntegrationReadinessCheck(appId, versionId)
-    readinessChecks { checks =>
-      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
-      checks += check
-    }
-    check
+    logger.info("... CLEAN UP finished <<<")
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {

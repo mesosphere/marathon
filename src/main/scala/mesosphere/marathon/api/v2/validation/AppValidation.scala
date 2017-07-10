@@ -5,10 +5,11 @@ import java.util.regex.Pattern
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.Validation.{ featureEnabled, _ }
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ AppDefinition, PathId, ResourceRole }
+import mesosphere.marathon.stream.Implicits._
 
 import scala.util.Try
 
@@ -52,6 +53,7 @@ trait AppValidation {
   def dockerDockerContainerValidator(networks: Seq[Network]): Validator[Container] = {
     val validDockerEngineSpec: Validator[DockerContainer] = validator[DockerContainer] { docker =>
       docker.image is notEmpty
+      docker.pullConfig is isTrue("pullConfig is not supported with Docker containerizer")(_.isEmpty)
       docker.portMappings is valid(optional(portMappingsValidator(networks)))
     }
     validator { (container: Container) =>
@@ -59,11 +61,17 @@ trait AppValidation {
     }
   }
 
-  val mesosDockerContainerValidator: Validator[Container] = {
+  def mesosDockerContainerValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Container] = {
+    val validPullConfigSpec: Validator[DockerPullConfig] = validator[DockerPullConfig] { pullConfig =>
+      pullConfig is isTrue("pullConfig.secret must refer to an existing secret")(
+        config => secrets.contains(config.secret))
+    }
     val validMesosEngineSpec: Validator[DockerContainer] = validator[DockerContainer] { docker =>
       docker.image is notEmpty
+      docker.pullConfig is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+      docker.pullConfig is optional(valid(validPullConfigSpec))
     }
-    validator{ (container: Container) =>
+    validator { (container: Container) =>
       container.docker is valid(definedAnd(validMesosEngineSpec))
     }
   }
@@ -121,22 +129,23 @@ trait AppValidation {
     }
   }
 
-  def validContainer(enabledFeatures: Set[String], networks: Seq[Network]): Validator[Container] = {
+  def validContainer(enabledFeatures: Set[String], networks: Seq[Network], secrets: Map[String, SecretDef]): Validator[Container] = {
     def volumesValidator(container: Container): Validator[Seq[AppVolume]] =
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
-        val names: Seq[String] = vols.flatMap(_.external.flatMap(_.name))
+        val names: Seq[String] = vols.collect{ case v: AppExternalVolume => v.external.name }.flatten
         names.distinct.size == names.size
-      } and every(valid(validVolume(container, enabledFeatures)))
+      } and every(valid(validVolume(container, enabledFeatures, secrets)))
 
     val validGeneralContainer: Validator[Container] = validator[Container] { container =>
       container.portMappings is optional(portMappingsValidator(networks))
       container.volumes is volumesValidator(container)
+      container.volumes.filterPF { case _: AppSecretVolume => true } is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     }
 
     val mesosContainerImageValidator = new Validator[Container] {
       override def apply(container: Container): Result = {
         (container.docker, container.appc, container.`type`) match {
-          case (Some(_), None, EngineType.Mesos) => validate(container)(mesosDockerContainerValidator)
+          case (Some(_), None, EngineType.Mesos) => validate(container)(mesosDockerContainerValidator(enabledFeatures, secrets))
           case (None, Some(_), EngineType.Mesos) => validate(container)(mesosAppcContainerValidator)
           case (None, None, EngineType.Mesos) => validate(container)(mesosImagelessContainerValidator)
           case _ => Failure(Set(RuleViolation(container, "mesos containers should specify, at most, a single image type", None)))
@@ -151,11 +160,11 @@ trait AppValidation {
     )
   }
 
-  def validVolume(container: Container, enabledFeatures: Set[String]): Validator[AppVolume] = new Validator[AppVolume] {
+  def validVolume(container: Container, enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[AppVolume] = new Validator[AppVolume] {
     import state.PathPatterns._
-    val validHostVolume = validator[AppVolume] { v =>
+    val validHostVolume = validator[AppDockerVolume] { v =>
       v.containerPath is valid(notEmpty)
-      v.hostPath is valid(definedAnd(notEmpty))
+      v.hostPath is valid(notEmpty)
     }
     val validPersistentVolume = {
       val notHaveConstraintsOnRoot = isTrue[PersistentVolume](
@@ -204,14 +213,14 @@ trait AppValidation {
         info.constraints.each must complyWithVolumeConstraintRules
       } and meetMaxSizeConstraint and notHaveConstraintsOnRoot and haveProperlyOrderedMaxSize
 
-      validator[AppVolume] { v =>
+      validator[AppPersistentVolume] { v =>
         v.containerPath is valid(notEqualTo("") and notOneOf(DotPaths: _*))
         v.containerPath is valid(matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\""))
         v.mode is equalTo(ReadMode.Rw) // see AppConversion, default is RW
-        v.persistent is valid(definedAnd(validPersistentInfo))
+        v.persistent is valid(validPersistentInfo)
       }
     }
-    val validExternalVolume: Validator[AppVolume] = {
+    val validExternalVolume: Validator[AppExternalVolume] = {
       import state.OptionLabelPatterns._
       val validOptions = validator[Map[String, String]] { option =>
         option.keys.each should matchRegex(OptionKeyRegex)
@@ -223,20 +232,25 @@ trait AppValidation {
       }
 
       forAll(
-        validator[AppVolume] { v =>
+        validator[AppExternalVolume] { v =>
           v.containerPath is valid(notEmpty)
-          v.external is valid(definedAnd(validExternalInfo))
+          v.external is valid(validExternalInfo)
         },
-        { v: AppVolume => v.external.exists(_.provider.nonEmpty) } -> ExternalVolumes.validRamlVolume(container),
+        { v: AppExternalVolume => v.external.provider.nonEmpty } -> ExternalVolumes.validRamlVolume(container),
         featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
       )
     }
+    val validSecretVolume: Validator[AppSecretVolume] = {
+      isTrue("volume.secret must refer to an existing secret")(
+        vol => secrets.contains(vol.secret))
+    }
     override def apply(v: AppVolume): Result = {
-      (v.persistent, v.external) match {
-        case (None, None) => validate(v)(validHostVolume)
-        case (Some(_), None) => validate(v)(validPersistentVolume)
-        case (None, Some(_)) => validate(v)(validExternalVolume)
-        case _ => Failure(Set(RuleViolation(v, "illegal combination of persistent and external volume fields", None)))
+      v match {
+        case v: AppDockerVolume => validate(v)(validHostVolume)
+        case v: AppPersistentVolume => validate(v)(validPersistentVolume)
+        case v: AppExternalVolume => validate(v)(validExternalVolume)
+        case v: AppSecretVolume => validate(v)(validSecretVolume) // Validate that the secret reference is valid
+        case _ => Failure(Set(RuleViolation(v, "Unknown app volume type", None)))
       }
     }
   }
@@ -295,13 +309,11 @@ trait AppValidation {
       update.id.map(PathId(_)) as "id" is optional(valid)
       update.dependencies.map(_.map(PathId(_))) as "dependencies" is optional(every(valid))
       update.env is optional(envValidator(strictNameValidation = false, update.secrets.getOrElse(Map.empty), enabledFeatures))
-      update.secrets is optional({ secrets: Map[String, SecretDef] =>
-        secrets.nonEmpty
-      } -> (featureEnabled(enabledFeatures, Features.SECRETS)))
+      update.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
       update.secrets is optional(featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator)))
       update.fetch is optional(every(valid))
       update.portDefinitions is optional(portDefinitionsValidator)
-      update.container is optional(valid(validContainer(enabledFeatures, update.networks.getOrElse(Nil))))
+      update.container is optional(valid(validContainer(enabledFeatures, update.networks.getOrElse(Nil), update.secrets.getOrElse(Map.empty))))
       update.acceptedResourceRoles is valid(optional(ResourceRole.validAcceptedResourceRoles(update.residency.isDefined) and notEmpty))
     },
     isTrue("must not be root")(!_.id.fold(false)(PathId(_).isRoot)),
@@ -384,7 +396,7 @@ trait AppValidation {
 
   /** validate most canonical API fields */
   private def validBasicAppDefinition(enabledFeatures: Set[String]): Validator[App] = validator[App] { app =>
-    app.container is optional(valid(validContainer(enabledFeatures, app.networks)))
+    app.container is optional(valid(validContainer(enabledFeatures, app.networks, app.secrets)))
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
     app.healthChecks is every(portIndexIsValid(portIndices(app)))
@@ -427,7 +439,7 @@ trait AppValidation {
 
   private val complyWithResidencyRules: Validator[App] =
     isTrue("App must contain persistent volumes and define residency") { app =>
-      val hasPersistentVolumes = app.container.fold(false)(_.volumes.exists(_.persistent.nonEmpty))
+      val hasPersistentVolumes = app.container.fold(false)(_.volumes.existsAn[AppPersistentVolume])
       !(app.residency.isDefined ^ hasPersistentVolumes)
     }
 

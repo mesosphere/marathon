@@ -31,23 +31,25 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
     preserveLastResponse = true
   )
 
+  def appId(suffix: String): PathId = testBasePath / s"app-$suffix"
+
   "ReadinessChecks" should {
     "A deployment of an application with readiness checks (no health) does finish when the app is ready" in {
 
       Given("An application service")
-      val app = appProxy("/readynohealth".toTestPath, "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId("with-readiness-no-health-finish-when-ready"), "v1", instances = 1, healthCheck = None)
         .copy(
           portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
           readinessChecks = Seq(ramlReadinessCheck)
         )
 
       And("The app is not ready")
-      val readinessCheck = appProxyReadinessCheck(PathId(app.id), "v1")
+      val readinessCheck = registerProxyReadinessCheck(PathId(app.id), "v1")
       readinessCheck.isReady.set(false)
 
       When("The app is created")
       val result = marathon.createAppV2(app)
-      result.code should be (201) withClue (result.entityString)
+      result should be (Created)
 
       (1 to 3).foreach { _ =>
 
@@ -71,7 +73,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
     "A deployment of an application with readiness checks and health does finish when health checks succeed and plan is ready" in {
       Given("An application service")
-      val app = appProxy("/readyhealth".toTestPath, "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId("with-readiness-and-health-finish-when-healthy-ready"), "v1", instances = 1, healthCheck = None)
         .copy(
           healthChecks = Set(ramlHealthCheck),
           portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
@@ -81,13 +83,13 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
       And("The app is not ready and not healthy")
       //TODO start with state - false
-      val check = appProxyHealthCheck(PathId(app.id), "v1", state = true)
-      val readinessCheck = appProxyReadinessCheck(PathId(app.id), "v1")
+      val check = registerAppProxyHealthCheck(PathId(app.id), "v1", state = true)
+      val readinessCheck = registerProxyReadinessCheck(PathId(app.id), "v1")
       readinessCheck.isReady.set(false)
 
       When("The app is created")
       val result = marathon.createAppV2(app)
-      result.code should be (201) withClue (result.entityString)
+      result should be(Created)
 
       (1 to 3).foreach { _ =>
 
@@ -112,19 +114,19 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
     "An upgrade of an application will wait for the readiness checks" in {
 
       Given("An application service")
-      val appV1 = appProxy("/readyhealth".toTestPath, "v1", instances = 1, healthCheck = None)
+      val appV1 = appProxy(appId("upgrade-will-wait-for-readiness-checks"), "v1", instances = 1, healthCheck = None)
         .copy(
           portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
           readinessChecks = Seq(ramlReadinessCheck)
 
         )
       And("The app is not ready")
-      val readinessCheckV1 = appProxyReadinessCheck(PathId(appV1.id), "v1")
+      val readinessCheckV1 = registerProxyReadinessCheck(PathId(appV1.id), "v1")
       readinessCheckV1.isReady.set(true)
 
       When("The app is created")
       val result = marathon.createAppV2(appV1)
-      result.code should be (201) withClue (result.entityString)
+      result should be (Created)
 
       And("There is one ongoing deployment")
       val deployments = marathon.listDeploymentsForBaseGroup().value
@@ -134,7 +136,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       waitForDeployment(result)
 
       When("The service is upgraded and the upgrade is not ready")
-      val readinessCheckV2 = appProxyReadinessCheck(appV1.id.toTestPath, "v2")
+      val readinessCheckV2 = registerProxyReadinessCheck(appV1.id.toTestPath, "v2")
       readinessCheckV2.isReady.set(false)
       val update = marathon.updateApp(PathId(appV1.id), AppUpdate(cmd = appProxy(appV1.id.toTestPath, "v2", 1).cmd))
       update.success should be(true) withClue (update.entityString)

@@ -14,7 +14,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ HostNetwork, Network }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.raml.{ App, Apps, Resources, TTY }
+import mesosphere.marathon.raml.{ App, Apps, Resources }
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.stream.Implicits._
@@ -80,9 +80,14 @@ case class AppDefinition(
 
   override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
 
-  tty: Option[TTY] = AppDefinition.DefaultTTY) extends RunSpec
+  tty: Option[Boolean] = AppDefinition.DefaultTTY) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
+  /**
+    * As an optimization, we precompute and cache the hash of this object
+    * This is done to speed up deployment plan computation.
+    */
+  override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
   import mesosphere.mesos.protos.Implicits._
 
   /* The following requirements are either validated at the API layer, or precluded by our normalization layer.
@@ -145,27 +150,27 @@ case class AppDefinition(
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
-      .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto))
+      .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto).asJava)
       .setRequirePorts(requirePorts)
       .setBackoff(backoffStrategy.backoff.toMillis)
       .setBackoffFactor(backoffStrategy.factor)
       .setMaxLaunchDelay(backoffStrategy.maxLaunchDelay.toMillis)
       .setExecutor(executor)
-      .addAllConstraints(constraints)
+      .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
       .addResources(memResource)
       .addResources(diskResource)
       .addResources(gpusResource)
-      .addAllHealthChecks(healthChecks.map(_.toProto))
+      .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setUpgradeStrategy(upgradeStrategy.toProto)
-      .addAllDependencies(dependencies.map(_.toString))
-      .addAllLabels(appLabels)
-      .addAllSecrets(secrets.map(SecretsSerializer.toProto))
-      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto))
+      .addAllDependencies(dependencies.map(_.toString).asJava)
+      .addAllLabels(appLabels.asJava)
+      .addAllSecrets(secrets.map(SecretsSerializer.toProto).asJava)
+      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
       .setUnreachableStrategy(unreachableStrategy.toProto)
       .setKillSelection(killSelection.toProto)
 
-    tty.foreach(builder.setTty(_))
+    tty.filter(tty => tty).foreach(builder.setTty(_))
     networks.foreach { network => builder.addNetworks(Network.toProto(network)) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
     readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
@@ -173,7 +178,7 @@ case class AppDefinition(
 
     if (acceptedResourceRoles.nonEmpty) {
       val roles = Protos.ResourceRoles.newBuilder()
-      roles.addAllRole(acceptedResourceRoles)
+      roles.addAllRole(acceptedResourceRoles.asJava)
       builder.setAcceptedResourceRoles(roles)
     }
 
@@ -224,7 +229,7 @@ case class AppDefinition(
 
     val residencyOption = if (proto.hasResidency) Some(ResidencySerializer.fromProto(proto.getResidency)) else None
 
-    val tty: Option[TTY] = if (proto.hasTty) Some(proto.getTty) else None
+    val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
 
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
@@ -407,7 +412,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     */
   val DefaultAcceptedResourceRoles = Set.empty[String]
 
-  val DefaultTTY = Option.empty[TTY]
+  val DefaultTTY: Option[Boolean] = None
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`

@@ -178,7 +178,7 @@ class AppInfoBaseData(
         }
       )).toMap
       val instanceStatus = instances.flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
-      val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
+      val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
       val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
       // TODO(jdef) pods need termination history

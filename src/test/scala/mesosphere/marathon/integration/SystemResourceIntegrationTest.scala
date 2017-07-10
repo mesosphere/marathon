@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import akka.http.scaladsl.model.MediaTypes
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import org.slf4j.LoggerFactory
@@ -23,8 +24,11 @@ class SystemResourceIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       val result = marathon.ping()
 
       Then("The system responses with a http 200 pong")
-      result.code should be(200)
+      result should be(OK)
       result.entityString should be("pong")
+
+      And("The content type is text/plain")
+      result.originalResponse.entity.contentType.mediaType should be(MediaTypes.`text/plain`)
     }
   }
 }

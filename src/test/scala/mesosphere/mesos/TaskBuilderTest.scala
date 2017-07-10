@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ App, Resources, TTY }
+import mesosphere.marathon.raml.{ App, Resources }
 import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
@@ -629,6 +629,8 @@ class TaskBuilderTest extends UnitTest {
         .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
         .build
 
+      val dockerPullConfigSecret = "aConfigSecret"
+      val dockerPullConfig = Container.DockerPullConfig(dockerPullConfigSecret)
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
         id = "/testApp".toPath,
@@ -639,7 +641,8 @@ class TaskBuilderTest extends UnitTest {
           credential = Some(Container.Credential(
             principal = "aPrincipal",
             secret = Some("aSecret")
-          ))
+          )),
+          pullConfig = Some(dockerPullConfig)
         )),
         portDefinitions = Seq.empty,
         networks = Seq(ContainerNetwork("vnet"))
@@ -657,6 +660,8 @@ class TaskBuilderTest extends UnitTest {
       taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getPrincipal should be ("aPrincipal")
       taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.hasSecret should be (true)
       taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getSecret should be ("aSecret")
+      taskInfo.getContainer.getMesos.getImage.getDocker.hasConfig shouldBe true
+      taskInfo.getContainer.getMesos.getImage.getDocker.getConfig.getReference.getName shouldBe dockerPullConfigSecret
     }
 
     "build creates task for MESOS AppC container" in {
@@ -1818,18 +1823,16 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "tty defined in an app will render ContainerInfo correctly" in {
-      val tty = TTY(rows = 50, columns = 120)
-      val appWithTTY = AppDefinition(id = PathId("/tty"), container = Some(Docker()), tty = Some(tty))
+      val appWithTTY = AppDefinition(id = PathId("/tty"), container = Some(Docker()), tty = Some(true))
       val builder = new TaskBuilder(appWithTTY, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
       val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forRunSpec(appWithTTY.id))
       containerInfo should be(defined)
       containerInfo.get.hasTtyInfo should be(true)
-      containerInfo.get.getTtyInfo.getWindowSize.getColumns should be(tty.columns)
-      containerInfo.get.getTtyInfo.getWindowSize.getRows should be(tty.rows)
+      containerInfo.get.getTtyInfo.hasWindowSize should be(false)
     }
 
     "no tty defined in an app will render ContainerInfo without tty" in {
-      val appNoTTY = MarathonTestHelper.makeBasicApp().copy(tty = None)
+      val appNoTTY = MarathonTestHelper.makeBasicApp().copy(tty = Some(false))
       val builder = new TaskBuilder(appNoTTY, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
       val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forRunSpec(appNoTTY.id))
       containerInfo should be(empty)

@@ -8,7 +8,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.raml
-import mesosphere.marathon.raml.{ Resources, Endpoint, TTY }
+import mesosphere.marathon.raml.{ Resources, Endpoint }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -24,7 +24,8 @@ import scala.collection.breakOut
 class TaskGroupBuilderTest extends UnitTest with Inside {
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
     acceptedResourceRoles = Set(ResourceRole.Unreserved),
-    envVarsPrefix = None)
+    envVarsPrefix = None,
+    mesosBridgeName = raml.Networks.DefaultMesosBridgeName)
 
   "A TaskGroupBuilder" must {
 
@@ -38,7 +39,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             Endpoint("port-2", containerPort = Some(2002), networkNames = List("2"))),
           List(
             Some(1001),
-            Some(1002)))
+            Some(1002)),
+          defaultBuilderConfig.mesosBridgeName)
 
         network1.getName shouldBe "1"
         inside(network1.getPortMappingsList.asScala.toList) {
@@ -308,7 +310,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       assert(envVars("MESOS_EXECUTOR_ID") == instanceId.executorIdString)
       assert(envVars("MESOS_TASK_ID") == Task.Id.forInstanceId(instanceId, Some(mesosContainer)).idString)
       assert(envVars("MARATHON_APP_ID") == instanceIdStr)
-      assert(envVars.containsKey("MARATHON_APP_VERSION"))
+      assert(envVars.contains("MARATHON_APP_VERSION"))
       assert(envVars("MARATHON_CONTAINER_ID") == containerIdStr)
     }
 
@@ -390,11 +392,11 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
             volumeMounts = Seq(
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume1",
                 mountPath = "/mnt/path1"
               ),
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume2",
                 mountPath = "/mnt/path2",
                 readOnly = Some(true)
@@ -405,7 +407,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             name = "Foo2",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
             volumeMounts = Seq(
-              raml.VolumeMount(
+              VolumeMount(
                 name = "volume1",
                 mountPath = "/mnt/path2",
                 readOnly = Some(false)
@@ -521,6 +523,48 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         .getTasksList.find(_.getName == "Foo3").get
 
       assert(!task3.hasContainer)
+    }
+
+    "create a pod of one container with Docker pull config" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 6.1, mem = 1568.0, disk = 10.0).build
+
+      val podSpec = PodDefinition(
+        id = "/product/frontend".toPath,
+        containers = Seq(
+          MesosContainer(
+            name = "Foo1",
+            resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+            image = Some(
+              raml.Image(
+                kind = raml.ImageType.Docker,
+                id = "alpine",
+                pullConfig = Some(raml.DockerPullConfig("aSecret")),
+                forcePull = Some(true)
+              ))
+          )))
+
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty, defaultBuilderConfig.acceptedResourceRoles)
+
+      val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+      )
+
+      assert(taskGroupInfo.getTasksCount == 1)
+
+      val taskContainer = taskGroupInfo
+        .getTasksList.find(_.getName == "Foo1").get.getContainer
+
+      assert(taskContainer.getType == mesos.ContainerInfo.Type.MESOS)
+      assert(taskContainer.getMesos.getImage.getType == mesos.Image.Type.DOCKER)
+      assert(taskContainer.getMesos.getImage.getDocker.getName == "alpine")
+      assert(taskContainer.getMesos.getImage.getDocker.getConfig.getType == mesos.Secret.Type.REFERENCE)
+      assert(taskContainer.getMesos.getImage.getDocker.getConfig.getReference.getName == "aSecret")
+      assert(!taskContainer.getMesos.getImage.getCached)
     }
 
     "create health check definitions with host-mode networking" in {
@@ -656,6 +700,64 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
 
       assert(task2HealthCheck.getType == mesos.HealthCheck.Type.TCP)
       assert(task2HealthCheck.getTcp.getPort == 1235)
+    }
+
+    "create pod with container-mode bridge networking" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 1200, endPort = 1300).build
+
+      val podSpec = PodDefinition(
+        id = "/product/frontend".toPath,
+        networks = Seq(BridgeNetwork()),
+        containers = Seq(
+          MesosContainer(
+            name = "Foo1",
+            resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+            endpoints = Seq(
+              raml.Endpoint(
+                name = "foo1",
+                hostPort = Some(1201),
+                containerPort = Some(1211)
+              )
+            )
+          ),
+          MesosContainer(
+            name = "Foo2",
+            resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+            endpoints = Seq(
+              raml.Endpoint(
+                name = "foo2",
+                hostPort = Some(0),
+                containerPort = Some(1212)
+              )
+            )
+          )
+        )
+      )
+
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty, defaultBuilderConfig.acceptedResourceRoles)
+
+      val (executorInfo, taskGroupInfo, _, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+      )
+
+      assert(taskGroupInfo.getTasksCount == 2)
+
+      val task1 = taskGroupInfo.getTasksList.find(_.getName == "Foo1").get
+
+      val networkInfo = executorInfo.getContainer.getNetworkInfosList.get(0)
+      assert(networkInfo.getName() == defaultBuilderConfig.mesosBridgeName)
+
+      val portMappings = networkInfo.getPortMappingsList
+
+      assert(portMappings.count(_.getContainerPort == 1211) == 1)
+      assert(portMappings.count(_.getContainerPort == 1212) == 1)
+      assert(portMappings.find(_.getContainerPort == 1211).get.getHostPort == 1201)
+      assert(portMappings.find(_.getContainerPort == 1212).get.getHostPort != 0)
     }
 
     "support URL artifacts" in {
@@ -918,14 +1020,12 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
     }
 
     "tty defined in a pod container will render ContainerInfo correctly" in {
-      val tty = TTY(rows = 50, columns = 120)
-      val container = MesosContainer(name = "withTTY", resources = Resources(), tty = Some(tty))
+      val container = MesosContainer(name = "withTTY", resources = Resources(), tty = Some(true))
       val pod = PodDefinition(id = PathId("/tty"), containers = Seq(container))
       val containerInfo = TaskGroupBuilder.computeContainerInfo(pod, container)
       containerInfo should be(defined)
       containerInfo.get.hasTtyInfo should be(true)
-      containerInfo.get.getTtyInfo.getWindowSize.getColumns should be(tty.columns)
-      containerInfo.get.getTtyInfo.getWindowSize.getRows should be(tty.rows)
+      containerInfo.get.getTtyInfo.hasWindowSize should be(false)
     }
 
     "no tty defined in a pod container will render ContainerInfo without tty" in {

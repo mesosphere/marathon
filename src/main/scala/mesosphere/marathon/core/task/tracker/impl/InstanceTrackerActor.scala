@@ -5,6 +5,7 @@ import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
@@ -35,12 +36,13 @@ object InstanceTrackerActor {
   private[impl] case class ForwardTaskOp(deadline: Timestamp, instanceId: Instance.Id, op: InstanceUpdateOperation)
 
   /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
-  private[impl] case class Ack(initiator: ActorRef, effect: InstanceUpdateEffect) {
+  private[impl] case class Ack(initiator: ActorRef, effect: InstanceUpdateEffect) extends StrictLogging {
     def sendAck(): Unit = {
       val msg = effect match {
         case InstanceUpdateEffect.Failure(cause) => Status.Failure(cause)
         case _ => effect
       }
+      logger.debug(s"Send acknowledgement: initiator=$initiator msg=$msg")
       initiator ! msg
     }
   }
@@ -169,7 +171,7 @@ private[impl] class InstanceTrackerActor(
           updateStepProcessor.process(change).recover {
             case NonFatal(cause) =>
               // since we currently only use ContinueOnErrorSteps, we can simply ignore failures here
-              log.warn("updateStepProcessor.process failed: {}", cause)
+              log.warn("updateStepProcessor.process failed", cause)
               Done
           }
         }.getOrElse(Future.successful(Done)).foreach { _ =>

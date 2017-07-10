@@ -232,6 +232,20 @@ message ExtendedContainerInfo {
 
   // Docker on a Docker engine
   message DockerInfo {
+    message ImagePullConfig {
+      enum Type {
+        SECRET = 1;
+      }
+
+      required Type type = 1;
+
+      // The UTF-8 character encoded byte data, which is expected as
+      // a docker config file in JSON format. This field is used for
+      // supporting docker private registry credential per container.
+      // Users can specify different docker config files for pulling
+      // their private images from different registries.
+      optional mesos.Secret secret = 2;
+    }
 
     required string image = 1;
 
@@ -276,12 +290,15 @@ message ExtendedContainerInfo {
     // Credential to authenticate with docker registry.
     // NOTE: This is not encrypted, therefore framework and operators
     // should enable SSL when passing this information.
-    optional mesos.Credential credential = 2;
+    optional mesos.Credential deprecated_credential = 2; // Deprecated since 1.5
 
     // With this flag set to true, the universal Mesos containerizer will
     // pull the docker image from the registry even if the image
     // is already downloaded on the agent.
     optional bool force_pull_image = 3;
+
+    // Docker config.json which is used when pulling Docker images.
+    optional DockerInfo.ImagePullConfig pull_config = 4;
   }
 
   // AppC on the universal Mesos engine
@@ -344,6 +361,11 @@ message Volume {
     repeated mesos.Label options = 4;
   }
 
+  // Defining properties of secret volumes
+  message SecretVolumeInfo {
+    required string secret = 1;
+  }
+
   required mesos.Volume.Mode mode = 3;
 
   // Path pointing to a directory or file in the container. If the
@@ -368,6 +390,9 @@ message Volume {
 
   // Defines an External Volume; implies no hostPath or persistent.
   optional ExternalVolumeInfo external = 6;
+
+  // Defines a SecretVolume; implies no hostPath, persistent or external.
+  optional SecretVolumeInfo secret = 7;
 }
 
 message StorageVersion {

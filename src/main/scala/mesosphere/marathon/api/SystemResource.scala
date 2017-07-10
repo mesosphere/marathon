@@ -37,7 +37,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
 
   @GET
   @Path("ping")
-  @Produces(Array(MediaType.TEXT_PLAIN))
+  @Produces(Array(MediaType.WILDCARD))
   def ping(): Response = ok("pong")
 
   @GET

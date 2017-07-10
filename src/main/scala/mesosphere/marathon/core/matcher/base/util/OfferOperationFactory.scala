@@ -64,7 +64,7 @@ class OfferOperationFactory(
     }
 
     val reserve = Mesos.Offer.Operation.Reserve.newBuilder()
-      .addAllResources(reservedResources)
+      .addAllResources(reservedResources.asJava)
       .build()
 
     Mesos.Offer.Operation.newBuilder()
@@ -110,7 +110,7 @@ class OfferOperationFactory(
     }
 
     val create = Mesos.Offer.Operation.Create.newBuilder()
-      .addAllVolumes(volumes)
+      .addAllVolumes(volumes.asJava)
 
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.CREATE)

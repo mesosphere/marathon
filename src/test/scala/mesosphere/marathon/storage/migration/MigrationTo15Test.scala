@@ -114,7 +114,8 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
           Option("someNetworkName"))
         val expected = basicCommandApp.copy(
           container = Some(Container.Mesos(
-            portMappings = Seq(Container.PortMapping(containerPort = 80, name = Some("http")))
+            portMappings = Seq(
+              Container.PortMapping(containerPort = 80, name = Some("http"), labels = Map("VIP_0" -> "namedvip:123")))
           )),
           networks = Seq(ContainerNetwork(name = "someNetworkName")),
           portDefinitions = Nil
@@ -382,7 +383,7 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
         ScalarResource.disk(10),
         ScalarResource.gpus(0),
         RangesResource.ports(Seq(Range(80)))
-      ).map(resourceToProto))
+      ).map(resourceToProto).asJava)
       .addPortDefinitions(Mesos.Port.newBuilder().setNumber(80))
       .setVersion(serviceVersion.toString)
       .build
@@ -405,7 +406,15 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
     def withDeprecatedIpAddress(sd: Protos.ServiceDefinition, networkName: Option[String] = None, ports: Seq[(Int, String)] = Seq(80 -> "http")) = {
       val ipAddress = Protos.ObsoleteIpAddress.newBuilder()
         .setDiscoveryInfo(Protos.ObsoleteDiscoveryInfo.newBuilder()
-          .addAllPorts(ports.map { case (port, name) => Mesos.Port.newBuilder().setNumber(port).setName(name).build })
+          .addAllPorts(ports.map {
+            case (port, name) =>
+              Mesos.Port.newBuilder().
+                setNumber(port).
+                setName(name).
+                setLabels(
+                  Mesos.Labels.newBuilder.addLabels(Mesos.Label.newBuilder.setKey("VIP_0").setValue("namedvip:123"))).
+                  build
+          }.asJava)
         )
       networkName.map(ipAddress.setNetworkName)
       sd.toBuilder.setOBSOLETEIpAddress(ipAddress).clearPortDefinitions().build

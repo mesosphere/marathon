@@ -477,5 +477,52 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Then("validation is successful")
       validResult.isSuccess should be(true)
     }
+
+    "should receive a non-root Group with nested groups as an updated and properly propagate transitiveAppsById" in {
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain/developers"),
+        groups = Set(
+          createGroup(
+            PathId("/domain/developers/gitlab"),
+            apps = Map(appPath -> app))))
+
+      val newVersion = Timestamp.now()
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+      updated.transitiveAppsById.keySet should contain(appPath)
+    }
+
+    "should receive a non-root Group with nested groups as an updated and properly propagate transitiveAppsByI2 2" in {
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain"),
+        groups = Set(createGroup(
+          PathId("/domain/developers"),
+          groups = Set(
+            createGroup(
+              PathId("/domain/developers/gitlab"),
+              apps = Map(appPath -> app))))))
+
+      val newVersion = Timestamp.now()
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+      updated.transitiveAppsById.keySet should contain(appPath)
+    }
+
+    "should receive a non-root Group without nested groups as an updated and properly propagate transitiveAppsById 3" in {
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain/developers/gitlab"),
+        apps = Map(appPath -> app))
+
+      val newVersion = Timestamp.now()
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+      updated.transitiveAppsById.keySet should contain(appPath)
+    }
   }
 }

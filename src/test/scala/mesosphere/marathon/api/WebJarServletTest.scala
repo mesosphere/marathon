@@ -45,7 +45,7 @@ class WebJarServletTest extends UnitTest {
       servlet.doGet(request, response)
 
       Then("A redirect response is send")
-      verify(response, atLeastOnce).sendError(404)
+      verify(response, atLeastOnce).sendError(HttpServletResponse.SC_NOT_FOUND)
     }
 
     "Get /ui/ will return the index.html" in {
@@ -58,12 +58,38 @@ class WebJarServletTest extends UnitTest {
 
       Then("A redirect response is send")
       out.toString should include("<title>Marathon</title>")
-      verify(response, atLeastOnce).setStatus(200)
+      verify(response, atLeastOnce).setStatus(HttpServletResponse.SC_OK)
       verify(response, atLeastOnce).setContentType("text/html")
     }
+
+    "Have TRACE disabled for /" in {
+      Given("A request response mock")
+      val request = req("/", "", "TRACE")
+      val (response, _) = resp()
+
+      When("TRACE is fired for /")
+      servlet.doTrace(request, response)
+
+      Then("TRACE is not allowed")
+      verify(response, atLeastOnce).sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED)
+    }
+
+    "Have TRACE disabled for /ui" in {
+      Given("A request response mock")
+      val request = req("/ui", "", "TRACE")
+      val (response, _) = resp()
+
+      When("TRACE is fired for /ui")
+      servlet.doTrace(request, response)
+
+      Then("TRACE is not allowed")
+      verify(response, atLeastOnce).sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED)
+    }
   }
-  def req(servletPath: String, path: String): HttpServletRequest = {
+
+  def req(servletPath: String, path: String, method: String = "GET"): HttpServletRequest = {
     val request = mock[HttpServletRequest]
+    request.getMethod returns method
     request.getServletPath returns servletPath
     request.getPathInfo returns path
     request.getRequestURI returns s"$servletPath$path"

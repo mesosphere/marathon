@@ -111,7 +111,14 @@ Marathon is in better compliance with various security best-practices. An exampl
 ### Fixed issues
 - [MARATHON-7320](https://jira.mesosphere.com/browse/MARATHON-7320) Fix MAX_PER constraint for attributes.
 
-------------------------------------------------------------
+### Overview
+
+#### File based secrets
+Marathon has a pluggable interface for secret store providers.
+Previous versions of Marathon allowed secrets to be passed as environment variables.
+With this version it is also possible to provide secrets as volumes, mounted under a specified path.
+See [file based secret documentation](http://mesosphere.github.io/marathon/docs/secrets.html)
+
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release
@@ -155,6 +162,8 @@ Bugfix release
 - [Data migration for UnreachableDisabled](https://github.com/mesosphere/marathon/issues/5209)
 
 ## Changes from 1.3.10 to 1.4.0
+
+### Recommended Mesos version is 1.1.0
 
 ### Breaking Changes
 

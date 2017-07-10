@@ -19,16 +19,16 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
   after(cleanUp())
 
   def healthyDockerApp(testName: String, f: (App) => App = (x) => x) =
-    testName taggedAs WhenEnvSet(envVar) in {
+    testName taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new app")
       val app = f(dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, healthCheck = Some(appProxyHealthCheck())))
-      val check = appProxyHealthCheck(app.id.toPath, "v1", state = true)
+      val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) //Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       eventually {
@@ -37,7 +37,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
   "DockerApp" should {
-    "deploy a simple Docker app" taggedAs WhenEnvSet(envVar) in {
+    "deploy a simple Docker app" taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new Docker app")
       val app = App(
         id = (testBasePath / "dockerapp").toString,
@@ -51,7 +51,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) // Created
+      result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1) // The app has really started

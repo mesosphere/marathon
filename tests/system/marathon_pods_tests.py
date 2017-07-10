@@ -1,5 +1,6 @@
 """Marathon pod acceptance tests for DC/OS."""
 
+import common
 import os
 import pytest
 import uuid
@@ -7,13 +8,15 @@ import retrying
 import shakedown
 import time
 
+from datetime import timedelta
 from distutils.version import LooseVersion
 from urllib.parse import urljoin
 
 from common import (block_port, cluster_info, event_fixture, get_pod_tasks, ip_other_than_mom,
-                    pin_pod_to_host, restore_iptables, save_iptables)
-from dcos import marathon, util, http
-from shakedown import dcos_1_9, dcos_version_less_than, private_agents, required_private_agents
+                    pin_pod_to_host, restore_iptables, save_iptables, docker_env_set, clear_pods)
+from dcos import marathon, util, http, mesos
+from shakedown import (dcos_1_9, marathon_1_5, dcos_version_less_than, marthon_version_less_than,
+                       private_agents, required_private_agents)
 from utils import fixture_dir, get_resource, parse_json
 
 
@@ -23,18 +26,6 @@ DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME) + "/"
 
 def _pods_json(file="simple-pods.json"):
     return get_resource(os.path.join(fixture_dir(), file))
-
-
-def _clear_pods():
-    # clearing doesn't cause
-    try:
-        client = marathon.create_client()
-        pods = client.list_pod()
-        for pod in pods:
-            client.remove_pod(pod["id"], True)
-        shakedown.deployment_wait()
-    except:
-        pass
 
 
 def _pods_url(path=""):
@@ -86,6 +77,32 @@ def test_create_pod():
     shakedown.deployment_wait()
     pod = client.show_pod(pod_id)
     assert pod is not None
+
+
+# TODO: D729 will provide a secrets fixture to use here
+@pytest.mark.skipif("docker_env_set()")
+@marathon_1_5
+def test_create_pod_with_private_image():
+    username = os.environ['DOCKER_HUB_USERNAME']
+    password = os.environ['DOCKER_HUB_PASSWORD']
+
+    secret_name = "dockerPullConfig"
+    secret_value_json = common.create_docker_pull_config_json(username, password)
+
+    import json
+    secret_value = json.dumps(secret_value_json)
+
+    client = marathon.create_client()
+    common.create_secret(secret_name, secret_value)
+
+    try:
+        pod_def = common.private_docker_pod(secret_name)
+        client.add_pod(pod_def)
+        shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+        pod = client.show_pod(pod_def["id"])
+        assert pod is not None
+    finally:
+        common.delete_secret(secret_name)
 
 
 @dcos_1_9
@@ -382,6 +399,62 @@ def test_pod_health_check():
 
 
 @dcos_1_9
+def test_pod_container_network():
+    """ Tests using "container" network (using default network "dcos")
+    """
+    client = marathon.create_client()
+    pod_id = "/pod-container-net-{}".format(uuid.uuid4().hex)
+    pod_json = _pods_json('pod-container-net.json')
+    pod_json["id"] = pod_id
+
+    client.add_pod(pod_json)
+    shakedown.deployment_wait()
+
+    tasks = get_pod_tasks(pod_id)
+
+    network_info = tasks[0]['statuses'][0]['container_status']['network_infos'][0]
+    assert network_info['name'] == "dcos"
+    container_ip = network_info['ip_addresses'][0]['ip_address']
+    assert container_ip is not None
+
+    url = "http://{}:80/".format(container_ip)
+    common.assert_http_code(url)
+
+
+@marathon_1_5
+def test_pod_container_bridge():
+    """ Tests using "container" network (using default network "dcos")
+    """
+    client = marathon.create_client()
+    pod_id = "/pod-container-bridge-{}".format(uuid.uuid4().hex)
+    pod_json = _pods_json('pod-container-bridge.json')
+    pod_json["id"] = pod_id
+
+    client.add_pod(pod_json)
+    shakedown.deployment_wait()
+
+    task = get_pod_tasks(pod_id)[0]
+
+    network_info = task['statuses'][0]['container_status']['network_infos'][0]
+    assert network_info['name'] == "mesos-bridge"
+
+    # port on the host
+    port = task['discovery']['ports']['ports'][0]['number']
+    # the agent IP:port will be routed to the bridge IP:port
+    # test against the agent_ip, however it is hard to get.. translating from
+    # slave_id
+    agent_ip = common.agent_hostname_by_id(task['slave_id'])
+    assert agent_ip is not None
+    container_ip = network_info['ip_addresses'][0]['ip_address']
+    assert agent_ip != container_ip
+
+    # assert container_ip is not None
+    #
+    url = "http://{}:{}/".format(agent_ip, port)
+    common.assert_http_code(url)
+
+
+@dcos_1_9
 @private_agents(2)
 def test_pod_health_failed_check():
     """ Deploys a pod with good health checks, then partitions the network and verifies
@@ -419,7 +492,7 @@ def test_pod_health_failed_check():
 
 
 def setup_function(function):
-    _clear_pods()
+    clear_pods()
 
 
 def setup_module(module):
@@ -427,4 +500,4 @@ def setup_module(module):
 
 
 def teardown_module(module):
-    _clear_pods()
+    clear_pods()

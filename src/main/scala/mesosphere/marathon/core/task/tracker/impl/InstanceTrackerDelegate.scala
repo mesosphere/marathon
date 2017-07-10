@@ -42,6 +42,10 @@ private[tracker] class InstanceTrackerDelegate(
   // TODO(jdef) support pods when counting launched instances
   override def countLaunchedSpecInstancesSync(appId: PathId): Int =
     instancesBySpecSync.specInstances(appId).count(_.isLaunched)
+  override def countLaunchedSpecInstances(appId: PathId): Future[Int] = {
+    import mesosphere.marathon.core.async.ExecutionContexts.global
+    instancesBySpec().map(_.specInstances(appId).count(_.isLaunched))
+  }
 
   override def hasSpecInstancesSync(appId: PathId): Boolean = instancesBySpecSync.hasSpecInstances(appId)
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =

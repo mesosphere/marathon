@@ -209,7 +209,8 @@ class ZkPersistenceStore(
         await(client.setData(id.path, v.bytes).asTry) match {
           case Success(_) =>
             Done
-          case Failure(_: NoNodeException) =>
+          case Failure(e: NoNodeException) =>
+            logger.debug(s"Node for $id not found. Creating node now", e)
             await(limitRequests(client.create(
               id.path,
               creatingParentContainersIfNeeded = true, data = Some(v.bytes))).asTry) match {
@@ -227,8 +228,10 @@ class ZkPersistenceStore(
             }
 
           case Failure(e: KeeperException) =>
+            logger.warn(s"Could not store under $id", e)
             throw new StoreCommandFailedException(s"Unable to store $id", e)
           case Failure(e) =>
+            logger.warn(s"Could not store under $id", e)
             throw e
         }
       }
@@ -264,7 +267,11 @@ class ZkPersistenceStore(
     val versions: Source[ZkId, NotUsed] = ids.flatMapConcat(id => rawVersions(id).map(v => id.copy(version = Some(v))))
     val combined = Source.combine(ids, versions)(Merge(_))
     combined.mapAsync(maxConcurrent) { id =>
-      rawGet(id).filter(_.isDefined).map(ser => BackupItem(id.category, id.id, id.version, ser.get.bytes))
+      rawGet(id).map { maybeSerialized =>
+        maybeSerialized.map(serialized => BackupItem(id.category, id.id, id.version, serialized.bytes))
+      }
+    }.collect {
+      case Some(backupItem) => backupItem
     }.concat {
       Source.fromFuture(storageVersion()).map { storedVersion =>
         val version = storedVersion.getOrElse(StorageVersions.current)

@@ -33,7 +33,7 @@ else:
         return response.getcode()
 
 
-def make_handler(app_id, version, base_url):
+def make_handler(app_id, version, task_id, base_url):
     """
     Factory method that creates a handler class.
     """
@@ -45,15 +45,14 @@ def make_handler(app_id, version, base_url):
             self.send_header('Content-type', 'text/html')
             self.end_headers()
 
-            marathonId = os.getenv("MARATHON_APP_ID", "NO_MARATHON_APP_ID_SET")
-            msg = "Pong {}".format(marathonId)
+            msg = "Pong {}".format(app_id)
 
             self.wfile.write(byte_type(msg, "UTF-8"))
             return
 
         def check_readiness(self):
 
-            url = "{}/ready".format(base_url)
+            url = "{}/{}/ready".format(base_url, task_id)
 
             logging.debug("Query %s for readiness", url)
             url_req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -129,7 +128,7 @@ if __name__ == "__main__":
     task_id = os.getenv("MESOS_TASK_ID", "<UNKNOWN>")
 
     HTTPServer.allow_reuse_address = True
-    httpd = HTTPServer(("", port), make_handler(app_id, version, base_url))
+    httpd = HTTPServer(("", port), make_handler(app_id, version, task_id, base_url))
     msg = "AppMock[%s %s]: %s has taken the stage at port %d. "\
           "Will query %s for health and readiness status."
     logging.info(msg, app_id, version, task_id, port, base_url)

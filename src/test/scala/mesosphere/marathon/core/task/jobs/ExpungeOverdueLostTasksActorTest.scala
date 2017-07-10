@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.task.jobs
 
 import akka.actor.{ ActorRef, PoisonPill, Terminated }
-import akka.event.LoggingAdapter
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
@@ -54,7 +53,6 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
       override val config: TaskJobsConfig = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
       override val clock: Clock = ConstantClock()
       override val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
-      override def log = mock[LoggingAdapter]
     }
 
     // format: OFF

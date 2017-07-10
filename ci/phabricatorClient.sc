@@ -2,6 +2,10 @@
 
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
+
+import $file.utils
+
+import scala.util.control.NonFatal
 import scalaj.http._
 import upickle._
 
@@ -86,23 +90,28 @@ def comment(revisionId: String, msg: String): Unit = {
 def reportTestResults(phid: String, status: String): Unit = {
   require("fail" == status || "pass" == status)
 
-  // Join all results
-  val testResults = ls! pwd / 'target / "phabricator-test-reports" |? ( _.ext == "json")
-  val joinedTestResults: Js.Arr = testResults.view.map(read!)
-    .map(upickle.json.read)
-    .collect { case a: Js.Arr => a }
-    .reduce { (l: Js.Arr, r: Js.Arr) =>
-      val n = l.arr ++ r.arr
-      Js.Arr(n :_*)
-    }
+  try {
+    // Join all results
+    val testResults = ls! pwd / 'target / "phabricator-test-reports" |? ( _.ext == "json")
+    val joinedTestResults: Js.Arr = testResults.view.map(read!)
+      .map(upickle.json.read)
+      .collect { case a: Js.Arr => a }
+      .reduce { (l: Js.Arr, r: Js.Arr) =>
+        val n = l.arr ++ r.arr
+        Js.Arr(n :_*)
+      }
 
-  // Add PHID and status
-  val parameters = Js.Obj(
-    "buildTargetPHID" -> Js.Str(phid),
-    "type" -> Js.Str(status.toString),
-    "unit" -> joinedTestResults
-  )
-  execute("harbormaster.sendmessage", parameters)
+    // Add PHID and status
+    val parameters = Js.Obj(
+      "buildTargetPHID" -> Js.Str(phid),
+      "type" -> Js.Str(status.toString),
+      "unit" -> joinedTestResults
+    )
+    execute("harbormaster.sendmessage", parameters)
+  } catch {
+    case NonFatal(e) =>
+      utils.printlnWithColor(s"Could not upload test results: ${e.getMessage}", utils.Colors.BrightRed)
+  }
 }
 
 /**
@@ -127,14 +136,16 @@ def reportSuccess(
   val marathonPackageChecksum = read! pwd / 'target / 'universal / s"${marathonPackage.last}.sha1"
 
   val msg = s"""
-    | \u2714 Build of $diffId completed [[ $buildUrl | $buildTag ]].
+    |(NOTE)\u2714 Build of $diffId completed [[ $buildUrl | $buildTag ]].
     |
     | You can create a DC/OS with your patched Marathon by creating a new pull
     | request with the following changes in [[ https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json | buildinfo.json ]]:
     |
     |   lang=json
     |   "url": "https://downloads.mesosphere.io/marathon/snapshots/${marathonPackage.last}",
-    |   "sha1"" "${marathonPackageChecksum}"
+    |   "sha1": "${marathonPackageChecksum}"
+    |
+    |= ＼\\ ٩( ᐛ )و /／ =
     |""".stripMargin
 
   // We accept and comment in two different calls because Phabriactor won't
@@ -165,6 +176,6 @@ def reportFailure(
   // We reject and comment in two different calls because Phabriactor won't
   // apply the comment if the diff is already rejected.
   reject(revisionId)
-  comment(revisionId, s"\u2717 Build of $diffId failed [[ $buildUrl | $buildTag ]].\n Error message: \n>$msg")
+  comment(revisionId, s"(IMPORTANT)\u2717 Build of $diffId failed [[ $buildUrl | $buildTag ]].\n\nError message: \n>$msg\n= (๑′°︿°๑) =")
   reportTestResults(phId, "fail")
 }

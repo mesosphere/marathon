@@ -2,7 +2,10 @@
 
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration._
 import scala.util.control.NonFatal
+import scala.util.Try
 
 import $file.awsClient
 import $file.fileUtil
@@ -11,12 +14,26 @@ import $file.provision
 import $file.utils
 
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
+
 /**
  * Compile Marathon and run unit and integration tests followed by scapegoat.
  */
 @main
 def compileAndTest(): Unit = utils.stage("Compile and Test") {
-  %('sbt, 'clean, 'test, "integration:test", 'scapegoat)
+
+  def run(cmd: String *) = utils.runWithTimeout(1.hour)(cmd)
+
+  run("sbt", "clean", "test", "integration:test", "scapegoat")
+
+  // Compile other projects.
+  run("sbt", "benchmark/compile")
+  run("sbt", "mesos-simulation/compile")
+  run("sbt", "plugin-interface/compile")
+}
+
+@main
+def zipSandboxLogs(): Unit = {
+  Try(%("tar", "-zcvf", "sandboxes.tar.gz", "sandboxes"))
 }
 
 @main
@@ -72,6 +89,7 @@ def phabricator(): Unit = {
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
 
   try {
+    phabricatorClient.reject(revisionId)
     jenkins()
     phabricatorClient.reportSuccess(diffId, phId, revisionId, buildUrl, buildTag)
   } catch {
@@ -91,7 +109,11 @@ def jenkins(): Unit = {
     provision.installMesos()
   }
 
-  compileAndTest()
+  try {
+    compileAndTest()
+  } finally {
+    zipSandboxLogs()    // Try to archive logs in any case
+  }
 
   createAndUploadPackages()
 }

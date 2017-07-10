@@ -29,6 +29,7 @@ trait InstanceTracker {
   def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec]
 
   def countLaunchedSpecInstancesSync(appId: PathId): Int
+  def countLaunchedSpecInstances(appId: PathId): Future[Int]
 
   def hasSpecInstancesSync(appId: PathId): Boolean
   def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean]

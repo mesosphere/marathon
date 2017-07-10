@@ -139,7 +139,7 @@ object ResourceUtil {
         Some(
           resource
             .toBuilder
-            .setSet(MesosProtos.Value.Set.newBuilder().addAllItem(resultSet))
+            .setSet(MesosProtos.Value.Set.newBuilder().addAllItem(resultSet.asJava))
             .build()
         )
       else
@@ -201,7 +201,7 @@ object ResourceUtil {
     usedResources: Seq[MesosProtos.Resource]): MesosProtos.Offer = {
     val offerResources: Seq[MesosProtos.Resource] = offer.getResourcesList.toSeq
     val leftOverResources = ResourceUtil.consumeResources(offerResources, usedResources)
-    offer.toBuilder.clearResources().addAllResources(leftOverResources).build()
+    offer.toBuilder.clearResources().addAllResources(leftOverResources.asJava).build()
   }
 
   def displayResource(resource: MesosProtos.Resource, maxRanges: Int): String = {

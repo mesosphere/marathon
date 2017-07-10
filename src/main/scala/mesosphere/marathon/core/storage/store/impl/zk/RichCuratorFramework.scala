@@ -60,7 +60,7 @@ class RichCuratorFramework(val client: CuratorFramework) {
       if (`protected`) builder.withProtection()
       if (creatingParentsIfNeeded) builder.creatingParentsIfNeeded()
       if (creatingParentContainersIfNeeded) builder.creatingParentContainersIfNeeded()
-      if (acls.nonEmpty) builder.withACL(acls)
+      if (acls.nonEmpty) builder.withACL(acls.asJava)
       builder.withMode(createMode)
       data.fold(builder.forPath(path)) { bytes =>
         builder.forPath(path, bytes.toArray)
@@ -129,7 +129,7 @@ class RichCuratorFramework(val client: CuratorFramework) {
     // sadly, the builder doesn't export BackgroundPathable, but the impl is.
     build(builder.asInstanceOf[BackgroundPathable[_]], ZkFuture.setAcl) { _ =>
       version.foreach(builder.withVersion)
-      builder.withACL(acls)
+      builder.withACL(acls.asJava)
       // it doesn't export Pathable either?
       builder.asInstanceOf[Pathable[_]].forPath(path)
     }

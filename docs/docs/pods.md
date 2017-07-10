@@ -42,7 +42,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 1. Verify the status of your new pod:
 
-        curl GET http://<ip>:<port>/v2/pods/simplepod::status
+        curl -X GET http://<ip>:<port>/v2/pods/simplepod::status
 
 1. Delete your pod:
 
@@ -75,6 +75,7 @@ Containers within a pod share ephemeral storage. Volumes are declared at the pod
  History is permanently tied to `pod_id`. If you delete a pod and then reuse the ID, even if the details of the pod are different, the new pod will have the previous history (such as version information).
 
 ### Pod Definitions
+
 Pods are configured via a JSON pod definition, which is similar to an [application definition]({{ site.baseurl }}/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod. See the [Examples](#examples) section for complete pod definitions.
 
 #### Executor Resources
@@ -111,34 +112,34 @@ Pods support ephemeral volumes, which are defined at the pod level. Your pod def
 
 ```json
 {
-	"volumes": [
-		{
-			"name": "etc"
-		}
-	]
+    "volumes": [
+        {
+            "name": "etc"
+        }
+    ]
 }
 ```
 
 ```json
 {
-	"volumeMounts": [
-		{
-			"name": "env",
-			"mountPath": "/mnt/etc"
-		}
-	]
+    "volumeMounts": [
+        {
+            "name": "env",
+            "mountPath": "/mnt/etc"
+        }
+    ]
 }
 ```
 
 Pods also support host volumes. A pod volume parameter can declare a `host` field that references a pre-existing file or directory on the agent.
 ```json
 {
-	"volumes": [
-		{
-			"name": "local",
-			"host": "/user/local"
-		}
-	]
+    "volumes": [
+        {
+            "name": "local",
+            "host": "/user/local"
+        }
+    ]
 }
 ```
 
@@ -151,14 +152,54 @@ Marathon pods support the [Mesos containerizer](http://mesos.apache.org/document
 The following JSON specifies a Docker image for the pod:
 
 ```json
-{  
-   "image":{  
+{
+   "image":{
       "id":"mesosphere/marathon:latest",
       "kind":"DOCKER",
       "forcePull":false
    }
 }
 ```
+
+An optional `image.pullConfig` is supported too. Here is an example of
+a pod pulling a Docker image from a private registry: 
+
+```json
+{
+    "id": "/simple-pod",
+    "scaling": {
+        "kind": "fixed",
+        "instances": 1
+    },
+    "containers": [{
+        "name": "container0",
+        "exec": {
+            "command": {
+                "shell": "sleep 1000"
+            }
+        },
+        "image": {
+            "kind": "DOCKER",
+            "id": "company/private-image",
+            "pullConfig": {
+                "secret": "configSecret"
+            }
+        },
+        "resources": {
+            "cpus": 1,
+            "mem": 50.0
+        }
+    }],
+    "secrets": {
+        "configSecret": {
+            "source": "/config"
+        }
+    }
+}
+```
+
+For further details, please refer
+to [Configuration of Docker images with Mesos containerizer]({{ site.baseurl }}/docs/native-docker.html).
 
 ## Create and Manage Pods
 

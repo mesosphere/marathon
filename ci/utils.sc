@@ -1,5 +1,13 @@
 // A collection of pipeline utilities such as stage names and colors.
+
+import ammonite.ops._
+import ammonite.ops.ImplicitWd._
+import java.util.concurrent.TimeUnit
+import scala.collection.JavaConverters._
+import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
+
+import $file.provision
 
 // Color definitions
 object Colors {
@@ -15,6 +23,8 @@ def printWithColor(text: String, color: String): Unit = {
   print(Colors.Reset)
 }
 
+def printlnWithColor(text: String, color: String): Unit = printWithColor(s"$text\n", color)
+
 def printHr(color: String, character: String = "*", length: Int = 80): Unit = {
   printWithColor(s"${character * length}\n", color)
 }
@@ -27,7 +37,10 @@ def printStageTitle(name: String): Unit = {
   printHr(Colors.BrightBlue)
 }
 
-case class StageException(private val message: String = "", private val cause: Throwable = None.orNull) extends Exception(message, cause)
+case class BuildException(val cmd: String, val exitValue: Int, private val cause: Throwable = None.orNull)
+  extends Exception(s"'$cmd' exited with $exitValue", cause)
+case class StageException(private val message: String = "", private val cause: Throwable = None.orNull)
+  extends Exception(message, cause)
 def stage[T](name: String)(block: => T): T = {
   printStageTitle(name)
 
@@ -36,5 +49,42 @@ def stage[T](name: String)(block: => T): T = {
   }
   catch { case NonFatal(e) =>
     throw new StageException(s"Stage $name failed.", e)
+  }
+}
+
+/**
+ * Run a process with given commands and time out it runs too long.
+ *
+ * @param timeout The maximum time to wait.
+ * @param commands The commands that are executed in a process. E.g. "sbt",
+ *  "compile".
+ */
+def runWithTimeout(timeout: FiniteDuration)(commands: Seq[String]): Unit = {
+
+  val builder = new java.lang.ProcessBuilder()
+  val buildProcess = builder
+    .directory(new java.io.File(pwd.toString))
+    .command(commands.asJava)
+    .inheritIO()
+    .start()
+
+  try {
+    val exited = buildProcess.waitFor(timeout.length, timeout.unit)
+
+    if (exited) {
+      val exitValue = buildProcess.exitValue
+      if(buildProcess.exitValue != 0) {
+        val cmd = commands.mkString(" ")
+        throw new utils.BuildException(cmd, exitValue)
+      }
+    } else {
+      // The process timed out. Try to kill it.
+      buildProcess.destroyForcibly().waitFor()
+      val cmd = commands.mkString(" ")
+      throw new java.util.concurrent.TimeoutException(s"'$cmd' timed out after $timeout.")
+    }
+  } finally {
+    // This also cleans forked SBT processes.
+    provision.killStaleTestProcesses()
   }
 }

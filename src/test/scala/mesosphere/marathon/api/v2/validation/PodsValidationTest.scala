@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.Validator
+import com.wix.accord.{ Result, Validator }
 import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, EphemeralVolume, Image, ImageType, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
@@ -24,6 +24,11 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
     "be rejected if a defined user is empty" in new Fixture {
       private val invalid = validPod.copy(user = Some(""))
       validator(invalid) should failWith("user" -> "must not be empty")
+    }
+
+    "be accepted if secrets defined" in new Fixture {
+      private val valid = validPod.copy(secrets = Map("secret1" -> SecretDef(source = "/foo")), environment = Map("TEST" -> EnvVarSecret("secret1")))
+      secretValidator(valid) shouldBe aSuccess
     }
 
     "be rejected if no container is defined" in new Fixture {
@@ -61,13 +66,59 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
     }
 
     "be rejected if volume names are not unique" in new Fixture {
-      val volume = Volume("volume", host = Some("/foo"))
+      val volume = EphemeralVolume("volume")
       val volumeMount = VolumeMount(volume.name, "/bla")
       private val invalid = validPod.copy(
         volumes = Seq(volume, volume),
         containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
       )
       validator(invalid) should failWith("volumes" -> PodsValidationMessages.VolumeNamesMustBeUnique)
+    }
+
+    "be rejected if a secret volume is defined without a corresponding secret" in new Fixture {
+      val volume = PodSecretVolume("volume", "foo")
+      val volumeMount = VolumeMount(volume.name, "/bla")
+      private val invalid = validPod.copy(
+        volumes = Seq(volume),
+        containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
+      )
+      // Here and below: stringifying validation is admittedly not the best way but it's a nested Set(GroupViolation...) and not easy to test.
+      validator(invalid).toString should include(PodsValidationMessages.SecretVolumeMustReferenceSecret)
+    }
+
+    "be accepted if it is a valid pod with a Docker pull config" in new Fixture {
+      secretValidator(pullConfigPod) shouldBe aSuccess
+    }
+
+    "be rejected if a pull config pod is provided when secrets features is disabled" in new Fixture {
+      val validationResult: Result = validator(pullConfigPod)
+      validationResult shouldBe aFailure
+      val validationResultString: String = validationResult.toString
+      validationResultString should include("must be empty")
+      validationResultString should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
+    }
+
+    "be rejected if a pull config pod doesn't have secrets" in new Fixture {
+      private val invalid = pullConfigPod.copy(secrets = Map.empty)
+      secretValidator(invalid) should failWith(
+        GroupViolationMatcher(
+          description = "containers",
+          constraint = "contains elements, which are not valid.",
+          violations = Set(group("(0)", "not valid",
+            "image" -> "pullConfig.secret must refer to an existing secret"))))
+    }
+
+    "be rejected if a pull config image is not Docker" in new Fixture {
+      private val invalid = pullConfigPod.copy(
+        containers = Seq(pullConfigContainer.copy(
+          image = Some(pullConfigContainer.image.get.copy(kind = ImageType.Appc))
+        )))
+      secretValidator(invalid) should failWith(
+        GroupViolationMatcher(
+          description = "containers",
+          constraint = "contains elements, which are not valid.",
+          violations = Set(group("(0)", "not valid",
+            "image" -> "pullConfig is supported only with Docker images"))))
     }
   }
 
@@ -92,11 +143,24 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       containers = Seq(validContainer),
       networks = Seq(Network(mode = NetworkMode.Host))
     )
-    val validator: Validator[Pod] = podDefValidator(Set.empty, SemanticVersion.zero)
+
+    val pullConfigContainer = PodContainer(
+      name = "pull-config-container",
+      resources = Resources(),
+      image = Some(Image(kind = ImageType.Docker, id = "some/image", pullConfig = Some(DockerPullConfig("aSecret"))))
+    )
+    val pullConfigPod = Pod(
+      id = "/pull/config/pod",
+      containers = Seq(pullConfigContainer),
+      secrets = Map("aSecret" -> SecretDef("/pull/config"))
+    )
+
+    val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero)
+    val secretValidator: Validator[Pod] = podValidator(Set(Features.SECRETS), SemanticVersion.zero)
   }
 
   "network validation" when {
-    val validator: Validator[Pod] = podDefValidator(Set.empty, SemanticVersion.zero)
+    val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero)
 
     def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint] = Nil) =
       PodContainer(
@@ -104,139 +168,176 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         resources = resources,
         endpoints = endpoints)
 
-    def containerNetworkedPod(containers: Seq[PodContainer], networkCount: Int = 1) =
+    def networks(networkCount: Int = 1): Seq[Network] =
+      1.to(networkCount).map(i => Network(mode = NetworkMode.Container, name = Some(i.toString)))
+
+    def bridgeNetwork: Seq[Network] = Seq(Network(mode = NetworkMode.ContainerBridge))
+
+    def hostNetwork: Seq[Network] = Seq(Network(mode = NetworkMode.Host))
+
+    def networkedPod(containers: Seq[PodContainer], nets: => Seq[Network] = networks()) =
       Pod(
         id = "/foo",
-        networks = 1.to(networkCount).map(i => Network(mode = NetworkMode.Container, name = Some(i.toString))),
+        networks = nets,
         containers = containers)
 
     "multiple container networks are specified for a pod" should {
 
       "require networkNames for containerPort to hostPort mapping" in {
-        val badApp = containerNetworkedPod(
+        val badApp = networkedPod(
           Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80), hostPort = Option(0))))),
-          networkCount = 2)
+          networks(2))
 
         validator(badApp).isFailure shouldBe true
       }
 
-      "allow portMappings that don't declare hostPort nor networkNames" in {
-        val app = containerNetworkedPod(
+      "allow endpoints that don't declare hostPort nor networkNames" in {
+        val app = networkedPod(
           Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80))))),
-          networkCount = 2)
+          networks(2))
         validator(app) shouldBe (aSuccess)
       }
 
-      "allow portMappings that both declare a hostPort and a networkNames" in {
-        val app = containerNetworkedPod(
+      "allow endpoints for pods with bridge networking" in {
+        val pod = Pod(
+          id = "/bridge",
+          networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
+          containers = Seq(podContainer(endpoints = Seq(Endpoint("endpoint", hostPort = Some(0), containerPort = Some(80)))))
+        )
+
+        validator(pod) shouldBe (aSuccess)
+      }
+
+      "allow endpoints that both declare a hostPort and a networkNames" in {
+        val app = networkedPod(
           Seq(podContainer(endpoints = Seq(
             Endpoint(
               "endpoint",
               hostPort = Option(0),
               containerPort = Some(80),
               networkNames = List("1"))))),
-          networkCount = 2)
+          networks(2))
         validator(app) shouldBe (aSuccess)
       }
     }
 
-    "single container network" should {
+    "bridge or single container network" should {
 
-      "consider a valid portMapping with a networkNames as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                hostPort = Some(80),
-                containerPort = Some(80),
-                networkNames = List("1"))))))) shouldBe (aSuccess)
+      def containerAndBridgeMode(subtitle: String, networks: => Seq[Network]): Unit = {
+        s"${subtitle} allow endpoint with no networkNames" in {
+          validator(
+            networkedPod(Seq(
+              podContainer(endpoints = Seq(
+                Endpoint(
+                  "endpoint",
+                  hostPort = Some(80),
+                  containerPort = Some(80),
+                  networkNames = Nil)))), networks)) shouldBe (aSuccess)
+        }
+
+        s"${subtitle} allow endpoint without hostport" in {
+          validator(
+            networkedPod(Seq(
+              podContainer(endpoints = Seq(
+                Endpoint(
+                  "endpoint",
+                  hostPort = None,
+                  containerPort = Some(80),
+                  networkNames = Nil)))), networks)) shouldBe (aSuccess)
+        }
+
+        s"${subtitle} allow endpoint with zero hostport" in {
+          validator(
+            networkedPod(Seq(
+              podContainer(endpoints = Seq(
+                Endpoint(
+                  "endpoint",
+                  containerPort = Some(80),
+                  hostPort = Some(0))))), networks)) shouldBe (aSuccess)
+        }
+
+        s"${subtitle} allows containerPort of zero" in {
+          val result = validator(
+            networkedPod(Seq(
+              podContainer(endpoints = Seq(
+                Endpoint("name1", containerPort = Some(0)),
+                Endpoint("name2", containerPort = Some(0))
+              ))), networks))
+
+          result shouldBe aSuccess
+        }
+
+        s"${subtitle} require that hostPort is unique" in {
+          val result = validator(
+            networkedPod(Seq(
+              podContainer(endpoints = Seq(
+                Endpoint(
+                  "name1",
+                  hostPort = Some(123)),
+                Endpoint(
+                  "name2",
+                  hostPort = Some(123))))), networks))
+
+          result should containViolation(
+            "/" -> PodsValidationMessages.HostPortsMustBeUnique)
+        }
       }
 
-      "consider a portMapping with a host port and two valid networkNames as invalid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                hostPort = Some(80),
-                containerPort = Some(80),
-                networkNames = List("1", "2"))))))) shouldBe (aFailure)
-      }
-
-      "consider a portMapping with no networkNames as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                hostPort = Some(80),
-                containerPort = Some(80),
-                networkNames = Nil)))))) shouldBe (aSuccess)
-      }
-
-      "maybe consider a portMapping without hostport as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                hostPort = None,
-                containerPort = Some(80),
-                networkNames = Nil)))))) shouldBe (aSuccess)
-      }
-
-      "consider portMapping with zero hostport as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                containerPort = Some(80),
-                hostPort = Some(0))))))) shouldBe (aSuccess)
-      }
-
-      "consider portMapping with a non-matching network name as invalid" in {
-        val result = validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                containerPort = Some(80),
-                hostPort = Some(80),
-                networkNames = List("invalid-network-name")))))))
-        result.isFailure shouldBe true
-      }
-
-      "consider portMapping without networkNames nor hostPort as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                containerPort = Some(80),
-                hostPort = None,
-                networkNames = Nil)))))) shouldBe (aSuccess)
-      }
+      behave like containerAndBridgeMode("container-mode:", networks(1))
+      behave like containerAndBridgeMode("bridge-mode:", bridgeNetwork)
     }
 
-    "require that hostPort is unique" in {
+    "container-mode: requires containerPort" in {
       val result = validator(
-        containerNetworkedPod(Seq(
+        networkedPod(Seq(
           podContainer(endpoints = Seq(
             Endpoint(
-              "name",
-              hostPort = Some(123)),
-            Endpoint(
-              "name",
+              "name1",
               hostPort = Some(123)))))))
 
       result should containViolation(
         "/containers(0)/endpoints(0)/containerPort" -> "is required when using container-mode networking")
-      result should containViolation(
-        "/" -> PodsValidationMessages.EndpointNamesMustBeUnique)
-      result should containViolation(
-        "/" -> PodsValidationMessages.HostPortsMustBeUnique)
+    }
+
+    "allow endpoint with a networkNames" in {
+      validator(
+        networkedPod(Seq(
+          podContainer(endpoints = Seq(
+            Endpoint(
+              "endpoint",
+              hostPort = Some(80),
+              containerPort = Some(80),
+              networkNames = List("1"))))))) shouldBe (aSuccess)
+    }
+
+    "disallow endpoint with a host port and two valid networkNames" in {
+      validator(
+        networkedPod(Seq(
+          podContainer(endpoints = Seq(
+            Endpoint(
+              "endpoint",
+              hostPort = Some(80),
+              containerPort = Some(80),
+              networkNames = List("1", "2"))))))) shouldBe (aFailure)
+    }
+
+    "disallow endpoint with a non-matching network name" in {
+      val result = validator(
+        networkedPod(Seq(
+          podContainer(endpoints = Seq(
+            Endpoint(
+              "endpoint",
+              containerPort = Some(80),
+              hostPort = Some(80),
+              networkNames = List("invalid-network-name")))))))
+      result.isFailure shouldBe true
+    }
+
+    "allow endpoint without hostPort for host networking" in {
+      val result = validator(networkedPod(Seq(
+        podContainer(endpoints = Seq(Endpoint("ep")))
+      ), hostNetwork))
+      result shouldBe aSuccess
     }
   }
 }

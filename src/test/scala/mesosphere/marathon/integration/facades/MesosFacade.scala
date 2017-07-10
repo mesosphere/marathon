@@ -48,6 +48,7 @@ object MesosFacade {
 
   case class ITResources(resources: Map[String, ITResourceValue]) {
     def isEmpty: Boolean = resources.isEmpty || resources.values.forall(_.isEmpty)
+    def nonEmpty: Boolean = !isEmpty
 
     override def toString: String = {
       "{" + resources.toSeq.sortBy(_._1).map {

@@ -139,7 +139,7 @@
           "properties": {
             "credential": {
               "type": "object",
-              "description": "Credential to authenticate with the docker registry.",
+              "description": "DEPRECATED since Marathon v1.5. Credential to authenticate with the docker registry.",
               "additionalProperties": false,
               "properties": {
                 "principal": {
@@ -153,6 +153,19 @@
               },
               "required": [ "principal" ]
             },
+            "pullConfig": {
+              "type": "object",
+              "description": "Docker's config.json",
+              "additionalProperties": false,
+              "properties": {
+                "secret" : {
+                  "type": "string",
+                  "description": "A secret whose value is a stringified JSON object in a Secret Store.",
+                  "minLength": 1
+                }
+              },
+              "required": [ "secret" ]
+            },
             "forcePullImage": {
               "type": "boolean",
               "description": "The container will be pulled, regardless if it is already available on the local system."
@@ -164,7 +177,7 @@
             },
             "network": {
               "type": "string",
-              "description": "The networking mode, this container should operate in. One of BRIDGE|HOST|NONE|USER",
+              "description": "DEPRECATED. The networking mode, this container should operate in. One of BRIDGE|HOST|NONE|USER",
               "enum": ["BRIDGE", "HOST", "NONE", "USER"]
             },
             "parameters": {
@@ -233,7 +246,7 @@
           "type": "string",
           "description": "Container engine type. Supported engine types at the moment are DOCKER and MESOS.",
           "enum": ["MESOS", "DOCKER"],
-	  "default": "DOCKER"
+          "default": "DOCKER"
         },
         "portMappings": {
           "$ref": "#/definitions/containerPortMappings",
@@ -392,19 +405,19 @@
           "executable": {
             "type": "boolean",
             "description": "Set fetched artifact as executable",
-	    "default": false
+            "default": false
           },
           "extract": {
             "type": "boolean",
             "description": "Extract fetched artifact if supported by Mesos fetcher module",
-	    "default": true
+            "default": true
           },
           "cache": {
             "type": "boolean",
             "description": "Cache fetched artifact if supported by Mesos fetcher module",
-	    "default": false
+            "default": false
           },
-          "outputFile": {
+          "destPath": {
             "type": "string",
             "description": "Rename fetched artifact with the given name"
           }
@@ -545,7 +558,7 @@
       "properties": {
         "discovery": {
           "type": "object",
-          "description": "Information useful for service discovery.",
+          "description": "DEPRECATED. Information useful for service discovery.",
           "properties": {
             "ports": {
               "type": "array",
@@ -568,6 +581,13 @@
                   "protocol": {
                     "enum": ["tcp", "udp"],
                     "description": "Protocol of the port (one of ['tcp', 'udp'])."
+                  },
+                  "labels": {
+                    "type": "object",
+                    "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   }
                 }
               }
@@ -596,7 +616,7 @@
     },
     "ports": {
       "type": "array",
-      "description": "An array of required port resources on the agent host. The number of items in the array determines how many dynamic ports are allocated for every task. For every port that is zero, a globally unique (cluster-wide) port is assigned and provided as part of the app definition to be used in load balancing definitions.",
+      "description": "DEPRECATED in favor of /portDefinitions. An array of required port resources on the agent host. The number of items in the array determines how many dynamic ports are allocated for every task. For every port that is zero, a globally unique (cluster-wide) port is assigned and provided as part of the app definition to be used in load balancing definitions.",
       "items": {
         "maximum": 65535,
         "minimum": 0,
@@ -755,7 +775,7 @@
     },
     "uris": {
       "type": "array",
-      "description": "URIs defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.",
+      "description": "DEPRECATED in favor of /fetch. URIs defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.",
       "items": {
         "type": "string",
         "minLength": 1

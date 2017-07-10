@@ -852,7 +852,7 @@ class ConstraintsTest extends UnitTest {
       .setType(Protos.Value.Type.SET)
       .setName(name)
       .setSet(Protos.Value.Set.newBuilder
-        .addAllItem(items)
+        .addAllItem(items.asJava)
         .build()
       )
       .build
@@ -876,7 +876,7 @@ class ConstraintsTest extends UnitTest {
       .setSlaveId(SlaveID(Random.nextString(9)))
       .setFrameworkId(FrameworkID(Random.nextString(9)))
       .setHostname(hostname)
-      .addAllAttributes(attributes)
+      .addAllAttributes(attributes.asJava)
       .build
   }
 

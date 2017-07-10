@@ -3,6 +3,7 @@ from shakedown import *
 from shakedown import http
 
 from utils import *
+from dcos import mesos
 from dcos.errors import DCOSException
 from distutils.version import LooseVersion
 from urllib.parse import urljoin
@@ -12,6 +13,7 @@ import random
 import retrying
 import pytest
 import shakedown
+import shlex
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -461,20 +463,74 @@ def private_docker_container_app(docker_credentials_filename='docker.tar.gz'):
     }
 
 
-def private_mesos_container_app(principal, secret):
+def private_mesos_container_app(secret_name, app_id=None):
+    """ Returns an application definition that uses Mesos containerizer and
+        expects a valid Docker config.json referenced by the given `secret_name`.
+
+        :param secret_name: secret name which value is a Docker config.json
+        :param app_id: optional application ID, if not given, a random UUID is used
+        :return: application definition represented using Python data structures
+    """
+    if app_id is None:
+        app_id = '/{}'.format(uuid.uuid4().hex)
+
     return {
-        "id": "/private-mesos-app",
+        "id": app_id,
         "instances": 1,
         "cpus": 1,
         "mem": 128,
         "container": {
-        "type": 'MESOS',
-        "docker": {
-            "image": "mesosphere/simple-docker-ee:latest",
-            "credential": {
-                "principal": principal,
-                "secret": secret
+            "type": 'MESOS',
+            "docker": {
+                "image": "mesosphere/simple-docker-ee:latest",
+                "config": {
+                    "secret": "pullConfigSecret"
                 }
+            }
+        },
+        "secrets": {
+            "pullConfigSecret": {
+                "source": '/{}'.format(secret_name)
+            }
+        }
+    }
+
+
+def private_docker_pod(secret_name, pod_id=None):
+    """ Returns a pod definition that uses a Docker image and
+        expects a valid Docker config.json referenced by the given `secret_name`.
+
+        :param secret_name: secret name which value is a Docker config.json
+        :param pod_id: optional pod ID, if not given, a random UUID is used
+        :return: pod definition represented using Python data structures
+    """
+    if pod_id is None:
+        pod_id = '/{}'.format(uuid.uuid4().hex)
+
+    return {
+        "id": pod_id,
+        "scaling": {
+            "kind": "fixed",
+            "instances": 1
+        },
+        "containers": [{
+            "name": "simple-docker",
+            "resources": {
+                "cpus": 1,
+                "mem": 128
+            },
+            "image": {
+                "kind": "DOCKER",
+                "id": "mesosphere/simple-docker-ee:latest",
+                "config": {
+                    "secret": "pullConfigSecret"
+                }
+            }
+        }],
+        "networks": [{"mode": "host"}],
+        "secrets": {
+            "pullConfigSecret": {
+                "source": '/{}'.format(secret_name)
             }
         }
     }
@@ -687,6 +743,18 @@ def wait_for_task(service, task, timeout_sec=120):
     return None
 
 
+def clear_pods():
+    # clearing doesn't cause
+    try:
+        client = marathon.create_client()
+        pods = client.list_pod()
+        for pod in pods:
+            client.remove_pod(pod["id"], True)
+        shakedown.deployment_wait()
+    except:
+        pass
+
+
 def get_pod_tasks(pod_id):
     pod_id = pod_id.lstrip('/')
     pod_tasks = []
@@ -758,6 +826,10 @@ def get_marathon_leader_not_on_master_leader_node():
     return marathon_leader
 
 
+def docker_env_set():
+    return 'DOCKER_HUB_USERNAME' not in os.environ and 'DOCKER_HUB_PASSWORD' not in os.environ
+
+
 #############
 #  moving to shakedown  START
 #############
@@ -780,6 +852,27 @@ def is_enterprise_cli_package_installed():
     return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
+def create_docker_pull_config_json(username, password):
+    """ Create a Docker config.json represented using Python data structures.
+
+        :param username: username for a private Docker registry
+        :param password: password for a private Docker registry
+        :return: Docker config.json
+    """
+    print('Creating a config.json content for dockerhub username {}'.format(username))
+
+    import base64
+    auth_hash = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
+
+    return {
+        "auths": {
+            "https://index.docker.io/v1/": {
+                "auth": auth_hash
+            }
+        }
+    }
+
+
 def create_docker_credentials_file(username, password, file_name='docker.tar.gz'):
     """ Create a docker credentials file. Docker username and password are used to create
         a `{file_name}` with `.docker/config.json` containing the credentials.
@@ -791,16 +884,7 @@ def create_docker_credentials_file(username, password, file_name='docker.tar.gz'
     print('Creating a tarball {} with json credentials for dockerhub username {}'.format(file_name, username))
     config_json_filename = 'config.json'
 
-    import base64
-    auth_hash = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
-
-    config_json = {
-      "auths": {
-        "https://index.docker.io/v1/": {
-          "auth": auth_hash
-        }
-      }
-    }
+    config_json = create_docker_pull_config_json(username, password)
 
     # Write config.json to file
     with open(config_json_filename, 'w') as f:
@@ -870,8 +954,32 @@ def delete_secret(secret_name):
     assert return_code == 0, "Failed to remove existing secret"
 
 
-def create_secret(secret_name, service_account, strict=False, private_key_filename='private-key.pem'):
-    """ Create a secret with a given private key file for passed service account in the vault. Both
+def create_secret(name, value=None, description=None):
+    """ Create a secret with a passed `{name}` and optional `{value}`.
+        This method uses `dcos security secrets` command and assumes that `dcos-enterprise-cli`
+        package is installed.
+
+        :param name: secret name
+        :type name: str
+        :param value: optional secret value
+        :type value: str
+        :param description: option secret description
+        :type description: str
+    """
+    print('Creating new secret {}:{}'.format(name, value))
+
+    value_opt = '-v {}'.format(shlex.quote(value)) if value else ''
+    description_opt = '-d "{}"'.format(description) if description else ''
+
+    stdout, stderr, return_code = run_dcos_command('security secrets create {} {} "{}"'.format(
+        value_opt,
+        description_opt,
+        name), print_output=True)
+    assert return_code == 0, "Failed to create a secret"
+
+
+def create_sa_secret(secret_name, service_account, strict=False, private_key_filename='private-key.pem'):
+    """ Create an sa-secret with a given private key file for passed service account in the vault. Both
         (service account and secret) should share the same key pair. `{strict}` parameter should be
         `True` when creating a secret in a `strict` secure cluster. Private key file will be removed
         after secret is successfully created.
@@ -889,7 +997,7 @@ def create_secret(secret_name, service_account, strict=False, private_key_filena
     """
     assert os.path.isfile(private_key_filename), "Failed to create secret: private key not found"
 
-    print('Creating new secret {}'.format(secret_name))
+    print('Creating new sa-secret {} for service-account: {}'.format(secret_name, service_account))
     strict_opt = '--strict' if strict else ''
     stdout, stderr, return_code = run_dcos_command('security secrets create-sa-secret {} {} {} {}'.format(
         strict_opt,
@@ -986,7 +1094,8 @@ def http_get_marathon_path(name, marathon_name='marathon'):
         ex.  name='ping'  http GET {dcos_url}/service/marathon/ping
     """
     url = get_marathon_endpoint(name, marathon_name)
-    return http.get(url)
+    headers = {'Accept': '*/*'}
+    return http.get(url, headers=headers)
 
 
 # PR added to dcos-cli (however it takes weeks)
@@ -1007,6 +1116,24 @@ def multi_master():
     """
     # reverse logic (skip if multi master cluster)
     return len(get_all_masters()) > 1
+
+
+def __get_all_agents():
+    """Provides all agent json in the cluster which can be used for filtering"""
+
+    client = mesos.DCOSClient()
+    agents = client.get_state_summary()['slaves']
+    return agents
+
+
+def agent_hostname_by_id(agent_id):
+    """Given a agent_id provides the agent ip"""
+    for agent in __get_all_agents():
+        if agent['id'] == agent_id:
+            return agent['hostname']
+
+    return None
+
 
 #############
 # moving to shakedown  END

@@ -165,7 +165,7 @@ def ensure_permissions():
 def ensure_secret(strict=False):
     if has_secret(MOM_EE_SECRET_NAME):
         delete_secret(MOM_EE_SECRET_NAME)
-    create_secret(MOM_EE_SECRET_NAME, MOM_EE_SERVICE_ACCOUNT, strict)
+    create_sa_secret(MOM_EE_SECRET_NAME, MOM_EE_SERVICE_ACCOUNT, strict)
     assert has_secret(MOM_EE_SECRET_NAME)
 
 

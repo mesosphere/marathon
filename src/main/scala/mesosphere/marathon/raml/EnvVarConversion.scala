@@ -10,7 +10,7 @@ trait EnvVarConversion {
     Writes {
       _.map {
         case (name, state.EnvVarString(v)) => name -> EnvVarValue(v)
-        case (name, state.EnvVarSecretRef(v)) => name -> EnvVarSecretRef(v)
+        case (name, state.EnvVarSecretRef(secret: String)) => name -> EnvVarSecret(secret)
       }
     }
 
@@ -18,7 +18,7 @@ trait EnvVarConversion {
     Reads {
       _.map {
         case (name, EnvVarValue(v)) => name -> state.EnvVarString(v)
-        case (name, EnvVarSecretRef(v)) => name -> state.EnvVarSecretRef(v)
+        case (name, EnvVarSecret(secret: String)) => name -> state.EnvVarSecretRef(secret)
       }
     }
 
@@ -30,7 +30,7 @@ trait EnvVarConversion {
         }(collection.breakOut)
 
         vanillaEnv ++ refs.withFilter(_.getType == Protos.EnvVarReference.Type.SECRET).map { secretRef =>
-          secretRef.getName -> EnvVarSecretRef(secretRef.getSecretRef.getSecretId)
+          secretRef.getName -> EnvVarSecret(secretRef.getSecretRef.getSecretId)
         }
     }
 }

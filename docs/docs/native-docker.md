@@ -1,23 +1,75 @@
 ---
-title: Running Containers on Marathon
+title: Provisioning Containers
 ---
 
-Marathon supports Docker and Appc container images by either one of two runtimes; Docker Engine and Universal Container Runtime.
+# Provisioning Containers
 
-# Running Docker Containers on Marathon
+A containerizer is a Mesos agent component responsible for launching containers, within which you can run a Marathon app. Running apps in containers offers a number of benefits, including the ability to isolate tasks from one another and control task resources programmatically.
 
-Marathon enables users to run Docker container images with two different runtimes:
+Marathon enables users to launch containers with container images using two different runtimes:
 
-  1. [Docker containerizer](# Docker Containerizer) using the native Docker Engine as runtime.
-  2. Mesos containerizer using the Universal Container Runtime.  
+1. Mesos containerizer using the [Universal Container Runtime](#ucr).
+1. [Docker containerizer](#docker-containerizer) using the native Docker Engine as runtime.
 
-# Docker Containerizer 
+<a name="ucr"></a>
+
+# Universal Container Runtime
+
+The [Universal Container Runtime](http://mesos.apache.org/documentation/latest/container-image) (UCR) extends the Mesos containerizer to support provisioning [Docker](https://docker.com/) container images ([AppC](https://github.com/appc/spec) coming soon). This means that you can use both the Mesos containerizer and other container image types. You can still use the Docker container runtime directly ([instructions are below](#docker-containerizer)), but the Universal Container Runtime supports running Docker images without depending on the Docker Engine, which allows for better integration with Mesos.
+
+The following Marathon features _only_ work with the UCR:
+
+- [Pods]({{ site.baseurl }}/docs/pods.html).
+- GPUs.
+- [Authentication to a private Docker registry using a secret store]({{ site.baseurl }}/docs/native-docker-private-registry.html).
+
+## Provisioning Containers with the UCR
+
+To provision containers with the UCR, specify the container type `MESOS` and a the appropriate object in your application definition. Here, we specify a Docker container with the `docker` object.
+
+The UCR containerizer provides a `pullConfig` parameter with a `secret` field for [authentication with a private Docker registry]({{ site.baseurl }}/docs/native-docker-private-registry.html). 
+
+`credential`, with a `principal` and an optional `secret` field to authenticate when downloading the Docker image.
+
+```json
+{  
+   "id":"mesos-docker",
+   "container":{  
+      "docker":{  
+         "image":"mesosphere/inky",
+         "pullConfig": {
+                "secret": "pullConfigSecret"
+          }
+      },
+      "type":"MESOS"
+   },
+   "secrets": {
+        "pullConfigSecret": {
+            "source": "/mesos-docker/pullConfig"
+        }
+   "args":[  
+      "<my-arg>"
+   ],
+   "cpus":0.2,
+   "mem":16.0,
+   "instances":1
+}
+```
+
+**Important:** If you leave the `args` field empty, the default entry point will be the launch command for the container. If your container does not have a default entry point, you must specify a command in the `args` field. If you do not, your app will fail to deploy.
+
+## UCR Limitations
+- The UCR does not support the following: runtime privileges, Docker options, force pull, named ports, numbered ports, bridge networking, port mapping.
+
+<a name="docker-containerizer"></a>
+
+# Provisioning Containers with the Docker Containerizer
 
 The Docker containerizer relies on the external Docker engine runtime to provision the containers.
 
 ## Configuration
 
-DC/OS clusters are already configured to run Docker containers, so 
+DC/OS clusters are already configured to run Docker containers, so
 DC/OS users do not need to follow the configuration steps below.
 
 #### Prerequisites
@@ -28,13 +80,13 @@ DC/OS users do not need to follow the configuration steps below.
 
   <div class="alert alert-info">
     <strong>Note:</strong> All commands below assume the Mesos agent process is being run
-    as a service using the package provided by 
+    as a service using the package provided by
     <a href="http://mesosphere.com/2014/07/17/mesosphere-package-repositories/">Mesosphere</a>
   </div>
 
 1. Update your agent node configuration to specify the use of the Docker containerizer
   <div class="alert alert-info">
-    <strong>Note:</strong> The order of the parameters to `containerizers` is important. 
+    <strong>Note:</strong> The order of the parameters to `containerizers` is important.
     It specifies the priority used when choosing the containerizer to launch
     the task.
   </div>
@@ -43,20 +95,20 @@ DC/OS users do not need to follow the configuration steps below.
     $ echo 'docker,mesos' > /etc/mesos-slave/containerizers
     ```
 
-2. Increase the executor timeout to account for the potential delay pulling a docker image to the agent node.
+1. Increase the executor timeout to account for the potential delay pulling a docker image to the agent node.
 
     ```bash
     $ echo '10mins' > /etc/mesos-slave/executor_registration_timeout
     ```
 
-3. Restart the agent process to load the new configuration.
+1. Restart the agent process to load the new configuration.
 
 #### Configure Marathon
 
-1. Increase the Marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
-`--task_launch_timeout` to at least the executor timeout, in milliseconds, 
-you set on your agent nodes in the previous step.
+Increase the Marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
 
+`--task_launch_timeout` to at least the executor timeout, in milliseconds,
+you set on your agent nodes in the previous step.
 
 ## Overview
 
@@ -180,11 +232,11 @@ default. This can be overridden; for example to also expose ports in the range
 See the [network configuration](https://docs.docker.com/engine/userguide/networking/)
 documentation for more details on how Docker handles networking.
 
-### Using a Private Docker Repository
+### Using a Private Docker Registry
 
 See the [private registry]({{ site.baseurl }}/docs/native-docker-private-registry.html)
 documentation for more details on how to initiate a `docker pull` from a private docker registry
-using marathon.
+using Marathon.
 
 ### Advanced Usage
 
@@ -228,7 +280,7 @@ and execute `echo hello`:
 
 ```json
 {
-    "id": "inky", 
+    "id": "inky",
     "container": {
         "docker": {
             "image": "mesosphere/inky"
@@ -286,59 +338,8 @@ the future, as Mesos may not always interact with Docker via the CLI.
 }
 ```
 
-# Mesos Containerizer and Universal Container Runtime
-
- Starting with version 1.3.0, Marathon can provision Docker container images without relying on the external Docker Engine
- Instead, the Mesos containerizer uses the Universal Container Runtime (added in [Apache Mesos version 1.0](http://mesos.apache.org/blog/mesos-1-0-0-released/), released July 2016) which uses native OS features to configure and start Docker or [AppC](https://github.com/appc/spec) container images and provide isolation.
-
-## Configuration
-
-Selected this setup by specifying the follow JSON combination, which previously provoked an error message:
-container type "MESOS" and a "docker" object.
-
-```json
-{
-    "id": "mesos-docker",
-    "container": {
-        "docker": {
-            "image": "mesosphere/inky"
-        },
-        "type": "MESOS"
-    },
-    "args": ["hello"],
-    "cpus": 0.2,
-    "mem": 16.0,
-    "instances": 1
-}
-```
-The Mesos containerizer does not support the same parameter options as the Docker containerizer yet.
-The only properties recognized by both containerizers are "image" and "forcePullImage",
-with the same semantics. All other Docker container properties result in an error with the Mesos containerizer.
-
-However, the latest version of the Mesos containerizer introduces its own new property, "credential", with a "principal" and an optional "secret" field to authenticate when downloading the Docker image.
-
-```json
-{
-    "id": "mesos-docker",
-    "container": {
-        "docker": {
-            "image": "mesosphere/inky",
-            "credential": {
-              "principal": "alice",
-              "secret": "wonderland"
-            }
-        },
-        "type": "MESOS"
-    },
-    "args": ["hello"],
-    "cpus": 0.2,
-    "mem": 16.0,
-    "instances": 1
-}
-```
-
-## Resources
+# Resources
 
 - [Mesos Docker Containerizer](http://mesos.apache.org/documentation/latest/docker-containerizer)
 - [Supporting Container Images in Mesos Containerizer]
-  (https://github.com/apache/mesos/blob/master/docs/container-image.md)
+  (http://mesos.apache.org/documentation/latest/container-image/)
