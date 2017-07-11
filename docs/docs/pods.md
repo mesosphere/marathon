@@ -10,7 +10,7 @@ Pods allow quick, convenient coordination between applications that need to work
 
 Currently, Marathon pods can only be created and administered via the `/v2/pods/` endpoint of the REST API, not via the web interface.
 
-**Note:** Pods are only available as of Marathon 1.4 and are not supported in the `strict` security mode of Enterprise DC/OS 1.9 and below. Pods are supported in strict mode as of DC/OS 1.10.
+**Note:** Pods are only available as of Marathon 1.4 and are not supported in the `strict` security mode of Enterprise DC/OS 1.9 and below.
 
 ## Features
 
