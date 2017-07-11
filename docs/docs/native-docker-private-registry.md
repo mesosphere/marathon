@@ -126,7 +126,7 @@ Add the following two parameters to your pod definition.
     ]
     ```
 
-    **Note:** This functionality is only supported if `containers.kind` is set to `DOCKER`.
+    **Note:** This functionality is only supported if `image.kind` is set to `DOCKER`.
 
   1.  A complete example:
 
