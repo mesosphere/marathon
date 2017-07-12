@@ -6,6 +6,8 @@
                  [jepsen "0.1.6-SNAPSHOT"]
                  [clj-http "3.6.1"]
                  [cheshire "5.7.1"]
-                 [clj-time "0.13.0"]]
+                 [clj-time "0.13.0"]
+                 [de.ubercode.clostache/clostache "1.4.0"]]
+  :resource-paths ["resources"]
   :plugins [[lein-cljfmt "0.5.6"]]
   :cljfmt {})

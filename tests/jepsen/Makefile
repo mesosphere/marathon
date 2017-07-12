@@ -1,7 +1,7 @@
 .PHONY : default clean indent clean-diff deps run shell build
 
 default:
-	@lein run test --nodes-file nodes_list --username vagrant --password vagrant
+	@lein run test --nodes-file nodes_list --username ubuntu --password ubuntu
 
 clean:
 	@lein clean
@@ -25,7 +25,7 @@ deps:
 	@lein deps
 
 run:
-	@lein run test --nodes-file $(nodes) --username vagrant --password vagrant
+	@lein run test --nodes-file $(nodes) --username ubuntu --password ubuntu
 
 shell:
 	@lein repl

@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [clojure.tools.logging :refer :all]
             [clojure.string :as str]
+            [clostache.parser :as parser]
             [jepsen.control :as c]
             [jepsen.db :as db]
             [jepsen.cli :as cli]
@@ -11,77 +12,82 @@
             [jepsen.util :as util :refer [meh timeout]]
             [jepsen.zookeeper :as zk]))
 
-(def master-pidfile "/var/run/mesos/master.pid")
-(def agent-pidfile  "/var/run/mesos/agent.pid")
-(def master-dir     "/usr/sbin/")
-(def master-bin     "mesos-master")
-(def agent-dir      "/usr/sbin/")
-(def agent-bin      "mesos-agent")
-(def master-log-dir "~/master.log")
-(def agent-log-dir  "~/agent.log")
-(def mesos-data-dir "/var/lib/mesos/data")
+(def mesos-data-dir       "/var/lib/mesos/data")
+(def mesos-master-config  "/etc/mesos-master")
+(def mesos-agent-config   "/etc/mesos-slave")
+(def mesos-zookeeper      "/etc/mesos/zk")
+
+(defn calculate_quorum
+  [test]
+  (+
+   1
+   (int (Math/floor (/ (count (:nodes test)) 2)))))
 
 (defn install!
   [test node version]
   (c/su
-   (debian/add-repo! :mesosphere "deb http://repos.mesosphere.com/ubuntu trusty main" "keyserver.ubuntu.com" "E56151BF")
+   (debian/add-repo! :mesosphere "deb http://repos.mesosphere.com/ubuntu xenial main" "keyserver.ubuntu.com" "E56151BF")
    (debian/install ["mesos"])
    (c/exec :mkdir :-p "/var/run/mesos")))
 
 (defn configure
   [test node version]
   (c/su
-   (c/exec :export "MESOS_NATIVE_JAVA_LIBRARY=/usr/local/lib/libmesos.so")))
+   (c/exec :echo (str "zk://" (zk/zk-url test) "/mesos") :| :tee mesos-zookeeper)
+   (c/exec :echo :marathon-dev :| :tee (str mesos-master-config "/cluster"))
+   (c/exec :echo node :| :tee (str mesos-master-config "/hostname"))
+   (c/exec :echo node :| :tee (str mesos-master-config "/ip"))
+   (c/exec :echo :in_memory :| :tee (str mesos-master-config "/registry"))
+   (c/exec :echo mesos-data-dir :| :tee (str mesos-master-config "/work_dir"))
+   (c/exec :echo (str (calculate_quorum test)) :| :tee (str mesos-master-config "/quorum"))
+
+   (c/exec :echo :mesos :| :tee (str mesos-agent-config "/containerizers"))
+   (c/exec :echo node :| :tee (str mesos-agent-config "/hostname"))
+   (c/exec :echo node :| :tee (str mesos-agent-config "/ip"))
+   (c/exec :echo :5051 :| :tee (str mesos-agent-config "/port"))
+   (c/exec :echo mesos-data-dir :| :tee (str mesos-agent-config "/work_dir"))))
 
 (defn uninstall!
   [test node version]
+  (info node "Uninstalling Mesos")
   (c/su
    (debian/uninstall! ["mesos"])
    (c/exec :rm :-rf
-           (c/lit "var/lib/mesos"))))
+           (c/lit "var/lib/mesos"))
+   (c/exec :rm :-rf
+           (c/lit "var/run/mesos"))
+   (c/exec :rm :-rf
+           (c/lit mesos-master-config))
+   (c/exec :rm :-rf
+           (c/lit mesos-agent-config))))
 
 (defn start-master!
   [test node]
+  (info node "Starting Mesos Master")
   (c/su
-   (cu/start-daemon! {:logfile        master-log-dir
-                      :make-pidfile?  true
-                      :pidfile        master-pidfile
-                      :chdir          master-dir}
-                     master-bin
-                     (str "--cluster=marathon-dev")
-                     (str "--hostname=" node)
-                     (str "--ip=" node)
-                     (str "--port=5050")
-                     (str "--registry=in_memory")
-                     (str "--zk=zk://" (zk/zk-url test) "/mesos")
-                     (str "--work_dir=" mesos-data-dir))))
-
-(defn start-agent!
-  [test node]
-  (c/su
-   (cu/start-daemon! {:logfile agent-log-dir
-                      :make-pidfile? true
-                      :pidfile agent-pidfile
-                      :chdir agent-dir}
-                     agent-bin
-                     (str "--containerizers=mesos")
-                     (str "--hostname=" node)
-                     (str "--ip=" node)
-                     (str "--master=zk://" (zk/zk-url test) "/mesos")
-                     (str "--port=5051")
-                     (str "--work_dir=" mesos-data-dir))))
+   (c/exec
+    :systemctl :start :mesos-master.service)))
 
 (defn stop-master!
   [node]
-  (info node "stopping mesos-master")
-  (meh (c/exec :killall :-9 :mesos-master))
-  (meh (c/exec :rm :-rf master-pidfile)))
+  (info node "Stopping Mesos Master")
+  (c/su
+   (c/exec
+    :systemctl :stop :mesos-master.service)))
 
-(defn stop-slave!
+(defn start-agent!
+  [test node]
+  (info node "Starting Mesos Agent")
+  (c/su
+   (c/exec
+    :systemctl :start :mesos-slave.service)))
+
+(defn stop-agent!
   [node]
-  (info node "stopping mesos-agent")
-  (meh (c/exec :killall :-9 :mesos-agent))
-  (meh (c/exec :rm :-rf agent-pidfile)))
+  (info node "Stopping Mesos Agent")
+  (c/su
+   (c/exec
+    :systemctl :stop :mesos-slave.service)))
 
 (defn db
   [version]
@@ -94,6 +100,6 @@
       (start-agent! test node))
     (teardown! [_ test node]
       (info node "tearing down mesos cluster..")
-      (stop-slave! node)
+      (stop-agent! node)
       (stop-master! node)
       (uninstall! test node version))))

@@ -6,6 +6,7 @@
             [clj-time.core :as time]
             [clj-time.format :as time.format]
             [cheshire.core :as json]
+            [clostache.parser :as parser]
             [jepsen.control :as c]
             [jepsen.generator :as gen]
             [jepsen.client :as client]
@@ -14,58 +15,57 @@
             [jepsen.tests :as tests]
             [jepsen.control.util :as cu]
             [jepsen.os.debian :as debian]
+            [jepsen.os.ubuntu :as ubuntu]
             [jepsen.mesos :as mesos]
             [jepsen.zookeeper :as zk]
             [jepsen.util :as util :refer [meh timeout]]
             [jepsen.nemesis :as nemesis]))
 
-(def marathon-pidfile "~/marathon/master.pid")
-(def marathon-dir     "~/marathon/bin/")
-(def marathon-bin     "marathon")
-(def marathon-run-log "~/marathon-log-file.log")
-(def app-dir          "/tmp/marathon-test/")
-(def test-duration    200)
+(def marathon-home     "/home/ubuntu/marathon")
+(def marathon-bin      "marathon")
+(def app-dir           "/tmp/marathon-test/")
+(def marathon-service  "/lib/systemd/system/marathon.service")
+(def test-duration     200)
 
 (defn install!
   [test node]
   (c/su
-   (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-586-g2a75b8e.tgz" "/home/vagrant/marathon")
+   (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-586-g2a75b8e.tgz" marathon-home)
    (c/exec :mkdir :-p app-dir)))
+
+(defn configure
+  [test node]
+  (c/su
+   (c/exec :touch marathon-service)
+   (c/exec :echo :-e  (parser/render-resource
+                       "services-templates/marathon-service.mustache"
+                       {:marathon-home marathon-home
+                        :node node
+                        :zk-url (zk/zk-url test)})
+           :|
+           :tee marathon-service)
+   (c/exec :systemctl :daemon-reload)))
 
 (defn uninstall!
   [test node]
   (c/su
    (c/exec :rm :-rf
-           (c/lit "~/marathon")
-           (c/lit app-dir))))
+           (c/lit marathon-home)
+           (c/lit app-dir))
+   (c/exec :rm marathon-service)))
 
 (defn start-marathon!
   [test node]
   (c/su
-   (cu/start-daemon! {:logfile marathon-run-log
-                      :make-pidfile? true
-                      :pidfile marathon-pidfile
-                      :chdir marathon-dir}
-                     marathon-bin
-                     :--framework_name          "marathon"
-                     :--hostname                 node
-                     :--http_address             node
-                     :--http_port                "8080"
-                     :--https_address            node
-                     :--https_port               "8443"
-                     :--master                   (str "zk://" (zk/zk-url test) "/mesos")
-                     :--zk                       (str "zk://" (zk/zk-url test) "/marathon"))))
+   (meh (c/exec
+         :systemctl :start :marathon.service))))
 
 (defn stop-marathon!
   [node]
   (info node "Stopping Marathon framework")
-  (meh (c/exec :kill
-               :-KILL
-               (str "`")
-               (str "cat")
-               marathon-pidfile
-               (str "`")))
-  (meh (c/exec :rm :-rf marathon-pidfile)))
+  (c/su
+   (meh (c/exec
+         :systemctl :stop :marathon.service))))
 
 (defn ping-marathon!
   [node]
@@ -123,9 +123,10 @@
     (reify db/DB
       (setup! [_ test node]
         (db/setup! zk test node)
+        (install! test node)
+        (configure test node)
         (info node "starting setting mesos")
         (db/setup! mesos test node)
-        (install! test node)
         (start-marathon! test node))
       (teardown! [_ test node]
         (stop-marathon! node)
@@ -141,7 +142,7 @@
   [opts]
   (merge tests/noop-test
          {:name      "marathon"
-          :os        debian/os
+          :os        ubuntu/os
           :db        (db "1.3.0" "zookeeper-version")
           :client    (->Client nil)
           :generator (gen/phases
@@ -155,7 +156,7 @@
                            (gen/time-limit test-duration))
                       (gen/nemesis (gen/once {:type :info, :f :stop}))
                       (gen/log "Done generating and launching apps.")
-                      (gen/sleep 5))}
+                      (gen/sleep 30))}
          opts))
 
 (defn -main

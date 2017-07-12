@@ -9,10 +9,8 @@
             [jepsen.control.util :as cu]
             [jepsen.os.debian :as debian]))
 
-(def zookeeper-bin     "/usr/share/zookeeper/bin/zkServer.sh")
-(def zookeeper-lib     "/usr/lib/zookeeper")
 (def zookeeper-conf    "/etc/zookeeper/conf/zoo.cfg")
-(def zookeeper-myid  "/var/lib/zookeeper/myid")
+(def zookeeper-myid    "/var/lib/zookeeper/myid")
 
 (defn zk-url
   [test]
@@ -51,15 +49,17 @@
   [test node]
   (info "Stopping Zookeeper..")
   (c/su
-   (c/exec
-    :service :zookeeper :stop)))
+   (c/exec :service :zookeeper :stop)))
 
 (defn uninstall!
   [test node version]
   (info node "Uninstalling zookeeper")
   (c/su
    (debian/uninstall! ["zookeeper"])
-   (debian/uninstall! ["zookeeper-bin"])))
+   (debian/uninstall! ["zookeeper-bin"])
+   (debian/uninstall! ["zookeeperd"])
+   (c/exec :rm :-rf
+           (c/lit "/tmp/hsperfdata_zookeeper"))))
 
 (defn db
   [version]
