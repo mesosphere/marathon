@@ -41,6 +41,8 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
   private val lock = KeyedLock[String]("LazyCachingStore", Int.MaxValue)
   private[store] val idCache = TrieMap.empty[Category, Set[Any]]
   private[store] val valueCache = TrieMap.empty[K, Option[Any]]
+  private[this] val getHitCounters = TrieMap.empty[Category, Counter]
+  private[this] val idsHitCounters = TrieMap.empty[Category, Counter]
 
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
 
@@ -52,6 +54,9 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     val idsFuture = lock(category.toString) {
       if (idCache.contains(category)) {
+        // TODO - remove special name when MARATHON-7618 is addressed
+        idsHitCounters.getOrElseUpdate(ir.category, Metrics.counter(
+          ServiceMetric, getClass, s"ids:${ir.category}:hit", Map("result" -> "hit", "category" -> ir.category.toString))).increment()
         Future.successful(idCache(category).asInstanceOf[Set[Id]])
       } else {
         async {
@@ -105,6 +110,9 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
       val cached = valueCache.get(storageId) // linter:ignore OptionOfOption
       cached match {
         case Some(v: Option[V] @unchecked) =>
+          // TODO - remove special name when MARATHON-7618 is addressed
+          getHitCounters.getOrElseUpdate(ir.category, Metrics.counter(
+            ServiceMetric, getClass, s"get:${ir.category}:hit", Map("result" -> "hit", "category" -> ir.category.toString))).increment()
           Future.successful(v)
         case _ =>
           async { // linter:ignore UnnecessaryElseBranch
