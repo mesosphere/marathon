@@ -261,6 +261,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       registerAppProxyHealthCheck(appId, "v1", state = false) //will always fail
       val group = GroupUpdate(Some(gid.toString), Some(Set(proxy)))
       marathon.createGroup(group)
+      // There is race condition in mesos which we trigger by issuing Launch and Kill requests very fast after each other
+      // https://issues.apache.org/jira/browse/MESOS-7783
+      // To prevent it, we should wait until both tasks are RUNNING
+      waitForTasks(appId, 2)
 
       When("Delete the group, while the deployment is in progress")
       val deleteResult = marathon.deleteGroup(gid)
