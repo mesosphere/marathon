@@ -35,11 +35,14 @@ import scala.util.Random
 case class LazyCachingPersistenceStore[K, Category, Serialized](
     store: BasePersistenceStore[K, Category, Serialized])(implicit
   mat: Materializer,
-    ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
+    ctx: ExecutionContext,
+    metrics: Metrics) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
   private val lock = KeyedLock[String]("LazyCachingStore", Int.MaxValue)
   private[store] val idCache = TrieMap.empty[Category, Set[Any]]
   private[store] val valueCache = TrieMap.empty[K, Option[Any]]
+  private[this] val getHitCounters = TrieMap.empty[Category, Metrics.Counter]
+  private[this] val idsHitCounters = TrieMap.empty[Category, Metrics.Counter]
 
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
 
@@ -51,6 +54,9 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     val idsFuture = lock(category.toString) {
       if (idCache.contains(category)) {
+        idsHitCounters.getOrElseUpdate(
+          ir.category,
+          metrics.counter(metrics.name(MetricPrefixes.SERVICE, getClass, s"ids:${ir.category}:hit"))).inc()
         Future.successful(idCache(category).asInstanceOf[Set[Id]])
       } else {
         async {
@@ -104,6 +110,9 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
       val cached = valueCache.get(storageId) // linter:ignore OptionOfOption
       cached match {
         case Some(v: Option[V] @unchecked) =>
+          getHitCounters.getOrElseUpdate(
+            ir.category,
+            metrics.counter(metrics.name(MetricPrefixes.SERVICE, getClass, s"get:${ir.category}:hit"))).inc()
           Future.successful(v)
         case _ =>
           async { // linter:ignore UnnecessaryElseBranch
