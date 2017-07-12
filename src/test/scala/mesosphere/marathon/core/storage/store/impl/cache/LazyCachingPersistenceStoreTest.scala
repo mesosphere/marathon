@@ -28,7 +28,10 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
     LazyCachingPersistenceStore(new InMemoryPersistenceStore())
   }
 
-  private def withLazyVersionCaching = LazyVersionCachingPersistentStore(cachedInMemory)
+  private def withLazyVersionCaching = {
+    implicit val metrics = new Metrics(new MetricRegistry)
+    LazyVersionCachingPersistentStore(cachedInMemory)
+  }
 
   def zkStore: ZkPersistenceStore = {
     implicit val metrics = new Metrics(new MetricRegistry)
