@@ -41,7 +41,10 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
     new ZkPersistenceStore(client, Duration.Inf, 8)
   }
 
-  private def cachedZk = LazyCachingPersistenceStore(zkStore)
+  private def cachedZk = {
+    implicit val metrics = new Metrics(new MetricRegistry)
+    LazyCachingPersistenceStore(zkStore)
+  }
 
   behave like basicPersistenceStore("LazyCache(InMemory)", cachedInMemory)
   behave like basicPersistenceStore("LazyCache(Zk)", cachedZk)
