@@ -54,10 +54,10 @@ trait MetricsConversion {
       counters = metrics.getOrElse("counter", Map.empty).collect { case (k, v: Counter) => k -> v },
       gauges = metrics.getOrElse("gauge", Map.empty).collect { case (k, v: Histogram) => k -> v },
       histograms = metrics.getOrElse("histogram", Map.empty).collect { case (k, v: Histogram) => k -> v },
-      `min-max-counter` = metrics.getOrElse("min-max-counter", Map.empty).collect { case (k, v: Histogram) => k -> v },
+      `min-max-counters` = metrics.getOrElse("min-max-counter", Map.empty).collect { case (k, v: Histogram) => k -> v },
       additionalProperties = JsObject(
-        metrics.filterKeys(s => s != "counter" || s != "gauge" || s != "histogram" || s != "min-max-counter").map {
-          case (name, metrics) =>
+        metrics.collect {
+          case (name, metrics) if name != "counter" && name != "gauge" && name != "histogram" && name != "min-max-counter" =>
             name -> JsObject(metrics.collect {
               case (name, histogram: Histogram) => name -> Json.toJson(histogram)
               case (name, counter: Counter) => name -> Json.toJson(counter)
