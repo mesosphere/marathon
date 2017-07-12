@@ -3,7 +3,6 @@ package integration
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.http.scaladsl.model.DateTime
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck }
 import mesosphere.marathon.raml.{ App, GroupUpdate, UpgradeStrategy }
@@ -341,9 +340,9 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       )
 
       When("The group gets deployed")
-      var ping = Map.empty[String, DateTime]
+      var ping = Map.empty[String, Long]
       def storeFirst(health: IntegrationHealthCheck): Unit = {
-        if (!ping.contains(health.appId.toString)) ping += health.appId.toString -> DateTime.now
+        if (!ping.contains(health.appId.toString)) ping += health.appId.toString -> System.currentTimeMillis()
       }
       registerAppProxyHealthCheck(PathId(db.id), "v1", state = true).withHealthAction(storeFirst)
       registerAppProxyHealthCheck(PathId(service.id), "v1", state = true).withHealthAction(storeFirst)
