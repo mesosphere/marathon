@@ -376,14 +376,14 @@ object RamlTypeGenerator {
     val playReader = {
       // required fields never have defaults
       if (required && !forceOptional) {
-        TUPLE(REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`
+        TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`
       } else if (repeated && !forceOptional) {
-        TUPLE(REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY(REF(PlayReads) DOT "pure" APPLY(`type` APPLY()))
+        TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY(REF(PlayReads) DOT "pure" APPLY(`type` APPLY()))
       } else {
         if (defaultValue.isDefined && !forceOptional) {
-          TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(PlayReads) DOT "pure" APPLY defaultValue.get)
+          TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(PlayReads) DOT "pure" APPLY defaultValue.get)
         } else {
-          TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "readNullable" APPLYTYPE `type`)
+          TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "readNullable" APPLYTYPE `type`)
         }
       }
     }
@@ -391,11 +391,11 @@ object RamlTypeGenerator {
     val playValidator = {
       def reads = constraints.validate(PlayPath DOT "read" APPLYTYPE `type`)
       def validate =
-        REF("json") DOT "\\" APPLY(LIT(name)) DOT "validate" APPLYTYPE `type` APPLY(reads)
+        REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validate" APPLYTYPE `type` APPLY(reads)
       def validateOpt =
-        REF("json") DOT "\\" APPLY(LIT(name)) DOT "validateOpt" APPLYTYPE `type` APPLY(reads)
+        REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validateOpt" APPLYTYPE `type` APPLY(reads)
       def validateOptWithDefault(defaultValue: Tree) =
-        REF("json") DOT "\\" APPLY(LIT(name)) DOT "validateOpt" APPLYTYPE `type` APPLY(reads) DOT "map" APPLY (REF("_") DOT "getOrElse" APPLY defaultValue)
+        REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validateOpt" APPLYTYPE `type` APPLY(reads) DOT "map" APPLY (REF("_") DOT "getOrElse" APPLY defaultValue)
 
       if (required && !forceOptional) {
         validate
@@ -485,7 +485,7 @@ object RamlTypeGenerator {
               actualFields.map { field =>
                 VAL(field.name) := field.playValidator
               } ++ Seq(
-                VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.name), REF(f.name)))) DOT "collect" APPLY BLOCK(
+                VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
                   CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY(REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
                 IF(REF("_errors") DOT "nonEmpty") THEN (
                   REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
@@ -521,7 +521,7 @@ object RamlTypeGenerator {
                 Seq(
                   REF(PlayJsObject) APPLY (SEQ(
                     actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-                      TUPLE(LIT(field.name), REF(field.name))
+                      TUPLE(LIT(field.rawName), REF(field.name))
                     }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull) DOT("++") APPLY(
                       actualFields.find(_.name == AdditionalProperties).fold(REF("Seq") DOT "empty") { extraPropertiesField =>
                       REF("o.additionalProperties") DOT "fields"
