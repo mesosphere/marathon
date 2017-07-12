@@ -12,6 +12,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.storage.VersionCacheConfig
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.util.KeyedLock
@@ -169,10 +170,12 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     store: PersistenceStore[K, Category, Serialized],
     config: VersionCacheConfig = VersionCacheConfig.Default)(implicit
   mat: Materializer,
-    ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
+    ctx: ExecutionContext,
+    metrics: Metrics) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
   private[store] val versionCache = TrieMap.empty[(Category, K), Set[OffsetDateTime]]
   private[store] val versionedValueCache = TrieMap.empty[(K, OffsetDateTime), Option[Any]]
+  private[this] val hitCounters = TrieMap.empty[Category, Metrics.Counter]
 
   private[cache] def maybePurgeCachedVersions(
     maxEntries: Int = config.maxEntries,
@@ -251,6 +254,9 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     val cached = versionedValueCache.get((storageId, version)) // linter:ignore OptionOfOption
     cached match {
       case Some(v: Option[V] @unchecked) =>
+        hitCounters.getOrElseUpdate(
+          ir.category,
+          metrics.counter(metrics.name(MetricPrefixes.SERVICE, getClass, s"get:${ir.category}:hit"))).inc()
         Future.successful(v)
       case _ =>
         async {
