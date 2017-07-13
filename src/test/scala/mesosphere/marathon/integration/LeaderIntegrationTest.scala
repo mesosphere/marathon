@@ -179,7 +179,7 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       val leadingProcess: LocalMarathon = leadingServerProcess(leader.leader)
       val client = leadingProcess.client
 
-      val app = App("/keepappsrunningduringabdicationintegrationtest", cmd = Some("sleep 1000"))
+      val app = App("/keep-apps-running-during-abdication-integration-test", cmd = Some("sleep 1000"))
       val result = marathon.createAppV2(app)
       result should be(Created)
       extractDeploymentIds(result) should have size 1 withClue "Deployment was not triggered"
@@ -239,11 +239,11 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       val leadingProcess1: LocalMarathon = leadingServerProcess(leader1.leader)
       val client1 = leadingProcess1.client
 
-      val app1 = App("/backuprestoreintegrationtest1delete", cmd = Some("sleep 1000"))
-      val app2 = App("/backuprestoreintegrationtest2update", cmd = Some("sleep 1000"))
-      val app3 = App("/backuprestoreintegrationtest3new", cmd = Some("sleep 1000"))
-      val app4 = App("/backuprestoreintegrationtest4scale", cmd = Some("sleep 1000"))
-      val app5 = App("/backuprestoreintegrationtest5deployment", cmd = Some("sleep 1000"), constraints = Set(Seq("hostname", "UNIQUE")), instances = 2)
+      val app1 = App("/backup-restore-integration-test-1-delete", cmd = Some("sleep 1000"))
+      val app2 = App("/backup-restore-integration-test-2-update", cmd = Some("sleep 1000"))
+      val app3 = App("/backup-restore-integration-test-3-new", cmd = Some("sleep 1000"))
+      val app4 = App("/backup-restore-integration-test-4-scale", cmd = Some("sleep 1000"))
+      val app5 = App("/backup-restore-integration-test-5-deployment", cmd = Some("sleep 1000"), constraints = Set(Seq("hostname", "UNIQUE")), instances = 2)
 
       val tmpBackupFile = File.createTempFile("marathon", "BackupRestoreIntegrationTest")
 
@@ -368,7 +368,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       val client = leadingProcess.client
 
       When("Creating an app")
-      val app = App("/deleteappandbackupintegrationtest", cmd = Some("sleep 1000"))
+      val app = App("/delete-app-and-backup-integration-test", cmd = Some("sleep 1000"))
       val result = marathon.createAppV2(app)
       result should be(Created)
       extractDeploymentIds(result) should have size 1 withClue "Deployment was not triggered"
