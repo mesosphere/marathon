@@ -14,7 +14,8 @@ object RunSpecOfferMatcher {
 
   val log = LoggerFactory.getLogger(getClass)
 
-  def matchOffer(runSpec: RunSpec, offer: Offer, otherInstances: => Seq[Instance], givenAcceptedResourceRoles: Set[String]): ResourceMatchResponse = {
+  def matchOffer(runSpec: RunSpec, offer: Offer, otherInstances: => Seq[Instance],
+    givenAcceptedResourceRoles: Set[String], drainingTime: Long): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles
@@ -26,7 +27,7 @@ object RunSpecOfferMatcher {
     }
 
     val resourceMatchResponse =
-      ResourceMatcher.matchResources(offer, runSpec, otherInstances, ResourceSelector.any(acceptedResourceRoles))
+      ResourceMatcher.matchResources(offer, runSpec, otherInstances, ResourceSelector.any(acceptedResourceRoles), drainingTime)
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = runSpec match {

@@ -131,7 +131,7 @@ object ResourceMatcher {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
-    selector: ResourceSelector): ResourceMatchResponse = {
+    selector: ResourceSelector, drainingTime: Long): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 
@@ -197,7 +197,7 @@ object ResourceMatcher {
     }
 
     val checkAvailability: Boolean = {
-      Availability.offerAvailable(offer)
+      Availability.offerAvailable(offer, drainingTime)
     }
 
     val resourceMatchOpt = if (scalarMatchResults.forall(_.matches) && meetsAllConstraints && checkAvailability) {

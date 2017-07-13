@@ -66,7 +66,8 @@ class InstanceOpFactoryImpl(
       config.mesosBridgeName())
 
     val matchedOffer =
-      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances, builderConfig.acceptedResourceRoles)
+      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
+        builderConfig.acceptedResourceRoles, config.drainingTime())
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -88,7 +89,8 @@ class InstanceOpFactoryImpl(
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
 
     val matchResponse =
-      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq,
+        config.defaultAcceptedResourceRolesSet, config.drainingTime())
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskBuilder = new TaskBuilder(app, Task.Id.forRunSpec, config, runSpecTaskProc)
@@ -150,7 +152,7 @@ class InstanceOpFactoryImpl(
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config.drainingTime()
           )
 
         resourceMatchResponse match {
@@ -176,7 +178,8 @@ class InstanceOpFactoryImpl(
       }
 
       val resourceMatchResponse =
-        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream, ResourceSelector.reservable)
+        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream,
+          ResourceSelector.reservable, config.drainingTime())
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)
