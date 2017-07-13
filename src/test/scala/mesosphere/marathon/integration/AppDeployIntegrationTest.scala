@@ -4,6 +4,7 @@ package integration
 import java.util.UUID
 
 import mesosphere.AkkaIntegrationTest
+import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
@@ -12,8 +13,8 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 
 @IntegrationTest
 class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
@@ -121,16 +122,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       And("our app gets a backoff delay")
       WaitTestSupport.waitUntil("queue item") {
-        try {
-          val queue: List[ITQueueItem] = marathon.launchQueue().value.queue
-          queue should have size 1
-          queue.map(_.delay.overdue) should contain(false)
-          true
-        } catch {
-          case NonFatal(e) =>
-            log.info("while querying queue", e)
-            false
-        }
+        val queue: List[ITQueueItem] = marathon.launchQueue().value.queue
+        queue should have size 1
+        queue.map(_.delay.overdue) should contain(false)
+        true
       }
       app
     }
@@ -675,10 +670,19 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       When("the deployment is rolled back")
       val delete = marathon.deleteDeployment(deploymentId, force = false)
       delete should be(OK)
+      val rollbackId = delete.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header")).value()
 
-      Then("the deployment should be gone")
-      waitForEvent("deployment_failed")
-      waitForDeployment(delete)
+      Then("old deployment should be canceled and rollback-deployment succeed")
+      // Both deployment events may come out of order
+      val waitingFor = mutable.Map("deployment_failed" -> deploymentId, "deployment_success" -> rollbackId)
+      waitForEventMatching(s"waiting for canceled $deploymentId and successful $rollbackId") { event =>
+        if (waitingFor.get(event.eventType).fold(false)(_ == event.id)) {
+          waitingFor -= event.eventType
+        }
+        waitingFor.isEmpty
+      }
+
+      Then("no more deployment in the queue")
       WaitTestSupport.waitUntil("Deployments get removed from the queue") {
         marathon.listDeploymentsForBaseGroup().value.isEmpty
       }

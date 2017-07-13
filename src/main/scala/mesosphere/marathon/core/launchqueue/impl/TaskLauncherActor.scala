@@ -311,7 +311,7 @@ private class TaskLauncherActor(
           logger.info(s"scaling change for '${runSpec.id}', version ${runSpec.version} with $addCount initial instances")
         }
       } else {
-        logger.info(s"add {$addCount instances to $instancesToLaunch instances to launch")
+        logger.info(s"add $addCount instances to $instancesToLaunch instances to launch")
         instancesToLaunch += addCount
       }
 
