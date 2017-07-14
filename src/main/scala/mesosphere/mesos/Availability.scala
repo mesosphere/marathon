@@ -1,25 +1,22 @@
 package mesosphere.mesos
 
-import java.util.concurrent.TimeUnit
-
+import mesosphere.marathon.core.base.Clock
 import org.apache.mesos.Protos.Offer
+
+import scala.concurrent.duration._
 
 object Availability {
 
-  def offerAvailable(offer: Offer, drainingTime: Long): Boolean = {
-    var unavailability = offer.hasUnavailability
-    var now = System.nanoTime()
+  def offerAvailable(offer: Offer, drainingTime: Duration): Boolean = {
+    lazy val clock: Clock = Clock()
+    val drainingTimeNanoseconds = drainingTime.toNanos
     if (offer.hasUnavailability && offer.getUnavailability.hasStart) {
       val start = offer.getUnavailability.getStart.getNanoseconds
-      if (now >= (start - TimeUnit.SECONDS.toNanos(drainingTime))) {
-        if (offer.getUnavailability.hasDuration) {
-          return start + (offer.getUnavailability.getDuration.getNanoseconds) < (now)
-        } else {
-          return false
-        }
-      }
-    }
-    return true
+      if (clock.now().millis >= (start - drainingTimeNanoseconds)) {
+        offer.getUnavailability.hasDuration &&
+          start + offer.getUnavailability.getDuration.getNanoseconds < clock.now().millis
+      } else true
+    } else true
   }
 
 }

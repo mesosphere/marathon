@@ -31,6 +31,8 @@ class InstanceOpFactoryImpl(
 
   import InstanceOpFactoryImpl._
 
+  val drainingTime = Duration(config.drainingTime(), SECONDS)
+
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val taskOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.get
@@ -67,7 +69,7 @@ class InstanceOpFactoryImpl(
 
     val matchedOffer =
       RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
-        builderConfig.acceptedResourceRoles, config.drainingTime())
+        builderConfig.acceptedResourceRoles, drainingTime)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -90,7 +92,7 @@ class InstanceOpFactoryImpl(
 
     val matchResponse =
       RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet, config.drainingTime())
+        config.defaultAcceptedResourceRolesSet, drainingTime)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskBuilder = new TaskBuilder(app, Task.Id.forRunSpec, config, runSpecTaskProc)
@@ -152,7 +154,7 @@ class InstanceOpFactoryImpl(
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config.drainingTime()
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), drainingTime
           )
 
         resourceMatchResponse match {
@@ -179,7 +181,7 @@ class InstanceOpFactoryImpl(
 
       val resourceMatchResponse =
         ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream,
-          ResourceSelector.reservable, config.drainingTime())
+          ResourceSelector.reservable, drainingTime)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)

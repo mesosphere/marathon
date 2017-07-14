@@ -9,13 +9,14 @@ import org.apache.mesos.Protos.Offer
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 object RunSpecOfferMatcher {
 
   val log = LoggerFactory.getLogger(getClass)
 
   def matchOffer(runSpec: RunSpec, offer: Offer, otherInstances: => Seq[Instance],
-    givenAcceptedResourceRoles: Set[String], drainingTime: Long): ResourceMatchResponse = {
+    givenAcceptedResourceRoles: Set[String], drainingTime: Duration): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles

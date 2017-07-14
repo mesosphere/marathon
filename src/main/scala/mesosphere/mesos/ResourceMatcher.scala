@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 object ResourceMatcher {
   import ResourceUtil.RichResource
@@ -131,7 +132,7 @@ object ResourceMatcher {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
-    selector: ResourceSelector, drainingTime: Long): ResourceMatchResponse = {
+    selector: ResourceSelector, drainingTime: Duration): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 

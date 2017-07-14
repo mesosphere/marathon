@@ -310,9 +310,9 @@ trait MarathonConf
 
   lazy val drainingTime = opt[Long](
     "draining_time",
-    descr = "(Default: 300 seconds) the seconds when marathon will start declining offers before a maintenance " +
+    descr = "(Default: 0 seconds) the seconds when marathon will start declining offers before a maintenance " +
       "window start time.",
-    default = Some(5 * 60)
+    default = Some(0)
   )
 }
 
