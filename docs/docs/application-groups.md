@@ -37,6 +37,8 @@ The definition could look like this:
 }
 ```
 
+NOTE: Assuming that you provide a complete application definition based on groups, to push it to Marathon you can do it through a `POST` to **/v2/groups** REST API endpoint.
+
 ## Dependencies 
 
 Applications can have dependencies. For example a Play application could require a database to run. 
