@@ -1,8 +1,9 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
-import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, RunSpec, DiskType, DiskSource }
+import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume, ResourceRole, RunSpec }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher, ResourceUtil }
 import mesosphere.mesos.protos.Resource
@@ -132,7 +133,7 @@ object ResourceMatcher {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
-    selector: ResourceSelector, drainingTime: Duration): ResourceMatchResponse = {
+    selector: ResourceSelector, drainingTime: FiniteDuration)(implicit clock: Clock): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 

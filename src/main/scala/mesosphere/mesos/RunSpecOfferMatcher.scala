@@ -1,6 +1,7 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, RunSpec }
@@ -16,7 +17,7 @@ object RunSpecOfferMatcher {
   val log = LoggerFactory.getLogger(getClass)
 
   def matchOffer(runSpec: RunSpec, offer: Offer, otherInstances: => Seq[Instance],
-    givenAcceptedResourceRoles: Set[String], drainingTime: Duration): ResourceMatchResponse = {
+    givenAcceptedResourceRoles: Set[String], drainingTime: FiniteDuration)(implicit clock: Clock): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles

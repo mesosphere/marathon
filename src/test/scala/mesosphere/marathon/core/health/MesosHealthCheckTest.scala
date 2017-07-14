@@ -6,6 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork, HostNetwork }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
@@ -22,6 +23,7 @@ import scala.concurrent.duration._
 
 class MesosHealthCheckTest extends UnitTest {
 
+  implicit val clock = Clock()
   implicit val healthCheckWrites: Writes[HealthCheck] = Writes { check =>
     val appCheck: AppHealthCheck = Raml.toRaml(check)
     AppHealthCheck.playJsonFormat.writes(appCheck)
@@ -825,7 +827,7 @@ class MesosHealthCheckTest extends UnitTest {
     val config = MarathonTestHelper.defaultConfig()
     val builder = new TaskBuilder(app, s => Task.Id(s.toString), config)
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty,
-      config.defaultAcceptedResourceRolesSet, Duration(config.drainingTime(), SECONDS))
+      config.defaultAcceptedResourceRolesSet, FiniteDuration(config.drainingTime(), SECONDS))
     resourceMatch match {
       case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None))
       case _ => None

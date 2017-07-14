@@ -31,7 +31,7 @@ class InstanceOpFactoryImpl(
 
   import InstanceOpFactoryImpl._
 
-  val drainingTime = Duration(config.drainingTime(), SECONDS)
+  val drainingTime = FiniteDuration(config.drainingTime(), SECONDS)
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val taskOperationFactory = {
