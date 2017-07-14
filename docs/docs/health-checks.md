@@ -34,8 +34,6 @@ Marathon offers the following protocols for health checks. Declaring a protocol 
 
 Marathon-level health checks (HTTP, HTTPS, and TCP) are executed by Marathon and thus test reachability from the current Marathon leader. Marathon-level health checks have several limitations:
 
-- The API for health checks varies from one framework to the next and common functionality must be reimplemented with each new framework that requires health checks.
-
 - Marathon-level health checks create extra network traffic if the task and the scheduler are run on different nodes (this is usually the case).
 
 - Network failures between the task and the scheduler, and port mapping misconfigurations can make a healthy task look unhealthy.
@@ -51,11 +49,9 @@ These limitations may be acceptable for smaller clusters with low-scale tasks, b
 Mesos-level health checks (`MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`, and `COMMAND`) health checks are locally
 executed by Mesos on the agent running the corresponding task and thus test reachability from the Mesos executor. Mesos-level health checks offer the following advantages over Marathon-level health checks:
 
-- All built-in executors support native health checks via the new API and library. Custom executors can now use the same library and API to implement health checks, regardless of whether their tasks are actual processes or something else.
-
 - Mesos-level health checks are performed as close to the task as possible, so they are are not affected by networking failures.
 
-- Mesos-level health checks delegated to the agents running the tasks, so the number of tasks that can be health checked can scale horizontally with the number of agents in the cluster.
+- Mesos-level health checks are delegated to the agents running the tasks, so the number of tasks that can be checked can scale horizontally with the number of agents in the cluster.
 
 #### Limitations and considerations
 
@@ -63,7 +59,7 @@ executed by Mesos on the agent running the corresponding task and thus test reac
 
 - The health check processes share resources with the task that they check. Your application definition must account for the extra resources consumed by the health checks.
 
-- Mesos-level health checks require tasks to listen on the loopback interface in addition to whatever interface they require. If you run a service in production, you will want to make sure that the users can reach it.
+- Mesos-level health checks require tasks to listen on the container's loopback interface in addition to whatever interface they require. If you run a service in production, you will want to make sure that the users can reach it.
 
 #### `COMMAND` health checks
 
