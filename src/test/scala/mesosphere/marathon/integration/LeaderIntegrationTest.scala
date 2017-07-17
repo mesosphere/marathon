@@ -105,7 +105,8 @@ class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with 
 @IntegrationTest
 class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
-  val zkTimeout = 2000L
+  // used also by mesosphere/marathon/api/RestResource.scala#result[T]
+  val zkTimeout = 5000L
   override val marathonArgs: Map[String, String] = Map(
     "zk_timeout" -> s"$zkTimeout"
   )
@@ -161,7 +162,8 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 @IntegrationTest
 class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTest {
 
-  val zkTimeout = 2000L
+  // used also by mesosphere/marathon/api/RestResource.scala#result[T]
+  val zkTimeout = 5000L
   override val marathonArgs: Map[String, String] = Map(
     "zk_timeout" -> s"$zkTimeout"
   )
@@ -221,7 +223,8 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
 @IntegrationTest
 class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
 
-  val zkTimeout = 2000L
+  // used also by mesosphere/marathon/api/RestResource.scala#result[T]
+  val zkTimeout = 5000L
   override val marathonArgs: Map[String, String] = Map(
     "zk_timeout" -> s"$zkTimeout"
   )
@@ -349,7 +352,8 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
 @IntegrationTest
 class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
 
-  val zkTimeout = 2000L
+  // used also by mesosphere/marathon/api/RestResource.scala#result[T]
+  val zkTimeout = 5000L
   override val marathonArgs: Map[String, String] = Map(
     "zk_timeout" -> s"$zkTimeout"
   )
