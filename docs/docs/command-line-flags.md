@@ -174,6 +174,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1
       Please note: access_key and secret_key are optional.
       If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
+* <span class="label label-default">v1.5.0</span>`--draining_time` (Optional. Default: 0):
+    Time (in seconds) when marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
