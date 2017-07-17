@@ -47,7 +47,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       finally { socket.close() }
 
       expectMsgPF(patienceConfig.timeout) {
-        case Healthy(taskId, _, _, _) => ()
+        case Healthy(_, _, _, _) => ()
       }
     }
 

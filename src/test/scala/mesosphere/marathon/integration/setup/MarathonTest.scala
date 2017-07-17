@@ -24,7 +24,6 @@ import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{ App, AppDockerVolume, Network, NetworkMode, AppHealthCheck, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
@@ -41,7 +40,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.sys.process.Process
 import scala.util.Try
-import scala.util.control.NonFatal
 
 /**
   * Runs a marathon server for the given test suite
@@ -745,7 +743,7 @@ trait MarathonSuite extends Suite with StrictLogging with ScalaFutures with Befo
 /**
   * Base trait that starts a local marathon but doesn't have mesos/zookeeper yet
   */
-trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFutures
+trait LocalMarathonTest extends MarathonTest with ScalaFutures
     with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
 
   def marathonArgs: Map[String, String] = Map.empty

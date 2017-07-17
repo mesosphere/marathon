@@ -13,7 +13,7 @@ import kamon.Kamon
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
+import mesosphere.marathon.test.Mockito
 import org.scalatest.matchers.{ BeMatcher, MatchResult, Matcher }
 import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
@@ -95,7 +95,7 @@ trait UnitTestLike extends WordSpecLike
     with AppendedClues
     with StrictLogging
     with Mockito
-    with ExitDisabledTest
+    with BeforeAndAfterAll
     with TimeLimitedTests {
 
   override val timeLimit = Span(1, Minute)

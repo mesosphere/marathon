@@ -126,7 +126,7 @@ object ForwarderService {
         override def localHostPort: String = ???
 
         def offerLeadership(candidate: ElectionCandidate): Unit = ???
-        def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = ???
+        def abdicateLeadership(): Unit = ???
 
         override def subscribe(self: ActorRef): Unit = ???
         override def unsubscribe(self: ActorRef): Unit = ???

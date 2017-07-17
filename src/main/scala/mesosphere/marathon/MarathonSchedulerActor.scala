@@ -20,7 +20,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ PathId, RunSpec }
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util._
 import mesosphere.mesos.Constraints
 import org.apache.mesos
 import org.apache.mesos.Protos.{ Status, TaskState }
@@ -440,7 +439,7 @@ class SchedulerActions(
 
     logger.info("Requesting task reconciliation with the Mesos master")
     logger.debug(s"Tasks to reconcile: $knownTaskStatuses")
-    if (knownTaskStatuses.nonEmpty) driver.reconcileTasks(knownTaskStatuses.asJavaCollection)
+    if (knownTaskStatuses.nonEmpty) driver.reconcileTasks(knownTaskStatuses.asJavaCollection) // linter:ignore UseIfExpression
 
     // in addition to the known statuses send an empty list to get the unknown
     driver.reconcileTasks(java.util.Arrays.asList())

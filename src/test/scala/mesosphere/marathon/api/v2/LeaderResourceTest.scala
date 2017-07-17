@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import akka.actor.ActorSystem
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
@@ -44,13 +45,15 @@ class LeaderResourceTest extends UnitTest {
       delete.getStatus should be(f.auth.UnauthorizedStatus)
     }
   }
+
   class Fixture {
+    val system = mock[ActorSystem]
     val schedulerService = mock[MarathonSchedulerService]
     val electionService = mock[ElectionService]
     val runtimeRepo = mock[RuntimeConfigurationRepository]
     val auth = new TestAuthFixture
     val config = AllConf.withTestConfig()
-    def leaderResource() = new LeaderResource(electionService, config, runtimeRepo, auth.auth, auth.auth)
+    def leaderResource() = new LeaderResource(system, electionService, config, runtimeRepo, auth.auth, auth.auth)
   }
 }
 
