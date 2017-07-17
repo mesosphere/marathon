@@ -47,18 +47,18 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
     version = Timestamp(2)
   )
 
-  test("No changes for empty group") {
+  test("No changes for empty group should result in the resulting root group version set to the given one") {
     When("Calculating version infos for an empty group")
     val updated = GroupVersioningUtil.updateVersionInfoForChangedApps(Timestamp(10), emptyGroup, emptyGroup)
-    Then("nothing is changed")
-    updated should be(emptyGroup)
+    Then("the version is updated anyway")
+    updated should be(emptyGroup.updateVersion(Timestamp(10)))
   }
 
-  test("No changes for nested app") {
+  test("No changes for nested app should result in the resulting root group version set to the given one") {
     When("Calculating version infos with no changes")
     val updated = GroupVersioningUtil.updateVersionInfoForChangedApps(Timestamp(10), nestedApp, nestedApp)
-    Then("nothing is changed")
-    updated should be(nestedApp)
+    Then("the version is updated anyway")
+    updated should be(nestedApp.updateVersion(Timestamp(10)))
   }
 
   test("A new app should get proper versionInfo") {
