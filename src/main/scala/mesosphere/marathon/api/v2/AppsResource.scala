@@ -236,13 +236,14 @@ class AppsResource @Inject() (
     @PathParam("id") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
+    val version = Timestamp.now()
 
     def deleteApp(rootGroup: RootGroup) = {
       checkAuthorization(DeleteRunSpec, rootGroup.app(appId), AppNotFoundException(appId))
-      rootGroup.removeApp(appId)
+      rootGroup.removeApp(appId, version)
     }
 
-    deploymentResult(result(groupManager.updateRoot(appId.parent, deleteApp, force = force)))
+    deploymentResult(result(groupManager.updateRoot(appId.parent, deleteApp, version = version, force = force)))
   }
 
   @Path("{appId:.+}/tasks")
@@ -294,7 +295,9 @@ class AppsResource @Inject() (
     assumeValid {
       val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
       val version = clock.now()
-      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation), version, force))
+      val plan = result(groupManager.updateApp(
+        appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation),
+        version, force))
       val response = plan.original.app(appId)
         .map(_ => Response.ok())
         .getOrElse(Response.created(new URI(appId.toString)))
@@ -324,7 +327,9 @@ class AppsResource @Inject() (
 
       def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
         update.id.map(PathId(_)) match {
-          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation), version)
+          case Some(id) =>
+            group.updateApp(
+              id, updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation), version)
           case None => group
         }
       }

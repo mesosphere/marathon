@@ -242,10 +242,8 @@ class GroupsResource @Inject() (
           raw
         ))(groupValidator)
 
-      val newVersion = Timestamp.now()
-
       if (dryRun) {
-
+        val newVersion = Timestamp.now()
         val originalGroup = groupManager.rootGroup()
         val updatedGroup = applyGroupUpdate(originalGroup, effectivePath, groupUpdate, newVersion)
 
@@ -350,7 +348,8 @@ class GroupsResource @Inject() (
     val version = Timestamp.now()
 
     val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
-    val deployment = result(groupManager.updateRoot(id.parent, applyGroupUpdate(_, effectivePath, update, version), version, force))
+    val deployment = result(groupManager.updateRoot(
+      id.parent, applyGroupUpdate(_, effectivePath, update, version), version, force))
     (deployment, effectivePath)
   }
 
