@@ -34,7 +34,7 @@ def compileAndTest(): Unit = utils.stage("Compile and Test") {
 
 @main
 def zipSandboxLogs(): Unit = {
-  Try(%("tar", "-zcvf", "sandboxes.tar.gz", "sandboxes"))
+  Try(%("tar", "-zcf", "sandboxes.tar.gz", "sandboxes"))
 }
 
 @main
