@@ -1,19 +1,15 @@
 package mesosphere.marathon
 package storage.repository
 
-import java.util.UUID
-
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
-import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
-import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId
 
-import scala.concurrent.duration.Duration
-
 // small test to make sure pod serialization/deserialization in ZK is functioning.
-class PodRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
+class PodRepositoryTest extends AkkaUnitTest {
   import PathId._
 
   "PodRepository" should {
@@ -34,9 +30,9 @@ class PodRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   }
 
   class Fixture {
-    val root = UUID.randomUUID().toString
-    val rootClient = zkClient(namespace = Some(root))
-    val store = new ZkPersistenceStore(rootClient, Duration.Inf)
-    val repo = PodRepository.zkRepository(store)
+    implicit val ctx = ExecutionContexts.global
+
+    val store = new InMemoryPersistenceStore()
+    val repo = PodRepository.inMemRepository(store)
   }
 }
