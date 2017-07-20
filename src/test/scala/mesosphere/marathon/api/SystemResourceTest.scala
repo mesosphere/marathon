@@ -3,20 +3,55 @@ package mesosphere.marathon.api
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FunTest
 import mesosphere.marathon.MarathonConf
-import play.api.libs.json.{ JsDefined, Json }
+import play.api.libs.json.{ JsDefined, Json, JsString }
+import javax.ws.rs.core.{ MediaType, Request, Variant }
+import org.mockito.Matchers
+import org.mockito.Mockito.when
 
 class SystemResourceTest extends FunTest {
 
-  test("Do a ping") {
+  test("Do a ping no response") {
     Given("The system resource")
     val f = new Fixture
     import f._
+    val request = mock[Request]
 
     When("A ping is requested")
-    val response = resource.ping()
+    val response = resource.ping(request)
+
+    Then("A pong is send back")
+    response.getStatus should be(204)
+  }
+
+  test("Do a ping for json") {
+    Given("The system resource")
+    val f = new Fixture
+    import f._
+    val request = mock[Request]
+    when(request.selectVariant(Matchers.any())).thenReturn(Variant.mediaTypes(MediaType.APPLICATION_JSON_TYPE).add.build.get(0))
+
+    When("A ping is requested")
+    val response = resource.ping(request)
+
+    Then("A pong is send back")
+    val pong = Json.parse(response.getEntity.asInstanceOf[String]).as[JsString]
+    pong.value should be("pong")
+    Option(response.getMetadata().getFirst("Content-type")).value.toString should be("application/json")
+  }
+
+  test("Do a ping for text content type") {
+    Given("The system resource")
+    val f = new Fixture
+    import f._
+    val request = mock[Request]
+    when(request.selectVariant(Matchers.any())).thenReturn(Variant.mediaTypes(MediaType.TEXT_PLAIN_TYPE).add.build.get(0))
+
+    When("A ping is requested")
+    val response = resource.ping(request)
 
     Then("A pong is send back")
     response.getEntity should be("pong")
+    Option(response.getMetadata().getFirst("Content-type")).value.toString should be("text/plain")
   }
 
   test("Get metrics") {
@@ -65,4 +100,5 @@ class SystemResourceTest extends FunTest {
     val conf = mock[MarathonConf]
     val resource = new SystemResource(metrics, conf)(auth.auth, auth.auth)
   }
+
 }
