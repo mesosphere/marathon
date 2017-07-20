@@ -162,7 +162,7 @@ class TaskReplaceActor(
   def checkFinished(): Unit = {
     if (targetCountReached(runSpec.instances) && oldInstanceIds.isEmpty) {
       logger.info(s"All new instances for $pathId are ready and all old instances have been killed")
-      promise.success(())
+      promise.trySuccess(())
       context.stop(self)
     } else {
       logger.debug(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +

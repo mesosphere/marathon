@@ -7,7 +7,7 @@ import akka.actor.{ Actor, Status }
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition.Terminal
-import mesosphere.marathon.core.deployment.impl.StartingBehavior.Sync
+import mesosphere.marathon.core.deployment.impl.StartingBehavior.{ PostStart, Sync }
 import mesosphere.marathon.core.event.{ InstanceChanged, InstanceHealthChanged }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -36,8 +36,9 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
     async {
       await(initializeStart())
-      checkFinished()
-      context.system.scheduler.scheduleOnce(1.seconds, self, Sync)
+      // We send ourselves a message to check if we're already finished since checking it in this async block
+      // would lead to a race condition because it's touching actor's state.
+      PostStart
     }.pipeTo(self)
   }
 
@@ -59,7 +60,8 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
         logger.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")
         await(launchQueue.addAsync(runSpec, instancesToStartNow))
       }
-      context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
+      context.system.scheduler.scheduleOnce(StartingBehavior.syncInterval, self, Sync)
+      Done // Otherwise we will pipe the result of scheduleOnce(...) call which is a Cancellable
     }.pipeTo(self)
 
     case Status.Failure(e) =>
@@ -67,6 +69,10 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
       // restart this actor. Next reincarnation should try to start from the beginning.
       logger.warn(s"Failure in the ${getClass.getSimpleName} deployment actor: ", e)
       throw e
+
+    case PostStart =>
+      checkFinished()
+      context.system.scheduler.scheduleOnce(StartingBehavior.firstSyncDelay, self, Sync)
 
     case Done => // This is the result of successful initializeStart(...) call. Nothing to do here
   }
@@ -88,5 +94,9 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
 object StartingBehavior {
   case object Sync
+  case object PostStart
+
+  val firstSyncDelay = 1.seconds
+  val syncInterval = 5.seconds
 }
 
