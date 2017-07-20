@@ -85,8 +85,7 @@ There are circumstances in which a step will never finish successfully. For exam
 - The new application does not become healthy.
 - A dependency of the new application was not declared and is not available.
 - The capacity of the cluster is exhausted.
-- The app uses a Docker container and the configuration changes at [Running Docker Containers on Marathon]
-(https://mesosphere.github.io/marathon/docs/native-docker.html) were not made.
+- The app uses a Docker container and the configuration changes at [Running Docker Containers on Marathon](https://mesosphere.github.io/marathon/docs/native-docker.html) were not made.
 
 The deployment in these cases would take forever.
 To heal the system, a new deployment must be applied to correct the problem with the current deployment.
