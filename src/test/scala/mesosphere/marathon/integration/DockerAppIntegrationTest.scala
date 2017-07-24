@@ -40,7 +40,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     "deploy a simple Docker app" taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new Docker app")
       val app = App(
-        id = (testBasePath / "dockerapp").toString,
+        id = (testBasePath / "simple-docker-app").toString,
         cmd = Some("sleep 600"),
         container = Some(Container(`type` = EngineType.Docker, docker = Some(DockerContainer(image = "busybox")))),
         cpus = 0.2, mem = 16.0,
@@ -57,11 +57,16 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForTasks(app.id.toPath, 1) // The app has really started
     }
 
-    behave like healthyDockerApp("create a simple docker app using http health checks with HOST networking")
+    behave like healthyDockerApp(
+      "create a simple docker app using http health checks with HOST networking",
+      (app) => app.copy(id = (testBasePath / "docker-http-app-with-host-networking").toString)
+    )
 
     behave like healthyDockerApp(
       "create a simple docker app using http health checks with BRIDGE networking",
-      (app) => app.copy(networks = Seq(Network(mode = NetworkMode.ContainerBridge)))
+      (app) => app.copy(
+        id = (testBasePath / "docker-http-app-with-bridge-networking").toString,
+        networks = Seq(Network(mode = NetworkMode.ContainerBridge)))
     )
   }
 }
