@@ -523,6 +523,24 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
       None
   }
 
+  /**
+    * Method waits for events and calls their callbacks independently of the events order. It receives a
+    * mutable map of EventId -> Callback e.g. mutable.Map("deployment_failed" -> _.id == deploymentId),
+    * checks every event for it's existence in the map and if found, calls it's callback method. If successful, the entry
+    * is removed from the map. Returns if the map is empty.
+    */
+  def waitForEventsWith(
+    description: String,
+    waitingFor: mutable.Map[String, CallbackEvent => Boolean],
+    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
+    waitForEventMatching(description) { event =>
+      if (waitingFor.get(event.eventType).fold(false)(fn => fn(event))) {
+        waitingFor -= event.eventType
+      }
+      waitingFor.isEmpty
+    }
+  }
+
   def waitForEventMatching(
     description: String,
     maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(fn: CallbackEvent => Boolean): CallbackEvent = {

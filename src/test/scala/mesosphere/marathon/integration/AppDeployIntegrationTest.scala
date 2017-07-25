@@ -674,13 +674,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("old deployment should be canceled and rollback-deployment succeed")
       // Both deployment events may come out of order
-      val waitingFor = mutable.Map("deployment_failed" -> deploymentId, "deployment_success" -> rollbackId)
-      waitForEventMatching(s"waiting for canceled $deploymentId and successful $rollbackId") { event =>
-        if (waitingFor.get(event.eventType).fold(false)(_ == event.id)) {
-          waitingFor -= event.eventType
-        }
-        waitingFor.isEmpty
-      }
+      val waitingFor = mutable.Map[String, CallbackEvent => Boolean](
+        "deployment_failed" -> (_.id == deploymentId),
+        "deployment_success" -> (_.id == rollbackId))
+      waitForEventsWith(s"waiting for canceled $deploymentId and successful $rollbackId", waitingFor)
 
       Then("no more deployment in the queue")
       WaitTestSupport.waitUntil("Deployments get removed from the queue") {

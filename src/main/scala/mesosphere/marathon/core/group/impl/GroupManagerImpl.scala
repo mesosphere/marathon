@@ -111,7 +111,7 @@ class GroupManagerImpl(
     }
     deployment.onComplete {
       case Success(plan) =>
-        logger.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
+        logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.target.id} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
       case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event
