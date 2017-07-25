@@ -75,6 +75,7 @@ class PodStatusConversionTest extends UnitTest {
       status.id should be(fixture.instance.instanceId.idString)
       status.specReference should be(Option(s"/v2/pods/foo::versions/${pod.version.toOffsetDateTime}"))
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Pending)
       status.resources should be(Some(PodDefinition.DefaultExecutorResources))
       status.containers should be(Seq(
@@ -103,6 +104,7 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Staging)
       status.resources should be(Some(pod.aggregateResources()))
       status.containers should be(Seq(
@@ -133,6 +135,7 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Staging)
       status.resources should be(Some(pod.aggregateResources()))
       status.containers should be(Seq(
@@ -166,6 +169,7 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
       status.containers should be(Seq(
@@ -203,6 +207,7 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
       status.containers should be(Seq(
@@ -240,6 +245,7 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Stable)
       status.resources should be(Some(pod.aggregateResources()))
       status.containers should be(Seq(
@@ -278,6 +284,7 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
       status.containers should be(Seq(
@@ -316,6 +323,7 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
       status.containers should be(Seq(
@@ -354,6 +362,7 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
+      status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Stable)
       status.resources should be(Some(pod.aggregateResources()))
       status.containers should be(Seq(
@@ -436,7 +445,7 @@ object PodStatusConversionTest {
     maybeHealthy: Option[Boolean] = None)(implicit clock: ConstantClock): InstanceFixture = {
 
     val since = clock.now()
-    val agentInfo = Instance.AgentInfo("agent1", None, Seq.empty)
+    val agentInfo = Instance.AgentInfo("agent1", Some("agentId1"), Seq.empty)
     val instanceId = Instance.Id.forRunSpec(pod.id)
     val taskIds = pod.containers.map { container =>
       Task.Id.forInstanceId(instanceId, Some(container))
