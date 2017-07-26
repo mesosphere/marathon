@@ -468,4 +468,24 @@ class AppInfoBaseDataTest extends FunTest with GroupCreation {
 
     maybeStatus3 should be ('empty)
   }
+
+  test("pod status for instances already removed from the group repo doesn't throw an exception") { // DCOS-16151
+    implicit val f = new Fixture
+
+    Given("a pod definition")
+    val instance1 = fakeInstance(pod)
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.instanceTracker.instancesBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(pod.id, Seq(instance1))))
+
+    And("with no instances in the repo")
+    f.groupManager.podVersion(any, any) returns Future.successful(None)
+    f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
+
+    When("requesting pod status")
+    val status = f.baseData.podStatus(pod).futureValue
+
+    Then("no exception was thrown so status was successfully fetched")
+  }
 }
