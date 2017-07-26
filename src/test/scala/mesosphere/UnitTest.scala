@@ -9,7 +9,6 @@ import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord.{ Failure, Result, Success }
-import kamon.Kamon
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
@@ -100,11 +99,6 @@ trait UnitTestLike extends WordSpecLike
 
   override val timeLimit = Span(1, Minute)
 
-  override def beforeAll(): Unit = {
-    Kamon.start()
-    super.beforeAll()
-  }
-
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(5, Seconds))
 }
 
@@ -116,7 +110,6 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
       |akka.test.default-timeout=${patienceConfig.timeout.millisPart}
     """.stripMargin).withFallback(ConfigFactory.load())
   implicit lazy val system: ActorSystem = {
-    Kamon.start()
     ActorSystem(suiteName, akkaConfig)
   }
   implicit lazy val scheduler: Scheduler = system.scheduler

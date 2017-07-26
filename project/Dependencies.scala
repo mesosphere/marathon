@@ -162,14 +162,13 @@ object Dependency {
   val akkaSse = "de.heikoseeberger" %% "akka-sse" % V.AkkaSSE
 
   object Kamon {
-    val Version = "0.6.5"
+    val Version = "0.6.7"
 
     val core = "io.kamon" %% "kamon-core" % Version % "compile"
-    val akka = "io.kamon" %% "kamon-akka" % "0.6.3" % "compile"
-    val autoweave = "io.kamon" %% "kamon-autoweave" % Version % "compile"
+    val akka = "io.kamon" %% "kamon-akka" % Version % "compile"
+    val autoweave = "io.kamon" %% "kamon-autoweave" % "0.6.5" % "compile"
     val scala = "io.kamon" %% "kamon-scala" % Version % "compile"
     val systemMetrics = "io.kamon" %% "kamon-system-metrics" % Version % "compile"
-    val akkaHttp = "io.kamon" %% "kamon-akka-http-experimental" % "0.6.3" % "compile"
 
     object Backends {
       val statsd = "io.kamon" %% "kamon-statsd" % Version % "compile"
