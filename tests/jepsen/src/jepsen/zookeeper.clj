@@ -1,16 +1,17 @@
 (ns jepsen.zookeeper
   (:gen-class)
-  (:require [clojure.tools.logging :refer :all]
-            [clojure.string :as str]
-            [jepsen.control :as c]
-            [jepsen.db :as db]
+  (:require [clojure.string :as str]
+            [clojure.tools.logging :refer :all]
             [jepsen.cli :as cli]
-            [jepsen.tests :as tests]
+            [jepsen.control :as c]
             [jepsen.control.util :as cu]
-            [jepsen.os.debian :as debian]))
+            [jepsen.db :as db]
+            [jepsen.os.debian :as debian]
+            [jepsen.tests :as tests]))
 
 (def zookeeper-conf    "/etc/zookeeper/conf/zoo.cfg")
 (def zookeeper-myid    "/var/lib/zookeeper/myid")
+(def zookeeper-log     "/var/log/zookeeper/zookeeper.log")
 
 (defn zk-url
   [test]
@@ -72,4 +73,7 @@
     (teardown! [_ test node]
       (info node "tearing down zookeeper..")
       (stop-zookeeper! test node)
-      (uninstall! test node version))))
+      (uninstall! test node version))
+    db/LogFiles
+    (log-files [_ test node]
+      [zookeeper-log])))

@@ -6,7 +6,8 @@ User=ubuntu
 Restart=always
 StartLimitInterval=0
 RestartSec=15
-ExecStart={{marathon-home}}/bin/marathon \
+Environment="LIBPROCESS_IP={{node}}"
+ExecStart=/bin/sh -c '{{marathon-home}}/bin/marathon \
         --framework_name marathon-dev \
         --hostname {{node}} \
         --http_address {{node}} \
@@ -14,4 +15,4 @@ ExecStart={{marathon-home}}/bin/marathon \
         --https_address {{node}} \
         --https_port "8443" \
         --master zk://{{zk-url}}/mesos \
-        --zk zk://{{zk-url}}/marathon
+        --zk zk://{{zk-url}}/marathon >> {{log-file}} 2>&1'

@@ -1,14 +1,14 @@
 (ns jepsen.mesos
   (:gen-class)
-  (:require [clojure.tools.logging :refer :all]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
+            [clojure.tools.logging :refer :all]
             [clostache.parser :as parser]
-            [jepsen.control :as c]
-            [jepsen.db :as db]
             [jepsen.cli :as cli]
-            [jepsen.tests :as tests]
+            [jepsen.control :as c]
             [jepsen.control.util :as cu]
+            [jepsen.db :as db]
             [jepsen.os.debian :as debian]
+            [jepsen.tests :as tests]
             [jepsen.util :as util :refer [meh timeout]]
             [jepsen.zookeeper :as zk]))
 
@@ -16,6 +16,7 @@
 (def mesos-master-config  "/etc/mesos-master")
 (def mesos-agent-config   "/etc/mesos-slave")
 (def mesos-zookeeper      "/etc/mesos/zk")
+(def mesos-log-dir        "/var/log/mesos")
 
 (defn calculate_quorum
   [test]
@@ -102,4 +103,7 @@
       (info node "tearing down mesos cluster..")
       (stop-agent! node)
       (stop-master! node)
-      (uninstall! test node version))))
+      (uninstall! test node version))
+    db/LogFiles
+    (log-files [_ test node]
+      (cu/ls-full mesos-log-dir))))
