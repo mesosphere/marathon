@@ -9,7 +9,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
@@ -33,7 +33,7 @@ import scala.util.Try
 class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
   case class Fixture(
-      clock: ConstantClock = ConstantClock(),
+      clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
@@ -107,7 +107,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
   case class FixtureWithRealGroupManager(
       initialRoot: RootGroup = RootGroup.empty,
-      clock: ConstantClock = ConstantClock(),
+      clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       service: MarathonSchedulerService = mock[MarathonSchedulerService],

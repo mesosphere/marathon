@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
+import java.time.Clock
+
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }

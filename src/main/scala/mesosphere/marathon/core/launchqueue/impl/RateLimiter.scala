@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import java.time.Clock
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.state.{ RunSpec, PathId, Timestamp }
 import org.slf4j.LoggerFactory

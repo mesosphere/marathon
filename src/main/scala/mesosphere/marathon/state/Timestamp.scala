@@ -78,6 +78,9 @@ object Timestamp {
     */
   def now(): Timestamp = Timestamp(System.currentTimeMillis)
 
+  def now(clock: java.time.Clock): Timestamp =
+    Timestamp(clock.millis())
+
   def zero: Timestamp = Timestamp(0)
 
   /**

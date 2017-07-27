@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
@@ -24,7 +24,7 @@ class TaskTest extends UnitTest with Inside {
 
   class Fixture {
 
-    val clock = ConstantClock()
+    val clock = new SettableClock()
 
     val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
     val appVirtualNetworks = Seq(ContainerNetwork("whatever"))

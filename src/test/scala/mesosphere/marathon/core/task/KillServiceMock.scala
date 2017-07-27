@@ -3,7 +3,7 @@ package core.task
 
 import akka.Done
 import akka.actor.ActorSystem
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
@@ -24,7 +24,7 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   val customStatusUpdates = mutable.Map.empty[Instance.Id, Seq[MarathonEvent]]
   val killed = mutable.Set.empty[Instance.Id]
   val eventsGenerator = InstanceChangedEventsGenerator
-  val clock = ConstantClock()
+  val clock = new SettableClock()
 
   override def killInstances(instances: Seq[Instance], reason: KillReason): Future[Done] = {
     instances.foreach { instance =>

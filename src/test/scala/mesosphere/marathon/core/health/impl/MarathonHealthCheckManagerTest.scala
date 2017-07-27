@@ -5,7 +5,7 @@ import akka.event.EventStream
 import akka.testkit.EventFilter
 import com.typesafe.config.{ Config, ConfigFactory }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -30,7 +30,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest {
   )
 
   private val appId = "test".toRootPath
-  private val clock = ConstantClock()
+  private val clock = new SettableClock()
 
   case class Fixture() {
     val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)

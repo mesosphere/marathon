@@ -3,7 +3,7 @@ package core.appinfo.impl
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep, DeploymentStepInfo }
 import mesosphere.marathon.core.group.GroupManager
@@ -29,7 +29,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
   class Fixture {
     val runSpecId = PathId("/test")
-    lazy val clock = ConstantClock()
+    lazy val clock = new SettableClock()
     lazy val instanceTracker = mock[InstanceTracker]
     lazy val healthCheckManager = mock[HealthCheckManager]
     lazy val marathonSchedulerService = mock[MarathonSchedulerService]

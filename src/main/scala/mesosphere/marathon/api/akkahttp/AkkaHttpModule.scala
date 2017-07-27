@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package api.akkahttp
 
+import java.time.Clock
+
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.AbstractModule
@@ -9,7 +11,6 @@ import com.typesafe.config.Config
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.MarathonHttpService
 import mesosphere.marathon.core.appinfo._
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager

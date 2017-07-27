@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core
 
+import java.time.Clock
 import javax.inject.Named
 
 import akka.actor.ActorSystem
@@ -8,7 +9,7 @@ import akka.event.EventStream
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.auth.AuthModule
-import mesosphere.marathon.core.base.{ ActorsModule, Clock, LifecycleState }
+import mesosphere.marathon.core.base.{ ActorsModule, LifecycleState }
 import mesosphere.marathon.core.deployment.DeploymentModule
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.EventModule

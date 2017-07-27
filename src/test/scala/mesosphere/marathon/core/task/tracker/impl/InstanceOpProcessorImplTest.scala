@@ -9,7 +9,7 @@ import ch.qos.logback.classic.Level
 import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.CoreGuiceModule
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.TestInstanceBuilder
@@ -37,7 +37,7 @@ class InstanceOpProcessorImplTest extends AkkaUnitTest {
     lazy val opSender = TestProbe()
     lazy val instanceRepository = mock[InstanceRepository]
     lazy val stateOpResolver = mock[InstanceUpdateOpResolver]
-    lazy val clock = ConstantClock()
+    lazy val clock = new SettableClock()
     lazy val now = clock.now()
 
     lazy val healthCheckManager: HealthCheckManager = mock[HealthCheckManager]

@@ -5,6 +5,7 @@ import akka.stream.scaladsl.{ Keep, Sink, Source }
 import kamon.metric.instrument.CollectionContext
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
+import mesosphere.marathon.test.SettableClock
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
 import org.scalatest.exceptions.TestFailedException
@@ -83,10 +84,10 @@ class MetricsTimerTest extends AkkaUnitTest with Eventually with Inside {
       val graph = timer.forSource(Source.fromFuture(promise.future))
         .toMat(Sink.seq)(Keep.right)
 
-      clock.plus(1.second)
+      clock += 1.second
       val sourceFuture = graph.run
       timer.histogram.collect(CollectionContext(10)).numberOfMeasurements should be(0L)
-      clock.plus(1.second)
+      clock += 1.second
       promise.success(1)
       sourceFuture.futureValue should contain theSameElementsAs Seq(1)
       // histograms are not precise, so we check the range

@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package api.v2
 
+import java.time.Clock
+
 import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
@@ -13,7 +15,6 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, PATCH, RestResource }
 import mesosphere.marathon.core.appinfo._
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager

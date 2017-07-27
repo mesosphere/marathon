@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package core.launchqueue
 
+import java.time.Clock
+
 import akka.actor.{ ActorRef, Props }
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launchqueue.impl._

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
@@ -70,6 +70,6 @@ class TaskStatusUpdateTest extends UnitTest {
 
   class Fixture {
     val appId = PathId("/app")
-    val clock = ConstantClock()
+    val clock = new SettableClock()
   }
 }

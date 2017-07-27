@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package core.task.jobs
 
-import mesosphere.marathon.core.base.Clock
+import java.time.Clock
+
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.jobs.impl.{ ExpungeOverdueLostTasksActor, OverdueTasksActor }
 import mesosphere.marathon.core.task.termination.KillService

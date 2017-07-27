@@ -1,11 +1,12 @@
 package mesosphere.marathon
 package core.matcher.manager.impl
 
+import java.time.Clock
+
 import akka.actor.{ Actor, Cancellable, Props }
 import akka.event.LoggingReceive
 import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher

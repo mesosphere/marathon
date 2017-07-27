@@ -2,7 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.Instance
@@ -65,7 +65,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, no official Mesos status yet" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(version = clock.now())
 
       clock += 1.seconds
@@ -95,7 +95,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, received STAGING status from Mesos" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(version = clock.now())
 
       clock += 1.seconds
@@ -126,7 +126,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, received STARTING status from Mesos" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(version = clock.now())
 
       clock += 1.seconds
@@ -160,7 +160,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, no task endpoint health info" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(version = clock.now())
 
       clock += 1.seconds
@@ -198,7 +198,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task endpoint health is failing" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(version = clock.now())
 
       clock += 1.seconds
@@ -236,7 +236,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task endpoint health looks great" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(version = clock.now())
 
       clock += 1.seconds
@@ -274,7 +274,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task command-line health is missing" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(version = clock.now()))
 
@@ -313,7 +313,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task command-line health is failing" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(version = clock.now()))
 
@@ -352,7 +352,7 @@ class PodStatusConversionTest extends UnitTest {
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task command-line health is passing" in {
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(version = clock.now()))
 
@@ -419,19 +419,19 @@ object PodStatusConversionTest {
     taskIds: Seq[Task.Id],
     instance: Instance)
 
-  def createdInstance(pod: PodDefinition)(implicit clock: ConstantClock): InstanceFixture =
+  def createdInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
     fakeInstance(pod, Condition.Created, Condition.Created)
 
-  def stagingInstance(pod: PodDefinition)(implicit clock: ConstantClock): InstanceFixture =
+  def stagingInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
     fakeInstance(pod, Condition.Staging, Condition.Staging, Some(Protos.TaskState.TASK_STAGING))
 
-  def startingInstance(pod: PodDefinition)(implicit clock: ConstantClock): InstanceFixture =
+  def startingInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
     fakeInstance(pod, Condition.Starting, Condition.Starting, Some(Protos.TaskState.TASK_STARTING),
       Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")))
 
   def runningInstance(
     pod: PodDefinition,
-    maybeHealthy: Option[Boolean] = None)(implicit clock: ConstantClock): InstanceFixture =
+    maybeHealthy: Option[Boolean] = None)(implicit clock: SettableClock): InstanceFixture =
 
     fakeInstance(pod, Condition.Running, Condition.Running, Some(Protos.TaskState.TASK_RUNNING),
       Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")), maybeHealthy)
@@ -442,7 +442,7 @@ object PodStatusConversionTest {
     taskStatus: Condition,
     maybeTaskState: Option[Protos.TaskState] = None,
     maybeNetworks: Option[Map[String, String]] = None,
-    maybeHealthy: Option[Boolean] = None)(implicit clock: ConstantClock): InstanceFixture = {
+    maybeHealthy: Option[Boolean] = None)(implicit clock: SettableClock): InstanceFixture = {
 
     val since = clock.now()
     val agentInfo = Instance.AgentInfo("agent1", Some("agentId1"), Seq.empty)

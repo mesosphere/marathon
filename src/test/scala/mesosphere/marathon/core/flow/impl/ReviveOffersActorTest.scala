@@ -4,7 +4,7 @@ package core.flow.impl
 import akka.actor._
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.TimedCheck
@@ -26,7 +26,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
         verify()
       }
     }
-    lazy val clock: ConstantClock = ConstantClock()
+    lazy val clock: SettableClock = new SettableClock()
     lazy val offersWanted: Subject[Boolean] = PublishSubject()
     lazy val driver: SchedulerDriver = mock[SchedulerDriver]
     lazy val driverHolder: MarathonSchedulerDriverHolder = {

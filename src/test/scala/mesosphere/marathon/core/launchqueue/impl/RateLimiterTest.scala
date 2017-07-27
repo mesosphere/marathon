@@ -2,16 +2,16 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy }
 
 import scala.concurrent.duration._
 
 class RateLimiterTest extends UnitTest {
 
-  val clock = ConstantClock(Timestamp.now())
+  val clock = SettableClock.ofNow()
 
   private[this] val launchQueueConfig: LaunchQueueConfig = new LaunchQueueConfig {
     verify()

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task.update.impl
 
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
@@ -298,7 +298,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
   lazy val appId = PathId("/app")
 
   class Fixture {
-    lazy val clock: ConstantClock = ConstantClock()
+    lazy val clock: SettableClock = new SettableClock()
 
     lazy val taskTracker: InstanceTracker = mock[InstanceTracker]
     lazy val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]

@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package core.launcher.impl
 
-import mesosphere.marathon.core.base.Clock
+import java.time.Clock
+
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation

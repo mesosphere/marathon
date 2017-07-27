@@ -2,7 +2,7 @@ package mesosphere.marathon
 package tasks
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -198,7 +198,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
     val instanceTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
-    implicit val clock = ConstantClock()
+    implicit val clock = new SettableClock()
     val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config)
     val hostName = "some_host"
 

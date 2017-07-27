@@ -1,9 +1,10 @@
 package mesosphere.marathon
 package core.task.tracker
 
+import java.time.Clock
+
 import akka.actor.ActorRef
 import akka.stream.Materializer
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.update.{ InstanceChangeHandler, InstanceUpdateOpResolver }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._

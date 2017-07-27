@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.instance.update
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -386,7 +386,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
   class Fixture {
     val eventsGenerator = InstanceChangedEventsGenerator
-    val clock = ConstantClock(Timestamp.now())
+    val clock = SettableClock.ofNow()
     val instanceTracker = mock[InstanceTracker]
     val updateOpResolver = new InstanceUpdateOpResolver(instanceTracker, clock)
 

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core
 
+import java.time.Clock
 import javax.inject.Named
 
 import akka.actor.{ ActorRef, Props }
@@ -10,7 +11,6 @@ import com.google.inject.name.Names
 import com.typesafe.config.Config
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -192,7 +192,7 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
   }
 
   override def configure(): Unit = {
-    bind(classOf[Clock]).toInstance(Clock())
+    bind(classOf[Clock]).toInstance(Clock.systemUTC())
     bind(classOf[CoreModule]).to(classOf[CoreModuleImpl]).in(Scopes.SINGLETON)
 
     // FIXME: Because of cycle breaking in guice, it is hard to not wire it with Guice directly

@@ -1,11 +1,12 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
+import java.time.Clock
+
 import akka.Done
 import akka.actor.{ Actor, Cancellable, Props }
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation

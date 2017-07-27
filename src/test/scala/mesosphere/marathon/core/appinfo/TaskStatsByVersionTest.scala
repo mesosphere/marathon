@@ -2,12 +2,12 @@ package mesosphere.marathon
 package core.appinfo
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy, VersionInfo }
+import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 import scala.concurrent.duration._
@@ -85,7 +85,7 @@ class TaskStatsByVersionTest extends UnitTest {
 
     }
   }
-  private[this] val now: Timestamp = ConstantClock().now()
+  private[this] val now: Timestamp = Timestamp(new DateTime(2015, 4, 9, 12, 30))
   private val lastScalingAt: Timestamp = now - 10.seconds
   private val intermediaryScalingAt: Timestamp = now - 20.seconds
   private val lastConfigChangeAt: Timestamp = now - 100.seconds

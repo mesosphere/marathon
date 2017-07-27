@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package core.matcher.manager
 
+import java.time.Clock
+
 import akka.actor.{ ActorRef, Scheduler }
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher

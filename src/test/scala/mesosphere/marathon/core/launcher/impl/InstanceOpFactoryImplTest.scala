@@ -1,8 +1,10 @@
 package mesosphere.marathon
 package core.launcher.impl
 
+import java.time.Clock
+
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.{ Clock, ConstantClock }
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
@@ -21,7 +23,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     "minimal ephemeralPodInstance" in {
       val pod = minimalPod
       val tc = TestCase(pod, agentInfo)
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
       check(tc, instance)
     }
@@ -31,7 +33,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
         ct.copy(endpoints = Seq(Endpoint(name = "web")))
       })
       val tc = TestCase(pod, agentInfo)
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
       check(tc, instance)
     }
@@ -41,7 +43,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
         ct.copy(endpoints = Seq(Endpoint(name = "web", hostPort = Some(80))))
       })
       val tc = TestCase(pod, agentInfo)
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
       check(tc, instance)
     }
@@ -56,7 +58,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
         ))
       })
       val tc = TestCase(pod, agentInfo)
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
       check(tc, instance)
     }
@@ -71,7 +73,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
         MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
       ))
       val tc = TestCase(pod, agentInfo)
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
       check(tc, instance)
     }
@@ -86,7 +88,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
         MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
       ))
       val tc = TestCase(pod, agentInfo)
-      implicit val clock = ConstantClock()
+      implicit val clock = new SettableClock()
       val instance = InstanceOpFactoryImpl.ephemeralPodInstance(
         pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
       check(tc, instance)

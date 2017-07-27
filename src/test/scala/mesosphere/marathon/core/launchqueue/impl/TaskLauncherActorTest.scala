@@ -5,7 +5,7 @@ import akka.actor.{ ActorContext, ActorRef, Cancellable, Props, Terminated }
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceChange
@@ -66,7 +66,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
   case class Fixture(
       offerMatcherManager: OfferMatcherManager = mock[OfferMatcherManager],
       launchQueueConfig: LaunchQueueConfig = new LaunchQueueConfig { verify() },
-      clock: ConstantClock = ConstantClock(),
+      clock: SettableClock = new SettableClock(),
       instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory],
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       offerReviver: OfferReviver = mock[OfferReviver],

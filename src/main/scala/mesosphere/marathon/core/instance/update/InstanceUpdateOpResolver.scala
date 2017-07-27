@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package core.instance.update
 
+import java.time.Clock
+
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
 import mesosphere.marathon.core.task.tracker.InstanceTracker

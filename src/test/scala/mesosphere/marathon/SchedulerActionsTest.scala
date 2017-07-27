@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -293,7 +293,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val instanceTracker = mock[InstanceTracker]
       val driver = mock[SchedulerDriver]
       val killService = mock[KillService]
-      val clock = ConstantClock()
+      val clock = new SettableClock()
 
       val scheduler = new SchedulerActions(
         groupRepo,

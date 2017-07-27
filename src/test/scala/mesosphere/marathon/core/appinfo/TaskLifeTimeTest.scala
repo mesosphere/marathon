@@ -2,14 +2,14 @@ package mesosphere.marathon
 package core.appinfo
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
+import org.joda.time.DateTime
 
 class TaskLifeTimeTest extends UnitTest {
-  private[this] val now: Timestamp = ConstantClock().now()
+  private[this] val now: Timestamp = Timestamp(new DateTime(2015, 4, 9, 12, 30))
   private[this] val runSpecId = PathId("/test")
   private[this] val agentInfo = AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil)
   private[this] def newTaskId(): Task.Id = {

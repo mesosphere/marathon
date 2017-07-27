@@ -1,12 +1,13 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import java.time.Clock
+
 import java.util.concurrent.TimeoutException
 
 import akka.actor.{ Actor, Props, Status }
 import akka.event.LoggingReceive
 import akka.pattern.pipe
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ ActorMetrics, FinishedInstanceOp, ProcessInstanceOp }
 import mesosphere.marathon.metrics._

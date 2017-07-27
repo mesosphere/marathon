@@ -3,7 +3,7 @@ package core.launcher.impl
 
 import akka.Done
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -40,7 +40,7 @@ class OfferProcessorImplTest extends UnitTest {
 
   case class Fixture(
       conf: OfferProcessorConfig = new OfferProcessorConfig { verify() },
-      clock: ConstantClock = ConstantClock(),
+      clock: SettableClock = new SettableClock(),
       offerMatcher: OfferMatcher = mock[OfferMatcher],
       taskLauncher: TaskLauncher = mock[TaskLauncher],
       taskCreationHandler: InstanceCreationHandler = mock[InstanceCreationHandler]) {

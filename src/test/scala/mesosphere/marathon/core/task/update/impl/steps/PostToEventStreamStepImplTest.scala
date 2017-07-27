@@ -3,7 +3,7 @@ package core.task.update.impl.steps
 
 import akka.event.EventStream
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -101,7 +101,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
   }
 
   class Fixture {
-    val clock = ConstantClock()
+    val clock = new SettableClock()
 
     val event1 = mock[MarathonEvent]
     val event2 = mock[MarathonEvent]

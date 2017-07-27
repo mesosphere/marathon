@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package test
 
+import java.time.Clock
+
 import akka.stream.Materializer
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
@@ -9,7 +11,6 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -39,7 +40,7 @@ import scala.util.Random
 
 object MarathonTestHelper {
 
-  lazy val clock = Clock()
+  lazy val clock = Clock.systemUTC()
 
   def makeConfig(args: String*): AllConf = {
     new AllConf(args.toIndexedSeq) {

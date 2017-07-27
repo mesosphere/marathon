@@ -2,7 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
@@ -40,7 +40,7 @@ class QueueInfoConversionTest extends UnitTest {
 
     "A QueueInfoWithStatistics is converted correctly" in {
       Given("A QueueInfoWithStatistics")
-      val clock = ConstantClock()
+      val clock = new SettableClock()
       val now = clock.now()
       val app = AppDefinition(PathId("/test"))
       val offer = MarathonTestHelper.makeBasicOffer().build()

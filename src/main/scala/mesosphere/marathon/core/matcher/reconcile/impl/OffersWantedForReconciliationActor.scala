@@ -1,9 +1,10 @@
 package mesosphere.marathon
 package core.matcher.reconcile.impl
 
+import java.time.Clock
+
 import akka.actor.{ Actor, Cancellable, Props }
 import akka.event.{ EventStream, LoggingReceive }
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.state.Timestamp

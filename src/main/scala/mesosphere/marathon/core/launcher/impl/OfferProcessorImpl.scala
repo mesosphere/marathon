@@ -1,10 +1,11 @@
 package mesosphere.marathon
 package core.launcher.impl
 
+import java.time.Clock
+
 import akka.Done
 import akka.stream.scaladsl.SourceQueue
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher

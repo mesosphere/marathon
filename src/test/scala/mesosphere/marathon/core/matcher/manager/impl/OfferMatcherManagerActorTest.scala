@@ -8,7 +8,7 @@ import akka.pattern.ask
 import akka.testkit.TestActorRef
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
@@ -202,7 +202,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     val metrics = new OfferMatcherManagerActorMetrics()
     val random = new Random(new util.Random())
     val idGen = 1.to(Int.MaxValue).iterator
-    val clock = ConstantClock()
+    val clock = new SettableClock()
     val observer = Observer.apply[Boolean]((a: Boolean) => ())
     object Config extends ScallopConf(config) with OfferMatcherManagerConfig {
       verify()

@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package api.v2
 
+import java.time.Clock
+
 import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
@@ -15,7 +17,6 @@ import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource, TaskKiller }
 import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }

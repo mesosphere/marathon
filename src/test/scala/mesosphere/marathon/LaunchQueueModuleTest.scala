@@ -1,7 +1,8 @@
 package mesosphere.marathon
 
+import java.time.Clock
+
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
@@ -254,7 +255,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       operation = InstanceUpdateOperation.LaunchEphemeral(instance),
       effect = InstanceUpdateEffect.Update(instance = instance, oldState = None, events = Nil)).wrapped
 
-    lazy val clock: Clock = Clock()
+    lazy val clock: Clock = Clock.systemUTC()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())
     val launchResult = OfferMatchResult.Match(app, offer, launch, clock.now())
 

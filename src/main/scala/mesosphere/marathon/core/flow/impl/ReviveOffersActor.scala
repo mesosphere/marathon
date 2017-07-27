@@ -1,11 +1,12 @@
 package mesosphere.marathon
 package core.flow.impl
 
+import java.time.Clock
+
 import akka.actor.{ Actor, Cancellable, Props }
 import akka.event.{ EventStream, LoggingReceive }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.OffersWanted
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }

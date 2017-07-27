@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.instance.update
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
@@ -291,7 +291,7 @@ class InstanceUpdaterTest extends UnitTest {
       name = "container2",
       resources = Resources()
     )
-    val clock = ConstantClock()
+    val clock = new SettableClock()
 
     val agentInfo = AgentInfo("localhost", None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None)

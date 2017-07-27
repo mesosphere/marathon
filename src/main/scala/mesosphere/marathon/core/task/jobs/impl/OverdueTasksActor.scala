@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package core.task.jobs.impl
 
+import java.time.Clock
+
 import akka.actor._
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
