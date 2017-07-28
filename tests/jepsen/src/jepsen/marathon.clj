@@ -14,7 +14,7 @@
             [jepsen.client :as client]
             [jepsen.db :as db]
             [jepsen.generator :as gen]
-            [jepsen.marathon.checker :refer [marathon-checker]]
+            [jepsen.marathon.checker :as mchecker]
             [jepsen.mesos :as mesos]
             [jepsen.nemesis :as nemesis]
             [jepsen.os.debian :as debian]
@@ -110,6 +110,45 @@
      (catch [:status 404] {:keys [body]}
        (assoc op :type :fail, :node node, :value (str "App does not exist: " app-id))))))
 
+(defn add-pod!
+  [node pod-id op]
+  (slingshot/try+
+   (http/post (str "http://" node ":8080/v2/pods")
+              {:form-params   {:id    (str "/" pod-id)
+                               :scaling {:kind "fixed", :instances 1}
+                               :containers [{:name (str pod-id "-container")
+                                             :exec {:command {:shell "sleep 1000"}}
+                                             :resources {:cpus 0.001
+                                                         :mem 10.0}}]
+                               :networks [{:mode "host"}]}
+               :content-type   :json}
+              {:throw-entire-message? true})
+   (assoc op :type :ok, :value pod-id)
+   (catch [:status 502] {:keys [body]}
+     (assoc op :type :fail, :value "Proxy node failed to respond"))
+   (catch [:status 422] {:keys [body]}
+     (info body)
+     (assoc op :type :fail, :value "Invalid object specification"))))
+
+(defn add-pod
+  []
+  (let [id (atom 0)]
+    (reify gen/Generator
+      (op [_ test process]
+        (let [pod-id (str "basic-pod-" (swap! id inc))]
+          {:type   :invoke
+           :f      :add-pod
+           :value  {:id    pod-id}})))))
+
+(defn check-pod-status!
+  [test op pod-id]
+  (let [node (rand-nth (:nodes test))]
+    (slingshot/try+
+     (http/get (str "http://" node ":8080/v2/pods/" pod-id "::status") {:throw-entire-message? true})
+     (assoc op :type :ok, :node node, :value pod-id)
+     (catch [:status 404] {:keys [body]}
+       (assoc op :type :fail, :node node, :value (str "Pod does not exist: " pod-id))))))
+
 (defrecord Client [node]
   client/Client
   (setup! [this test node]
@@ -118,19 +157,32 @@
   (invoke! [this test op]
 
     (case (:f op)
-      :add-app      (timeout 20000 (assoc op :type :info, :value :timed-out)
-                             (try
-                               (do (info "Adding app:" (:id (:value op)))
-                                   (add-app! node (:id (:value op)) op))
-                               (catch org.apache.http.ConnectionClosedException e
-                                 (assoc op :type :fail, :value (.getMessage e)))
-                               (catch org.apache.http.NoHttpResponseException e
-                                 (assoc op :type :fail, :value (.getMessage e)))
-                               (catch java.net.ConnectException e
-                                 (assoc op :type :fail, :value (.getMessage e)))))
-      :check-status (timeout 50000 (assoc op :type :info, :value :timed-out)
-                             (do
-                               (check-status! test op (:id (:value op)))))))
+      :add-app         (timeout 20000 (assoc op :type :info, :value :timed-out)
+                               (try
+                                 (do (info "Adding app:" (:id (:value op)))
+                                     (add-app! node (:id (:value op)) op))
+                                 (catch org.apache.http.ConnectionClosedException e
+                                   (assoc op :type :fail, :value (.getMessage e)))
+                                 (catch org.apache.http.NoHttpResponseException e
+                                   (assoc op :type :fail, :value (.getMessage e)))
+                                 (catch java.net.ConnectException e
+                                   (assoc op :type :fail, :value (.getMessage e)))))
+      :add-pod          (timeout 20000 (assoc op :type :info, :value :timed-out)
+                                 (try
+                                   (do (info "Adding pod:" (:id (:value op)))
+                                       (add-pod! node (:id (:value op)) op))
+                                   (catch org.apache.http.ConnectionClosedException e
+                                     (assoc op :type :fail, :value (.getMessage e)))
+                                   (catch org.apache.http.NoHttpResponseException e
+                                     (assoc op :type :fail, :value (.getMessage e)))
+                                   (catch java.net.ConnectException e
+                                     (assoc op :type :fail, :value (.getMessage e)))))
+      :check-status     (timeout 50000 (assoc op :type :info, :value :timed-out)
+                                 (do
+                                   (check-status! test op (:id (:value op)))))
+      :check-pod-status (timeout 50000 (assoc op :type :info, :value :timed-out)
+                                 (do
+                                   (check-pod-status! test op (:id (:value op)))))))
 
   (teardown! [_ test]))
 
@@ -176,16 +228,35 @@
       (op [_ test process]
         (if-let [op (gen/op gen test process)]
           (dosync
-            (when (= :add-app (:f op))
-              (alter apps conj (:id (:value op))))
-            op)
+           (when (= :add-app (:f op))
+             (alter apps conj (:id (:value op))))
+           op)
           (if (not (#{:nemesis} (gen/process->thread test process)))
             (dosync
-              (when-let  [current-app (peek @apps)]
-                  (alter apps pop)
-                  {:type  :invoke
-                   :f     :check-status
-                   :value {:id current-app}}))))))))
+             (when-let  [current-app (peek @apps)]
+               (alter apps pop)
+               {:type  :invoke
+                :f     :check-status
+                :value {:id current-app}}))))))))
+
+(defn track-check-added-pods
+  [gen]
+  (let [pods (ref [])]
+    (reify gen/Generator
+      (op [_ test process]
+        (if-let [op (gen/op gen test process)]
+          (dosync
+           (when (= :add-pod (:f op))
+             (alter pods conj (:id (:value op))))
+           op)
+          (if (not (#{:nemesis} (gen/process->thread test process)))
+            (dosync
+             (when (> (count @pods) 0)
+               (let [current-pod (peek @pods)]
+                 (alter pods pop)
+                 {:type  :invoke
+                  :f     :check-pod-status
+                  :value {:id current-pod}})))))))))
 
 (defn marathon-test
   "Given an options map from the command-line runner (e.g. :nodes, :ssh,
@@ -194,28 +265,57 @@
   (merge tests/noop-test
          {:name      "marathon"
           :os        ubuntu/os
-          :db        (db "1.3.0" "zookeeper-version")
-          :client    (->Client nil)
-          :generator (track-check-added-apps
-                      (gen/phases
-                       (->> (add-app)
-                            (gen/stagger 10)
-                            (gen/nemesis
-                             (gen/seq (cycle [(gen/sleep 50)
-                                              {:type :info, :f :start}
-                                              (gen/sleep 20)
-                                              {:type :info, :f :stop}])))
-                            (gen/time-limit test-duration))
-                       (gen/nemesis (gen/once {:type :info, :f :stop}))
-                       (gen/log "Done generating and launching apps.")
-                       (gen/sleep 60)))
-          :nemesis   (nemesis/partition-random-halves)
-          :checker   (checker/compose
-                      {:marathon (marathon-checker)})}
+          :db        (db "1.3.0" "zookeeper-version")}
          opts))
+
+(defn basic-app-test
+  [opts]
+  (marathon-test
+   (merge
+    {:client    (->Client nil)
+     :generator (track-check-added-apps
+                 (gen/phases
+                  (->> (add-app)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 50)
+                                         {:type :info, :f :start}
+                                         (gen/sleep 20)
+                                         {:type :info, :f :stop}])))
+                       (gen/time-limit test-duration))
+                  (gen/nemesis (gen/once {:type :info, :f :stop}))
+                  (gen/log "Done generating and launching apps.")
+                  (gen/sleep 60)))
+     :nemesis   (nemesis/partition-random-halves)
+     :checker   (checker/compose
+                 {:marathon (mchecker/marathon-app-checker)})}
+    opts)))
+
+(defn basic-pod-test
+  [opts]
+  (marathon-test
+   (merge
+    {:client    (->Client nil)
+     :generator (track-check-added-pods
+                 (gen/phases
+                  (->> (add-pod)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 50)
+                                         {:type :info, :f :start}
+                                         (gen/sleep 20)
+                                         {:type :info, :f :stop}])))
+                       (gen/time-limit test-duration))
+                  (gen/nemesis (gen/once {:type :info, :f :stop}))
+                  (gen/log "Done generating and launching apps.")
+                  (gen/sleep 60)))
+     :nemesis   (nemesis/partition-random-halves)
+     :checker   (checker/compose
+                 {:marathon (mchecker/marathon-pod-checker)})}
+    opts)))
 
 (defn -main
   "Handles command line arguments. This will run marathon-test"
   [& args]
-  (cli/run! (cli/single-test-cmd {:test-fn marathon-test})
+  (cli/run! (cli/single-test-cmd {:test-fn basic-app-test})
             args))

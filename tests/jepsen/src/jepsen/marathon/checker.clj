@@ -20,7 +20,18 @@
   (info "Apps which got acknowledged but were lost: " (set/difference (set apps-ack) (set apps-survived)))
   {:valid? (every? (set apps-survived) apps-ack)})
 
-(defn marathon-checker
+(defn verify-pods-survival
+  [pods-ack pods-survived]
+  (info "Acknowledged Apps: " pods-ack)
+  (info "Total: " (count pods-ack))
+
+  (info "Existing Apps: " pods-survived)
+  (info "Total: " (count pods-survived))
+
+  (info "Apps which got acknowledged but were lost: " (set/difference (set pods-ack) (set pods-survived)))
+  {:valid? (every? (set pods-survived) pods-ack)})
+
+(defn marathon-app-checker
   "Constructs a Jepsen checker."
   []
   (reify checker/Checker
@@ -30,9 +41,26 @@
                                         (= :add-app (:f %))))
                           (map :value))
             apps-survived (->> history
-                              (filter #(and (= :ok (:type %))
-                                            (= :check-status (:f %))))
-                              (map :value))]
-        (info apps-ack "Total Acknowledged apps: " (count apps-ack ))
+                               (filter #(and (= :ok (:type %))
+                                             (= :check-status (:f %))))
+                               (map :value))]
+        (info apps-ack "Total Acknowledged apps: " (count apps-ack))
         (info apps-survived "Total Survived apps: " (count apps-survived))
         (verify-apps-survival apps-ack apps-survived)))))
+
+(defn marathon-pod-checker
+  "Constructs a Jepsen checker."
+  []
+  (reify checker/Checker
+    (check [this test model history opts]
+      (let [pods-ack (->> history
+                          (filter #(and (= :ok (:type %))
+                                        (= :add-pod (:f %))))
+                          (map :value))
+            pods-survived (->> history
+                               (filter #(and (= :ok (:type %))
+                                             (= :check-pod-status (:f %))))
+                               (map :value))]
+        (info pods-ack "Total Acknowledged pods: " (count pods-ack))
+        (info pods-survived "Total Survived pods: " (count pods-survived))
+        (verify-pods-survival pods-ack pods-survived)))))
