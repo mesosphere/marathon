@@ -19,10 +19,6 @@ node('shakedown') {
       checkout scm
     }
 
-    stage('Installing Dependencies') {
-      sh "pip3 install retrying"
-    }
-
     stage('Run System Integration Tests'){
       withCredentials(
         [ [$class: 'FileBinding',
@@ -40,7 +36,6 @@ node('shakedown') {
         ]) {
           try {
             sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
-            sh "dcos config set core.ssl_verify False"
             sh """
               TERM=velocity shakedown \
                 --stdout all \

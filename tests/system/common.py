@@ -53,6 +53,14 @@ def app_mesos(app_id=None):
     }
 
 
+def ignore_exception(exc):
+    """ Used with @retrying.retry to igmore exceptions in a retry loop.
+    ex.  @retrying.retry( retry_on_exception=ignore_exception)
+    It does verify that the object passed is an exception
+    """
+    return isinstance(exc, Exception)
+
+
 def constraints(name, operator, value=None):
     constraints = [name, operator]
     if value is not None:
@@ -483,7 +491,7 @@ def private_mesos_container_app(secret_name, app_id=None):
             "type": 'MESOS',
             "docker": {
                 "image": "mesosphere/simple-docker-ee:latest",
-                "config": {
+                "pullConfig": {
                     "secret": "pullConfigSecret"
                 }
             }
@@ -840,7 +848,7 @@ def install_enterprise_cli_package():
         command to create secrets, manage service accounts etc.
     """
     print('Installing dcos-enterprise-cli package')
-    stdout, stderr, return_code = run_dcos_command('package install dcos-enterprise-cli')
+    stdout, stderr, return_code = run_dcos_command('package install dcos-enterprise-cli --cli --yes')
     assert return_code == 0, "Failed to install dcos-enterprise-cli package"
 
 

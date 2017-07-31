@@ -88,7 +88,7 @@ def test_mom_when_mom_agent_bounced():
 
         shakedown.restart_agent(mom_ip)
 
-        @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+        @retrying.retry(wait_fixed=1000, stop_max_delay=3000, retry_on_exception=common.ignore_exception)
         def check_task_is_back():
             tasks = client.get_tasks('/agent-failure')
             tasks[0]['id'] == original_task_id

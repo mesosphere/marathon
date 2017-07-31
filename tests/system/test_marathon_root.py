@@ -57,7 +57,7 @@ def test_marathon_delete_leader(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    @retrying.retry(stop_max_attempt_number=30)
+    @retrying.retry(stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def marathon_leadership_changed():
         current_leader = shakedown.marathon_leader_ip()
         print('leader: {}'.format(current_leader))
@@ -88,7 +88,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    @retrying.retry(stop_max_attempt_number=30)
+    @retrying.retry(stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def marathon_leadership_changed():
         current_leader = shakedown.marathon_leader_ip()
         print('leader: {}'.format(current_leader))
@@ -97,7 +97,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     # wait until leader changed
     marathon_leadership_changed()
 
-    @retrying.retry(stop_max_attempt_number=30)
+    @retrying.retry(stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_app_existence(expected_instances):
         app = client.get_app(app_id)
         assert app['tasksRunning'] == expected_instances
@@ -190,7 +190,7 @@ def test_event_channel():
     client.add_app(app_def)
     shakedown.deployment_wait()
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=common.ignore_exception)
     def check_deployment_message():
         status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'event_stream_attached' in stdout
@@ -201,7 +201,7 @@ def test_event_channel():
     client.remove_app(app_id, True)
     shakedown.deployment_wait()
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=common.ignore_exception)
     def check_kill_message():
         status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'KILLED' in stdout
@@ -339,7 +339,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    @retrying.retry(stop_max_attempt_number=30)
+    @retrying.retry(stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def marathon_leadership_changed():
         current_leader = shakedown.marathon_leader_ip()
         print('leader: {}'.format(current_leader))
@@ -348,7 +348,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     # wait until leader changed
     marathon_leadership_changed()
 
-    @retrying.retry(stop_max_attempt_number=30)
+    @retrying.retry(stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_app_existence(expected_instances):
         app = client.get_app(app_id)
         assert app['tasksRunning'] == expected_instances

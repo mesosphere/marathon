@@ -121,7 +121,7 @@ def test_event_channel_for_pods():
     shakedown.deployment_wait()
 
     # look for created
-    @retrying.retry(stop_max_delay=10000)
+    @retrying.retry(stop_max_delay=10000, retry_on_exception=common.ignore_exception)
     def check_deployment_message():
         status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'event_stream_attached' in stdout
@@ -133,7 +133,7 @@ def test_event_channel_for_pods():
     shakedown.deployment_wait()
 
     # look for updated
-    @retrying.retry(stop_max_delay=10000)
+    @retrying.retry(stop_max_delay=10000, retry_on_exception=common.ignore_exception)
     def check_update_message():
         status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'pod_updated_event' in stdout
