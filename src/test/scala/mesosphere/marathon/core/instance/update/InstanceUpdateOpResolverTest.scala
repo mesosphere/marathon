@@ -38,7 +38,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     f.instanceTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
     val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
       instanceId = f.notExistingInstanceId,
-      runSpecVersion = Timestamp(0),
+      newTaskId = Task.Id.forResidentTask(Task.Id.forRunSpec(f.notExistingInstanceId.runSpecId)), runSpecVersion = Timestamp(0),
       timestamp = Timestamp(0),
       status = Task.Status(Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder()),
       hostPorts = Seq.empty)).futureValue

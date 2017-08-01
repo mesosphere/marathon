@@ -1,9 +1,10 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.PathId._
 import org.apache.mesos.Protos.TaskID
 import org.scalatest.{ FunSuite, Matchers }
-import mesosphere.marathon.state.PathId._
 
 class TaskIdTest extends FunSuite with Matchers {
 
@@ -54,5 +55,49 @@ class TaskIdTest extends FunSuite with Matchers {
   test("container id with underscores is handled correctly") {
     val taskId = Task.Id.apply(TaskID.newBuilder().setValue("zebra_wookie_thor.instance-c9707703-1eee-11e7-bfcc-70b3d5800004.wookie_thor1").build())
     assert(taskId.instanceId.idString == "zebra_wookie_thor.instance-c9707703-1eee-11e7-bfcc-70b3d5800004")
+  }
+
+  test("TaskIds for resident tasks can be created from legacy taskIds") {
+    val originalId = Task.Id.forRunSpec(PathId("/app"))
+    originalId.attempt shouldBe None
+
+    val newTaskId = Task.Id.forResidentTask(originalId)
+    // this is considered the first attempt
+    newTaskId.attempt shouldBe Some(1)
+
+    originalId shouldNot equal(newTaskId)
+    originalId.instanceId shouldEqual newTaskId.instanceId
+  }
+
+  test("TaskIds for resident tasks can be incremented") {
+    val taskIdString = "app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.#41"
+    val originalId = Task.Id(taskIdString)
+    originalId.attempt shouldBe Some(41)
+
+    val newTaskId = Task.Id.forResidentTask(originalId)
+    newTaskId.attempt shouldBe Some(42)
+
+    originalId shouldNot equal(newTaskId)
+    originalId.instanceId shouldEqual newTaskId.instanceId
+  }
+
+  test("TaskId.reservationId returns the same value for an id w/o attempt counter") {
+    val originalId = Task.Id.forRunSpec(PathId("/app"))
+    val reservationId = Task.Id.reservationId(originalId.idString)
+
+    reservationId shouldEqual originalId.idString
+  }
+
+  test("TaskId.reservationId returns the base value w/o attempt for an id including the attempt") {
+    val originalId = Task.Id.forRunSpec(PathId("/app"))
+    val reservationIdFromOriginal = Task.Id.reservationId(originalId.idString)
+
+    val residentTaskId = Task.Id.forResidentTask(originalId)
+    residentTaskId.instanceId shouldEqual originalId.instanceId
+    Task.Id.reservationId(residentTaskId.idString) shouldEqual reservationIdFromOriginal
+
+    val anotherResidentTaskId = Task.Id.forResidentTask(residentTaskId)
+    anotherResidentTaskId.instanceId shouldEqual originalId.instanceId
+    Task.Id.reservationId(anotherResidentTaskId.idString) shouldEqual reservationIdFromOriginal
   }
 }

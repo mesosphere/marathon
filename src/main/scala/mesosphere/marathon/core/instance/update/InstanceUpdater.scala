@@ -76,9 +76,9 @@ object InstanceUpdater extends StrictLogging {
           InstanceUpdateEffect.Failure(cause)
 
         case _ =>
-          InstanceUpdateEffect.Failure("ForceExpunge should never delegated to an instance")
+          InstanceUpdateEffect.Failure("ForceExpunge should never be delegated to an instance")
       }
-    }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in ${instance.instanceId}"))
+    }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in ${instance.instanceId}: ${instance.tasksMap.keySet}"))
   }
 
   private[marathon] def launchOnReservation(instance: Instance, op: LaunchOnReservation): InstanceUpdateEffect = {
@@ -86,8 +86,8 @@ object InstanceUpdater extends StrictLogging {
       require(instance.tasksMap.size == 1, "Residency is not yet implemented for task groups")
 
       // TODO(PODS): make this work for taskGroups
-      val task = instance.firstTask
-      val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(op.runSpecVersion, op.status))
+      val currentTask: Task = instance.firstTask
+      val taskEffect = currentTask.update(TaskUpdateOperation.LaunchOnReservation(op.newTaskId, op.runSpecVersion, op.status))
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated = instance.copy(
@@ -95,7 +95,7 @@ object InstanceUpdater extends StrictLogging {
               condition = Condition.Staging,
               since = op.timestamp
             ),
-            tasksMap = instance.tasksMap.updated(task.taskId, updatedTask),
+            tasksMap = Map(updatedTask.taskId -> updatedTask),
             runSpecVersion = op.runSpecVersion
           )
           val events = eventsGenerator.events(updated, task = None, op.timestamp, previousCondition = Some(instance.state.condition))

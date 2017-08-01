@@ -16,6 +16,7 @@ object TaskUpdateOperation {
     now: Timestamp) extends TaskUpdateOperation
 
   case class LaunchOnReservation(
+    newTaskId: Task.Id,
     runSpecVersion: Timestamp,
     status: Task.Status) extends TaskUpdateOperation
 }

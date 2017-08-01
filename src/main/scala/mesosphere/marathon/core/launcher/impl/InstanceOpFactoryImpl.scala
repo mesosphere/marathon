@@ -90,7 +90,8 @@ class InstanceOpFactoryImpl(
       RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
-        val taskBuilder = new TaskBuilder(app, Task.Id.forRunSpec, config, runSpecTaskProc)
+        val taskId = Task.Id.forRunSpec(app.id)
+        val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(request.offer, matches.resourceMatch, None)
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -202,13 +203,25 @@ class InstanceOpFactoryImpl(
     resourceMatch: ResourceMatcher.ResourceMatch,
     volumeMatch: PersistentVolumeMatcher.VolumeMatch): InstanceOp = {
 
-    val reuseOldTaskId = (_: PathId) => reservedInstance.tasksMap.headOption.map(_._1).getOrElse {
-      throw new IllegalStateException(s"${reservedInstance.instanceId} does not contain any task")
-    }
-    // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    val (taskInfo, networkInfo) = new TaskBuilder(spec, reuseOldTaskId, config, runSpecTaskProc).build(offer, resourceMatch, Some(volumeMatch))
+    val currentTaskId = reservedInstance.firstTask.taskId
+
+    // The new taskId is based on the previous one. The previous taskId can denote either
+    // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
+    //    perfectly normal taskIds.
+    // 2. a task that was created to hold a reservation in 1.5 or later, this still is a completely normal taskId.
+    // 3. an existing reservation from a previous version of Marathon, or a new reservation created in 1.5 or later. In
+    //    this case, this is also a normal taskId
+    // 4. a resident task that was created with 1.5 or later. In this case, the taskId has an appended launch attempt,
+    //    a number prefixed with a separator.
+    // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
+    // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
+    // in version 1.5.
+    val newTaskId = Task.Id.forResidentTask(currentTaskId)
+    val (taskInfo, networkInfo) = new TaskBuilder(spec, newTaskId, config, runSpecTaskProc)
+      .build(offer, resourceMatch, Some(volumeMatch))
     val stateOp = InstanceUpdateOperation.LaunchOnReservation(
       reservedInstance.instanceId,
+      newTaskId,
       runSpecVersion = spec.version,
       timestamp = clock.now(),
       status = Task.Status(
@@ -242,9 +255,17 @@ class InstanceOpFactoryImpl(
     val agentInfo = Instance.AgentInfo(offer)
     val hostPorts = resourceMatch.hostPorts.flatten
     val networkInfo = NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
+
+    // The first taskId does not have an attempt count - this is only the task created to hold the reservation and it
+    // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
+    // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
+    // there was always a 1:1 correlation from reservation to taskId)
+    val taskId = Task.Id.forRunSpec(runSpec.id)
+    val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
+    val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
     val task = Task.Reserved(
-      taskId = Task.Id.forRunSpec(runSpec.id),
-      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
+      taskId = taskId,
+      reservation = reservation,
       status = Task.Status(
         stagedAt = now,
         condition = Condition.Reserved,
@@ -266,7 +287,7 @@ class InstanceOpFactoryImpl(
       unreachableStrategy = runSpec.unreachableStrategy
     )
     val stateOp = InstanceUpdateOperation.Reserve(instance)
-    taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources, localVolumes)
+    taskOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }
 
   def combine(processors: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor = new RunSpecTaskProcessor {

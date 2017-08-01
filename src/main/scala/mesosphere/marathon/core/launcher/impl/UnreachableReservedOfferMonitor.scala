@@ -53,8 +53,7 @@ object UnreachableReservedOfferMonitor extends StrictLogging {
         // This doesn't change during the lifetime of Marathon but it's simpler to get it from here.
         val frameworkId = FrameworkId(offer.getFrameworkId.getValue)
         offer.getResourcesList.iterator
-          .flatMap(TaskLabels.taskIdForResource(frameworkId, _))
-          .map(_.instanceId)
+          .flatMap(TaskLabels.instanceIdForResource(frameworkId, _))
           .to[Seq]
       }
       .named("reservedInstanceIdsForReservations")
