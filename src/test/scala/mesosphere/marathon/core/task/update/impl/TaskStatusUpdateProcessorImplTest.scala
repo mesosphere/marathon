@@ -6,8 +6,8 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MarathonEvent
-import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
@@ -225,7 +225,8 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
     // TODO: it should be up to the Task.update function to determine whether the received update makes sense
     "receiving an update for known reserved task" should withFixture { f =>
       val appId = PathId("/app")
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Seq.empty, TestTaskBuilder.Helper.taskReservationStateNew)).getInstance()
+      val localVolumeId = Task.LocalVolumeId(appId, "persistent-volume", "uuid")
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(localVolumeId).getInstance()
       val status = MesosTaskStatusTestHelper.finished(instance.tasksMap.values.head.taskId)
 
       f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))

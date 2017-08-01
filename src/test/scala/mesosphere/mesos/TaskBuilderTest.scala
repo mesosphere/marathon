@@ -1188,22 +1188,22 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
-      id = "testApp".toPath,
+      id = "/testApp".toPath,
       resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Docker(
         image = "busybox"
       ))
-    ), None, None, None,
-      _ => Task.Id("mesos_task_id")
-    )
+    ), None, None, None)
+
     assert(task.isDefined, "expected task to match offer")
     val (taskInfo, _) = task.get
+    val taskId = Task.Id(taskInfo.getTaskId())
 
     assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
     val param = taskInfo.getContainer.getDocker.getParametersList.get(0)
     assert(param.getKey == "label", "expected docker having a parameter key: label")
-    assert(param.getValue == "MESOS_TASK_ID=mesos_task_id", s"expected docker having a parameter value for key 'label': MESOS_TASK_ID=mesos_task_id but ${param.getValue}")
+    assert(param.getValue == s"MESOS_TASK_ID=${taskId.idString}", s"expected docker having a parameter value for key 'label': MESOS_TASK_ID=${taskId.idString} but ${param.getValue}")
   }
 
   test("BuildIfMatchesWithRackIdConstraint") {
@@ -1226,7 +1226,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val builder = new TaskBuilder(
       app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
     val config = MarathonTestHelper.defaultConfig()
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet)
@@ -1249,13 +1249,16 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     var runningInstances = Set.empty[Instance]
     val config = MarathonTestHelper.defaultConfig()
 
+    val taskId = Task.Id.forRunSpec(app.id)
     val builder = new TaskBuilder(
       app,
-      s => Task.Id.forRunSpec(s), config)
+      taskId, config)
 
     def shouldBuildTask(message: String, offer: Offer): Unit = {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
-      withClue(message) { assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match]) }
+      withClue(message) {
+        assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
+      }
       val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
       val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None)
       val agentInfo = Instance.AgentInfo(
@@ -1312,10 +1315,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     var runningInstances = Set.empty[Instance]
 
+    val taskId = Task.Id.forRunSpec(app.id)
     val config = MarathonTestHelper.defaultConfig()
     val builder = new TaskBuilder(
       app,
-      s => Task.Id.forRunSpec(s), config)
+      taskId, config)
 
     def shouldBuildTask(offer: Offer): Unit = {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
@@ -1791,7 +1795,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
     val config = MarathonTestHelper.defaultConfig()
-    val builder = new TaskBuilder(app, s => Task.Id(s.toString), config)
+    val taskId = Task.Id.forRunSpec(app.id)
+    val builder = new TaskBuilder(app, taskId, config)
     val runningInstances = Set.empty[Instance]
 
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
@@ -1813,11 +1818,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     app: AppDefinition,
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
-    envVarsPrefix: Option[String] = None,
-    newTaskId: PathId => Task.Id = s => Task.Id.forRunSpec(s)): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
+    envVarsPrefix: Option[String] = None): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
+    val taskId = Task.Id.forRunSpec(app.id)
     val builder = new TaskBuilder(
       app,
-      newTaskId,
+      taskId,
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,

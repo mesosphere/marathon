@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon._
@@ -17,7 +17,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
     val app = f.appWithPersistentVolume()
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(
-      reservation = Task.Reservation(Seq(Task.LocalVolumeId(app.id, "persistent-volume", "uuid")), f.taskReservationStateNew))
+      Task.LocalVolumeId(app.id, "persistent-volume", "uuid"))
       .getInstance()
     val instances: Seq[Instance] = Seq(instance)
 
@@ -35,7 +35,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
     val app = f.appWithPersistentVolume()
     val localVolumeId = Task.LocalVolumeId(app.id, "persistent-volume", "uuid")
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(
-      reservation = Task.Reservation(Seq(localVolumeId), f.taskReservationStateNew))
+      localVolumeId)
       .getInstance()
 
     val instances: Seq[Instance] = Seq(instance)
@@ -61,14 +61,14 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
     val localVolumeId3 = Task.LocalVolumeId(app.id, "persistent-volume", "uuid3")
     val instances = IndexedSeq(
       TestInstanceBuilder.newBuilder(app.id).addTaskReserved(
-        reservation = Task.Reservation(Seq(localVolumeId2), f.taskReservationStateNew))
+        localVolumeId2)
         .getInstance(),
       TestInstanceBuilder.newBuilder(app.id).addTaskReserved(
-        reservation = Task.Reservation(Seq(localVolumeId3), f.taskReservationStateNew))
+        localVolumeId3)
         .getInstance()
     )
     val unknownInstance = TestInstanceBuilder.newBuilder(PathId("/unknown")).addTaskReserved(
-      reservation = Task.Reservation(Seq(localVolumeId2), f.taskReservationStateNew))
+      localVolumeId2)
       .getInstance()
     val offer =
       f.offerWithVolumes(unknownInstance, localVolumeId1)
@@ -95,8 +95,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
     val localVolumeId = Task.LocalVolumeId(app.id, "persistent-volume", "uuid")
     val instances = Seq(
       TestInstanceBuilder.newBuilder(app.id).addTaskReserved(
-        reservation = Task.Reservation(
-          Seq(Task.LocalVolumeId(app.id, "other-container", "uuid")), f.taskReservationStateNew))
+        Task.LocalVolumeId(app.id, "other-container", "uuid"))
         .getInstance())
     val offer = f.offerWithVolumes(instances.head, localVolumeId)
 
@@ -108,12 +107,10 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
   }
 
   class Fixture {
-    def makeTask(appId: PathId, reservation: Task.Reservation) = TestTaskBuilder.Helper.minimalReservedTask(appId, reservation)
     def offerWithVolumes(instance: Instance, localVolumeIds: Task.LocalVolumeId*) = {
       val taskId = instance.tasksMap.values.head.taskId
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)
     }
     def appWithPersistentVolume(): AppDefinition = MarathonTestHelper.appWithPersistentVolume()
-    val taskReservationStateNew = TestTaskBuilder.Helper.taskReservationStateNew
   }
 }
