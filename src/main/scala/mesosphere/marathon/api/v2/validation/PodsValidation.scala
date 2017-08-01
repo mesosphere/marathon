@@ -10,7 +10,6 @@ import mesosphere.marathon.raml._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.marathon.stream.Implicits._
-import org.rogach.scallop.ScallopOption
 // scalastyle:on
 
 /**
@@ -195,7 +194,7 @@ trait PodsValidation {
     hostPorts.distinct.size == hostPorts.size
   }
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: ScallopOption[String]): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
