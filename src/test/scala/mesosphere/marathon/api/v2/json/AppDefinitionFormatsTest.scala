@@ -51,7 +51,7 @@ class AppDefinitionFormatsTest extends UnitTest
         AppNormalization.apply(config)
           .normalized(Validation.validateOrThrow(
             AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
-          AppValidation.validateCanonicalAppAPI(Set.empty, config)
+          AppValidation.validateCanonicalAppAPI(Set.empty, () => None)
         )
     )
   }
@@ -690,7 +690,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "container": {}
           |}""".stripMargin)
       val ramlApp = json.as[raml.App]
-      AppValidation.validateCanonicalAppAPI(Set.empty, config)(ramlApp) should failWith(
+      AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)(ramlApp) should failWith(
         group("container", "is invalid", "docker" -> "not defined")
       )
     }

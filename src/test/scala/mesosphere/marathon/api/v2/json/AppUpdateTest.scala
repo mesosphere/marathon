@@ -18,7 +18,7 @@ import scala.collection.immutable.Seq
 
 class AppUpdateTest extends UnitTest {
 
-  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(Set("secrets"), AppNormalization.Configuration(None, "mesos-bridge-name"))
+  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(Set("secrets"), () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName)
 
   val runSpecId = PathId("/test")
 

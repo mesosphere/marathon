@@ -305,7 +305,7 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppUpdateAPI(enabledFeatures: Set[String], normalizationConfig: AppNormalization.Config): Validator[AppUpdate] = forAll(
+  def validateCanonicalAppUpdateAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[AppUpdate] = forAll(
     validator[AppUpdate] { update =>
       update.id.map(PathId(_)) as "id" is optional(valid)
       update.dependencies.map(_.map(PathId(_))) as "dependencies" is optional(every(valid))
@@ -326,7 +326,7 @@ trait AppValidation {
       !(update.networks.exists(_.exists(_.mode != NetworkMode.Host)) && update.portDefinitions.exists(_.nonEmpty))
     },
     isTrue(AppValidationMessages.NetworkNameMustBeSpecified) { update =>
-      update.networks.forall(n => n.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || normalizationConfig.defaultNetworkName.isDefined))
+      update.networks.forall(n => n.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || defaultNetworkName().isDefined))
     },
     isTrue("The 'version' field may only be combined with the 'id' field.") { update =>
       def onlyVersionOrIdSet: Boolean = update.productIterator.forall {
@@ -371,7 +371,7 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppAPI(enabledFeatures: Set[String], normalizationConfig: AppNormalization.Config): Validator[App] = forAll(
+  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[App] = forAll(
     validBasicAppDefinition(enabledFeatures),
     validator[App] { app =>
       PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
@@ -386,7 +386,7 @@ trait AppValidation {
       !(app.networks.exists(_.mode != NetworkMode.Host) && app.portDefinitions.exists(_.nonEmpty))
     },
     isTrue(AppValidationMessages.NetworkNameMustBeSpecified) { app =>
-      app.networks.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || normalizationConfig.defaultNetworkName.isDefined)
+      app.networks.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || defaultNetworkName().isDefined)
     }
   )
 

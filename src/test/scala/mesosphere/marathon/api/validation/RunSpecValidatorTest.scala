@@ -22,7 +22,7 @@ import scala.reflect.ClassTag
 class RunSpecValidatorTest extends UnitTest {
 
   val config = AppNormalization.Configuration(None, "mesos-bridge-name")
-  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), config)
+  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
   private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
 
