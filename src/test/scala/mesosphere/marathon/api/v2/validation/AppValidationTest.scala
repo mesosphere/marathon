@@ -13,9 +13,9 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
 
   val config = AppNormalization.Configuration(None, "mesos-bridge-name")
   val configWithDefaultNetworkName = AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name")
-  implicit val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, config)
-  implicit val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), config)
-  implicit val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, configWithDefaultNetworkName)
+  val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, config)
+  val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), config)
+  val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, configWithDefaultNetworkName)
 
   "File based secrets validation" when {
     "file based secret is used when secret feature is not enabled" should {
