@@ -4,13 +4,13 @@ package integration
 import java.util.concurrent.atomic.AtomicInteger
 
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
+import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, WaitTestSupport}
-import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
+import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
+import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
 import mesosphere.marathon.state.PathId._
-import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
+import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable

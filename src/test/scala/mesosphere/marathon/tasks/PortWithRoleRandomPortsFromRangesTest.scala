@@ -96,7 +96,7 @@ class PortWithRoleRandomPortsFromRangesTest extends UnitTest {
           s"allowing time for test = ${allowTimeForTest.toMillis}ms"
       )
       log.info(s"duration = ${duration.toMillis}ms")
-      assert(duration.toMillis < allowTimeForTest.toMillis)
+      duration.toMillis should be < allowTimeForTest.toMillis withClue "Port range benchmark failed. It does not seem to be lazy."
     }
 
     "is lazy with multiple ranges" in {
@@ -133,7 +133,7 @@ class PortWithRoleRandomPortsFromRangesTest extends UnitTest {
           s"allowing time for test = ${allowTimeForTest.toMillis}ms"
       )
       log.info(s"duration = ${duration.toMillis}ms for $iterations iterations and $numberOfRanges ranges")
-      assert(duration.toMillis < allowTimeForTest.toMillis)
+      duration.toMillis should be < allowTimeForTest.toMillis withClue "Port range benchmark failed. It does not seem to be lazy."
     }
   }
 }
