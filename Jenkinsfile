@@ -4,7 +4,14 @@ ansiColor('gnome-terminal') {
   node('JenkinsMarathonCI-Debian8-2017-07-18') {
     stage("Run Pipeline") {
       try {
-        checkout scm
+        checkout([
+            $class: 'GitSCM',
+            branches: [[name: '**']],
+            doGenerateSubmoduleConfigurations: false,
+            extensions: [[$class: 'CloneOption', depth: 0, noTags: false, reference: '', shallow: false]],
+            submoduleCfg: [],
+            userRemoteConfigs: [[credentialsId: '4ff09dce-407b-41d3-847a-9e6609dd91b8', url: 'git@github.com:mesosphere/marathon.git']]
+        ])
         withCredentials([
             usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
             string(credentialsId: '3f0dbb48-de33-431f-b91c-2366d2f0e1cf',variable: 'AWS_ACCESS_KEY_ID'),
