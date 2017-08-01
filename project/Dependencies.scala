@@ -79,7 +79,7 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Aws = "1.11.128"
+    val Aws = "1.11.129"
     val Alpakka  = "0.8"
     val Chaos = "0.8.8"
     val Guava = "19.0"

@@ -88,3 +88,10 @@ def runWithTimeout(timeout: FiniteDuration)(commands: Seq[String]): Unit = {
     provision.killStaleTestProcesses()
   }
 }
+
+/**
+ * @return True if build is on master build.
+ */
+def isMasterBuild(): Boolean = {
+  sys.env.get("JOB_NAME").contains("marathon-pipelines/master")
+}

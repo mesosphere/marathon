@@ -8,7 +8,8 @@ import ammonite.ops.ImplicitWd._
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.merge.MergeStrategy
 import org.eclipse.jgit.revwalk.RevCommit
-import org.eclipse.jgit.transport.{ RefSpec, URIish }
+import org.eclipse.jgit.transport.{ CredentialsProvider, PushResult, RefSpec,
+  RemoteRefUpdate, URIish, UsernamePasswordCredentialsProvider }
 import play.api.libs.json.Json
 
 // BuildInfo Models and their Json formats.
@@ -33,16 +34,20 @@ val dcosRepoPath = pwd / 'dcos
  * @param branch Branch that is checkout out.
  * @param f The function that is applied to the repository.
  */
-def withRepository(repo: String, branch: String)(f: Git => Unit): Unit = {
+def withRepository(repo: String, branch: String)(f: Git => Unit)(implicit creds: CredentialsProvider): Unit = {
   // Make sure the path is empty for cloning.
   rm! dcosRepoPath
 
   // Clone
   val git = Git.cloneRepository()
     .setURI(repo)
+    .setRemote("mesosphere")
     .setBranch(branch)
+    .setCredentialsProvider(creds)
     .setDirectory(dcosRepoPath.toIO)
     .call()
+
+  println(s"Cloned $repo:$branch.")
 
   try {
     f(git)
@@ -57,7 +62,7 @@ def withRepository(repo: String, branch: String)(f: Git => Unit): Unit = {
  *
  * @param git The Git repository that will be updated.
  */
-def upgradeDCOS(git: Git): Unit = {
+def upgradeDCOS(git: Git)(implicit creds: CredentialsProvider): Unit = {
   // Update with latest DC/OS
   val remoteAddCmd = git.remoteAdd()
   remoteAddCmd.setName("dcos")
@@ -65,10 +70,13 @@ def upgradeDCOS(git: Git): Unit = {
   remoteAddCmd.call()
 
   git.pull()
+    .setCredentialsProvider(creds)
     .setRemote("dcos")
     .setRemoteBranchName("master")
     .setStrategy(MergeStrategy.THEIRS)
     .call()
+
+  println(s"Merged DC/OS master.")
 }
 
 /**
@@ -104,10 +112,41 @@ def updateBuildInfo(url: String, sha1: String): Unit = {
  * @return Reference of the new commit.
  */
 def commit(git: Git, message: String): RevCommit = {
+  println(s"Commit changes: $message.")
+
   val buildinfoPath = dcosRepoPath / 'packages/ 'marathon / "buildinfo.json"
 
   git.add().addFilepattern("packages/marathon").call()
   git.commit().setMessage(message).call()
+}
+
+
+/**
+ * Exception thrown by `push(2)` if the update was not successful.
+ */
+case class PushException(val msg: String, private val cause: Throwable = None.orNull) extends Exception(msg, cause)
+
+/**
+ * @return true if [status] is OK or UP_TO_DATE, false otherwise.
+ */
+def notOk(status: RemoteRefUpdate.Status): Boolean = {
+  !(RemoteRefUpdate.Status.OK.equals(status) || RemoteRefUpdate.Status.UP_TO_DATE.equals(status))
+}
+
+/**
+ * Throws a [PushException] is push result contains a RemoteRefUpdata.Status
+ * other than OK and UP_TO_DATE.
+ *
+ * @param result The result of a PushCommand call.
+ * @param refRpec The ref spec that was pushed.
+ */
+def throwIfNotSuccessful(refSpec: RefSpec)(result: PushResult): Unit = {
+  import scala.collection.JavaConverters._
+
+  result.getRemoteUpdates().asScala.foreach { refUpdate =>
+    val status = refUpdate.getStatus()
+    if(notOk(status)) throw new PushException(s"Could not push $refSpec: ${refUpdate.getMessage()}")
+  }
 }
 
 /**
@@ -116,10 +155,20 @@ def commit(git: Git, message: String): RevCommit = {
  * @param git Reference to git repository.
  * @param commitRev The reference of the commit which is pushed.
  */
-def push(git : Git, commitRev: RevCommit): Unit = {
-  git.push()
-    .setRefSpecs(new RefSpec(s"${commitRev.getId.getName}:refs/heads/marathon/latest"))
+def push(git : Git, commitRev: RevCommit)(implicit creds: CredentialsProvider): Unit = {
+  import scala.collection.JavaConverters._
+
+  val refSpec = (new RefSpec())
+    .setSource(commitRev.getId.getName)
+    .setDestination("refs/heads/marathon/latest")
+
+  val result = git.push()
+    .setRemote("mesosphere")
+    .setRefSpecs(refSpec)
+    .setCredentialsProvider(creds)
     .call()
+
+  result.asScala.foreach(throwIfNotSuccessful(refSpec))
 }
 
 /**
@@ -132,12 +181,22 @@ def push(git : Git, commitRev: RevCommit): Unit = {
  */
 @main
 def updateMarathon(url: String, sha1: String, message: String): Unit = {
-  withRepository("git@github.com:mesosphere/dcos.git", "marathon/latest") { git =>
+
+  // Authentication
+  val user = sys.env("GIT_USER")
+  val password = sys.env("GIT_PASSWORD")
+  implicit val credentials = new UsernamePasswordCredentialsProvider(user, password)
+
+  println(s"Updating Marathon to $url in DC/OS.")
+
+  withRepository("https://github.com/mesosphere/dcos.git", "marathon/latest") { git =>
     upgradeDCOS(git)
 
     updateBuildInfo(url, sha1)
 
     val commitRev = commit(git, message)
     push(git, commitRev)
+
+    %('git, "log", "-5")(pwd / 'dcos)
   }
 }

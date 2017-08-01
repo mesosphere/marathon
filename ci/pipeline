@@ -1,5 +1,8 @@
 #!/usr/bin/env amm
 
+// Get a logging backend into classpath.
+import $ivy.`org.slf4j:slf4j-simple:1.7.25`
+
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import java.util.concurrent.TimeUnit
@@ -38,35 +41,52 @@ def zipSandboxLogs(): Unit = {
 }
 
 @main
-def uploadPackagesToS3(): Unit = utils.stage("Upload Packages") {
-  // || file.ext == "sha1" removed, separated out
-  (ls! PACKAGE_DIR |? (file => file.ext == "tgz" || file.ext == "txz" ))
-    .foreach(awsClient.archiveArtifact)
+/**
+ * Upload Marathon tgz tarballs and its cha1 checksum to S3.
+ *
+ * @return Artifact description if it was uploaded.
+ */
+def uploadTarballToS3(): Option[awsClient.Artifact] = utils.stage("Upload Packages") {
+  import scala.collection.breakOut
+
+  PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
+    .headOption.flatMap(file => awsClient.archiveArtifact(Path(file)))
 }
 
 @main
-def createAndUploadPackages(): Unit = {
-  createPackages()
-  uploadPackagesToS3()
-  createLinuxPackages()
-}
-
 /**
- * Creates SHA-1 for all files in the package directory
+ * Packages Marathon and uploads its artifacts alongside sha1 checksum to S3.
+ *
+ * @return Version and artifact description of Marathon build.
  */
-def createPackageSha1s(): Unit = {
-  (ls! PACKAGE_DIR |? (file => file.ext == "tgz" || file.ext == "txz"))
-    .foreach(fileUtil.writeSha1ForFile)
+def createAndUploadPackages(): (String, Option[awsClient.Artifact]) = {
+  val version = createPackages()
+  val artifact = uploadTarballToS3()
+  createLinuxPackages()
+  (version, artifact)
 }
 
 /**
  * Creates the zip and txz files of the Marathon runnable package with their
  * associated sha1
+ *
+ * @return version of build.
  */
 @main
-def createPackages(): Unit = utils.stage("Package") {
-  %('sbt, "universal:packageZipTarball", "universal:packageXzTarball")
-  createPackageSha1s()
+def createPackages(): String = utils.stage("Package") {
+  val result = %%('sbt, "universal:packageZipTarball", "version")
+
+  // Regex is for version:
+  // starting with random chars, match $number$dot$number$dot$number followed by optional alpha numberic chars plus `-`
+  // ending with random characters
+  // we need to regex this string because we do have colored output in the `sbt version` command
+  val VersionLineRegex = "^.*(\\d+\\.\\d+\\.\\d+[-A-Za-z\\d]+).*$".r
+
+  // Nothing is what it seems. This is a poor man's way to extract the version
+  // from sbt's console output until we run our Ammonite scripts in sbt.
+  val VersionLineRegex(version) = result.out.lines.last
+  println(s"Built tarballs for Marathon $version.")
+  version
 }
 
 /**
@@ -91,8 +111,8 @@ def phabricator(): Unit = {
 
   try {
     phabricatorClient.reject(revisionId)
-    jenkins()
-    phabricatorClient.reportSuccess(diffId, phId, revisionId, buildUrl, buildTag)
+    val (_, maybeArtifact) = jenkins()
+    phabricatorClient.reportSuccess(diffId, phId, revisionId, buildUrl, buildTag, maybeArtifact)
   } catch {
     case NonFatal(e) =>
       phabricatorClient.reportFailure(diffId, phId, revisionId, buildUrl, buildTag, e.getMessage())
@@ -101,10 +121,24 @@ def phabricator(): Unit = {
 }
 
 /**
- * The main pipeline target for builds on Jekins.
+ * Update DC/OS repository and triggers build of update DC/OS image.
+ *
+ * @param version The newly built Marathon version.
+ * @param artifactUrl Url for the saved Marathon artifact.
+ * @param sha1 The sah1 checksum of the artifact.
  */
 @main
-def jenkins(): Unit = {
+def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
+  upgrade.updateMarathon(artifactUrl, sha1, s"Update Marathon to $version")
+}
+
+/**
+ * The main pipeline target for builds on Jenkins.
+ *
+ * @return Version and artifact description of Marathon build.
+ */
+@main
+def jenkins(): (String, Option[awsClient.Artifact]) = {
   utils.stage("Provision") {
     provision.killStaleTestProcesses()
     provision.installMesos()
@@ -116,5 +150,13 @@ def jenkins(): Unit = {
     zipSandboxLogs()    // Try to archive logs in any case
   }
 
-  createAndUploadPackages()
+  val (version, maybeArtifact) = createAndUploadPackages()
+
+  if(utils.isMasterBuild) {
+    maybeArtifact.foreach { artifact =>
+      updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
+    }
+  }
+
+  (version, maybeArtifact)
 }

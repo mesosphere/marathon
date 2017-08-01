@@ -4,6 +4,7 @@ import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 
 import $file.utils
+import $file.awsClient
 
 import scala.util.control.NonFatal
 import scalaj.http._
@@ -122,6 +123,8 @@ def reportTestResults(phid: String, status: String): Unit = {
  * @param revisionId The identifier for the Phabricator revision that was build.
  * @param buildUrl A link back to the build on Jenkins.
  * @param buildTag Identifies build.
+ * @param maybeArtifact A description of the Marathon binary that has been uploaded.
+ *    It's None when now package was uploaded.
  */
 @main
 def reportSuccess(
@@ -129,11 +132,17 @@ def reportSuccess(
   phId: String,
   revisionId: String,
   buildUrl: String,
-  buildTag: String): Unit = {
+  buildTag: String,
+  maybeArtifact: Option[awsClient.Artifact]): Unit = {
 
   // Construct message
-  val marathonPackage: Path = ((ls! pwd / 'target / 'universal) |? (_.ext == "tgz")).head
-  val marathonPackageChecksum = read! pwd / 'target / 'universal / s"${marathonPackage.last}.sha1"
+  val buildinfoDiff = maybeArtifact.fold(""){ artifact =>
+    s"""
+      |   lang=json
+      |   "url": "${artifact.downloadUrl}",
+      |   "sha1": "${artifact.sha1}"
+     """.stripMargin
+  }
 
   val msg = s"""
     |(NOTE)\u2714 Build of $diffId completed [[ $buildUrl | $buildTag ]].
@@ -141,9 +150,7 @@ def reportSuccess(
     | You can create a DC/OS with your patched Marathon by creating a new pull
     | request with the following changes in [[ https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json | buildinfo.json ]]:
     |
-    |   lang=json
-    |   "url": "https://downloads.mesosphere.io/marathon/snapshots/${marathonPackage.last}",
-    |   "sha1": "${marathonPackageChecksum}"
+    | $buildinfoDiff
     |
     |= ＼\\ ٩( ᐛ )و /／ =
     |""".stripMargin
