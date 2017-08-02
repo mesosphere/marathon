@@ -5,7 +5,6 @@ import java.util.regex.Pattern
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.api.v2.Validation.{ featureEnabled, _ }
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.raml._
@@ -316,6 +315,7 @@ trait AppValidation {
       update.portDefinitions is optional(portDefinitionsValidator)
       update.container is optional(valid(validContainer(enabledFeatures, update.networks.getOrElse(Nil), update.secrets.getOrElse(Map.empty))))
       update.acceptedResourceRoles is valid(optional(ResourceRole.validAcceptedResourceRoles(update.residency.isDefined) and notEmpty))
+      update.networks is optional(NetworkValidation.defaultNetworkNameValidator(defaultNetworkName))
     },
     isTrue("must not be root")(!_.id.fold(false)(PathId(_).isRoot)),
     isTrue("must not be an empty string")(_.cmd.forall { s => s.length() > 1 }),
@@ -324,9 +324,6 @@ trait AppValidation {
     },
     isTrue("portDefinitions are only allowed with host-networking") { update =>
       !(update.networks.exists(_.exists(_.mode != NetworkMode.Host)) && update.portDefinitions.exists(_.nonEmpty))
-    },
-    isTrue(AppValidationMessages.NetworkNameMustBeSpecified) { update =>
-      update.networks.forall(n => n.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || defaultNetworkName().isDefined))
     },
     isTrue("The 'version' field may only be combined with the 'id' field.") { update =>
       def onlyVersionOrIdSet: Boolean = update.productIterator.forall {
@@ -376,6 +373,7 @@ trait AppValidation {
     validator[App] { app =>
       PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
       app.dependencies.map(PathId(_)) as "dependencies" is every(valid)
+      app.networks is defaultNetworkNameValidator(defaultNetworkName)
     },
     isTrue("must not be root")(!_.id.toPath.isRoot),
     isTrue("must not be an empty string")(_.cmd.forall { s => s.length() > 1 }),
@@ -384,9 +382,6 @@ trait AppValidation {
     },
     isTrue("portDefinitions are only allowed with host-networking") { app =>
       !(app.networks.exists(_.mode != NetworkMode.Host) && app.portDefinitions.exists(_.nonEmpty))
-    },
-    isTrue(AppValidationMessages.NetworkNameMustBeSpecified) { app =>
-      app.networks.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || defaultNetworkName().isDefined)
     }
   )
 
@@ -537,6 +532,4 @@ object AppValidationMessages {
 
   val DockerEngineLimitedToSingleContainerNetwork =
     "may only specify a single container network when using the Docker container engine"
-
-  val NetworkNameMustBeSpecified = "Network name must be specified when container network is selected."
 }

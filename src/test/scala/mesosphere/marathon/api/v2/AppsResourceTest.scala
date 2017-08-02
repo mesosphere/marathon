@@ -7,7 +7,7 @@ import javax.ws.rs.core.Response
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api._
-import mesosphere.marathon.api.v2.validation.AppValidationMessages
+import mesosphere.marathon.api.v2.validation.{ AppValidationMessages, NetworkValidationMessages }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
@@ -287,7 +287,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("Validation fails")
       response.getStatus should be(422)
-      response.getEntity.toString should include(AppValidationMessages.NetworkNameMustBeSpecified)
+      response.getEntity.toString should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
     }
 
     "Create a new app with IP/CT, no default network name, Alice does not specify a network" in new Fixture {
@@ -398,7 +398,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("the update should fail")
       response.getStatus should be(422)
-      response.getEntity.toString should include(AppValidationMessages.NetworkNameMustBeSpecified)
+      response.getEntity.toString should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
     }
 
     "Create a new app without IP/CT when default virtual network is bar" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {

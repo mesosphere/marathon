@@ -8,8 +8,8 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.util.SemanticVersion
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 
 /**
@@ -211,9 +211,7 @@ trait PodsValidation {
     }
     pod.secrets is empty or (valid(secretValidator) and featureEnabled(enabledFeatures, Features.SECRETS))
     pod.networks is valid(ramlNetworksValidator)
-    pod.networks is isTrue[Seq[Network]]("network name must be specified when container network is selected") { nets =>
-      nets.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || defaultNetworkName.isDefined)
-    }
+    pod.networks is defaultNetworkNameValidator(() => defaultNetworkName)
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique

@@ -5,7 +5,7 @@ import com.wix.accord._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
-import mesosphere.marathon.api.v2.validation.{ AppValidation, AppValidationMessages }
+import mesosphere.marathon.api.v2.validation.{ AppValidation, AppValidationMessages, NetworkValidationMessages }
 import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, PortDefinition, PortDefinitions, Raml, SecretDef, UpgradeStrategy }
@@ -83,7 +83,7 @@ class AppUpdateTest extends UnitTest {
       shouldViolate(update.copy(cpus = Some(-3.0)), "/cpus", "error.min")
       shouldViolate(update.copy(disk = Some(-3.0)), "/disk", "error.min")
       shouldViolate(update.copy(instances = Some(-3)), "/instances", "error.min")
-      shouldViolate(update.copy(networks = Some(Seq(Network(mode = NetworkMode.Container)))), "/", AppValidationMessages.NetworkNameMustBeSpecified)
+      shouldViolate(update.copy(networks = Some(Seq(Network(mode = NetworkMode.Container)))), "/networks", NetworkValidationMessages.NetworkNameMustBeSpecified)
     }
 
     "Validate secrets" in {
