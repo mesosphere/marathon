@@ -5,7 +5,6 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.collection.mutable
-import scala.util.control.NonFatal
 
 /**
   * Allows capping the maximum number of concurrent tasks in an easy manner:
@@ -47,6 +46,7 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
     * @tparam T
     * @return Future that completes when work item fished.
     */
+  @SuppressWarnings(Array("CatchThrowable"))
   private def run[T](workItem: WorkItem[T]): Unit = synchronized {
     workItem.ctx.execute(new Runnable {
       override def run(): Unit = {
@@ -60,8 +60,9 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
           }(workItem.ctx)
           workItem.promise.completeWith(future)
         } catch {
-          case NonFatal(ex) =>
+          case ex: Throwable =>
             workItem.promise.failure(ex)
+            executeNextIfPossible()
         }
       }
     })
