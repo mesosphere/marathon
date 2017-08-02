@@ -35,7 +35,7 @@
   [test node]
   (c/su
    (info node "Fetching Marathon Snapshot")
-   (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-586-g2a75b8e.tgz" marathon-home)
+   (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-673-gaadd1c3.tgz" marathon-home)
    (info node "Done fetching Marathon Snapshot")
    (c/exec :mkdir :-p app-dir)))
 
@@ -87,6 +87,16 @@
        "sleep " (* test-duration 10) ";"
        "date -u -Ins >> $LOG;"))
 
+(defn add-app
+  []
+  (let [id (atom 0)]
+    (reify gen/Generator
+      (op [_ test process]
+        (let [app-id (str "basic-app-" (swap! id inc))]
+          {:type   :invoke
+           :f      :add-app
+           :value  {:id    app-id}})))))
+
 (defn add-app!
   [node app-id op]
   (slingshot/try+
@@ -99,7 +109,52 @@
               {:throw-entire-message? true})
    (assoc op :type :ok, :value app-id)
    (catch [:status 502] {:keys [body]}
-     (assoc op :type :fail, :value "Proxy node failed to respond"))))
+     (assoc op :type :fail, :value "Proxy node failed to respond"))
+   (catch [:status 503] {:keys [body]}
+     (assoc op :type :fail, :value body))))
+
+(defn update-app
+  []
+  (let [id (atom 0)]
+    (reify gen/Generator
+      (op [_ test process]
+        (let [app-id (str "basic-app-" (swap! id inc))]
+          {:type   :invoke
+           :f      :update-app
+           :value  {:id    app-id
+                    :instances (+ 1 (count (:nodes test)))}})))))
+
+(defn update-app-again
+  []
+  (let [id (atom 0)]
+    (reify gen/Generator
+      (op [_ test process]
+        (let [app-id (str "basic-app-" (swap! id inc))]
+          {:type   :invoke
+           :f      :update-app
+           :value  {:id    app-id
+                    :instances (count (:nodes test))}})))))
+
+(defn update-app!
+  [node app-id op]
+  (slingshot/try+
+   (http/put (str "http://" node ":8080/v2/apps/" app-id "?force=true")
+             {:form-params   {:id    app-id
+                              :instances (:instances (:value op))
+                              :cmd   "sleep 1000"
+                              :cpus  0.001
+                              :mem   10.0
+                              :constraints [["hostname", "UNIQUE"]]}
+              :content-type   :json}
+             {:query-params {"force" "true"}}
+             {:throw-entire-message? true})
+   (assoc op :type :ok, :value app-id)
+   (catch [:status 409] {:keys [body]}
+     (assoc op :type :fail, :value body))
+   (catch [:status 502] {:keys [body]}
+     (assoc op :type :fail, :value body))
+   (catch [:status 503] {:keys [body]}
+     (assoc op :type :fail, :value body))))
 
 (defn check-status!
   [test op app-id]
@@ -109,6 +164,16 @@
      (assoc op :type :ok, :node node, :value app-id)
      (catch [:status 404] {:keys [body]}
        (assoc op :type :fail, :node node, :value (str "App does not exist: " app-id))))))
+
+(defn add-pod
+  []
+  (let [id (atom 0)]
+    (reify gen/Generator
+      (op [_ test process]
+        (let [pod-id (str "basic-pod-" (swap! id inc))]
+          {:type   :invoke
+           :f      :add-pod
+           :value  {:id    pod-id}})))))
 
 (defn add-pod!
   [node pod-id op]
@@ -124,21 +189,13 @@
                :content-type   :json}
               {:throw-entire-message? true})
    (assoc op :type :ok, :value pod-id)
-   (catch [:status 502] {:keys [body]}
-     (assoc op :type :fail, :value "Proxy node failed to respond"))
    (catch [:status 422] {:keys [body]}
      (info body)
-     (assoc op :type :fail, :value "Invalid object specification"))))
-
-(defn add-pod
-  []
-  (let [id (atom 0)]
-    (reify gen/Generator
-      (op [_ test process]
-        (let [pod-id (str "basic-pod-" (swap! id inc))]
-          {:type   :invoke
-           :f      :add-pod
-           :value  {:id    pod-id}})))))
+     (assoc op :type :fail, :value "Invalid object specification"))
+   (catch [:status 502] {:keys [body]}
+     (assoc op :type :fail, :value "Proxy node failed to respond"))
+   (catch [:status 503] {:keys [body]}
+     (assoc op :type :fail, :value body))))
 
 (defn check-pod-status!
   [test op pod-id]
@@ -158,15 +215,25 @@
 
     (case (:f op)
       :add-app         (timeout 20000 (assoc op :type :info, :value :timed-out)
-                               (try
-                                 (do (info "Adding app:" (:id (:value op)))
-                                     (add-app! node (:id (:value op)) op))
-                                 (catch org.apache.http.ConnectionClosedException e
-                                   (assoc op :type :fail, :value (.getMessage e)))
-                                 (catch org.apache.http.NoHttpResponseException e
-                                   (assoc op :type :fail, :value (.getMessage e)))
-                                 (catch java.net.ConnectException e
-                                   (assoc op :type :fail, :value (.getMessage e)))))
+                                (try
+                                  (do (info "Adding app:" (:id (:value op)))
+                                      (add-app! node (:id (:value op)) op))
+                                  (catch org.apache.http.ConnectionClosedException e
+                                    (assoc op :type :fail, :value (.getMessage e)))
+                                  (catch org.apache.http.NoHttpResponseException e
+                                    (assoc op :type :fail, :value (.getMessage e)))
+                                  (catch java.net.ConnectException e
+                                    (assoc op :type :fail, :value (.getMessage e)))))
+      :update-app         (timeout 20000 (assoc op :type :info, :value :timed-out)
+                                   (try
+                                     (do (info "Updating app:" (:id (:value op)))
+                                         (update-app! node (:id (:value op)) op))
+                                     (catch org.apache.http.ConnectionClosedException e
+                                       (assoc op :type :fail, :value (.getMessage e)))
+                                     (catch org.apache.http.NoHttpResponseException e
+                                       (assoc op :type :fail, :value (.getMessage e)))
+                                     (catch java.net.ConnectException e
+                                       (assoc op :type :fail, :value (.getMessage e)))))
       :add-pod          (timeout 20000 (assoc op :type :info, :value :timed-out)
                                  (try
                                    (do (info "Adding pod:" (:id (:value op)))
@@ -185,16 +252,6 @@
                                    (check-pod-status! test op (:id (:value op)))))))
 
   (teardown! [_ test]))
-
-(defn add-app
-  []
-  (let [id (atom 0)]
-    (reify gen/Generator
-      (op [_ test process]
-        (let [app-id (str "basic-app-" (swap! id inc))]
-          {:type   :invoke
-           :f      :add-app
-           :value  {:id    app-id}})))))
 
 (defn db
   "Setup and teardown marathon, mesos and zookeeper"
@@ -233,7 +290,7 @@
            op)
           (if (not (#{:nemesis} (gen/process->thread test process)))
             (dosync
-             (when-let  [current-app (peek @apps)]
+             (when-let [current-app (peek @apps)]
                (alter apps pop)
                {:type  :invoke
                 :f     :check-status
@@ -251,12 +308,41 @@
            op)
           (if (not (#{:nemesis} (gen/process->thread test process)))
             (dosync
-             (when (> (count @pods) 0)
-               (let [current-pod (peek @pods)]
-                 (alter pods pop)
+             (when-let [current-pod (peek @pods)]
+               (alter pods pop)
+               {:type  :invoke
+                :f     :check-pod-status
+                :value {:id current-pod}}))))))))
+
+(defn track-check-added-updated-apps
+  [gen]
+  (let [apps (ref [])
+        updated-apps (ref [])]
+    (reify gen/Generator
+      (op [_ test process]
+        (if-let [op (gen/op gen test process)]
+          (dosync
+           (when (= :add-app (:f op))
+             (alter apps conj (:id (:value op))))
+           (when (= :update-app (:f op))
+             (if (not (.contains @updated-apps (:id (:value op))))
+               (alter updated-apps conj (:id (:value op)))))
+           op)
+          (if (not (#{:nemesis} (gen/process->thread test process)))
+            (dosync
+             (if-let [current-app (peek @apps)]
+               (do
+                 (alter apps pop)
                  {:type  :invoke
-                  :f     :check-pod-status
-                  :value {:id current-pod}})))))))))
+                  :f     :check-status
+                  :value {:id current-app
+                          :operation "app attempted to be deployed - Check status"}})
+               (when-let [current-app (peek @updated-apps)]
+                 (alter updated-apps pop)
+                 {:type  :invoke
+                  :f     :check-status
+                  :value {:id current-app
+                          :operation "app attempted to be upgraded - Check status"}})))))))))
 
 (defn marathon-test
   "Given an options map from the command-line runner (e.g. :nodes, :ssh,
@@ -314,8 +400,47 @@
                  {:marathon (mchecker/marathon-pod-checker)})}
     opts)))
 
+(defn app-instance-test
+  [opts]
+  (marathon-test
+   (merge
+    {:client    (->Client nil)
+     :generator (track-check-added-updated-apps
+                 (gen/phases
+                  (->> (add-app)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 50)
+                                         {:type :info, :f :start}
+                                         (gen/sleep 20)
+                                         {:type :info, :f :stop}])))
+                       (gen/time-limit 100))
+                  (gen/nemesis (gen/once {:type :info, :f :stop}))
+                  (->> (update-app)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 50)
+                                         {:type :info, :f :start}
+                                         (gen/sleep 20)
+                                         {:type :info, :f :stop}])))
+                       (gen/time-limit 30))
+                  (gen/nemesis (gen/once {:type :info, :f :stop}))
+                  (->> (update-app-again)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 50)
+                                         {:type :info, :f :start}
+                                         (gen/sleep 20)
+                                         {:type :info, :f :stop}])))
+                       (gen/time-limit 30))
+                  (gen/nemesis (gen/once {:type :info, :f :stop}))
+                  (gen/log "Done generating and launching apps.")
+                  (gen/sleep 30)))
+     :nemesis   (nemesis/partition-random-halves)}
+    opts)))
+
 (defn -main
   "Handles command line arguments. This will run marathon-test"
   [& args]
-  (cli/run! (cli/single-test-cmd {:test-fn basic-app-test})
+  (cli/run! (cli/single-test-cmd {:test-fn app-instance-test})
             args))

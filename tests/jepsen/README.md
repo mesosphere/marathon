@@ -30,5 +30,3 @@ make
 ```
 make run nodes=<path-to-nodes-file>
 ```
-
-NOTE: Currently, Jepsen setup and teardown code for Mesos, Marathon and Zookeeper has been implemented. The further additions would be the Jepsen client, generator and checker code.
