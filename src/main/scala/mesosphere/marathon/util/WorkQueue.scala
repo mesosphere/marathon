@@ -51,14 +51,19 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
   private def run[T](workItem: WorkItem[T]): Unit = synchronized {
     workItem.ctx.execute(new Runnable {
       override def run(): Unit = {
-        val future = workItem.f()
-        future.onComplete { _ =>
-          // This might block for a short time if something is put into the queue. This is fine for two reasons
-          // * The time it takes to complete apply() is very short.
-          // * The blocking does not take place in this thread. So we won't deadlock.
-          executeNextIfPossible()
-        }(workItem.ctx)
-        workItem.promise.completeWith(future)
+        try {
+          val future = workItem.f()
+          future.onComplete { _ =>
+            // This might block for a short time if something is put into the queue. This is fine for two reasons
+            // * The time it takes to complete apply() is very short.
+            // * The blocking does not take place in this thread. So we won't deadlock.
+            executeNextIfPossible()
+          }(workItem.ctx)
+          workItem.promise.completeWith(future)
+        } catch {
+          case ex: Throwable =>
+            workItem.promise.failure(ex)
+        }
       }
     })
   }
