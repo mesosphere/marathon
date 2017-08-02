@@ -3,10 +3,9 @@ package util
 
 import com.typesafe.scalalogging.StrictLogging
 import scala.collection.concurrent.TrieMap
-
 import scala.concurrent.{ ExecutionContext, Future, Promise }
-
 import scala.collection.mutable
+import scala.util.control.NonFatal
 
 /**
   * Allows capping the maximum number of concurrent tasks in an easy manner:
@@ -61,7 +60,7 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
           }(workItem.ctx)
           workItem.promise.completeWith(future)
         } catch {
-          case ex: Throwable =>
+          case NonFatal(ex) =>
             workItem.promise.failure(ex)
         }
       }
