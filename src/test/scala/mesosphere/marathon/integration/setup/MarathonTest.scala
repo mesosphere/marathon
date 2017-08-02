@@ -533,7 +533,7 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
     description: String,
     waitingFor: mutable.Map[String, CallbackEvent => Boolean],
     maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
-    waitForEventMatching(description) { event =>
+    waitForEventMatching(description, maxWait) { event =>
       if (waitingFor.get(event.eventType).fold(false)(fn => fn(event))) {
         waitingFor -= event.eventType
       }
