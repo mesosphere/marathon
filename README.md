@@ -15,6 +15,21 @@ following the instructions.
 
 ### Instructions
 
+#### Using Docker
+
+1. Build the docker image:
+
+        docker build . -t marathon-jekyll
+
+2. Run it (from this folder)
+
+        docker run --rm -it -v $(pwd):/marathon-docs -p 4000:4000 marathon-jekyll
+
+3. Visit the site at
+   [http://localhost:4000/marathon/](http://localhost:4000/marathon/)
+
+#### Native OS
+
 1. Install packages needed to generate the site
 
     * On Linux:

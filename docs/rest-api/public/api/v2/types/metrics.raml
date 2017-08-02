@@ -1,0 +1,98 @@
+#%RAML 1.0 Library
+types:
+  TimeMeasurement:
+    type: string
+    description: The unit of time
+  GeneralMeasurement:
+    type: object
+    properties:
+      name: string
+      label: string
+  UnitOfMeasurement:
+    type: TimeMeasurement | GeneralMeasurement
+  Histogram:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+        description: The number of samples
+      min:
+        type: number
+        format: int64
+        description: The minimum value
+      max:
+        type: number
+        format: int64
+        description: The maximum value
+      p50:
+        type: number
+        format: int64
+        description: The 50th percentile median value
+      p75:
+        type: number
+        format: int64
+        description: The 75th percentile median value
+      p98:
+        type: number
+        format: int64
+        description: The 98th percentile median value
+      p99:
+        type: number
+        format: int64
+        description: The 99th percentile median value
+      p999:
+        type: number
+        format: int64
+        description: The 999th percentile median value
+      mean:
+        type: number
+        format: float
+        description: The average of all samples
+      tags:
+        type: object
+        properties:
+          /.*/: string
+        description: metadata about the metric
+      unit:
+        type: UnitOfMeasurement
+        description: The unit of measurement
+  Counter:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+        description: The current value
+      tags:
+        type: object
+        properties:
+          /.*/: string
+        description: metadata about the metric
+      unit:
+        type: UnitOfMeasurement
+        description: The unit of measurement
+  Metrics:
+    type: object
+    properties:
+      start: datetime
+      end: datetime
+      histograms:
+        type: object
+        properties:
+          /.*/: Histogram
+      counters:
+        type: object
+        properties:
+          /.*/: Counter
+      gauges:
+        type: object
+        properties:
+          /.*/: Histogram
+      min-max-counters:
+        type: object
+        properties:
+          /.*/: Histogram
+      /.*/:
+        type: object
+
