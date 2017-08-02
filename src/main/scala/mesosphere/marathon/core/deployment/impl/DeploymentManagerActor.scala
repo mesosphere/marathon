@@ -212,7 +212,7 @@ class DeploymentManagerActor(
       self ! LaunchDeploymentActor(plan)
     }.recover {
       case NonFatal(e) =>
-        logger.error(s"Couldn't start deployment ${plan.id}. Repository store failed with: $e")
+        logger.error(s"Couldn't start deployment ${plan.id}. Repository store failed with:", e)
         self ! FailedRepositoryOperation(plan, e)
     }
     result

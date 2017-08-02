@@ -7,13 +7,13 @@ import akka.Done
 import akka.actor.{ ActorRef, ActorRefFactory, FSM, LoggingFSM, Props }
 import akka.pattern._
 import akka.stream.Materializer
+import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import kamon.metric.instrument.Time
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state.{ PathId, RootGroup }
 import mesosphere.marathon.storage.repository.GcActor.{ CompactDone, _ }
 import mesosphere.marathon.stream.Sink
-import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.collection.{ SortedSet, mutable }
@@ -119,7 +119,7 @@ private[storage] class GcActor[K, C, S](
   initialize()
 }
 
-private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with CompactBehavior[K, C, S] =>
+private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[State, Data] with CompactBehavior[K, C, S] =>
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
   val maxVersions: Int
@@ -128,8 +128,6 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Compa
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
   val deploymentRepository: DeploymentRepositoryImpl[K, C, S]
   val self: ActorRef
-  // a val named "log" would conflict with LoggingFSM
-  private[this] val logger = LoggerFactory.getLogger(getClass)
 
   when(Scanning) {
     case Event(RunGC, updates: UpdatedEntities) =>
@@ -357,14 +355,12 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Compa
   }
 }
 
-private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with ScanBehavior[K, C, S] =>
+private[storage] trait CompactBehavior[K, C, S] extends StrictLogging { this: FSM[State, Data] with ScanBehavior[K, C, S] =>
   val maxVersions: Int
   val appRepository: AppRepositoryImpl[K, C, S]
   val podRepository: PodRepositoryImpl[K, C, S]
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
   val self: ActorRef
-  // a val named "log" would conflict with LoggingFSM
-  private[this] val logger = LoggerFactory.getLogger(getClass)
 
   when(Compacting) {
     case Event(RunGC, blocked: BlockedEntities) =>
