@@ -16,6 +16,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.metrics.MetricsReporterService
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.stream.Sink
@@ -68,6 +69,7 @@ class MarathonSchedulerService @Inject() (
   leadershipCoordinator: LeadershipCoordinator,
   config: MarathonConf,
   electionService: ElectionService,
+  metricsReporterService: MetricsReporterService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
   groupManager: GroupManager,
   driverFactory: SchedulerDriverFactory,
@@ -218,6 +220,10 @@ class MarathonSchedulerService @Inject() (
     // start all leadership coordination actors
     Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
 
+    // start metrics service
+    metricsReporterService.startUp()
+    log.info("Metrics service started")
+
     // create new driver
     driver = Some(driverFactory.createDriver())
 
@@ -272,6 +278,10 @@ class MarathonSchedulerService @Inject() (
       // Our leadership has been defeated. Thus, stop the driver.
       stopDriver()
     }
+
+    // stop metrics service
+    metricsReporterService.shutDown()
+    log.info("Metrics service stopped")
 
     log.error("Terminating after loss of leadership")
     Runtime.getRuntime.asyncExit()
