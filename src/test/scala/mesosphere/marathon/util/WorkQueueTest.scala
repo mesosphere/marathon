@@ -6,13 +6,26 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.twitter.util.CountDownLatch
 import mesosphere.UnitTest
+import org.scalatest.Inside
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.Future
+import scala.util.Try
 
-class WorkQueueTest extends UnitTest {
+class WorkQueueTest extends UnitTest with Inside {
   "WorkQueue" should {
+    "return a failure if the Future returning thunk throws an exception" in {
+      val queue = WorkQueue("test", maxConcurrent = 1, maxQueueLength = Int.MaxValue)
+      val r = queue {
+        throw new RuntimeException("le failure")
+      }
+      inside(Try(r.futureValue)) {
+        case Failure(ex) =>
+          ex.getCause.shouldBe(a[RuntimeException])
+      }
+    }
+
     "cap the maximum number of concurrent operations" in {
       val queue = WorkQueue("test", maxConcurrent = 1, maxQueueLength = Int.MaxValue)
       val sem = new Semaphore(0)
