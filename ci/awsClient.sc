@@ -36,7 +36,7 @@ case class Artifact(path: S3Path, sha1: String) {
   /**
    * @return download url.
    */
-  def downloadUrl: String = s"$base/${path.key}"
+  def downloadUrl: String = s"$base/${path.bucket}/${path.key}"
 }
 
 val S3_PREFIX = S3Path(
