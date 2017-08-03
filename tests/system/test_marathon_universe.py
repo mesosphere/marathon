@@ -105,7 +105,7 @@ def neo_package(request):
     package_name = request.param
     yield package_name
     try:
-        shakedown.uninstall_package_and_data(package_name)
+        shakedown.uninstall_package_and_data(package_name, 'neo4j/core')
     except Exception as e:
         # cleanup does NOT fail the test
         print(e)
