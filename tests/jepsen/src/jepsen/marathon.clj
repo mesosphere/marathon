@@ -342,7 +342,32 @@
                  {:type  :invoke
                   :f     :check-status
                   :value {:id current-app
-                          :operation "app attempted to be upgraded - Check status"}})))))))))
+                          :operation "app attempted to be updated - Check status"}})))))))))
+
+(defn abdicate-leader
+  []
+  (reify client/Client
+    (setup! [this test node]
+      (abdicate-leader))
+
+    (invoke! [this test op]
+      (do
+        (let [node (rand-nth (:nodes test))]
+          (slingshot/try+
+           (http/delete (str "http://" node ":8080/v2/leader") {:throw-entire-message? true})
+           (assoc op :type :ok, :node node, :value "Current leader abdicated")
+           (catch [:status 404] {:keys [body]}
+             (assoc op :type :fail, :node node, :value body))
+           (catch [:status 502] {:keys [body]}
+             (assoc op :type :fail, :value "Proxy node failed to respond"))
+           (catch org.apache.http.ConnectionClosedException e
+             (assoc op :type :fail, :value (.getMessage e)))
+           (catch org.apache.http.NoHttpResponseException e
+             (assoc op :type :fail, :value (.getMessage e)))
+           (catch java.net.ConnectException e
+             (assoc op :type :fail, :value (.getMessage e)))))))
+
+    (teardown! [this test])))
 
 (defn marathon-test
   "Given an options map from the command-line runner (e.g. :nodes, :ssh,
@@ -439,8 +464,22 @@
      :nemesis   (nemesis/partition-random-halves)}
     opts)))
 
-(defn -main
-  "Handles command line arguments. This will run marathon-test"
-  [& args]
-  (cli/run! (cli/single-test-cmd {:test-fn app-instance-test})
-            args))
+(defn leader-abdication-test
+  [opts]
+  (marathon-test
+   (merge
+    {:client    (->Client nil)
+     :generator (track-check-added-apps
+                 (gen/phases
+                  (->> (add-app)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 20)
+                                         {:type :info, :f :abdicate-leader}])))
+                       (gen/time-limit test-duration))
+                  (gen/log "Done generating and launching apps.")
+                  (gen/sleep 60)))
+     :nemesis   (abdicate-leader)
+     :checker   (checker/compose
+                 {:marathon (mchecker/marathon-app-checker)})}
+    opts)))
