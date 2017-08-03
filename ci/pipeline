@@ -84,7 +84,12 @@ def createPackages(): String = utils.stage("Package") {
 
   // Nothing is what it seems. This is a poor man's way to extract the version
   // from sbt's console output until we run our Ammonite scripts in sbt.
-  val VersionLineRegex(version) = result.out.lines.last
+  val version = result.out.lines.last match {
+    case VersionLineRegex(v) => v
+    case _ =>
+        val commit = %%('git, "log", "--pretty=format:%h", "-n1").out.lines.last
+        s"unkown version in commit $commit"
+  }
   println(s"Built tarballs for Marathon $version.")
   version
 }
