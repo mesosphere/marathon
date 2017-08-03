@@ -1,3 +1,20 @@
+## Changes since 1.4.5
+
+### Fixed issues
+
+- [MARATHON-7681](https://jira.mesosphere.com/browse/MARATHON-7681) - Fixes an issue in WorkQueue that could cause Marathon to drop exceptions and become unresponsive.
+- [MARATHON-7653](https://jira.mesosphere.com/browse/MARATHON-7653) - Fixes an issue in which Marathon could become unresponsive when pod status wasn't available
+- [MARATHON-7629](https://jira.mesosphere.com/browse/MARATHON-7629) - Fixes issue in which Marathon could get into an infinite kill loop, in certain situations
+- [MARATHON-7469](https://jira.mesosphere.com/browse/MARATHON-7469) - Fixes a bug in which a new leading Marathon would kill tasks launched by an ongoing deployment during the former leader.
+- [MARATHON-7472](https://jira.mesosphere.com/browse/MARATHON-7472), [MARATHON-7358](https://jira.mesosphere.com/browse/MARATHON-7358) - Further improve deployment performance by removing unnecessary thread blocking.
+- [MARATHON-7617](https://jira.mesosphere.com/browse/MARATHON-7617) - Capture storage cache layer metrics, by category
+- [MARATHON-7536](https://jira.mesosphere.com/browse/MARATHON-7536) - Disable HTTP TRACE method in API
+- [MARATHON-7566](https://jira.mesosphere.com/browse/MARATHON-7566) - Fix a regression in which content-type was required for the ping endpoint
+- [MARATHON-7334](https://jira.mesosphere.com/browse/MARATHON-7334) - Fix a regression in which `fetch[].destPath` was ignored
+- Replace lock with non-blocking concurrent data structure in WorkQueue, evidently the source of some contention looking at thread dump from [MARATHON-7400](https://jira.mesosphere.com/browse/MARATHON-7400)
+- [MARATHON-7433](https://jira.mesosphere.com/browse/MARATHON-7433) - Fix a group deployment issue which would cause non-root groups without a nested group to be ignored.
+- [MARATHON-7462](https://jira.mesosphere.com/browse/MARATHON-7462) - Fix a race condition in WorkQueue which caused various issues, such as dropped events and could cause components of Marathon to become unresponsive.
+
 ## Changes from 1.4.4 to 1.4.5
 
 ### Fixed issues
