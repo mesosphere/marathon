@@ -4,11 +4,13 @@
             [clj-http.client :as http]
             [clj-time.format :as time.format]
             [clj-time.core :as time]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.tools.logging :refer :all]
             [clostache.parser :as parser]
             [jepsen.control :as c]
             [jepsen.control.util :as cu]
+            [jepsen.store :as store]
             [jepsen.checker :as checker]
             [jepsen.cli :as cli]
             [jepsen.client :as client]
@@ -30,6 +32,11 @@
 (def marathon-service  "/lib/systemd/system/marathon.service")
 (def marathon-log      "/home/ubuntu/marathon.log")
 (def test-duration     200)
+(def verify-check256sum-download
+  (str
+   "bash resources/download-checked.sh \\
+   https://github.com/timcharper/mcli/archive/v0.2.tar.gz \\
+   $(pwd)/v0.2.tar.gz 939b6360a1f5ce93daf654f19c97bc4290227a72ec590b21c5f84fd2165752ba"))
 
 (defn install!
   [test node]
@@ -37,7 +44,10 @@
    (info node "Fetching Marathon Snapshot")
    (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-673-gaadd1c3.tgz" marathon-home)
    (info node "Done fetching Marathon Snapshot")
-   (c/exec :mkdir :-p app-dir)))
+   (c/exec :mkdir :-p app-dir))
+  (dosync
+   (info "Verifying checksum and downloading mcli v0.2: " (= 0 (:exit (shell/sh "sh" "-c" verify-check256sum-download))))
+   (shell/sh "tar" "-xzf" "v0.2.tar.gz")))
 
 (defn configure
   [test node]
@@ -53,6 +63,18 @@
            :tee marathon-service)
    (c/exec :systemctl :daemon-reload)))
 
+(defn store-mcli-logs
+  ([test cmd logfile]
+   (let [folder (.getCanonicalPath (store/path! test))]
+     (info "Retrieving the logs for cmd: " cmd "and storing it as " folder "/" logfile)
+     (shell/sh "sh" "-c" (str "mcli-0.2/marathon-cli " cmd ">" folder "/" logfile))))
+
+  ([test cmd logfile fileop]
+   (when (= fileop "append")
+     (let [folder (.getCanonicalPath (store/path! test))]
+       (info "Retrieving the logs for cmd: " cmd "and storing (append mode) it as " folder "/" logfile)
+       (shell/sh "sh" "-c" (str "mcli-0.2/marathon-cli " cmd ">>" folder "/" logfile))))))
+
 (defn uninstall!
   [test node]
   (c/su
@@ -60,7 +82,9 @@
            (c/lit marathon-home)
            (c/lit app-dir))
    (c/exec :rm marathon-service)
-   (c/exec :rm marathon-log)))
+   (c/exec :rm marathon-log))
+  (shell/sh "rm" "-rf" "mcli-0.2")
+  (shell/sh "rm" "v0.2.tar.gz"))
 
 (defn start-marathon!
   [test node]
@@ -136,7 +160,7 @@
                     :instances (count (:nodes test))}})))))
 
 (defn update-app!
-  [node app-id op]
+  [node app-id op test]
   (slingshot/try+
    (http/put (str "http://" node ":8080/v2/apps/" app-id "?force=true")
              {:form-params   {:id    app-id
@@ -148,6 +172,9 @@
               :content-type   :json}
              {:query-params {"force" "true"}}
              {:throw-entire-message? true})
+   (store-mcli-logs test "apps" (str "mcli-apps-update-" (:instances (:value op)) ".log"))
+   (store-mcli-logs test "tasks" (str "mcli-tasks-update-" (:instances (:value op)) ".log"))
+   (store-mcli-logs test (str "app /" app-id) (str "mcli-app-details-update-" (:instances (:value op)) ".log") "append")
    (assoc op :type :ok, :value app-id)
    (catch [:status 409] {:keys [body]}
      (assoc op :type :fail, :value body))
@@ -227,7 +254,7 @@
       :update-app         (timeout 20000 (assoc op :type :info, :value :timed-out)
                                    (try
                                      (do (info "Updating app:" (:id (:value op)))
-                                         (update-app! node (:id (:value op)) op))
+                                         (update-app! node (:id (:value op)) op test))
                                      (catch org.apache.http.ConnectionClosedException e
                                        (assoc op :type :fail, :value (.getMessage e)))
                                      (catch org.apache.http.NoHttpResponseException e
@@ -274,6 +301,8 @@
         (uninstall! test node))
       db/LogFiles
       (log-files [_ test node]
+        (store-mcli-logs test "apps" "mcli-apps.log")
+        (store-mcli-logs test "tasks" "mcli-tasks.log")
         (concat (db/log-files zk test node)
                 (db/log-files mesos test node)
                 [marathon-log])))))
@@ -460,7 +489,7 @@
                        (gen/time-limit 30))
                   (gen/nemesis (gen/once {:type :info, :f :stop}))
                   (gen/log "Done generating and launching apps.")
-                  (gen/sleep 30)))
+                  (gen/sleep 60)))
      :nemesis   (nemesis/partition-random-halves)}
     opts)))
 
@@ -476,7 +505,7 @@
                        (gen/nemesis
                         (gen/seq (cycle [(gen/sleep 20)
                                          {:type :info, :f :abdicate-leader}])))
-                       (gen/time-limit test-duration))
+                       (gen/time-limit 100))
                   (gen/log "Done generating and launching apps.")
                   (gen/sleep 60)))
      :nemesis   (abdicate-leader)
