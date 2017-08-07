@@ -33,7 +33,6 @@ class Migration(
     private[migration] val appRepository: AppRepository,
     private[migration] val groupRepository: GroupRepository,
     private[migration] val deploymentRepository: DeploymentRepository,
-    private[migration] val taskRepo: TaskRepository,
     private[migration] val instanceRepo: InstanceRepository,
     private[migration] val taskFailureRepo: TaskFailureRepository,
     private[migration] val frameworkIdRepo: FrameworkIdRepository,

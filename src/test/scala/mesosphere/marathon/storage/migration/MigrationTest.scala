@@ -24,7 +24,6 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     appRepository: AppRepository = mock[AppRepository],
     groupRepository: GroupRepository = mock[GroupRepository],
     deploymentRepository: DeploymentRepository = mock[DeploymentRepository],
-    taskRepository: TaskRepository = mock[TaskRepository],
     instanceRepository: InstanceRepository = mock[InstanceRepository],
     taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
@@ -37,7 +36,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     configurationRepository.get() returns Future.successful(None)
     configurationRepository.store(any) returns Future.successful(Done)
     new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, groupRepository, deploymentRepository,
-      taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository,
+      instanceRepository, taskFailureRepository, frameworkIdRepository,
       serviceDefinitionRepository, configurationRepository, backup, config)
   }
 

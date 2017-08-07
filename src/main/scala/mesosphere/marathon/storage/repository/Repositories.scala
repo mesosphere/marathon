@@ -17,7 +17,6 @@ import mesosphere.marathon.core.storage.repository.impl.{ PersistenceStoreReposi
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.util.state.FrameworkId
 import mesosphere.marathon.raml.RuntimeConfiguration
@@ -140,25 +139,6 @@ object DeploymentRepository {
     mat: Materializer): DeploymentRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
     new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions)
-  }
-}
-
-private[storage] trait TaskRepository extends Repository[Task.Id, Task] {
-  def tasks(appId: PathId): Source[Task.Id, NotUsed] = {
-    ids().filter(_.runSpecId == appId)
-  }
-}
-
-object TaskRepository {
-
-  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): TaskRepository = {
-    import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new TaskRepositoryImpl(persistenceStore)
-  }
-
-  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): TaskRepository = {
-    import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new TaskRepositoryImpl(persistenceStore)
   }
 }
 
@@ -299,13 +279,6 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     persistenceStore.deleteVersion(id, version)
   }
 }
-
-class TaskRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-  ir: IdResolver[Task.Id, Task, C, K],
-  marshaller: Marshaller[Task, S],
-  unmarshaller: Unmarshaller[S, Task])
-    extends PersistenceStoreRepository[Task.Id, Task, K, C, S](persistenceStore, _.taskId)
-    with TaskRepository
 
 class InstanceRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[Instance.Id, Instance, C, K],
