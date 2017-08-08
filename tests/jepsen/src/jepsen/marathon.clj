@@ -32,6 +32,7 @@
 (def marathon-service  "/lib/systemd/system/marathon.service")
 (def marathon-log      "/home/ubuntu/marathon.log")
 (def test-duration     200)
+(def apps (atom []))
 (def verify-check256sum-download
   (str
    "bash resources/download-checked.sh \\
@@ -124,14 +125,17 @@
 (defn add-app!
   [node app-id op]
   (slingshot/try+
-   (http/post (str "http://" node ":8080/v2/apps")
-              {:form-params   {:id    app-id
-                               :cmd   (app-cmd app-id)
-                               :cpus  0.001
-                               :mem   10.0}
-               :content-type   :json}
-              {:throw-entire-message? true})
-   (assoc op :type :ok, :value app-id)
+   (dosync
+    (http/post (str "http://" node ":8080/v2/apps")
+               {:form-params   {:id    app-id
+                                :instances 5
+                                :cmd   (app-cmd app-id)
+                                :cpus  0.001
+                                :mem   10.0}
+                :content-type   :json}
+               {:throw-entire-message? true})
+    (swap! apps conj app-id)
+    (assoc op :type :ok, :value app-id))
    (catch [:status 502] {:keys [body]}
      (assoc op :type :fail, :value "Proxy node failed to respond"))
    (catch [:status 503] {:keys [body]}
@@ -162,7 +166,7 @@
 (defn update-app!
   [node app-id op test]
   (slingshot/try+
-   (http/put (str "http://" node ":8080/v2/apps/" app-id "?force=true")
+   (http/put (str "http://" node ":8080/v2/apps/" app-id)
              {:form-params   {:id    app-id
                               :instances (:instances (:value op))
                               :cmd   "sleep 1000"
@@ -398,6 +402,57 @@
 
     (teardown! [this test])))
 
+(defn random-scale
+  [nemesis]
+  (reify client/Client
+    (setup! [this test node]
+      (random-scale (client/setup! nemesis test node)))
+
+    (invoke! [this test op]
+      (if (not= :random-scale (:f op))
+        (client/invoke! nemesis test op)
+        (let [node (rand-nth (:nodes test))
+              app-id (rand-nth @apps)]
+          (slingshot/try+
+           (if (< 0.5 (rand))
+             (do
+               (http/put (str "http://" node ":8080/v2/apps/" app-id)
+                         {:form-params   {:id    app-id
+                                          :instances 100
+                                          :cmd   (app-cmd app-id)
+                                          :cpus  0.001
+                                          :mem   10.0}
+                          :content-type   :json}
+                         {:query-params {"force" "true"}}
+                         {:throw-entire-message? true})
+               (assoc op :type :ok, :value (str "Scaling up: " app-id " to 100 instances")))
+             (do
+               (http/put (str "http://" node ":8080/v2/apps/" app-id)
+                         {:form-params   {:id    app-id
+                                          :instances 1
+                                          :cmd   (app-cmd app-id)
+                                          :cpus  0.001
+                                          :mem   10.0}
+                          :content-type   :json}
+                         {:query-params {"force" "true"}}
+                         {:throw-entire-message? true})
+               (assoc op :type :ok, :value (str "Scaling down: " app-id " to 1 instance"))))
+           (catch [:status 409] {:keys [body]}
+             (assoc op :type :fail, :value (str app-id ": " body)))
+           (catch [:status 502] {:keys [body]}
+             (assoc op :type :fail, :value (str app-id ": " body)))
+           (catch [:status 503] {:keys [body]}
+             (assoc op :type :fail, :value (str app-id ": " body)))
+           (catch org.apache.http.ConnectionClosedException e
+             (assoc op :type :fail, :value (.getMessage e)))
+           (catch org.apache.http.NoHttpResponseException e
+             (assoc op :type :fail, :value (.getMessage e)))
+           (catch java.net.ConnectException e
+             (assoc op :type :fail, :value (.getMessage e)))))))
+
+    (teardown! [this test]
+      (client/teardown! nemesis test))))
+
 (defn marathon-test
   "Given an options map from the command-line runner (e.g. :nodes, :ssh,
    :concurrency, ...), constructs a test map."
@@ -424,8 +479,8 @@
                                          {:type :info, :f :stop}])))
                        (gen/time-limit test-duration))
                   (gen/nemesis (gen/once {:type :info, :f :stop}))
-                  (gen/log "Done generating and launching apps.")
-                  (gen/sleep 60)))
+                  (gen/once (gen/sleep 60))
+                  (gen/log "Done generating and launching apps.")))
      :nemesis   (nemesis/partition-random-halves)
      :checker   (checker/compose
                  {:marathon (mchecker/marathon-app-checker)})}
@@ -447,8 +502,8 @@
                                          {:type :info, :f :stop}])))
                        (gen/time-limit test-duration))
                   (gen/nemesis (gen/once {:type :info, :f :stop}))
-                  (gen/log "Done generating and launching apps.")
-                  (gen/sleep 60)))
+                  (gen/once (gen/sleep 60))
+                  (gen/log "Done generating and launching apps.")))
      :nemesis   (nemesis/partition-random-halves)
      :checker   (checker/compose
                  {:marathon (mchecker/marathon-pod-checker)})}
@@ -488,8 +543,8 @@
                                          {:type :info, :f :stop}])))
                        (gen/time-limit 30))
                   (gen/nemesis (gen/once {:type :info, :f :stop}))
-                  (gen/log "Done generating and launching apps.")
-                  (gen/sleep 60)))
+                  (gen/once (gen/sleep 60))
+                  (gen/log "Done generating and launching apps.")))
      :nemesis   (nemesis/partition-random-halves)}
     opts)))
 
@@ -506,9 +561,35 @@
                         (gen/seq (cycle [(gen/sleep 20)
                                          {:type :info, :f :abdicate-leader}])))
                        (gen/time-limit 100))
-                  (gen/log "Done generating and launching apps.")
-                  (gen/sleep 60)))
+                  (gen/once (gen/sleep 60))
+                  (gen/log "Done generating and launching apps.")))
      :nemesis   (abdicate-leader)
+     :checker   (checker/compose
+                 {:marathon (mchecker/marathon-app-checker)})}
+    opts)))
+
+(defn scale-test
+  [opts]
+  (marathon-test
+   (merge
+    {:client    (->Client nil)
+     :generator (track-check-added-apps
+                 (gen/phases
+                  (->> (add-app)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 25)
+                                         {:type :info, :f :random-scale}
+                                         (gen/sleep 20)
+                                         {:type :info, :f :start}
+                                         (gen/sleep 10)
+                                         {:type :info, :f :stop}])))
+                       (gen/time-limit 300))
+                  (gen/nemesis (gen/once {:type :info, :f :stop}))
+                  (gen/once (gen/sleep 60))
+                  (gen/log "Done generating, launching and scaling apps")))
+     :nemesis   (random-scale
+                 (nemesis/partition-random-halves))
      :checker   (checker/compose
                  {:marathon (mchecker/marathon-app-checker)})}
     opts)))
