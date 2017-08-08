@@ -112,7 +112,7 @@ object ResourceMatcher {
 
     case object WithoutReservationLabels extends LabelMatcher {
       override def matches(resourceLabels: Map[String, String]): Boolean =
-        resourceLabels.keys.toSet.intersect(TaskLabels.labelKeysForTaskReservations).isEmpty
+        resourceLabels.keys.toSet.intersect(TaskLabels.labelKeysForReservations).isEmpty
 
       override def toString: Role = "without resident reservation labels"
     }

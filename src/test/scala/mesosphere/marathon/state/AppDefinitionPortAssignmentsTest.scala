@@ -89,7 +89,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       val app = MarathonTestHelper.makeBasicApp()
 
       Given("A reserved task")
-      val task = TestTaskBuilder.Helper.minimalReservedTask(app.id, TestTaskBuilder.Helper.newReservation)
+      val task = TestTaskBuilder.Helper.minimalReservedTask(app.id, TestTaskBuilder.Helper.taskReservationStateNew, localVolumeIds = Seq.empty)
 
       Then("The port assignments are empty")
       task.status.networkInfo.portAssignments(app, includeUnresolved = true) should be(empty)

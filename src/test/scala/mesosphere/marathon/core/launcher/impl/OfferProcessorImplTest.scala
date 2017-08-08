@@ -53,7 +53,7 @@ class OfferProcessorImplTest extends UnitTest {
   object f {
     import org.apache.mesos.{ Protos => Mesos }
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral, _: Instance)
-    val launchWithOldTask = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
+    val launchWithNewTask = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
   }
 
   class DummySource extends InstanceOpSource {
@@ -143,11 +143,12 @@ class OfferProcessorImplTest extends UnitTest {
           val dummyInstance = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved().getInstance()
           val updateOperation = InstanceUpdateOperation.LaunchOnReservation(
             instanceId = dummyInstance.instanceId,
+            newTaskId = Task.Id.forResidentTask(Task.Id(taskInfo.getTaskId)),
             runSpecVersion = clock.now(),
             timestamp = clock.now(),
             status = Task.Status(clock.now(), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder()),
             hostPorts = Seq.empty)
-          val launch = f.launchWithOldTask(
+          val launch = f.launchWithNewTask(
             taskInfo,
             updateOperation,
             dummyInstance

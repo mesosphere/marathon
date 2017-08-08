@@ -244,8 +244,9 @@ class TaskTest extends UnitTest with Inside {
       val reservation = mock[Task.Reservation]
       val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
       val task = Task.Reserved(taskId, reservation, status, f.clock.now)
+      val newTaskId = Task.Id.forResidentTask(task.taskId)
 
-      val op = TaskUpdateOperation.LaunchOnReservation(f.clock.now, status)
+      val op = TaskUpdateOperation.LaunchOnReservation(newTaskId, f.clock.now, status)
 
       val effect = task.update(op)
 
@@ -278,8 +279,11 @@ class TaskTest extends UnitTest with Inside {
       val reservedTask: Task.Reserved = TestTaskBuilder.Helper.residentReservedTask(
         f.appWithoutIpAddress.id,
         taskReservationState = Task.Reservation.State.New(None),
-        LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
-        LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000"))
+        Seq(
+          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
+          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000")
+        )
+      )
 
       Json.toJson(reservedTask).as[Task] shouldBe reservedTask
     }
@@ -288,8 +292,11 @@ class TaskTest extends UnitTest with Inside {
       val f = new Fixture
       val launchedTask: Task.LaunchedOnReservation = TestTaskBuilder.Helper.residentLaunchedTask(
         f.appWithoutIpAddress.id,
-        LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
-        LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000"))
+        Seq(
+          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
+          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000")
+        )
+      )
 
       Json.toJson(launchedTask).as[Task] shouldBe launchedTask
     }

@@ -16,32 +16,32 @@ class TaskLabelsTest extends UnitTest {
 
       Given("unlabeled resources")
       When("checking for taskIds")
-      val taskIds = f.unlabeledResources.flatMap(TaskLabels.taskIdForResource(f.frameworkId, _))
+      val instanceIds = f.unlabeledResources.flatMap(TaskLabels.instanceIdForResource(f.frameworkId, _))
 
-      Then("we don't get any taskIds")
-      taskIds should be(empty)
+      Then("we don't get any instanceIds")
+      instanceIds should be(empty)
     }
 
     "correct labels => taskId" in {
       val f = new Fixture
 
       Given("correctly labeled resources")
-      When("checking for taskIds")
-      val taskIds = f.labeledResources.flatMap(TaskLabels.taskIdForResource(f.frameworkId, _))
+      When("checking for instanceIds")
+      val instanceIds = f.labeledResources.flatMap(TaskLabels.instanceIdForResource(f.frameworkId, _))
 
-      Then("we get as many taskIds as resources")
-      taskIds should be(Seq.fill(f.labeledResources.size)(f.taskId))
+      Then("we get as many instanceIds as resources")
+      instanceIds should be(Seq.fill(f.labeledResources.size)(f.taskId.instanceId))
     }
 
     "labels with incorrect frameworkId are ignored" in {
       val f = new Fixture
 
       Given("labeled resources for other framework")
-      When("checking for taskIds")
-      val taskIds = f.labeledResourcesForOtherFramework.flatMap(TaskLabels.taskIdForResource(f.frameworkId, _))
+      When("checking for instanceIds")
+      val instanceIds = f.labeledResourcesForOtherFramework.flatMap(TaskLabels.instanceIdForResource(f.frameworkId, _))
 
-      Then("we don't get task ids")
-      taskIds should be(empty)
+      Then("we don't get instanceIds")
+      instanceIds should be(empty)
     }
   }
   class Fixture {

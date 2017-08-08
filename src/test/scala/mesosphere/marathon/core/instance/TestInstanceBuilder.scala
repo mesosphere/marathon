@@ -20,8 +20,11 @@ case class TestInstanceBuilder(
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLaunched(container).build()
 
-  def addTaskReserved(reservation: Task.Reservation = TestTaskBuilder.Helper.newReservation, containerName: Option[String] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskReserved(reservation, containerName).build()
+  def addTaskReserved(containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskReserved(containerName).build()
+
+  def addTaskReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
+    addTaskWithBuilder().taskResidentReserved(localVolumeIds: _*).build()
 
   def addTaskResidentReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
     addTaskWithBuilder().taskResidentReserved(localVolumeIds: _*).build()
@@ -104,6 +107,7 @@ case class TestInstanceBuilder(
   def taskLaunchedOp(): InstanceUpdateOperation.LaunchOnReservation = {
     InstanceUpdateOperation.LaunchOnReservation(
       instanceId = instance.instanceId,
+      newTaskId = Task.Id.forResidentTask(instance.appTask.taskId),
       timestamp = now,
       runSpecVersion = instance.runSpecVersion,
       status = Task.Status(stagedAt = now, condition = Condition.Running, networkInfo = NetworkInfoPlaceholder()),
