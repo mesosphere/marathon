@@ -4,19 +4,23 @@ package api.v2.validation
 // scalastyle:off
 
 import com.wix.accord._
+import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.util.SemanticVersion
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 
 /**
   * Defines implicit validation for pods
   */
 @SuppressWarnings(Array("all")) // wix breaks stuff
-trait PodsValidation {
+trait PodsValidation extends GeneralPurposeCombinators {
   import EnvVarValidation._
   import NameValidation._
   import NetworkValidation._
@@ -222,6 +226,14 @@ trait PodsValidation {
     case HostVolume(name, _) => name
     case PodSecretVolume(name, _) => name
   }
+
+  def pluginValidators(implicit pluginManager: PluginManager): Validator[PodDefinition] =
+    new Validator[PodDefinition] {
+      override def apply(pod: PodDefinition): Result = {
+        val plugins = pluginManager.plugins[RunSpecValidator]
+        new And(plugins: _*).apply(pod)
+      }
+    }
 }
 
 object PodsValidation extends PodsValidation {

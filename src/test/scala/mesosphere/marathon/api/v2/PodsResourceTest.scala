@@ -11,19 +11,19 @@ import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, PodSecretVolume, Raml, Resources }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ Mockito, SettableClock }
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 
@@ -839,6 +839,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       implicit val authz: Authorizer = auth.auth
       implicit val authn: Authenticator = auth.auth
       implicit val clock = new SettableClock()
+      implicit val pluginManager: PluginManager = PluginManager.None
       scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
       new Fixture(
         new PodsResource(config),

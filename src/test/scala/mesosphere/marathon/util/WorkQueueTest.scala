@@ -16,7 +16,7 @@ class WorkQueueTest extends UnitTest with Inside {
   "WorkQueue" should {
     "return a failure if the Future returning thunk throws an exception" in {
       val queue = WorkQueue("test", maxConcurrent = 1, maxQueueLength = Int.MaxValue)
-      val r = queue {
+      val r = queue { // linter:ignore UndesirableTypeInference
         throw new RuntimeException("le failure")
       }
       inside(Try(r.futureValue)) {

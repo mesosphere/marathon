@@ -20,7 +20,7 @@ from shakedown import (masters, required_masters, public_agents, required_public
                        dcos_1_9, marthon_version_less_than, marthon_version_less_than,
                        ee_version)
 
-from dcos import marathon
+from dcos import marathon, errors
 
 from datetime import timedelta
 
@@ -435,7 +435,7 @@ def test_app_file_based_secret(secret_fixture):
     host = tasks[0]['host']
     # The secret by default is saved in $MESOS_SANDBOX/.secrets/path/to/secret
     cmd = "curl {}:{}/{}_file".format(host, port, secret_container_path)
-    
+
     @retrying.retry(stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def value_check():
         status, data = shakedown.run_command_on_master(cmd)
@@ -494,6 +494,93 @@ def test_app_secret_env_var(secret_fixture):
         assert data.rstrip() == secret_value
 
     value_check()
+
+
+@dcos_1_9
+@pytest.mark.skipif("ee_version() is None")
+def test_app_inaccessible_secret_env_var():
+
+    secret_name = '/some/secret'    # Secret in an inaccessible namespace
+
+    app_id = uuid.uuid4().hex
+    app_def = {
+        "id": app_id,
+        "instances": 1,
+        "cpus": 0.1,
+        "mem": 64,
+        "cmd": "echo \"shouldn't be called anyway\"",
+        "env": {
+            "SECRET_ENV": {
+                "secret": "secret1"
+            }
+        },
+        "portDefinitions": [{
+            "port": 0,
+            "protocol": "tcp",
+            "name": "api",
+            "labels": {}
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+
+    with pytest.raises(errors.DCOSUnprocessableException) as excinfo:
+        client.add_app(app_def)
+
+    print('An app with an inaccessible secret could not be deployed because: {}'.format(excinfo.value))
+    assert 'HTTP 422' in str(excinfo.value)
+    assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
+
+
+@dcos_1_9
+@pytest.mark.skipif("ee_version() is None")
+def test_pod_inaccessible_secret_env_var():
+
+    secret_name = '/some/secret'    # Secret in an inaccessible namespace
+
+    pod_id = '/{}'.format(uuid.uuid4().hex)
+    pod_def = {
+        "id": pod_id,
+        "containers": [{
+            "name": "container-1",
+            "resources": {
+                "cpus": 0.1,
+                "mem": 64
+            },
+            "exec": {
+                "command": {
+                    "shell": "echo \"shouldn't be called anyway\""
+                }
+            }
+        }],
+        "environment": {
+            "SECRET_ENV": {
+                "secret": "secret1"
+            }
+        },
+        "networks": [{
+            "mode": "host"
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
+    }
+
+    client = marathon.create_client()
+
+    with pytest.raises(errors.DCOSUnprocessableException) as excinfo:
+        client.add_pod(pod_def)
+
+    print('A pod with an inaccessible secret could not be deployed because: {}'.format(excinfo.value))
+    assert 'HTTP 422' in str(excinfo.value)
+    assert 'Secret {} is not accessible'.format(secret_name) in str(excinfo.value)
 
 
 @pytest.mark.skip('need: https://github.com/mesosphere/dcos-enterprise/pull/1124')

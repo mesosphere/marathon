@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2
 
 import java.time.Clock
-
 import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
@@ -26,6 +25,8 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json.Json
 import Normalization._
+import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.api.v2.Validation._
 
 @Path("v2/pods")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -41,7 +42,8 @@ class PodsResource @Inject() (
     eventBus: EventStream,
     mat: Materializer,
     clock: Clock,
-    scheduler: MarathonScheduler) extends RestResource with AuthResource {
+    scheduler: MarathonScheduler,
+    pluginManager: PluginManager) extends RestResource with AuthResource {
 
   import PodsResource._
   implicit def podDefValidator: Validator[Pod] =
@@ -88,6 +90,8 @@ class PodsResource @Inject() (
     authenticated(req) { implicit identity =>
       withValid(unmarshal(body)) { podDef =>
         val pod = normalize(Raml.fromRaml(podDef.normalize))
+        validateOrThrow(pod)(PodsValidation.pluginValidators)
+
         withAuthorization(CreateRunSpec, pod) {
           val deployment = result(podSystem.create(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
@@ -120,6 +124,8 @@ class PodsResource @Inject() (
         ).build()
       } else {
         val pod = normalize(Raml.fromRaml(podDef.normalize))
+        validateOrThrow(pod)(PodsValidation.pluginValidators)
+
         withAuthorization(UpdateRunSpec, pod) {
           val deployment = result(podSystem.update(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
