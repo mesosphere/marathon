@@ -1,14 +1,15 @@
 package mesosphere.marathon
 package integration
 
-import scala.concurrent.duration._
 import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.UnreachableEnabled
+import mesosphere.marathon.state.{ AppDefinition, UnreachableEnabled }
 import org.scalatest.Inside
+
+import scala.concurrent.duration._
 
 @SerialIntegrationTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest with Inside {
@@ -123,6 +124,41 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     })
 
     marathon.listDeploymentsForBaseGroup().value should have size 0
+  }
+
+  test("A task unreachable update with inactiveAfterSeconds 0 will trigger a replacement task instantly") {
+    Given("a new app with proper timeouts")
+    val strategy = state.UnreachableEnabled(0.seconds, 60.seconds)
+    val app = appProxy(testBasePath / "unreachable-instant", "v1", instances = 1, healthCheck = None).copy(
+      unreachableStrategy = strategy
+    )
+    waitForDeployment(marathon.createAppV2(app))
+    val task = waitForTasks(app.id, 1).head
+
+    When("the slave is partitioned")
+    mesosCluster.agents(0).stop()
+    mesosCluster.agents(1).start() // Start an alternative agent
+
+    Then("the task is declared unreachable")
+    waitForEventMatching("Task is declared unreachable") {
+      matchEvent("TASK_UNREACHABLE", task)
+    }
+
+    Then("the replacement task is running")
+    // wait not longer than 1 second, because it should be replaced even faster
+    waitForEventMatching("Replacement task is declared running", 1.seconds) {
+      matchEvent("TASK_RUNNING", app)
+    }
+
+    // immediate replacement should be started
+    val tasks = marathon.tasks(app.id).value
+    tasks should have size 2
+    tasks.groupBy(_.state).keySet should be(Set("TASK_RUNNING", "TASK_UNREACHABLE"))
+  }
+
+  def matchEvent(status: String, app: AppDefinition): CallbackEvent => Boolean = { event =>
+    event.info.get("taskStatus").contains(status) &&
+      event.info.get("appId").contains(app.id)
   }
 
   def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean = { event =>

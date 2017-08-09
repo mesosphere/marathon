@@ -1,5 +1,17 @@
 ## Changes since 1.4.5
 
+### Overview
+#### Changes around unreachableStrategy
+It is now possible to configure `unreachableStrategy` for apps and pods to instantly* replace unreachable apps or pods. To enable this behavior, you need to configure your app or pod as shown below:
+```
+unreachableStrategy: {
+    "inactiveAfterSeconds": 0,
+    "expunceAfterSeconds": 0
+}
+```
+**Note**: Instantly means as soon as marathon becomes aware of the unreachable task. By default marathon is notified after 75 seconds by mesos
+  that an agent is disconnected. You can change this duration in mesos by configuring `agent-ping-timeout` and `max_agent_ping_timeouts`.
+
 ### Fixed issues
 
 - [MARATHON-7681](https://jira.mesosphere.com/browse/MARATHON-7681) - Fixes an issue in WorkQueue that could cause Marathon to drop exceptions and become unresponsive.
