@@ -6,11 +6,11 @@ It is now possible to configure `unreachableStrategy` for apps and pods to insta
 ```
 unreachableStrategy: {
     "inactiveAfterSeconds": 0,
-    "expunceAfterSeconds": 0
+    "expungeAfterSeconds": 0
 }
 ```
 **Note**: Instantly means as soon as marathon becomes aware of the unreachable task. By default marathon is notified after 75 seconds by mesos
-  that an agent is disconnected. You can change this duration in mesos by configuring `agent-ping-timeout` and `max_agent_ping_timeouts`.
+  that an agent is disconnected. You can change this duration in mesos by configuring `agent_ping_timeout` and `max_agent_ping_timeouts`.
 
 ### Fixed issues
 
