@@ -18,7 +18,7 @@ object TaskLabels {
   private[this] final val TASK_ID_LABEL = "marathon_task_id"
 
   /**
-    * Returns a the instance id for which this reservation has been performed if the reservation was
+    * Returns an instance id for which this reservation has been performed if the reservation was
     * labeled by this framework.
     */
   def instanceIdForResource(frameworkId: FrameworkId, resource: MesosProtos.Resource): Option[Instance.Id] = {

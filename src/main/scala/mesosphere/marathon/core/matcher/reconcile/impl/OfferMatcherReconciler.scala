@@ -75,7 +75,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
                   oldInstance = instancesBySpec.instance(instanceId),
                   resources = spuriousResources
                 )
-              logger.warn(s"removing spurious resources and volumes of $instanceId because the instance does no longer exist")
+              logger.warn(s"removing spurious resources and volumes of $instanceId because the instance no longer exist")
               InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
           }(collection.breakOut)
 

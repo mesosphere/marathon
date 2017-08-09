@@ -31,7 +31,6 @@ object InstanceUpdateOperation {
     override def possibleNewState: Option[Instance] = Some(instance)
   }
 
-  // TODO(PODS): this should work on an instance, not a task
   case class Reserve(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
     override def possibleNewState: Option[Instance] = Some(instance)
