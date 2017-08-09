@@ -134,9 +134,16 @@ function error {
   exit 1
 }
 
-function confirm {
+function ret_confirm {
   read -r -p "$1 [y/n] " response
-  if [[ ! "$response" =~ [yY](es)* ]]; then
+  if [[ ! "$response" =~ [yY](es)? ]]; then
+    return 1
+  fi
+  return 0
+}
+
+function confirm {
+  if ! ret_confirm "$1"; then
     echo "Abort."
     exit 0
   fi
@@ -340,34 +347,43 @@ function install_mvm {
 
   # let user verify installation
   echo "The following steps will be performed:"
-  if $step_env; then echo "Create environment file \"$MVM_ENV_FILE\""; fi
-  if $step_bin_dir; then echo "Create directory \"$MVM_BIN\""; fi
-  echo "Copy \"$current_file\" to \"$mvm_bin_file\""
-  echo "Source \"$MVM_ENV_FILE\" in \"$GENERIC_PROFILE_FILE\""
-  if $step_zsh; then echo "Source \"$MVM_ENV_FILE\" in \"$ZSH_RC_FILE\""; fi
-  if $step_fish; then echo "Source \"$MVM_ENV_FILE\" in \"$FISH_RC_FILE\""; fi
-  echo "Create \"$MVM_INSTALL_LOCK_FILE\""
+  if $step_env; then echo "Create environment file \"${MVM_ENV_FILE/$HOME/~}\""; fi
+  if $step_bin_dir; then echo "Create directory \"${MVM_BIN/$HOME/~}\""; fi
+  echo "Copy \"${current_file/$HOME/~}\" to \"${mvm_bin_file/$HOME/~}\""
+  echo "Create \"${MVM_INSTALL_LOCK_FILE/$HOME/~}\""
   confirm "Proceed?"
 
   # perform installation
   if $step_env; then
-    echo "Creating \"$MVM_ENV_FILE\""
+    echo "Creating \"${MVM_ENV_FILE/$HOME/~}\""
     generate_env_content > "$MVM_ENV_FILE"
   fi
 
   if $step_bin_dir; then
-    echo "Creating directory \"$MVM_BIN\""
+    echo "Creating directory \"${MVM_BIN/$HOME/~}\""
     mkdir "$MVM_BIN"
   fi
 
-  echo "Copying $current_file to $mvm_bin_file"
+  echo "Copying ${current_file/$HOME/~} to ${mvm_bin_file/$HOME/~}"
   cp "$current_file" "$mvm_bin_file"
 
   # configure shells
-  configure_rc_file "$GENERIC_PROFILE_FILE" "bash & sh"
-  if $step_zsh; then configure_rc_file "$ZSH_RC_FILE" "zsh"; fi
-  if $step_fish; then configure_rc_file "$FISH_RC_FILE" "fish"; fi
+  if ret_confirm "Configure bash & sh?"; then
+    echo "Source \"${MVM_ENV_FILE/$HOME/~}\" in \"${GENERIC_PROFILE_FILE/$HOME/~}\""
+    configure_rc_file "$GENERIC_PROFILE_FILE" "bash & sh"
+  fi
 
+  if $step_zsh && ret_confirm "Configure zsh shell?"; then
+    echo "Source \"${MVM_ENV_FILE/$HOME/~}\" in \"${ZSH_RC_FILE/$HOME/~}\""
+    configure_rc_file "$ZSH_RC_FILE" "zsh"
+  fi
+
+  if $step_fish && ret_confirm "Configure fish shell?"; then
+    echo "Source \"${MVM_ENV_FILE/$HOME/~}\" in \"${FISH_RC_FILE/$HOME/~}\""
+    configure_rc_file "$FISH_RC_FILE" "fish"
+  fi
+
+  echo "Creating ${MVM_INSTALL_LOCK_FILE/$HOME/~}"
   touch "$MVM_INSTALL_LOCK_FILE"
 
   echo "MVM successfully installed."
