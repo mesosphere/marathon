@@ -31,6 +31,7 @@ class Migration(
     private[migration] val legacyConfig: Option[LegacyStorageConfig],
     private[migration] val persistenceStore: Option[PersistenceStore[_, _, _]],
     private[migration] val appRepository: AppRepository,
+    private[migration] val podRepository: PodRepository,
     private[migration] val groupRepository: GroupRepository,
     private[migration] val deploymentRepository: DeploymentRepository,
     private[migration] val taskRepo: TaskRepository,
@@ -109,6 +110,11 @@ class Migration(
       StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
         new MigrationTo_1_4_2(appRepository).migrate().recover {
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.4.2", e)
+        }
+      },
+      StorageVersions(1, 4, 6, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
+        new MigrationTo_1_4_6(appRepository, podRepository).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.4.6", e)
         }
       }
     )

@@ -25,6 +25,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     legacyConfig: Option[LegacyStorageConfig] = None,
     persistenceStore: Option[PersistenceStore[_, _, _]] = None,
     appRepository: AppRepository = mock[AppRepository],
+    podRepository: PodRepository = mock[PodRepository],
     groupRepository: GroupRepository = mock[GroupRepository],
     deploymentRepository: DeploymentRepository = mock[DeploymentRepository],
     taskRepository: TaskRepository = mock[TaskRepository],
@@ -33,7 +34,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
     eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository]): Migration = {
     groupRepository.invalidateGroupCache() returns Future.successful(Done)
-    new Migration(Set.empty, legacyConfig, persistenceStore, appRepository, groupRepository, deploymentRepository,
+    new Migration(Set.empty, legacyConfig, persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
       taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
   }
   // scalastyle:on
