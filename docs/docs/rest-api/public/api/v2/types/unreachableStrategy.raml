@@ -12,7 +12,7 @@ types:
         type: integer
         format: int64
         default: 300
-        minimum: 1
+        minimum: 0
         description: |
           If an instance is unreachable for longer than inactiveAfter seconds it is marked
           as inactive. This will trigger a new instance launch. The original task is not
@@ -24,7 +24,7 @@ types:
         type: integer
         format: int64
         default: 600
-        minimum: 1
+        minimum: 0
         description: |
           If an instance is unreachable for longer than unreachableExpungeAfter seconds it will be expunged.  That means
           it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged

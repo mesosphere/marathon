@@ -4,8 +4,11 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId._
 import org.scalatest.Inside
+
+import scala.concurrent.duration._
 
 @IntegrationTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
@@ -82,6 +85,36 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       marathon.tasks(app.id.toPath).value.head.state should be("TASK_RUNNING")
     }
 
+    "A task unreachable update with inactiveAfterSeconds 0 will trigger a replacement task instantly" in {
+      Given("a new app with proper timeouts")
+      val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 60)
+      val app = appProxy(testBasePath / "unreachable-instant", "v1", instances = 1, healthCheck = None).copy(
+        unreachableStrategy = Option(strategy)
+      )
+      waitForDeployment(marathon.createAppV2(app))
+      val task = waitForTasks(app.id.toPath, 1).head
+
+      When("the slave is partitioned")
+      mesosCluster.agents(0).stop()
+      mesosCluster.agents(1).start() // Start an alternative agent
+
+      Then("the task is declared unreachable")
+      waitForEventMatching("Task is declared unreachable") {
+        matchEvent("TASK_UNREACHABLE", task)
+      }
+
+      Then("the replacement task is running")
+      // wait not longer than 1 second, because it should be replaced even faster
+      waitForEventMatching("Replacement task is declared running", 1.seconds) {
+        matchEvent("TASK_RUNNING", app)
+      }
+
+      // immediate replacement should be started
+      val tasks = marathon.tasks(app.id.toPath).value
+      tasks should have size 2
+      tasks.groupBy(_.state).keySet should be(Set("TASK_RUNNING", "TASK_UNREACHABLE"))
+    }
+
     // regression test for https://github.com/mesosphere/marathon/issues/4059
     "Scaling down an app with constraints and unreachable task will succeed" in {
       Given("an app that is constrained to a unique hostname")
@@ -136,6 +169,12 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       marathon.listDeploymentsForBaseGroup().value should have size 0
     }
   }
+
+  def matchEvent(status: String, app: App): CallbackEvent => Boolean = { event =>
+    event.info.get("taskStatus").contains(status) &&
+        event.info.get("appId").contains(app.id)
+  }
+
   def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&
       event.info.get("taskId").contains(task.id)

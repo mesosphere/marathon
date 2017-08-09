@@ -76,7 +76,7 @@ Please move to the `/v2/events` endpoint instead.
 #### Deprecated command line parameters
 - The command line flag `save_tasks_to_launch_timeout` is deprecated and has no effect any longer.
 
-### New Features
+### Overview
 
 #### Networking Improvements Involving Multiple Container Networks
 
@@ -108,17 +108,25 @@ All validation specified in the RAML is now programatically enforced, leading to
 
 Marathon is in better compliance with various security best-practices. An example of this is that Marathon no longer responds to the directory listing request.
 
-### Fixed issues
-- [MARATHON-7320](https://jira.mesosphere.com/browse/MARATHON-7320) Fix MAX_PER constraint for attributes.
-
-### Overview
-
 #### File based secrets
 Marathon has a pluggable interface for secret store providers.
 Previous versions of Marathon allowed secrets to be passed as environment variables.
 With this version it is also possible to provide secrets as volumes, mounted under a specified path.
 See [file based secret documentation](http://mesosphere.github.io/marathon/docs/secrets.html)
 
+#### Changes around unreachableStrategy
+It is now possible to configure `unreachableStrategy` for apps and pods to instantly* replace unreachable apps or pods. To enable this behavior, you need to configure your app or pod as shown below:
+```
+unreachableStrategy: {
+    "inactiveAfterSeconds": 0,
+    "expunceAfterSeconds": 0
+}
+```
+**Note**: Instantly means as soon as marathon becomes aware of the unreachable task. By default marathon is notified after 75 seconds by mesos
+  that an agent is disconnected. You can change this duration in mesos by configuring `agent-ping-timeout` and `max_agent_ping_timeouts`.
+
+### Fixed issues
+- [MARATHON-7320](https://jira.mesosphere.com/browse/MARATHON-7320) Fix MAX_PER constraint for attributes.
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release

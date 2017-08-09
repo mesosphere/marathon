@@ -35,8 +35,8 @@ object UnreachableEnabled {
   val default = UnreachableEnabled()
 
   implicit val unreachableEnabledValidator = validator[UnreachableEnabled] { strategy =>
-    strategy.inactiveAfter should be >= 1.second
-    strategy.inactiveAfter should be < strategy.expungeAfter
+    strategy.inactiveAfter should be >= 0.second
+    strategy.inactiveAfter should be <= strategy.expungeAfter
   }
 }
 
