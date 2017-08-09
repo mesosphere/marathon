@@ -122,24 +122,51 @@
            :f      :add-app
            :value  {:id    app-id}})))))
 
-(defn add-app!
-  [node app-id op]
+(defn handle-response
+  "Tries to make a request and throws custom errors based on status
+  code. Returns the body of a response."
+  [req-fn url options op node expected other]
   (slingshot/try+
-   (dosync
-    (http/post (str "http://" node ":8080/v2/apps")
-               {:form-params   {:id    app-id
-                                :instances 5
-                                :cmd   (app-cmd app-id)
-                                :cpus  0.001
-                                :mem   10.0}
-                :content-type   :json}
-               {:throw-entire-message? true})
-    (swap! apps conj app-id)
-    (assoc op :type :ok, :value app-id))
+   (req-fn url options)
+   (doseq [function other]
+     (apply (first function) (rest function)))
+   (assoc op :type :ok, :value expected)
    (catch [:status 502] {:keys [body]}
      (assoc op :type :fail, :value "Proxy node failed to respond"))
    (catch [:status 503] {:keys [body]}
-     (assoc op :type :fail, :value body))))
+     (assoc op :type :fail, :value body))
+   (catch [:status 422] {:keys [body]}
+     (assoc op :type :fail, :value body))
+   (catch [:status 401] {:keys [body]}
+     (assoc op :type :fail, :node node, :value body))
+   (catch [:status 403] {:keys [body]}
+     (assoc op :type :fail, :node node, :value body))
+   (catch [:status 404] {:keys [body]}
+     (assoc op :type :fail, :node node, :value body))
+   (catch [:status 409] {:keys [body]}
+     (assoc op :type :fail, :node node, :value body))
+   (catch org.apache.http.ConnectionClosedException e
+     (assoc op :type :fail, :value (.getMessage e)))
+   (catch org.apache.http.NoHttpResponseException e
+     (assoc op :type :fail, :value (.getMessage e)))
+   (catch java.net.ConnectException e
+     (assoc op :type :fail, :value (.getMessage e)))))
+
+(defn add-app!
+  [node app-id op]
+  (handle-response
+   http/post
+   (str "http://" node ":8080/v2/apps")
+   {:form-params  {:id          app-id
+                   :instances   5
+                   :cmd         (app-cmd app-id)
+                   :cpus        0.001
+                   :mem         10.0}
+    :content-type :json}
+   op
+   node
+   app-id
+   [[swap! apps conj app-id]]))
 
 (defn update-app
   []
@@ -165,27 +192,21 @@
 
 (defn update-app!
   [node app-id op test]
-  (slingshot/try+
-   (http/put (str "http://" node ":8080/v2/apps/" app-id)
-             {:form-params   {:id    app-id
-                              :instances (:instances (:value op))
-                              :cmd   "sleep 1000"
-                              :cpus  0.001
-                              :mem   10.0
-                              :constraints [["hostname", "UNIQUE"]]}
-              :content-type   :json}
-             {:query-params {"force" "true"}}
-             {:throw-entire-message? true})
-   (store-mcli-logs test "apps" (str "mcli-apps-update-" (:instances (:value op)) ".log"))
-   (store-mcli-logs test "tasks" (str "mcli-tasks-update-" (:instances (:value op)) ".log"))
-   (store-mcli-logs test (str "app /" app-id) (str "mcli-app-details-update-" (:instances (:value op)) ".log") "append")
-   (assoc op :type :ok, :value app-id)
-   (catch [:status 409] {:keys [body]}
-     (assoc op :type :fail, :value body))
-   (catch [:status 502] {:keys [body]}
-     (assoc op :type :fail, :value body))
-   (catch [:status 503] {:keys [body]}
-     (assoc op :type :fail, :value body))))
+  (handle-response
+   http/put
+   (str "http://" node ":8080/v2/apps/" app-id)
+   {:form-params   {:id    app-id
+                    :instances (:instances (:value op))
+                    :cmd   "sleep 1000"
+                    :cpus  0.001
+                    :mem   10.0
+                    :constraints [["hostname", "UNIQUE"]]}
+    :query-params {"force" "true"}
+    :content-type   :json}
+   op
+   node
+   app-id
+   [[store-mcli-logs test (str "app /" app-id) (str "mcli-app-details-update-" (:instances (:value op)) ".log") "append"]]))
 
 (defn check-status!
   [test op app-id]
@@ -208,25 +229,22 @@
 
 (defn add-pod!
   [node pod-id op]
-  (slingshot/try+
-   (http/post (str "http://" node ":8080/v2/pods")
-              {:form-params   {:id    (str "/" pod-id)
-                               :scaling {:kind "fixed", :instances 1}
-                               :containers [{:name (str pod-id "-container")
-                                             :exec {:command {:shell "sleep 1000"}}
-                                             :resources {:cpus 0.001
-                                                         :mem 10.0}}]
-                               :networks [{:mode "host"}]}
-               :content-type   :json}
-              {:throw-entire-message? true})
-   (assoc op :type :ok, :value pod-id)
-   (catch [:status 422] {:keys [body]}
-     (info body)
-     (assoc op :type :fail, :value "Invalid object specification"))
-   (catch [:status 502] {:keys [body]}
-     (assoc op :type :fail, :value "Proxy node failed to respond"))
-   (catch [:status 503] {:keys [body]}
-     (assoc op :type :fail, :value body))))
+
+  (handle-response
+   http/post
+   (str "http://" node ":8080/v2/pods")
+   {:form-params   {:id    (str "/" pod-id)
+                    :scaling {:kind "fixed", :instances 1}
+                    :containers [{:name (str pod-id "-container")
+                                  :exec {:command {:shell "sleep 1000"}}
+                                  :resources {:cpus 0.001
+                                              :mem 10.0}}]
+                    :networks [{:mode "host"}]}
+    :content-type   :json}
+   op
+   node
+   pod-id
+   nil))
 
 (defn check-pod-status!
   [test op pod-id]
@@ -245,36 +263,15 @@
   (invoke! [this test op]
 
     (case (:f op)
-      :add-app         (timeout 20000 (assoc op :type :info, :value :timed-out)
-                                (try
-                                  (do (info "Adding app:" (:id (:value op)))
-                                      (add-app! node (:id (:value op)) op))
-                                  (catch org.apache.http.ConnectionClosedException e
-                                    (assoc op :type :fail, :value (.getMessage e)))
-                                  (catch org.apache.http.NoHttpResponseException e
-                                    (assoc op :type :fail, :value (.getMessage e)))
-                                  (catch java.net.ConnectException e
-                                    (assoc op :type :fail, :value (.getMessage e)))))
-      :update-app         (timeout 20000 (assoc op :type :info, :value :timed-out)
-                                   (try
-                                     (do (info "Updating app:" (:id (:value op)))
-                                         (update-app! node (:id (:value op)) op test))
-                                     (catch org.apache.http.ConnectionClosedException e
-                                       (assoc op :type :fail, :value (.getMessage e)))
-                                     (catch org.apache.http.NoHttpResponseException e
-                                       (assoc op :type :fail, :value (.getMessage e)))
-                                     (catch java.net.ConnectException e
-                                       (assoc op :type :fail, :value (.getMessage e)))))
+      :add-app          (timeout 20000 (assoc op :type :info, :value :timed-out)
+                                 (do (info "Adding app:" (:id (:value op)))
+                                     (add-app! node (:id (:value op)) op)))
+      :update-app       (timeout 20000 (assoc op :type :info, :value :timed-out)
+                                 (do (info "Updating app:" (:id (:value op)))
+                                     (update-app! node (:id (:value op)) op test)))
       :add-pod          (timeout 20000 (assoc op :type :info, :value :timed-out)
-                                 (try
-                                   (do (info "Adding pod:" (:id (:value op)))
-                                       (add-pod! node (:id (:value op)) op))
-                                   (catch org.apache.http.ConnectionClosedException e
-                                     (assoc op :type :fail, :value (.getMessage e)))
-                                   (catch org.apache.http.NoHttpResponseException e
-                                     (assoc op :type :fail, :value (.getMessage e)))
-                                   (catch java.net.ConnectException e
-                                     (assoc op :type :fail, :value (.getMessage e)))))
+                                 (do (info "Adding pod:" (:id (:value op)))
+                                     (add-pod! node (:id (:value op)) op)))
       :check-status     (timeout 50000 (assoc op :type :info, :value :timed-out)
                                  (do
                                    (check-status! test op (:id (:value op)))))
@@ -386,19 +383,14 @@
     (invoke! [this test op]
       (do
         (let [node (rand-nth (:nodes test))]
-          (slingshot/try+
-           (http/delete (str "http://" node ":8080/v2/leader") {:throw-entire-message? true})
-           (assoc op :type :ok, :node node, :value "Current leader abdicated")
-           (catch [:status 404] {:keys [body]}
-             (assoc op :type :fail, :node node, :value body))
-           (catch [:status 502] {:keys [body]}
-             (assoc op :type :fail, :value "Proxy node failed to respond"))
-           (catch org.apache.http.ConnectionClosedException e
-             (assoc op :type :fail, :value (.getMessage e)))
-           (catch org.apache.http.NoHttpResponseException e
-             (assoc op :type :fail, :value (.getMessage e)))
-           (catch java.net.ConnectException e
-             (assoc op :type :fail, :value (.getMessage e)))))))
+          (handle-response
+           http/delete
+           (str "http://" node ":8080/v2/leader")
+           nil
+           op
+           node
+           "Current leader abdicated"
+           nil))))
 
     (teardown! [this test])))
 
@@ -413,42 +405,60 @@
         (client/invoke! nemesis test op)
         (let [node (rand-nth (:nodes test))
               app-id (rand-nth @apps)]
-          (slingshot/try+
-           (if (< 0.5 (rand))
-             (do
-               (http/put (str "http://" node ":8080/v2/apps/" app-id)
-                         {:form-params   {:id    app-id
-                                          :instances 100
-                                          :cmd   (app-cmd app-id)
-                                          :cpus  0.001
-                                          :mem   10.0}
-                          :content-type   :json}
-                         {:query-params {"force" "true"}}
-                         {:throw-entire-message? true})
-               (assoc op :type :ok, :value (str "Scaling up: " app-id " to 100 instances")))
-             (do
-               (http/put (str "http://" node ":8080/v2/apps/" app-id)
-                         {:form-params   {:id    app-id
-                                          :instances 1
-                                          :cmd   (app-cmd app-id)
-                                          :cpus  0.001
-                                          :mem   10.0}
-                          :content-type   :json}
-                         {:query-params {"force" "true"}}
-                         {:throw-entire-message? true})
-               (assoc op :type :ok, :value (str "Scaling down: " app-id " to 1 instance"))))
-           (catch [:status 409] {:keys [body]}
-             (assoc op :type :fail, :value (str app-id ": " body)))
-           (catch [:status 502] {:keys [body]}
-             (assoc op :type :fail, :value (str app-id ": " body)))
-           (catch [:status 503] {:keys [body]}
-             (assoc op :type :fail, :value (str app-id ": " body)))
-           (catch org.apache.http.ConnectionClosedException e
-             (assoc op :type :fail, :value (.getMessage e)))
-           (catch org.apache.http.NoHttpResponseException e
-             (assoc op :type :fail, :value (.getMessage e)))
-           (catch java.net.ConnectException e
-             (assoc op :type :fail, :value (.getMessage e)))))))
+          (if (< 0.5 (rand))
+            (do
+              (handle-response
+               http/put
+               (str "http://" node ":8080/v2/apps/" app-id)
+               {:form-params  {:id        app-id
+                               :instances 100
+                               :cmd       (app-cmd app-id)
+                               :cpus      0.001
+                               :mem       10.0}
+                :query-params {"force" "true"}
+                :content-type :json}
+               op
+               node
+               (str "Scaling up: " app-id " to 100 instances")
+               nil))
+            (do
+              (handle-response
+               http/put
+               (str "http://" node ":8080/v2/apps/" app-id)
+               {:form-params  {:id        app-id
+                               :instances 1
+                               :cmd       (app-cmd app-id)
+                               :cpus      0.001
+                               :mem       10.0}
+                :query-params {"force" "true"}
+                :content-type :json}
+               op
+               node
+               (str "Scaling down: " app-id " to 1 instance")
+               nil))))))
+
+    (teardown! [this test]
+      (client/teardown! nemesis test))))
+
+(defn destroy-app
+  [nemesis]
+  (reify client/Client
+    (setup! [this test node]
+      (destroy-app (client/setup! nemesis test node)))
+
+    (invoke! [this test op]
+      (if (not= :destroy-app (:f op))
+        (client/invoke! nemesis test op)
+        (let [node (rand-nth (:nodes test))
+              app-id (rand-nth @apps)]
+          (handle-response
+           http/delete
+           (str "http://" node ":8080/v2/apps/" app-id)
+           nil
+           op
+           node
+           app-id
+           nil))))
 
     (teardown! [this test]
       (client/teardown! nemesis test))))
@@ -503,7 +513,7 @@
                        (gen/time-limit test-duration))
                   (gen/nemesis (gen/once {:type :info, :f :stop}))
                   (gen/once (gen/sleep 60))
-                  (gen/log "Done generating and launching apps.")))
+                  (gen/log "Done generating and launching pods.")))
      :nemesis   (nemesis/partition-random-halves)
      :checker   (checker/compose
                  {:marathon (mchecker/marathon-pod-checker)})}
@@ -592,4 +602,28 @@
                  (nemesis/partition-random-halves))
      :checker   (checker/compose
                  {:marathon (mchecker/marathon-app-checker)})}
+    opts)))
+
+(defn destroy-app-test
+  [opts]
+  (marathon-test
+   (merge
+    {:client (->Client nil)
+     :generator (track-check-added-apps
+                 (gen/phases
+                  (->> (add-app)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 25)
+                                         {:type :info, :f :destroy-app}
+                                         (gen/sleep 20)
+                                         {:type :info, :f :start}
+                                         (gen/sleep 10)
+                                         {:type :info, :f :stop}])))
+                       (gen/time-limit test-duration))
+                  (gen/nemesis (gen/once {:type :info, :f :stop}))
+                  (gen/once (gen/sleep 60))
+                  (gen/log "Done generating, launching and deleting some random apps")))
+     :nemesis (destroy-app
+               (nemesis/partition-random-halves))}
     opts)))

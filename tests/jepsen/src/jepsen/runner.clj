@@ -11,7 +11,8 @@
    "basic-app-test"          marathon/basic-app-test
    "basic-pod-test"          marathon/basic-pod-test
    "leader-abdication-test"  marathon/leader-abdication-test
-   "scale-test"              marathon/scale-test})
+   "scale-test"              marathon/scale-test
+   "destroy-app-test"        marathon/destroy-app-test})
 
 (def opt-spec
   [(cli/repeated-opt "-t" "--test NAME" "Test(s) to run" (keys tests) tests)])
