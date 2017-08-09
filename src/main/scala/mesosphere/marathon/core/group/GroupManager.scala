@@ -10,7 +10,7 @@ import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunS
 
 import scala.concurrent.Future
 import scala.collection.immutable.Seq
-import akka.{ Done, NotUsed }
+import akka.NotUsed
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 /**
@@ -128,12 +128,4 @@ trait GroupManager {
     force: Boolean = false,
     toKill: Seq[Instance] = Seq.empty
   ): Future[DeploymentPlan]
-
-  /**
-    * Refresh the internal root group cache. When calling this function, the internal hold cached root group will be dropped
-    * and loaded when accessing the next time.
-    *
-    * @return Done if refresh was successful
-    */
-  def invalidateGroupCache(): Future[Done]
 }

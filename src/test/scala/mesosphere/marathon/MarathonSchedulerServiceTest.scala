@@ -2,7 +2,6 @@ package mesosphere.marathon
 
 import java.util.{ Timer, TimerTask }
 
-import akka.Done
 import akka.actor.ActorRef
 import akka.testkit.TestProbe
 import mesosphere.AkkaFunTest
@@ -97,7 +96,6 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
     heartbeatActor = heartbeatProbe.ref
     prePostDriverCallbacks = scala.collection.immutable.Seq.empty
     mockTimer = mock[Timer]
-    groupManager.invalidateGroupCache() returns Future.successful(Done)
   }
 
   def driverFactory[T](provide: => SchedulerDriver): SchedulerDriverFactory = {
