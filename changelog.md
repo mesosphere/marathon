@@ -2,11 +2,13 @@
 
 ### Overview
 #### Changes around unreachableStrategy
+Recent changes in Apache Mesos introduced the ability to handle intermittent connectivity to an agent which may be running a Marathon task. This change introduced the `TASK_UNREACHABLE`. This allows for the ability for a node to disconnect and reconnect to the cluster without having a task replaced. This resulted in (based on default configurations) of a delay of 75 seconds before Marathon would be notified by Mesos to replace the task. The previous behavior of Marathon was usually sub-second replacement of a lost task.
+
 It is now possible to configure `unreachableStrategy` for apps and pods to instantly* replace unreachable apps or pods. To enable this behavior, you need to configure your app or pod as shown below:
 ```
 unreachableStrategy: {
     "inactiveAfterSeconds": 0,
-    "expungeAfterSeconds": 0
+    "expunceAfterSeconds": 0
 }
 ```
 **Note**: Instantly means as soon as marathon becomes aware of the unreachable task. By default marathon is notified after 75 seconds by mesos
