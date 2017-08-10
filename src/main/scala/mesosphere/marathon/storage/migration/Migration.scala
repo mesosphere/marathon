@@ -128,6 +128,9 @@ class Migration(
   @SuppressWarnings(Array("all")) // async/await
   def migrate(): Seq[StorageVersion] = {
     val result = async { // linter:ignore UnnecessaryElseBranch
+      // invalidate group cache before migration
+      await(groupRepository.invalidateGroupCache())
+
       val legacyStore = await(legacyStoreFuture)
       val currentVersion = await(getCurrentVersion(legacyStore))
 
@@ -160,6 +163,9 @@ class Migration(
           Nil
       }
       await(closeLegacyStore)
+
+      // invalidate group cache after migration
+      await(groupRepository.invalidateGroupCache())
       migrations
     }.recover {
       case ex: MigrationFailedException => throw ex

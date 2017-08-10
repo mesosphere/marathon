@@ -8,10 +8,10 @@ import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
-import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.Future
 import scala.collection.immutable.Seq
+import mesosphere.marathon.upgrade.DeploymentPlan
 
 /**
   * The group manager is the facade for all group related actions.

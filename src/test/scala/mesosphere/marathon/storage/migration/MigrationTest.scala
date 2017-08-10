@@ -32,6 +32,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
     eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository]): Migration = {
+    groupRepository.invalidateGroupCache() returns Future.successful(Done)
     new Migration(Set.empty, legacyConfig, persistenceStore, appRepository, groupRepository, deploymentRepository,
       taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
   }
