@@ -150,6 +150,10 @@ types:
         description: |
           Hostname that this instance was launched on.
           May be an IP address if the agent was configured to advertise its hostname that way.
+      agentId?:
+        type: string
+        description: |
+          The Mesos-generated ID of the agent upon which the instance was launched.
       resources?:
         type: resources.Resources
         description: |

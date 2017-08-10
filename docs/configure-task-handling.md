@@ -15,9 +15,9 @@ You can configure Marathon's actions on unreachable tasks. The `unreachableStrat
 
 ## `unreachableStrategy` Configuration Options
 
-- `inactiveAfterSeconds`: If a task instance is unreachable for longer than this value, it is marked inactive and a new instance will launch. At this point, the unreachable task is not yet expunged. The minimum value for this parameter is 1. The default value is 300 seconds.
+- `inactiveAfterSeconds`: If a task instance is unreachable for longer than this value, it is marked inactive and a new instance will launch. At this point, the unreachable task is not yet expunged. The minimum value for this parameter is 0. The default value is 300 seconds.
 
-- `expungeAfterSeconds`: If an instance is unreachable for longer than this value, it will be expunged. An expunged task will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged, but that is not required. This parameter must be larger than `unreachableInactiveAfterSeconds`. The default value is 600 seconds.
+- `expungeAfterSeconds`: If an instance is unreachable for longer than this value, it will be expunged. An expunged task will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged, but that is not required. This parameter must be larger than or equal `unreachableInactiveAfterSeconds`. The default value is 600 seconds.
 
 You can use `inactiveAfterSeconds` and `expungeAfterSeconds` in conjunction with one another. For example, if you configure `inactiveAfterSeconds = 60` and `expungeAfterSeconds = 120`, a task instance will be expunged if it has been unreachable for more than 120 seconds and a second instance will be started if it has been unreachable for more than 60 seconds.
 
