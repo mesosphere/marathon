@@ -7,6 +7,8 @@ import mesosphere.marathon.core.base.{ CrashStrategy, LifecycleState }
 import mesosphere.marathon.core.election.ElectionCandidate
 import mesosphere.marathon.util.ScallopStub
 import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
+import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.duration._
 
@@ -34,7 +36,7 @@ class CuratorElectionServiceTest extends AkkaUnitTest with Eventually {
       "shut Marathon down on a NonFatal" in {
         val candidate = mock[ElectionCandidate]
         service.offerLeadership(candidate)
-        eventually { verify(crashStrategy).crash() }
+        eventually(Timeout(Span(20, Seconds))) { verify(crashStrategy).crash() }
       }
     }
   }
