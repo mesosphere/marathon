@@ -211,7 +211,7 @@ class MarathonSchedulerService @Inject() (
     // Therefore we need to re-load the root group from zk again from zookeeper when becoming leader.
     // The same is true after doing the migration. A migration or a restore also affects the state of zookeeper, but does not
     // update the internal hold caches. Therefore we need to refresh the internally loaded caches after the migration.
-    // Actually we need to do the fresh twice, before the migration, to perform the migration on the current zk state and after
+    // Actually we need to do the refresh twice, before the migration, to perform the migration on the current zk state and after
     // the migration to have marathon loaded the current valid state to the internal caches.
 
     // ATTENTION!!

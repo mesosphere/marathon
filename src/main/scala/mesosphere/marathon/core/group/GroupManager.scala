@@ -3,6 +3,7 @@ package core.group
 
 import java.time.OffsetDateTime
 
+import akka.NotUsed
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
@@ -10,7 +11,6 @@ import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunS
 
 import scala.concurrent.Future
 import scala.collection.immutable.Seq
-import akka.NotUsed
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 /**
