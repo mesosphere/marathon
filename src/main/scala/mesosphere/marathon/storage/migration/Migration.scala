@@ -31,6 +31,7 @@ class Migration(
     private[migration] val mesosBridgeName: String,
     private[migration] val persistenceStore: PersistenceStore[_, _, _],
     private[migration] val appRepository: AppRepository,
+    private[migration] val podRepository: PodRepository,
     private[migration] val groupRepository: GroupRepository,
     private[migration] val deploymentRepository: DeploymentRepository,
     private[migration] val instanceRepo: InstanceRepository,
@@ -56,6 +57,9 @@ class Migration(
     List(
       StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
         new MigrationTo142(appRepository).migrate()
+      },
+      StorageVersions(1, 4, 6, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
+        new MigrationTo146(appRepository, podRepository).migrate()
       },
       StorageVersions(1, 5, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> (() =>
         MigrationTo15(this).migrate()
