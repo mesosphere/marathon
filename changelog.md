@@ -38,6 +38,10 @@ When opting in to the unreachable migration step
 - Replace lock with non-blocking concurrent data structure in WorkQueue, evidently the source of some contention looking at thread dump from [MARATHON-7400](https://jira.mesosphere.com/browse/MARATHON-7400)
 - [MARATHON-7433](https://jira.mesosphere.com/browse/MARATHON-7433) - Fix a group deployment issue which would cause non-root groups without a nested group to be ignored.
 - [MARATHON-7462](https://jira.mesosphere.com/browse/MARATHON-7462) - Fix a race condition in WorkQueue which caused various issues, such as dropped events and could cause components of Marathon to become unresponsive.
+- [MARATHON-7628](https://jira.mesosphere.com/browse/MARATHON-7462) - Added `agentId` to the pod status
+- [MARATHON-7458](https://jira.mesosphere.com/browse/MARATHON-7458) - Reset root group cache when elected as leader
+- [MARATHON_EE-1590](https://jira.mesosphere.com/browse/MARATHON_EE-1590) - Change unreachableStrategy to be able to start instant replacement tasks
+- [MARATHON_EE-1591](https://jira.mesosphere.com/browse/MARATHON_EE-1591) - Allow migration from previous UnreachableStrategy default
 
 ## Changes from 1.4.4 to 1.4.5
 
