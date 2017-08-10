@@ -42,7 +42,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
     val frameworkIdRepository = FrameworkIdRepository.inMemRepository(persistenceStore)
     val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(persistenceStore)
 
-    new Migration(Set.empty, legacyConfig, Some(persistenceStore), appRepository, groupRepository, deploymentRepository,
+    new Migration(Set.empty, legacyConfig, Some(persistenceStore), appRepository, podRepository, groupRepository, deploymentRepository,
       taskRepo, instanceRepo, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
   }
 

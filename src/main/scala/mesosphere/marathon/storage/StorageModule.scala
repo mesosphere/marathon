@@ -76,7 +76,7 @@ object StorageModule {
         val eventSubscribersStore = l.entityStore[EventSubscribers] _
         val eventSubscribersRepository = EventSubscribersRepository.legacyRepository(eventSubscribersStore)
 
-        val migration = new Migration(l.availableFeatures, legacyConfig, None, appRepository, groupRepository,
+        val migration = new Migration(l.availableFeatures, legacyConfig, None, appRepository, podRepository, groupRepository,
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
 
@@ -107,7 +107,7 @@ object StorageModule {
             Nil
         }
 
-        val migration = new Migration(zk.availableFeatures, legacyConfig, Some(store), appRepository, groupRepository,
+        val migration = new Migration(zk.availableFeatures, legacyConfig, Some(store), appRepository, podRepository, groupRepository,
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
@@ -141,7 +141,7 @@ object StorageModule {
             Nil
         }
 
-        val migration = new Migration(mem.availableFeatures, legacyConfig, Some(store), appRepository, groupRepository,
+        val migration = new Migration(mem.availableFeatures, legacyConfig, Some(store), appRepository, podRepository, groupRepository,
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
