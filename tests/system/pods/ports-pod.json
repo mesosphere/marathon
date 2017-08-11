@@ -1,9 +1,14 @@
 {
-  "id": "/testhealth",
-  "scheduling": {"placement": {"constraints": [], "acceptedResourceRoles": []}},
+  "id": "/ports-pod",
+  "scheduling": {
+    "placement": {
+      "constraints": [],
+      "acceptedResourceRoles": []
+    }
+  },
   "containers": [
     {
-      "name": "healthapp1",
+      "name": "health-app1",
       "exec": {
         "command": {
           "shell": "/opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT"
@@ -15,10 +20,23 @@
         "disk": 0,
         "gpus": 0
       },
-      "endpoints": [{ "name": "httpendpoint", "containerPort": null, "hostPort": 0,
-          "protocol": ["tcp"], "labels": {}}],
+      "endpoints": [
+        {
+          "name": "httpendpoint",
+          "containerPort": null,
+          "hostPort": 0,
+          "protocol": [
+            "tcp"
+          ],
+          "labels": {}
+        }
+      ],
       "healthCheck": {
-        "http": { "endpoint": "httpendpoint", "path": "/", "scheme": "http" },
+        "http": {
+          "endpoint": "httpendpoint",
+          "path": "/",
+          "scheme": "http"
+        },
         "gracePeriodSeconds": 2,
         "intervalSeconds": 2,
         "maxConsecutiveFailures": 2,
@@ -26,7 +44,7 @@
       }
     },
     {
-      "name": "healthapp2",
+      "name": "health-app2",
       "exec": {
         "command": {
           "shell": "/opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT2"

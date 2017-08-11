@@ -1,8 +1,8 @@
 {
-  "id": "/pod-container-bridge",
+  "id": "/container-bridge-pod",
   "containers": [
     {
-      "name": "simple-docker",
+      "name": "nginx",
       "resources": {
         "cpus": 1,
         "mem": 128,
@@ -17,7 +17,7 @@
         {
           "name": "web",
           "containerPort": 80,
-          "hostPort" : 0,
+          "hostPort": 0,
           "protocol": [
             "tcp"
           ]
@@ -25,5 +25,9 @@
       ]
     }
   ],
-"networks": [ { "mode": "container/bridge"} ]
+  "networks": [
+    {
+      "mode": "container/bridge"
+    }
+  ]
 }

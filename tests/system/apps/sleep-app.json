@@ -1,0 +1,8 @@
+{
+  "id": "/sleep",
+  "instances": 1,
+  "cmd": "sleep 100000000",
+  "cpus": 0.01,
+  "mem": 8,
+  "disk": 0
+}

@@ -14,14 +14,27 @@
         "disk": 0,
         "gpus": 0
       },
-      "endpoints": [{ "name": "httpendpoint", "containerPort": null, "hostPort": 0,
-          "protocol": ["tcp"], "labels": {}}],
+      "endpoints": [
+        {
+          "name": "httpendpoint",
+          "containerPort": null,
+          "hostPort": 0,
+          "protocol": [
+            "tcp"
+          ],
+          "labels": {}
+        }
+      ],
       "image": {
         "kind": "docker",
         "id": "debian:jessie"
       },
       "healthCheck": {
-        "http": { "endpoint": "httpendpoint", "path": "/", "scheme": "http" },
+        "http": {
+          "endpoint": "httpendpoint",
+          "path": "/",
+          "scheme": "http"
+        },
         "gracePeriodSeconds": 30,
         "intervalSeconds": 10,
         "maxConsecutiveFailures": 3,

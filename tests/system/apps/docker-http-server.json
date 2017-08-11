@@ -1,0 +1,19 @@
+{
+  "id": "/docker-http-server",
+  "cmd": "python3 -m http.server 8080",
+  "cpus": 0.5,
+  "mem": 32,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "python:3.5-alpine",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 0
+        }
+      ]
+    }
+  }
+}

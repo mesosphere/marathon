@@ -1,0 +1,24 @@
+{
+  "id": "/pinger-localhost-app",
+  "instances": 1,
+  "cpus": 0.1,
+  "mem": 128,
+  "cmd": "/opt/mesosphere/bin/python pinger.py 7777",
+  "fetch": [
+    {
+      "uri": "http://master.mesos:7777/pinger.py"
+    }
+  ],
+  "ipAddress": {
+    "networkName": "dcos",
+    "discovery": {
+      "ports": [
+        {
+          "name": "my-port",
+          "number": 7777,
+          "protocol": "tcp"
+        }
+      ]
+    }
+  }
+}

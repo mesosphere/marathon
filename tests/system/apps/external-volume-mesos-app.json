@@ -1,0 +1,42 @@
+{
+  "id": "/external-volume-app",
+  "instances": 1,
+  "cpus": 0.1,
+  "mem": 32,
+  "cmd": "env && echo 'hello' >> /test-rexray-volume && /opt/mesosphere/bin/python -m http.server $PORT_API",
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "containerPath": "test-rexray-volume",
+        "external": {
+          "size": 1,
+          "name": "marathon-si-test-vol",
+          "provider": "dvdi",
+          "options": {
+            "dvdi/driver": "rexray"
+          }
+        },
+        "mode": "RW"
+      }
+    ]
+  },
+  "portDefinitions": [
+    {
+      "port": 0,
+      "protocol": "tcp",
+      "name": "api"
+    }
+  ],
+  "healthChecks": [
+    {
+      "portIndex": 0,
+      "protocol": "MESOS_HTTP",
+      "path": "/"
+    }
+  ],
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 0,
+    "maximumOverCapacity": 0
+  }
+}

@@ -1,21 +1,31 @@
 """Marathon acceptance tests for DC/OS."""
 
+import common
 import pytest
 import shakedown
 import time
 
 from datetime import timedelta
-from dcos import (packagemanager, subcommand)
-from dcos.cosmos import get_cosmos_url
-from shakedown import required_private_agents, private_agents
-from dcos import marathon
+from dcos import packagemanager, marathon, cosmos
 
-from common import cluster_info
 
 PACKAGE_NAME = 'marathon'
 SERVICE_NAME = 'marathon-user'
 DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
+
+
+def teardown_function(function):
+    uninstall('test-marathon')
+
+
+def setup_module(module):
+    uninstall(SERVICE_NAME)
+    common.cluster_info()
+
+
+def teardown_module(module):
+    uninstall(SERVICE_NAME)
 
 
 def test_install_marathon():
@@ -57,8 +67,8 @@ def test_install_marathon():
 def test_custom_service_name():
     """  Install MoM with a custom service name.
     """
-    cosmos = packagemanager.PackageManager(get_cosmos_url())
-    pkg = cosmos.get_package_version('marathon', None)
+    cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
+    pkg = cosmos_pm.get_package_version('marathon', None)
     options = {
         'service': {'name': "test-marathon"}
     }
@@ -70,7 +80,7 @@ def test_custom_service_name():
 
 @pytest.fixture(
     params=[
-        pytest.mark.skipif('required_private_agents(4)')('cassandra'),
+        pytest.mark.skipif('shakedown.required_private_agents(4)')('cassandra'),
     ])
 def package(request):
     package_name = request.param
@@ -132,27 +142,14 @@ def test_neo4j_universe_package_install(neo_package):
         assert task['healthCheckResults'][0]['consecutiveFailures'] == 0
 
 
-def teardown_function(function):
-    uninstall('test-marathon')
-
-
-def setup_module(module):
-    uninstall(SERVICE_NAME)
-    cluster_info()
-
-
-def teardown_module(module):
-    uninstall(SERVICE_NAME)
-
-
 def uninstall(service, package=PACKAGE_NAME):
     try:
         task = shakedown.get_service_task(package, service)
         if task is not None:
-            cosmos = packagemanager.PackageManager(get_cosmos_url())
-            cosmos.uninstall_app(package, True, service)
+            cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
+            cosmos_pm.uninstall_app(package, True, service)
             shakedown.deployment_wait()
-            assert wait_for_service_endpoint_removal('test-marathon')
+            assert shakedown.wait_for_service_endpoint_removal('test-marathon')
             shakedown.delete_zk_node('/universe/{}'.format(service))
 
     except Exception as e:

@@ -1,0 +1,21 @@
+{
+  "id": "/private-ucr-docker-app",
+  "instances": 1,
+  "cpus": 1,
+  "mem": 128,
+  "container": {
+    "type": "MESOS",
+    "docker": {
+      "image": "mesosphere/simple-docker-ee:latest",
+      "pullConfig": {
+        "secret": "pullConfigSecret"
+      },
+      "forcePull": true
+    }
+  },
+  "secrets": {
+    "pullConfigSecret": {
+      "source": "/pullConfig"
+    }
+  }
+}

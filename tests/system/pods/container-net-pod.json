@@ -1,8 +1,8 @@
 {
-  "id": "/pod-container-net",
+  "id": "/container-net-pod",
   "containers": [
     {
-      "name": "simple-docker",
+      "name": "nginx",
       "resources": {
         "cpus": 1,
         "mem": 128,
@@ -24,5 +24,9 @@
       ]
     }
   ],
-"networks": [ { "mode": "container"} ]
+  "networks": [
+    {
+      "mode": "container"
+    }
+  ]
 }

@@ -1,0 +1,8 @@
+{
+  "id": "/http-server",
+  "cmd": "/opt/mesosphere/bin/python -m http.server $PORT0",
+  "cpus": 0.5,
+  "mem": 128,
+  "disk": 0,
+  "instances": 1
+}

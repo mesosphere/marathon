@@ -50,9 +50,9 @@
     }
   ],
   "secrets": {
-      "service-credential": {
-        "source": "my-secret"
-      }
+    "service-credential": {
+      "source": "my-secret"
+    }
   },
   "portDefinitions": [
     {

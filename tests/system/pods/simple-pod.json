@@ -1,0 +1,70 @@
+{
+  "id": "/simple-pod",
+  "scaling": {
+    "kind": "fixed",
+    "instances": 1
+  },
+  "environment": {
+    "PING": "PONG"
+  },
+  "containers": [
+    {
+      "name": "ct1",
+      "resources": {
+        "cpus": 0.1,
+        "mem": 32
+      },
+      "image": {
+        "kind": "DOCKER",
+        "id": "busybox"
+      },
+      "exec": {
+        "command": {
+          "shell": "while true; do echo the current time is $(date) > ./test-v1/clock; sleep 1; done"
+        }
+      },
+      "volumeMounts": [
+        {
+          "name": "v1",
+          "mountPath": "test-v1"
+        }
+      ]
+    },
+    {
+      "name": "ct2",
+      "resources": {
+        "cpus": 0.1,
+        "mem": 32
+      },
+      "exec": {
+        "command": {
+          "shell": "while true; do echo -n $PING ' '; cat ./etc/clock; sleep 1; done"
+        }
+      },
+      "volumeMounts": [
+        {
+          "name": "v1",
+          "mountPath": "etc"
+        },
+        {
+          "name": "v2",
+          "mountPath": "docker"
+        }
+      ]
+    }
+  ],
+  "networks": [
+    {
+      "mode": "host"
+    }
+  ],
+  "volumes": [
+    {
+      "name": "v1"
+    },
+    {
+      "name": "v2",
+      "host": "/var/lib/docker"
+    }
+  ]
+}

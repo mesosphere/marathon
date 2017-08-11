@@ -1,0 +1,35 @@
+{
+  "id": "/pinger-bridge-app",
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "python:3.5-alpine",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 7777,
+          "protocol": "tcp",
+          "name": "http"
+        }
+      ],
+      "requirePorts": true
+    },
+    "volumes": [
+      {
+        "containerPath": "/opt/pinger.py",
+        "hostPath": "pinger.py",
+        "mode": "RO"
+      }
+    ]
+  },
+  "cpus": 0.1,
+  "mem": 128,
+  "cmd": "python3 /opt/pinger.py 80",
+  "fetch": [
+    {
+      "uri": "http://master.mesos:7777/pinger.py"
+    }
+  ]
+}
