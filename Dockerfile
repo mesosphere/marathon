@@ -8,11 +8,14 @@
 #
 FROM openjdk:8-jdk
 
-
 COPY . /marathon
 WORKDIR /marathon
 
+# TODO: line below starting touch /usr/local/bin/systemctl is a necessary hack for the installation
+# of mesos.  We need to find a better solution. https://jira.mesosphere.com/browse/MARATHON-7694
+
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
+    touch /usr/local/bin/systemctl && chmod +x /usr/local/bin/systemctl && \
     echo "deb http://repos.mesosphere.com/debian jessie-unstable main" | tee /etc/apt/sources.list.d/mesosphere.list && \
     echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
