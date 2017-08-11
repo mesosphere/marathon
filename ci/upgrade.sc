@@ -49,6 +49,12 @@ def withRepository(repo: String, branch: String)(f: Git => Unit)(implicit creds:
 
   println(s"Cloned $repo:$branch.")
 
+  // Set proper user
+  val config = git.getRepository().getConfig()
+  config.setString("user", null, "name", "MesosphereCI Robot")
+  config.setString("user", null, "email", "mesosphere-ci@users.noreply.github.com")
+  config.save()
+
   try {
     f(git)
   } finally {
@@ -155,7 +161,7 @@ def throwIfNotSuccessful(refSpec: RefSpec)(result: PushResult): Unit = {
  * @param git Reference to git repository.
  * @param commitRev The reference of the commit which is pushed.
  */
-def push(git : Git, commitRev: RevCommit)(implicit creds: CredentialsProvider): Unit = {
+def push(git: Git, commitRev: RevCommit)(implicit creds: CredentialsProvider): Unit = {
   import scala.collection.JavaConverters._
 
   val refSpec = (new RefSpec())
