@@ -566,26 +566,65 @@ class MigrationTo_1_3_5(appRepository: AppRepository, groupRepository: GroupRepo
     deploymentRepository: DeploymentRepository) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  private def isBrokenConstraint(constraint: Constraint): Boolean = {
-    (constraint.getOperator == Constraint.Operator.LIKE ||
-      constraint.getOperator == Constraint.Operator.UNLIKE) &&
-      (constraint.hasValue && Try(Pattern.compile(constraint.getValue)).isFailure)
+  // scalastyle:off cyclomatic.complexity
+  // format: OFF
+  private def fixConstraint(appId: PathId, constraint: Constraint): Option[Constraint] = {
+    constraint.getOperator match {
+      case Constraint.Operator.UNIQUE
+        if constraint.hasValue =>
+        log.warn(s"Removing the value of $constraint in $appId app")
+        Option(constraint.toBuilder.clearValue().build())
+
+      case Constraint.Operator.GROUP_BY
+        if constraint.hasValue && constraint.getValue.isEmpty =>
+        log.warn(s"Removing the empty value of $constraint in $appId app")
+        Option(constraint.toBuilder.clearValue().build())
+
+      case Constraint.Operator.GROUP_BY
+        if constraint.hasValue && Try(constraint.getValue.toInt).isFailure =>
+        log.warn(s"Removing the invalid constraint $constraint from $appId app")
+        None
+
+      case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE
+        if !constraint.hasValue =>
+        log.warn(s"Removing the invalid constraint $constraint from $appId app")
+        None
+
+      case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE
+        if constraint.hasValue && constraint.getValue == "*" =>
+        log.warn(s"""Replacing the value "*" of $constraint with ".*" in $appId app""")
+        Option(constraint.toBuilder.setValue(".*").build())
+
+      case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE
+        if constraint.hasValue && Try(Pattern.compile(constraint.getValue)).isFailure =>
+        log.warn(s"Removing the invalid constraint $constraint from $appId app")
+        None
+
+      case _ =>
+        Option(constraint)
+    }
   }
+  // format: ON
+  // scalastyle:on cyclomatic.complexity
+
+  // scalastyle:off cyclomatic.complexity
+  // format: OFF
+  private def isBrokenConstraint(constraint: Constraint): Boolean = constraint.getOperator match {
+    case Constraint.Operator.UNIQUE
+      if constraint.hasValue => true
+    case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE
+      if !constraint.hasValue => true
+    case Constraint.Operator.GROUP_BY
+      if constraint.hasValue && Try(constraint.getValue.toInt).isFailure => true
+    case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE
+      if constraint.hasValue && Try(Pattern.compile(constraint.getValue)).isFailure => true
+    case _ => false
+  }
+  // format: ON
+  // scalastyle:on cyclomatic.complexity
 
   private def fixConstraints(app: AppDefinition): AppDefinition = {
-    val newConstraints: Set[Constraint] = app.constraints.flatMap { constraint =>
-      constraint.getOperator match {
-        case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE if isBrokenConstraint(constraint) =>
-          // we know we have a value and the pattern doesn't compile already.
-          if (constraint.getValue == "*") {
-            Some(constraint.toBuilder.setValue(".*").build())
-          } else {
-            log.warn(s"Removing invalid constraint $constraint from ${app.id}")
-            None
-          }
-        case _ => Some(constraint)
-      }
-    }(collection.breakOut)
+    val newConstraints: Set[Constraint] = app.constraints.flatMap(fixConstraint(app.id, _))(collection.breakOut)
     app.copy(constraints = newConstraints)
   }
 

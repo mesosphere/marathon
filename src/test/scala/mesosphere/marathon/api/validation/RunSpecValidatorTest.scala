@@ -571,8 +571,8 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
 
     Given("A CLUSTER constraint without a value")
     val appClusterNoValue = app.copy(constraints = Set(cluster.build()))
-    Then("validation fails")
-    validAppDefinition(appClusterNoValue).isFailure shouldBe true
+    Then("validation succeeds")
+    validAppDefinition(appClusterNoValue).isSuccess shouldBe true
 
     Given("A CLUSTER constraint with a value")
     val appCluster = app.copy(constraints = Set(cluster.setValue("abc").build()))
