@@ -30,6 +30,6 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
     rm -rf project/target project/project/target plugin-interface/target target/* ~/.sbt ~/.ivy2 && \
     mv marathon-assembly-*.jar target && \
     /var/lib/dpkg/info/ca-certificates-java.postinst configure && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENTRYPOINT ["./bin/start"]
