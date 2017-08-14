@@ -172,7 +172,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
   def matchEvent(status: String, app: App): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&
-        event.info.get("appId").contains(app.id)
+      event.info.get("appId").contains(app.id)
   }
 
   def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean = { event =>
