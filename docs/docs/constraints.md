@@ -10,7 +10,7 @@ Constraints control where apps run to allow optimizing for either fault toleranc
 
 ### Hostname field
 
-The `hostname` field matches the the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
+The `hostname` field matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
 
 `hostname` field supports all operators of Marathon.
 
