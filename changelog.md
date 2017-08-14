@@ -1,28 +1,39 @@
 ## Changes since 1.4.5
 
 ### Overview
+
 #### Changes around unreachableStrategy
+
 Recent changes in Apache Mesos introduced the ability to handle intermittent connectivity to an agent which may be running a Marathon task. This change introduced the `TASK_UNREACHABLE`. This allows for the ability for a node to disconnect and reconnect to the cluster without having a task replaced. This resulted in (based on default configurations) of a delay of 75 seconds before Marathon would be notified by Mesos to replace the task. The previous behavior of Marathon was usually sub-second replacement of a lost task.
 
 It is now possible to configure `unreachableStrategy` for apps and pods to instantly* replace unreachable apps or pods. To enable this behavior, you need to configure your app or pod as shown below:
+
 ```
-unreachableStrategy: {
+{
+  ...
+  "unreachableStrategy": {
     "inactiveAfterSeconds": 0,
     "expungeAfterSeconds": 0
+  },
+  ...
 }
 ```
+
 **Note**: Instantly means as soon as marathon becomes aware of the unreachable task. By default marathon is notified after 75 seconds by mesos
   that an agent is disconnected. You can change this duration in mesos by configuring `agent_ping_timeout` and `max_agent_ping_timeouts`.
 
 #### Migrating unreachableStrategy
+
 If you want all of your apps and pods to adopt a `UnreachableStrategy` that retains the previous behavior where instance were immediately replaced so that you does not have to update every single app definition.
 
-To change the `unreachableStrategy` of all apps and pods, you can define the environment parameter `MIGRATION_1_4_6_UNREACHABLE_STRATEGY` which leads to the following behavior during migration:
+To change the `unreachableStrategy` of all apps and pods, you may set the environment variable `MIGRATION_1_4_6_UNREACHABLE_STRATEGY` to `true`, which leads to the following behavior during migration:
 
 When opting in to the unreachable migration step
 1) all app and pod definitions that had a config of `UnreachableStrategy(300 seconds, 600 seconds)` (previous default) are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
 2) all app and pod definitions that had a config of `UnreachableStrategy(1 second, x seconds)` are migrated to have `UnreachableStrategy(0 seconds, x seconds)`
 3) all app and pod definitions that had a config of `UnreachableStrategy(1 second, 2 seconds)` are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+
+Please note that if you set this variable after upgrading to 1.4.6 it will have no effect. Also, the `UnreachableStrategy` default has not been changed, so apps and pods must specify the 0, 0 unreachableStrategy JSON as seen above.
 
 ### Fixed issues
 
