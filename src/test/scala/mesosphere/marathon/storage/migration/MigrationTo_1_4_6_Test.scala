@@ -20,7 +20,7 @@ class MigrationTo_1_4_6_Test extends AkkaUnitTest with GroupCreation with Strict
 
   "Migration to 1.4.6" should {
     "do nothing if env var is not configured" in new Fixture {
-      MigrationTo_1_4_6.migrateUnreachableApps(appRepository, podRepository)(env, ctx, mat)
+      MigrationTo_1_4_6.migrateUnreachableApps(appRepository, podRepository)(env, ctx, mat).futureValue
       verify(appRepository, never).all()
       verify(appRepository, never).store(_: AppDefinition)
       verify(podRepository, never).all()
@@ -28,7 +28,7 @@ class MigrationTo_1_4_6_Test extends AkkaUnitTest with GroupCreation with Strict
     }
 
     "do migration if env var is configured" in new Fixture(Map(MigrationTo_1_4_6.MigrateUnreachableStrategyEnvVar -> "true")) {
-      MigrationTo_1_4_6.migrateUnreachableApps(appRepository, podRepository)(env, ctx, mat)
+      MigrationTo_1_4_6.migrateUnreachableApps(appRepository, podRepository)(env, ctx, mat).futureValue
       val targetApp = app.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 5.seconds)) // case 2
       val targetApp2 = app2.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 0.seconds)) // case 1
       val targetPod = pod.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 0.seconds)) // case 3
