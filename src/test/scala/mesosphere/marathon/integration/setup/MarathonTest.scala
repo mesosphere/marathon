@@ -525,19 +525,37 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
 
   /**
     * Method waits for events and calls their callbacks independently of the events order. It receives a
-    * mutable map of EventId -> Callback e.g. mutable.Map("deployment_failed" -> _.id == deploymentId),
+    * map of EventId -> Callback e.g.:
+    * Map("deployment_failed" -> _.id == deploymentId, "deployment_successful" -> _.id == rollbackId)),
     * checks every event for it's existence in the map and if found, calls it's callback method. If successful, the entry
     * is removed from the map. Returns if the map is empty.
     */
   def waitForEventsWith(
     description: String,
-    waitingFor: mutable.Map[String, CallbackEvent => Boolean],
+    eventsMap: Map[String, CallbackEvent => Boolean],
     maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
+    val waitingFor = mutable.Map(eventsMap.toSeq: _*)
     waitForEventMatching(description, maxWait) { event =>
       if (waitingFor.get(event.eventType).fold(false)(fn => fn(event))) {
         waitingFor -= event.eventType
       }
       waitingFor.isEmpty
+    }
+  }
+
+  /**
+    * Method waits for ANY (and only one) of the given events. It receives a map of EventId -> Callback e.g.:
+    * Map("deployment_failed" -> _.id == deploymentId, "deployment_successful" -> _.id == rollbackId)),
+    * and checks every incoming event for it's existence in the map and if found, calls it's callback method.
+    * Returns if event found and callback returns true.
+    */
+  def waitForAnyEventWith(
+    description: String,
+    eventsMap: Map[String, CallbackEvent => Boolean],
+    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
+    val waitingForAny = mutable.Map(eventsMap.toSeq: _*)
+    waitForEventMatching(description, maxWait) { event =>
+      waitingForAny.get(event.eventType).fold(false)(fn => fn(event))
     }
   }
 

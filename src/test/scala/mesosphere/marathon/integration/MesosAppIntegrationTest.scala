@@ -338,7 +338,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       deleteId shouldBe defined
 
       Then("the deployment should be gone")
-      val waitingFor = mutable.Map[String, CallbackEvent => Boolean](
+      val waitingFor = Map[String, CallbackEvent => Boolean](
         "deployment_failed" -> (_.id == deploymentId.value), // StartPod
         "deployment_success" -> (_.id == deleteId.value) // StopPod
       )

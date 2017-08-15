@@ -27,7 +27,17 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       When("the task is killed")
       val killResult = marathon.killAllTasksAndScale(app.id.toPath)
       killResult should be(OK)
-      waitForStatusUpdates("TASK_KILLING")
+
+      // We used to wait for TASK_KILLING here, however in rare cases the task would start and then fail immediately e.g.
+      // because the port for `app_mock` is already bound.
+      // When marathon tries to kill a FAILED task it will receive a TASK_UNKNOWN status from mesos. The deployment will
+      // succeed in the end since the task is gone but we'll never see TASK_KILLING event.
+      // We can simply wait for the deployment to succeed but that defeats the purpose of this test (we test kill-and-scale
+      // elsewhere.
+      val waitingFor = Map[String, CallbackEvent => Boolean](
+        "status_update_event" -> (_.taskStatus == "TASK_KILLING"),
+        "unknown_instance_terminated_event" -> (_.info("instanceId").toString == app.id))
+      waitForAnyEventWith(s"waiting for task ${app.id} to be removed", waitingFor)
     }
   }
 }
