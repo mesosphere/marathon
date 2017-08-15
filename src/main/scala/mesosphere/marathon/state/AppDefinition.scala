@@ -614,11 +614,7 @@ object AppDefinition extends GeneralPurposeCombinators {
               Success
             }
           case CLUSTER =>
-            if (c.hasValue && c.getValue.nonEmpty) {
-              Success
-            } else {
-              Failure(Set(RuleViolation(c, "Missing value", None)))
-            }
+            Success
           case GROUP_BY =>
             if (!c.hasValue || (c.hasValue && c.getValue.nonEmpty && Try(c.getValue.toInt).isSuccess)) {
               Success

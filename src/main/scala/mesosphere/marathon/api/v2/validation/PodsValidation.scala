@@ -233,11 +233,7 @@ trait PodsValidation {
           case Unique =>
             c.value.fold[Result](Success) { _ => Failure(Set(RuleViolation(c, "Value specified but not used", None))) }
           case Cluster =>
-            if (c.value.isEmpty || c.value.map(_.length).getOrElse(0) == 0) {
-              Failure(Set(RuleViolation(c, "Missing value", None)))
-            } else {
-              Success
-            }
+            Success
           case GroupBy =>
             if (c.value.fold(true)(i => Try(i.toInt).isSuccess)) {
               Success
