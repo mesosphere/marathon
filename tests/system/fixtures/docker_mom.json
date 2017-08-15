@@ -13,7 +13,7 @@
     "type": "DOCKER",
     "volumes": [],
     "docker": {
-      "image": "mesosphere/marathon:v1.4.2",
+      "image": "mesosphere/marathon:__VERSION_GOES_HERE__",
       "forcePullImage": false,
       "privileged": false,
       "parameters": []
@@ -43,7 +43,7 @@
     "DCOS_SERVICE_NAME": "marathon-user",
     "DCOS_PACKAGE_FRAMEWORK_NAME": "marathon-user",
     "DCOS_SERVICE_PORT_INDEX": "0",
-    "DCOS_PACKAGE_VERSION": "1.4.2",
+    "DCOS_PACKAGE_VERSION": "__VERSION_GOES_HERE__",
     "DCOS_PACKAGE_NAME": "marathon",
     "DCOS_PACKAGE_IS_FRAMEWORK": "true"
   },
