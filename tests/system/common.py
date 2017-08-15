@@ -1,3 +1,4 @@
+import fixtures
 import json
 import os
 import pytest
@@ -11,6 +12,7 @@ from dcos import http, mesos
 from distutils.version import LooseVersion
 from shakedown import marathon
 from urllib.parse import urljoin
+from utils import get_resource
 from dcos.errors import DCOSHTTPException
 
 
@@ -207,6 +209,31 @@ def ensure_mom():
 
         if not shakedown.wait_for_service_endpoint('marathon-user'):
             print('ERROR: Timeout waiting for endpoint')
+
+
+def get_docker_mom_json(version='v1.3.6'):
+    docker_mom_file = '{}/docker_mom.json'.format(fixtures.fixtures_dir())
+    mom_json = get_resource(docker_mom_file)
+    docker_image = "mesosphere/marathon:{}".format(version)
+    mom_json['container']['docker']['image'] = docker_image
+    mom_json['labels']['DCOS_PACKAGE_VERSION'] = version
+    return mom_json
+
+
+def install_docker_mom(version='v1.4.5'):
+    """ Used to install a docker instance of marathon based on version label.
+        It is dependent on the docker_mom.json satisfying the needs of the
+        marathon version.
+    """
+    # the docker tags start with v
+    # however the marathon reports version without the v :(
+    if not version.startswith('v'):
+        version = 'v{}'.format(version)
+
+    client = marathon.create_client()
+    client.add_app(get_docker_mom_json(version))
+    print("Installing MoM: {}".format(version))
+    shakedown.deployment_wait(timedelta(minutes=5).total_seconds())
 
 
 def is_mom_installed():
