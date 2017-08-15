@@ -33,8 +33,6 @@ Three networking modes are supported:
 In `host` networking, an application shares the network namespace of the Mesos agent
 process, typically the host network namespace.
 
-**Note:** The `Network.name` parameter cannot be used with `host` networking.
-
 ### `container` Networking
 
 An application should be allocated its own network namespace and IP address;
@@ -49,7 +47,10 @@ Similar to `container`, an application should be allocated its own network names
 Mesos CNI provides a special `mesos-bridge` that application containers are attached to.
 When using the Docker containerizer, this translates to the Docker "default bridge" network.
 
-*NOTE*: All network modes are supported for both the Mesos and Docker containerizers.
+**Notes**: 
+
+- All network modes are supported for both the Mesos and Docker containerizers.
+- The `Network.name` parameter is only supported with `container` networking.
 
 ### Usage:
 
