@@ -211,7 +211,7 @@ def ensure_mom():
             print('ERROR: Timeout waiting for endpoint')
 
 
-def get_docker_mom_json(version='v1.3.6'):
+def get_docker_mom_json(version):
     docker_mom_file = '{}/docker_mom.json'.format(fixtures.fixtures_dir())
     mom_json = get_resource(docker_mom_file)
     docker_image = "mesosphere/marathon:{}".format(version)
@@ -220,7 +220,7 @@ def get_docker_mom_json(version='v1.3.6'):
     return mom_json
 
 
-def install_docker_mom(version='v1.4.5'):
+def install_docker_mom(version):
     """ Used to install a docker instance of marathon based on version label.
         It is dependent on the docker_mom.json satisfying the needs of the
         marathon version.

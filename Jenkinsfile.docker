@@ -15,8 +15,8 @@ node('shakedown') {
 
           string(name: 'marathon',
                 defaultValue: '1.4.6',
-                description: '''Version of Marathon (MoM).  This is the version tag to the docker image.
-      docker image: mesosphere/marathon:v{marathon1}
+                description: '''Version of Marathon (MoM).  This is the version tag of the docker image.
+      docker image: mesosphere/marathon:v{marathon}
       default: mesosphere/marathon:v1.4.6
       ''')]
       )])
