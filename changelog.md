@@ -108,22 +108,22 @@ All validation specified in the RAML is now programatically enforced, leading to
 
 Marathon is in better compliance with various security best-practices. An example of this is that Marathon no longer responds to the directory listing request.
 
-#### File based secrets
+#### File-based secrets
 Marathon has a pluggable interface for secret store providers.
 Previous versions of Marathon allowed secrets to be passed as environment variables.
 With this version it is also possible to provide secrets as volumes, mounted under a specified path.
 See [file based secret documentation](http://mesosphere.github.io/marathon/docs/secrets.html)
 
 #### Changes around unreachableStrategy
-It is now possible to configure `unreachableStrategy` for apps and pods to instantly* replace unreachable apps or pods. To enable this behavior, you need to configure your app or pod as shown below:
+It is now possible to configure `unreachableStrategy` for apps and pods to instantly replace unreachable apps or pods. To enable this behavior, you need to configure your app or pod as shown below:
 ```
 unreachableStrategy: {
     "inactiveAfterSeconds": 0,
     "expunceAfterSeconds": 0
 }
 ```
-**Note**: Instantly means as soon as marathon becomes aware of the unreachable task. By default marathon is notified after 75 seconds by mesos
-  that an agent is disconnected. You can change this duration in mesos by configuring `agent-ping-timeout` and `max_agent_ping_timeouts`.
+**Note**: Instantly means as soon as marathon becomes aware of the unreachable task. By default Marathon is notified after 75 seconds by Mesos
+  that an agent is disconnected. You can change this duration in Mesos by configuring `agent-ping-timeout` and `max_agent_ping_timeouts`.
 
 #### Migrating unreachableStrategy
 If you want all of your apps and pods to adopt a `UnreachableStrategy` that retains the previous behavior where instance were immediately replaced so that you does not have to update every single app definition.
