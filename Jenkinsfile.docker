@@ -42,7 +42,7 @@ node('shakedown') {
         ]) {
           try {
             sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
-            withEnv(["DOCKER_MOM=${marathon}"]) {
+            withEnv(["DOCKER_MOM_VERSION=${marathon}"]) {
               sh """
                 TERM=velocity shakedown \
                   --stdout all \
