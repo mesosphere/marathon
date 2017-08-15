@@ -56,6 +56,13 @@ case TASK_KILLED => Killed
 ```
 The task was killed by the executor.
 
+
+**Note:** Mesos also sends a deprecated `TASK_LOST` message in certain situations. A future version of Mesos will no longer send this message. You may receive a `TASK_LOST` message if a Mesos agent is removed because a new Mesos agent registers with the same IP address. When a `TASK_LOST` message is received, Marathon will try to get more information about the reason the message was sent.
+
+```
+case TASK_LOST => inferStateForLost(taskStatus.getReason, taskStatus.getMessage)
+```
+
 ## Non-terminal states
 
 ```
