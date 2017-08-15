@@ -60,7 +60,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         )
 
         Given("a new simple app with 2 instances")
-        val appId = nextAppId(f)
+        val appId = f.testBasePath / "one-ready-one-not-ready-continue"
         val createApp = f.appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
 
         createApp.instances shouldBe 2 withClue (s"${appId} has ${createApp.instances} instances running but there should be 2.")
@@ -132,7 +132,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
           protocol = raml.AppHealthCheckProtocol.Http)
 
         Given("a new simple app with 2 instances")
-        val appId = nextAppId(f)
+        val appId = f.testBasePath / "two-unhealthy-continue"
         val createApp = f.appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
         val created = f.marathon.createAppV2(createApp)
         created should be(Created)
@@ -195,7 +195,4 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       }
     }
   }
-
-  val appIdCount = new AtomicInteger()
-  def nextAppId(f: MarathonTest): PathId = f.testBasePath / s"app-${appIdCount.getAndIncrement()}"
 }
