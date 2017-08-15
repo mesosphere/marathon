@@ -10,6 +10,7 @@
   {"app-instance-test"       marathon/app-instance-test
    "basic-app-test"          marathon/basic-app-test
    "basic-pod-test"          marathon/basic-pod-test
+   "group-dependency-test"   marathon/group-dependency-test
    "leader-abdication-test"  marathon/leader-abdication-test
    "scale-test"              marathon/scale-test
    "destroy-app-test"        marathon/destroy-app-test})

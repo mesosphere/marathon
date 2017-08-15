@@ -33,6 +33,9 @@
 (def marathon-log      "/home/ubuntu/marathon.log")
 (def test-duration     200)
 (def apps (atom []))
+(def groups (atom []))
+(def app-ids (atom 0))
+(def group-ids (atom 0))
 (def verify-check256sum-download
   (str
    "bash resources/download-checked.sh \\
@@ -43,7 +46,9 @@
   [test node]
   (c/su
    (info node "Fetching Marathon Snapshot")
-   (cu/install-archive! "https://downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-673-gaadd1c3.tgz" marathon-home)
+   (cu/install-archive!
+    "https://s3.amazonaws.com/downloads.mesosphere.io/marathon/snapshots/marathon-1.5.0-SNAPSHOT-661-g596e861.tgz"
+    marathon-home)
    (info node "Done fetching Marathon Snapshot")
    (c/exec :mkdir :-p app-dir))
   (dosync
@@ -122,35 +127,48 @@
            :f      :add-app
            :value  {:id    app-id}})))))
 
+(defn add-group
+  []
+  (let [id (atom 0)]
+    (reify gen/Generator
+      (op [_ test process]
+        (let [group-id (str "/department-" (swap! id inc))]
+          {:type :invoke
+           :f    :add-group
+           :value {:id group-id}})))))
+
 (defn handle-response
   "Tries to make a request and throws custom errors based on status
   code. Returns the body of a response."
   [req-fn url options op node expected other]
-  (slingshot/try+
-   (req-fn url options)
-   (doseq [function other]
-     (apply (first function) (rest function)))
-   (assoc op :type :ok, :value expected)
-   (catch [:status 502] {:keys [body]}
-     (assoc op :type :fail, :value "Proxy node failed to respond"))
-   (catch [:status 503] {:keys [body]}
-     (assoc op :type :fail, :value body))
-   (catch [:status 422] {:keys [body]}
-     (assoc op :type :fail, :value body))
-   (catch [:status 401] {:keys [body]}
-     (assoc op :type :fail, :node node, :value body))
-   (catch [:status 403] {:keys [body]}
-     (assoc op :type :fail, :node node, :value body))
-   (catch [:status 404] {:keys [body]}
-     (assoc op :type :fail, :node node, :value body))
-   (catch [:status 409] {:keys [body]}
-     (assoc op :type :fail, :node node, :value body))
-   (catch org.apache.http.ConnectionClosedException e
-     (assoc op :type :fail, :value (.getMessage e)))
-   (catch org.apache.http.NoHttpResponseException e
-     (assoc op :type :fail, :value (.getMessage e)))
-   (catch java.net.ConnectException e
-     (assoc op :type :fail, :value (.getMessage e)))))
+  (dosync
+   (slingshot/try+
+    (req-fn url options)
+    (doseq [function other]
+      (apply (first function) (rest function)))
+    (assoc op :type :ok, :value expected)
+    (catch [:status 500] {:keys [body]}
+      (assoc op :type :fail, :value body))
+    (catch [:status 502] {:keys [body]}
+      (assoc op :type :fail, :value "Proxy node failed to respond"))
+    (catch [:status 503] {:keys [body]}
+      (assoc op :type :fail, :value body))
+    (catch [:status 422] {:keys [body]}
+      (assoc op :type :fail, :value body))
+    (catch [:status 401] {:keys [body]}
+      (assoc op :type :fail, :node node, :value options))
+    (catch [:status 403] {:keys [body]}
+      (assoc op :type :fail, :node node, :value body))
+    (catch [:status 404] {:keys [body]}
+      (assoc op :type :fail, :node node, :value body))
+    (catch [:status 409] {:keys [body]}
+      (assoc op :type :fail, :node node, :value body))
+    (catch org.apache.http.ConnectionClosedException e
+      (assoc op :type :fail, :value (.getMessage e)))
+    (catch org.apache.http.NoHttpResponseException e
+      (assoc op :type :fail, :value (.getMessage e)))
+    (catch java.net.ConnectException e
+      (assoc op :type :fail, :value (.getMessage e))))))
 
 (defn add-app!
   [node app-id op]
@@ -167,6 +185,64 @@
    node
    app-id
    [[swap! apps conj app-id]]))
+
+(defn service-app
+  [group-id]
+  {:id (str group-id "/service-" (swap! app-ids inc))
+   :instances 1
+   :cmd "sleep 1000"
+   :cpus 0.5
+   :mem 32.0})
+
+(defn dependency-app
+  [group-app-id]
+  {:id (str group-app-id "/mesos-docker")
+   :container {:docker
+               {:image "busybox"}
+               :type "MESOS"}
+   :cmd "sleep 20 && touch foo && sleep 2000"
+   :cpus 0.2
+   :mem 16.0
+   :instances 1
+   :healthChecks [{:protocol "COMMAND",
+                   :command {:value "pwd && cat foo"},
+                   :gracePeriodSeconds 300,
+                   :intervalSeconds 5,
+                   :timeoutSeconds 1,
+                   :maxConsecutiveFailures 3}]})
+
+(defn group
+  [group-id dep-group-id]
+  (let [group-apps (atom [])
+        id (str group-id "/product-" (swap! group-ids inc))]
+    (doseq [app-list (take 5 (repeatedly #(service-app id)))]
+      (swap! group-apps conj app-list))
+    (do
+      {:id id
+       :dependencies [dep-group-id]
+       :apps @group-apps})))
+
+(defn dependency-group
+  [group-id]
+  (let [dependency-id (str group-id "/database")]
+    (do
+      {:id (str group-id "/database")
+       :apps [(dependency-app dependency-id)]})))
+
+(defn add-group!
+  [node group-id op]
+  (dosync
+   (let [group (group group-id (str group-id "/database"))]
+     (handle-response
+      http/post
+      (str "http://" node ":8080/v2/groups")
+      {:form-params  {:id   group-id
+                      :groups [(dependency-group group-id) group]}
+       :content-type :json}
+      op
+      node
+      group-id
+      [[swap! groups conj group-id]]))))
 
 (defn update-app
   []
@@ -217,6 +293,15 @@
      (catch [:status 404] {:keys [body]}
        (assoc op :type :fail, :node node, :value (str "App does not exist: " app-id))))))
 
+(defn check-group-status!
+  [test op group-id]
+  (let [node (rand-nth (:nodes test))]
+    (slingshot/try+
+     (http/get (str "http://" node ":8080/v2/groups/" group-id) {:throw-entire-message? true})
+     (assoc op :type :ok, :node node, :value group-id)
+     (catch [:status 404] {:keys [body]}
+       (assoc op :type :fail, :node node, :value (str "Group does not exist: " group-id))))))
+
 (defn add-pod
   []
   (let [id (atom 0)]
@@ -263,21 +348,27 @@
   (invoke! [this test op]
 
     (case (:f op)
-      :add-app          (timeout 20000 (assoc op :type :info, :value :timed-out)
-                                 (do (info "Adding app:" (:id (:value op)))
-                                     (add-app! node (:id (:value op)) op)))
-      :update-app       (timeout 20000 (assoc op :type :info, :value :timed-out)
-                                 (do (info "Updating app:" (:id (:value op)))
-                                     (update-app! node (:id (:value op)) op test)))
-      :add-pod          (timeout 20000 (assoc op :type :info, :value :timed-out)
-                                 (do (info "Adding pod:" (:id (:value op)))
-                                     (add-pod! node (:id (:value op)) op)))
-      :check-status     (timeout 50000 (assoc op :type :info, :value :timed-out)
-                                 (do
-                                   (check-status! test op (:id (:value op)))))
-      :check-pod-status (timeout 50000 (assoc op :type :info, :value :timed-out)
-                                 (do
-                                   (check-pod-status! test op (:id (:value op)))))))
+      :add-app            (timeout 20000 (assoc op :type :info, :value :timed-out)
+                                   (do (info "Adding app:" (:id (:value op)))
+                                       (add-app! node (:id (:value op)) op)))
+      :update-app         (timeout 20000 (assoc op :type :info, :value :timed-out)
+                                   (do (info "Updating app:" (:id (:value op)))
+                                       (update-app! node (:id (:value op)) op test)))
+      :add-pod            (timeout 20000 (assoc op :type :info, :value :timed-out)
+                                   (do (info "Adding pod:" (:id (:value op)))
+                                       (add-pod! node (:id (:value op)) op)))
+      :add-group          (timeout 20000 (assoc op :type :info, :value :timed-out)
+                                   (do (info "Adding group:" (:id (:value op)))
+                                       (add-group! node (:id (:value op)) op)))
+      :check-status       (timeout 50000 (assoc op :type :info, :value :timed-out)
+                                   (do
+                                     (check-status! test op (:id (:value op)))))
+      :check-pod-status   (timeout 50000 (assoc op :type :info, :value :timed-out)
+                                   (do
+                                     (check-pod-status! test op (:id (:value op)))))
+      :check-group-status (timeout 50000 (assoc op :type :info, :value :timed-out)
+                                   (do
+                                     (check-group-status! test op (:id (:value op)))))))
 
   (teardown! [_ test]))
 
@@ -373,6 +464,24 @@
                   :f     :check-status
                   :value {:id current-app
                           :operation "app attempted to be updated - Check status"}})))))))))
+
+(defn track-check-added-groups
+  [gen]
+  (let [groups (ref [])]
+    (reify gen/Generator
+      (op [_ test process]
+        (if-let [op (gen/op gen test process)]
+          (dosync
+           (when (= :add-group (:f op))
+             (alter groups conj (:id (:value op))))
+           op)
+          (if (not (#{:nemesis} (gen/process->thread test process)))
+            (dosync
+             (when-let [current-groups (peek @groups)]
+               (alter groups pop)
+               {:type  :invoke
+                :f     :check-group-status
+                :value {:id current-groups}}))))))))
 
 (defn abdicate-leader
   []
@@ -626,4 +735,27 @@
                   (gen/log "Done generating, launching and deleting some random apps")))
      :nemesis (destroy-app
                (nemesis/partition-random-halves))}
+    opts)))
+
+(defn group-dependency-test
+  [opts]
+  (marathon-test
+   (merge
+    {:client    (->Client nil)
+     :generator (track-check-added-groups
+                 (gen/phases
+                  (->> (add-group)
+                       (gen/stagger 10)
+                       (gen/nemesis
+                        (gen/seq (cycle [(gen/sleep 50)
+                                         {:type :info, :f :start}
+                                         (gen/sleep 20)
+                                         {:type :info, :f :stop}])))
+                       (gen/time-limit test-duration))
+                  (gen/nemesis (gen/once {:type :info, :f :stop}))
+                  (gen/once (gen/sleep 60))
+                  (gen/log "Done generating and launching apps.")))
+     :nemesis   (nemesis/partition-random-halves)
+     :checker   (checker/compose
+                 {:marathon (mchecker/marathon-group-checker)})}
     opts)))

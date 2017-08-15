@@ -42,7 +42,10 @@
    (c/exec :echo mesos-data-dir :| :tee (str mesos-master-config "/work_dir"))
    (c/exec :echo (str (calculate_quorum test)) :| :tee (str mesos-master-config "/quorum"))
 
-   (c/exec :echo :mesos :| :tee (str mesos-agent-config "/containerizers"))
+   (c/exec :echo (str "mesos") :| :tee (str mesos-agent-config "/containerizers"))
+   (c/exec :echo (str "docker") :| :tee (str mesos-agent-config "/image_providers"))
+   (c/exec :echo (str "docker/runtime,filesystem/linux") :| :tee (str mesos-agent-config "/isolation"))
+   (c/exec :echo (str "10mins") :| :tee (str mesos-agent-config "/executor_registration_timeout"))
    (c/exec :echo node :| :tee (str mesos-agent-config "/hostname"))
    (c/exec :echo node :| :tee (str mesos-agent-config "/ip"))
    (c/exec :echo :5051 :| :tee (str mesos-agent-config "/port"))
@@ -53,8 +56,8 @@
   (info node "Uninstalling Mesos")
   (c/su
    (debian/uninstall! ["mesos"])
-   (c/exec :rm :-rf
-           (c/lit "var/lib/mesos"))
+   (meh (c/exec :rm :-rf
+                (c/lit "var/lib/mesos")))
    (c/exec :rm :-rf
            (c/lit "var/run/mesos"))
    (c/exec :rm :-rf

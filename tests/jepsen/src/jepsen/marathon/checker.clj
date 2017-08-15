@@ -22,14 +22,26 @@
 
 (defn verify-pods-survival
   [pods-ack pods-survived]
-  (info "Acknowledged Apps: " pods-ack)
+  (info "Acknowledged Pods: " pods-ack)
   (info "Total: " (count pods-ack))
 
-  (info "Existing Apps: " pods-survived)
+  (info "Existing Pods: " pods-survived)
   (info "Total: " (count pods-survived))
 
-  (info "Apps which got acknowledged but were lost: " (set/difference (set pods-ack) (set pods-survived)))
+  (info "Pods which got acknowledged but were lost: " (set/difference (set pods-ack) (set pods-survived)))
   {:valid? (every? (set pods-survived) pods-ack)})
+
+(defn verify-groups-survival
+  [groups-ack groups-survived]
+  (info "Acknowledged Groups: " groups-ack)
+  (info "Total: " (count groups-ack))
+
+  (info "Existing Groups: " groups-survived)
+  (info "Total: " (count groups-survived))
+
+  (info "Groups which got acknowledged but were lost: " (set/difference (set groups-ack) (set groups-survived)))
+  (info "Groups which not acknowledged but survived: " (set/difference (set groups-survived) (set groups-ack)))
+  {:valid? (every? (set groups-survived) groups-ack)})
 
 (defn marathon-app-checker
   "Constructs a Jepsen checker."
@@ -64,3 +76,19 @@
         (info pods-ack "Total Acknowledged pods: " (count pods-ack))
         (info pods-survived "Total Survived pods: " (count pods-survived))
         (verify-pods-survival pods-ack pods-survived)))))
+
+(defn marathon-group-checker
+  []
+  (reify checker/Checker
+    (check [this test model history opts]
+      (let [groups-ack (->> history
+                            (filter #(and (= :ok (:type %))
+                                          (= :add-group (:f %))))
+                            (map :value))
+            groups-survived (->> history
+                                 (filter #(and (= :ok (:type %))
+                                               (= :check-group-status (:f %))))
+                                 (map :value))]
+        (info groups-ack "Total Acknowledged groups: " (count groups-ack))
+        (info groups-survived "Total Survived groups: " (count groups-survived))
+        (verify-groups-survival groups-ack groups-survived)))))
