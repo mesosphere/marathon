@@ -212,7 +212,7 @@ def ensure_mom():
 
 
 def get_docker_mom_json(version):
-    docker_mom_file = '{}/docker_mom.json'.format(fixtures.fixtures_dir())
+    docker_mom_file = '{}/docker-mom.json'.format(fixtures.fixtures_dir())
     mom_json = get_resource(docker_mom_file)
     docker_image = "mesosphere/marathon:{}".format(version)
     mom_json['container']['docker']['image'] = docker_image
@@ -222,7 +222,7 @@ def get_docker_mom_json(version):
 
 def install_docker_mom(version):
     """ Used to install a docker instance of marathon based on version label.
-        It is dependent on the docker_mom.json satisfying the needs of the
+        It is dependent on the docker-mom.json satisfying the needs of the
         marathon version.
     """
     # the docker tags start with v
