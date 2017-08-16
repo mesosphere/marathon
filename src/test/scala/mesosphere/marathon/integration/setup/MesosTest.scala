@@ -37,7 +37,7 @@ case class MesosCluster(
     quorumSize: Int = 1,
     autoStart: Boolean = false,
     config: MesosConfig = MesosConfig(),
-    waitForLeaderTimeout: FiniteDuration = 5.minutes)(implicit
+    waitForMesosTimeout: FiniteDuration = 5.minutes)(implicit
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
@@ -66,15 +66,17 @@ case class MesosCluster(
     start()
   }
 
-  def start(): Future[String] = {
+  def start(): Future[String] = async {
     masters.foreach(_.start())
     agents.foreach(_.start())
-    waitForLeader()
+    val masterUri = await(waitForLeader())
+    await(waitForAgents(masterUri))
+    masterUri
   }
 
   def waitForLeader(): Future[String] = async {
     val firstMaster = s"http://${masters.head.ip}:${masters.head.port}"
-    val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDelay = waitForLeaderTimeout) {
+    val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDuration = waitForMesosTimeout) {
       Http().singleRequest(Get(firstMaster + "/redirect")).map { result =>
         result.discardEntityBytes() // forget about the body
         if (result.status.isFailure()) {
@@ -95,6 +97,17 @@ case class MesosCluster(
 
     val location = await(result).headers.find(_.lowercaseName() == "location").map(_.value()).getOrElse(firstMaster)
     maybeFixURI(location)
+  }
+
+  def waitForAgents(masterUri: String): Future[Done] = {
+    val mesosFacade = new MesosFacade(masterUri)
+    Retry.blocking("wait for agents", maxAttempts = Int.MaxValue, maxDuration = waitForMesosTimeout) {
+      val numAgents = mesosFacade.state.value.agents.size
+      if (numAgents != agents.size) {
+        throw new Exception(s"Agents are not ready. Found $numAgents but expected ${agents.size}")
+      }
+      Done
+    }
   }
 
   def stop(): Unit = {
@@ -244,10 +257,10 @@ case class MesosCluster(
   }
   // format: ON
 
-  def state = new MesosFacade(Await.result(waitForLeader(), waitForLeaderTimeout)).state
+  def state = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout)).state
 
   def clean(): Unit = {
-    val client = new MesosFacade(Await.result(waitForLeader(), waitForLeaderTimeout))
+    val client = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout))
     MesosTest.clean(client)
   }
 
