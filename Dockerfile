@@ -29,7 +29,12 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
     mv $(find target -name 'marathon-assembly-*.jar' | sort | tail -1) ./ && \
     rm -rf project/target project/project/target plugin-interface/target target/* ~/.sbt ~/.ivy2 && \
     mv marathon-assembly-*.jar target && \
+
+    # jdk setup
     /var/lib/dpkg/info/ca-certificates-java.postinst configure && \
+    ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home && \
+
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+ENV JAVA_HOME /docker-java-home
 ENTRYPOINT ["./bin/start"]
