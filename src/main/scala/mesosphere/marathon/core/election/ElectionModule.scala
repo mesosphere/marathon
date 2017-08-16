@@ -3,7 +3,7 @@ package core.election
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.marathon.core.base.{ JvmExitsCrashStrategy, LifecycleState }
+import mesosphere.marathon.core.base.{ CrashStrategy, LifecycleState }
 import mesosphere.marathon.core.election.impl.{ CuratorElectionService, PseudoElectionService }
 
 class ElectionModule(
@@ -11,7 +11,8 @@ class ElectionModule(
     system: ActorSystem,
     eventStream: EventStream,
     hostPort: String,
-    lifecycleState: LifecycleState) {
+    lifecycleState: LifecycleState,
+    crashStrategy: CrashStrategy) {
 
   lazy val service: ElectionService = if (config.highlyAvailable()) {
     config.leaderElectionBackend.get match {
@@ -22,7 +23,7 @@ class ElectionModule(
           system,
           eventStream,
           lifecycleState,
-          JvmExitsCrashStrategy
+          crashStrategy
         )
       case backend: Option[String] =>
         throw new IllegalArgumentException(s"Leader election backend $backend not known!")
@@ -33,7 +34,7 @@ class ElectionModule(
       system,
       eventStream,
       lifecycleState,
-      JvmExitsCrashStrategy
+      crashStrategy
     )
   }
 }
