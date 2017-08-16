@@ -70,7 +70,7 @@ class TaskIdTest extends FunSuite with Matchers {
   }
 
   test("TaskIds for resident tasks can be incremented") {
-    val taskIdString = "app.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.#41"
+    val taskIdString = "app.test.23.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41"
     val originalId = Task.Id(taskIdString)
     originalId.attempt shouldBe Some(41)
 
@@ -82,14 +82,14 @@ class TaskIdTest extends FunSuite with Matchers {
   }
 
   test("TaskId.reservationId returns the same value for an id w/o attempt counter") {
-    val originalId = Task.Id.forRunSpec(PathId("/app"))
+    val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
     val reservationId = Task.Id.reservationId(originalId.idString)
 
     reservationId shouldEqual originalId.idString
   }
 
   test("TaskId.reservationId returns the base value w/o attempt for an id including the attempt") {
-    val originalId = Task.Id.forRunSpec(PathId("/app"))
+    val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
     val reservationIdFromOriginal = Task.Id.reservationId(originalId.idString)
 
     val residentTaskId = Task.Id.forResidentTask(originalId)
