@@ -21,7 +21,7 @@ VIPs map traffic from a single virtual address to multiple IP addresses and port
 Several [command-line flags](command-line-flags.html) determine Marathon's behavior with respect to networking.
 
 * `default_network_name` is injected as the `name` of a `container` mode network when left blank by an application.
-* `local_port_min` and `local_port_max` define a port range from which Marathon automatically allocates *service-port*s.
+* `local_port_min` and `local_port_max` define a port range from which Marathon automatically allocates \*service-port\*s.
 
 ## Networking Modes
 
@@ -47,7 +47,7 @@ Similar to `container`, an application should be allocated its own network names
 Mesos CNI provides a special `mesos-bridge` that application containers are attached to.
 When using the Docker containerizer, this translates to the Docker "default bridge" network.
 
-**Notes**: 
+**Notes**:
 
 - All network modes are supported for both the Mesos and Docker containerizers.
 - The `Network.name` parameter is only supported with `container` networking.
@@ -298,6 +298,47 @@ Specify `container/bridge` mode through the `networks` property:
     }
   },
 ```
+##### Installing the `mesos-bridge` CNI plugin
+If you are not using DC/OS and want to enable `container/bridge` mode with the Universal Container Runtime (UCR), several more steps are necessary to install and use the `mesos-bridge` CNI plugin.
+
+**Prerequisites**
+- Mesos version 1.2.0 or higher.
+- Marathon version 1.5 or higher.
+
+1. Navigate to or create a `/var/lib/mesos/cni` directory on each of your agent nodes as well as `config` and `plugins` subdirectories.
+
+1. Clone the CNI repository from [https://github.com/containernetworking/cni](https://github.com/containernetworking/cni) and build according to their instructions.
+
+1. Copy the contents of the `bin` folder created in the previous step to `/var/lib/mesos/cni/plugins` on each agent node.
+
+1. Create a file called `mesos-bridge.json`, copy the following configuration into it, and add it to `/var/lib/mesos/cni/config`.
+
+   ```
+   {
+     "name": "mesos-bridge",
+     "type": "mesos-cni-port-mapper",
+     "excludeDevices": ["mesos-bridge"],
+     "chain": "MESOS-BRIDGE-PORT-MAPPER",
+     "delegate": {
+       "type": "bridge",
+       "bridge": "mesos-bridge",
+       "isGateway": true,
+       "ipMasq": true,
+       "ipam": {
+         "type": "host-local",
+         "subnet": "10.1.1.0/24",
+         "routes": [{
+           "dst": "0.0.0.0/0"
+         }]
+       }
+     }
+   }
+   ```
+
+1. Soft-link the `mesos-cni-port-mapper` plugin to your plugins directory using the following command
+   ```
+   $ sudo ln -sf /usr/libexec/mesos/mesos-cni-port-mapper /var/lib/mesos/cni/plugins/mesos-cni-port-mapper
+   ```
 
 #### Enabling `container` Mode
 
