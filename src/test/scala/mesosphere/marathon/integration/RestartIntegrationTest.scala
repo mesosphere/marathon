@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package integration
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId
