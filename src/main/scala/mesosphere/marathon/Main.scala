@@ -11,7 +11,7 @@ import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.toRichRuntime
-import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
+import mesosphere.marathon.metrics.MetricsReporterModule
 import mesosphere.marathon.stream._
 import mesosphere.mesos.LibMesos
 import org.slf4j.LoggerFactory
@@ -74,8 +74,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     val injector = Guice.createInjector(modules)
     val services = Seq(
       classOf[HttpService],
-      classOf[MarathonSchedulerService],
-      classOf[MetricsReporterService]).map(injector.getInstance(_))
+      classOf[MarathonSchedulerService]).map(injector.getInstance(_))
     serviceManager = Some(new ServiceManager(services))
 
     sys.addShutdownHook(shutdownAndWait())

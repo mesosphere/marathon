@@ -14,6 +14,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.MetricsReporterService
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
@@ -70,6 +71,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
   private[this] var httpConfig: HttpConf = _
   private[this] var frameworkIdRepository: FrameworkIdRepository = _
   private[this] var electionService: ElectionService = _
+  private[this] var metricsReporterService: MetricsReporterService = _
   private[this] var groupManager: GroupManager = _
   private[this] var taskTracker: InstanceTracker = _
   private[this] var marathonScheduler: MarathonScheduler = _
@@ -88,6 +90,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
     httpConfig = mock[HttpConf]
     frameworkIdRepository = mock[FrameworkIdRepository]
     electionService = mock[ElectionService]
+    metricsReporterService = mock[MetricsReporterService]
     groupManager = mock[GroupManager]
     taskTracker = mock[InstanceTracker]
     marathonScheduler = mock[MarathonScheduler]
@@ -109,6 +112,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       leadershipCoordinator,
       config,
       electionService,
+      metricsReporterService,
       prePostDriverCallbacks,
       groupManager,
       driverFactory(mock[SchedulerDriver]),
@@ -131,6 +135,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       leadershipCoordinator,
       config,
       electionService,
+      metricsReporterService,
       prePostDriverCallbacks,
       groupManager,
       driverFactory(driver),
@@ -158,6 +163,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       leadershipCoordinator,
       config,
       electionService,
+      metricsReporterService,
       prePostDriverCallbacks,
       groupManager,
       driverFactory(mock[SchedulerDriver]),
@@ -185,6 +191,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       leadershipCoordinator,
       config,
       electionService,
+      metricsReporterService,
       prePostDriverCallbacks,
       groupManager,
       driverFactory(mock[SchedulerDriver]),
@@ -217,6 +224,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       leadershipCoordinator,
       config,
       electionService,
+      metricsReporterService,
       prePostDriverCallbacks,
       groupManager,
       driverFactory,
@@ -244,6 +252,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       leadershipCoordinator,
       config,
       electionService,
+      metricsReporterService,
       prePostDriverCallbacks,
       groupManager,
       driverFactory,
@@ -275,6 +284,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       leadershipCoordinator,
       config,
       electionService,
+      metricsReporterService,
       scala.collection.immutable.Seq(cb),
       groupManager,
       driverFactory,
