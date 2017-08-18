@@ -80,7 +80,7 @@ private[impl] class ReviveOffersActor(
         logger.info(s"=> Schedule next revive at $nextRevive in $untilNextRevive, adhering to --${conf.minReviveOffersInterval.name} ${conf.minReviveOffersInterval()} (ms)")
         nextReviveCancellableOpt = Some(schedulerCheck(untilNextRevive))
       } else {
-        logger.info("=> Next revive already scheduled at {} not yet due for {}", nextRevive, untilNextRevive)
+        logger.info(s"=> Next revive already scheduled at $nextRevive not yet due for $untilNextRevive")
       }
     }
   }
@@ -104,7 +104,7 @@ private[impl] class ReviveOffersActor(
       initiateNewSeriesOfRevives()
 
     case OffersWanted(false) =>
-      logger.info("Received offers NOT WANTED notification, canceling {} revives", revivesNeeded)
+      logger.info(s"Received offers NOT WANTED notification, canceling $revivesNeeded revives")
       offersCurrentlyWanted = false
       revivesNeeded = 0
       nextReviveCancellableOpt.foreach(_.cancel())
