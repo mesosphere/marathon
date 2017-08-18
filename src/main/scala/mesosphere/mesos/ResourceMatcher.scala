@@ -1,5 +1,6 @@
 package mesosphere.mesos
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume, ResourceRole, RunSpec }
@@ -9,16 +10,13 @@ import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
-import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
-object ResourceMatcher {
+object ResourceMatcher extends StrictLogging {
   import ResourceHelpers._
   type Role = String
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
 
   /**
     * A successful match result of the [[ResourceMatcher]].matchResources method.
@@ -130,7 +128,7 @@ object ResourceMatcher {
     * resources, the disk resources for the local volumes are included since they must become part of
     * the reservation.
     */
-  def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
+  def matchResources(offer: Offer, runSpec: RunSpec, knownInstances: => Seq[Instance],
     selector: ResourceSelector): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).mapValues(_.to[Seq])
@@ -175,8 +173,10 @@ object ResourceMatcher {
     def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
 
     val meetsAllConstraints: Boolean = {
-      lazy val instances = runningInstances.filter { inst =>
-        inst.isLaunched && inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
+      lazy val instances = knownInstances.filter { inst =>
+        // we ignore instances of older configurations: this way we can place a new instance on an agent that already
+        // hosts an old instance that will be killed once a new one is running/healthy/ready
+        inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
       }
       val badConstraints = runSpec.constraints.filterNot { constraint =>
         Constraints.meetsConstraint(instances, offer, constraint)
@@ -185,12 +185,10 @@ object ResourceMatcher {
       if (badConstraints.nonEmpty) {
         // Add constraints to noOfferMatchReasons
         noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
-        if (log.isInfoEnabled) {
-          log.info(
-            s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
-              s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
-          )
-        }
+        logger.info(
+          s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
+            s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
+        )
       }
 
       badConstraints.isEmpty
@@ -467,9 +465,9 @@ object ResourceMatcher {
     offer: Offer,
     selector: ResourceSelector,
     scalarMatchResults: Seq[ScalarMatchResult]): Unit = {
-    if (log.isInfoEnabled && scalarMatchResults.exists(!_.matches)) {
+    if (scalarMatchResults.exists(!_.matches)) {
       val basicResourceString = scalarMatchResults.mkString(", ")
-      log.info(
+      logger.info(
         s"Offer [${offer.getId.getValue}]. " +
           s"$selector. " +
           s"Not all basic resources satisfied: $basicResourceString")
