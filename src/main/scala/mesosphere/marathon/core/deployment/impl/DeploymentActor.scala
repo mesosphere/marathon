@@ -151,7 +151,7 @@ private class DeploymentActor(
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
     status: DeploymentStatus): Future[Done] = {
-    logger.debug("Scale runnable {}", runnableSpec)
+    logger.debug(s"Scale runnable $runnableSpec")
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runnableSpec, notSentencedAndRunning, toKillCount)
@@ -187,10 +187,13 @@ private class DeploymentActor(
 
   @SuppressWarnings(Array("all")) /* async/await */
   def stopRunnable(runnableSpec: RunSpec): Future[Done] = async {
+    logger.debug(s"Stop runnable $runnableSpec")
     val instances = await(instanceTracker.specInstances(runnableSpec.id))
     val launchedInstances = instances.filter(_.isLaunched)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
+
+    logger.debug(s"Killed all remaining tasks: ${launchedInstances.map(_.instanceId)}")
 
     // Note: This is an asynchronous call. We do NOT wait for the run spec to stop. If we do, the DeploymentActorTest
     // fails.

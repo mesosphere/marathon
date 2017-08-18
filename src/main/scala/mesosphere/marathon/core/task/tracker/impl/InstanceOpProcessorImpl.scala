@@ -25,6 +25,7 @@ private[tracker] class InstanceOpProcessorImpl(
   import InstanceOpProcessor._
 
   override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
+    logger.debug(s"Process $op")
     val stateChange = stateOpResolver.resolve(op.op)
 
     stateChange.flatMap {

@@ -381,9 +381,10 @@ class SchedulerActions(
 
   @SuppressWarnings(Array("all")) // async/await
   def stopRunSpec(runSpec: RunSpec): Future[Done] = {
+    logger.info(s"Stopping runSpec ${runSpec.id}")
+
     healthCheckManager.removeAllFor(runSpec.id)
 
-    logger.info(s"Stopping runSpec ${runSpec.id}")
     async {
       val tasks = await(instanceTracker.specInstances(runSpec.id))
 

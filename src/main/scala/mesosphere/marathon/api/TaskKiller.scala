@@ -4,6 +4,7 @@ package api
 import javax.inject.Inject
 
 import akka.Done
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
@@ -13,7 +14,6 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
-import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.Future
@@ -27,9 +27,7 @@ class TaskKiller @Inject() (
     val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    killService: KillService) extends AuthResource {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
+    killService: KillService) extends AuthResource with StrictLogging {
 
   @SuppressWarnings(Array("all")) // async/await
   def kill(
@@ -66,10 +64,10 @@ class TaskKiller @Inject() (
 
     instances.foldLeft(Future.successful(Done)) { (resultSoFar, nextInstance) =>
       resultSoFar.flatMap { _ =>
-        log.info("Expunging {}", nextInstance.instanceId)
+        logger.info(s"Expunging ${nextInstance.instanceId}")
         stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(nextInstance.instanceId)).map(_ => Done).recover {
           case NonFatal(cause) =>
-            log.info("Failed to expunge {}, got: {}", Array[Object](nextInstance.instanceId, cause): _*)
+            logger.warn(s"Failed to expunge ${nextInstance.instanceId}, got:", cause)
             Done
         }
       }

@@ -117,6 +117,9 @@ object InstanceUpdater extends StrictLogging {
         state = instance.state.copy(condition = Condition.Killed)
       )
       val events = eventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+
+      logger.debug(s"Expunge reserved ${instance.instanceId}")
+
       InstanceUpdateEffect.Expunge(instance, events)
     } else {
       InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
@@ -130,6 +133,9 @@ object InstanceUpdater extends StrictLogging {
     )
     val events = InstanceChangedEventsGenerator.events(
       updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+
+    logger.debug(s"Force expunge ${instance.instanceId}")
+
     InstanceUpdateEffect.Expunge(updatedInstance, events)
   }
 

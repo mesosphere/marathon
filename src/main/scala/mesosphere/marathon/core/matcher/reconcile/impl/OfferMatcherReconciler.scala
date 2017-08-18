@@ -95,6 +95,6 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
     override def instanceOpAccepted(instanceOp: InstanceOp): Unit =
       logger.info(s"accepted unreserveAndDestroy for ${instanceOp.instanceId} in offer [${offerId.getValue}]")
     override def instanceOpRejected(instanceOp: InstanceOp, reason: String): Unit =
-      logger.info("rejected unreserveAndDestroy for {} in offer [{}]: {}", instanceOp.instanceId, offerId.getValue, reason)
+      logger.info(s"rejected unreserveAndDestroy for ${instanceOp.instanceId} in offer [${offerId.getValue}]: $reason")
   }
 }
