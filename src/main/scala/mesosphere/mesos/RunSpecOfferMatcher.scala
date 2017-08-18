@@ -1,32 +1,36 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import org.apache.mesos.Protos.Offer
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 
-object RunSpecOfferMatcher {
+object RunSpecOfferMatcher extends StrictLogging {
 
-  val log = LoggerFactory.getLogger(getClass)
-
-  def matchOffer(runSpec: RunSpec, offer: Offer, otherInstances: => Seq[Instance], givenAcceptedResourceRoles: Set[String]): ResourceMatchResponse = {
+  /**
+    * @param runSpec The runSpec for which the given offer shall be matched
+    * @param offer The Mesos offer that shall be matched
+    * @param knownInstances All instances associated with the given runSpec, needed to validate constraints
+    * @param givenAcceptedResourceRoles The resource roles for which to look.
+    */
+  def matchOffer(runSpec: RunSpec, offer: Offer, knownInstances: => Seq[Instance], givenAcceptedResourceRoles: Set[String]): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles
       } else {
         runSpec.acceptedResourceRoles
       }
-      if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
+      logger.debug(s"acceptedResourceRoles $roles")
       roles
     }
 
     val resourceMatchResponse =
-      ResourceMatcher.matchResources(offer, runSpec, otherInstances, ResourceSelector.any(acceptedResourceRoles))
+      ResourceMatcher.matchResources(offer, runSpec, knownInstances, ResourceSelector.any(acceptedResourceRoles))
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = runSpec match {
@@ -53,7 +57,7 @@ object RunSpecOfferMatcher {
 
       val portsString = s"ports=($portStrings)"
 
-      log.debug(
+      logger.debug(
         s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] " +
           s"(need cpus=${runSpec.resources.cpus}, mem=${runSpec.resources.mem}, disk=${runSpec.resources.disk}, " +
           s"gpus=${runSpec.resources.gpus}, $portsString, available in offer: " +
@@ -63,10 +67,10 @@ object RunSpecOfferMatcher {
 
     resourceMatchResponse match {
       case matches: ResourceMatchResponse.Match =>
-        log.debug(s"Offer [${offer.getId.getValue}] matches resources for [${runSpec.id}].")
+        logger.debug(s"Offer [${offer.getId.getValue}] matches resources for [${runSpec.id}].")
         matches
       case matchesNot: ResourceMatchResponse.NoMatch =>
-        if (log.isDebugEnabled) logInsufficientResources()
+        logInsufficientResources()
         matchesNot
     }
   }
