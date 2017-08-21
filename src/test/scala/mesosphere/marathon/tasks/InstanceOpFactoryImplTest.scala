@@ -9,25 +9,25 @@ import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
-import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.state.{ AgentTestDefaults, NetworkInfo }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{ GivenWhenThen, Matchers, Inside }
 
 import scala.collection.immutable.Seq
 
-class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
+class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers with Inside {
 
   test("Copy SlaveID from Offer to Task") {
     val f = new Fixture
 
     val appId = PathId("/test")
     val offer = MarathonTestHelper.makeBasicOffer()
-      .setHostname(f.hostName)
+      .setHostname(f.defaultHostName)
       .setSlaveId(SlaveID("some slave ID"))
       .build()
     val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
@@ -37,10 +37,12 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    matchResult shouldBe a[OfferMatchResult.Match]
-    val matched = matchResult.asInstanceOf[OfferMatchResult.Match]
-    assert(matched.instanceOp.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
-    assert(matched.instanceOp.stateOp.possibleNewState.get.tasksMap.size == 1, "new state should have 1 task")
+    val matched = inside(matchResult) {
+      case matched: OfferMatchResult.Match =>
+        assert(matched.instanceOp.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
+        assert(matched.instanceOp.stateOp.possibleNewState.get.tasksMap.size == 1, "new state should have 1 task")
+        matched
+    }
 
     val (expectedTaskId, _) = matched.instanceOp.stateOp.possibleNewState.get.tasksMap.head
     val expectedTask = Task.LaunchedEphemeral(
@@ -50,14 +52,14 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
         stagedAt = f.clock.now(),
         condition = Condition.Created,
         networkInfo = NetworkInfo(
-          f.hostName,
+          f.defaultHostName,
           hostPorts = Nil,
           ipAddresses = Nil
         )
       )
     )
     val expectedAgentInfo = Instance.AgentInfo(
-      host = f.hostName,
+      host = f.defaultHostName,
       agentId = Some(offer.getSlaveId.getValue),
       attributes = Vector.empty
     )
@@ -93,8 +95,10 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A Match with Launch is inferred")
-    matchResult shouldBe a[OfferMatchResult.Match]
-    matchResult.asInstanceOf[OfferMatchResult.Match].instanceOp shouldBe a[InstanceOp.LaunchTask]
+    inside(matchResult) {
+      case mr: OfferMatchResult.Match =>
+        mr.instanceOp shouldBe a[InstanceOp.LaunchTask]
+    }
   }
 
   test("Resident app -> None (insufficient offer)") {
@@ -136,8 +140,10 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A Match with ReserveAndCreateVolumes is returned")
-    matchResult shouldBe a[OfferMatchResult.Match]
-    matchResult.asInstanceOf[OfferMatchResult.Match].instanceOp shouldBe a[InstanceOp.ReserveAndCreateVolumes]
+    inside(matchResult) {
+      case mr: OfferMatchResult.Match =>
+        mr.instanceOp shouldBe a[InstanceOp.ReserveAndCreateVolumes]
+    }
   }
 
   test("Resident app -> Launch succeeds") {
@@ -161,9 +167,11 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A Match with a Launch is returned")
-    matchResult shouldBe a[OfferMatchResult.Match]
-    val matched = matchResult.asInstanceOf[OfferMatchResult.Match]
-    matched.instanceOp shouldBe a[InstanceOp.LaunchTask]
+    val matched = inside(matchResult) {
+      case matched: OfferMatchResult.Match =>
+        matched.instanceOp shouldBe a[InstanceOp.LaunchTask]
+        matched
+    }
 
     And("the taskInfo contains the correct persistent volume")
     val taskInfoResources = matched.instanceOp.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
@@ -192,13 +200,48 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     matchResult shouldBe a[OfferMatchResult.NoMatch]
   }
 
+  // There are times when an agent gets a new agentId after a reboot. There might have been a task using
+  // reservations and a persistent volume on agent-1 in the past. When agent-1 is rebooted and looses
+  // the task, Marathon might see the resources offered from agent-2 in the future - if the agent has
+  // been re-registered with that new ID. In order to report correct AgentInfo, the AgentInfo needs to recreated
+  // each time we launch on an existing reservation.
+  test("update the agentInfo based on the used offer") {
+    val f = new Fixture
+    val app = f.residentApp
+    val volumeId = LocalVolumeId(app.id, "/path", "uuid1")
+    val existingReservedInstance = f.residentReservedInstance(app.id, volumeId)
+    existingReservedInstance.agentInfo.host shouldBe f.defaultHostName
+    existingReservedInstance.agentInfo.agentId shouldBe Some(f.defaultAgentId)
+
+    val taskId = existingReservedInstance.firstTask.taskId
+    val updatedHostName = "updatedHostName"
+    val updatedAgentId = "updatedAgentId"
+    val offer = f.offerWithVolumes(taskId, updatedHostName, updatedAgentId, volumeId)
+
+    val request = InstanceOpFactory.Request(app, offer, Map(existingReservedInstance.instanceId -> existingReservedInstance), additionalLaunches = 1)
+    val result = f.instanceOpFactory.matchOfferRequest(request)
+
+    inside(result) {
+      case m: OfferMatchResult.Match =>
+        inside(m.instanceOp) {
+          case launchTask: InstanceOp.LaunchTask =>
+            inside(launchTask.stateOp) {
+              case launchOnReservation: InstanceUpdateOperation.LaunchOnReservation =>
+                launchOnReservation.agentInfo.host shouldBe updatedHostName
+                launchOnReservation.agentInfo.agentId shouldBe Some(updatedAgentId)
+            }
+        }
+    }
+  }
+
   class Fixture {
     import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
     val instanceTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     implicit val clock = ConstantClock()
     val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config)
-    val hostName = "some_host"
+    val defaultHostName = AgentTestDefaults.defaultHostName
+    val defaultAgentId = AgentTestDefaults.defaultAgentId
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
@@ -209,7 +252,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()
 
     def offerWithVolumes(taskId: Task.Id, localVolumeIds: LocalVolumeId*) =
-      MTH.offerWithVolumes(taskId, localVolumeIds: _*)
+      MTH.offerWithVolumes(taskId, defaultHostName, defaultAgentId, localVolumeIds: _*)
+    def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: LocalVolumeId*) =
+      MTH.offerWithVolumes(taskId, hostname, agentId, localVolumeIds: _*)
   }
 
 }

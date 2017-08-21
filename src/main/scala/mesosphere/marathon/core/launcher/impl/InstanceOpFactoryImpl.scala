@@ -220,6 +220,10 @@ class InstanceOpFactoryImpl(
     val newTaskId = Task.Id.forResidentTask(currentTaskId)
     val (taskInfo, networkInfo) = new TaskBuilder(spec, newTaskId, config, runSpecTaskProc)
       .build(offer, resourceMatch, Some(volumeMatch))
+
+    // The agentInfo could have possibly changed after a reboot. See the docs for
+    // InstanceUpdateOperation.LaunchOnReservation for more details
+    val agentInfo = Instance.AgentInfo(offer)
     val stateOp = InstanceUpdateOperation.LaunchOnReservation(
       reservedInstance.instanceId,
       newTaskId,
@@ -230,7 +234,8 @@ class InstanceOpFactoryImpl(
         condition = Condition.Created,
         networkInfo = networkInfo
       ),
-      networkInfo.hostPorts)
+      networkInfo.hostPorts,
+      agentInfo)
 
     taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
   }
