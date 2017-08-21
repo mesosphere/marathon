@@ -8,6 +8,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
+import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.async.ExecutionContexts
@@ -284,10 +285,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val ex = intercept[NormalizationException] {
-        f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
-      }
-      ex.msg shouldBe NetworkNormalizationMessages.ContainerNetworkNameUnresolved
+      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
+      response.getStatus shouldBe 422
+      response.getEntity.toString should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
     }
 
     "create a pod with custom executor resource declaration" in {

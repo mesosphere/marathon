@@ -198,7 +198,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     hostPorts.distinct.size == hostPorts.size
   }
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -215,6 +215,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     }
     pod.secrets is empty or (valid(secretValidator) and featureEnabled(enabledFeatures, Features.SECRETS))
     pod.networks is valid(ramlNetworksValidator)
+    pod.networks is defaultNetworkNameValidator(() => defaultNetworkName)
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique

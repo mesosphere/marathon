@@ -45,7 +45,7 @@ class AppsResource @Inject() (
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
   private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  private implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures)
+  private implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
 
   private val normalizationConfig = AppNormalization.Configuration(
     config.defaultNetworkName.get,
@@ -414,14 +414,14 @@ object AppsResource {
   def appNormalization(config: NormalizationConfig): Normalization[raml.App] = Normalization { app =>
     validateOrThrow(app)(AppValidation.validateOldAppAPI)
     val migrated = AppNormalization.forDeprecated(config.config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures))
+    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.config.defaultNetworkName))
     AppNormalization(config.config).normalized(migrated)
   }
 
   def appUpdateNormalization(config: NormalizationConfig): Normalization[raml.AppUpdate] = Normalization { app =>
     validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
     val migrated = AppNormalization.forDeprecatedUpdates(config.config).normalized(app)
-    validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(config.enabledFeatures))
+    validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(config.enabledFeatures, () => config.config.defaultNetworkName))
     AppNormalization.forUpdates(config.config).normalized(migrated)
   }
 

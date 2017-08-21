@@ -304,7 +304,7 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppUpdateAPI(enabledFeatures: Set[String]): Validator[AppUpdate] = forAll(
+  def validateCanonicalAppUpdateAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[AppUpdate] = forAll(
     validator[AppUpdate] { update =>
       update.id.map(PathId(_)) as "id" is optional(valid)
       update.dependencies.map(_.map(PathId(_))) as "dependencies" is optional(every(valid))
@@ -315,6 +315,7 @@ trait AppValidation {
       update.portDefinitions is optional(portDefinitionsValidator)
       update.container is optional(valid(validContainer(enabledFeatures, update.networks.getOrElse(Nil), update.secrets.getOrElse(Map.empty))))
       update.acceptedResourceRoles is valid(optional(ResourceRole.validAcceptedResourceRoles(update.residency.isDefined) and notEmpty))
+      update.networks is optional(NetworkValidation.defaultNetworkNameValidator(defaultNetworkName))
     },
     isTrue("must not be root")(!_.id.fold(false)(PathId(_).isRoot)),
     isTrue("must not be an empty string")(_.cmd.forall { s => s.length() > 1 }),
@@ -367,11 +368,12 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppAPI(enabledFeatures: Set[String]): Validator[App] = forAll(
+  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[App] = forAll(
     validBasicAppDefinition(enabledFeatures),
     validator[App] { app =>
       PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
       app.dependencies.map(PathId(_)) as "dependencies" is every(valid)
+      app.networks is defaultNetworkNameValidator(defaultNetworkName)
     },
     isTrue("must not be root")(!_.id.toPath.isRoot),
     isTrue("must not be an empty string")(_.cmd.forall { s => s.length() > 1 }),

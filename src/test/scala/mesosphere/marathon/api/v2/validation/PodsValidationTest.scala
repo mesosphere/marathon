@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.{ Result, Validator }
 import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.{ UnitTest, ValidationTestLike }
+import com.wix.accord.{ Result, Validator }
 import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, EphemeralVolume, Image, ImageType, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
+import mesosphere.{ UnitTest, ValidationTestLike }
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
 
@@ -59,7 +59,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       val endpoint1 = Endpoint("endpoint1", containerPort = Some(123))
       val endpoint2 = Endpoint("endpoint2", containerPort = Some(123))
       private val invalid = validPod.copy(
-        networks = Seq(Network(mode = NetworkMode.Container)),
+        networks = Seq(Network(mode = NetworkMode.Container, name = Some("default-network-name"))),
         containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2)))
       )
       validator(invalid) should failWith("value" -> PodsValidationMessages.ContainerPortsMustBeUnique)
@@ -155,12 +155,12 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       secrets = Map("aSecret" -> SecretDef("/pull/config"))
     )
 
-    val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero)
-    val secretValidator: Validator[Pod] = podValidator(Set(Features.SECRETS), SemanticVersion.zero)
+    val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, None)
+    val secretValidator: Validator[Pod] = podValidator(Set(Features.SECRETS), SemanticVersion.zero, None)
   }
 
   "network validation" when {
-    val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero)
+    val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"))
 
     def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint] = Nil) =
       PodContainer(
