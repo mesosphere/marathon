@@ -97,7 +97,8 @@ object InstanceUpdater extends StrictLogging {
               since = op.timestamp
             ),
             tasksMap = Map(updatedTask.taskId -> updatedTask),
-            runSpecVersion = op.runSpecVersion
+            runSpecVersion = op.runSpecVersion,
+            agentInfo = op.agentInfo
           )
           val events = eventsGenerator.events(updated, task = None, op.timestamp, previousCondition = Some(instance.state.condition))
           InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)

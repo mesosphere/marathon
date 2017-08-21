@@ -3,7 +3,8 @@ package core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.{ TaskCondition, Task }
+import mesosphere.marathon.core.instance.Instance.AgentInfo
+import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos
 
@@ -42,7 +43,8 @@ object InstanceUpdateOperation {
     runSpecVersion: Timestamp,
     timestamp: Timestamp,
     status: Task.Status, // TODO(PODS): the taskStatus must be created for each task and not passed in here
-    hostPorts: Seq[Int]) extends InstanceUpdateOperation
+    hostPorts: Seq[Int],
+    agentInfo: AgentInfo) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.

@@ -12,7 +12,7 @@ import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessorConfig, Tas
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
+import mesosphere.marathon.core.task.state.{ AgentInfoPlaceholder, NetworkInfoPlaceholder }
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
@@ -147,7 +147,8 @@ class OfferProcessorImplTest extends UnitTest {
             runSpecVersion = clock.now(),
             timestamp = clock.now(),
             status = Task.Status(clock.now(), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder()),
-            hostPorts = Seq.empty)
+            hostPorts = Seq.empty,
+            agentInfo = AgentInfoPlaceholder())
           val launch = f.launchWithNewTask(
             taskInfo,
             updateOperation,

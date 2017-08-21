@@ -6,7 +6,7 @@ import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState, Le
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, InstanceUpdater }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
+import mesosphere.marathon.core.task.state.{ AgentInfoPlaceholder, NetworkInfoPlaceholder }
 import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
 import org.apache.mesos
 
@@ -111,7 +111,8 @@ case class TestInstanceBuilder(
       timestamp = now,
       runSpecVersion = instance.runSpecVersion,
       status = Task.Status(stagedAt = now, condition = Condition.Running, networkInfo = NetworkInfoPlaceholder()),
-      hostPorts = Seq.empty)
+      hostPorts = Seq.empty,
+      agentInfo = AgentInfoPlaceholder())
   }
 
   def stateOpExpunge() = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
