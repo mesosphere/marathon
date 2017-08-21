@@ -227,41 +227,6 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       And("all 5 tasks are of the new version")
       all.map(_.version).forall(_.contains(newVersion)) shouldBe true
     }
-
-    /**
-      * FIXME (3043): implement the following tests. TASK_LOST can be induced when launching a task with permission:
-      *
-      * When a framework launches a task, “run_tasks” ACLs are checked to see if the framework
-      * (FrameworkInfo.principal) is authorized to run the task/executor as the given user. If not authorized,
-      * the launch is rejected and the framework gets a TASK_LOST.
-      *
-      * (From http://mesos.apache.org/documentation/latest/authorization/)
-      */
-
-    "taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s" in {
-      pending
-      Given("A resident app with 1 instance")
-      When("The task is lost")
-      Then("The task is not relaunched within the timeout")
-      And("The task is relaunched with a new Id after the timeout")
-    }
-
-    "taskLostBehavior = WAIT_FOREVER" in {
-      pending
-      Given("A resident app with 1 instance")
-      When("The task is lost")
-      Then("No timeout is scheduled") // can we easily verify this?
-      And("The task is not relaunched") // can we verify this without waiting?
-    }
-
-    "relaunchEscalationTimeoutSeconds = 5s" in {
-      pending
-      Given("A resident app with 1 instance")
-      When("The task terminates")
-      And("We don't get an offer within the timeout")
-      Then("We launch a new task on any matching offer")
-    }
-
   }
 
   class Fixture {

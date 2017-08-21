@@ -3,6 +3,7 @@ package core.launcher.impl
 
 import java.time.Clock
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -21,18 +22,16 @@ import mesosphere.mesos.{ NoOfferMatchReason, PersistentVolumeMatcher, ResourceM
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => Mesos }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
   config: MarathonConf,
   pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
-    extends InstanceOpFactory {
+    extends InstanceOpFactory with StrictLogging {
 
   import InstanceOpFactoryImpl._
 
-  private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val taskOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.get
     val roleOpt = config.mesosRole.get
@@ -44,7 +43,7 @@ class InstanceOpFactoryImpl(
     pluginManager.plugins[RunSpecTaskProcessor].toIndexedSeq)
 
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
-    log.debug("matchOfferRequest")
+    logger.debug("matchOfferRequest")
 
     request.runSpec match {
       case app: AppDefinition =>
@@ -141,10 +140,12 @@ class InstanceOpFactoryImpl(
 
       maybeVolumeMatch.map { volumeMatch =>
 
-        // we must not consider the volumeMatch's Reserved instance because that would lead to a violation of constraints
-        // by the Reserved instance that we actually want to launch
+        // The volumeMatch identified a specific instance that matches the volume's reservation labels.
+        // This is the instance we want to launch. However, when validating constraints, we need to exclude that one
+        // instance: it would be considered as an instance on that agent, and would violate e.g. a hostname:unique
+        // constraint although it is just a placeholder for the instance that will be launched.
         val instancesToConsiderForConstraints: Stream[Instance] =
-          instances.valuesIterator.toStream.filterNotAs(_.instanceId != volumeMatch.instance.instanceId)
+          instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
@@ -174,7 +175,7 @@ class InstanceOpFactoryImpl(
       // We can only reserve unreserved resources
       val rolesToConsider = Set(ResourceRole.Unreserved).intersect(configuredRoles)
       if (rolesToConsider.isEmpty) {
-        log.warn(s"Will never match for ${runSpec.id}. The runSpec is not configured to accept unreserved resources.")
+        logger.warn(s"Will never match for ${runSpec.id}. The runSpec is not configured to accept unreserved resources.")
       }
 
       val resourceMatchResponse =
@@ -191,7 +192,7 @@ class InstanceOpFactoryImpl(
     maybeLaunchOnReservation
       .orElse(maybeReserveAndCreateVolumes)
       .getOrElse {
-        log.warn("No need to reserve or launch and offer request isForResidentRunSpec")
+        logger.warn("No need to reserve or launch and offer request isForResidentRunSpec")
         OfferMatchResult.NoMatch(app, request.offer,
           Seq(NoOfferMatchReason.NoCorrespondingReservationFound), clock.now())
       }
