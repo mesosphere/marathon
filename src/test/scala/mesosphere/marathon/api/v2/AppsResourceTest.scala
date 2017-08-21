@@ -7,7 +7,7 @@ import javax.ws.rs.core.Response
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api._
-import mesosphere.marathon.api.v2.validation.{ AppValidationMessages, NetworkValidationMessages }
+import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.test.SettableClock

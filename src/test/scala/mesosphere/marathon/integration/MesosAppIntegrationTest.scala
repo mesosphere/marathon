@@ -13,7 +13,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 
 import scala.collection.immutable.Seq
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 @IntegrationTest

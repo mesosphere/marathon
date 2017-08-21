@@ -13,7 +13,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 @IntegrationTest

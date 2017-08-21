@@ -386,6 +386,15 @@ object MarathonTestHelper {
     ).addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
   }
 
+  def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: Task.LocalVolumeId*) = {
+    MarathonTestHelper.makeBasicOffer(
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
+      role = "test"
+    ).setHostname(hostname)
+      .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agentId).build())
+      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
+  }
+
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer()
       .clearResources()

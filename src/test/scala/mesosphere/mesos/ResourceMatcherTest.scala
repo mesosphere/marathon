@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.NetworkInfoTestDefaults
+import mesosphere.marathon.core.task.state.AgentTestDefaults
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
@@ -790,7 +790,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
     "a Reserved instance prevents creation of another reservation when hostname constraint is set" in {
       val offer = MarathonTestHelper.makeBasicOffer().
         addResources(MarathonTestHelper.scalarResource("disk", 1024.0)).
-        setHostname(NetworkInfoTestDefaults.defaultHostName).
+        setHostname(AgentTestDefaults.defaultHostName).
         build()
 
       val volume = PersistentVolume(
@@ -822,7 +822,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
     "a Reserved instance DOES NOT prevent creation of another reservation when NO hostname constraint is set" in {
       val offer = MarathonTestHelper.makeBasicOffer().
         addResources(MarathonTestHelper.scalarResource("disk", 1024.0)).
-        setHostname(NetworkInfoTestDefaults.defaultHostName).
+        setHostname(AgentTestDefaults.defaultHostName).
         build()
 
       val volume = PersistentVolume(

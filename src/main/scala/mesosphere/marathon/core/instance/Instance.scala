@@ -76,8 +76,8 @@ object Instance {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
-  def instancesById(tasks: Seq[Instance]): Map[Instance.Id, Instance] =
-    tasks.map(task => task.instanceId -> task)(collection.breakOut)
+  def instancesById(instances: Seq[Instance]): Map[Instance.Id, Instance] =
+    instances.map(instance => instance.instanceId -> instance)(collection.breakOut)
 
   /**
     * Describes the state of an instance which is an accumulation of task states.
