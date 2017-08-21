@@ -21,6 +21,11 @@ def installMesos(): Unit = {
     %%('sudo, "apt-get", "install", "-y", "--force-yes", "--no-install-recommends", s"mesos=$version")
   }
 
+  // Stop Mesos service
+  def stop_mesos(): Unit = {
+    %%("sudo", "systemctl", "stop", "mesos-master.service", "mesos-slave.service", "mesos_executor.slice")
+  }
+
   maybeVersion match {
     case Some(version) =>
       try { install_mesos(version) }
@@ -31,6 +36,7 @@ def installMesos(): Unit = {
           install_mesos(version)
       }
       println(s"Successfully installed Mesos $version!")
+      stop_mesos()
     case None => throw new IllegalStateException("Could not determine Mesos version.")
   }
 }

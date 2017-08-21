@@ -46,6 +46,7 @@ apt-get install -y \
 # Download (but don't install) Mesos and its dependencies.
 # The CI task will install Mesos later.
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
+systemctl stop mesos-master.service mesos-slave.service mesos_executor.slice
 
 # Add arcanist
 mkdir -p /opt/arcanist
