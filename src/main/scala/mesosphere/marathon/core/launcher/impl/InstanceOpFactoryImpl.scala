@@ -221,8 +221,8 @@ class InstanceOpFactoryImpl(
     val (taskInfo, networkInfo) = new TaskBuilder(spec, newTaskId, config, runSpecTaskProc)
       .build(offer, resourceMatch, Some(volumeMatch))
 
-    // The agentId might have changed if the agent re-registered with a new ID after a reboot. In order to reflect
-    // this change, we recreate the AgentInfo each time we launch on an existing reservation.
+    // The agentInfo could have possibly changed after a reboot. See the docs for
+    // InstanceUpdateOperation.LaunchOnReservation for more details
     val agentInfo = Instance.AgentInfo(offer)
     val stateOp = InstanceUpdateOperation.LaunchOnReservation(
       reservedInstance.instanceId,

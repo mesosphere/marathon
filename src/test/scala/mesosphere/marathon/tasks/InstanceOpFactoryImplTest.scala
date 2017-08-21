@@ -16,11 +16,11 @@ import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{ GivenWhenThen, Matchers, Inside }
 
 import scala.collection.immutable.Seq
 
-class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
+class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers with Inside {
 
   test("Copy SlaveID from Offer to Task") {
     val f = new Fixture
@@ -37,10 +37,12 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    matchResult shouldBe a[OfferMatchResult.Match]
-    val matched = matchResult.asInstanceOf[OfferMatchResult.Match]
-    assert(matched.instanceOp.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
-    assert(matched.instanceOp.stateOp.possibleNewState.get.tasksMap.size == 1, "new state should have 1 task")
+    val matched = inside(matchResult) {
+      case matched: OfferMatchResult.Match =>
+        assert(matched.instanceOp.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
+        assert(matched.instanceOp.stateOp.possibleNewState.get.tasksMap.size == 1, "new state should have 1 task")
+        matched
+    }
 
     val (expectedTaskId, _) = matched.instanceOp.stateOp.possibleNewState.get.tasksMap.head
     val expectedTask = Task.LaunchedEphemeral(
@@ -93,8 +95,10 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A Match with Launch is inferred")
-    matchResult shouldBe a[OfferMatchResult.Match]
-    matchResult.asInstanceOf[OfferMatchResult.Match].instanceOp shouldBe a[InstanceOp.LaunchTask]
+    inside(matchResult) {
+      case mr: OfferMatchResult.Match =>
+        mr.instanceOp shouldBe a[InstanceOp.LaunchTask]
+    }
   }
 
   test("Resident app -> None (insufficient offer)") {
@@ -136,8 +140,10 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A Match with ReserveAndCreateVolumes is returned")
-    matchResult shouldBe a[OfferMatchResult.Match]
-    matchResult.asInstanceOf[OfferMatchResult.Match].instanceOp shouldBe a[InstanceOp.ReserveAndCreateVolumes]
+    inside(matchResult) {
+      case mr: OfferMatchResult.Match =>
+        mr.instanceOp shouldBe a[InstanceOp.ReserveAndCreateVolumes]
+    }
   }
 
   test("Resident app -> Launch succeeds") {
@@ -161,9 +167,11 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A Match with a Launch is returned")
-    matchResult shouldBe a[OfferMatchResult.Match]
-    val matched = matchResult.asInstanceOf[OfferMatchResult.Match]
-    matched.instanceOp shouldBe a[InstanceOp.LaunchTask]
+    val matched = inside(matchResult) {
+      case matched: OfferMatchResult.Match =>
+        matched.instanceOp shouldBe a[InstanceOp.LaunchTask]
+        matched
+    }
 
     And("the taskInfo contains the correct persistent volume")
     val taskInfoResources = matched.instanceOp.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
@@ -213,15 +221,17 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val request = InstanceOpFactory.Request(app, offer, Map(existingReservedInstance.instanceId -> existingReservedInstance), additionalLaunches = 1)
     val result = f.instanceOpFactory.matchOfferRequest(request)
 
-    // I am truly sorry for this ugly nested match. The alternative is
-    result shouldBe a[OfferMatchResult.Match]
-    val expectedResult = result.asInstanceOf[OfferMatchResult.Match]
-    expectedResult.instanceOp shouldBe a[InstanceOp.LaunchTask]
-    val expectedInstanceOp = expectedResult.instanceOp.asInstanceOf[InstanceOp.LaunchTask]
-    expectedInstanceOp.stateOp shouldBe a[InstanceUpdateOperation.LaunchOnReservation]
-    val expectedStateOp = expectedInstanceOp.stateOp.asInstanceOf[InstanceUpdateOperation.LaunchOnReservation]
-    expectedStateOp.agentInfo.host shouldBe updatedHostName
-    expectedStateOp.agentInfo.agentId shouldBe Some(updatedAgentId)
+    inside(result) {
+      case m: OfferMatchResult.Match =>
+        inside(m.instanceOp) {
+          case launchTask: InstanceOp.LaunchTask =>
+            inside(launchTask.stateOp) {
+              case launchOnReservation: InstanceUpdateOperation.LaunchOnReservation =>
+                launchOnReservation.agentInfo.host shouldBe updatedHostName
+                launchOnReservation.agentInfo.agentId shouldBe Some(updatedAgentId)
+            }
+        }
+    }
   }
 
   class Fixture {

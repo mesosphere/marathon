@@ -44,12 +44,11 @@ object InstanceUpdateOperation {
     * @param timestamp time
     * @param status
     * @param hostPorts the assigned hostPorts
-    * @param agentInfo The (possibly updated) AgentInfo based on the offer that was used to launch this task. There are
-    *                  times when an agent gets a new agentId after a reboot. There might have been a task using
-    *                  reservations and a persistent volume on agent-1 in the past. When agent-1 is rebooted and looses
-    *                  the task, Marathon might see the resources offered from agent-2 in the future - if the agent has
-    *                  been re-registered with that new ID. In order to report correct AgentInfo, it is now required in
-    *                  this message.
+    * @param agentInfo The (possibly updated) AgentInfo based on the offer that was used to launch this task, needed to
+    *                  keep an Instance's agentInfo updated when re-launching resident tasks. Until Mesos 1.4.0, an
+    *                  agent will get a new agentId after a host reboot. Further, in dynamic IP environments, the
+    *                  hostname could potentially change after a reboot (especially important to keep up-to-date in the
+    *                  context of unique hostname constraints).
     */
   case class LaunchOnReservation(
     instanceId: Instance.Id,
