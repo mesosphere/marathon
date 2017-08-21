@@ -165,3 +165,12 @@ def jenkins(): (String, Option[awsClient.Artifact]) = {
 
   (version, maybeArtifact)
 }
+
+@main
+def travis(): Unit = {
+  try {
+    compileAndTest()
+  } finally {
+    zipSandboxLogs()    // Try to archive logs in any case
+  }
+}
