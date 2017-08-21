@@ -173,27 +173,6 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     f.verifyNoMoreInteractions()
   }
 
-  test("Revive timer is cancelled if offers not wanted anymore") {
-    val f = new Fixture()
-    Given("we received offersWanted = true two times and thus scheduled a timer")
-    f.actorRef.start()
-    f.offersWanted.onNext(true)
-    f.offersWanted.onNext(true)
-
-    Mockito.reset(f.driver)
-    Mockito.reset(f.actorRef.underlyingActor.cancellable)
-
-    When("we receive a false (= offers not wanted anymore) message")
-    f.offersWanted.onNext(false)
-
-    Then("we cancel the timer")
-    Mockito.verify(f.actorRef.underlyingActor.cancellable, Mockito.timeout(1000)).cancel()
-
-    Then("we suppress offers")
-    Mockito.verify(f.driver, Mockito.timeout(1000)).suppressOffers()
-    f.verifyNoMoreInteractions()
-  }
-
   test("Check revives if last offersWanted == true and more than 5.seconds ago") {
     val f = new Fixture()
     Given("that we received various flipping offers wanted requests")
@@ -218,28 +197,7 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     f.verifyNoMoreInteractions()
   }
 
-  test("Check does not revives if last offersWanted == false and more than 5.seconds ago") {
-    val f = new Fixture()
-    Given("that we received various flipping offers wanted requests")
-    f.actorRef.start()
-    f.offersWanted.onNext(true)
-    f.offersWanted.onNext(true)
-    f.offersWanted.onNext(false)
-
-    Mockito.reset(f.driver)
-    Mockito.reset(f.actorRef.underlyingActor.cancellable)
-
-    And("we wait for 5 seconds")
-    f.clock += 5.seconds
-
-    When("we receive a Check message")
-    f.actorRef ! ReviveOffersActor.TimedCheck
-
-    Then("we do not do anything")
-    f.verifyNoMoreInteractions()
-  }
-
-  test("revive on repeatedly while OffersWanted(true)") {
+  test("revive on repeatedly while OffersWanted") {
     val f = new Fixture(repetitions = 5)
     Given("a started actor")
     f.actorRef.start()
