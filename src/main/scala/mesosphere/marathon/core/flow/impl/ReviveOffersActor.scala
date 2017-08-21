@@ -21,7 +21,7 @@ private[flow] object ReviveOffersActor {
   }
 
   private[impl] case object TimedCheck
-  private[impl] case class OffersWanted(wanted: Boolean)
+  private[impl] case object OffersWanted
 }
 
 /**
@@ -40,7 +40,7 @@ private[impl] class ReviveOffersActor(
   private[impl] var nextReviveCancellableOpt: Option[Cancellable] = None
 
   override def preStart(): Unit = {
-    subscription = offersWanted.map(OffersWanted).subscribe(self ! _)
+    subscription = offersWanted.subscribe(offersWanted => if (offersWanted) self ! OffersWanted)
     marathonEventStream.subscribe(self, classOf[SchedulerRegisteredEvent])
     marathonEventStream.subscribe(self, classOf[SchedulerReregisteredEvent])
   }
@@ -85,11 +85,6 @@ private[impl] class ReviveOffersActor(
     }
   }
 
-  private[this] def suppressOffers(): Unit = {
-    log.info("=> Suppress offers NOW")
-    driverHolder.driver.foreach(_.suppressOffers())
-  }
-
   override def receive: Receive = LoggingReceive {
     Seq(
       receiveOffersWantedNotifications,
@@ -98,23 +93,10 @@ private[impl] class ReviveOffersActor(
   }
 
   private[this] def receiveOffersWantedNotifications: Receive = {
-    case OffersWanted(true) =>
+    case OffersWanted =>
       log.info("Received offers WANTED notification")
       offersCurrentlyWanted = true
       initiateNewSeriesOfRevives()
-
-    case OffersWanted(false) =>
-      log.info("Received offers NOT WANTED notification, canceling {} revives", revivesNeeded)
-      offersCurrentlyWanted = false
-      revivesNeeded = 0
-      nextReviveCancellableOpt.foreach(_.cancel())
-      nextReviveCancellableOpt = None
-
-      // When we don't want any more offers, we ask mesos to suppress
-      // them. This alleviates load on the allocator, and acts as an
-      // infinite duration filter for all agents until the next time
-      // we call `Revive`.
-      suppressOffers()
   }
 
   def initiateNewSeriesOfRevives(): Unit = {
