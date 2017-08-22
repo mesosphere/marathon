@@ -1,4 +1,4 @@
-## Changes since 1.4.6
+## Changes from 1.4.6 to 1.4.7
 
 ### Fixed issues
 
@@ -7,7 +7,7 @@
 * [MARATHON-7707](https://jira.mesosphere.com/browse/MARATHON-7707) - Resident task instance agentId and host name values are now properly updated on re-launch.
 * [MARATHON-7654](https://jira.mesosphere.com/browse/MARATHON-7654) - Marathon resident task re-launch requests are no longer denied by Mesos for having the same id as another unreachable task (because Marathon no longer re-uses task ids).
 
-## Changes since 1.4.5
+## Changes from 1.4.5 to 1.4.6
 
 ### Overview
 
