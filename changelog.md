@@ -1,3 +1,12 @@
+## Changes since 1.4.6
+
+### Fixed issues
+
+* [MARATHON-7715](https://jira.mesosphere.com/browse/MARATHON-7715) - Marathon would not notice an unreachable / lost resident task was gone, or that a reservation should be released, unless if it was idle. This is has been resolved.
+* [MARATHON-1703](https://jira.mesosphere.com/browse/MARATHON-1703) - Resident task instance placement now properly respects constraints which rely on the placement state of instance peers (such as hostname:UNIQUE).
+* [MARATHON-7707](https://jira.mesosphere.com/browse/MARATHON-7707) - Resident task instance agentId and host name values are now properly updated on re-launch.
+* [MARATHON-7654](https://jira.mesosphere.com/browse/MARATHON-7654) - Marathon resident task re-launch requests are no longer denied by Mesos for having the same id as another unreachable task (because Marathon no longer re-uses task ids).
+
 ## Changes since 1.4.5
 
 ### Overview
