@@ -3,7 +3,6 @@ package integration
 
 import java.net.URL
 
-import akka.http.scaladsl.model.StatusCodes._
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyFilter }
 import mesosphere.marathon.integration.setup._
@@ -29,13 +28,11 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
       val helloPort = forwarder.startHelloApp().futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = helloPort).futureValue
-      assert(result.response.status.intValue == 200)
-      assert(result.asString == "pong\n")
-      assert(!result.response.headers.exists(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA))
-      assert(result.response.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
-      assert(
-        result.response.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
-          == s"http://localhost:$helloPort")
+      result should be(OK)
+      result.entityString should be("pong\n")
+      result.value.headers.exists(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) should be(false)
+      result.value.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) should be(1)
+      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(s"http://localhost:$helloPort")
     }
 
     "forwarding ping" in withForwarder { forwarder =>
@@ -44,16 +41,12 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
 
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort).futureValue
-      assert(result.response.status.intValue == 200)
-      assert(result.asString == "pong\n")
-      assert(result.response.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) == 1)
-      assert(
-        result.response.headers.find(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA).get.value
-          == s"1.1 localhost:$forwardPort")
-      assert(result.response.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
-      assert(
-        result.response.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
-          == s"http://localhost:$helloPort")
+      result should be(OK)
+      result.entityString should be("pong\n")
+      result.value.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) should be(1)
+      result.value.headers.find(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA).get.value should be(s"1.1 localhost:$forwardPort")
+      result.value.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) should be(1)
+      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(s"http://localhost:$helloPort")
     }
 
     "direct HTTPS ping" in withForwarder { forwarder =>
@@ -68,9 +61,9 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
       val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
       val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
       val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
-      assert(response == "pong\n")
-      assert(via == null)
-      assert(leader == s"https://localhost:$helloPort")
+      response should be("pong\n")
+      via should be(null)
+      leader should be(s"https://localhost:$helloPort")
     }
 
     "forwarding HTTPS ping with a self-signed cert" in withForwarder { forwarder =>
@@ -91,9 +84,9 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
       val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
       val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
       val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
-      assert(response == "pong\n")
-      assert(via == s"1.1 localhost:$forwardPort")
-      assert(leader == s"https://localhost:$helloPort")
+      response should be("pong\n")
+      via should be(s"1.1 localhost:$forwardPort")
+      leader should be(s"https://localhost:$helloPort")
     }
 
     "forwarding HTTPS ping with a ca signed cert" in withForwarder { forwarder =>
@@ -118,16 +111,16 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
       val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
       val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
       val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
-      assert(response == "pong\n")
-      assert(via == s"1.1 localhost:$forwardPort")
-      assert(leader == s"https://localhost:$helloPort")
+      response should be("pong\n")
+      via should be(s"1.1 localhost:$forwardPort")
+      leader should be(s"https://localhost:$helloPort")
     }
 
     "direct 404" in withForwarder { forwarder =>
       val helloPort = forwarder.startHelloApp().futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.custom("/notfound")("localhost", port = helloPort).futureValue
-      assert(result.response.status.intValue == 404)
+      result should be(NotFound)
     }
 
     "forwarding 404" in withForwarder { forwarder =>
@@ -135,15 +128,15 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
       val forwardPort = forwarder.startForwarder(helloPort).futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.custom("/notfound")("localhost", port = forwardPort).futureValue
-      assert(result.response.status.intValue == 404)
+      result should be(NotFound)
     }
 
     "direct internal server error" in withForwarder { forwarder =>
       val helloPort = forwarder.startHelloApp().futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.custom("/hello/crash")("localhost", port = helloPort).futureValue
-      assert(result.response.status.intValue == 500)
-      assert(result.asString == "Error")
+      result should be(ServerError)
+      result.entityString should be("Error")
     }
 
     "forwarding internal server error" in withForwarder { forwarder =>
@@ -151,15 +144,15 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
       val forwardPort = forwarder.startForwarder(helloPort).futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.custom("/hello/crash")("localhost", port = forwardPort).futureValue
-      assert(result.response.status.intValue == 500)
-      assert(result.asString == "Error")
+      result should be(ServerError)
+      result.entityString should be("Error")
     }
 
     "forwarding connection failed" in withForwarder { forwarder =>
       val forwardPort = forwarder.startForwarder(PortAllocator.ephemeralPort()).futureValue
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort).futureValue
-      assert(result.response.status.intValue == BadGateway.intValue)
+      result should be(BadGateway)
     }
 
     "forwarding loop" in withForwarder { forwarder =>
@@ -168,7 +161,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
 
       val appFacade = new AppMockFacade()
       val result = appFacade.ping("localhost", port = forwardPort1).futureValue
-      assert(result.response.status.intValue == BadGateway.intValue)
+      result should be(BadGateway)
     }
 
   }

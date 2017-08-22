@@ -164,7 +164,7 @@ trait IntegrationTestLike extends UnitTestLike {
     * Custom matcher for HTTP responses that print response body.
     * @param status The expected status code.
     */
-  class HttpResponseMatcher(status: Int) extends BeMatcher[RestResult[_]] {
+  class RestResultMatcher(status: Int) extends BeMatcher[RestResult[_]] {
     def apply(left: RestResult[_]) =
       MatchResult(
         left.code == status,
@@ -173,12 +173,14 @@ trait IntegrationTestLike extends UnitTestLike {
       )
   }
 
-  def Accepted = new HttpResponseMatcher(202)
-  def Created = new HttpResponseMatcher(201)
-  def Conflict = new HttpResponseMatcher(409)
-  def Deleted = new HttpResponseMatcher(202)
-  def OK = new HttpResponseMatcher(200)
-  def NotFound = new HttpResponseMatcher(404)
+  val Accepted = new RestResultMatcher(202)
+  val BadGateway = new RestResultMatcher(502)
+  val Created = new RestResultMatcher(201)
+  val Conflict = new RestResultMatcher(409)
+  val Deleted = new RestResultMatcher(202)
+  val OK = new RestResultMatcher(200)
+  val NotFound = new RestResultMatcher(404)
+  val ServerError = new RestResultMatcher(500)
 }
 
 abstract class IntegrationTest extends WordSpec with IntegrationTestLike

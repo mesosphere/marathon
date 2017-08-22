@@ -619,7 +619,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       def pingTask(taskInfo: CallbackEvent): String = {
         val host: String = taskInfo.info("host").asInstanceOf[String]
         val port: Int = taskInfo.info("ports").asInstanceOf[Seq[Int]].head
-        appMock.ping(host, port).futureValue.asString
+        appMock.ping(host, port).futureValue.entityString
       }
 
       pingTask(taskUpdate1) should be(s"Pong $appIdPath")
