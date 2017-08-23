@@ -1,4 +1,4 @@
-(ns jepsen.marathon.checker
+(ns jepsen.checker.marathon-checker
   (:require [clj-time.core :as t]
             [clj-time.format :as tf]
             [clj-time.coerce :as tc]
