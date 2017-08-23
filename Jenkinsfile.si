@@ -4,6 +4,9 @@ timeout(90) {
 node('shakedown') {
   wrap([$class: 'MesosSingleUseSlave']) {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
+
+    properties([pipelineTriggers([cron('0 */8 * * *')])])
+
     stage("Run System Integration Test Pipeline") {
       try {
         checkout scm
