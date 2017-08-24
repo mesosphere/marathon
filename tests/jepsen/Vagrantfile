@@ -1,8 +1,12 @@
 VAGRANTFILE_API_VERSION = "2"
 
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+cluster_size = 3
+if ENV['JEPSEN_CLUSTER_SIZE']
+  cluster_size = ENV['JEPSEN_CLUSTER_SIZE']
+end
 
-  (1..4).each do |i|
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  (1..Integer("#{cluster_size}")).each do |i|
     nodename = "n#{i}"
     config.vm.box = "ubuntu/xenial64"
     config.vm.provision "shell", inline: <<-SHELL

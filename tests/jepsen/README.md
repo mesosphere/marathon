@@ -1,32 +1,64 @@
 # Marathon Jepsen
-Automate testing of various Marathon operations in a cluster in the presence of controlled network splits.
+
+Automating the testing of various Marathon operations in a cluster in the presence of controlled network splits.
 
 ## What is Jepsen?
-Jepsen is a clojure library designed by Kyle Kingsbury, designed to test the partition tolerance of distributed systems.
-<brbr>Find more about Jepsen here https://jepsen.io
 
-Jepsen source code can be found here https://github.com/jepsen-io/jepsen
+[Jepsen](https://jepsen.io) is a clojure library designed by Kyle Kingsbury, designed to test the partition tolerance of distributed systems.
+
+Jepsen source code can be found on [GitHub](https://github.com/jepsen-io/jepsen)
+
+## Tests
+
+The entry point for each test is in the `tests/jepsen` directory.
+
+The tests currently available in the suite are as follows (in alphabetical order):
+
+1. [App Instance test](test/jepsen/app_instance_test.clj)
+1. [Basic app test](test/jepsen/basic_app_test.clj)
+1. [Basic pod test](test/jepsen/basic_pod_test.clj)
+1. [Destroy app test](test/jepsen/destroy_app_test.clj)
+1. [Groups and dependencies test](test/jepsen/groups_dependencies_test.clj)
+1. [Leader abdication test](test/jepsen/leader_abdication_test.clj)
+1. [Scale test](test/jepsen/scale_test.clj)
+
+## Install Prerequisites
+
+Here are the following prerequisites which are required to run the tests:
+1. Java 8
+1. Vagrant
+1. [Leiningen](https://leiningen.org/#install)
 
 ## Usage
 
-1. To spin-up VMs using `vagrant`:
+To spin-up VMs using `vagrant`:
+
 ```
 vagrant up
 ```
-This will spin-up 2 VMs for now for the purpose of testing.
 
-1. To download the Jepsen and other dependencies:
+This will spin-up 4 VM cluster for now for the purpose of testing.
+To spin-up a cluster with different number of VMs, set the environment variable `JEPSEN_CLUSTER_SIZE`:
+
+```
+export JEPSEN_CLUSTER_SIZE=<number-of-VMs>
+```
+
+To download the Jepsen and other dependencies:
+
 ```
 make deps
 ```
 
-1. To perform Jepsen setup and teardown on each of the VMs:
-```
-make
-```
-`make` if not passed any argument as shown above, will pick up the list of nodes from `nodes_list` file.
+Makes sure the ip address of the VMs spun-up by vagrant are present in a file called `nodes_list` which is picked up by the test with the default username and password as `ubuntu`.
+To run a test,
 
-1. If you want run Jepsen setup and teardown on more number of nodes, add them in the `nodes_list` file or, a new nodes_list file can be passed as follows:
 ```
-make run nodes=<path-to-nodes-file>
+make test=jepsen.<test-name>
+```
+
+Example:
+
+```
+make test=jepsen.app-instance-test
 ```

@@ -1,7 +1,7 @@
 .PHONY : default clean check-indent help indent indent-file clean-diff deps run shell build
 
 default:
-	@lein run test --nodes-file nodes_list --username ubuntu --password ubuntu --test $(testname)
+	@lein test $(test)
 
 clean:
 	@lein clean
@@ -10,7 +10,7 @@ check-indent:
 	@lein cljfmt check
 
 help:
-	@lein run test -h
+	@lein test -h
 
 indent:
 	@echo "Indenting the clojure files in this project..."
@@ -28,7 +28,7 @@ deps:
 	@lein deps
 
 run:
-	@lein run test --nodes-file $(nodes) --username ubuntu --password ubuntu
+	@lein test $(test)
 
 shell:
 	@lein repl
