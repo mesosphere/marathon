@@ -103,7 +103,7 @@ def createPackages(): String = utils.stage("Package") {
  */
 @main
 def createLinuxPackages(): Unit = utils.stage("Package Docker Image, Debian and RedHat Packages") {
-  %('sbt, "docker:publishLocal", "packageDebian", "packageRpm")
+  %('sbt, "docker:publishLocal", "packageAll")
 }
 
 /**

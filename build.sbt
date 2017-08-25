@@ -147,11 +147,8 @@ lazy val commonSettings = testSettings ++
 )
 
 
-lazy val packageDebianUpstart = taskKey[File]("Create debian upstart package")
-lazy val packageDebianSystemV = taskKey[File]("Create debian systemv package")
-lazy val packageDebianSystemd = taskKey[File]("Create debian systemd package")
-lazy val packageRpmSystemV = taskKey[File]("Create rpm systemv package")
-lazy val packageRpmSystemd = taskKey[File]("create rpm systemd package")
+lazy val packageDebianForLoader = taskKey[File]("Create debian package for active serverLoader")
+lazy val packageRpmForLoader = taskKey[File]("Create rpm package for active serverLoader")
 
 lazy val packagingSettings = Seq(
   packageSummary := "Scheduler for Apache Mesos",
@@ -160,6 +157,7 @@ lazy val packagingSettings = Seq(
   debianPackageDependencies in Debian := Seq("java8-runtime-headless", "lsb-release", "unzip", s"mesos (>= ${Dependency.V.MesosDebian})"),
   rpmVendor := "mesosphere",
   rpmLicense := Some("Apache 2"),
+  serverLoading := None,
   version in Rpm := {
     val releasePattern = """^(\d+)\.(\d+)\.(\d+)$""".r
     val snapshotPattern = """^(\d+).(\d+)\.(\d+)-SNAPSHOT-\d+-g(\w+)""".r
@@ -167,11 +165,12 @@ lazy val packagingSettings = Seq(
       case releasePattern(major, minor, patch) => s"$major.$minor.$patch"
       case snapshotPattern(major, minor, patch, commit) => s"$major.$minor.$patch${LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE)}git$commit"
       case v =>
+
         System.err.println(s"Version '$v' is not fully supported, please update the git tags.")
         v
     }
   },
-  daemonStdoutLogFile := None,
+  daemonStdoutLogFile := Some("marathon"),
   debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
   rpmRequirements in Rpm := Seq("coreutils", "unzip", "java >= 1:1.8.0"),
   dockerBaseImage := Dependency.V.OpenJDK,
@@ -202,58 +201,47 @@ lazy val packagingSettings = Seq(
       |  addApp "$env_op"
       |done
     """.stripMargin,
-  packageDebianUpstart := {
+
+  /* It is expected that these task (packageDebianForLoader, packageRpmForLoader) will be called with various loader
+   * configuration specified (systemv, systemd, and upstart as appropriate)
+   *
+   * See the command alias packageAll for the invocation */
+  packageDebianForLoader := {
     val debianFile = (packageBin in Debian).value
-    val output = target.value / "packages" / s"upstart-${debianFile.getName}"
+    val serverLoadingName = (serverLoading in Debian).value.get
+    val output = target.value / "packages" / s"${serverLoadingName}-${debianFile.getName}"
     IO.move(debianFile, output)
-    streams.value.log.info(s"Moved debian ${(serverLoading in Debian).value} package $debianFile to $output")
+    streams.value.log.info(s"Moved debian ${serverLoadingName} package $debianFile to $output")
     output
   },
-  packageDebianSystemV := {
-    val debianFile = (packageBin in Debian).value
-    val output = target.value / "packages" /  s"sysvinit-${debianFile.getName}"
-    IO.move(debianFile, output)
-    streams.value.log.info(s"Moved debian ${(serverLoading in Debian).value} package $debianFile to $output")
-    output
-  },
-  packageDebianSystemd := {
-    val debianFile = (packageBin in Debian).value
-    val output = target.value / "packages" /  s"systemd-${debianFile.getName}"
-    IO.move(debianFile, output)
-    streams.value.log.info(s"Moving debian ${(serverLoading in Debian).value} package $debianFile to $output")
-    output
-  },
-  packageRpmSystemV := {
+  packageRpmForLoader := {
     val rpmFile = (packageBin in Rpm).value
-    val output = target.value / "packages" /  s"sysvinit-${rpmFile.getName}"
+    val serverLoadingName = (serverLoading in Rpm).value.get
+    val output = target.value / "packages" /  s"${serverLoadingName}-${rpmFile.getName}"
     IO.move(rpmFile, output)
-    streams.value.log.info(s"Moving rpm ${(serverLoading in Rpm).value} package $rpmFile to $output")
-    output
-  },
-  packageRpmSystemd := {
-    val rpmFile = (packageBin in Rpm).value
-    val output = target.value / "packages" /  s"systemd-${rpmFile.getName}"
-    IO.move(rpmFile, output)
-    streams.value.log.info(s"Moving rpm ${(serverLoading in Rpm).value} package $rpmFile to $output")
+    streams.value.log.info(s"Moving rpm ${serverLoadingName} package $rpmFile to $output")
     output
   },
   mappings in (Compile, packageDoc) := Seq()
 )
 
-addCommandAlias("packageAll", ";universal:packageBin; universal:packageXzTarball; docker:publishLocal; packageDebian; packageRpm")
+/* Builds all the different package configurations by modifying the session config and running the packaging tasks Note
+ *  you cannot build RPM packages unless if you have a functioning `rpmbuild` command (see the alien package for
+ *  debian). */
+addCommandAlias("packageAll",
+  ";session clear-all" +
+  ";set SystemloaderPlugin.projectSettings ++ SystemdPlugin.projectSettings" +
+  ";packageDebianForLoader" +
+  ";packageRpmForLoader" +
 
-addCommandAlias("packageDebian",  ";set serverLoading in Debian := com.typesafe.sbt.packager.archetypes.ServerLoader.SystemV" +
-  ";packageDebianSystemV" +
-  ";set serverLoading in Debian := com.typesafe.sbt.packager.archetypes.ServerLoader.Upstart" +
-  ";packageDebianUpstart" +
-  ";set serverLoading in Debian := com.typesafe.sbt.packager.archetypes.ServerLoader.Systemd" +
-  ";packageDebianSystemd")
+  ";session clear-all" +
+  ";set SystemloaderPlugin.projectSettings ++ SystemVPlugin.projectSettings ++ NativePackagerSettings.debianSystemVSettings" +
+  ";packageDebianForLoader" +
+  ";packageRpmForLoader" +
 
-addCommandAlias("packageRpm",  ";set serverLoading in Rpm := com.typesafe.sbt.packager.archetypes.ServerLoader.SystemV" +
-  ";packageRpmSystemV" +
-  ";set serverLoading in Rpm := com.typesafe.sbt.packager.archetypes.ServerLoader.Systemd" +
-  ";packageRpmSystemd")
-
+  ";session clear-all" +
+  ";set SystemloaderPlugin.projectSettings ++ UpstartPlugin.projectSettings  ++ NativePackagerSettings.ubuntuUpstartSettings" +
+  ";packageDebianForLoader")
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)

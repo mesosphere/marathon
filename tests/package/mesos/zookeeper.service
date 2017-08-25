@@ -1,0 +1,14 @@
+[Unit]
+Description=Zookeeper
+After=network.target
+Wants=network.target
+
+[Service]
+ExecStart=/usr/share/zookeeper/bin/zkServer.sh start-foreground
+Restart=always
+RestartSec=20
+LimitNOFILE=16384
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=mesos-master.target

@@ -1,0 +1,40 @@
+# generated upstart config
+
+description "${{descr}}"
+author "${{author}}"
+
+# Stanzas
+#
+# Stanzas control when and how a process is started and stopped
+# See a list of stanzas here: http://upstart.ubuntu.com/wiki/Stanzas#respawn
+
+# General settings
+kill timeout ${{kill_timeout}}
+
+# When to start the service
+start on runlevel ${{start_runlevels}}
+${{start_facilities}}
+
+# When to stop the service
+stop on runlevel ${{stop_runlevels}}
+${{stop_facilities}}
+
+# Automatically restart process if crashed. Tries ${{retries}} times every ${{retryTimeout}} seconds
+respawn
+respawn limit ${{retries}} ${{retryTimeout}}
+
+# Set maximum number of open file descriptors
+limit nofile ${{file_descriptor_limit}} ${{file_descriptor_limit}}
+
+pre-start script
+    [ -d /var/run/${{app_name}} ] || install -m 755 -o ${{daemon_user}} -g ${{daemon_group}} -d /var/run/${{app_name}}
+end script
+
+# set the working directory of the job processes
+chdir ${{chdir}}
+
+# Start the process
+script
+  [ -f ${{env_config}} ] && . ${{env_config}}
+  exec sudo -E -u ${{daemon_user}} bin/${{exec}}
+end script
