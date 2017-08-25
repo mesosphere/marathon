@@ -99,7 +99,7 @@ class Migration(
       },
       StorageVersions(1, 4, 0, StorageVersion.StorageFormat.LEGACY) -> { () =>
         new MigrationTo_1_4_0(legacyConfig).migrate().recover {
-          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.3.6")
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.3.6", e)
         }
       },
       StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
