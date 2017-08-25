@@ -9,17 +9,22 @@ import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 import akka.Done
+import akka.http.scaladsl.model.StatusCodes._
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
+<<<<<<< HEAD
 import mesosphere.marathon.stream._
 import org.apache.http.HttpStatus
+=======
+import mesosphere.marathon.stream.Implicits._
+>>>>>>> 6f5e6fc14... community debug of proxy failure to leader.  @xperimental code moved to master first.
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
-import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
+import scala.util.{ Failure, Success, Try }
 
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.
@@ -227,10 +232,11 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       }
     }
 
-    def copyRequestToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Unit = {
+    def copyRequestToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Try[Done] = Try {
       leaderConnection.setRequestMethod(request.getMethod)
       copyRequestHeadersToConnection(leaderConnection, request)
       copyRequestBodyToConnection(leaderConnection, request)
+      Done
     }
 
     def cloneResponseStatusAndHeader(remote: HttpURLConnection, response: HttpServletResponse): Try[Done] = Try {
@@ -275,16 +281,25 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       } else {
         val leaderConnection: HttpURLConnection = createAndConfigureConnection(url)
         try {
-          copyRequestToConnection(leaderConnection, request)
-          copyConnectionResponse(
-            response
-          )(
+          copyRequestToConnection(leaderConnection, request) match {
+            case Failure(ex: ConnectException) =>
+              log.error(ERROR_STATUS_CONNECTION_REFUSED, ex)
+              response.sendError(BadGateway.intValue, ERROR_STATUS_CONNECTION_REFUSED)
+              return
+            case Failure(ex: SocketTimeoutException) =>
+              log.error(ERROR_STATUS_GATEWAY_TIMEOUT, ex)
+              response.sendError(GatewayTimeout.intValue, ERROR_STATUS_GATEWAY_TIMEOUT)
+              return
+            case Failure(ex) =>
+              log.error(ERROR_STATUS_BAD_CONNECTION, ex)
+              response.sendError(InternalServerError.intValue)
+              return
+            case Success(_) => // ignore
+          }
+          copyConnectionResponse(response)(
             () => cloneResponseStatusAndHeader(leaderConnection, response),
             () => cloneResponseEntity(leaderConnection, response)
           )
-        } catch {
-          case connException: ConnectException =>
-            response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_CONNECTION_REFUSED)
         } finally {
           Try(leaderConnection.getInputStream.close())
           Try(leaderConnection.getErrorStream.close())
@@ -317,6 +332,7 @@ object JavaUrlConnectionRequestForwarder {
   val HEADER_VIA: String = "X-Marathon-Via"
   val ERROR_STATUS_LOOP: String = "Detected proxying loop."
   val ERROR_STATUS_CONNECTION_REFUSED: String = "Connection to leader refused."
+  val ERROR_STATUS_GATEWAY_TIMEOUT: String = "Connection to leader timed out."
   val ERROR_STATUS_BAD_CONNECTION: String = "Failed to successfully establish a connection to the leader."
 
   val HEADER_FORWARDED_FOR: String = "X-Forwarded-For"
