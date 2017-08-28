@@ -18,6 +18,7 @@ fi
 echo "Workspace: ${WORKSPACE}"
 echo "Using: ${TEMPLATE}"
 
+apk update
 apk --upgrade add gettext wget
 wget 'https://downloads.dcos.io/dcos-test-utils/bin/linux/dcos-launch' && chmod +x dcos-launch
 
