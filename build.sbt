@@ -6,6 +6,7 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
+import NativePackagerHelper.directory
 
 import scalariform.formatter.preferences._
 
@@ -177,6 +178,13 @@ lazy val packagingSettings = Seq(
   dockerExposedPorts := Seq(8080),
   dockerRepository := Some("mesosphere"),
   daemonUser in Docker := "root",
+
+  // Package docs
+  universalArchiveOptions in (UniversalDocs, packageZipTarball) := Seq("-pcvf"), // Remove this line once fix for https://github.com/sbt/sbt-native-packager/issues/1019 is released
+  (packageName in UniversalDocs) := { packageName.value + "-docs" + "-" + version.value },
+  (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
+  mappings in UniversalDocs ++= directory("docs/docs"),
+
   dockerCommands ++= Seq(
     Cmd("RUN", "apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && " +
         "echo deb http://repos.mesosphere.com/debian jessie-testing main | tee -a /etc/apt/sources.list.d/mesosphere.list && " +

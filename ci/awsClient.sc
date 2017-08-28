@@ -83,11 +83,17 @@ def archiveArtifact(uploadFile: Path): Option[Artifact] = {
 def uploadFileAndSha(uploadFile: Path): Artifact = {
   val shaFile = fileUtil.writeSha1ForFile(uploadFile)
 
-  uploadFileToS3(uploadFile, S3_PREFIX / uploadFile.last)
-  uploadFileToS3(shaFile, S3_PREFIX / shaFile.last)
+  upload(uploadFile)
+  upload(shaFile)
   Artifact(S3_PREFIX / uploadFile.last, read(shaFile))
 }
 
+/**
+ * Uploads file to default bucket.
+ */
+def upload(file: Path): Unit = {
+  uploadFileToS3(file, S3_PREFIX / file.last)
+}
 
 /**
  *  Uploads a file to the S3 bucket
