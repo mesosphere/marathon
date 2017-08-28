@@ -342,11 +342,13 @@ object JavaUrlConnectionRequestForwarder {
     forwardHeaders: () => Try[Done], forwardEntity: () => Unit): Unit = {
 
     forwardHeaders() match {
-      case Failure(e) =>
+      case Failure(ex: SocketTimeoutException) =>
+        log.error(ERROR_STATUS_GATEWAY_TIMEOUT, ex)
+        response.sendError(GatewayTimeout.intValue, ERROR_STATUS_GATEWAY_TIMEOUT)
+      case Failure(ex) =>
         // early detection of proxy failure, before we commit the status code to the response stream
-        log.warn("failed to proxy response headers from leader", e)
-        response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_BAD_CONNECTION)
-
+        log.warn("failed to proxy response headers from leader", ex)
+        response.sendError(BadGateway.intValue, ERROR_STATUS_BAD_CONNECTION)
       case Success(_) =>
         forwardEntity()
     }
