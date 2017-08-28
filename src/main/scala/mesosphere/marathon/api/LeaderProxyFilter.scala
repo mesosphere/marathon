@@ -283,12 +283,8 @@ class JavaUrlConnectionRequestForwarder @Inject() (
             () => cloneResponseEntity(leaderConnection, response)
           )
         } catch {
-          case _: ConnectException =>
-            response.sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, ERROR_STATUS_CONNECTION_REFUSED)
-          case _: SocketTimeoutException =>
-            response.sendError(HttpStatus.SC_GATEWAY_TIMEOUT, ERROR_STATUS_GATEWAY_TIMEOUT)
-          case NonFatal(_) =>
-            response.sendError(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+          case connException: ConnectException =>
+            response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_CONNECTION_REFUSED)
         } finally {
           Try(leaderConnection.getInputStream.close())
           Try(leaderConnection.getErrorStream.close())
@@ -322,7 +318,6 @@ object JavaUrlConnectionRequestForwarder {
   val ERROR_STATUS_LOOP: String = "Detected proxying loop."
   val ERROR_STATUS_CONNECTION_REFUSED: String = "Connection to leader refused."
   val ERROR_STATUS_BAD_CONNECTION: String = "Failed to successfully establish a connection to the leader."
-  val ERROR_STATUS_GATEWAY_TIMEOUT: String = "Connection to leader timed out."
 
   val HEADER_FORWARDED_FOR: String = "X-Forwarded-For"
   final val NAMED_LEADER_PROXY_SSL_CONTEXT = "JavaUrlConnectionRequestForwarder.SSLContext"
