@@ -17,7 +17,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
 
   // this command simulates a 'long terminating' application
   // note: Integration test does not interpret symbolic names (SIGTERM=15), therefore signal 15 is used.
-  val taskKillGraceDuration = 4
+  val taskKillGraceDuration = 10
   val taskKillGracePeriod = taskKillGraceDuration.seconds
   val appCommand: String = s"""trap \"sleep ${taskKillGraceDuration + 1}\" 15 && sleep 100000"""
 
