@@ -208,7 +208,7 @@ Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API s
 ### Create
 
 ```bash
- $ curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods
+curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods
 ```
 
 Sample response:
