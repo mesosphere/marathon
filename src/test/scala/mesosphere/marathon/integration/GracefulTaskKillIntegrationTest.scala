@@ -11,6 +11,7 @@ import scala.concurrent.duration._
 
 @IntegrationTest
 class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+
   before {
     cleanUp()
   }
@@ -25,7 +26,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
     "create a 'long terminating' app with custom taskKillGracePeriod duration" in {
       Given("a new 'long terminating' app with taskKillGracePeriod set to 10 seconds")
       val app = App(
-        (testBasePath / "app").toString,
+        (testBasePath / "app-stopped-with-sigkill").toString,
         cmd = Some(appCommand),
         taskKillGracePeriodSeconds = Some(taskKillGracePeriod.toSeconds.toInt))
 
@@ -57,7 +58,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
     "create a 'short terminating' app with custom taskKillGracePeriod duration" in {
       Given("a new 'short terminating' app with taskKillGracePeriod set to 10 seconds")
       val app = App(
-        (testBasePath / "app").toString,
+        (testBasePath / "app-stopped-with-sigterm").toString,
         cmd = Some("sleep 100000"),
         taskKillGracePeriodSeconds = Some(taskKillGracePeriod.toSeconds.toInt))
 
