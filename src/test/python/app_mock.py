@@ -5,6 +5,7 @@ import logging
 import os
 import platform
 import time
+import socket
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -128,7 +129,13 @@ if __name__ == "__main__":
     task_id = os.getenv("MESOS_TASK_ID", "<UNKNOWN>")
 
     HTTPServer.allow_reuse_address = True
-    httpd = HTTPServer(("", port), make_handler(app_id, version, task_id, base_url))
+    try:
+        httpd = HTTPServer(("", port), make_handler(app_id, version, task_id, base_url))
+    except socket.error:
+        logging.error("Processes bound on port %d", port)
+        os.system("ps -a | grep $(lsof -ti :{})".format(port))
+        raise
+
     msg = "AppMock[%s %s]: %s has taken the stage at port %d. "\
           "Will query %s for health and readiness status."
     logging.info(msg, app_id, version, task_id, port, base_url)
