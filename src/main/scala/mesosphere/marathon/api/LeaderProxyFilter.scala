@@ -275,7 +275,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
         response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
       } else {
         val leaderConnection: HttpURLConnection = createAndConfigureConnection(url)
-        withTryClosing(leaderConnection.getInputStream, leaderConnection.getOutputStream) {
+        try {
           copyRequestToConnection(leaderConnection, request) match {
             case Failure(ex: ConnectException) =>
               log.error(ERROR_STATUS_CONNECTION_REFUSED, ex)
@@ -292,6 +292,9 @@ class JavaUrlConnectionRequestForwarder @Inject() (
                 () => cloneResponseEntity(leaderConnection, response)
               )
           }
+        } finally {
+          Try(leaderConnection.getInputStream.close())
+          Try(leaderConnection.getErrorStream.close())
         }
       }
     }
@@ -305,9 +308,9 @@ class JavaUrlConnectionRequestForwarder @Inject() (
     try { body }
     finally {
       closeables.foreach { closeable =>
-        Try(closeable.close()) match {
+        Try(if (closeable != null) closeable.close()) match {
           case Failure(ex) =>
-            log.error("Error closing ${closeable}", ex)
+            log.error(s"Error closing ${closeable}", ex)
           case Success(_) => ()
         }
       }
