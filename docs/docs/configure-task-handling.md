@@ -29,7 +29,9 @@ You can configure `unreachableStrategy` to replace unreachable apps or pods as s
  }
  ```
 
-**Note:** By default, Mesos notifies Marathon of an unreachable task after 75 seconds. Change this duration in Mesos by configuring `agent-ping-timeout` and `max_agent_ping_timeouts`.
+## Mesos configuration
+
+By default, Mesos notifies Marathon of an unreachable task after 75 seconds. Change this duration in Mesos by configuring `agent_ping_timeout` and `max_agent_ping_timeouts`.
 
 ## Kill Selection
 You call also define a kill selection to declare whether Marathon kills the youngest or oldest tasks first when rescaling or otherwise killing multiple tasks. The default value for this parameter is `YoungestFirst`. You can also specify `OldestFirst`.
