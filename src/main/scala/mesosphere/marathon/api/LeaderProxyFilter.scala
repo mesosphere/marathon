@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api
 
-import java.io.{ IOException, InputStream, OutputStream }
+import java.io.{ Closeable, IOException, InputStream, OutputStream }
 import java.net._
 import javax.inject.Named
 import javax.net.ssl._
@@ -269,43 +269,49 @@ class JavaUrlConnectionRequestForwarder @Inject() (
     }
 
     log.info(s"Proxying request to ${request.getMethod} $url from $myHostPort")
-
-    try {
+    withTryClosing(request.getInputStream, response.getOutputStream) {
       if (hasProxyLoop) {
         log.error("Prevent proxy cycle, rejecting request")
         response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
       } else {
         val leaderConnection: HttpURLConnection = createAndConfigureConnection(url)
-        try {
+        withTryClosing(leaderConnection.getInputStream, leaderConnection.getOutputStream) {
           copyRequestToConnection(leaderConnection, request) match {
             case Failure(ex: ConnectException) =>
               log.error(ERROR_STATUS_CONNECTION_REFUSED, ex)
               response.sendError(BadGateway.intValue, ERROR_STATUS_CONNECTION_REFUSED)
-              return
             case Failure(ex: SocketTimeoutException) =>
               log.error(ERROR_STATUS_GATEWAY_TIMEOUT, ex)
               response.sendError(GatewayTimeout.intValue, ERROR_STATUS_GATEWAY_TIMEOUT)
-              return
             case Failure(ex) =>
               log.error(ERROR_STATUS_BAD_CONNECTION, ex)
               response.sendError(InternalServerError.intValue)
-              return
-            case Success(_) => // ignore
+            case Success(_) =>
+              copyConnectionResponse(response)(
+                () => cloneResponseStatusAndHeader(leaderConnection, response),
+                () => cloneResponseEntity(leaderConnection, response)
+              )
           }
-          copyConnectionResponse(response)(
-            () => cloneResponseStatusAndHeader(leaderConnection, response),
-            () => cloneResponseEntity(leaderConnection, response)
-          )
-        } finally {
-          Try(leaderConnection.getInputStream.close())
-          Try(leaderConnection.getErrorStream.close())
         }
       }
-    } finally {
-      Try(request.getInputStream.close())
-      Try(response.getOutputStream.close())
     }
+  }
 
+  /**
+    * Closes the closeables when the provided body returns
+    * If close fails, log and proceed to close next closeable.
+    */
+  def withTryClosing(closeables: Closeable*)(body: => Unit): Unit = {
+    try { body }
+    finally {
+      closeables.foreach { closeable =>
+        Try(closeable.close()) match {
+          case Failure(ex) =>
+            log.error("Error closing ${closeable}", ex)
+          case Success(_) => ()
+        }
+      }
+    }
   }
 
   def copy(nullableIn: InputStream, nullableOut: OutputStream): Unit = {
