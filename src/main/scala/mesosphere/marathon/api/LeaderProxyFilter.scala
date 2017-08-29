@@ -14,12 +14,8 @@ import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
-<<<<<<< HEAD
 import mesosphere.marathon.stream._
 import org.apache.http.HttpStatus
-=======
-import mesosphere.marathon.stream.Implicits._
->>>>>>> 6f5e6fc14... community debug of proxy failure to leader.  @xperimental code moved to master first.
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
