@@ -1,7 +1,7 @@
 # Marathon CI pipeline
 
 In order to be CI tool agnostic and provide the benefit of running all CI tasks
-on a "local" machine, the marathon team has moved to using [Amonite](http://www.lihaoyi.com/Ammonite/)
+on a "local" machine, the marathon team has moved to using [Ammonite](http://www.lihaoyi.com/Ammonite/)
 for CI pipelining tasks.   Ammonite is a Scala based scripting tool and is
 easiest to install on a Mac with `brew install ammonite-repl`.  Other platforms
 please read the Ammonite site.   The `ci` folder in the root project contains
