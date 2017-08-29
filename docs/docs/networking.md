@@ -305,9 +305,9 @@ If you are not using DC/OS and want to enable `container/bridge` mode with the U
 - Mesos version 1.2.0 or higher.
 - Marathon version 1.5 or higher.
 
-1. Navigate to or create a `/var/lib/mesos/cni` directory on each of your agent nodes as well as `config` and `plugins` subdirectories.
-
 1. Clone the CNI repository from [https://github.com/containernetworking/cni](https://github.com/containernetworking/cni) and build according to their instructions.
+
+1. Navigate to or create a `/var/lib/mesos/cni` directory on each of your agent nodes as well as `config` and `plugins` subdirectories.
 
 1. Copy the contents of the `bin` folder created in the previous step to `/var/lib/mesos/cni/plugins` on each agent node.
 
