@@ -23,7 +23,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 1. Run the following REST call, substituting your IP and port for `<ip>` and `<port>`:
 
-        $ curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods <<EOF
+        curl -X POST -H "Content-type: application/json" -d@- http://<ip>:<port>/v2/pods <<EOF
         {
            "id": "/simplepod",
            "scaling": { "kind": "fixed", "instances": 1 },
@@ -209,7 +209,7 @@ Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API s
 ### Create
 
 ```bash
- $ curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods
+curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods
 ```
 
 Sample response:
