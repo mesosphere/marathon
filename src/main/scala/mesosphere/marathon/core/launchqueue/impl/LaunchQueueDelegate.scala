@@ -98,6 +98,8 @@ private[launchqueue] class LaunchQueueDelegate(
   override def addDelay(spec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(spec)
 
   override def resetDelay(spec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(spec)
+
+  override def advanceDelay(spec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.AdvanceDelay(spec)
 }
 
 private[impl] object LaunchQueueDelegate {

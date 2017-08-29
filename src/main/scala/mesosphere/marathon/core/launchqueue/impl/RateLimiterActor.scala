@@ -4,7 +4,7 @@ package core.launchqueue.impl
 import akka.actor.{ Actor, ActorRef, Cancellable, Props }
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor.{ AddDelay, DecreaseDelay, DelayUpdate, GetDelay, ResetDelay, ResetDelayResponse, ResetViableTasksDelays }
+import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor._
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 
 import scala.concurrent.duration._
@@ -25,6 +25,7 @@ private[launchqueue] object RateLimiterActor {
   case class GetDelay(runSpec: RunSpec)
   private[impl] case class AddDelay(runSpec: RunSpec)
   private[impl] case class DecreaseDelay(runSpec: RunSpec)
+  private[impl] case class AdvanceDelay(runSpec: RunSpec)
 
   private case object ResetViableTasksDelays
 }
@@ -69,11 +70,14 @@ private class RateLimiterActor private (
       rateLimiter.addDelay(runSpec)
       launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
 
-    case DecreaseDelay(runSpec) => // ignore for now
+    case DecreaseDelay(_) => // ignore for now
+
+    case AdvanceDelay(runSpec) =>
+      rateLimiter.advanceDelay(runSpec)
+      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
 
     case ResetDelay(runSpec) =>
       rateLimiter.resetDelay(runSpec)
       launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
-      sender() ! ResetDelayResponse
   }
 }

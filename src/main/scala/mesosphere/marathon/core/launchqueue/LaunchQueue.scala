@@ -91,6 +91,9 @@ trait LaunchQueue {
   /** Reset the backoff delay for the given RunnableSpec. */
   def resetDelay(spec: RunSpec): Unit
 
+  /** Advance the reference time point of the delay for the given RunSpec */
+  def advanceDelay(spec: RunSpec): Unit
+
   /** Notify queue about InstanceUpdate */
   def notifyOfInstanceUpdate(update: InstanceChange): Future[Done]
 }

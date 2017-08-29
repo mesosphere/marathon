@@ -99,7 +99,6 @@ case class LocalMarathon(
     "min_revive_offers_interval" -> "100",
     "hostname" -> "localhost",
     "logging_level" -> "debug",
-    "minimum_viable_task_execution_duration" -> "0",
     "offer_matching_timeout" -> 10.seconds.toMillis.toString // see https://github.com/mesosphere/marathon/issues/4920
   ) ++ conf
 
