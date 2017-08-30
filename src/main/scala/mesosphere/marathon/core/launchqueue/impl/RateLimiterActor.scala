@@ -20,14 +20,12 @@ private[launchqueue] object RateLimiterActor {
   case class DelayUpdate(runSpec: RunSpec, delayUntil: Timestamp)
 
   case class ResetDelay(runSpec: RunSpec)
-  case object ResetDelayResponse
-
   case class GetDelay(runSpec: RunSpec)
   private[impl] case class AddDelay(runSpec: RunSpec)
   private[impl] case class DecreaseDelay(runSpec: RunSpec)
   private[impl] case class AdvanceDelay(runSpec: RunSpec)
 
-  private case object ResetViableTasksDelays
+  private case object CleanupOverdueDelays
 }
 
 private class RateLimiterActor private (
@@ -37,7 +35,7 @@ private class RateLimiterActor private (
 
   override def preStart(): Unit = {
     import context.dispatcher
-    cleanup = context.system.scheduler.schedule(10.seconds, 10.seconds, self, ResetViableTasksDelays)
+    cleanup = context.system.scheduler.schedule(10.seconds, 10.seconds, self, CleanupOverdueDelays)
     logger.info("started RateLimiterActor")
   }
 
@@ -52,14 +50,12 @@ private class RateLimiterActor private (
     ).reduceLeft(_.orElse[Any, Unit](_))
   }
 
-  /**
-    * If an app gets removed or updated, the delay should be reset. If
-    * an app is considered viable, the delay should be reset too. We
-    * check and reset viable tasks' delays periodically.
-    */
   private[this] def receiveCleanup: Receive = {
-    case ResetViableTasksDelays =>
-      rateLimiter.resetDelaysOfViableTasks()
+    case CleanupOverdueDelays =>
+      // If a run spec gets removed or updated, the delay should be reset.
+      // In addition to that we remove overdue delays to ensure there are no leaks,
+      // by calling this periodically.
+      rateLimiter.cleanUpOverdueDelays()
   }
 
   private[this] def receiveDelayOps: Receive = {

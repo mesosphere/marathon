@@ -21,8 +21,8 @@ private[launchqueue] class RateLimiter(clock: Clock) {
   /** The task launch delays per run spec and their last config change. */
   private[this] var taskLaunchDelays = Map[(PathId, Timestamp), Delay]()
 
-  /**Reset delays for tasks that have reached the maximum launch delay threshold. */
-  def resetDelaysOfViableTasks(): Unit = {
+  /** Reset delays for tasks that have reached the maximum launch delay threshold. */
+  def cleanUpOverdueDelays(): Unit = {
     val now = clock.now()
     taskLaunchDelays = taskLaunchDelays.filter {
       case (_, delay) =>

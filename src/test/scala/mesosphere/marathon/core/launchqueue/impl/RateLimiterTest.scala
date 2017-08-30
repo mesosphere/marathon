@@ -32,27 +32,27 @@ class RateLimiterTest extends UnitTest {
       limiter.getDeadline(app) should be(clock.now() + 20.seconds)
     }
 
-    "resetDelaysOfViableTasks" in {
+    "cleanUpOverdueDelays" in {
       val time_origin = clock.now()
       val limiter = new RateLimiter(clock)
       val threshold = 60.seconds
 
-      val app1 = AppDefinition(
-        id = "viable".toPath,
+      val appWithOverdueDelay = AppDefinition(
+        id = "overdue".toPath,
         backoffStrategy = BackoffStrategy(backoff = 10.seconds, maxLaunchDelay = threshold))
-      limiter.addDelay(app1)
+      limiter.addDelay(appWithOverdueDelay)
 
-      val app2 = AppDefinition(
-        id = "test".toPath,
+      val appWithValidDelay = AppDefinition(
+        id = "valid".toPath,
         backoffStrategy = BackoffStrategy(backoff = 20.seconds, maxLaunchDelay = threshold + 10.seconds))
-      limiter.addDelay(app2)
+      limiter.addDelay(appWithValidDelay)
 
       // after advancing the clock by (threshold + 1), the existing delays
       // with maxLaunchDelay < (threshold + 1) should be gone
       clock += threshold + 1.seconds
-      limiter.resetDelaysOfViableTasks()
-      limiter.getDeadline(app1) should be(clock.now())
-      limiter.getDeadline(app2) should be(time_origin + 20.seconds)
+      limiter.cleanUpOverdueDelays()
+      limiter.getDeadline(appWithOverdueDelay) should be(clock.now())
+      limiter.getDeadline(appWithValidDelay) should be(time_origin + 20.seconds)
     }
 
     "resetDelay" in {
