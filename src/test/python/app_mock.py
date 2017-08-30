@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-import sys
 import logging
 import os
 import platform
-import time
+import signal
 import socket
+import sys
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -130,7 +130,8 @@ if __name__ == "__main__":
 
     HTTPServer.allow_reuse_address = True
     try:
-        httpd = HTTPServer(("", port), make_handler(app_id, version, task_id, base_url))
+        httpd = HTTPServer(("", port),
+                           make_handler(app_id, version, task_id, base_url))
     except socket.error:
         logging.error("Processes bound on port %d", port)
         os.system("ps -a | grep $(lsof -ti :{})".format(port))
@@ -140,6 +141,12 @@ if __name__ == "__main__":
           "Will query %s for health and readiness status."
     logging.info(msg, app_id, version, task_id, port, base_url)
 
+    # Rais KeyboardInterrupt on SIGTERM to trigger proper shutdown.
+    def handle_sigterm(signum, frame):
+        raise KeyboardInterrupt()
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -148,3 +155,4 @@ if __name__ == "__main__":
     logging.info("Shutting down.")
     httpd.shutdown()
     httpd.socket.close()
+    logging.info("Done.")
