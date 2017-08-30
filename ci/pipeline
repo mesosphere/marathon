@@ -139,6 +139,7 @@ def phabricator(): Unit = {
 @main
 def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
   upgrade.updateMarathon(artifactUrl, sha1, s"Update Marathon to $version")
+  upgrade.updateMarathonEE(artifactUrl, sha1, s"Update Marathon to $version")
 }
 
 /**
