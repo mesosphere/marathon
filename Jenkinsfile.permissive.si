@@ -1,11 +1,23 @@
 #!/usr/bin/env groovy
 
-timeout(90) {
+timeout(120) {
 node('shakedown') {
   wrap([$class: 'MesosSingleUseSlave']) {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
 
-    properties([pipelineTriggers([cron('0 */8 * * *')])])
+    // Hardcoded default values are:
+    // DC/OS OS: channel="testing/pull/1739", for open cluster
+    // DC/OS EE: channel="testing/pull/1296", for strict, permissive or disabled clusters
+    // The channel can be passed to the job in Jenkins (Build with Parameters) so that this job can be executed against any PR/cluster.
+    properties([
+            pipelineTriggers([cron('0 */8 * * *')]),
+            parameters([
+                    string(name: 'channel',
+                            defaultValue: 'testing/pull/1296',
+                            description: 'PR to start the cluster from e.g. testing/pull/1739'
+                    )]
+            )
+    ])
 
     stage("Run System Integration Test Pipeline") {
       try {
@@ -17,7 +29,8 @@ node('shakedown') {
             [$class: 'StringBinding', credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'],
             [$class: 'StringBinding', credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD']
           ]) {
-            sh """ci/system_integration.sh"""
+            dcos_url = sh (script: """ci/launch_cluster.sh $params.channel permissive""", returnStdout: true).trim().readLines().last()
+            sh """ci/system_integration.sh ${dcos_url}"""
           }
         } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'

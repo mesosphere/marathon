@@ -2,9 +2,15 @@
 
 set -e -o pipefail
 
-# Hardcode configuration to open DC/OS.
-VARIANT="open"
-CHANNEL="testing/pull/1739"
+# Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
+# VARIANT could be one of four custer variants: open, strict, permissive and disabled
+if [ "$#" -ne 2 ]; then
+    echo "Expected 2 parameters: <channel> and <variant> e.g. launch_cluster.sh testing/pull/1739 open"
+    exit 1
+fi
+
+CHANNEL="$1"
+VARIANT="$2"
 
 JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
 DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$(date +%s)"
@@ -38,3 +44,6 @@ template_parameters:
 EOF
 ./dcos-launch create
 ./dcos-launch wait
+
+# Return dcos_url
+echo "http://$(./dcos-launch describe | jq -r ".masters[0].public_ip")/"
