@@ -348,7 +348,7 @@ object Dependency {
     val RxScala = "0.26.2"
     val MarathonUI = "1.1.7"
     val MarathonApiConsole = "0.1.1"
-    val Graphite = "3.1.2"
+    val Graphite = "3.2.4"
     val DataDog = "1.1.5"
     val Logback = "1.1.3"
     val Logstash = "4.7"
