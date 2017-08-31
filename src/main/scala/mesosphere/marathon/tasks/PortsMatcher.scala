@@ -270,6 +270,7 @@ object PortsMatcher {
       * * We randomly choose an index where we want to start assigning dynamic ports in that sequence. When
       *   we hit the last offered port with wrap around and start offering the ports at the beginning
       *   of the sequence up to (excluding) the port index we started at.
+      * * The next range is determined on demand. That's why an iterator is returned.
       */
     def lazyRandomPortsFromRanges(rand: Random = Random)(offeredPortRanges: Seq[PortRange]): Iterator[PortWithRole] = {
       val numberOfOfferedPorts = offeredPortRanges.map(_.size).sum
