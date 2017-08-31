@@ -34,22 +34,26 @@ object PortAllocator extends StrictLogging {
   private def freeSocket(): ServerSocket = {
     val port = ephemeralPorts.incrementAndGet()
     if (port > EPHEMERAL_PORT_MAX) throw new RuntimeException("Out of ephemeral ports.")
+
     Try(new ServerSocket(port)) match {
-      case Success(v) => v
+      case Success(socket) =>
+        // We can't return a port if we couldn't close it successfully: theoretically it would then
+        // stay bound until (after a timeout) the underlying OS decides that it's free. Hence we should
+        // return only successfully closed ports and retry if closing fails.
+        Try(socket.close()) match {
+          case Success(_) => socket
+          case Failure(ex) =>
+            logger.warn(s"Failed to close port allocator's socket because ${ex.getMessage}")
+            freeSocket()
+        }
       case Failure(ex) =>
         logger.warn(s"Failed to provide an ephemeral port because of ${ex.getMessage}. Will retry again...")
         freeSocket()
     }
   }
 
-  private def closeSocket(socket: ServerSocket) = {
-    try { socket.close() }
-    catch { case NonFatal(ex) => logger.debug(s"Failed to close port allocator's socket because ${ex.getMessage}") }
-  }
-
   def ephemeralPort(): Int = {
     val socket = freeSocket()
-    closeSocket(socket)
     socket.getLocalPort
   }
 
