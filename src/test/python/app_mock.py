@@ -6,6 +6,7 @@ import platform
 import signal
 import socket
 import sys
+import threading
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -49,7 +50,6 @@ def make_handler(app_id, version, task_id, base_url):
             msg = "Pong {}".format(app_id)
 
             self.wfile.write(byte_type(msg, "UTF-8"))
-            return
 
         def check_readiness(self):
 
@@ -100,20 +100,17 @@ def make_handler(app_id, version, task_id, base_url):
                     return self.check_readiness()
                 else:
                     return self.check_health()
-            except:
+            except Exception:
                 logging.exception('Could not handle GET request')
-                raise
 
         def do_POST(self):
             try:
                 logging.debug("Got POST request")
                 return self.check_health()
-            except:
+            except Exception:
                 logging.exception('Could not handle POST request')
-                raise
 
     return Handler
-
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -141,18 +138,26 @@ if __name__ == "__main__":
           "Will query %s for health and readiness status."
     logging.info(msg, app_id, version, task_id, port, base_url)
 
-    # Rais KeyboardInterrupt on SIGTERM to trigger proper shutdown.
+    def kill_server(server):
+        logging.info("Shutting down. Waiting for last request to be handled.")
+        try:
+            server.shutdown()
+            server.socket.close()
+        except:
+            logging.exception("Error in shutdown thread:")
+        logging.info("Done.")
+
+    # Trigger proper shutdown on SIGTERM.
     def handle_sigterm(signum, frame):
-        raise KeyboardInterrupt()
+        # Do not set daemon = True otherwise Python will kill the shutdown
+        # thread.
+        shutdown_thread = threading.Thread(target=kill_server, args=(httpd, ))
+        shutdown_thread.start()
 
     signal.signal(signal.SIGTERM, handle_sigterm)
 
     try:
         httpd.serve_forever()
-    except KeyboardInterrupt:
-        pass
-
-    logging.info("Shutting down.")
-    httpd.shutdown()
-    httpd.socket.close()
-    logging.info("Done.")
+    except:
+        logging.exception("Error in server thread:")
+        kill_server(httpd)
