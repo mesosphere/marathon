@@ -10,6 +10,7 @@ import akka.Done
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.google.inject._
+import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
@@ -28,11 +29,10 @@ import scala.sys.process.{ Process, ProcessLogger }
   * Helper that starts/stops the forwarder classes as java processes specifically for the integration test
   * Basically, the tests need to bring up a minimum version of the http service with leader forwarding enabled.
   */
-class ForwarderService {
+class ForwarderService extends StrictLogging {
   private val children = Lock(ArrayBuffer.empty[Process])
   private val uuids = Lock(ArrayBuffer.empty[String])
 
-  val logger = LoggerFactory.getLogger(classOf[ForwarderService])
   def close(): Unit = {
     children(_.par.foreach(_.destroy()))
     children(_.clear())
@@ -94,8 +94,7 @@ class ForwarderService {
   }
 }
 
-object ForwarderService {
-  private val log = LoggerFactory.getLogger(getClass)
+object ForwarderService extends StrictLogging {
   val className = {
     val withDollar = getClass.getName
     withDollar.substring(0, withDollar.length - 1)
@@ -116,7 +115,7 @@ object ForwarderService {
   }
 
   class LeaderInfoModule(elected: Boolean, leaderHostPort: Option[String]) extends AbstractModule {
-    log.info(s"Leader configuration: elected=$elected leaderHostPort=$leaderHostPort")
+    logger.info(s"Leader configuration: elected=$elected leaderHostPort=$leaderHostPort")
 
     override def configure(): Unit = {
       val leader = leaderHostPort
@@ -169,13 +168,13 @@ object ForwarderService {
 
   private def createHelloApp(args: String*): Service = {
     val conf = createConf(args: _*)
-    log.info(s"Start hello app at ${conf.httpPort()}")
+    logger.info(s"Start hello app at ${conf.httpPort()}")
     startImpl(conf, new LeaderInfoModule(elected = true, leaderHostPort = None))
   }
 
   private def createForwarder(forwardToPort: Int, args: String*): Service = {
     val conf = createConf(args: _*)
-    log.info(s"Start forwarder on port  ${conf.httpPort()}, forwarding to $forwardToPort")
+    logger.info(s"Start forwarder on port  ${conf.httpPort()}, forwarding to $forwardToPort")
     startImpl(conf, new LeaderInfoModule(elected = false, leaderHostPort = Some(s"localhost:$forwardToPort")))
   }
 
