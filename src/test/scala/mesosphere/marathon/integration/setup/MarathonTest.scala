@@ -141,14 +141,14 @@ case class LocalMarathon(
       marathon = Some(create())
     }
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
-    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 5.minutes) {
+    val future = Retry(s"Waiting for Marathon on $port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 4.minutes) {
       async {
         val result = await(Http().singleRequest(Get(s"http://localhost:$port/v2/leader")))
         result.discardEntityBytes() // forget about the body
         if (result.status.isSuccess()) { // linter:ignore //async/await
           Done
         } else {
-          throw new Exception("Marathon not ready yet.")
+          throw new Exception(s"Marathon on port=$port hasn't started yet. Giving up waiting..")
         }
       }
     }
