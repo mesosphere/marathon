@@ -35,7 +35,9 @@ private class RateLimiterActor private (
 
   override def preStart(): Unit = {
     import context.dispatcher
-    cleanup = context.system.scheduler.schedule(10.seconds, 10.seconds, self, CleanupOverdueDelays)
+    val overdueDelayCleanupInterval = 10.seconds
+    cleanup = context.system.scheduler.schedule(
+      overdueDelayCleanupInterval, overdueDelayCleanupInterval, self, CleanupOverdueDelays)
     logger.info("started RateLimiterActor")
   }
 
