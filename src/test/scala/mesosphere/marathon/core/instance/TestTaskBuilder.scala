@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.instance
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
@@ -447,14 +446,6 @@ object TestTaskBuilder {
       runningTask(taskId).withStatus { status =>
         status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(false).build()))
       }
-    }
-
-    def lostTask(id: String): MarathonTask = {
-      MarathonTask
-        .newBuilder()
-        .setId(id)
-        .setStatus(statusForState(id, mesos.Protos.TaskState.TASK_LOST))
-        .buildPartial()
     }
   }
 

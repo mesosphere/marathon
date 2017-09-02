@@ -1938,9 +1938,8 @@ class TaskBuilderTest extends UnitTest {
     }
 
     def mesosPorts(ports: MesosProtos.Port*) =
-      ports.fold(MesosProtos.Ports.newBuilder){
-        case (builder: MesosProtos.Ports.Builder, p: MesosProtos.Port) =>
-          builder.addPorts(p)
-      }.asInstanceOf[MesosProtos.Ports.Builder]
+      ports.foldLeft(MesosProtos.Ports.newBuilder) { (builder, p) =>
+        builder.addPorts(p)
+      }
   }
 }
