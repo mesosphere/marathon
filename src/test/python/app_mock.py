@@ -6,7 +6,6 @@ import platform
 import signal
 import socket
 import sys
-import threading
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -112,6 +111,7 @@ def make_handler(app_id, version, task_id, base_url):
 
     return Handler
 
+
 if __name__ == "__main__":
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s: %(message)s',
@@ -125,39 +125,37 @@ if __name__ == "__main__":
     base_url = sys.argv[4]
     task_id = os.getenv("MESOS_TASK_ID", "<UNKNOWN>")
 
-    HTTPServer.allow_reuse_address = True
-    try:
-        httpd = HTTPServer(("", port),
-                           make_handler(app_id, version, task_id, base_url))
-    except socket.error:
-        logging.error("Processes bound on port %d", port)
-        os.system("ps -a | grep $(lsof -ti :{})".format(port))
-        raise
+    # Defer binding and activating the server to a later point, allowing to set
+    # allow_reuse_address=True option.
+    httpd = HTTPServer(("", port),
+                       make_handler(app_id, version, task_id, base_url),
+                       bind_and_activate=False)
+    httpd.allow_reuse_address = True
 
     msg = "AppMock[%s %s]: %s has taken the stage at port %d. "\
           "Will query %s for health and readiness status."
     logging.info(msg, app_id, version, task_id, port, base_url)
 
-    def kill_server(server):
-        logging.info("Shutting down. Waiting for last request to be handled.")
-        try:
-            server.shutdown()
-            server.socket.close()
-        except:
-            logging.exception("Error in shutdown thread:")
-        logging.info("Done.")
-
     # Trigger proper shutdown on SIGTERM.
     def handle_sigterm(signum, frame):
-        # Do not set daemon = True otherwise Python will kill the shutdown
-        # thread.
-        shutdown_thread = threading.Thread(target=kill_server, args=(httpd, ))
-        shutdown_thread.start()
+        logging.warning("Received {} signal. Closing the server...".format(signum))
+        httpd.server_close()
 
     signal.signal(signal.SIGTERM, handle_sigterm)
 
     try:
+        httpd.server_bind()
+        httpd.server_activate()
         httpd.serve_forever()
+    except socket.error as e:
+        # If "[Errno 48] Address already in use" then grep for the process using the port
+        if e.errno == 48:
+            logging.error("Failed to bind to port %d. Trying to grep blocking process:", port)
+            os.system("ps -a | grep $(lsof -ti :{})".format(port))
+        else:
+            logging.exception("Socket.error in the main thread: ")
     except:
-        logging.exception("Error in server thread:")
-        kill_server(httpd)
+        logging.exception("Exception in the main thread: ")
+    finally:
+        logging.info("Closing the server...")
+        httpd.server_close()
