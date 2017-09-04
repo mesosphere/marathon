@@ -190,6 +190,16 @@ Please see the [RunSpecValidator](https://github.com/mesosphere/marathon/blob/ma
 
 Marathon and the `RunSpecValidator` use the [Accord](https://github.com/wix/accord) validation library which is useful to understand when creating validator rules.
 
+## Scheduler
+
+#### mesosphere.marathon.plugin.scheduler.SchedulerPlugin
+
+This plugin allows to reject offers. Possible use-cases are:
+* Maintenance. Mark agent as going to maintenance and reject new offers from it.
+* Analytics. If task fails, for example, 5 times for 5 minutes, we can assume that it will fail again and reject new offers for it.
+* Binding to agents. For example, agents can be marked as included into primary or secondary group. Task can be marked with group name.
+ Plugin can schedule task deployment to primary agents. If all primary agents are busy, task can be scheduled to secondary agents
+
 ## Notes on Plugins
 
 * The plugins allow for the extension of behavior in Marathon.  They do NOT allow for replacement or removal of existing functionality.
