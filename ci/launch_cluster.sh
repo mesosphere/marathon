@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e -o pipefail
+set -x -e -o pipefail
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of four custer variants: open, strict, permissive and disabled
@@ -42,8 +42,31 @@ template_parameters:
     PublicSlaveInstanceCount: 1
     SlaveInstanceCount: 5
 EOF
-./dcos-launch create
-./dcos-launch wait
+
+function create-junit-xml {
+    local testsuite_name=$1
+    local testcase_name=$2
+    local error_message=$3
+
+	cat > shakedown.xml <<-EOF
+	<testsuites>
+	  <testsuite name="$testsuite_name" errors="0" skipped="0" tests="1" failures="1">
+	      <testcase classname="$testsuite_name" name="$testcase_name">
+	        <failure message="test setup failed">$error_message</failure>
+	      </testcase>
+	  </testsuite>
+	</testsuites>
+	EOF
+}
+
+if ! ./dcos-launch create; then
+  create-junit-xml "dcos-launch" "cluster.create" "Cluster launch failed."
+  exit 1
+fi
+if ! ./dcos-launch wait; then
+  create-junit-xml "dcos-launch" "cluster.create" "Cluster did not start in time."
+  exit 1
+fi
 
 # Return dcos_url
 echo "http://$(./dcos-launch describe | jq -r ".masters[0].public_ip")/"
