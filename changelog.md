@@ -2,7 +2,7 @@
 
 ### Fixed issues:
 
-- [MARATHON-4802](https://jira.mesosphere.com/browse/MARATHON-4802) Constaint migration was not really implemented. This commit makes sure that it is fully implemented. During migration some constaints get sanitized. For instance, `["field", "UNIQUE", "value"]` gets transformed to `["field", "UNIQUE"]` because the `UNIQUE` constraint should not have any value. In addition to that the validation of `CLUSTER` is relaxed, because it doesn't require a value, and such a constraint did not pass the validation before.
+- [MARATHON-4802](https://jira.mesosphere.com/browse/MARATHON-4802) Constraint migration was not really implemented. This commit makes sure that it is fully implemented. During migration some constraints get sanitized. For instance, `["field", "UNIQUE", "value"]` gets transformed to `["field", "UNIQUE"]` because the `UNIQUE` constraint should not have any value. In addition to that the validation of `CLUSTER` is relaxed, because it doesn't require a value, and such a constraint did not pass the validation before.
 - [#5487](https://github.com/mesosphere/marathon/pull/5487) Handle socket timeout exception when forwarding requests to a leader.
 
 ## Changes from 1.3.11 to 1.3.12
