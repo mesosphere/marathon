@@ -150,7 +150,7 @@ Instructions on how to install prepackaged releases are available [in the Marath
         export MESOS_NATIVE_JAVA_LIBRARY="/path/to/mesos/lib/libmesos.dylib"
         ```
    
-1.  Run `sbt universal:packageXzTarball` to package Marathon as an txz file
+1.  Run `sbt universal:packageZipTarball` to package Marathon as an txz file
     containing bin/marathon fully packaged.
 
 1. Run `sbt docker:publishLocal` for a local marathon docker image.
