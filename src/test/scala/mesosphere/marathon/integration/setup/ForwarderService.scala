@@ -19,7 +19,6 @@ import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.util.Lock
 import mesosphere.util.{ CallerThreadExecutionContext, PortAllocator }
 import org.rogach.scallop.ScallopConf
-import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Future, Promise }
@@ -43,7 +42,7 @@ class ForwarderService extends StrictLogging {
         case PIDRE(pid, mainClass, jvmArgs) if mainClass.contains(classOf[ForwarderService].getName) && jvmArgs.contains(id) => pid
       }
       if (pids.nonEmpty) {
-        Process(s"kill -9 ${pids.mkString(" ")}").!
+        Process(s"kill ${pids.mkString(" ")}").!
       }
     })
     uuids(_.clear())

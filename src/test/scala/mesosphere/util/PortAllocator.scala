@@ -1,12 +1,11 @@
 package mesosphere.util
 
-import java.net.ServerSocket
+import java.net.{ InetSocketAddress, ServerSocket }
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.annotation.tailrec
-import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
 
 object PortAllocator extends StrictLogging {
@@ -32,10 +31,17 @@ object PortAllocator extends StrictLogging {
   // out of free ephemeral ports a RuntimeException is thrown.
   @tailrec
   private def freeSocket(): ServerSocket = {
+    def tryOpenSocket(port: Int): ServerSocket = {
+      val socket = new ServerSocket()
+      socket.setReuseAddress(false)
+      socket.bind(new InetSocketAddress("localhost", port))
+      socket
+    }
+
     val port = ephemeralPorts.incrementAndGet()
     if (port > EPHEMERAL_PORT_MAX) throw new RuntimeException("Out of ephemeral ports.")
 
-    Try(new ServerSocket(port)) match {
+    Try(tryOpenSocket(port)) match {
       case Success(socket) =>
         // We can't return a port if we couldn't close it successfully: theoretically it would then
         // stay bound until (after a timeout) the underlying OS decides that it's free. Hence we should
@@ -43,11 +49,11 @@ object PortAllocator extends StrictLogging {
         Try(socket.close()) match {
           case Success(_) => socket
           case Failure(ex) =>
-            logger.warn(s"Failed to close port allocator's socket because ${ex.getMessage}")
+            logger.warn(s"Failed to close allocator's socket on port $port because: ${ex.getMessage}")
             freeSocket()
         }
       case Failure(ex) =>
-        logger.warn(s"Failed to provide an ephemeral port because of ${ex.getMessage}. Will retry again...")
+        logger.warn(s"Failed to provide an ephemeral port $port because: ${ex.getMessage}. Will retry again...")
         freeSocket()
     }
   }
