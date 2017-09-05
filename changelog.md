@@ -1,3 +1,10 @@
+## Changes from 1.3.12 to 1.3.13
+
+### Fixed issues:
+
+- [MARATHON-4802](https://jira.mesosphere.com/browse/MARATHON-4802) Constaint migration was not really implemented. This commit makes sure that it is fully implemented. During migration some constaints get sanitized. For instance, `["field", "UNIQUE", "value"]` gets transformed to `["field", "UNIQUE"]` because the `UNIQUE` constraint should not have any value. In addition to that the validation of `CLUSTER` is relaxed, because it doesn't require a value, and such a constraint did not pass the validation before.
+- [#5487](https://github.com/mesosphere/marathon/pull/5487) Handle socket timeout exception when forwarding requests to a leader.
+
 ## Changes from 1.3.11 to 1.3.12
 
 ### Changes
@@ -5,7 +12,6 @@
 - [MARATHON-7397](https://jira.mesosphere.com/browse/MARATHON-7397) Include USER networked docker containers in /v2/tasks text/plain output. If no host port is specified, specify address as `{containerIp}:{containerPort}`. If host port is specified, `{agentIp}:{hostPort}`.
 
 ## Changes from 1.3.5 to 1.3.6
-
 
 ### Fixed issues:
 
@@ -214,8 +220,8 @@ See: https://groups.google.com/forum/#!topic/marathon-framework/j6fNc4xk5tQ
 
 ## Changes from 1.1.4 to 1.1.5
 Added a migration that will fix improperly structured app groups. If an app entry is in the wrong group e.g.
-`Group( id = /, apps = [“/foo/bar”] )` it will be moved: `Group ( id = / , Group( id = /foo, apps = [”/foo/bar”] )` 
-thus taking care of structuring the groups properly. 
+`Group( id = /, apps = [“/foo/bar”] )` it will be moved: `Group ( id = / , Group( id = /foo, apps = [”/foo/bar”] )`
+thus taking care of structuring the groups properly.
 Note: if an app has multiple entries with different versions then the newest is kept.
 
 ## Changes from 1.0.0 to 1.1.0
