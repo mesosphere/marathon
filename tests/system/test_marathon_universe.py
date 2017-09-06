@@ -129,17 +129,17 @@ def test_neo4j_universe_package_install(neo_package):
         so framework health checks do not work with neo4j.
     """
     package = neo_package
-    shakedown.install_package_and_wait(package)
-    assert shakedown.package_installed(package), 'Package failed to install'
+    shakedown.install_package(package)
+    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), app_id='neo4j/core')
 
-    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+    assert shakedown.package_installed(package), 'Package failed to install'    
 
     marathon_client = marathon.create_client()
     tasks = marathon_client.get_tasks('neo4j/core')
 
     for task in tasks:
-        assert task['healthCheckResults'][0]['lastSuccess'] is not None
-        assert task['healthCheckResults'][0]['consecutiveFailures'] == 0
+        assert task['healthCheckResults'][0]['lastSuccess'] is not None, 'Healthcheck was not successful'
+        assert task['healthCheckResults'][0]['consecutiveFailures'] == 0, 'Healthcheck had consecutive failures'
 
 
 def uninstall(service, package=PACKAGE_NAME):
