@@ -24,8 +24,8 @@ PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
 
 DEFAULT_MOM_IMAGES = {
-    'MOM_EE_1.4': 'v1.4.6_1.9.8',
-    'MOM_EE_1.3': '1.3.10_1.1.5'
+    'MOM_EE_1.4': 'v1.4.7_1.9.8',
+    'MOM_EE_1.3': '1.3.13_1.1.5'
 }
 
 
@@ -123,8 +123,8 @@ def test_permissive_mom_ee(version, security_mode):
 
 
 # disabled security mode
-@pytest.mark.skipif('required_private_agents(2)')
-@pytest.mark.skipif("ee_version() != 'disabled'")
+@pytest.mark.skipif('shakedown.required_private_agents(2)')
+@pytest.mark.skipif("shakedown.ee_version() != 'disabled'")
 @pytest.mark.parametrize("version,security_mode", [
     ('1.4', 'disabled'),
     ('1.3', 'disabled')
