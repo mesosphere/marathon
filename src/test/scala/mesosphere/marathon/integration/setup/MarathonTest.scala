@@ -312,8 +312,6 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
   val testBasePath: PathId
   def suiteName: String
 
-  val appProxyIds = Lock(mutable.ListBuffer.empty[String])
-
   implicit val system: ActorSystem
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
@@ -342,16 +340,6 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
 
   protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
 
-  protected[setup] def killAppProxies(): Unit = {
-    val PIDRE = """^\s*(\d+)\s+(.*)$""".r
-    val allJavaIds = Process("jps -lv").!!.split("\n")
-    val pids = allJavaIds.collect {
-      case PIDRE(pid, exec) if appProxyIds(_.exists(exec.contains)) => pid
-    }
-    if (pids.nonEmpty) {
-      Process(s"kill -9 ${pids.mkString(" ")}").run().exitValue()
-    }
-  }
   implicit class PathIdTestHelper(path: String) {
     def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
     def toTestPath: PathId = testBasePath.append(path)
@@ -471,7 +459,6 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
     require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
     events.clear()
     healthChecks(_.clear())
-    killAppProxies()
 
     logger.info("... CLEAN UP finished <<<")
   }
@@ -653,7 +640,6 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
       mesos.teardown(frameworkId).futureValue
     }
     Try(healthEndpoint.unbind().futureValue)
-    Try(killAppProxies())
   }
 
   /**
@@ -756,6 +742,7 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       f(marathonServer, marathonTest)
     } finally {
       sseStream.cancel()
+      if (marathonServer.isRunning()) marathonTest.cleanUp()
       marathonTest.teardown()
       marathonServer.stop()
     }
