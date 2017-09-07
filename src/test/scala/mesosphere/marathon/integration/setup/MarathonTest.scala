@@ -22,9 +22,9 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppDockerVolume, Network, NetworkMode, AppHealthCheck, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppDockerVolume, AppHealthCheck, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.util.{ Lock, Retry }
+import mesosphere.marathon.util.{ Lock, Retry, Timeout }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
@@ -40,6 +40,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.sys.process.Process
 import scala.util.Try
+import scala.util.control.NonFatal
 
 /**
   * Runs a marathon server for the given test suite
@@ -111,7 +112,7 @@ case class LocalMarathon(
       }
   }(collection.breakOut)
 
-  private var marathon = Option.empty[Process]
+  @volatile private var marathon = Option.empty[Process]
 
   if (autoStart) {
     start()
@@ -167,20 +168,30 @@ case class LocalMarathon(
 
   def exitValue(): Option[Int] = marathon.map(_.exitValue())
 
-  def stop(): Unit = {
-    marathon.foreach(_.destroy())
-    marathon = Option.empty[Process]
-
-    val pids = activePids
-    if (pids.nonEmpty) {
-      Process(s"kill -9 ${pids.mkString(" ")}").!
+  def stop(): Future[Done] = {
+    marathon.fold(Future.successful(Done)){ p =>
+      p.destroy()
+      Timeout.blocking(30.seconds){ p.exitValue(); Done }
+        .recover {
+          case NonFatal(e) =>
+            logger.warn(s"Could not shutdown Marathon $suiteName in time", e)
+            val pids = activePids
+            if (pids.nonEmpty) {
+              Process(s"kill -9 ${pids.mkString(" ")}").!
+            }
+            Done
+        }
+    }.andThen {
+      case _ =>
+        marathon = Option.empty[Process]
     }
   }
 
   def restart(): Future[Done] = {
     logger.info(s"Restarting Marathon on $httpPort")
-    stop()
-    start().map { x =>
+    async {
+      await(stop())
+      val x = await(start())
       logger.info(s"Restarted Marathon on $httpPort")
       x
     }
