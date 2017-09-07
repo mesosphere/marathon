@@ -28,7 +28,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       *
       * Adapted from https://github.com/EvanKrall/reproduce_marathon_issue_3783
       */
-    "not kill a running task currently involved in a deployment" in withMarathon("restart-dont-kill") { (server, f) =>
+    "not kill a running task currently involved in a deployment" in withMarathon("RestartIntegrationTest-restart-dont-kill") { (server, f) =>
       Given("a new app with an impossible constraint")
       // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
       val constraint = raml.Constraints("hostname" -> "UNIQUE")
@@ -47,7 +47,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
 
     "readiness" should {
-      "deployment with 1 ready and 1 not ready instance is continued properly after a restart" in withMarathon("readiness") { (server, f) =>
+      "deployment with 1 ready and 1 not ready instance is continued properly after a restart" in withMarathon("RestartIntegrationTest-readiness") { (server, f) =>
         val ramlReadinessCheck = raml.ReadinessCheck(
           name = "ready",
           portName = "http",
@@ -121,7 +121,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       }
     }
     "health checks" should {
-      "deployment with 2 unhealthy instances is continued properly after master abdication" in withMarathon("health-check") { (server, f) =>
+      "deployment with 2 unhealthy instances is continued properly after master abdication" in withMarathon("RestartIntegrationTest-health-check") { (server, f) =>
         val ramlHealthCheck: raml.AppHealthCheck = raml.AppHealthCheck(
           path = Some("/health"),
           portIndex = Some(0),

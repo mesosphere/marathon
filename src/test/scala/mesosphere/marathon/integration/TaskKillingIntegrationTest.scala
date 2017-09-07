@@ -13,7 +13,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
   "TaskKilling" should {
     "Killing a task publishes a TASK_KILLING event" in {
       Given("a new app")
-      val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
+      val app = appProxy(testBasePath / "app-to-kill", "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed")
       val createResult = marathon.createAppV2(app)
