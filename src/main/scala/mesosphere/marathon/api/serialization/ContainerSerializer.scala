@@ -143,7 +143,8 @@ object DockerSerializer {
       portMappings = if (pms.nonEmpty) Some(pms.map(PortMappingSerializer.fromProto).to[Seq]) else None,
       privileged = d.getPrivileged,
       parameters = d.getParametersList.asScala.map(Parameter(_)).to[Seq],
-      forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
+      forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false,
+      forceIp = if (d.hasForceIp) d.getForceIp else false
     )
   }
 
@@ -153,6 +154,7 @@ object DockerSerializer {
       .setPrivileged(docker.privileged)
       .addAllParameters(docker.parameters.map(ParameterSerializer.toMesos).asJava)
       .setForcePullImage(docker.forcePullImage)
+      .setForceIp(docker.forceIp)
 
     docker.network.foreach(builder.setNetwork)
 
@@ -300,7 +302,8 @@ object MesosDockerSerializer {
       volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
       image = d.getImage,
       credential = if (d.hasCredential) Some(CredentialSerializer.fromMesos(d.getCredential)) else None,
-      forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
+      forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false,
+      forceIp = if (d.hasForceIp) d.getForceIp else false
     )
   }
 
@@ -308,6 +311,7 @@ object MesosDockerSerializer {
     val builder = Protos.ExtendedContainerInfo.MesosDockerInfo.newBuilder
       .setImage(docker.image)
       .setForcePullImage(docker.forcePullImage)
+      .setForceIp(docker.forceIp)
 
     docker.credential.foreach { credential =>
       builder.setCredential(CredentialSerializer.toMesos(credential))
@@ -341,7 +345,8 @@ object MesosAppCSerializer {
       image = appc.getImage,
       id = if (appc.hasId) Some(appc.getId) else None,
       labels = appc.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
-      forcePullImage = if (appc.hasForcePullImage) appc.getForcePullImage else false
+      forcePullImage = if (appc.hasForcePullImage) appc.getForcePullImage else false,
+      forceIp = if (appc.hasForceIp) appc.getForceIp else false
     )
   }
 
@@ -349,6 +354,7 @@ object MesosAppCSerializer {
     val builder = Protos.ExtendedContainerInfo.MesosAppCInfo.newBuilder
       .setImage(appc.image)
       .setForcePullImage(appc.forcePullImage)
+      .setForceIp(appc.forceIp)
 
     appc.id.foreach(builder.setId)
 

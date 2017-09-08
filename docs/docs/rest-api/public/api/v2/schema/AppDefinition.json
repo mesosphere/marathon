@@ -99,6 +99,10 @@
               "type": "boolean",
               "description": "The container will be pulled, regardless if it is already available on the local system."
             },
+            "forceIp": {
+              "type": "boolean",
+              "description": "The container will use values from ipAddressess ."
+            },
             "image": {
               "type": "string",
               "minLength": 1,
@@ -206,6 +210,10 @@
             "forcePullImage": {
               "type": "boolean",
               "description": "The container will be pulled, regardless if it is already available on the local system."
+            },
+            "forceIp": {
+              "type": "boolean",
+              "description": "The container will use values from ipAddressess ."
             }
           },
           "required": [ "image" ],

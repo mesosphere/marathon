@@ -267,7 +267,8 @@ trait ContainerFormats {
       privileged: Boolean,
       parameters: Seq[Parameter],
       credential: Option[Container.Credential],
-      forcePullImage: Boolean)
+      forcePullImage: Boolean,
+      forceIp: Boolean)
 
     implicit lazy val DockerContainerParametersFormat: Format[DockerContainerParameters] = (
       (__ \ "image").format[String] ~
@@ -276,21 +277,24 @@ trait ContainerFormats {
       (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
       (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~
-      (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-    )(DockerContainerParameters(_, _, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
+      (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false) ~
+      (__ \ "forceIp").formatNullable[Boolean].withDefault(false)
+    )(DockerContainerParameters(_, _, _, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
 
     case class AppcContainerParameters(
       image: String,
       id: Option[String],
       labels: Map[String, String],
-      forcePullImage: Boolean)
+      forcePullImage: Boolean,
+      forceIp: Boolean)
 
     implicit lazy val AppcContainerParametersFormat: Format[AppcContainerParameters] = (
       (__ \ "image").format[String] ~
       (__ \ "id").formatNullable[String] ~
       (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
-      (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-    )(AppcContainerParameters(_, _, _, _), unlift(AppcContainerParameters.unapply))
+      (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false) ~
+      (__ \ "forceIp").formatNullable[Boolean].withDefault(false)
+    )(AppcContainerParameters(_, _, _, _, _), unlift(AppcContainerParameters.unapply))
 
     def container(
       `type`: mesos.ContainerInfo.Type,
@@ -307,14 +311,16 @@ trait ContainerFormats {
               docker.get.portMappings,
               docker.get.privileged,
               docker.get.parameters,
-              docker.get.forcePullImage
+              docker.get.forcePullImage,
+              docker.get.forceIp
             )
           } else {
             Container.MesosDocker(
               volumes,
               docker.get.image,
               docker.get.credential,
-              docker.get.forcePullImage
+              docker.get.forcePullImage,
+              docker.get.forceIp
             )
           }
         case _ =>
@@ -331,7 +337,8 @@ trait ContainerFormats {
                 a.image,
                 a.id,
                 a.labels,
-                a.forcePullImage
+                a.forcePullImage,
+                a.forceIp
               )
             case _ =>
               Container.Mesos(volumes)
@@ -362,7 +369,8 @@ trait ContainerFormats {
         "portMappings" -> d.portMappings,
         "privileged" -> d.privileged,
         "parameters" -> d.parameters,
-        "forcePullImage" -> d.forcePullImage
+        "forcePullImage" -> d.forcePullImage,
+        "forceIp" -> d.forceIp
       )
       Json.obj(
         "type" -> mesos.ContainerInfo.Type.DOCKER,
@@ -375,7 +383,8 @@ trait ContainerFormats {
       def dockerValues(c: Container.MesosDocker): JsObject = Json.obj(
         "image" -> c.image,
         "credential" -> c.credential,
-        "forcePullImage" -> c.forcePullImage
+        "forcePullImage" -> c.forcePullImage,
+        "forceIp" -> c.forceIp
       )
       Json.obj(
         "type" -> mesos.ContainerInfo.Type.MESOS,
@@ -389,7 +398,8 @@ trait ContainerFormats {
         "image" -> a.image,
         "id" -> a.id,
         "labels" -> a.labels,
-        "forcePullImage" -> a.forcePullImage
+        "forcePullImage" -> a.forcePullImage,
+        "forceIp" -> a.forceIp
       )
       Json.obj(
         "type" -> mesos.ContainerInfo.Type.MESOS,
