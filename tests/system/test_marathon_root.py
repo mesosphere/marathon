@@ -755,7 +755,7 @@ def test_pod_file_based_secret(secret_fixture):
             },
             "volumeMounts": [{
                 "name": "vol",
-                "mountPath": secret_name
+                "mountPath": './{}'.format(secret_name)
             }],
         }],
         "networks": [{
