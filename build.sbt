@@ -159,8 +159,10 @@ lazy val packagingSettings = Seq(
   rpmLicense := Some("Apache 2"),
   serverLoading := None,
   version in Rpm := {
+    // Matches e.g. 1.5.1
     val releasePattern = """^(\d+)\.(\d+)\.(\d+)$""".r
-    val snapshotPattern = """^(\d+).(\d+)\.(\d+)-SNAPSHOT-\d+-g(\w+)""".r
+    // Matches e.g. 1.5.1-pre-42-gdeadbeef and 1.6.0-pre-42-gdeadbeef
+    val snapshotPattern = """^(\d+)\.(\d+)\.(\d+)(?:-SNAPSHOT|-pre)?-\d+-g(\w+)""".r
     version.value match {
       case releasePattern(major, minor, patch) => s"$major.$minor.$patch"
       case snapshotPattern(major, minor, patch, commit) => s"$major.$minor.$patch${LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE)}git$commit"
