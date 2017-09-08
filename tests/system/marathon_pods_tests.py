@@ -75,7 +75,6 @@ def test_create_pod():
 @common.marathon_1_5
 @pytest.mark.skipif("shakedown.ee_version() is None")
 @pytest.mark.skipif("common.docker_env_not_set()")
-@pytest.mark.skip(reason="Enable when https://jira.mesosphere.com/browse/DCOS-18580 fixed")
 def test_create_pod_with_private_image():
     """Deploys a pod with a private Docker image, using Mesos containerizer."""
 

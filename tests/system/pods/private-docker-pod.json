@@ -14,7 +14,7 @@
       "image": {
         "kind": "DOCKER",
         "id": "mesosphere/simple-docker-ee:latest",
-        "config": {
+        "pullConfig": {
           "secret": "pullConfigSecret"
         },
         "force": true
