@@ -6,12 +6,14 @@ import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
 
 import akka.actor.ActorRef
 import mesosphere.marathon.api.RequestFacade
+import mesosphere.marathon.api.v2.json.Formats.{ eventToJson }
 import mesosphere.marathon.core.event.{ EventConf, MarathonEvent }
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.eclipse.jetty.servlets.{ EventSource, EventSourceServlet }
+import play.api.libs.json.Json
 
 import scala.concurrent.{ Await, blocking }
 
@@ -21,7 +23,7 @@ import scala.concurrent.{ Await, blocking }
   * @param request the initial http request.
   * @param emitter the emitter to emit data
   */
-class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends HttpEventStreamHandle {
+class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, conf: EventConf) extends HttpEventStreamHandle {
 
   lazy val id: String = UUID.randomUUID().toString
 
@@ -36,7 +38,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
   override def close(): Unit = emitter.close()
 
   override def sendEvent(event: MarathonEvent): Unit = {
-    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, event.jsonString))
+    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, Json.stringify(eventToJson(event)(conf.eventStreamLightweight()))))
   }
 
   override def toString: String = s"HttpEventSSEHandle($id on $remoteAddress on event types from $subscribedEventTypes)"
@@ -111,7 +113,7 @@ class HttpEventStreamServlet(
     @volatile private var handler: Option[HttpEventSSEHandle] = None
 
     override def onOpen(emitter: Emitter): Unit = {
-      val handle = new HttpEventSSEHandle(request, emitter)
+      val handle = new HttpEventSSEHandle(request, emitter, conf)
       this.handler = Some(handle)
       streamActor ! HttpEventStreamConnectionOpen(handle)
     }

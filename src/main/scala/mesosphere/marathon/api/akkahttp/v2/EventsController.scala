@@ -52,7 +52,7 @@ class EventsController(
               EventsController.eventStreamLogic(eventBus, leaderStateEvents,
                 eventStreamMaxOutstandingMessages, clientIp)
                 .filter(isAllowed(events.toSet))
-                .map(event => ServerSentEvent(`type` = event.eventType, data = Json.stringify(Formats.eventToJson(event))))
+                .map(event => ServerSentEvent(`type` = event.eventType, data = Json.stringify(Formats.eventToJson(event)(conf.eventStreamLightweight()))))
                 .keepAlive(5.second, () => ServerSentEvent.heartbeat)
             }
           }
