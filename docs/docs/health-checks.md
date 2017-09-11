@@ -101,7 +101,10 @@ Options applicable to every protocol:
 * `maxConsecutiveFailures`(Optional. Default: 3): Number of consecutive health
   check failures after which the unhealthy task should be killed.
   HTTP & TCP health checks: If this value is `0`, tasks will not be killed if
-  they fail the health check.
+  they fail the health check. Note that this semantic is different for mesos health checks e.g.
+  `MESOS_HTTP`. Here the task will be killed by mesos after failing `>= maxConsecutiveFailures`
+  times. This means that setting `maxConsecutiveFailures = 0` will lead to task being killed immediately after
+  first health check fails.
 * `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
   health check is considered a failure regardless of the response.
 
