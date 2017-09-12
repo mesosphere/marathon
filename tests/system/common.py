@@ -111,7 +111,7 @@ def command_health_check(command='true', failures=1, timeout=2):
 
 
 def cluster_info(mom_name='marathon-user'):
-    print("DC/OS: {}".format(shakedown.dcos_version()))
+    print("DC/OS: {}, in {} mode".format(shakedown.dcos_version(), shakedown.ee_version()))
     agents = shakedown.get_private_agents()
     print("Agents: {}".format(len(agents)))
     client = marathon.create_client()
