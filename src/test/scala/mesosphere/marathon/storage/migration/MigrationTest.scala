@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package storage.migration
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import akka.Done
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
@@ -14,38 +16,67 @@ import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.test.Mockito
 import org.scalatest.GivenWhenThen
+import Migration.MigrationAction
+import akka.actor.{ Cancellable, Scheduler }
+import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.Future
+import concurrent.duration._
+import scala.concurrent.{ ExecutionContext, Future }
 
-class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
+class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Eventually {
 
-  private[this] def migration(
-    persistenceStore: PersistenceStore[_, _, _] = new InMemoryPersistenceStore(),
-    appRepository: AppRepository = mock[AppRepository],
-    podRepository: PodRepository = mock[PodRepository],
-    groupRepository: GroupRepository = mock[GroupRepository],
-    deploymentRepository: DeploymentRepository = mock[DeploymentRepository],
-    instanceRepository: InstanceRepository = mock[InstanceRepository],
-    taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
-    frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
-    configurationRepository: RuntimeConfigurationRepository = mock[RuntimeConfigurationRepository],
-    backup: PersistentStoreBackup = mock[PersistentStoreBackup],
-    serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository],
-    config: StorageConfig = InMem(1, Set.empty, None, None)): Migration = {
+  class Fixture(
+      persistenceStore: PersistenceStore[_, _, _] = new InMemoryPersistenceStore(),
+      fakeMigrations: List[MigrationAction] = List.empty) {
+    private val appRepository: AppRepository = mock[AppRepository]
+    private val podRepository: PodRepository = mock[PodRepository]
+    private val groupRepository: GroupRepository = mock[GroupRepository]
+    private val deploymentRepository: DeploymentRepository = mock[DeploymentRepository]
+    private val instanceRepository: InstanceRepository = mock[InstanceRepository]
+    private val taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository]
+    private val frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository]
+    private val configurationRepository: RuntimeConfigurationRepository = mock[RuntimeConfigurationRepository]
+    private val backup: PersistentStoreBackup = mock[PersistentStoreBackup]
+    private val serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository]
+    private val config: StorageConfig = InMem(1, Set.empty, None, None)
+
+    val scheduledNotification = new Cancellable {
+      val cancelled = new AtomicBoolean(false)
+      override def cancel(): Boolean = cancelled.getAndSet(true)
+      override def isCancelled: Boolean = cancelled.get()
+    }
+
+    //mockito can't mock call-by-name parameters, have to mock a scheduler manually
+    val mockedScheduler: Scheduler = new Scheduler {
+      override def maxFrequency: Double = ???
+      override def schedule(initialDelay: FiniteDuration, interval: FiniteDuration, runnable: Runnable)(implicit executor: ExecutionContext): Cancellable = scheduledNotification
+      override def scheduleOnce(delay: FiniteDuration, runnable: Runnable)(implicit executor: ExecutionContext): Cancellable = ???
+    }
 
     // assume no runtime config is stored in repository
     configurationRepository.get() returns Future.successful(None)
     configurationRepository.store(any) returns Future.successful(Done)
-    new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
+    val migration = new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
       instanceRepository, taskFailureRepository, frameworkIdRepository,
-      serviceDefinitionRepository, configurationRepository, backup, config)
+      serviceDefinitionRepository, configurationRepository, backup, config) {
+
+      override protected def scheduler = mockedScheduler
+
+      override def migrations: List[(StorageVersion, () => Future[Any])] = if (fakeMigrations.nonEmpty) {
+        fakeMigrations
+      } else {
+        super.migrations
+      }
+    }
   }
 
   val currentVersion: StorageVersion = StorageVersions.current
 
   "Migration" should {
     "be filterable by version" in {
-      val migrate = migration()
+      val f = new Fixture
+
+      val migrate = f.migration
       val all = migrate.migrations.filter(_._1 > StorageVersions(0, 0, 0)).sortBy(_._1)
       all should have size migrate.migrations.size.toLong
 
@@ -58,7 +89,9 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
     "migrate on an empty database will set the storage version" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
-      val migrate = migration(persistenceStore = mockedStore)
+      val f = new Fixture(mockedStore)
+
+      val migrate = f.migration
 
       mockedStore.storageVersion() returns Future.successful(None)
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
@@ -72,7 +105,9 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
     "migrate on a database with the same version will do nothing" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
-      val migrate = migration(persistenceStore = mockedStore)
+      val f = new Fixture(mockedStore)
+
+      val migrate = f.migration
 
       val currentPersistenceVersion =
         StorageVersions.current.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
@@ -85,7 +120,9 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
     "migrate throws an error for early unsupported versions" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
-      val migrate = migration(persistenceStore = mockedStore)
+      val f = new Fixture(mockedStore)
+
+      val migrate = f.migration
       val minVersion = migrate.minSupportedStorageVersion
 
       Given("An unsupported storage version")
@@ -103,7 +140,9 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
     "migrate throws an error for versions > current" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
-      val migrate = migration(persistenceStore = mockedStore)
+      val f = new Fixture(mockedStore)
+
+      val migrate = f.migration
 
       Given("An unsupported storage version")
       val unsupportedVersion = StorageVersions(Int.MaxValue, Int.MaxValue, Int.MaxValue, StorageVersion.StorageFormat.PERSISTENCE_STORE)
@@ -130,7 +169,9 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       mockedStore.store(any, any, any)(any, any) returns Future.successful(Done)
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
 
-      val migrate = migration(persistenceStore = mockedStore)
+      val f = new Fixture(mockedStore)
+
+      val migrate = f.migration
       migrate.appRepository.all() returns Source.empty
       migrate.groupRepository.rootVersions() returns Source.empty
       migrate.groupRepository.root() returns Future.successful(RootGroup.empty)
@@ -139,6 +180,35 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       val result = migrate.migrate()
       result should be ('nonEmpty)
       result should contain theSameElementsInOrderAs migrate.migrations.map(_._1)
+    }
+
+    "log periodic messages if migration takes more time than usual" in {
+      val mockedStore = mock[PersistenceStore[_, _, _]]
+
+      val migration = List(
+        StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () => Future.successful(Done)
+        }
+      )
+
+      val f = new Fixture(mockedStore, migration)
+
+      f.scheduledNotification should not be 'cancelled
+
+      val migrate = f.migration
+
+      mockedStore.storageVersion() returns Future.successful(
+        Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
+      )
+
+      mockedStore.setStorageVersion(any) returns Future.successful(Done)
+
+      migrate.migrate()
+
+      f.scheduledNotification shouldBe 'cancelled
+
+      verify(mockedStore).storageVersion()
+      verify(mockedStore).setStorageVersion(StorageVersions.current)
+      noMoreInteractions(mockedStore)
     }
   }
 }
