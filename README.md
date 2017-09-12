@@ -202,7 +202,9 @@ If you want to inspect the contents of the Docker container:
 
     docker run -it --entrypoint=/bin/bash marathon:{version} -s
 
-Test it:
+### Testing
+
+The tests and integration tests a run with:
 
     sbt test integration:test
 
@@ -213,7 +215,11 @@ You have to set the Mesos test IP and disable Docker tests on Mac:
     RUN_MESOS_INTEGRATION_TESTS=false \
     sbt test integration:test
 
-The Docker integration tests are not supported on Mac.
+The Docker integration tests are not supported on Mac. The tests start and stop
+local Mesos clusters and Marathon instances. Sometimes processes leak after
+failed test runs. You can check them with `ps aux | grep "python|java|mesos"`
+and kill all `app_mock.py` processes and Mesos and Marathon instances unless
+they do not belong to a production environment of course.
 
 Also see the [CI instructions](ci/README.md) on running specfic build pipeline
 targets.
