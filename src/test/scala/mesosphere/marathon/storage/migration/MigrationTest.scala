@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package storage.migration
 
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 import akka.Done
 import akka.stream.scaladsl.Source
@@ -14,14 +14,12 @@ import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.{ InMem, StorageConfig }
 import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository._
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ Mockito, SimulatedScheduler, SettableClock }
 import org.scalatest.GivenWhenThen
 import Migration.MigrationAction
-import akka.actor.{ Cancellable, Scheduler }
 import org.scalatest.concurrent.Eventually
 
-import concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Future, Promise }
 
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Eventually {
 
@@ -40,27 +38,18 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     private val serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository]
     private val config: StorageConfig = InMem(1, Set.empty, None, None)
 
-    val scheduledNotification = new Cancellable {
-      val cancelled = new AtomicBoolean(false)
-      override def cancel(): Boolean = cancelled.getAndSet(true)
-      override def isCancelled: Boolean = cancelled.get()
-    }
-
-    //mockito can't mock call-by-name parameters, have to mock a scheduler manually
-    val mockedScheduler: Scheduler = new Scheduler {
-      override def maxFrequency: Double = ???
-      override def schedule(initialDelay: FiniteDuration, interval: FiniteDuration, runnable: Runnable)(implicit executor: ExecutionContext): Cancellable = scheduledNotification
-      override def scheduleOnce(delay: FiniteDuration, runnable: Runnable)(implicit executor: ExecutionContext): Cancellable = ???
-    }
-
     // assume no runtime config is stored in repository
     configurationRepository.get() returns Future.successful(None)
     configurationRepository.store(any) returns Future.successful(Done)
+    val clock = SettableClock.ofNow()
+    implicit val scheduler = new SimulatedScheduler(clock)
+    val notificationCounter = new AtomicInteger(0)
     val migration = new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
       instanceRepository, taskFailureRepository, frameworkIdRepository,
       serviceDefinitionRepository, configurationRepository, backup, config) {
 
-      override protected def scheduler = mockedScheduler
+      override protected def notifyMigrationInProgress(from: StorageVersion, migrateVersion: StorageVersion): Unit =
+        notificationCounter.incrementAndGet()
 
       override def migrations: List[(StorageVersion, () => Future[Any])] = if (fakeMigrations.nonEmpty) {
         fakeMigrations
@@ -184,17 +173,17 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
     "log periodic messages if migration takes more time than usual" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
+      val started = Promise[Done]
+      val migrationDone = Promise[Done]
+      val version = StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE)
 
       val migration = List(
-        StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () => Future.successful(Done)
+        version -> { () =>
+          started.success(Done)
+          migrationDone.future
         }
       )
-
       val f = new Fixture(mockedStore, migration)
-
-      f.scheduledNotification should not be 'cancelled
-
-      val migrate = f.migration
 
       mockedStore.storageVersion() returns Future.successful(
         Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
@@ -202,13 +191,20 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
 
-      migrate.migrate()
+      val result = f.migration.migrateAsync()
 
-      f.scheduledNotification shouldBe 'cancelled
+      started.future.futureValue shouldBe Done
+      (1 to 3) foreach { _ =>
+        f.clock += Migration.statusLoggingInterval
+      }
+      eventually {
+        f.notificationCounter.get shouldBe 3
+      }
 
-      verify(mockedStore).storageVersion()
-      verify(mockedStore).setStorageVersion(StorageVersions.current)
-      noMoreInteractions(mockedStore)
+      migrationDone.success(Done)
+
+      eventually { f.scheduler.taskCount shouldBe 0 }
+      result.futureValue shouldBe List(version)
     }
   }
 }
