@@ -8,7 +8,6 @@ import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.flow.impl.{ OfferReviverDelegate, OfferMatcherLaunchTokensActor, ReviveOffersActor }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.bus.TaskChangeObservables
 import org.slf4j.LoggerFactory
 import rx.lang.scala.Observable
 
@@ -59,11 +58,10 @@ class FlowModule(leadershipModule: LeadershipModule) {
     */
   def refillOfferMatcherManagerLaunchTokens(
     conf: LaunchTokenConfig,
-    taskStatusObservables: TaskChangeObservables,
     offerMatcherManager: OfferMatcherManager): Unit =
     {
       lazy val offerMatcherLaunchTokensProps = OfferMatcherLaunchTokensActor.props(
-        conf, taskStatusObservables, offerMatcherManager
+        conf, offerMatcherManager
       )
       leadershipModule.startWhenLeader(offerMatcherLaunchTokensProps, "offerMatcherLaunchTokens")
 

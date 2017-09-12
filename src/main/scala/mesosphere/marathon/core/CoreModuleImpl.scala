@@ -28,7 +28,6 @@ import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModu
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.pod.PodModule
 import mesosphere.marathon.core.readiness.ReadinessModule
-import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
@@ -76,7 +75,6 @@ class CoreModuleImpl @Inject() (
 
   // TASKS
 
-  override lazy val taskBusModule = new TaskBusModule()
   override lazy val taskTrackerModule =
     new InstanceTrackerModule(clock, marathonConf, leadershipModule,
       storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
@@ -159,7 +157,7 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val flowActors = new FlowModule(leadershipModule)
 
   flowActors.refillOfferMatcherManagerLaunchTokens(
-    marathonConf, taskBusModule.taskStatusObservables, offerMatcherManagerModule.subOfferMatcherManager)
+    marathonConf, offerMatcherManagerModule.subOfferMatcherManager)
 
   /** Combine offersWanted state from multiple sources. */
   private[this] lazy val offersWanted =

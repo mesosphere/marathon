@@ -16,7 +16,7 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusEmitter }
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.repository.InstanceRepository
@@ -58,17 +58,12 @@ class InstanceOpProcessorImplTest extends AkkaUnitTest {
     }
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
     lazy val eventBus: EventStream = mock[EventStream]
-    lazy val taskStatusEmitter: TaskStatusEmitter = mock[TaskStatusEmitter]
-    lazy val taskStatusEmitterProvider: Provider[TaskStatusEmitter] = new Provider[TaskStatusEmitter] {
-      override def get(): TaskStatusEmitter = taskStatusEmitter
-    }
     lazy val guiceModule = new CoreGuiceModule(system.settings.config)
     // Use module method to ensure that we keep the list of steps in sync with the test.
     lazy val statusUpdateSteps = guiceModule.taskStatusUpdateSteps(
       notifyHealthCheckManager,
       notifyRateLimiter,
       notifyLaunchQueue,
-      emitUpdate,
       postToEventStream,
       scaleApp
     )
@@ -78,7 +73,6 @@ class InstanceOpProcessorImplTest extends AkkaUnitTest {
     lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueueProvider, groupManagerProvider)
     lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus)
     lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueueProvider)
-    lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitterProvider)
     lazy val scaleApp = new ScaleAppUpdateStepImpl(schedulerActorProvider)
     lazy val processor = new InstanceOpProcessorImpl(instanceTrackerProbe.ref, instanceRepository, stateOpResolver, config)
 
