@@ -19,19 +19,20 @@ trait MesosTest extends UnitTest with BeforeAndAfterAll {
   val PackageFile = "^([^-]+).+?\\.(rpm|deb)$".r
 
   def assertOneOfEachKind(): Unit = {
+    assert(packagePath.toIO.exists, "package path ${packagePath} does not exist! Did you build packages?")
     val counts = ls(packagePath).
       map(_.last).
       collect { case PackageFile(launcher, ext) => (launcher, ext) }.
       groupBy(identity).
       mapValues(_.length)
 
-    assert(counts.size > 1, "No packages exist!")
+    assert(counts.size > 0, "No packages exist!")
     assert(counts.forall { case (k, count) => count == 1 }, "Some packages have multiple versions; " +
       s"please assert that ${packagePath} contains one version of each package only (for each service manager and package format)")
   }
 
   def removeStaleDockerInstances(): Unit = {
-    val images = %%("docker", "ps", "--filter", "label=marathon-package-test", "--format", "{{.ID}}").
+    val images = %%("docker", "ps", "-a", "--filter", "label=marathon-package-test", "--format", "{{.ID}}").
       out.string.split("\n").filter(_ != "")
 
     images.foreach { id =>
@@ -57,6 +58,17 @@ trait MesosTest extends UnitTest with BeforeAndAfterAll {
 
   def execBash(containerId: String, cmd: String): String = {
     %%("docker", "exec", "-i", containerId, "bash", "-c", cmd).out.string
+  }
+
+  /** OS X temp directory /var/folders really resides in /private/var/folders and this confuses Docker. Detect and
+    * workaround */
+  def getTmpFile(): Path = {
+    val t = tmp()
+    val withPrivate = root / 'private / t.relativeTo(root)
+    if (withPrivate.toIO.exists)
+      withPrivate
+    else
+      t
   }
 
   override def beforeAll(): Unit = {
@@ -341,6 +353,57 @@ class UbuntuUpstartTest extends MesosTest {
   }
 }
 
+// Test the sbt-native-packager docker produced image
+class DockerImageTest extends MesosTest {
+  val tag = sys.env.getOrElse("DOCKER_TAG", %%("git", "describe", "HEAD", "--tags", "--abbrev=7").out.string.trim)
+  val image = s"mesosphere/marathon:${tag}"
+
+  var mesos: Container = _
+  var dockerMarathon: Container = _
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    mesos = startMesos()
+
+    System.err.println(s"Using docker image ${image}")
+    val startHookFile = getTmpFile()
+    write.over(startHookFile, s"""
+      |#!/bin/bash
+      |touch /tmp/hello-world
+      |
+      |cat <<-EOF > /opt/docker/start-hook.env
+      |export MARATHON_WEBUI_URL=http://test-host:port
+      |EOF
+      |""".stripMargin)
+    %("chmod", "+x", startHookFile)
+
+    dockerMarathon = runContainer(
+      "--name", "docker-marathon",
+      "-v", s"${startHookFile}:/opt/docker/start-hook.sh",
+      "-e", "HOOK_MARATHON_START=/opt/docker/start-hook.sh",
+      "-e", s"MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos",
+      "-e", s"MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon",
+      image)
+  }
+
+  "The specified HOOK_MARATHON_START file is run" in {
+    execBash(dockerMarathon.containerId, "find /tmp/hello-world").trim.shouldBe("/tmp/hello-world")
+  }
+
+  "The resulting start-hook.env file is sourced" in {
+    // Round about way of testing this; the HOOK_MARATHON_START file creates an env file which sets this parameter
+    execBash(dockerMarathon.containerId, "curl localhost:8080/v2/info") should include("http://test-host:port")
+  }
+
+  "The installed Marathon registers and connects to the running Mesos master" in {
+    implicit val patienceConfig = veryPatient
+    eventually {
+      execBash(mesos.containerId,
+        s"""curl -s ${mesos.ipAddress}:5050/frameworks | jq '.frameworks[].name' -r""").trim shouldBe ("marathon")
+    }
+  }
+}
+
 def help(testNames: Seq[String]): Unit = {
   println(s"""
 Usage: ./test.sc [tests to run]
@@ -375,7 +438,9 @@ def main(args: String*): Unit = {
     new DebianSystemvTest,
     new CentosSystemdTest,
     new CentosSystemvTest,
-    new UbuntuUpstartTest)
+    new UbuntuUpstartTest,
+    new DockerImageTest
+  )
   val predicate: (String => Boolean) = args match {
     case Seq("all") =>
       { _: String => true }

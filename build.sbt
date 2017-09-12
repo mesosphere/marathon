@@ -150,14 +150,74 @@ lazy val commonSettings = testSettings ++
 lazy val packageDebianForLoader = taskKey[File]("Create debian package for active serverLoader")
 lazy val packageRpmForLoader = taskKey[File]("Create rpm package for active serverLoader")
 
+/**
+  * The documentation for sbt-native-package can be foound here:
+  * - General, non-vendor specific settings (such as launch script):
+  *     http://sbt-native-packager.readthedocs.io/en/latest/archetypes/java_app/index.html#usage
+  *
+  * - Linux packaging settings
+  *     http://sbt-native-packager.readthedocs.io/en/latest/archetypes/java_app/index.html#usage
+  */
 lazy val packagingSettings = Seq(
+  bashScriptExtraDefines += IO.read((baseDirectory.value / "project" / "NativePackagerSettings" / "extra-defines.bash")),
+  mappings in (Compile, packageDoc) := Seq(),
+  debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
+
+  /* Universal packaging (docs) - http://sbt-native-packager.readthedocs.io/en/latest/formats/universal.html
+   */
+  universalArchiveOptions in (UniversalDocs, packageZipTarball) := Seq("-pcvf"), // Remove this line once fix for https://github.com/sbt/sbt-native-packager/issues/1019 is released
+  (packageName in UniversalDocs) := { packageName.value + "-docs" + "-" + version.value },
+  (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
+  mappings in UniversalDocs ++= directory("docs/docs"),
+
+
+  /* Docker config (http://sbt-native-packager.readthedocs.io/en/latest/formats/docker.html)
+   */
+  dockerBaseImage := Dependency.V.OpenJDK,
+  dockerRepository := Some("mesosphere"),
+  daemonUser in Docker := "root",
+  version in Docker := { "v" + (version in Compile).value },
+  dockerBaseImage := "buildpack-deps:jessie-curl",
+  dockerCommands := {
+    // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
+    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(2)
+
+    prefixCommands ++
+      Seq(Cmd("RUN",
+        s"""apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\
+          |echo "deb http://ftp.debian.org/debian jessie-backports main" | tee -a /etc/apt/sources.list && \\
+          |echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
+          |echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
+          |apt-get update && \\
+          |
+          |# jdk setup
+          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20161107~bpo8+1 && \\
+          |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
+          |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
+          |
+          |apt-get install --no-install-recommends -y --force-yes mesos=${Dependency.V.MesosDebian} && \\
+          |apt-get clean""".stripMargin)) ++
+      restCommands ++
+      Seq(
+        Cmd("RUN", "chown -R daemon:daemon ."),
+        Cmd("USER", "daemon"))
+  },
+
+  /* Linux packaging settings (http://sbt-native-packager.readthedocs.io/en/latest/formats/linux.html)
+   *
+   * It is expected that these task (packageDebianForLoader, packageRpmForLoader) will be called with various loader
+   * configuration specified (systemv, systemd, and upstart as appropriate)
+   *
+   * See the command alias packageLinux for the invocation */
   packageSummary := "Scheduler for Apache Mesos",
   packageDescription := "Cluster-wide init and control system for services running on\\\n\tApache Mesos",
   maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
+  serverLoading := None, // We override this to build for each supported system loader in the packageLinux alias
   debianPackageDependencies in Debian := Seq("java8-runtime-headless", "lsb-release", "unzip", s"mesos (>= ${Dependency.V.MesosDebian})"),
+  rpmRequirements in Rpm := Seq("coreutils", "unzip", "java >= 1:1.8.0"),
   rpmVendor := "mesosphere",
   rpmLicense := Some("Apache 2"),
-  serverLoading := None,
+  daemonStdoutLogFile := Some("marathon"),
   version in Rpm := {
     // Matches e.g. 1.5.1
     val releasePattern = """^(\d+)\.(\d+)\.(\d+)$""".r
@@ -172,42 +232,7 @@ lazy val packagingSettings = Seq(
         v
     }
   },
-  daemonStdoutLogFile := Some("marathon"),
-  debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
-  rpmRequirements in Rpm := Seq("coreutils", "unzip", "java >= 1:1.8.0"),
-  dockerBaseImage := Dependency.V.OpenJDK,
-  dockerExposedPorts := Seq(8080),
-  dockerRepository := Some("mesosphere"),
-  daemonUser in Docker := "root",
 
-  // Package docs
-  universalArchiveOptions in (UniversalDocs, packageZipTarball) := Seq("-pcvf"), // Remove this line once fix for https://github.com/sbt/sbt-native-packager/issues/1019 is released
-  (packageName in UniversalDocs) := { packageName.value + "-docs" + "-" + version.value },
-  (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
-  mappings in UniversalDocs ++= directory("docs/docs"),
-
-  dockerCommands ++= Seq(
-    Cmd("RUN", "apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && " +
-        "echo deb http://repos.mesosphere.com/debian jessie-testing main | tee -a /etc/apt/sources.list.d/mesosphere.list && " +
-        "echo deb http://repos.mesosphere.com/debian jessie main | tee -a /etc/apt/sources.list.d/mesosphere.list && " +
-        "apt-get update && " +
-        s"apt-get install --no-install-recommends -y --force-yes mesos=${Dependency.V.MesosDebian} && " +
-        "apt-get clean"
-    ),
-    Cmd("RUN", "chown -R daemon:daemon ."),
-    Cmd("USER", "daemon")
-  ),
-  bashScriptExtraDefines +=
-    """
-      |for env_op in `env | grep -v ^MARATHON_APP | grep ^MARATHON_ | awk '{gsub(/MARATHON_/,""); gsub(/=/," "); printf("%s%s ", "--", tolower($1)); for(i=2;i<=NF;i++){printf("%s ", $i)}}'`; do
-      |  addApp "$env_op"
-      |done
-    """.stripMargin,
-
-  /* It is expected that these task (packageDebianForLoader, packageRpmForLoader) will be called with various loader
-   * configuration specified (systemv, systemd, and upstart as appropriate)
-   *
-   * See the command alias packageAll for the invocation */
   packageDebianForLoader := {
     val debianFile = (packageBin in Debian).value
     val serverLoadingName = (serverLoading in Debian).value.get
@@ -223,14 +248,12 @@ lazy val packagingSettings = Seq(
     IO.move(rpmFile, output)
     streams.value.log.info(s"Moving rpm ${serverLoadingName} package $rpmFile to $output")
     output
-  },
-  mappings in (Compile, packageDoc) := Seq()
-)
+  })
 
 /* Builds all the different package configurations by modifying the session config and running the packaging tasks Note
  *  you cannot build RPM packages unless if you have a functioning `rpmbuild` command (see the alien package for
  *  debian). */
-addCommandAlias("packageAll",
+addCommandAlias("packageLinux",
   ";session clear-all" +
   ";set SystemloaderPlugin.projectSettings ++ SystemdPlugin.projectSettings" +
   ";packageDebianForLoader" +
@@ -243,7 +266,8 @@ addCommandAlias("packageAll",
 
   ";session clear-all" +
   ";set SystemloaderPlugin.projectSettings ++ UpstartPlugin.projectSettings  ++ NativePackagerSettings.ubuntuUpstartSettings" +
-  ";packageDebianForLoader")
+  ";packageDebianForLoader"
+)
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)

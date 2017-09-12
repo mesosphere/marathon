@@ -102,8 +102,8 @@ def createPackages(): String = utils.stage("Package") {
  * Create Docker, rpm and deb packages.
  */
 @main
-def createLinuxPackages(): Unit = utils.stage("Package Docker Image, Debian and RedHat Packages") {
-  %('sbt, "docker:publishLocal", "packageAll")
+def createDockerAndLinux(): Unit = utils.stage("Package Docker Image, Debian and RedHat Packages") {
+  %('sbt, "docker:publishLocal", "packageLinux")
 }
 
 /**

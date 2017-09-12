@@ -25,7 +25,7 @@ Build with:
 ```
 cd ../../
 rm -rf target/packages
-sbt packageAll
+sbt docker:publishLocal packageLinux
 ```
 
 ### 2) Build the docker images
