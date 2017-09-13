@@ -6,14 +6,12 @@ import mesosphere.marathon.plugin.plugin.Plugin
 import org.apache.mesos.Protos.Offer
 
 /**
-  * Allows to use external logic to reject offers
-  *
-  * @author Dmitry Tsydzik.
-  * @since 6/15/17.
+  * Allows to use external logic to decline offers.
   */
 trait SchedulerPlugin extends Plugin {
+ 
   /**
-    * @return true if offer is accepted
+    * @return true if offer matches
     */
   def isMatch(offer: Offer, runSpec: RunSpec): Boolean
 }
