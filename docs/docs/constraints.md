@@ -30,20 +30,21 @@ Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the stri
 
 ### CLUSTER operator
 **Value** (optional): A string value.
-When a value is specified then tasks are launched on agent nodes with an attribute whose value matches exactly.
+When a value is specified, tasks are launched on agent nodes with an attribute whose value matches exactly.
 
 `CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute.
-This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency.
+This is useful, for example, if you have apps with special hardware needs, or if you want to run them on the same rack for low latency.
 
-A field of `"hostname"` tells Marathon that launched tasks of the app/pod have affinity for each other and should be launched together on the same agent:
-* When value is specified then tasks are launched on the agent whose hostname matches the value.
-* When value is empty or unspecified then the first instance is launched on **any** agent node and the remaining tasks are launched alongside it on the same agent.
+The <hostname> field tells Marathon that the launched tasks of the app or pod should be launched together on the same agent:
+* When a value for <hostname> is specified, tasks are launched on the agent whose hostname matches the value.
+* WWhen the <hostname> value is empty or unspecified, the first instance is launched on **any** agent node and the remaining tasks are launched alongside it on the same agent.
 
 Attribute fields are handled differently:
-* When value is specified then tasks are launched on any agent with an attribute named according the field **and** with a value matching that of the constraint.
-* When value is empty or unspecified then the first instance is launched on any agent with an attribute named according to the field; the value of the attribute on that agent is used for future constraint matches.
+* When attribute fields are specified, tasks are launched on any agent with an attribute named according the field **and** with a value matching that of the constraint.
+* When attribute fields are empty or unspecified, the first instance is launched on any agent with an attribute named according to the field; the value of the attribute on that agent is used for future constraint matches.
 
-You could specify the exact rack on which to run app tasks:
+## Examples
+The example below specifies the exact rack on which to run app tasks:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -54,7 +55,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-Alternatively, you could specify that all of the app tasks should run on the same rack, but without specifying which rack:
+This example leaves the attribute field empty. This tells Marathon that all of the app tasks should run on the same rack, but does not specify which.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -65,7 +66,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-You can also tie an app to a specific node by using the `hostname` field:
+This example uses the `hostname` field to specify that an app must run on a specific node.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -76,7 +77,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-Or in a similar way, you can run all app tasks together on the same node but without specifying which agent to use:
+Below, the attribute field is empty. This tells Marathon that all app tasks must run on the same node, but does not specify which.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
