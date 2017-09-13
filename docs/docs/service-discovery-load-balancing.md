@@ -14,6 +14,10 @@ There are several ways to do this:
 
 For a detailed description of how ports work in Marathon, see [Networking](networking.html).
 
+**Note:** While Marathon accepts dots in application names, names with dots can prevent proper service discovery
+behavior.
+If you intend to use a service discovery mechanism, you should not put dots in your application name.
+
 ## Mesos-DNS
 
 Mesos-DNS generates an SRV record for each Mesos task (including Marathon application instances) and translates these records to the IP address and port on the machine currently running each application.

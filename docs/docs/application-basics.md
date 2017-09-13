@@ -6,6 +6,8 @@ title: Application Basics
 
 Applications are an integral concept in Marathon. Each application typically represents a long-running service, of which there would be many instances running on multiple hosts. An application instance is called a *task*. The *application definition* describes everything needed to start and maintain the tasks. 
 
+**Note:** While Marathon accepts dots in application names, names with dots can prevent proper service discovery behavior.
+If you intend to use a service discovery mechanism, you should not put dots in your application name.
 
 ## Hello Marathon: An Inline Shell Script
 
