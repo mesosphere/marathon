@@ -371,7 +371,7 @@ class DockerImageTest extends MesosTest {
       |#!/bin/bash
       |touch /tmp/hello-world
       |
-      |cat <<-EOF > /opt/docker/start-hook.env
+      |cat <<-EOF > /marathon/start-hook.env
       |export MARATHON_WEBUI_URL=http://test-host:port
       |EOF
       |""".stripMargin)
@@ -379,8 +379,8 @@ class DockerImageTest extends MesosTest {
 
     dockerMarathon = runContainer(
       "--name", "docker-marathon",
-      "-v", s"${startHookFile}:/opt/docker/start-hook.sh",
-      "-e", "HOOK_MARATHON_START=/opt/docker/start-hook.sh",
+      "-v", s"${startHookFile}:/marathon/start-hook.sh",
+      "-e", "HOOK_MARATHON_START=/marathon/start-hook.sh",
       "-e", s"MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos",
       "-e", s"MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon",
       image)

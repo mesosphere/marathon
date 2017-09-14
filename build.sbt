@@ -178,6 +178,7 @@ lazy val packagingSettings = Seq(
   daemonUser in Docker := "root",
   version in Docker := { "v" + (version in Compile).value },
   dockerBaseImage := "buildpack-deps:jessie-curl",
+  (defaultLinuxInstallLocation in Docker) := "/marathon",
   dockerCommands := {
     // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
     val (prefixCommands, restCommands) = dockerCommands.value.splitAt(2)
@@ -199,8 +200,8 @@ lazy val packagingSettings = Seq(
           |apt-get clean""".stripMargin)) ++
       restCommands ++
       Seq(
-        Cmd("RUN", "chown -R daemon:daemon ."),
-        Cmd("USER", "daemon"))
+        Cmd("ENV", "JAVA_HOME /docker-java-home"),
+        Cmd("RUN", "ln -sf /marathon/bin/marathon /marathon/bin/start"))
   },
 
   /* Linux packaging settings (http://sbt-native-packager.readthedocs.io/en/latest/formats/linux.html)
