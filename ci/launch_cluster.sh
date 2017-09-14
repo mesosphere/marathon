@@ -35,7 +35,7 @@ launch_config_version: 1
 template_url: $TEMPLATE
 deployment_name: $DEPLOYMENT_NAME
 provider: aws
-aws_region: eu-central-1
+aws_region: us-west-2
 template_parameters:
     KeyName: default
     AdminLocation: 0.0.0.0/0
