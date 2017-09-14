@@ -8,7 +8,7 @@ import akka.testkit.TestKitBase
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
+import mesosphere.marathon.test.Mockito
 import org.scalactic.source.Position
 import org.scalatest._
 
@@ -62,12 +62,12 @@ trait UnitTestLike extends WordSpecLike
   with Matchers
   with BeforeAndAfter
   with BeforeAndAfterEach
+  with BeforeAndAfterAll
   with OptionValues
   with TryValues
   with AppendedClues
   with StrictLogging
   with Mockito
-  with ExitDisabledTest
 
 abstract class UnitTest extends WordSpec with UnitTestLike
 
@@ -105,12 +105,12 @@ trait FunTestLike extends FunSuiteLike
   with Matchers
   with BeforeAndAfter
   with BeforeAndAfterEach
+  with BeforeAndAfterAll
   with OptionValues
   with TryValues
   with AppendedClues
   with StrictLogging
   with Mockito
-  with ExitDisabledTest
 
 abstract class FunTest extends FunSuite with FunTestLike
 

@@ -1,27 +1,135 @@
-package mesosphere.marathon.core.election.impl
+package mesosphere.marathon
+package core.election.impl
+
+import java.util.concurrent.atomic.{ AtomicBoolean, AtomicReference }
+import java.util.concurrent.{ ExecutorService, Executors }
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.base.ShutdownHooks
+import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.base.{ CrashStrategy, ShutdownHooks }
+import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics
-import org.slf4j.LoggerFactory
 
+import scala.async.Async
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.util.control.NonFatal
+
+/**
+  * This is a somewhat dummy implementation of [[ElectionService]]. It is used
+  * when the high-availability mode is disabled.
+  *
+  * It stops Marathon when leadership is abdicated.
+  */
 class PseudoElectionService(
-  system: ActorSystem,
-  eventStream: EventStream,
-  metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
-  backoff: ExponentialBackoff,
-  shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  system, eventStream, metrics, backoff, shutdownHooks
-) {
-  private val log = LoggerFactory.getLogger(getClass.getName)
+  system: ActorSystem,
+  override val eventStream: EventStream,
+  override val metrics: Metrics,
+  shutdownHooks: ShutdownHooks,
+  crashStrategy: CrashStrategy)
+    extends ElectionService with ElectionServiceMetrics with ElectionServiceEventStream with StrictLogging {
 
-  override def leaderHostPortImpl: Option[String] = if (isLeader) Some(hostPort) else None
+  system.registerOnTermination {
+    logger.info("Stopping leadership on shutdown")
+    stop(exit = false)
+  }
 
-  override def offerLeadershipImpl(): Unit = synchronized {
-    log.info("Not using HA and therefore electing as leader by default")
-    startLeadership(_ => stopLeadership())
+  private[this] val exitTimeoutOnAbdication: FiniteDuration = 500.milliseconds
+
+  private val threadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+  /** We re-use the single thread executor here because some methods of this class might get blocked for a long time. */
+  private implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(threadExecutor)
+
+  /* it is made `private[impl]` because it has to be accessible from inside the corresponding unit-tests. */
+  private[impl] val currentCandidate = new AtomicReference(Option.empty[ElectionCandidate])
+  private[this] val isCurrentlyLeading = new AtomicBoolean(false)
+
+  // This variable is initialized with `false` and can only be set to `true` later.
+  private[this] val leadershipOffered = new AtomicBoolean(false)
+
+  override def isLeader: Boolean = isCurrentlyLeading.get
+
+  override def leaderHostPort: Option[String] = leaderHostPortMetric {
+    if (isLeader) Some(hostPort) else None
+  }
+
+  override def offerLeadership(candidate: ElectionCandidate): Unit = {
+    logger.info(s"$candidate offered leadership")
+    if (leadershipOffered.compareAndSet(false, true)) {
+      if (!shutdownHooks.isShuttingDown) {
+        logger.info("Going to acquire leadership")
+        currentCandidate.set(Some(candidate))
+        Async.async {
+          try {
+            startLeadership()
+            isCurrentlyLeading.set(true)
+          } catch {
+            case NonFatal(ex) =>
+              logger.error(s"Fatal error while acquiring leadership for $candidate. Exiting now", ex)
+              stop(exit = true)
+          }
+        }
+      } else {
+        logger.info("Not accepting the leadership offer since Marathon is shutting down")
+      }
+    } else {
+      logger.error(s"Got another leadership offer from $candidate. Exiting now")
+      stop(exit = true)
+    }
+  }
+
+  override def abdicateLeadership(): Unit = {
+    logger.info("Abdicating leadership")
+    stop(exit = true, exitTimeout = exitTimeoutOnAbdication)
+  }
+
+  private def stop(exit: Boolean, exitTimeout: FiniteDuration = 0.milliseconds): Unit = {
+    logger.info("Stopping the election service")
+    isCurrentlyLeading.set(false)
+    try {
+      stopLeadership()
+    } catch {
+      case NonFatal(ex) =>
+        logger.error("Fatal error while stopping", ex)
+    } finally {
+      currentCandidate.set(None)
+      if (exit) {
+        logger.info("Terminating due to leadership abdication or failure")
+        system.scheduler.scheduleOnce(exitTimeout) {
+          crashStrategy.crash()
+        }
+      }
+    }
+  }
+
+  private def startLeadership(): Unit = {
+    currentCandidate.get.foreach(startCandidateLeadership)
+    startMetrics()
+  }
+
+  private def stopLeadership(): Unit = {
+    stopMetrics()
+    currentCandidate.get.foreach(stopCandidateLeadership)
+  }
+
+  private[this] val candidateLeadershipStarted = new AtomicBoolean(false)
+  private def startCandidateLeadership(candidate: ElectionCandidate): Unit = {
+    if (candidateLeadershipStarted.compareAndSet(false, true)) {
+      logger.info(s"Starting $candidate's leadership")
+      candidate.startLeadership()
+      logger.info(s"Started $candidate's leadership")
+      eventStream.publish(LocalLeadershipEvent.ElectedAsLeader)
+    }
+  }
+
+  private def stopCandidateLeadership(candidate: ElectionCandidate): Unit = {
+    if (candidateLeadershipStarted.compareAndSet(true, false)) {
+      logger.info(s"Stopping $candidate's leadership")
+      candidate.stopLeadership()
+      logger.info(s"Stopped $candidate's leadership")
+      eventStream.publish(LocalLeadershipEvent.Standby)
+    }
   }
 }
