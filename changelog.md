@@ -1,5 +1,7 @@
 ## Changes from 1.4.x to 1.5.0 (unreleased)
 
+### Recommended Mesos version is 1.3.0
+
 ### Breaking Changes
 
 #### Packaging standardized
