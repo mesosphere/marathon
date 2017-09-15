@@ -13,6 +13,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.state._
@@ -38,6 +39,8 @@ class InstanceOpFactoryImpl(
 
     new InstanceOpFactoryHelper(principalOpt, roleOpt)
   }
+
+  private[this] val schedulerPlugins: Seq[SchedulerPlugin] = pluginManager.plugins[SchedulerPlugin]
 
   private[this] lazy val runSpecTaskProc: RunSpecTaskProcessor = combine(
     pluginManager.plugins[RunSpecTaskProcessor].toIndexedSeq)
@@ -153,7 +156,8 @@ class InstanceOpFactoryImpl(
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels),
+            schedulerPlugins
           )
 
         resourceMatchResponse match {
@@ -179,7 +183,8 @@ class InstanceOpFactoryImpl(
       }
 
       val resourceMatchResponse =
-        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream, ResourceSelector.reservable)
+        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream, ResourceSelector.reservable,
+          schedulerPlugins)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)

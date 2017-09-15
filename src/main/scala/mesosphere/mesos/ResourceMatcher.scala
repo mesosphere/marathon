@@ -3,6 +3,7 @@ package mesosphere.mesos
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
+import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume, ResourceRole, RunSpec }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher, ResourceUtil }
@@ -129,7 +130,7 @@ object ResourceMatcher extends StrictLogging {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, knownInstances: => Seq[Instance],
-    selector: ResourceSelector): ResourceMatchResponse = {
+    selector: ResourceSelector, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 
@@ -194,7 +195,9 @@ object ResourceMatcher extends StrictLogging {
       badConstraints.isEmpty
     }
 
-    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches) && meetsAllConstraints) {
+    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches)
+      && meetsAllConstraints
+      && schedulerPlugins.forall(_.isMatch(offer, runSpec))) {
       portsMatchOpt match {
         case Some(portsMatch) =>
           Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch))
