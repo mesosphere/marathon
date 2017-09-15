@@ -108,6 +108,12 @@ def test_event_channel_for_pods():
 
     pod_def = pods.simple_pod()
 
+    # In strict mode all tasks are started as user `nobody` by default and `nobody`
+    # doesn't have permissions to write files.
+    if shakedown.ee_version() == 'strict':
+        pod_def['user'] = 'root'
+        common.add_dcos_marathon_root_user_acls()
+
     client = marathon.create_client()
     client.add_pod(pod_def)
     shakedown.deployment_wait()
@@ -389,6 +395,12 @@ def test_pod_with_container_network():
 
     pod_def = pods.container_net_pod()
 
+    # In strict mode all tasks are started as user `nobody` by default and `nobody`
+    # doesn't have permissions to write to /var/log within the container.
+    if shakedown.ee_version() == 'strict':
+        pod_def['user'] = 'root'
+        common.add_dcos_marathon_root_user_acls()
+
     client = marathon.create_client()
     client.add_pod(pod_def)
     shakedown.deployment_wait()
@@ -411,6 +423,12 @@ def test_pod_with_container_bridge_network():
     """Tests creation of a pod with a "container/bridge" network, and its HTTP endpoint accessibility."""
 
     pod_def = pods.container_bridge_pod()
+
+    # In strict mode all tasks are started as user `nobody` by default and `nobody`
+    # doesn't have permissions to write to /var/log within the container.
+    if shakedown.ee_version() == 'strict':
+        pod_def['user'] = 'root'
+        common.add_dcos_marathon_root_user_acls()
 
     client = marathon.create_client()
     client.add_pod(pod_def)

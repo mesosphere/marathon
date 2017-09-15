@@ -123,6 +123,7 @@ def neo_package(request):
         print(e)
 
 
+@shakedown.private_agents(2)
 def test_neo4j_universe_package_install(neo_package):
     """ Neo4j used to be 1 of the universe packages tested above, largely
         because there was a bug in marathon for a short period of time

@@ -456,13 +456,11 @@ def test_private_repository_mesos_app():
 
     app_def = apps.private_ucr_docker_app()
 
-    # Here we're starting an nignx server in a container. In a strict mode however
-    # all tasks are started as user `nobody` and `nobody` doesn't have permissions
-    # to write to /var/log within the container. To avoid this we override the cmd
-    # with a simple `sleep`. This is a hacky workaround but the test is still valid
-    # since we're testing `pullConfig` feature.
+    # In strict mode all tasks are started as user `nobody` by default and `nobody`
+    # doesn't have permissions to write to /var/log within the container.
     if shakedown.ee_version() == 'strict':
-        app_def['cmd'] = 'sleep 10000000'
+        app_def['user'] = 'root'
+        common.add_dcos_marathon_root_user_acls()
 
     common.create_secret(secret_name, secret_value)
     client = marathon.create_client()
