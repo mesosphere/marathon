@@ -1,5 +1,7 @@
 package mesosphere.mesos
 
+import java.time.Clock
+
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
@@ -14,6 +16,7 @@ import org.apache.mesos.Protos.Resource.DiskInfo.Source
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 object ResourceMatcher extends StrictLogging {
   import ResourceUtil.RichResource
@@ -130,7 +133,7 @@ object ResourceMatcher extends StrictLogging {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, knownInstances: => Seq[Instance],
-    selector: ResourceSelector, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty): ResourceMatchResponse = {
+    selector: ResourceSelector, drainingTime: FiniteDuration, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty)(implicit clock: Clock): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 
@@ -195,8 +198,13 @@ object ResourceMatcher extends StrictLogging {
       badConstraints.isEmpty
     }
 
+    val checkAvailability: Boolean = {
+      Availability.offerAvailable(offer, drainingTime)
+    }
+
     val resourceMatchOpt = if (scalarMatchResults.forall(_.matches)
       && meetsAllConstraints
+      && checkAvailability
       && schedulerPlugins.forall(_.isMatch(offer, runSpec))) {
       portsMatchOpt match {
         case Some(portsMatch) =>

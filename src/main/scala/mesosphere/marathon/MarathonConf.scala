@@ -307,5 +307,12 @@ trait MarathonConf
     noshort = true,
     hidden = true,
     default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD))
+
+  lazy val drainingTime = opt[Long](
+    "draining_time",
+    descr = "(Default: 0 seconds) the seconds when marathon will start declining offers before a maintenance " +
+      "window start time.",
+    default = Some(0)
+  )
 }
 

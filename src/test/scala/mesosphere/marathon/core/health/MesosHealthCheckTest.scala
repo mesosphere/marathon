@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.health
 
+import java.time.Clock
+
 import com.wix.accord.validate
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
@@ -22,6 +24,7 @@ import scala.concurrent.duration._
 
 class MesosHealthCheckTest extends UnitTest {
 
+  implicit val clock = Clock.systemUTC()
   implicit val healthCheckWrites: Writes[HealthCheck] = Writes { check =>
     val appCheck: AppHealthCheck = Raml.toRaml(check)
     AppHealthCheck.playJsonFormat.writes(appCheck)
@@ -825,7 +828,8 @@ class MesosHealthCheckTest extends UnitTest {
     val config = MarathonTestHelper.defaultConfig()
     val taskId = Task.Id.forRunSpec(app.id)
     val builder = new TaskBuilder(app, taskId, config)
-    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty, config.defaultAcceptedResourceRolesSet)
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty,
+      config.defaultAcceptedResourceRolesSet, FiniteDuration(config.drainingTime(), SECONDS))
     resourceMatch match {
       case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None))
       case _ => None

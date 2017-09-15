@@ -9,7 +9,7 @@ import org.apache.mesos.Protos.Offer
   * Allows to use external logic to decline offers.
   */
 trait SchedulerPlugin extends Plugin {
- 
+
   /**
     * @return true if offer matches
     */
