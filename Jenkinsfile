@@ -47,7 +47,7 @@ node('JenkinsMarathonCI-Debian8') {
             sh "bin/kill-stale-test-processes"
         }
         stage("Provision Jenkins Node") {
-            sh "ci/provision.sh"
+            sh "sudo -E ci/provision.sh"
         }
         stageWithCommitStatus("1. Compile") {
           try {
