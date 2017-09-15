@@ -47,20 +47,7 @@ node('JenkinsMarathonCI-Debian8') {
             sh "bin/kill-stale-test-processes"
         }
         stage("Provision Jenkins Node") {
-            sh "sudo apt-get -y clean"
-            sh "sudo apt-get -y update"
-            sh "sudo apt-get install -y lsb-release"
-            sh "sudo apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF"
-            sh """echo "deb http://repos.mesosphere.com/`lsb_release -is | tr '[:upper:]' '[:lower:]'` `lsb_release -cs` main" | sudo tee /etc/apt/sources.list.d/mesosphere.list"""
-            sh "sudo apt-get -y update"
-            sh "sudo apt-get install -y --force-yes --no-install-recommends curl"
-            sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
-        MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
-      else
-        MESOS_VERSION=\$(sed -n 's/^.*mesos=\\(.*\\)&&.*/\\1/p' <\$WORKSPACE/Dockerfile)
-      fi
-      sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
-      """
+            sh "ci/provision.sh"
         }
         stageWithCommitStatus("1. Compile") {
           try {
