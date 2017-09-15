@@ -259,6 +259,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
       }
     }
     val port = PortAllocator.ephemeralPort()
+    logger.info(s"Starting health check endpoint on port $port.")
     val server = Http().bindAndHandle(route, "0.0.0.0", port).futureValue
     logger.info(s"Listening for health events on $port")
     server

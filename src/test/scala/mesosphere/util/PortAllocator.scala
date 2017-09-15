@@ -14,13 +14,24 @@ object PortAllocator extends StrictLogging {
   // The Internet Assigned Numbers Authority (IANA) suggests the range 49152 to 65535  for dynamic or private ports.
   // Many Linux kernels use the port range 32768 to 61000.
 
+  // From http://mesos.apache.org/documentation/latest/port-mapping-isolator/
+  // Mesos provides two ranges of ports to containers:
+  //
+  // • OS allocated “ephemeral” ports are assigned by the OS in a range specified for each container by Mesos.
+  // • Mesos allocated “non-ephemeral” ports are acquired by a framework using the same Mesos resource offer mechanism
+  //   used for cpu, memory etc. for allocation to executors/tasks as required.
+  //
+  // Additionally, the host itself will require ephemeral ports for network communication. You need to configure these
+  // three non-overlapping port ranges on the host.
+
   // We reserve 1000 ephemeral ports for Marathon/Zk/Mesos Master/Mesos Agent processes to listen on:
   val EPHEMERAL_PORT_START = 32768
   val EPHEMERAL_PORT_MAX = EPHEMERAL_PORT_START + 1000
   // and use the rest of the range as ports resources for mesos agents to offer e.g. --resources="ports:[10000-110000]"
-  // IMPORTANT: These two ranges should NOT overlap!
+  // IMPORTANT: These two ranges should NOT overlap with each other and with the operating system's ephemeral port range
+  // define in ci/set_port_range.sh!
   val PORT_RANGE_START = EPHEMERAL_PORT_MAX + 1
-  val PORT_RANGE_MAX = 65535
+  val PORT_RANGE_MAX = 60000 // 60001 - 61000 is reserved for port 0 random allocation. See ci/set_port_range.sh.
 
   // We use 2 different atomic counters: one for ephemeral ports and one for port ranges.
   private val ephemeralPorts: AtomicInteger = new AtomicInteger(EPHEMERAL_PORT_START)

@@ -150,6 +150,10 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
 @main
 def jenkins(): (String, Option[awsClient.Artifact]) = {
   utils.stage("Provision") {
+
+    // Set port range for random port 0 allocation.
+    %('sudo, "ci/set_port_range.sh")
+
     provision.killStaleTestProcesses()
     provision.installMesos()
   }

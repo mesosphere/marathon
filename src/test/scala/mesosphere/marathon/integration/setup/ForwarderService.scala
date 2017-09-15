@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration.setup
 
+import java.net.BindException
 import java.util.UUID
 import javax.inject.{ Inject, Named }
 import javax.ws.rs.core.Response
@@ -61,6 +62,7 @@ class ForwarderService extends StrictLogging {
   }
 
   private def start(trustStore: Seq[String] = Nil, args: Seq[String] = Nil): Future[Done] = {
+    logger.info(s"Starting forwarder '${args.mkString(" ")}'")
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val uuid = UUID.randomUUID().toString
@@ -77,8 +79,12 @@ class ForwarderService extends StrictLogging {
     val log = new ProcessLogger {
       def checkUp(s: String) = {
         logger.info(s)
-        if (!up.isCompleted && s.contains("ServerConnector@")) {
-          up.trySuccess(Done)
+        if (!up.isCompleted) {
+          if (s.contains("Started ServerConnector@")) {
+            up.trySuccess(Done)
+          } else if (s.contains("java.net.BindException: Address already in use")) {
+            up.tryFailure(new BindException("Address already in use"))
+          }
         }
       }
       override def out(s: => String): Unit = checkUp(s)
@@ -155,11 +161,11 @@ object ForwarderService extends StrictLogging {
 
   def main(args: Array[String]): Unit = {
     Kamon.start()
-    val service = args(0) match {
-      case "helloApp" =>
-        createHelloApp(args.tail: _*)
-      case "forwarder" =>
-        createForwarder(forwardToPort = args(1).toInt, args.drop(2): _*)
+    val service = args.toList match {
+      case "helloApp" :: tail =>
+        createHelloApp(tail: _*)
+      case "forwarder" :: port :: tail =>
+        createForwarder(forwardToPort = port.toInt, tail: _*)
     }
     service.startAsync().awaitRunning()
     service.awaitTerminated()
@@ -173,7 +179,7 @@ object ForwarderService extends StrictLogging {
 
   private def createForwarder(forwardToPort: Int, args: String*): Service = {
     val conf = createConf(args: _*)
-    logger.info(s"Start forwarder on port  ${conf.httpPort()}, forwarding to $forwardToPort")
+    logger.info(s"Start forwarder on port ${conf.httpPort()}, forwarding to $forwardToPort")
     startImpl(conf, new LeaderInfoModule(elected = false, leaderHostPort = Some(s"localhost:$forwardToPort")))
   }
 
