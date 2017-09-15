@@ -261,7 +261,9 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       }
     }
     val port = PortAllocator.ephemeralPort()
+    logger.info(s"Starting health check endpoint on port $port.")
     val server = Http().bindAndHandle(route, "localhost", port).futureValue
+    logger.info(s"Listening for health events on $port")
     logger.info(s"Listening for health events on $port")
     server
   }
