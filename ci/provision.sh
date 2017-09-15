@@ -1,5 +1,5 @@
 #!/bin/bash
-set +x
+set -x
 sudo apt-get -y clean
 sudo apt-get -y update
 
@@ -16,9 +16,10 @@ sudo apt-get -y update
 # Install dependencies.
 sudo apt-get install -y --force-yes --no-install-recommends curl sbt
 
-if grep -q MesosDebian project/Dependencies.scala; then
+if grep MesosDebian $WORKSPACE/project/Dependencies.scala; then
     MESOS_VERSION=$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' < "$WORKSPACE/project/Dependencies.scala")
 else
     MESOS_VERSION=$(sed -n 's/^.*mesos=\\(.*\\)&&.*/\\1/p' < "$WORKSPACE/Dockerfile")
 fi
+echo $MESOS_VERSION
 sudo apt-get install -y --force-yes --no-install-recommends mesos="$MESOS_VERSION"
