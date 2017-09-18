@@ -48,6 +48,7 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stage("Provision Jenkins Node") {
             sh "sudo -E ci/provision.sh"
+            sh "sudo -E ci/set_port_range.sh"
         }
         stageWithCommitStatus("1. Compile") {
           try {
