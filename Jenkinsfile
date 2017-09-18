@@ -44,16 +44,7 @@ node('JenkinsMarathonCI-Debian8') {
             currentBuild.displayName = "#${env.BUILD_NUMBER}: ${shortCommit}"
         }
         stage("Provision Jenkins Node") {
-            sh "sudo apt-get -y clean"
-            sh "sudo apt-get -y update"
-            sh "sudo apt-get install -y --force-yes --no-install-recommends curl"
-            sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
-        MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
-      else
-        MESOS_VERSION=\$(sed -n 's/^.*mesos=\\(.*\\)&&.*/\\1/p' <\$WORKSPACE/Dockerfile)
-      fi
-      sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
-      """
+            sh "sudo -E ci/provision.sh"
         }
         stageWithCommitStatus("1. Compile") {
           withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
