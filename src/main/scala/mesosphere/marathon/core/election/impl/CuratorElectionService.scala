@@ -17,7 +17,7 @@ import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
 import org.apache.curator.framework.{ AuthInfo, CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.retry.ExponentialBackoffRetry
-import org.apache.zookeeper.ZooDefs
+import org.apache.zookeeper.{ CreateMode, KeeperException, ZooDefs }
 import org.apache.zookeeper.data.ACL
 
 import scala.async.Async
@@ -262,12 +262,81 @@ class CuratorElectionService(
   private object LeaderChangeListener extends LeaderLatchListener {
     override def notLeader(): Unit = Async.async {
       logger.info(s"Leader defeated. New leader: ${leaderHostPort.getOrElse("-")}")
+      twitterCommonsTombstone.delete(onlyMyself = true)
       stop(exit = true)
     }
 
     override def isLeader(): Unit = Async.async {
       logger.info("Leader elected")
       leadershipAcquired()
+
+      // write a tombstone into the old twitter commons leadership election path which always
+      // wins the selection. Check that startLeadership was successful and didn't abdicate.
+      if (CuratorElectionService.this.isLeader) {
+        twitterCommonsTombstone.create()
+      }
+    }
+  }
+
+  private object twitterCommonsTombstone {
+    def memberPath(member: String): String = {
+      config.zooKeeperLeaderPath.stripSuffix("/") + "/" + member
+    }
+
+    // - precedes 0-9 in ASCII and hence this instance overrules other candidates
+    lazy val memberName: String = "member_-00000000"
+    lazy val path: String = memberPath(memberName)
+
+    var fallbackCreated = false
+
+    def create(): Unit = {
+      try {
+        delete(onlyMyself = false)
+
+        client.createContainers(config.zooKeeperLeaderPath)
+
+        // Create a ephemeral node which is not removed when loosing leadership. This is necessary to avoid a
+        // race of old Marathon instances which think that they can become leader in the moment
+        // the new instances fail-over and no tombstone is existing (yet).
+        if (!fallbackCreated) {
+          client.create().
+            creatingParentsIfNeeded().
+            withMode(CreateMode.EPHEMERAL_SEQUENTIAL).
+            forPath(memberPath("member_-1"), hostPort.getBytes("UTF-8"))
+          fallbackCreated = true
+        }
+
+        logger.info("Creating tombstone for old twitter commons leader election")
+        client.create().
+          creatingParentsIfNeeded().
+          withMode(CreateMode.EPHEMERAL).
+          forPath(path, hostPort.getBytes("UTF-8"))
+      } catch {
+        case NonFatal(e) =>
+          logger.error(s"Exception while creating tombstone for twitter commons leader election: ${e.getMessage}")
+          abdicateLeadership()
+      }
+    }
+
+    @SuppressWarnings(Array("SwallowedException"))
+    def delete(onlyMyself: Boolean): Unit = try {
+      Option(client.checkExists().forPath(path)).foreach { tombstone =>
+        try {
+          if (!onlyMyself ||
+            new String(client.getData.forPath(memberPath(memberName))) == hostPort) {
+            logger.info("Deleting existing tombstone for old twitter commons leader election")
+            client.delete().guaranteed().withVersion(tombstone.getVersion).forPath(path)
+          }
+        } catch {
+          case _: KeeperException.NoNodeException =>
+          case _: KeeperException.BadVersionException =>
+        }
+      }
+    } catch {
+      case NonFatal(e) =>
+        logger.error("Unexpected exception while deleting the old twitter Commons leader election tombstone; " +
+          "Commit suicide", e)
+        abdicateLeadership()
     }
   }
 }
