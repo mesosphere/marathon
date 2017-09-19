@@ -103,8 +103,8 @@ def reportSuccess(
   val buildinfoDiff = maybeArtifact.fold(""){ artifact =>
     s"""
       |```json
-      |   "url": "${artifact.downloadUrl}",
-      |   "sha1": "${artifact.sha1}"
+      |"url": "${artifact.downloadUrl}",
+      |"sha1": "${artifact.sha1}"
       |```
      """.stripMargin
   }
