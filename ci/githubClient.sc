@@ -29,7 +29,7 @@ def execute(path:String, body: String): Unit = {
  */
 def reject(pullNumber: String): Unit = {
   val request = Js.Obj(
-    "body" -> Js.Str(""),
+    "body" -> Js.Str("Let me check..."),
     "event" -> Js.Str("REQUEST_CHANGES")
     )
   val path = s"repos/mesosphere/marathon/pulls/$pullNumber/reviews"
