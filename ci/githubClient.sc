@@ -25,18 +25,6 @@ def execute(path:String, body: String): Unit = {
 }
 
 /**
- * Reject pull request with pullNumber.
- */
-def reject(pullNumber: String): Unit = {
-  val request = Js.Obj(
-    "body" -> Js.Str("Let me check..."),
-    "event" -> Js.Str("REQUEST_CHANGES")
-    )
-  val path = s"repos/mesosphere/marathon/pulls/$pullNumber/reviews"
-  execute(path, request.toString)
-}
-
-/**
  * Comment with msg on pull request with pullNumber.
  */
 def comment(pullNumber: String, msg: String, event: String = "COMMENT"): Unit = {
@@ -46,6 +34,18 @@ def comment(pullNumber: String, msg: String, event: String = "COMMENT"): Unit = 
     )
   val path = s"repos/mesosphere/marathon/pulls/$pullNumber/reviews"
   execute(path, request.toString)
+}
+
+/**
+ * Reject pull request with pullNumber.
+ */
+def reject(
+  pullNumber: String,
+  buildUrl: String,
+  buildTag: String): Unit = {
+  val msg = s"I'm building your change at [$buildTag]($buildUrl)."
+
+  comment(pullNumber, msg, "REQUEST_CHANGES")
 }
 
 /**
