@@ -63,14 +63,12 @@ def reportSuccess(
   buildTag: String,
   maybeArtifact: Option[awsClient.Artifact]): Unit = {
 
-  // TODO: Include test result overview in comment.
-  //val testResults = reportTestResults(phId, "pass")
+  val testResults = reportTestResults(phId, "pass")
 
   // Collect unsound, i.e. canceled, tests
- // val unsoundTests = testResults.value
- //   .collect { case test: Js.Obj if test("result").value == "unsound" => test  }
- // val hasUnsoundTests = unsoundTests.nonEmpty
- val hasUnsoundTests = false
+  val unsoundTests = testResults.value
+    .collect { case test: Js.Obj if test("result").value == "unsound" => test  }
+  val hasUnsoundTests = unsoundTests.nonEmpty
 
   // Construct message
   val buildinfoDiff = maybeArtifact.fold(""){ artifact =>
@@ -96,21 +94,20 @@ def reportSuccess(
 
   if (!hasUnsoundTests) {
     msg += "**＼\\ ٩( ᐛ )و /／**"
-  } //else {
- //   val unsoundTestsList: String = unsoundTests.foldLeft("") { (msg:String, test: Js.Obj) =>
- //     msg + s"""\n- `${test("name").value}`"""
- //   }
+  } else {
+    val unsoundTestsList: String = unsoundTests.foldLeft("") { (msg:String, test: Js.Obj) =>
+      msg + s"""\n- `${test("name").value}`"""
+    }
 
- //   msg += s"""
- //   |WARNING: The following tests failed and have been marked as canceled.
- //   |Are you sure you want to land this patch?
- //   | $unsoundTestsList
- //   |
- //   |Anyhow, check the [[ $buildUrl/testReport | skipped tests ]] on Jenkins for details and decide for yourself.
- //   |
- //   |**¯\\_(ツ)_/¯**
- //   |""".stripMargin
- // }
+    msg += s"""
+    |The following tests failed and have been marked as canceled. Are you sure you want to land this patch?
+    | $unsoundTestsList
+    |
+    |Anyhow, check the [skipped tests]($buildUrl/testReport) on Jenkins for details and decide for yourself.
+    |
+    |**¯\\_(ツ)_/¯**
+    |""".stripMargin
+  }
 
   comment(pullNumber, msg, event="APPROVE")
 }
@@ -132,8 +129,7 @@ def reportFailure(
   val body = s"""
     |**\u2717 Build of #$pullNumber failed.**
     |
-    |See the [logs]($buildUrl/console) and [test results]($buildUrl/testReport)
-    |for details.
+    |See the [logs]($buildUrl/console) and [test results]($buildUrl/testReport) for details.
     |
     |Error message:
     |>$msg

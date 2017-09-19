@@ -1,11 +1,11 @@
 package mesosphere.marathon
 
-import mesosphere.UnitTest
+import mesosphere.{ KnownIssue, UnitTest }
 
 class BuildInfoTest extends UnitTest {
 
   "BuildInfo" should {
-    "return a default versions" in {
+    "return a default versions" taggedAs KnownIssue("MARATHON-7602") in {
       BuildInfo.scalaVersion should be("2.x.x")
       BuildInfo.version should be("1.5.0-SNAPSHOT ohoh")
     }
