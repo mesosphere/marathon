@@ -3,8 +3,10 @@
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 
+import $file.utils
 import $file.awsClient
 
+import scala.util.control.NonFatal
 import scalaj.http._
 import upickle._
 
@@ -49,6 +51,33 @@ def reject(
 }
 
 /**
+ * Collect test results.
+ *
+ * @return the parsed test results.
+ */
+@main
+def collectTestResults(): Js.Arr = {
+
+  try {
+    // Join all results
+    val testResults = ls! pwd / 'target / "phabricator-test-reports" |? ( _.ext == "json")
+    val joinedTestResults: Js.Arr = testResults.view.map(read!)
+      .map(upickle.json.read)
+      .collect { case a: Js.Arr => a }
+      .reduce { (l: Js.Arr, r: Js.Arr) =>
+        val n = l.arr ++ r.arr
+        Js.Arr(n :_*)
+      }
+
+    joinedTestResults
+  } catch {
+    case NonFatal(e) =>
+      utils.printlnWithColor(s"Could not upload test results: ${e.getMessage}", utils.Colors.BrightRed)
+      Js.Arr()
+  }
+}
+
+/**
  * Report success of diff build back to GitHub.
  *
  * @param pullNumber The pull request of the build.
@@ -63,7 +92,7 @@ def reportSuccess(
   buildTag: String,
   maybeArtifact: Option[awsClient.Artifact]): Unit = {
 
-  val testResults = reportTestResults(phId, "pass")
+  val testResults = collectTestResults()
 
   // Collect unsound, i.e. canceled, tests
   val unsoundTests = testResults.value
