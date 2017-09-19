@@ -37,11 +37,11 @@ This is useful, for example, if you have apps with special hardware needs, or if
 
 The <hostname> field tells Marathon that the launched tasks of the app or pod should be launched together on the same agent:
 * When a value for <hostname> is specified, tasks are launched on the agent whose hostname matches the value.
-* WWhen the <hostname> value is empty or unspecified, the first instance is launched on **any** agent node and the remaining tasks are launched alongside it on the same agent.
+* When the <hostname> value is empty or unspecified, the first instance is launched on **any** agent node and the remaining tasks are launched alongside it on the same agent.
 
 Attribute fields are handled differently:
-* When attribute fields are specified, tasks are launched on any agent with an attribute named according the field **and** with a value matching that of the constraint.
-* When attribute fields are empty or unspecified, the first instance is launched on any agent with an attribute named according to the field; the value of the attribute on that agent is used for future constraint matches.
+* When a value is specified, tasks are launched on any agent with an attribute named according the field **and** with a value matching that of the constraint.
+* When the value is empty or unspecified, the first instance is launched on any agent with an attribute named according to the field; the value of the attribute on that agent is used for future constraint matches.
 
 ## Examples
 The example below specifies the exact rack on which to run app tasks:
@@ -55,7 +55,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-This example leaves the attribute field empty. This tells Marathon that all of the app tasks should run on the same rack, but does not specify which.
+This example leaves the value field empty. This tells Marathon that all of the app tasks should run on the same rack, but does not specify which.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -77,7 +77,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-Below, the attribute field is empty. This tells Marathon that all app tasks must run on the same node, but does not specify which.
+Below, the value field is empty. This tells Marathon that all app tasks must run on the same node, but does not specify which.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
