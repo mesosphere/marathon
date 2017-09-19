@@ -108,41 +108,17 @@ def createDockerAndLinux(): Unit = utils.stage("Package Docker Image, Debian and
 }
 
 /**
- * The pipeline target for Phabricator builds. It triggers the Jenkins target
- * and does some additional reporting to Phabricator.
+ * The pipeline target for GitHub pull request builds. It wraps other targets
+ * and does some additional reporting to GitHub.
  */
-@main
-def phabricator(): Unit = {
-  val diffId: String = sys.env.getOrElse("DIFF_ID", throw new IllegalArgumentException("No DIFF_ID was defined."))
-  val phId: String = sys.env.getOrElse("PHID", throw new IllegalArgumentException("No PHID was defined."))
-  val revisionId: String = sys.env.getOrElse("REVISION_ID", throw new IllegalArgumentException("No REVISION_ID was defined."))
-  val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
-  val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
-
-  try {
-    phabricatorClient.reject(revisionId)
-    val (_, maybeArtifact) = jenkins()
-    phabricatorClient.reportSuccess(diffId, phId, revisionId, buildUrl, buildTag, maybeArtifact)
-  } catch {
-    case NonFatal(e) =>
-      phabricatorClient.reportFailure(diffId, phId, revisionId, buildUrl, buildTag, e.getMessage())
-      throw e
-  }
-}
-
-/**
- * The pipeline target for GitHub pull request builds. It triggers the Jenkins
- * target and does some additional reporting to GitHub.
- */
-@main
-def pullRequest(): Unit = {
+def asPullRequest(run: => (String, Option[awsClient.Artifact])): Unit = {
   val pullNumber: String = sys.env.getOrElse("CHANGE_ID", throw new IllegalArgumentException("No CHANGE_ID was defined."))
   val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
 
   try {
     githubClient.reject(pullNumber, buildUrl, buildTag)
-    val (_, maybeArtifact) = jenkins()
+    val (_, maybeArtifact) = run
     githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
   } catch {
     case NonFatal(e) =>
@@ -165,12 +141,12 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
 }
 
 /**
- * The main pipeline target for builds on Jenkins.
+ * Run the main pipeline.
  *
  * @return Version and artifact description of Marathon build.
  */
 @main
-def jenkins(): (String, Option[awsClient.Artifact]) = {
+def run(): (String, Option[awsClient.Artifact]) = {
   utils.stage("Provision") {
 
     // Set port range for random port 0 allocation.
@@ -195,4 +171,18 @@ def jenkins(): (String, Option[awsClient.Artifact]) = {
   }
 
   (version, maybeArtifact)
+}
+
+/**
+ * The main pipeline target for builds on Jenkins.
+ *
+ * @return Version and artifact description of Marathon build.
+ */
+@main
+def jenkins(): Unit = {
+  if(utils.isPullRequest) {
+    asPullRequest { run() }
+  } else {
+    run()
+  }
 }

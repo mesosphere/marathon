@@ -72,7 +72,7 @@ def collectTestResults(): Js.Arr = {
     joinedTestResults
   } catch {
     case NonFatal(e) =>
-      utils.printlnWithColor(s"Could not upload test results: ${e.getMessage}", utils.Colors.BrightRed)
+      utils.printlnWithColor(s"Could not collect test results: ${e.getMessage}", utils.Colors.BrightRed)
       Js.Arr()
   }
 }
