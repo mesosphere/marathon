@@ -136,12 +136,14 @@ def phabricator(): Unit = {
  */
 @main
 def pullRequest(): Unit = {
+  val pullNumber: String = sys.env.getOrElse("CHANGE_ID", throw new IllegalArgumentException("No CHANGE_ID was defined."))
   val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
 
   try {
     // phabricatorClient.reject(revisionId)
-    val (_, maybeArtifact) = jenkins()
+    //val (_, maybeArtifact) = jenkins()
+    val maybeArtifact = createAndUploadPackages
     githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
   } catch {
     case NonFatal(e) =>

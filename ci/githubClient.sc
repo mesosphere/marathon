@@ -10,9 +10,9 @@ import upickle._
 
 def execute(path:String, body: String): Unit = {
   val GITHUB_API_TOKEN =
-    sys.env.getOrElse("GITHUB_API_TOKEN", throw new IllegalArgumentException("GITHUB_API_TOKEN enviroment variable was not set."))
+    sys.env.getOrElse("GIT_PASSWORD", throw new IllegalArgumentException("GIT_PASSWORD enviroment variable was not set."))
   val GITHUB_API_USER =
-    sys.env.getOrElse("GITHUB_API_USER", throw new IllegalArgumentException("GITHUB_API_TOKEN enviroment variable was not set."))
+    sys.env.getOrElse("GIT_USER", throw new IllegalArgumentException("GIT_USER enviroment variable was not set."))
 
   // Execute request
   println(body)
