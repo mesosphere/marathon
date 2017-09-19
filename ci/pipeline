@@ -141,7 +141,7 @@ def pullRequest(): Unit = {
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
 
   try {
-    githubClient.reject(pullNumber)
+    githubClient.reject(pullNumber, buildUrl, buildTag)
     //val (_, maybeArtifact) = jenkins()
     val (_, maybeArtifact) = createAndUploadPackages
     githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
