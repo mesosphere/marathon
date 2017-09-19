@@ -147,7 +147,7 @@ def pullRequest(): Unit = {
     githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
   } catch {
     case NonFatal(e) =>
-      phabricatorClient.reportFailure(diffId, phId, revisionId, buildUrl, buildTag, e.getMessage())
+      //phabricatorClient.reportFailure(diffId, phId, revisionId, buildUrl, buildTag, e.getMessage())
       throw e
   }
 }
