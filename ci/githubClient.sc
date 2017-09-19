@@ -52,7 +52,6 @@ def reject(
  * Report success of diff build back to GitHub.
  *
  * @param pullNumber The pull request of the build.
- * TODO: Add commitId
  * @param buildUrl A link back to the build on Jenkins.
  * @param buildTag Identifies build.
  * @param maybeArtifact A description of the Marathon binary that has been uploaded.
@@ -113,11 +112,34 @@ def reportSuccess(
  //   |""".stripMargin
  // }
 
-  //accept(revisionId)
   comment(pullNumber, msg, event="APPROVE")
 }
 
-@main
-def main(): Unit = {
-  reportSuccess("5513","https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/marathon-pipelines/view/change-requests/job/PR-5513/1/", "PR-5513", None)
+/**
+ * Report failue of diff build back to Phabricator.
+ *
+ * @param pullNumber The pull request of the build.
+ * @param buildUrl A link back to the build on Jenkins.
+ * @param buildTag Identifies build.
+ * @param msg The error message for the failure.
+ */
+def reportFailure(
+  pullNumber: String,
+  buildUrl: String,
+  buildTag: String,
+  msg: String) : Unit = {
+
+  val body = s"""
+    |**\u2717 Build of #$pullNumber failed.**
+    |
+    |See the [logs]($buildUrl/console) and [test results]($buildUrl/testReport)
+    |for details.
+    |
+    |Error message:
+    |>$msg
+    |
+    |**(๑′°︿°๑)**
+    |""".stripMargin
+
+  comment(pullNumber, body, event="REQUEST_CHANGES")
 }

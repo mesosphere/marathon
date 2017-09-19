@@ -142,12 +142,11 @@ def pullRequest(): Unit = {
 
   try {
     githubClient.reject(pullNumber, buildUrl, buildTag)
-    //val (_, maybeArtifact) = jenkins()
-    val (_, maybeArtifact) = createAndUploadPackages
+    val (_, maybeArtifact) = jenkins()
     githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
   } catch {
     case NonFatal(e) =>
-      //phabricatorClient.reportFailure(diffId, phId, revisionId, buildUrl, buildTag, e.getMessage())
+      githubClient.reportFailure(pullNumber, buildUrl, buildTag, e.getMessage())
       throw e
   }
 }
