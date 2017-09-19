@@ -12,6 +12,7 @@ import scala.util.Try
 
 import $file.awsClient
 import $file.fileUtil
+import $file.githubClient
 import $file.phabricatorClient
 import $file.provision
 import $file.upgrade
@@ -122,6 +123,26 @@ def phabricator(): Unit = {
     phabricatorClient.reject(revisionId)
     val (_, maybeArtifact) = jenkins()
     phabricatorClient.reportSuccess(diffId, phId, revisionId, buildUrl, buildTag, maybeArtifact)
+  } catch {
+    case NonFatal(e) =>
+      phabricatorClient.reportFailure(diffId, phId, revisionId, buildUrl, buildTag, e.getMessage())
+      throw e
+  }
+}
+
+/**
+ * The pipeline target for GitHub pull request builds. It triggers the Jenkins
+ * target and does some additional reporting to GitHub.
+ */
+@main
+def pullRequest(): Unit = {
+  val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
+  val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
+
+  try {
+    // phabricatorClient.reject(revisionId)
+    val (_, maybeArtifact) = jenkins()
+    githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
   } catch {
     case NonFatal(e) =>
       phabricatorClient.reportFailure(diffId, phId, revisionId, buildUrl, buildTag, e.getMessage())
