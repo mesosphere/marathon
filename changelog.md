@@ -5,7 +5,7 @@
 * [MARATHON-7697](https://jira.mesosphere.com/browse/MARATHON-7697) - CLUSTER constraint doesn't require a value.
 * [MARATHON-7724](https://jira.mesosphere.com/browse/MARATHON-7724) - Better error handling around proxy leader failure.
 * [MARATHON-7728](https://jira.mesosphere.com/browse/MARATHON-7728) - Always log exceptions when performing migration.
-* [MARATHON-7696](https://jira.mesosphere.com/browse/MARATHON-7696) - Use maxLaunchDelay to determine what delays to GC.
+* [MARATHON-7696](https://jira.mesosphere.com/browse/MARATHON-7696) - Do a better job at maintaining task failure rate limiting values per RunSpec.
 
 
 ## Changes from 1.4.6 to 1.4.7
