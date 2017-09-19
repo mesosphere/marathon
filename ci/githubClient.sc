@@ -25,6 +25,17 @@ def execute(path:String, body: String): Unit = {
 }
 
 /**
+ * Reject pull request with pullNumber.
+ */
+def reject(pullNumber: String): Unit = {
+  val request = Js.Obj(
+    "event" -> Js.Str("REQUEST_CHANGES")
+    )
+  val path = s"repos/mesosphere/marathon/pulls/$pullNumber/reviews"
+  execute(path, request.toString)
+}
+
+/**
  * Comment with msg on pull request with pullNumber.
  */
 def comment(pullNumber: String, msg: String, event: String = "COMMENT"): Unit = {
@@ -72,7 +83,7 @@ def reportSuccess(
   }
 
   var msg = s"""
-    |#\u2714 Build of #$pullNumber completed successfully.
+    |**\u2714 Build of #$pullNumber completed successfully.**
     |
     |See details at [$buildTag]($buildUrl).
     |
