@@ -59,6 +59,7 @@ def reportSuccess(
  // val unsoundTests = testResults.value
  //   .collect { case test: Js.Obj if test("result").value == "unsound" => test  }
  // val hasUnsoundTests = unsoundTests.nonEmpty
+ val hasUnsoundTests = false
 
   // Construct message
   val buildinfoDiff = maybeArtifact.fold(""){ artifact =>
@@ -71,7 +72,9 @@ def reportSuccess(
   }
 
   var msg = s"""
-    |# \u2714 Build of $pullNumber completed [$buildTag]($buildUrl).
+    |#\u2714 Build of #$pullNumber completed successfully.
+    |
+    |See details at [$buildTag]($buildUrl).
     |
     |You can create a DC/OS with your patched Marathon by creating a new pull
     |request with the following changes in [buildinfo.json](https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json):
@@ -80,9 +83,9 @@ def reportSuccess(
     |
     |""".stripMargin
 
- // if (!hasUnsoundTests) {
- //   msg += "= ＼\\ ٩( ᐛ )و /／ ="
- // } else {
+  if (!hasUnsoundTests) {
+    msg += "**＼\\ ٩( ᐛ )و /／**"
+  } //else {
  //   val unsoundTestsList: String = unsoundTests.foldLeft("") { (msg:String, test: Js.Obj) =>
  //     msg + s"""\n- `${test("name").value}`"""
  //   }
@@ -94,12 +97,12 @@ def reportSuccess(
  //   |
  //   |Anyhow, check the [[ $buildUrl/testReport | skipped tests ]] on Jenkins for details and decide for yourself.
  //   |
- //   |= ¯\\_(ツ)_/¯ =
+ //   |**¯\\_(ツ)_/¯**
  //   |""".stripMargin
  // }
 
   //accept(revisionId)
-  comment(pullNumber, msg, event="COMMENT")
+  comment(pullNumber, msg, event="APPROVE")
 }
 
 @main
