@@ -10,14 +10,22 @@ import scala.util.control.NonFatal
 import scalaj.http._
 import upickle._
 
+/**
+ * Makes a POST request to GitHub's API with path and body.
+ * E.g. "repos/mesosphere/marathon/pulls/5513/reviews" would post the body as a
+ * comment.
+ *
+ * @param path The API path. See path in
+ *   https://developer.github.com/v3/pulls/reviews/#create-a-pull-request-review
+ *   for an example.
+ * @param body The body of the post request.
+ */
 def execute(path:String, body: String): Unit = {
   val GITHUB_API_TOKEN =
     sys.env.getOrElse("GIT_PASSWORD", throw new IllegalArgumentException("GIT_PASSWORD enviroment variable was not set."))
   val GITHUB_API_USER =
     sys.env.getOrElse("GIT_USER", throw new IllegalArgumentException("GIT_USER enviroment variable was not set."))
 
-  // Execute request
-  println(body)
   val response = Http(s"https://api.github.com/$path")
     .auth(GITHUB_API_USER, GITHUB_API_TOKEN)
     .timeout(connTimeoutMs = 5000, readTimeoutMs = 100000)
@@ -142,7 +150,7 @@ def reportSuccess(
 }
 
 /**
- * Report failue of diff build back to Phabricator.
+ * Report failure of build back to GitHub.
  *
  * @param pullNumber The pull request of the build.
  * @param buildUrl A link back to the build on Jenkins.
