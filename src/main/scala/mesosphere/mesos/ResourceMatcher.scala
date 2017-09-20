@@ -3,6 +3,7 @@ package mesosphere.mesos
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.Features
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
@@ -198,7 +199,7 @@ object ResourceMatcher extends StrictLogging {
     }
 
     val checkAvailability: Boolean = {
-      if (conf.availableFeatures.contains("maintenance_mode"))
+      if (conf.availableFeatures.contains(Features.MAINTENANCE_MODE))
         Availability.offerAvailable(offer, conf.drainingTime)
       else
         true
