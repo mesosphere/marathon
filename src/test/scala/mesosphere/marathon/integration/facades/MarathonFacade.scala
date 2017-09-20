@@ -455,6 +455,11 @@ class MarathonFacade(
     result(pipeline(Delete(s"$url/v2/artifacts$path")), waitTime)
   }
 
+  def ping(): RestResult[HttpResponse] = {
+    val pipeline = marathonSendReceive ~> responseResult
+    result(pipeline(Get(s"$url/ping")), waitTime)
+  }
+
   //leader ----------------------------------------------
   def leader(): RestResult[ITLeaderResult] = {
     result(leaderAsync(), waitTime)
