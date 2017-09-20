@@ -29,6 +29,8 @@ import scala.util.{ Failure, Success }
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
   private val bucket = math.abs(id.hashCode % ZkId.HashBucketSize)
+
+  // BUG: id = "" for the root group this results in "Path must not end with / character" in curator
   def path: String = version.fold(f"/$category/$bucket%x/$id") { v =>
     f"/$category/$bucket%x/$id/${ZkId.DateFormat.format(v)}"
   }
@@ -241,7 +243,7 @@ class ZkPersistenceStore(
   @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteAll(id: ZkId): Future[Done] = {
     val unversionedId = id.copy(version = None)
-    retry(s"ZkPersistenceStore::delete($unversionedId)") {
+    retry(s"ZkPersistenceStore::deleteAll($unversionedId)") {
       client.delete(unversionedId.path, guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done).recover {
         case _: NoNodeException =>
           Done

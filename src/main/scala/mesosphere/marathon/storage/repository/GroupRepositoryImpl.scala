@@ -26,7 +26,7 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
-private[storage] case class StoredGroup(
+case class StoredGroup(
     id: PathId,
     appIds: Map[PathId, OffsetDateTime],
     podIds: Map[PathId, OffsetDateTime],

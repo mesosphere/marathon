@@ -134,7 +134,7 @@ case class CuratorZk(
     (client)
   }
 
-  protected def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
+  def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[ZkId, String, ZkSerialized] = {
 
     actorSystem.registerOnTermination {

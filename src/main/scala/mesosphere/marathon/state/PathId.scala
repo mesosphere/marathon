@@ -61,7 +61,7 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
   }
 
   def safePath: String = {
-    require(absolute, "Path is not absolute. Can not create safe path.")
+    require(absolute, s"Path absolute flag is not true for path ${this.toString}. Can not create safe path.")
     path.mkString("_")
   }
 
