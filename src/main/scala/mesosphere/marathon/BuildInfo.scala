@@ -4,6 +4,7 @@ import java.util.jar.{ Attributes, Manifest }
 import scala.Predef._
 import scala.util.control.NonFatal
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.io.IO
 
 case object BuildInfo {
   private val marathonJar = "\\bmesosphere\\.marathon\\.marathon-[0-9.]+".r
@@ -27,8 +28,10 @@ case object BuildInfo {
     case Nil => None
     case List(file) =>
       val mf = new Manifest()
-      mf.read(file.openStream)
-      Some(mf)
+      IO.using(file.openStream) { f =>
+        mf.read(f)
+        Some(mf)
+      }
     case otherwise =>
       throw new RuntimeException(s"Multiple marathon JAR manifests returned! ${otherwise}")
   }
