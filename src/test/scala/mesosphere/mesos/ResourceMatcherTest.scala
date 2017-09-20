@@ -26,6 +26,8 @@ import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.Inside
 
+import scala.concurrent.duration.Duration
+
 class ResourceMatcherTest extends UnitTest with Inside {
 
   implicit val clock = Clock.systemUTC()
@@ -853,6 +855,36 @@ class ResourceMatcherTest extends UnitTest with Inside {
         offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config)
 
       response shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "match offers with maintenance mode and not enabled feature should not match" in {
+      val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now, Duration.Inf).build
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config)
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+
+      res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
+      res.scalarMatch(Resource.MEM).get.roles should be(Seq(ResourceRole.Unreserved))
+      res.scalarMatch(Resource.DISK) should be(empty)
+    }
+
+    "match offers with maintenance mode and enabled feature should match" in {
+      val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
+      val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now, Duration.Inf).build
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf)
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     }
   }
 

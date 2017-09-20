@@ -23,7 +23,6 @@ import org.scalatest.Inside
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.collection.breakOut
-import scala.concurrent.duration._
 
 class TaskGroupBuilderTest extends UnitTest with Inside {
 

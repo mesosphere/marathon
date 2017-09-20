@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.RichClock
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.Protos.{ DurationInfo, Offer, TimeInfo, Unavailability }
+import org.apache.mesos.Protos.Offer
 
 import scala.concurrent.duration._
 
@@ -34,13 +34,6 @@ class AvailabilityTest extends UnitTest {
   }
 
   def makeBasicOfferWithUnavailability(startTime: Timestamp = now, duration: Duration = Duration.Inf): Offer.Builder = {
-    val unavailableOfferBuilder = Unavailability.newBuilder()
-      .setStart(TimeInfo.newBuilder().setNanoseconds(startTime.nanos))
-
-    if (duration.isFinite()) {
-      unavailableOfferBuilder.setDuration(DurationInfo.newBuilder().setNanoseconds(duration.toNanos))
-    }
-
-    MarathonTestHelper.makeBasicOffer().setUnavailability(unavailableOfferBuilder.build())
+    MarathonTestHelper.makeBasicOfferWithUnavailability(startTime, duration)
   }
 }
