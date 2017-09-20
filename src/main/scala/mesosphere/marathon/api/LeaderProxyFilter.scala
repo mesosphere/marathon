@@ -15,6 +15,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.stream.Implicits._
+import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -312,7 +313,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       for {
         in <- Option(nullableIn)
         out <- Option(nullableOut)
-      } IO.transfer(in, out, close = false)
+      } IOUtils.copy(in, out)
     } catch {
       case e: UnknownServiceException =>
         log.warn("unexpected unknown service exception", e)

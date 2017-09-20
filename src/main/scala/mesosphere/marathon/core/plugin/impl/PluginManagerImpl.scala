@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.plugin.impl
 
+import java.io.File
 import java.net.{ URL, URLClassLoader }
 import java.util.ServiceLoader
 
@@ -10,6 +11,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions, Pl
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.plugin.plugin.PluginConfiguration
 import mesosphere.marathon.stream.Implicits._
+import org.apache.commons.io.FileUtils
 import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json.{ JsObject, JsString, Json }
 
@@ -92,7 +94,7 @@ object PluginManagerImpl {
   implicit val definitionFormat = Json.format[PluginDefinition]
 
   def parse(fileName: String): PluginDefinitions = {
-    val plugins: Seq[PluginDefinition] = Json.parse(IO.readFile(fileName)).as[JsObject]
+    val plugins: Seq[PluginDefinition] = Json.parse(FileUtils.readFileToByteArray(new File(fileName))).as[JsObject]
       .\("plugins").as[JsObject]
       .fields.map {
         case (id, value) =>

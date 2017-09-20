@@ -51,6 +51,7 @@ object Dependencies {
     akkaHttpPlayJson % "compile",
     alpakkaS3 % "compile",
     commonsCompress % "compile", // used for tar flow
+    commonsIO % "compile",
     akkaSse % "compile",
 
 
@@ -62,8 +63,7 @@ object Dependencies {
     Test.junit % "test",
     Test.scalacheck % "test",
     Test.wixAccordScalatest % "test",
-    Test.curatorTest % "test",
-    Test.commonsIO % "test"
+    Test.curatorTest % "test"
   ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
@@ -91,7 +91,7 @@ object Dependency {
     val AkkaHttp = "10.0.6"
     val AkkaSSE = "2.0.0"
     val ApacheCommonsCompress = "1.13"
-    val ApacheCommonsIO = "2.4"
+    val ApacheCommonsIO = "2.5"
     val AsyncAwait = "0.9.6"
     val Jersey = "1.18.6"
     val JettyServlets = "9.3.6.v20151106"
@@ -159,6 +159,7 @@ object Dependency {
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
+  val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   val akkaSse = "de.heikoseeberger" %% "akka-sse" % V.AkkaSSE
 
   object Kamon {
@@ -190,6 +191,5 @@ object Dependency {
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
     val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
-    val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   }
 }
