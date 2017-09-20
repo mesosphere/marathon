@@ -28,8 +28,7 @@ import scala.concurrent.duration._
 class TaskGroupBuilderTest extends UnitTest with Inside {
 
   implicit val clock = Clock.systemUTC()
-  val config = AllConf.withTestConfig("--draining_time", "300")
-  val drainingTime = FiniteDuration(config.drainingTime(), SECONDS)
+  val config = AllConf.withTestConfig("--draining_seconds", "300")
 
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
     acceptedResourceRoles = Set(ResourceRole.Unreserved),
@@ -79,7 +78,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         )
       )
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -113,7 +112,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         )
       )
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
         offer,
@@ -151,7 +150,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -209,7 +208,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -247,7 +246,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (executorInfo, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -302,7 +301,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, instanceId) = TaskGroupBuilder.build(
         podSpec,
@@ -352,7 +351,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -443,7 +442,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -507,7 +506,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         )
       )
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -562,7 +561,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
           )))
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -624,7 +623,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -694,7 +693,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -756,7 +755,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (executorInfo, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -801,7 +800,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -838,7 +837,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (executorInfo, _, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -899,7 +898,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (executorInfo, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -993,7 +992,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       )
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,
@@ -1035,7 +1034,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       val container = MesosContainer(name = "foo", resources = raml.Resources(cpus = 1.0f, mem = 128.0f))
       val podSpec = PodDefinition(id = "/product/frontend".toPath, containers = Seq(container))
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
-        defaultBuilderConfig.acceptedResourceRoles, drainingTime)
+        defaultBuilderConfig.acceptedResourceRoles, config)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
         podSpec,

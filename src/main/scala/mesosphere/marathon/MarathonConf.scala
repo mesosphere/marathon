@@ -15,6 +15,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
+import mesosphere.mesos.MatcherConf
 import org.rogach.scallop.{ ScallopConf, ScallopOption }
 
 import scala.sys.SystemProperties
@@ -34,7 +35,8 @@ trait MarathonConf
     with EventConf with NetworkConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig
     with LeaderProxyConf with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
     with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
-    with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf {
+    with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf
+    with MatcherConf {
 
   lazy val mesosMaster = opt[String](
     "master",
@@ -308,10 +310,10 @@ trait MarathonConf
     hidden = true,
     default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD))
 
-  lazy val drainingTime = opt[Long](
-    "draining_time",
+  lazy val drainingSeconds = opt[Long](
+    "draining_seconds",
     descr = "(Default: 0 seconds) the seconds when marathon will start declining offers before a maintenance " +
-      "window start time.",
+      "window start time. This is only evaluated if `maintenance_mode` is in the set of `enable_features`!",
     default = Some(0)
   )
 }

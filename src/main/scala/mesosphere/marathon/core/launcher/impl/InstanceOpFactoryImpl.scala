@@ -33,8 +33,6 @@ class InstanceOpFactoryImpl(
 
   import InstanceOpFactoryImpl._
 
-  val drainingTime = FiniteDuration(config.drainingTime(), SECONDS)
-
   private[this] val taskOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.get
     val roleOpt = config.mesosRole.get
@@ -72,7 +70,7 @@ class InstanceOpFactoryImpl(
 
     val matchedOffer =
       RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
-        builderConfig.acceptedResourceRoles, drainingTime)
+        builderConfig.acceptedResourceRoles, config)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -95,7 +93,7 @@ class InstanceOpFactoryImpl(
 
     val matchResponse =
       RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet, drainingTime)
+        config.defaultAcceptedResourceRolesSet, config)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = Task.Id.forRunSpec(app.id)
@@ -160,7 +158,7 @@ class InstanceOpFactoryImpl(
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), drainingTime,
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
             schedulerPlugins
           )
 
@@ -188,7 +186,7 @@ class InstanceOpFactoryImpl(
 
       val resourceMatchResponse =
         ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream,
-          ResourceSelector.reservable, drainingTime, schedulerPlugins)
+          ResourceSelector.reservable, config, schedulerPlugins)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)

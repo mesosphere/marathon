@@ -6,7 +6,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
-import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume, ResourceRole, RunSpec }
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher, ResourceUtil }
 import mesosphere.mesos.protos.Resource
@@ -16,7 +16,6 @@ import org.apache.mesos.Protos.Resource.DiskInfo.Source
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 
 object ResourceMatcher extends StrictLogging {
   import ResourceUtil.RichResource
@@ -133,7 +132,7 @@ object ResourceMatcher extends StrictLogging {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, knownInstances: => Seq[Instance],
-    selector: ResourceSelector, drainingTime: FiniteDuration, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty)(implicit clock: Clock): ResourceMatchResponse = {
+    selector: ResourceSelector, conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty)(implicit clock: Clock): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 
@@ -199,7 +198,10 @@ object ResourceMatcher extends StrictLogging {
     }
 
     val checkAvailability: Boolean = {
-      Availability.offerAvailable(offer, drainingTime)
+      if (conf.availableFeatures.contains("maintenance_mode"))
+        Availability.offerAvailable(offer, conf.drainingTime)
+      else
+        true
     }
 
     val resourceMatchOpt = if (scalarMatchResults.forall(_.matches)
