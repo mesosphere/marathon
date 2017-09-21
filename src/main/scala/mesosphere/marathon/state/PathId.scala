@@ -97,8 +97,13 @@ object PathId {
     if (in.isEmpty) PathId.empty
     else PathId(in.split("_").toList, absolute = true)
   }
+
+  def sanitized(pieces: TraversableOnce[String], absolute: Boolean = true) =
+    PathId(pieces.filter(_.nonEmpty).toList, absolute)
+
   def apply(in: String): PathId =
-    PathId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").filter(_.nonEmpty).toList, in.startsWith("/"))
+    sanitized(in.replaceAll("""(^/+)|(/+$)""", "").split("/"), in.startsWith("/"))
+
   def empty: PathId = PathId(Nil)
 
   implicit class StringPathId(val stringPath: String) extends AnyVal {

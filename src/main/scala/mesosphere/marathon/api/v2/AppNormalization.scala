@@ -397,4 +397,5 @@ object AppNormalization {
       ).asInstanceOf[T]
     case _ => throw NormalizationException("withCanonizedIds only applies for App and AppUpdate")
   }
+
 }

@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.api.v2.validation.{ AppValidation, NetworkValidationMessages }
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers, ValidationHelper }
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, PortDefinition, PortDefinitions, Raml, SecretDef, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
@@ -331,7 +331,7 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val strategy = AppsResource.withoutPriorAppDefinition(update, "foo".toPath).upgradeStrategy
+      val strategy = AppHelpers.withoutPriorAppDefinition(update, "foo".toPath).upgradeStrategy
       assert(strategy.contains(raml.UpgradeStrategy(
         minimumHealthCapacity = 0.5,
         maximumOverCapacity = 0
@@ -362,7 +362,7 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val residency = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "foo".toPath)).residency
+      val residency = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "foo".toPath)).residency
       assert(residency.contains(Residency.default))
     }
 
@@ -390,7 +390,7 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val strategy = AppsResource.withoutPriorAppDefinition(update, "foo".toPath).upgradeStrategy
+      val strategy = AppHelpers.withoutPriorAppDefinition(update, "foo".toPath).upgradeStrategy
       assert(strategy.contains(raml.UpgradeStrategy(
         minimumHealthCapacity = 0.5,
         maximumOverCapacity = 0
@@ -426,7 +426,7 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val createdViaUpdate = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "/put-path-id".toPath))
+      val createdViaUpdate = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/put-path-id".toPath))
       assert(update.container.isDefined)
       assert(createdViaUpdate.container.contains(state.Container.Docker(
         volumes = Seq(PersistentVolume("data", PersistentVolumeInfo(size = 100), mode = Mesos.Volume.Mode.RW)),
@@ -463,7 +463,7 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val create = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "/app".toPath))
+      val create = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/app".toPath))
       assert(update.residency.isDefined)
       assert(update.residency.map(Raml.fromRaml(_)) == create.residency)
     }
@@ -501,7 +501,7 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val create = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "/app".toPath))
+      val create = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/app".toPath))
       assert(update.upgradeStrategy.isDefined)
       assert(update.upgradeStrategy.map(Raml.fromRaml(_)).contains(create.upgradeStrategy))
     }
@@ -530,7 +530,7 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val residency = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "foo".toPath)).residency
+      val residency = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "foo".toPath)).residency
       assert(residency.contains(Residency.default))
     }
 
@@ -556,7 +556,7 @@ class AppUpdateTest extends UnitTest {
       """
 
       val update = fromJsonString(json)
-      val strategy = Raml.fromRaml(AppsResource.withoutPriorAppDefinition(update, "foo".toPath)).upgradeStrategy
+      val strategy = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "foo".toPath)).upgradeStrategy
       assert(strategy == state.UpgradeStrategy.forResidentTasks)
     }
 

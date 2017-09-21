@@ -4,8 +4,8 @@ package api.akkahttp
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse }
-import akka.stream.ActorMaterializer
+import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse, StatusCodes }
+import akka.stream.{ ActorMaterializer, Materializer }
 import com.google.common.util.concurrent.AbstractIdleService
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.chaos.http.HttpConf
@@ -30,26 +30,8 @@ class AkkaHttpMarathonService(
   implicit val materializer = ActorMaterializer()
   private var handler: Option[Future[Http.ServerBinding]] = None
   import Directives._
-  import EntityMarshallers._
-  implicit def rejectionHandler =
-    RejectionHandler.newBuilder()
-      .handle(LeaderDirectives.handleNonLeader)
-      .handle(EntityMarshallers.handleNonValid)
-      .handle(AuthDirectives.handleAuthRejections)
-      .handle {
-        case Rejections.EntityNotFound(message) => complete(NotFound -> message)
-      }
-      .result()
-      .withFallback(RejectionHandler.default)
-      .mapRejectionResponse {
-        // Turn all simple string rejections into json format
-        // Please note: akka-http has a lot of built in rejections, that are all send via plain text
-        // Map RejectionResponse is the akka http suggested way of enforcing other content types.
-        case res @ HttpResponse(_, _, HttpEntity.Strict(ContentTypes.`text/plain(UTF-8)`, data), _) =>
-          val message = Json.stringify(Json.toJson(Message(data.utf8String)))
-          res.copy(entity = HttpEntity(ContentTypes.`application/json`, message))
-        case response: HttpResponse => response
-      }
+
+  implicit val rejectionHandler: RejectionHandler = AkkaHttpMarathonService.rejectionHandler
 
   val route: Route = {
     val corsOrPass = config.accessControlAllowOrigin.get.map(corsResponse).getOrElse(pass)
@@ -97,4 +79,29 @@ class AkkaHttpMarathonService(
       }
     }
   }
+}
+
+object AkkaHttpMarathonService {
+  import Directives._
+  import EntityMarshallers._
+
+  def rejectionHandler(implicit actorSystem: ActorSystem, materializer: Materializer): RejectionHandler =
+    RejectionHandler.newBuilder()
+      .handle(LeaderDirectives.handleNonLeader)
+      .handle(EntityMarshallers.handleNonValid)
+      .handle(AuthDirectives.handleAuthRejections)
+      .handle {
+        case Rejections.EntityNotFound(message) => complete(NotFound -> message)
+      }
+      .result()
+      .withFallback(RejectionHandler.default)
+      .mapRejectionResponse {
+        // Turn all simple string rejections into json format
+        // Please note: akka-http has a lot of built in rejections, that are all send via plain text
+        // Map RejectionResponse is the akka http suggested way of enforcing other content types.
+        case res @ HttpResponse(_, _, HttpEntity.Strict(ContentTypes.`text/plain(UTF-8)`, data), _) =>
+          val message = Json.stringify(Json.toJson(Message(data.utf8String)))
+          res.copy(entity = HttpEntity(ContentTypes.`application/json`, message))
+        case response: HttpResponse => response
+      }
 }

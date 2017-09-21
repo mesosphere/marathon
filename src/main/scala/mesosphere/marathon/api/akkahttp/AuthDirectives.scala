@@ -54,11 +54,14 @@ trait AuthDirectives extends AkkaDirectives {
     * @param action The action for which to check authorization for the given identity
     * @param resource The entity for which authorization should be checked
     */
-  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
+  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource, onFailure: Rejection)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
     if (authorizer.isAuthorized(identity, action, resource))
       pass
     else
-      reject(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+      reject(onFailure)
+
+  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
+    authorized[Resource](action, resource, NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
 
   /**
     * Using the active Authorizer, check for authorization for the specified request
@@ -74,6 +77,17 @@ trait AuthDirectives extends AkkaDirectives {
     */
   def authorized[Resource](resource: Resource)(implicit authorizer: Authorizer, identity: Identity, actionSet: AuthorizedActionSet[_ >: Resource]): Directive0 =
     extractAuthorizedAction(actionSet).flatMap(authorized(_, resource))
+
+  /**
+    * Like authorized, but returns an Either rather than a directive
+    */
+  def checkAuthorization[T, Resource <: T](action: AuthorizedAction[T], resource: Resource)(
+    implicit
+    authorizer: Authorizer, identity: Identity): Either[Rejection, Resource] =
+    if (authorizer.isAuthorized(identity, action, resource))
+      Right(resource)
+    else
+      Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
 
   /**
     * This will extract the authorized action for resource type R based on the HTTP method.
@@ -101,9 +115,9 @@ trait AuthDirectives extends AkkaDirectives {
 
 object AuthDirectives {
 
-  private[AuthDirectives] case object AuthServiceUnavailable extends Rejection
-  private[AuthDirectives] case class NotAuthorized(toResponse: HttpResponse) extends Rejection
-  private[AuthDirectives] case class NotAuthenticated(toResponse: HttpResponse) extends Rejection
+  private[akkahttp] case object AuthServiceUnavailable extends Rejection
+  private[akkahttp] case class NotAuthorized(toResponse: HttpResponse) extends Rejection
+  private[akkahttp] case class NotAuthenticated(toResponse: HttpResponse) extends Rejection
 
   def handleAuthRejections: PartialFunction[Rejection, Route] = {
     case AuthServiceUnavailable => Directives.complete(StatusCodes.ServiceUnavailable -> "Auth Service currently not available.")
