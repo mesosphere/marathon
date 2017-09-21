@@ -22,7 +22,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, UnreachableEnabled }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
@@ -206,10 +206,11 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         .setOperator(Operator.UNIQUE)
         .setValue("")
         .build
-      val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
+      val unreachableStrategy = UnreachableEnabled(5.minutes, 10.minutes)
+      val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint), unreachableStrategy = unreachableStrategy)
       val offer = MarathonTestHelper.makeBasicOffer().build()
 
-      val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance()
+      val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable(unreachableStrategy = unreachableStrategy).getInstance()
 
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])

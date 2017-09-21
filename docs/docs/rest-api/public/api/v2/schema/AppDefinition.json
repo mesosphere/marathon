@@ -825,12 +825,12 @@
             "inactiveAfterSeconds": {
               "type": "integer",
               "description": "If an instance is unreachable for longer than inactiveAfter seconds it is marked as inactive. This will trigger a new instance launch. The original task is not expunged yet. Must be less than expungeAfterSeconds.",
-              "minimum": 1
+              "minimum": 0
             },
             "expungeAfterSeconds": {
               "type": "number",
               "description": "If an instance is unreachable for longer than unreachableExpungeAfter seconds it will be expunged.  That means it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged but they don't have to. This value is required to be greater than inactiveAfterSeconds.\n\nIf the instance has any persistent volumes associated with it, then they will be destroyed and associated data will be deleted.\n\nDefault is 7 days (604800 seconds).",
-              "minimum": 2
+              "minimum": 0
             }
           }
         }
