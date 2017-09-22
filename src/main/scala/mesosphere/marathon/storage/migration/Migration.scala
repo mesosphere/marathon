@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package storage.migration
 
+import akka.actor.Scheduler
 import java.net.URI
 
 import akka.Done
-import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
@@ -42,14 +42,12 @@ class Migration(
     private[migration] val runtimeConfigurationRepository: RuntimeConfigurationRepository,
     private[migration] val backup: PersistentStoreBackup,
     private[migration] val config: StorageConfig
-)(implicit mat: Materializer, system: ActorSystem) extends StrictLogging {
+)(implicit mat: Materializer, scheduler: Scheduler) extends StrictLogging {
 
   import StorageVersions._
-  import Migration.MigrationAction
+  import Migration.{ MigrationAction, statusLoggingInterval }
 
   private[migration] val minSupportedStorageVersion = StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)
-
-  protected def statusLoggingInterval = 10.seconds
 
   /**
     * All the migrations, that have to be applied.
@@ -67,8 +65,6 @@ class Migration(
         MigrationTo15(this).migrate()
       )
     )
-
-  protected def scheduler = system.scheduler
 
   protected def notifyMigrationInProgress(from: StorageVersion, migrateVersion: StorageVersion) = {
     logger.info(
@@ -103,22 +99,22 @@ class Migration(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def migrate(): Seq[StorageVersion] = {
-    val result = async {
-      val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())
-      // before backup/restore called, reset the runtime configuration
-      await(runtimeConfigurationRepository.store(RuntimeConfiguration(None, None)))
-      // step 1: backup current zk state
-      await(config.backup.map(uri => backup.backup(new URI(uri))).getOrElse(Future.successful(Done)))
-      // step 2: restore state from given backup
-      await(config.restore.map(uri => backup.restore(new URI(uri))).getOrElse(Future.successful(Done)))
-      // last step run the migration, to ensure we can operate on the zk state
-      await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined))
-    }
-    val migrations = Await.result(result, Duration.Inf)
+  def migrateAsync(): Future[Seq[StorageVersion]] = async {
+    val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())
+    // before backup/restore called, reset the runtime configuration
+    await(runtimeConfigurationRepository.store(RuntimeConfiguration(None, None)))
+    // step 1: backup current zk state
+    await(config.backup.map(uri => backup.backup(new URI(uri))).getOrElse(Future.successful(Done)))
+    // step 2: restore state from given backup
+    await(config.restore.map(uri => backup.restore(new URI(uri))).getOrElse(Future.successful(Done)))
+    // last step run the migration, to ensure we can operate on the zk state
+    val result = await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined))
     logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
-    migrations
+    result
   }
+
+  def migrate(): Seq[StorageVersion] =
+    Await.result(migrateAsync(), Duration.Inf)
 
   @SuppressWarnings(Array("all")) // async/await
   def migrateStorage(backupCreated: Boolean = false): Future[Seq[StorageVersion]] = {
@@ -169,6 +165,7 @@ class Migration(
 
 object Migration {
   val StorageVersionName = "internal:storage:version"
+  val statusLoggingInterval = 10.seconds
 
   type MigrationAction = (StorageVersion, () => Future[Any])
 
