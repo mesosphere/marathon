@@ -8,6 +8,11 @@ Marathon handles tasks in the following ways. You can consult the Marathon logs 
 
 You can [configure Marathon's behavior when a task is unreachable](configure-task-handling.md).
 
+<p class="text-center">
+  <img src="{{site.baseurl}}/img/task-handling.png" width="700" height="700" alt=""><br>
+  <em>Figure 1: Task Handling Flow</em>
+</p>
+
 ## Terminal states
 
 ```
@@ -50,6 +55,10 @@ The mster has no knowledge of the task. This is typically because either (a) the
 case TASK_KILLED => Killed
 ```
 The task was killed by the executor.
+
+
+**Note:** Mesos also sends a deprecated `TASK_LOST` message in certain situations. A future version of Mesos will no longer send this message. Marathon may receive a `TASK_LOST` message if a Mesos agent is removed because a new Mesos agent registers with the same IP address. When a `TASK_LOST` message is received, [Marathon will look at the `TASK_LOST` reason that is sent along with the status update](https://github.com/mesosphere/marathon/blob/master/src/main/scala/mesosphere/marathon/core/task/state/TaskConditionMapping.scala) and use it to infer `TASK_GONE`, `TASK_UNREACHABLE`, or `TASK_UNKOWN`.
+
 
 ## Non-terminal states
 

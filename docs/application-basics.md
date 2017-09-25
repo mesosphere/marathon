@@ -6,6 +6,8 @@ title: Application Basics
 
 Applications are an integral concept in Marathon. Each application typically represents a long-running service, of which there would be many instances running on multiple hosts. An application instance is called a *task*. The *application definition* describes everything needed to start and maintain the tasks. 
 
+**Note:** While Marathon accepts dots in application names, names with dots can prevent proper service discovery behavior.
+If you intend to use a service discovery mechanism, you should not put dots in your application name.
 
 ## Hello Marathon: An Inline Shell Script
 
@@ -28,7 +30,7 @@ Note that `cmd` in the above example is the command that gets executed. Its valu
   <img src="{{ site.baseurl }}/img/marathon-basic-0.png" width="800" height="612" alt="Marathon deployment example: simple bash command">
 </p>
 
-When you define and launch an application, Marathon hands over execution to Mesos. Mesos creates a sandbox directory for each task. The sanbox directory is a directory on each agent node that acts as an execution environment and contains relevant log files. The `stderr` and `stdout` streams are also written to the sanbox directory.
+When you define and launch an application, Marathon hands over execution to Mesos. Mesos creates a sandbox directory for each task. The sandbox directory is a directory on each agent node that acts as an execution environment and contains relevant log files. The `stderr` and `stdout` streams are also written to the sandbox directory.
 
 ## Using Resources in Applications
 
@@ -116,15 +118,15 @@ In the following example application definition, we will focus on a simple Docke
   "cmd": "python3 -m http.server 8080",
   "cpus": 0.5,
   "mem": 32.0,
+  "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "python:3",
-      "network": "BRIDGE",
-      "portMappings": [
-        { "containerPort": 8080, "hostPort": 0 }
-      ]
-    }
+      "image": "python:3"
+    },
+    "portMappings": [
+      { "containerPort": 8080, "hostPort": 0 }
+    ]
   }
 }
 ```

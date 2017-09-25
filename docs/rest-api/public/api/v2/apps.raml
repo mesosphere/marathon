@@ -58,7 +58,7 @@
           Note&#58; deprecated and will be removed in future versions
           Please define all embeds explicitly.
 
-          - <code>apps.taskStats</code> exposes task statatistics in the JSON.
+          - <code>apps.taskStats</code> exposes task statistics in the JSON.
 
 
         enum: [ apps.tasks, apps.count, apps.deployments, apps.lastTaskFailure, apps.failures, apps.taskStats ]
@@ -280,7 +280,7 @@
             Note&#58; deprecated and will be removed in future versions
             Please define all embeds explicitly.
 
-            - <code>app.taskStats</code> exposes task statatistics in the JSON.
+            - <code>app.taskStats</code> exposes task statistics in the JSON.
 
 
 
@@ -486,13 +486,11 @@
           host:
             description: all tasks of that application on the supplied slave are killed
           scale:
-            type: boolean
             description: If `scale=true` is specified, then the application is scaled down by the number of killed tasks. Only possible if `wipe=false` or not specified.
-            default: false
+            default: "false"
           wipe:
-            type: boolean
             description: If `wipe=true` is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if `scale=false` or not specified.
-            default: false
+            default: "false"
         responses:
 
           200:
@@ -517,13 +515,11 @@
           is: [ secured, deployable ]
           queryParameters:
             scale:
-              type: boolean
               description: If `scale=true` is specified, then the application is scaled down by the number of killed tasks. Only possible if `wipe=false` or not specified.
-              default: false
+              default: "false"
             wipe:
-              type: boolean
               description: If `wipe=true` is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if `scale=false` or not specified.
-              default: false
+              default: "false"
           responses:
             200:
               description: If scale=false, the task that was killed is returned.

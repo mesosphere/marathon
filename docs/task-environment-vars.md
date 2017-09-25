@@ -21,20 +21,23 @@ Host ports are the ports at which the application is reachable on the host runni
 the Mesos slave.
 
 For the Mesos executor, these are also the ports that the application
-should listen to. For the docker executor in BRIDGED mode, the application
-should actually bind to the container port which is typically the same
+should listen to. In both `container` and `container/bridge` modes, the application
+should actually bind to the `containerPort`, which is typically the same
 for each task since the containers use their own network stack.
 
-One environment variable is set for each assigned port resource.
-These are named `PORT0` through `PORT{N-1}` where `N` is the number of
-assigned ports. In addition provided there is at least one assigned
-port, then `PORT` has the same value as `PORT0`.
+Two environment variables are set for each assigned port resource.
+One is by-index and the other is by-name.
+Referencing ports by name is **strongly** encouraged.
 
-The `PORTS` variable contains a comma-separated list of all assigned
-host ports.
+By-index variables are named `PORT0` through `PORT{N-1}` where `N` is the number of assigned ports.
+In addition, provided there is at least one assigned port, then `PORT` has the same value as `PORT0`.
 
-**Note:** It is possible to specify a custom prefix for these variable
-names through the `--env_vars_prefix` command line flag.
+By-name variables are named `PORT_xxx` where `xxx` is the `name` of some `portDefinition` or `portMapping`.
+See the [networking](networking.html) docs for details.
+
+The `PORTS` variable contains a comma-separated list of all assigned host ports.
+
+**Note:** It is possible to specify a custom prefix for these variable names through the `--env_vars_prefix` command line flag.
 
 ## App Metadata
 
@@ -65,5 +68,5 @@ All keys and values longer than 512 chars will be omitted.
 
 This is by no means exhaustive!
 
-- `MESOS_SANDBOX` (set by the Docker containerizer)  
+- `MESOS_SANDBOX` 
   Path within the container to the mount point of the sandbox directory.

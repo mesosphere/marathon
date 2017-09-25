@@ -4,6 +4,8 @@ uses:
   numbers: numberTypes.raml
   volumes: volumes.raml
   strings: stringTypes.raml
+  pragma: pragma.raml
+  docker: docker.raml
 
 types:
   EngineType:
@@ -13,6 +15,7 @@ types:
       Container engine type. Supported engine types at the moment are DOCKER and MESOS.
   DockerCredentials:
     type: object
+    (pragma.deprecated): Deprecated since v1.5
     description: Credential to authenticate with the docker registry
     properties:
       principal:
@@ -37,11 +40,12 @@ types:
       value:
         type: string
         description: value of this parameter
-  DockerPortMapping:
+  ContainerPortMapping:
     type: object
     properties:
       containerPort:
         type: numbers.AnyPort
+        default: 0
         description: |
           Refers to the port the application listens to inside of the
           container.
@@ -70,11 +74,10 @@ types:
           This can be used to add metadata to be interpreted by external
           applications such as firewalls.
       name?:
-        type: string
+        type: strings.LegacyName
         description:
           Name of the service hosted on this port.
           If provided, it must be unique over all port mappings.
-        pattern: ^[a-z][-a-z0-9]*$
       protocol?:
         type: strings.NetworkProtocol
         default: tcp
@@ -96,6 +99,15 @@ types:
           [local_port_min, local_port_max] where local_port_min and
           local_port_max are command line options with default values of
           10000 and 20000, respectively.
+      networkNames?:
+        type: array
+        items: strings.Name
+        description: |
+          List of the container networks associated with this mapping. If
+          absent, then this mapping is associated with all defined container
+          networks (for this application). A single item list is mandatory when
+          `hostPort` is specified and multiple container networks are defined.
+        (pragma.omitEmpty):
   DockerContainer:
     type: object
     properties:
@@ -104,6 +116,13 @@ types:
         description: |
           The credentials to fetch this container.
           Please note: this property is supported only with the Mesos containerizer, not the docker containerizer.
+        (pragma.deprecated): Deprecated since Marathon v1.5 in favor of pullConfig
+      pullConfig?:
+        type: docker.DockerPullConfig
+        description: |
+          Docker's config.json given as a secret name into a secret store
+          which corresponding value is a content of `~/.docker/config.json`.
+          It is supported only with Mesos containerizer.
       forcePullImage?:
         type: boolean
         description: |
@@ -116,21 +135,18 @@ types:
         description: The name of the docker image to use
       network?:
         type: DockerNetwork
-        description: |
-          The network mode of this container.
-          Please note: this property is supported only with the docker containerizer, not the Mesos containerizer.
+        (pragma.deprecated): Deprecated in favor of App.networks
       parameters?:
         type: DockerParameter[]
         description: |
           Allowing arbitrary parameters to be passed to docker CLI.
           Note that anything passed to this field is not guaranteed to be
           supported moving forward, as we might move away from the docker CLI.
-          Please note: this property is supported only with the docker containerizer, not the Mesos containerizer.
       portMappings?:
-        type: DockerPortMapping[]
-        description: |
-          The port mappings of this container.
-          Please note: this property is supported only with the docker containerizer, not the Mesos containerizer.
+        type: array
+        items: ContainerPortMapping
+        (pragma.deprecated): Deprecated in favor of Container.portMappings
+        (pragma.forceOptional):
       privileged?:
         type: boolean
         description: |
@@ -164,7 +180,18 @@ types:
   Container:
     type: object
     properties:
-      type: EngineType
+      type:
+        type: EngineType
+        default: DOCKER
       docker?: DockerContainer
       appc?: AppCContainer
-      volumes?: volumes.AppVolume[]
+      volumes?:
+        type: array
+        items: volumes.AppVolume
+      portMappings?:
+        type: ContainerPortMapping[]
+        description: |
+          Map container ports to host and service ports when using bridge- or container-mode networking.
+          If left unspecified, Marathon will provide a single, default port mapping.
+          To obtain a container with no port mappings, specify an empty array here.
+        (pragma.forceOptional):

@@ -76,7 +76,7 @@ The writer of the plugin can define dependencies on other libraries and use thos
 - If the library is not provided, it must not conflict with any library bundled with Marathon (for instance, different byte code manipulation libraries are known to interfere).
   Such a dependency should be defined as `compile` dependency in your build tool of choice.
 
-Dependant libraries that are not already provided by Marathon have to be shipped along with the plugin itself.
+Dependent libraries that are not already provided by Marathon have to be shipped along with the plugin itself.
 
 ### Packaging
 
@@ -161,12 +161,47 @@ Start Marathon with this options:
 
 ## Security
 
-#### [mesosphere.marathon.plugin.auth.Authenticator](https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/auth/Authenticator.scala)
+The security plugins are interceptors on the HTTP REST endpoint.   The plugins will be in a multi-threaded environment invoked for each HTTP request.   The execution time of the HTTP request (which includes the plugin) must be within the configured timeout.  By default this is 10 seconds.
+
+#### mesosphere.marathon.plugin.auth.Authenticator
 
 Marathon exposes an HTTP REST API. To make sure only authenticated identities can access the system, the plugin developer must implement the Authenticator interface.
 This interface relies purely on the HTTP Layer. Please see the [Authenticator](https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/auth/Authenticator.scala) trait for documentation, as well as the [Example Scala Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/auth) or the [Example Java Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/javaauth).
 
-#### [mesosphere.marathon.plugin.auth.Authorizer](https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/auth/Authorizer.scala)
+#### mesosphere.marathon.plugin.auth.Authorizer
 
 This plugin works along with the Authentication plugin. With this interface you can refine which actions an authenticated identity can perform on Marathon's resources.
 Please see the [Authorizer](https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/auth/Authorizer.scala) trait for documentation as well as [Example Scala Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/auth) or the [Example Java Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/javaauth).
+
+## RunSpec
+
+#### mesosphere.marathon.plugin.task.RunSpecTaskProcessor
+
+This plugin allows for the modification of an app TaskInfo or the pod TaskGroupInfo.  This could be used to modify the runSpec by adding labels or to enforce the use of a custom executor.
+Please see the [RunSpecTaskProcessor]((https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/task/RunSpecTaskProcessor.scala)) trait for documentation  as well as [Example Scala Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/env).
+
+When working with the `RunSpecTaskProcessor` is best to be familiar with [ProtocolBuffers](https://developers.google.com/protocol-buffers/docs/overview) and the Apache Mesos [org.apache.mesos.Protos.TaskInfo](http://mesos.apache.org/api/latest/java/org/apache/mesos/Protos.TaskInfo.html)
+
+
+#### mesosphere.marathon.plugin.validation.RunSpecValidator
+
+This plugin allow for the validation of an app or pod at the time the runspec is added or updated.  This allows for the enforcement of specific rules on the runspec.  
+Please see the [RunSpecValidator](https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/validation/RunSpecValidator.scala) trait for documentation as well as [Example Scala Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/label).
+
+Marathon and the `RunSpecValidator` use the [Accord](https://github.com/wix/accord) validation library which is useful to understand when creating validator rules.
+
+## Scheduler
+
+#### mesosphere.marathon.plugin.scheduler.SchedulerPlugin
+
+This plugin allows to reject offers. Possible use-cases are:
+* Maintenance. Mark agent as going to maintenance and reject new offers from it.
+* Analytics. If task fails, for example, 5 times for 5 minutes, we can assume that it will fail again and reject new offers for it.
+* Binding to agents. For example, agents can be marked as included into primary or secondary group. Task can be marked with group name.
+ Plugin can schedule task deployment to primary agents. If all primary agents are busy, task can be scheduled to secondary agents
+
+## Notes on Plugins
+
+* The plugins allow for the extension of behavior in Marathon.  They do NOT allow for replacement or removal of existing functionality.
+* It is possible to have multiple configured plugins for the same plugin site.  There are no guarantees on the order of plugin invocation.
+* Exceptions within plugins are NOT currently isolated and could affect other aspects of Marathon.

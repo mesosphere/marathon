@@ -12,7 +12,11 @@ There are several ways to do this:
 * [Marathon-lb](https://github.com/mesosphere/marathon-lb) provides port-based service discovery using HAProxy, a lightweight TCP/HTTP proxy.
 * [haproxy-marathon-bridge](https://github.com/mesosphere/marathon/blob/master/examples/haproxy-marathon-bridge) *(DEPRECATED)* is an example script that configures a local HAProxy installation.
 
-For a detailed description of how ports work in Marathon, see [Ports](ports.html).
+For a detailed description of how ports work in Marathon, see [Networking](networking.html).
+
+**Note:** While Marathon accepts dots in application names, names with dots can prevent proper service discovery
+behavior.
+If you intend to use a service discovery mechanism, you should not put dots in your application name.
 
 ## Mesos-DNS
 
@@ -32,9 +36,9 @@ An alternative way to implement service discovery is to run a TCP/HTTP proxy on 
 
 Marathon-lb is a Dockerized application that includes both HAProxy an application that uses Marathon's REST API to regenerate the HAProxy configuration. It supports advanced functionality like SSL offloading, sticky connections, and VHost based load balancing, allowing you to specify virtual hosts for your Marathon applications.
 
-When using marathon-lb, note that it is not necessary to set `requirePorts` to `true`, as described in the [ports documentation](ports.html).
+When using marathon-lb, note that it is not necessary to set `requirePorts` to `true`, as described in the [networking documentation](networking.html).
 
-For more information, see the [Marathon-lb repository](https://github.com/mesosphere/marathon-lb) or refer to the [marathon-lb documentation on the Mesosphere site](https://dcos.io/docs/1.9/usage/service-discovery/marathon-lb/).
+For more information, see the [Marathon-lb repository](https://github.com/mesosphere/marathon-lb) or refer to the [marathon-lb documentation on the Mesosphere site](https://dcos.io/docs/latest/usage/service-discovery/marathon-lb/).
 
 ## haproxy-marathon-bridge (DEPRECATED)
 

@@ -6,6 +6,64 @@
       "type": "string",
       "pattern": "^(\\/?((\\.{2})|([a-z0-9][a-z0-9\\-.]*[a-z0-9]+)|([a-z0-9]*))($|\\/))+$",
       "minLength": 1
+    },
+    "containerPortMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "containerPort": {
+            "type": "integer",
+            "description": "Refers to the port the application listens to inside of the container. It is optional and defaults to 0. For each containerPort with a value of 0 Marathon assigns the containerPort the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "hostPort": {
+            "type": "integer",
+            "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional. In BRIDGE mode it defaults to 0 if left unspecified. In USER mode an unspecified hostPort does not allocate a port from a Mesos offer.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "labels": {
+            "type": "object",
+            "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings.",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "networkNames": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "List of the container networks associated with this mapping. If absent, then this mapping is associated with all defined container networks (for this application). A single item list is mandatory when `hostPort` is specified and multiple container networks are defined.",
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "minLength": 1,
+              "maxLength": 63
+            }
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "tcp",
+              "udp",
+              "udp,tcp"
+            ],
+            "description": "Protocol of the port (one of ['tcp', 'udp'] or 'udp,tcp' for both). Defaults to 'tcp'."
+          },
+          "servicePort": {
+            "type": "integer",
+            "description": "Is a helper port intended for doing service discovery using a well-known port per service. The assigned servicePort value is not used/interpreted by Marathon itself but supposed to be used by the load balancer infrastructure. See Service Discovery Load Balancing doc page. The servicePort parameter is optional and defaults to 0. Like hostPort, If the value is 0, a random port will be assigned. If a servicePort value is assigned by Marathon then Marathon guarantees that its value is unique across the cluster. The values for random service ports are in the range [local_port_min, local_port_max] where local_port_min and local_port_max are command line options with default values of 10000 and 20000, respectively.",
+            "maximum": 65535,
+            "minimum": 0
+          }
+        }
+      }
     }
   },
   "not": {
@@ -81,7 +139,7 @@
           "properties": {
             "credential": {
               "type": "object",
-              "description": "Credential to authenticate with the docker registry.",
+              "description": "DEPRECATED since Marathon v1.5. Credential to authenticate with the docker registry.",
               "additionalProperties": false,
               "properties": {
                 "principal": {
@@ -95,6 +153,19 @@
               },
               "required": [ "principal" ]
             },
+            "pullConfig": {
+              "type": "object",
+              "description": "Docker's config.json",
+              "additionalProperties": false,
+              "properties": {
+                "secret" : {
+                  "type": "string",
+                  "description": "A secret whose value is a stringified JSON object in a Secret Store.",
+                  "minLength": 1
+                }
+              },
+              "required": [ "secret" ]
+            },
             "forcePullImage": {
               "type": "boolean",
               "description": "The container will be pulled, regardless if it is already available on the local system."
@@ -106,7 +177,7 @@
             },
             "network": {
               "type": "string",
-              "description": "The networking mode, this container should operate in. One of BRIDGE|HOST|NONE|USER",
+              "description": "DEPRECATED. The networking mode, this container should operate in. One of BRIDGE|HOST|NONE|USER",
               "enum": ["BRIDGE", "HOST", "NONE", "USER"]
             },
             "parameters": {
@@ -130,48 +201,8 @@
               }
             },
             "portMappings": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "containerPort": {
-                    "type": "integer",
-                    "description": "Refers to the port the application listens to inside of the container. It is optional and defaults to 0. For each containerPort with a value of 0 Marathon assigns the containerPort the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
-                    "maximum": 65535,
-                    "minimum": 0
-                  },
-                  "hostPort": {
-                    "type": "integer",
-                    "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional. In BRIDGE mode it defaults to 0 if left unspecified. In USER mode an unspecified hostPort does not allocate a port from a Mesos offer.",
-                    "maximum": 65535,
-                    "minimum": 0
-                  },
-                  "labels": {
-                    "type": "object",
-                    "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
-                    "additionalProperties": {
-                      "type": "string"
-                    }
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings.",
-                    "pattern": "^[a-z][a-z0-9-]*$"
-                  },
-                  "protocol": {
-                    "type": "string",
-                    "enum": ["tcp", "udp", "udp,tcp"],
-                    "description": "Protocol of the port (one of ['tcp', 'udp'] or 'udp,tcp' for both). Defaults to 'tcp'."
-                  },
-                  "servicePort": {
-                    "type": "integer",
-                    "description": "Is a helper port intended for doing service discovery using a well-known port per service. The assigned servicePort value is not used/interpreted by Marathon itself but supposed to be used by the load balancer infrastructure. See Service Discovery Load Balancing doc page. The servicePort parameter is optional and defaults to 0. Like hostPort, If the value is 0, a random port will be assigned. If a servicePort value is assigned by Marathon then Marathon guarantees that its value is unique across the cluster. The values for random service ports are in the range [local_port_min, local_port_max] where local_port_min and local_port_max are command line options with default values of 10000 and 20000, respectively.",
-                    "maximum": 65535,
-                    "minimum": 0
-                  }
-                }
-              }
+              "$ref": "#/definitions/containerPortMappings",
+              "description": "DEPRECATED in favor of /container/portMappings"
             },
             "privileged": {
               "type": "boolean",
@@ -214,7 +245,12 @@
         "type": {
           "type": "string",
           "description": "Container engine type. Supported engine types at the moment are DOCKER and MESOS.",
-          "enum": ["MESOS", "DOCKER"]
+          "enum": ["MESOS", "DOCKER"],
+          "default": "DOCKER"
+        },
+        "portMappings": {
+          "$ref": "#/definitions/containerPortMappings",
+          "description": "Defines port usage for container and bridge networking. Use /portDefinitions for host networking."
         },
         "volumes": {
           "items": {
@@ -368,15 +404,18 @@
           },
           "executable": {
             "type": "boolean",
-            "description": "Set fetched artifact as executable"
+            "description": "Set fetched artifact as executable",
+            "default": false
           },
           "extract": {
             "type": "boolean",
-            "description": "Extract fetched artifact if supported by Mesos fetcher module"
+            "description": "Extract fetched artifact if supported by Mesos fetcher module",
+            "default": true
           },
           "cache": {
             "type": "boolean",
-            "description": "Cache fetched artifact if supported by Mesos fetcher module"
+            "description": "Cache fetched artifact if supported by Mesos fetcher module",
+            "default": false
           },
           "destPath": {
             "type": "string",
@@ -449,9 +488,9 @@
           },
           "delaySeconds": {
             "type": "integer",
-            "description": "Defaults to 2 seconds. Only applicable to mesos based health checks. Number of seconds after which a health check is started, when the task has been started.",
+            "description": "Defaults to 15 seconds. Only applicable to mesos based health checks. Number of seconds after which a health check is started, when the task has been started.",
             "minimum": 0,
-            "default": 2
+            "default": 15
           }
         }
       },
@@ -488,13 +527,38 @@
      "description": "The amount of GPU cores that is needed for the application per instance.",
      "minimum": 0
     },
+    "networks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "container",
+              "container/bridge",
+              "host"
+            ],
+            "default": "container"
+          },
+          "labels": {
+            "type": "object",
+            "description": "Key value pair for meta data on that network interface.",
+            "properties": {},
+            "additionalProperties": true
+          }
+        }
+      }
+    },
     "ipAddress": {
       "type": "object",
-      "description": "If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",
+      "description": "DEPRECATED. If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",
       "properties": {
         "discovery": {
           "type": "object",
-          "description": "Information useful for service discovery.",
+          "description": "DEPRECATED. Information useful for service discovery.",
           "properties": {
             "ports": {
               "type": "array",
@@ -517,6 +581,13 @@
                   "protocol": {
                     "enum": ["tcp", "udp"],
                     "description": "Protocol of the port (one of ['tcp', 'udp'])."
+                  },
+                  "labels": {
+                    "type": "object",
+                    "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   }
                 }
               }
@@ -525,7 +596,7 @@
         },
         "groups": {
           "type": "array",
-          "description": "Array of network groups. One IP address can belong to zero or more network groups. The idea is that containers can only reach containers with which they share at least one network group.",
+          "description": "IGNORED BY MARATHON",
           "items": {
             "type": "string",
             "description": "The name of the network group."
@@ -545,7 +616,7 @@
     },
     "ports": {
       "type": "array",
-      "description": "An array of required port resources on the agent host. The number of items in the array determines how many dynamic ports are allocated for every task. For every port that is zero, a globally unique (cluster-wide) port is assigned and provided as part of the app definition to be used in load balancing definitions.",
+      "description": "DEPRECATED in favor of /portDefinitions. An array of required port resources on the agent host. The number of items in the array determines how many dynamic ports are allocated for every task. For every port that is zero, a globally unique (cluster-wide) port is assigned and provided as part of the app definition to be used in load balancing definitions.",
       "items": {
         "maximum": 65535,
         "minimum": 0,
@@ -678,14 +749,6 @@
         }
       }
     },
-    "storeUrls": {
-      "type": "array",
-      "description": "URL's that have to be resolved and put into the artifact store, before the task will be started.",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
     "taskKillGracePeriodSeconds": {
       "type": "integer",
       "description": "Configures the number of seconds between escalating from SIGTERM to SIGKILL when signalling tasks to terminate. Using this grace period, tasks should perform orderly shut down immediately upon receiving SIGTERM.",
@@ -712,7 +775,7 @@
     },
     "uris": {
       "type": "array",
-      "description": "URIs defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.",
+      "description": "DEPRECATED in favor of /fetch. URIs defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.",
       "items": {
         "type": "string",
         "minLength": 1

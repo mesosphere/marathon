@@ -40,7 +40,7 @@
         body:
           application/json:
             example: !include examples/group.json
-            schema: group.Group
+            schema: group.GroupInfo
 
   ###
   # Update the group
@@ -125,7 +125,7 @@
     body:
       application/json:
         example: !include examples/group.json
-        schema: group.Group
+        schema: group.GroupUpdate
     responses:
       400:
         description: The group definition provided in the body is not valid.
