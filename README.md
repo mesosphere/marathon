@@ -310,6 +310,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Tapad](https://tapad.com)
 * [Teradata](http://www.teradata.com)
 * [trivago](http://www.trivago.com/)
+* [tronc / L.A. Times](http://www.tronc.com/about-us/)
 * [VANAD Enovation](http://www.vanadenovation.nl/)
 * [Viadeo](http://www.viadeo.com)
 * [Wikia](http://www.wikia.com/Wikia)

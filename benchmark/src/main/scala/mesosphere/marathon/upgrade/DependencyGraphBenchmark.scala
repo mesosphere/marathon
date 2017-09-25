@@ -53,7 +53,7 @@ object DependencyGraphBenchmark {
       }(breakOut)
 
     val subGroups: Map[GroupKey, Group] = groupIds.map { groupId =>
-      val id = s"supergroup-${superGroupId}/group-${groupId}".toPath
+      val id = s"/supergroup-${superGroupId}/group-${groupId}".toPath
       id -> Group(
         id = id,
         transitiveAppsById = appDefs,

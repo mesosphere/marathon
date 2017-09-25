@@ -5,6 +5,7 @@ import java.net.URI
 import javax.servlet.http.{ HttpServlet, HttpServletRequest, HttpServletResponse }
 
 import mesosphere.marathon.io.IO
+import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
 class WebJarServlet extends HttpServlet {
@@ -18,7 +19,8 @@ class WebJarServlet extends HttpServlet {
         resp.setContentType(mime)
         resp.setContentLength(stream.available())
         resp.setStatus(200)
-        IO.transfer(stream, resp.getOutputStream)
+        IOUtils.copy(stream, resp.getOutputStream)
+        IOUtils.closeQuietly(stream)
       } getOrElse {
         resp.sendError(404)
       }

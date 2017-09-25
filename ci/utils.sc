@@ -95,3 +95,11 @@ def runWithTimeout(timeout: FiniteDuration)(commands: Seq[String]): Unit = {
 def isMasterBuild(): Boolean = {
   sys.env.get("JOB_NAME").contains("marathon-pipelines/master")
 }
+
+/**
+ * @return True if build is for pull request.
+ */
+def isPullRequest(): Boolean = {
+  val pr = """marathon-pipelines/PR-(\d+)""".r
+  sys.env.get("JOB_NAME").collect { case pr(_) => true }.getOrElse(false)
+}
