@@ -42,6 +42,26 @@ If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started
 
 *servicePort*: When you create a new application in Marathon (either through the REST API or the front end), you may assign one or more service ports to it. You can specify all valid port numbers as service ports or you can use 0 to indicate that Marathon should allocate free service ports to the app automatically. If you do choose your own service port, you have to ensure yourself that it is unique across all of your applications.
 
+## Use Cases for Different ports
+
+The 3 ports defined (containerPort, hostPort, servicePort) along with the label for a VIP_0 in a port mapping can be confusing.  The following is another way of considering these ports using an ACME app as an example.  Lets say the actual application opens port :8080.   All applications on Mesos are hosted in containers. Containers can be run in bridge host mode.  When in host mode, the container will have the host network interface defined in the container namespace.  The container will not do any port magic and the application will open up port :8080 on the host network interface.   In this case there is no container port, and the `hostPort` is :8080.
+The container could be run in bridge mode.  In this case, the container gets it's own network interface and the `containerPort` is :8080.   In bridge mode, the container will open a pseudo random port on the host and bridge/NAT communication to the container port.   For example, lets say the port is :31000.   Now the `containerPort` is :8080, but the `hostPort` is 31000.  Clients to this service will open port 31000 on the host the service is running on and the container will route that to the internal port :8080 in the container.
+Now lets say you have 3 instances of App ACME, for example 10.0.0.2:31000, 10.0.0.2:31001 and 10.0.0.3.31000.  There is a common need to have a port that will route with some algorithm to each of those instances.  This "port" is meta-data which is specific to this application.  All instances of the application will be hosted behind this port.  In marathon this is referred to as the `servicePort`.  As part of the ACME app definition you can specify a `servicePort` of :8080 for instance.  It is important to recognize that this is meta-data and marathon doesn't do anything with this information... which can be confusing.   It is however tracked and provided by marathon.   The purpose is to provide meta-data about the service, in this case the ACME app.    It is expected that a user will configure a load balancer to host a port :8080 (or the `servicePort`) and route to each of the instances of this application.   All the information is queryable from marathon.  The marathon-lb service when configured, does exactly this.  marathon-lb will register all instances of an app and route to its configured `servicePort`.  In this configuration, a client will connect to a load balancer at port :8080 (`servicePort`) which will route (with some algorithm) to 10.0.0.2:31000 (`hostPort`) which will route to :8080 (`containerPort`) of the internal application.
+
+`VIP_0` defined in `portDefinitions` as a label is like `servicePort` in that it is informational and implementation dependent.   However, when used with DCOS, services internal to DCOS will make available to the cluster that DNS name and port as a routing to services.   An example configuration:
+
+```app_def['portDefinitions'] = [{
+        "port": 0,
+        "protocol": "tcp",
+        "name": "acme",
+        "labels": {
+            "VIP_0": "/acme:10000"
+        }
+    }]
+```
+This configuration will create a FQN of `acme.marathon.l4lb.thisdcos.directory` at port :10000 which will load balance all instances of the application.  It is important to note that marathon itself doesn't do anything with this configuration it is meta-data that marathon manages for the application.  A client in DCOS could open a connection to `acme.marathon.l4lb.thisdcos.directory` at port :10000, which would route 10.0.0.2:31000 which will route to the containerPort of :8080.
+
+
 ## Random Port Assignment
 
 Using the value 0 for any port settings indicates to Marathon that you would like a random port assignment. However, if `containerPort` is set to 0 within a `portMapping`, it is set to the same value as `hostPort`.
