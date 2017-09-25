@@ -21,14 +21,14 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, UnreachableEnabled }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
 import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 
 /**
@@ -152,6 +152,35 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       .setOperator(Operator.UNIQUE)
       .setValue("")
       .build
+    val unreachableStrategy = UnreachableEnabled(5.minutes, 10.minutes)
+    val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint), unreachableStrategy = unreachableStrategy)
+    val offer = MarathonTestHelper.makeBasicOffer().build()
+
+    val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable(unreachableStrategy = unreachableStrategy).getInstance()
+
+    Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
+    val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+    // we're only interested in capturing the argument, so return value doesn't matter
+    Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
+
+    val launcherRef = createLauncherRef(instances = 1, constraintApp)
+    launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
+
+    val promise = Promise[MatchedInstanceOps]
+    Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedInstanceOps]
+
+    Mockito.verify(instanceTracker).instancesBySpecSync
+    Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
+    assert(captor.getValue.instanceMap.isEmpty)
+  }
+
+  test("Restart a replacement task for an unreachable task with default unreachableStrategy instantly") {
+    import mesosphere.marathon.Protos.Constraint.Operator
+    val uniqueConstraint = Protos.Constraint.newBuilder
+      .setField("hostname")
+      .setOperator(Operator.UNIQUE)
+      .setValue("")
+      .build
     val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
     val offer = MarathonTestHelper.makeBasicOffer().build()
 
@@ -159,7 +188,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
     Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
     val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
-    // we're only interested in capturing the argument, so return value doesn't matte
+    // we're only interested in capturing the argument, so return value doesn't matter
     Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
     val launcherRef = createLauncherRef(instances = 1, constraintApp)
@@ -168,7 +197,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedInstanceOps]
     Mockito.verify(instanceTracker).instancesBySpecSync
     Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
-    assert(captor.getValue.instanceMap.isEmpty)
+    assert(captor.getValue.instanceMap.size == 1) // we should have one replacement task scheduled already
   }
 
   test("Wait for inflight task launches on stop") {
