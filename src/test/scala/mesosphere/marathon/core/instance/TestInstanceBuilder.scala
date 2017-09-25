@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, Insta
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{ AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder }
-import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableEnabled, UnreachableStrategy }
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -41,8 +41,9 @@ case class TestInstanceBuilder(
   def addTaskLost(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLost(since, containerName).build()
 
-  def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskUnreachable(since, containerName).build()
+  def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None, unreachableStrategy: UnreachableStrategy = UnreachableEnabled()): TestInstanceBuilder =
+    this.copy(instance = instance.copy(unreachableStrategy = unreachableStrategy)) // we need to update the unreachable strategy first before adding an unreachable task
+      .addTaskWithBuilder().taskUnreachable(since, containerName).build()
 
   def addTaskUnreachableInactive(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskUnreachableInactive(since, containerName).build()

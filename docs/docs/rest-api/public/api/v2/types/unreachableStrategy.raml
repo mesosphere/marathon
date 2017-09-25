@@ -11,23 +11,23 @@ types:
       inactiveAfterSeconds?:
         type: integer
         format: int64
-        default: 300
+        default: 0
         minimum: 0
         description: |
           If an instance is unreachable for longer than inactiveAfter seconds it is marked
           as inactive. This will trigger a new instance launch. The original task is not
-          expunged yet. Must be less than expungeAfterSeconds.
+          expunged yet. Must be less than or equal to expungeAfterSeconds.
 
-          The default value is set to 5 minutes (300 seconds).
+          The default value is set to 0 seconds.
 
       expungeAfterSeconds?:
         type: integer
         format: int64
-        default: 600
+        default: 0
         minimum: 0
         description: |
-          If an instance is unreachable for longer than unreachableExpungeAfter seconds it will be expunged.  That means
+          If an instance is unreachable for longer than expungeAfterSeconds it will be expunged.  That means
           it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged
-          but they don't have to. This value is required to be greater than inactiveAfterSeconds.
+          but they don't have to. This value is required to be greater than or equal to inactiveAfterSeconds.
 
-          The default value is set to 10 minutes (600 seconds).
+          The default value is set to 0 seconds.
