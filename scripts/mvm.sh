@@ -34,8 +34,8 @@
 # In this mode, MVM will create a symlink at ~/mesos/current, which always points to the currently
 # activated version, and store the current version number in ~/mesos/current_version.
 # The following operations are carried out during the installation process:
-# Path configurations are stored in ~/.mesos/env
-# A "source" command for ~/.mesos/env is added to ~/.profile and
+# Path configurations are stored in ~/.mesos/env
+# A "source" command for ~/.mesos/env is added to ~/.profile and
 # ~/.config/fish/config.fish (if fish is installed)
 # ~/.zshrc (if zsh is installed)
 # mvm.sh is copied to ~/.mesos/bin
@@ -88,18 +88,19 @@ function print_help {
   echo ""
   echo "Commands:"
   echo " --current                Show the currently activated Mesos version"
-  echo " --delete [VERSION]       Delete an installed version of Mesos"
+  echo " --delete VERSION         Delete an installed version of Mesos"
   echo " --fetch                  See --update"
   echo " --help                   Display this help screen"
   if ! $PERSISTENT_MODE; then
-    echo " --self-install                Install mvm to ~/.mesos and configure shells"
+    echo " --self-install           Install mvm to ~/.mesos and configure shells"
   fi
   echo " --installed              List all installed versions"
   echo " --latest                 Switch to the latest avaiable version (HEAD)"
   echo " --list                   See --tags"
   echo " --print-config           Print the shell configuration"
   echo " --tags                   List all available version tags"
-  echo " --shell [VERSION]        Force spawning a shell, even in persistent mode"
+  echo " --shell VERSION          Force spawning a shell, even in persistent mode"
+  echo " --switch-to VERSION      Switch to the given Mesos version"
   echo " --update                 Update the Mesos sources"
   echo ""
   echo "Environment variables:"
@@ -407,7 +408,7 @@ if [ "$1" == "--help" ]; then
   exit 0
 fi
 
-# ensure that the MVM_BASE directory exists
+# ensure that the MVM_BASE directory exists
 if [ ! -d "$MVM_BASE" ]; then
   mkdir "$MVM_BASE"
 fi
@@ -417,13 +418,13 @@ if [ ! -d "$MESOS_INSTALL_BASE" ]; then
   mkdir "$MESOS_INSTALL_BASE"
 fi
 
-# check if mesos source directory exists
+# check if mesos source directory exists
 if [ ! -d "$MESOS_SOURCES" ]; then
   echo "Mesos sources not found. Cloning sources."
   git clone https://git-wip-us.apache.org/repos/asf/mesos.git "$MESOS_SOURCES"
 fi
 
-# process command line arguments
+# process command line arguments
 if [ -z "${1+x}" ]; then
   print_installed
   exit 0
@@ -468,6 +469,12 @@ elif [ "$1" == "--latest" ]; then
   # set requested_version to the latest commit
   REQUESTED_VERSION=$(get_head_revision)
   echo "Latest commit is '$REQUESTED_VERSION'."
+elif [ "$1" == "--switch-to" ]; then
+  if [ -z "${2+x}" ]; then
+    error "VERSION parameter required for --switch-to option"
+  fi
+  persist_version "$2"
+  exit $?
 elif [[ $1 == --* ]]; then
   error "Unknown flag: '$1'."
 else
