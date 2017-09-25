@@ -199,4 +199,9 @@ trait PersistenceStore[K, Category, Serialized] {
     * @return a sink that can be used to restore the complete state.
     */
   def restore(): Sink[BackupItem, Future[Done]]
+
+  /**
+    * Make sure that store read operations return up-to-date values.
+    */
+  def sync(): Future[Done]
 }

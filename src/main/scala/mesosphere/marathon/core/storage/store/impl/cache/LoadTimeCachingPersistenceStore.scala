@@ -200,6 +200,8 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 
   override def restore(): Sink[BackupItem, Future[Done]] = store.restore()
 
+  override def sync(): Future[Done] = store.sync()
+
   override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
     store.versions(id)
 

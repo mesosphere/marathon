@@ -8,6 +8,7 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
@@ -22,13 +23,13 @@ import mesosphere.marathon.util.{ LockedVar, WorkQueue }
 import scala.async.Async._
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class GroupManagerImpl(
     config: GroupManagerConfig,
-    initialRoot: RootGroup,
+    initialRoot: Option[RootGroup],
     groupRepository: GroupRepository,
     deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
   /**
@@ -43,9 +44,25 @@ class GroupManagerImpl(
     * Even though updates go through the workqueue, we want to make sure multiple readers always read
     * the latest version of the root. This could be solved by a @volatile too, but this is more explicit.
     */
-  private[this] val root = LockedVar(initialRoot)
+  private[this] var root = LockedVar(initialRoot)
 
-  override def rootGroup(): RootGroup = root.get()
+  override def rootGroup(): RootGroup =
+    root.get() match { // linter:ignore:UseGetOrElseNotPatMatch
+      case None =>
+        val group = Await.result(groupRepository.root(), config.zkTimeoutDuration)
+        root := Some(group)
+
+        // We've already released metrics using these names, so we can't use the Metrics.* methods
+        Kamon.metrics.gauge("service.mesosphere.marathon.app.count")(
+          rootGroup().transitiveApps.size.toLong
+        )
+        Kamon.metrics.gauge("service.mesosphere.marathon.group.count")(
+          rootGroup().transitiveGroupsById.size.toLong
+        )
+
+        group
+      case Some(group) => group
+    }
 
   override def versions(id: PathId): Source[Timestamp, NotUsed] = {
     groupRepository.rootVersions().mapAsync(Int.MaxValue) { version =>
@@ -105,7 +122,7 @@ class GroupManagerImpl(
         await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
         logger.info(s"Updated groups/apps/pods according to plan ${plan.id}")
         // finally update the root under the write lock.
-        root := plan.target
+        root := Option(plan.target)
         plan
       }
     }
@@ -199,7 +216,7 @@ class GroupManagerImpl(
     // because manager and repository are holding own caches
     await(groupRepository.invalidateGroupCache())
     val currentRoot = await(groupRepository.root())
-    root := currentRoot
+    root := Option(currentRoot)
     Done
   }
 }

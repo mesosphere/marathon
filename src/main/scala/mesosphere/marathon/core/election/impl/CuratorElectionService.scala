@@ -4,7 +4,7 @@ package core.election.impl
 import java.util
 import java.util.Collections
 import java.util.concurrent.atomic.{ AtomicBoolean, AtomicReference }
-import java.util.concurrent.{ ExecutorService, Executors, TimeUnit }
+import java.util.concurrent.{ ExecutorService, Executors }
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -111,7 +111,7 @@ class CuratorElectionService(
     if (acquiringLeadership.compareAndSet(false, true)) {
       require(leaderLatch.get.isEmpty, "leaderLatch is not empty")
 
-      startCuratorClient()
+      startCuratorClientAndConnect()
       val latch = new LeaderLatch(
         client, config.zooKeeperLeaderPath + "-curator", hostPort)
       latch.addListener(LeaderChangeListener, threadExecutor)
@@ -250,9 +250,28 @@ class CuratorElectionService(
     client
   }
 
-  private def startCuratorClient(): Unit = {
+  private def startCuratorClientAndConnect(): Unit = {
     client.start()
-    client.blockUntilConnected(config.zkTimeoutDuration.toMillis.toInt, TimeUnit.MILLISECONDS)
+
+    val zkTimeout: Int = client.getZookeeperClient.getConnectionTimeoutMs
+    val timeoutAt: Long = System.currentTimeMillis() + zkTimeout
+    var connected = false
+
+    while (!connected && System.currentTimeMillis <= timeoutAt) {
+      if (!lifecycleState.isRunning) {
+        throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")
+      }
+
+      try {
+        connected = client.blockUntilConnected(zkTimeout, java.util.concurrent.TimeUnit.MILLISECONDS)
+      } catch {
+        case _: InterruptedException => // ignore
+      }
+    }
+
+    if (!connected) {
+      throw new InterruptedException("timed out while waiting for zookeeper connection")
+    }
   }
 
   /**

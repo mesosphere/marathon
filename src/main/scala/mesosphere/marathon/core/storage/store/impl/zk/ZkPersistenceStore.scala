@@ -288,12 +288,15 @@ class ZkPersistenceStore(
       val id = ZkId(item.category, item.key, item.version)
       rawStore(id, ZkSerialized(item.data))
     }
+
     def clean(): Future[Done] = {
       client.delete("/", guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done)
     }
+
     def setVersion(item: BackupItem): Future[Done] = {
       setStorageVersion(StorageVersion.parseFrom(item.data.toArray))
     }
+
     Flow[BackupItem]
       .map {
         case item if item.key == Migration.StorageVersionName => () => setVersion(item)
@@ -302,5 +305,16 @@ class ZkPersistenceStore(
       .prepend { Source.single(() => clean()) }
       .mapAsync(1) { _.apply() } // no parallelization: first element needs to be processed before the second
       .toMat(Sink.ignore)(Keep.right)
+  }
+
+  override def sync(): Future[Done] = async {
+    await(client.sync("/").asTry) match {
+      case Success(_) =>
+        Done
+      case Failure(e: KeeperException) =>
+        throw new StoreCommandFailedException("Failed to sync", e)
+      case Failure(e) =>
+        throw e
+    }
   }
 }

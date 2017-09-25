@@ -181,6 +181,8 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
 
   override def restore(): ScalaSink[BackupItem, Future[Done]] = store.restore()
 
+  override def sync(): Future[Done] = store.sync()
+
   override def toString: String = s"LazyCachingPersistenceStore($store)"
 }
 
@@ -360,6 +362,8 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
   override def backup(): Source[BackupItem, NotUsed] = store.backup()
 
   override def restore(): ScalaSink[BackupItem, Future[Done]] = store.restore()
+
+  override def sync(): Future[Done] = store.sync()
 
   override def toString: String = s"LazyVersionCachingPersistenceStore($store)"
 }

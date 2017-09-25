@@ -115,6 +115,8 @@ class InMemoryPersistenceStore(implicit
       .prepend { Source.single(clean()) }
       .toMat(Sink.ignore)(Keep.right)
   }
+
+  override def sync(): Future[Done] = Future.successful(Done)
 }
 
 object InMemoryPersistenceStore {
