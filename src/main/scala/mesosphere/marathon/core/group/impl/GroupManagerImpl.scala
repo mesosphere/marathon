@@ -44,25 +44,18 @@ class GroupManagerImpl(
     * Even though updates go through the workqueue, we want to make sure multiple readers always read
     * the latest version of the root. This could be solved by a @volatile too, but this is more explicit.
     */
-  private[this] var root = LockedVar(initialRoot)
+  private[this] val root = LockedVar(initialRoot)
 
   override def rootGroup(): RootGroup =
     root.get() match { // linter:ignore:UseGetOrElseNotPatMatch
       case None =>
         val group = Await.result(groupRepository.root(), config.zkTimeoutDuration)
         root := Some(group)
-
-        // We've already released metrics using these names, so we can't use the Metrics.* methods
-        Kamon.metrics.gauge("service.mesosphere.marathon.app.count")(
-          rootGroup().transitiveApps.size.toLong
-        )
-        Kamon.metrics.gauge("service.mesosphere.marathon.group.count")(
-          rootGroup().transitiveGroupsById.size.toLong
-        )
-
         group
       case Some(group) => group
     }
+
+  override def rootGroupOption(): Option[RootGroup] = root.get()
 
   override def versions(id: PathId): Source[Timestamp, NotUsed] = {
     groupRepository.rootVersions().mapAsync(Int.MaxValue) { version =>
