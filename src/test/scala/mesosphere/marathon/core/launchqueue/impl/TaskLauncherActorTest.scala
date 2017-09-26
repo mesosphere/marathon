@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.{ActorContext, ActorRef, Cancellable, Props}
+import akka.actor.{ ActorContext, ActorRef, Cancellable, Props }
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
@@ -9,9 +9,9 @@ import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
-import mesosphere.marathon.core.launcher.{InstanceOpFactory, OfferMatchResult}
+import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
@@ -22,10 +22,10 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp , UnreachableEnabled}
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, UnreachableEnabled }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
-import org.mockito.{ArgumentCaptor, Mockito}
+import org.mockito.{ ArgumentCaptor, Mockito }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
@@ -42,7 +42,7 @@ import scala.concurrent.duration._
   */
 class TaskLauncherActorTest extends AkkaUnitTest {
 
-  import org.mockito.{Matchers => m}
+  import org.mockito.{ Matchers => m }
 
   def sendUpdate(launcherRef: ActorRef, update: InstanceChange): QueuedInstanceInfo = {
     launcherRef ! update
@@ -50,7 +50,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
   }
 
   object f {
-    import org.apache.mesos.{Protos => Mesos}
+    import org.apache.mesos.{ Protos => Mesos }
     val app = AppDefinition(id = PathId("/testapp"))
     val marathonInstance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, version = app.version, now = Timestamp.now()).getInstance()
     val marathonTask: Task.LaunchedEphemeral = marathonInstance.appTask
