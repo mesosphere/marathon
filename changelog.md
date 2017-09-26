@@ -3,9 +3,9 @@ Bugfix release
 
 ### Fixed issues
 - [MARATHON-7576](https://jira.mesosphere.com/browse/MARATHON-7576) Changed default of UnreachableEnabled to (0,0)
-- TaskLauncherActor doesn't wait for in-flight tasks on stop
+- [D907](https://phabricator.mesosphere.com/D907) TaskLauncherActor doesn't wait for in-flight tasks on stop
 - [MARATHON-7765](https://jira.mesosphere.com/browse/MARATHON-7765) Update to jar Manifest file
-- Added SchedulerPlugin to enable the ability to customize the rejection of offers. (see below)
+- [PR 5421](https://github.com/mesosphere/marathon/pull/5421) Added SchedulerPlugin to enable the ability to customize the rejection of offers. (see below)
 - [MARATHON-2520](https://jira.mesosphere.com/browse/MARATHON-2520) Improved logging around migration
 - [D1044](https://phabricator.mesosphere.com/D1044) EventStream implementation moved to Akka eventStream
 - [D1042](https://phabricator.mesosphere.com/D1042) Fix a problem with allocating port for IT by forbidding port reuse in the `PortAllocator`
@@ -16,7 +16,7 @@ Bugfix release
 - [D974](https://phabricator.mesosphere.com/D974) Plugin configuration or initialization issues are made more obvious, potentially causing Marathon to not launch.
 - [MARATHON-7707](https://jira.mesosphere.com/browse/MARATHON-7707)  Update AgentInfo when launching an instance based on an existing reservation
 - [MARATHON-7724](https://jira.mesosphere.com/browse/MARATHON-7724) Better socket error handling leader proxy.
-- [MARATHON-7711](https://jira.mesosphere.com/browse/MARATHON-7711)[MARATHON-7338](https://jira.mesosphere.com/browse/MARATHON-7338) Under certain circumstances, resident tasks wouldn't relaunch when resources were available, and reservations wouldn't be freed. In order to address this, Marathon no longer suppresses offers from Mesos.
+- [MARATHON-7711](https://jira.mesosphere.com/browse/MARATHON-7711),[MARATHON-7338](https://jira.mesosphere.com/browse/MARATHON-7338) Under certain circumstances, resident tasks wouldn't relaunch when resources were available, and reservations wouldn't be freed. In order to address this, Marathon no longer suppresses offers from Mesos.
 - [PR 5432](https://github.com/mesosphere/marathon/pull/5432) App and pod validation errors for missing network name.
 - [MARATHON-1703](https://jira.mesosphere.com/browse/MARATHON-1703) Fixed when Marathon would not consider instances in state Reserved when validating constraints.
 
