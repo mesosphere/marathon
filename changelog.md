@@ -8,17 +8,13 @@ Bugfix release
 - [PR 5421](https://github.com/mesosphere/marathon/pull/5421) Added SchedulerPlugin to enable the ability to customize the rejection of offers. (see below)
 - [MARATHON-2520](https://jira.mesosphere.com/browse/MARATHON-2520) Improved logging around migration
 - [D1044](https://phabricator.mesosphere.com/D1044) EventStream implementation moved to Akka eventStream
-- [D1042](https://phabricator.mesosphere.com/D1042) Fix a problem with allocating port for IT by forbidding port reuse in the `PortAllocator`
-- [D1058](https://phabricator.mesosphere.com/D1058) Fixed ephemeral port range to avoid collision with executor
-- [MARATHON-7696](https://jira.mesosphere.com/browse/MARATHON-7696) variable overdueDelayCleanupInterval replaces hardcoded value
-- [D1027](https://phabricator.mesosphere.com/D1027) Fixed state which Marathon could not boot.
 - [MARATHON-7545](https://jira.mesosphere.com/browse/MARATHON-7545) Initialize RunSpecTaskProcessor and RunSpecValidator at startup to early detect misconfiguration.
 - [D974](https://phabricator.mesosphere.com/D974) Plugin configuration or initialization issues are made more obvious, potentially causing Marathon to not launch.
-- [MARATHON-7707](https://jira.mesosphere.com/browse/MARATHON-7707)  Update AgentInfo when launching an instance based on an existing reservation
+- [MARATHON-7707](https://jira.mesosphere.com/browse/MARATHON-7707)  Resident tasks now have an up-to-date agentInfo (agentId) when they are re-launched, rather than preserving the agentInfo as received during initial launch.
 - [MARATHON-7724](https://jira.mesosphere.com/browse/MARATHON-7724) Better socket error handling leader proxy.
-- [MARATHON-7711](https://jira.mesosphere.com/browse/MARATHON-7711),[MARATHON-7338](https://jira.mesosphere.com/browse/MARATHON-7338) Under certain circumstances, resident tasks wouldn't relaunch when resources were available, and reservations wouldn't be freed. In order to address this, Marathon no longer suppresses offers from Mesos.
+-  [MARATHON-7711](https://jira.mesosphere.com/browse/MARATHON-7711), [MARATHON-7338](https://jira.mesosphere.com/browse/MARATHON-7338) Under certain circumstances, resident tasks wouldn't relaunch when resources were available, and reservations wouldn't be freed. In order to address this, Marathon no longer suppresses offers from Mesos.
 - [PR 5432](https://github.com/mesosphere/marathon/pull/5432) App and pod validation errors for missing network name.
-- [MARATHON-1703](https://jira.mesosphere.com/browse/MARATHON-1703) Fixed when Marathon would not consider instances in state Reserved when validating constraints.
+- [MARATHON-1703](https://jira.mesosphere.com/browse/MARATHON-1703) Fixed issue in which constraints would not be properly evaluated when launching multiple resident tasks at a time.
 
 ### 1.5.1 New Behavior
 
