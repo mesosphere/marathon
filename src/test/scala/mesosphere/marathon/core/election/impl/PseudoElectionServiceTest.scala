@@ -1,4 +1,3 @@
-
 package mesosphere.marathon
 package core.election.impl
 

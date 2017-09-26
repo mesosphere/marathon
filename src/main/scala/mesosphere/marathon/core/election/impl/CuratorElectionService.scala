@@ -252,26 +252,9 @@ class CuratorElectionService(
 
   private def startCuratorClientAndConnect(): Unit = {
     client.start()
-
-    val zkTimeout: Int = client.getZookeeperClient.getConnectionTimeoutMs
-    val timeoutAt: Long = System.currentTimeMillis() + zkTimeout
-    var connected = false
-
-    while (!connected && System.currentTimeMillis <= timeoutAt) {
-      if (!lifecycleState.isRunning) {
-        throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")
-      }
-
-      try {
-        connected = client.blockUntilConnected(zkTimeout, java.util.concurrent.TimeUnit.MILLISECONDS)
-      } catch {
-        case _: InterruptedException => // ignore
-      }
-    }
-
-    if (!connected) {
-      throw new InterruptedException("timed out while waiting for zookeeper connection")
-    }
+    client.blockUntilConnected(
+      client.getZookeeperClient.getConnectionTimeoutMs,
+      java.util.concurrent.TimeUnit.MILLISECONDS)
   }
 
   /**

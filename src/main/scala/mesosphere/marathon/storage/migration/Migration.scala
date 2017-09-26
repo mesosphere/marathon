@@ -104,6 +104,7 @@ class Migration(
     // no stale values are read from the persistence store.
     // Although in case of ZK it is done at the time of creation of CuratorZK,
     // it is better to be safe than sorry.
+    logger.info(s"$persistenceStore")
     await(persistenceStore.sync())
 
     val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())

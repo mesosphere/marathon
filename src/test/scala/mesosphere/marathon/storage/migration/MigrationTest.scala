@@ -14,7 +14,7 @@ import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.{ InMem, StorageConfig }
 import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository._
-import mesosphere.marathon.test.{ Mockito, SimulatedScheduler, SettableClock }
+import mesosphere.marathon.test.{ Mockito, SettableClock, SimulatedScheduler }
 import org.scalatest.GivenWhenThen
 import Migration.MigrationAction
 import org.scalatest.concurrent.Eventually
@@ -59,6 +59,12 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
   }
 
+  def mockStore(): PersistenceStore[_, _, _] = {
+    val mockedStore = mock[PersistenceStore[_, _, _]]
+    mockedStore.sync() returns Future.successful(Done)
+    mockedStore
+  }
+
   val currentVersion: StorageVersion = StorageVersions.current
 
   "Migration" should {
@@ -77,7 +83,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "migrate on an empty database will set the storage version" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockStore()
       val f = new Fixture(mockedStore)
 
       val migrate = f.migration
@@ -87,13 +93,14 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       migrate.migrate()
 
+      verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       verify(mockedStore).setStorageVersion(StorageVersions.current)
       noMoreInteractions(mockedStore)
     }
 
     "migrate on a database with the same version will do nothing" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockStore()
       val f = new Fixture(mockedStore)
 
       val migrate = f.migration
@@ -103,12 +110,13 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       mockedStore.storageVersion() returns Future.successful(Some(currentPersistenceVersion))
       migrate.migrate()
 
+      verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       noMoreInteractions(mockedStore)
     }
 
     "migrate throws an error for early unsupported versions" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockStore()
       val f = new Fixture(mockedStore)
 
       val migrate = f.migration
@@ -128,7 +136,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "migrate throws an error for versions > current" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockStore()
       val f = new Fixture(mockedStore)
 
       val migrate = f.migration
@@ -147,7 +155,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "migrations are executed sequentially" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockStore()
       mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
       mockedStore.versions(any)(any) returns Source.empty
       mockedStore.ids()(any) returns Source.empty
@@ -172,7 +180,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "log periodic messages if migration takes more time than usual" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockStore()
       val started = Promise[Done]
       val migrationDone = Promise[Done]
       val version = StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE)
