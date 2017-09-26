@@ -1,3 +1,37 @@
+## Changes from 1.5.0 to 1.5.1
+Bugfix release
+
+### Fixed issues
+- [MARATHON-7576](https://jira.mesosphere.com/browse/MARATHON-7576) Changed default of UnreachableEnabled to (0,0)
+- TaskLauncherActor doesn't wait for in-flight tasks on stop
+- [MARATHON-7765](https://jira.mesosphere.com/browse/MARATHON-7765) Update to jar Manifest file
+- Replace custom IO with Apache Commons IO
+- Added SchedulerPlugin to enable the ability to
+- Update to the docker build process
+- [MARATHON-2520](https://jira.mesosphere.com/browse/MARATHON-2520) Improved logging around migration
+- [D1044](https://phabricator.mesosphere.com/D1044) EventStream implementation moved to Akka eventStream
+- [D1042](https://phabricator.mesosphere.com/D1042) Fix a problem with allocating port for IT by forbidding port reuse in the `PortAllocator`
+- [D1058](https://phabricator.mesosphere.com/D1058) Fixed ephemeral port range to avoid collision with executor
+- [MARATHON-7696](https://jira.mesosphere.com/browse/MARATHON-7696) variable overdueDelayCleanupInterval replaces hardcoded value
+- [D1027](https://phabricator.mesosphere.com/D1027) Fixed state which Marathon could not boot.
+- [MARATHON-7545](https://jira.mesosphere.com/browse/MARATHON-7545) Initialize RunSpecTaskProcessor and RunSpecValidator at startup to early detect misconfiguration.
+- [D974](https://phabricator.mesosphere.com/D974) Allows plugin to throw an InitializationException if it is unable to init properly.
+- [MARATHON-7707](https://jira.mesosphere.com/browse/MARATHON-7707)  Update AgentInfo when launching an instance based on an existing reservation
+- [MARATHON-7724](https://jira.mesosphere.com/browse/MARATHON-7724) Better socket error handling leader proxy.
+- [MARATHON-7711](https://jira.mesosphere.com/browse/MARATHON-7711)[MARATHON-7338](https://jira.mesosphere.com/browse/MARATHON-7338) Complete removal of suppress offers.
+- [PR 5432](https://github.com/mesosphere/marathon/pull/5432) App and pod validation errors for missing network name.
+- [MARATHON-1703](https://jira.mesosphere.com/browse/MARATHON-1703) Fixed when Marathon would not consider instances in state Reserved when validating constraints.
+
+### 1.5.1 New Behavior
+
+#### mesosphere.marathon.plugin.scheduler.SchedulerPlugin
+
+This plugin allows to reject offers. Possible use-cases are:
+  * Maintenance. Mark agent as going to maintenance and reject new offers from it.
+  * Analytics. If task fails, for example, 5 times for 5 minutes, we can assume that it will fail again and reject new offers for it.
+  * Binding to agents. For example, agents can be marked as included into primary or secondary group. Task can be marked with group name.  Plugin can schedule task deployment to primary agents. If all primary agents are busy, task can be scheduled to secondary agents
+
+
 ## Changes from 1.4.x to 1.5.0 (unreleased)
 
 ### Recommended Mesos version is 1.3.0
