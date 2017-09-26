@@ -4,7 +4,7 @@ Bugfix release
 ### Fixed issues
 - [MARATHON-7576](https://jira.mesosphere.com/browse/MARATHON-7576) Changed default of UnreachableEnabled to (0,0)
 - [D907](https://phabricator.mesosphere.com/D907) TaskLauncherActor doesn't wait for in-flight tasks on stop
-- [MARATHON-7765](https://jira.mesosphere.com/browse/MARATHON-7765) Update to jar Manifest file
+- [MARATHON-7765](https://jira.mesosphere.com/browse/MARATHON-7765) Fixes issue in which /v2/info endpoint always returned 1.5.0-snapshot1, regardless of the actual endpoint.
 - [PR 5421](https://github.com/mesosphere/marathon/pull/5421) Added SchedulerPlugin to enable the ability to customize the rejection of offers. (see below)
 - [MARATHON-2520](https://jira.mesosphere.com/browse/MARATHON-2520) Improved logging around migration
 - [D1044](https://phabricator.mesosphere.com/D1044) EventStream implementation moved to Akka eventStream
