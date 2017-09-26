@@ -126,7 +126,7 @@ lazy val commonSettings = testSettings ++
 
   scapegoatVersion := "1.3.0",
 
-  coverageMinimum := 75,
+  coverageMinimum := 70,
   coverageFailOnMinimum := true,
 
   fork in run := true,
