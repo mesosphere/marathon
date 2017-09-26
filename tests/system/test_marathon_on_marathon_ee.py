@@ -26,7 +26,7 @@ PUBLIC_KEY_FILE = 'public-key.pem'
 DEFAULT_MOM_IMAGES = {
     'MOM_EE_1.4': 'v1.4.7_1.9.8',
     'MOM_EE_1.3': '1.3.13_1.1.5',
-    'MOM_EE_1.5': 'v1.5.0_1.10.0-rc1'
+    'MOM_EE_1.5': 'v1.5.0_1.10.0'
 }
 
 
@@ -51,6 +51,7 @@ def remove_mom_ee():
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
+        print('Checking endpoint: {}'.format(endpoint))
         if shakedown.service_available_predicate(endpoint):
             print('Removing {}...'.format(endpoint))
             with shakedown.marathon_on_marathon(name=endpoint):
