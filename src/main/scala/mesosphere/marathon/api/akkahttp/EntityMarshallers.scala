@@ -1,17 +1,17 @@
 package mesosphere.marathon
 package api.akkahttp
 
-import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}
+import akka.http.scaladsl.marshalling.{ Marshaller, ToEntityMarshaller }
 import akka.http.scaladsl.model.MediaTypes.`application/json`
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.{Rejection, RejectionError, Route}
-import akka.http.scaladsl.unmarshalling.{FromEntityUnmarshaller, Unmarshaller}
+import akka.http.scaladsl.server.{ Rejection, RejectionError, Route }
+import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, Unmarshaller }
 import akka.util.ByteString
-import com.wix.accord.{Failure, RuleViolation, Success, Validator}
+import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo.AppInfo
-import mesosphere.marathon.raml.{LoggerChange, Metrics}
+import mesosphere.marathon.raml.{ LoggerChange, Metrics }
 import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.state.AppDefinition
 import play.api.libs.json._
