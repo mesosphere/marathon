@@ -37,7 +37,7 @@ The definition could look like this:
 }
 ```
 
-NOTE: Assuming that you provide a complete application definition based on groups, to push it to Marathon you can do it through a `POST` to **/v2/groups** REST API endpoint.
+**Note:** Deploy an application group through a `POST` to the `/v2/groups` REST API endpoint.
 
 ## Dependencies 
 
