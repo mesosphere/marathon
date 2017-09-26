@@ -25,7 +25,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     val groupRepository = mock[GroupRepository]
     val deploymentService = mock[DeploymentService]
     val eventStream = mock[EventStream]
-    val groupManager = new GroupManagerImpl(config, initialRoot, groupRepository, new Provider[DeploymentService] {
+    val groupManager = new GroupManagerImpl(config, Option(initialRoot), groupRepository, new Provider[DeploymentService] {
       override def get(): DeploymentService = deploymentService
     })(eventStream, ExecutionContexts.global)
   }
