@@ -8,7 +8,6 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
-import kamon.Kamon
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }

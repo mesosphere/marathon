@@ -307,6 +307,7 @@ class ZkPersistenceStore(
       .toMat(Sink.ignore)(Keep.right)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def sync(): Future[Done] = async {
     await(client.sync("/").asTry) match {
       case Success(_) =>
