@@ -45,6 +45,7 @@ class GroupManagerImpl(
     */
   private[this] val root = LockedVar(initialRoot)
 
+  @SuppressWarnings(Array("OptionGet"))
   override def rootGroup(): RootGroup =
     root.get() match { // linter:ignore:UseGetOrElseNotPatMatch
       case None =>
