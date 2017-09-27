@@ -18,14 +18,14 @@ class V2Controller(
     pathPrefix("apps") {
       appsController.route
     } ~
-    pathPrefix("events") {
-      eventsController.route
-    } ~
-    pathPrefix("plugins") {
-      pluginsController.route
-    } ~
-    pathPrefix("info") {
-      infoController.route
-    }
+      pathPrefix("events") {
+        eventsController.route
+      } ~
+      pathPrefix("plugins") {
+        pluginsController.route
+      } ~
+      pathPrefix("info") {
+        infoController.route
+      }
   }
 }

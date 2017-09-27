@@ -19,6 +19,8 @@ import mesosphere.marathon.api.akkahttp.v2.{AppsController, EventsController, In
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.http.HttpRequestHandler
+import mesosphere.marathon.storage.StorageModule
+import mesosphere.util.state.MesosLeaderInfo
 
 class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
   override def configure(): Unit = {
@@ -36,6 +38,8 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     groupManager: GroupManager,
     pluginManager: PluginManager,
     marathonSchedulerService: MarathonSchedulerService,
+    storageModule: StorageModule,
+    mesosLeaderInfo: MesosLeaderInfo,
     appTasksRes: mesosphere.marathon.api.v2.AppTasksResource)(implicit
     actorSystem: ActorSystem,
     authenticator: Authenticator,
@@ -56,7 +60,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val resourceController = new ResourceController
     val systemController = new SystemController(config)
     val eventsController = new EventsController(conf, eventBus)
-    val infoController = new InfoController()
+    val infoController = InfoController(mesosLeaderInfo, storageModule.frameworkIdRepository, conf)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
     val v2Controller = new V2Controller(appsController, eventsController, pluginsController, infoController)
 
