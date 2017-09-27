@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{ CountDownLatch, ExecutorService }
 import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
@@ -11,7 +11,7 @@ import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, DeploymentStepInfo }
-import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
+import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.instance.Instance
@@ -74,8 +74,10 @@ class MarathonSchedulerService @Inject() (
   migration: Migration,
   deploymentManager: DeploymentManager,
   @Named("schedulerActor") schedulerActor: ActorRef,
-  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef)(implicit mat: Materializer)
-    extends AbstractExecutionThreadService with ElectionCandidate with DeploymentService {
+  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef,
+  @Named(ModuleNames.ELECTION_EXECUTOR) electionExecutor: ExecutorService
+)(implicit mat: Materializer)
+    extends AbstractExecutionThreadService with DeploymentService {
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
 
@@ -107,6 +109,8 @@ class MarathonSchedulerService @Inject() (
   // be reused (i.e. once stopped they can't be started again. Thus,
   // we have to allocate a new driver before each run or after each stop.
   var driver: Option[SchedulerDriver] = None
+  @volatile private[this] var _leaderReady = false
+  def leaderReady = _leaderReady
 
   implicit val timeout: Timeout = 5.seconds
 
@@ -150,8 +154,21 @@ class MarathonSchedulerService @Inject() (
   override def run(): Unit = {
     log.info("Beginning run")
 
-    // The first thing we do is offer our leadership.
-    electionService.offerLeadership(this)
+    // ElectionService immediately offers leadership. We want to register to listen for when leadership was acquired
+    electionService.leaderTransitionEvents.takeWhile {
+      case LeadershipTransition.ObtainedLeadership =>
+        // We reuse the electionExecutor because these methods were called in that context, previously
+        // Consider removing after we rework the blocking Await.result calls in the startLeadership logic
+        electionExecutor.submit(new Runnable {
+          override def run: Unit = startLeadership()
+        })
+        true
+      case LeadershipTransition.LostLeadership =>
+        electionExecutor.submit(new Runnable {
+          override def run: Unit = stopLeadership()
+        })
+        false // Ends this stream instance stream
+    }.runWith(Sink.ignore)
 
     // Block on the latch which will be countdown only when shutdown has been
     // triggered. This is to prevent run()
@@ -195,7 +212,7 @@ class MarathonSchedulerService @Inject() (
 
   //Begin ElectionCandidate interface
 
-  override def startLeadership(): Unit = synchronized {
+  private[marathon] def startLeadership(): Unit = synchronized {
     log.info("As new leader running the driver")
 
     refreshCachesAndDoMigration()
@@ -247,6 +264,7 @@ class MarathonSchedulerService @Inject() (
         log.info("Finished postDriverRuns callbacks")
       }
     }
+    _leaderReady = true
   }
 
   private def refreshCachesAndDoMigration(): Unit = {
@@ -270,7 +288,7 @@ class MarathonSchedulerService @Inject() (
     Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
   }
 
-  override def stopLeadership(): Unit = synchronized {
+  private[marathon] def stopLeadership(): Unit = synchronized {
     // invoked by election service upon loss of leadership (state transitioned to Idle)
     log.info("Lost leadership")
 

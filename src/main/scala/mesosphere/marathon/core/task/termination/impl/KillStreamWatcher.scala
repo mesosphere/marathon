@@ -11,7 +11,7 @@ import java.util.UUID
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
-import mesosphere.marathon.stream.EnrichedSource
+import mesosphere.marathon.stream.{ EnrichedFlow, EnrichedSource }
 
 object KillStreamWatcher extends StrictLogging {
 
@@ -40,17 +40,13 @@ object KillStreamWatcher extends StrictLogging {
       merge(killedViaUnknownInstanceTerminated, eagerComplete = true)
   }
 
-  @SuppressWarnings(Array("AsInstanceOf"))
-  def ignoreFlow[T]: Flow[T, Nothing, NotUsed] =
-    Flow[T].filter(_ => false).asInstanceOf[Flow[T, Nothing, NotUsed]]
-
   private val singleDone = List(Done)
   private[impl] def killedInstanceFlow(instanceIds: Iterable[Instance.Id]): Flow[Instance.Id, Done, NotUsed] = {
 
     val instanceIdsSet = instanceIds.toSet
     if (instanceIdsSet.isEmpty) {
       logger.info("Asked to watch no instances. Completing immediately.")
-      ignoreFlow[Instance.Id].prepend(Source.single(Done)).take(1)
+      EnrichedFlow.ignore[Instance.Id].prepend(Source.single(Done)).take(1)
     } else {
       Flow[Instance.Id].
         filter(instanceIdsSet).

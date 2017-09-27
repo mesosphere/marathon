@@ -2,7 +2,9 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import akka.actor._
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{ Sink, Source }
+import mesosphere.marathon.core.election.{ ElectionService, LeadershipState }
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.{ ApiMetric, Metrics, SettableGauge }
@@ -29,21 +31,25 @@ class HttpEventStreamActorMetrics() {
   * It subscribes to the event stream and pushes all marathon events to all listener.
   */
 class HttpEventStreamActor(
-  electionService: ElectionService,
+  leaderStateEvents: Source[LeadershipState, Cancellable],
   metrics: HttpEventStreamActorMetrics,
   handleStreamProps: HttpEventStreamHandle => Props)
     extends Actor {
   //map from handle to actor
   private[impl] var streamHandleActors = Map.empty[HttpEventStreamHandle, ActorRef]
   private[this] val log = LoggerFactory.getLogger(getClass)
+  private implicit val materializer = ActorMaterializer()
+  private var leaderStateSubscriber: Cancellable = _
 
   override def preStart(): Unit = {
     metrics.numberOfStreams.setValue(0)
-    electionService.subscribe(self)
+    leaderStateSubscriber = leaderStateEvents
+      .to(Sink.foreach { state: LeadershipState => self ! state })
+      .run
   }
 
   override def postStop(): Unit = {
-    electionService.unsubscribe(self)
+    leaderStateSubscriber.cancel()
     metrics.numberOfStreams.setValue(0)
   }
 
@@ -90,12 +96,12 @@ class HttpEventStreamActor(
 
   /** Switch behavior according to leadership changes. */
   private[this] def handleLeadership: Receive = {
-    case LocalLeadershipEvent.Standby =>
+    case _: LeadershipState.Standby =>
       log.info("Now standing by. Closing existing handles and rejecting new.")
       context.become(standby)
       streamHandleActors.keys.foreach(removeHandler)
 
-    case LocalLeadershipEvent.ElectedAsLeader =>
+    case LeadershipState.ElectedAsLeader =>
       log.info("Became active. Accepting event streaming requests.")
       context.become(active)
   }

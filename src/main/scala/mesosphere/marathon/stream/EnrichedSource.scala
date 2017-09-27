@@ -1,12 +1,21 @@
 package mesosphere.marathon
 package stream
 
-import akka.actor.Cancellable
+import akka.actor.{ Cancellable, PoisonPill }
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Source
-import mesosphere.marathon.util.ActorCancellable
+import mesosphere.marathon.util.CancellableOnce
 
 object EnrichedSource {
+
+  /**
+    * Stream that produces no elements, but is cancellable
+    */
+  val emptyCancellable: Source[Nothing, Cancellable] =
+    Source.queue[Nothing](1, OverflowStrategy.fail).mapMaterializedValue { m =>
+      new CancellableOnce(() => m.complete())
+    }
+
   /**
     * Returns a Source which subscribes to messages of the given type
     *
@@ -37,7 +46,7 @@ object EnrichedSource {
     source.
       mapMaterializedValue { ref =>
         eventStream.subscribe(ref, message)
-        new ActorCancellable(ref)
+        new CancellableOnce(() => ref ! PoisonPill)
       }
   }
 }

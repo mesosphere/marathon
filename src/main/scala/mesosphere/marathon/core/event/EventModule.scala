@@ -31,7 +31,7 @@ class EventModule(
     actorSystem.actorOf(
       Props(
         new HttpEventStreamActor(
-          electionService,
+          electionService.leaderStateEvents,
           new HttpEventStreamActorMetrics(),
           handleStreamProps)
       ),

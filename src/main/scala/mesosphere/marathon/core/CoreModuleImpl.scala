@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core
 
 import java.time.Clock
+import java.util.concurrent.ExecutorService
 import javax.inject.Named
 
 import akka.actor.ActorSystem
@@ -52,7 +53,8 @@ class CoreModuleImpl @Inject() (
   clock: Clock,
   scheduler: Provider[DeploymentService],
   instanceUpdateSteps: Seq[InstanceChangeHandler],
-  taskStatusUpdateProcessor: TaskStatusUpdateProcessor
+  taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
+  @Named(ModuleNames.ELECTION_EXECUTOR) electionExecutor: ExecutorService
 )
     extends CoreModule {
 
@@ -70,7 +72,8 @@ class CoreModuleImpl @Inject() (
     eventStream,
     hostPort,
     lifecycleState,
-    crashStrategy
+    crashStrategy,
+    electionExecutor
   )
 
   // TASKS
