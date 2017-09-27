@@ -727,7 +727,7 @@ def test_pod_secret_env_var(secret_fixture):
     cmd = "curl {}:{}/secret-env".format(host, port)
     status, data = shakedown.run_command_on_master(cmd)
 
-    assert status, "{} did not succeed".format(cmd)
+    assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
     assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
 
@@ -791,7 +791,7 @@ def test_pod_file_based_secret(secret_fixture):
     cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
     status, data = shakedown.run_command_on_master(cmd)
 
-    assert status, "{} did not succeed".format(cmd)
+    assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
     assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
 
