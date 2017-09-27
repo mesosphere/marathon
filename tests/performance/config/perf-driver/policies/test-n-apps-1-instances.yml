@@ -1,0 +1,107 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : N apps / 1 instances scale test    #
+# ----------------------------------------------------------- #
+# This fragment defines two parameters that we are going to   #
+# explore: the number of `aps`, fixing `instances` to 1.      #
+#                                                             #
+# It also defines how these parameters are going to be a      #
+# applied to the marathon instance.                           #
+#                                                             #
+# Finally, it also includes an inter-test clean-up phase that #
+# helps reduce the number of resources consumed by the test.  #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Input parameters of the test
+  parameters:
+
+    - name: apps
+      uuid: 7836e302bb7f43ea8e3477264c9b523e
+      units: count
+      desc: The number of apps deployed to marathon
+
+# Definitions
+# ===========================
+define:
+
+  # Instruct whoever is trying to normalize the indicators to do so
+  # against the number of apps
+  normalize_to: apps
+
+# Test Metadata
+# ===========================
+meta:
+  test: n-apps-1-instances
+
+# Test policy configuration
+# ===========================
+policies:
+
+  # Use multi-step exploration policy even if we are using only 1 step
+  - class: policy.MultiStepPolicy
+    steps:
+
+      # Scale the apps
+      - name: Scale Apps
+        values:
+          - parameter: apps
+            min: 50
+            step: 50
+            max: 500
+
+        events:
+          # Wait until marathon is started before continuing with the tests
+          start: MarathonStartedEvent:single
+
+          # We advance to next values every time we receive a deployment completion
+          advance: MarathonDeploymentSuccessEvent MarathonDeploymentFailedEvent
+
+        # Wait for "apps" number of advance events before actually advancing
+        advance_condition:
+          events: "apps"
+
+        tasks:
+          pre_value: intertest
+
+# Channel configuration
+# ===========================
+channels:
+
+  # Perform a bulk of marathon deployments for every {{apps}} change
+  - class: channel.MarathonDeployChannel
+    url: "{{marathon_url}}"
+    trigger:
+      parameters: apps
+    deploy:
+      - type: app
+        repeat: "apps"
+        spec: |
+          {
+            "cmd": "sleep infinity",
+            "cpus": 0.005,
+            "mem": 32,
+            "disk": 0,
+            "instances": 1,
+            "id": "/scale-instances/{{uuid()}}",
+            "backoffFactor": 1.0,
+            "backoffSeconds": 0
+          }
+
+# One-shot tasks
+# ===========================
+tasks:
+
+  # Right after ever test run we should remove all the instances
+  - class: tasks.marathon.RemoveGroup
+    url: "{{marathon_url}}"
+    group: /scale-instances
+    at: intertest
+
+  # Also remove the tests if they were abruptly terminated
+  - class: tasks.marathon.RemoveGroup
+    url: "{{marathon_url}}"
+    group: /scale-instances
+    at: teardown

@@ -1,0 +1,15 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Image Plots Reporter               #
+# ----------------------------------------------------------- #
+# This fragment enables the PlotReporter that is visualising  #
+# the results as a 2D plot image and stores it in the results #
+# folder.                                                     #
+# ----------------------------------------------------------- #
+
+# Reporter configuration
+# ===========================
+reporters:
+
+  # Create plots as images to results/plot-*.png
+  - class: reporter.PlotReporter
+    prefix: "results/plot-{{versionspec}}-"

@@ -1,0 +1,44 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Extract groupsResponseTime time    #
+# ----------------------------------------------------------- #
+# This fragment installs a EventAttributeTracker that is      #
+# going to write the timing response of the groups endpoint   #
+# to the groups response endpoint.                            #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Define the metrics we are measuring
+  metrics:
+    - name: groupsResponseTime
+      uuid: 6be71b57b76a49a180c4e8760513cf85
+      desc: The time it takes for the /groups endpoint to respond
+      summarize: [mean_err]
+      units: sec
+
+  # Define the indicators that can summarise our values
+  indicators:
+
+    # Calculate `meangroupsResponseTime` by calculating the normalizing average
+    # of all the `groupsResponseTime` mean values, normalized against each test's
+    # normalization expression
+    - name: meangroupsResponseTime
+      class: indicator.NormalizedMeanMetricIndicator
+      metric: groupsResponseTime.mean_err
+      normalizeto: "{{normalize_to}}"
+
+# Tracker configuration
+# ===========================
+trackers:
+
+  # We are writing down the value measured by the HTTPTimingObserver as a metric
+  # The observer is emitting a `HTTPTimingResultEvent` when the sampling is
+  # completed, so we are getting event values and storing them as metrics
+  - class: tracker.EventAttributeTracker
+    event: HTTPTimingResultEvent
+    extract:
+      # (You can consult the `Event Reference` to know which attributes you can use)
+      - attrib: totalTime
+        metric: groupsResponseTime
