@@ -4,7 +4,7 @@ import java.time.Clock
 
 import mesosphere.marathon.RichClock
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.{DurationInfo, Offer}
+import org.apache.mesos.Protos.{ DurationInfo, Offer }
 
 import scala.concurrent.duration._
 import scala.language.implicitConversions
