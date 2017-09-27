@@ -37,6 +37,8 @@ The definition could look like this:
 }
 ```
 
+**Note:** Deploy an application group through a `POST` to the `/v2/groups` REST API endpoint.
+
 ## Dependencies 
 
 Applications can have dependencies. For example a Play application could require a database to run. 
