@@ -4,7 +4,7 @@ import org.rogach.scallop.{ ScallopConf, ScallopOption }
 
 import scala.concurrent.duration._
 
-trait MatcherConf extends ScallopConf {
+trait MatcherConf {
 
   def availableFeatures: Set[String]
 

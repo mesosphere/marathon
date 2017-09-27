@@ -1,7 +1,5 @@
 package mesosphere.mesos
 
-import java.time.Clock
-
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
@@ -17,7 +15,7 @@ import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatcher
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
@@ -30,7 +28,7 @@ import scala.concurrent.duration.Duration
 
 class ResourceMatcherTest extends UnitTest with Inside {
 
-  implicit val clock = Clock.systemUTC()
+  implicit val clock = new SettableClock()
   val config = AllConf.withTestConfig("--draining_seconds", "300")
 
   "ResourceMatcher" should {

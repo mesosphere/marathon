@@ -1,7 +1,5 @@
 package mesosphere.mesos
 
-import java.time.Clock
-
 import mesosphere.UnitTest
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.Instance
@@ -14,7 +12,7 @@ import mesosphere.marathon.raml.{ Endpoint, Resources }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import mesosphere.marathon.AllConf
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
@@ -26,8 +24,8 @@ import scala.collection.breakOut
 
 class TaskGroupBuilderTest extends UnitTest with Inside {
 
-  implicit val clock = Clock.systemUTC()
-  val config = AllConf.withTestConfig("--draining_seconds", "300")
+  implicit val clock = new SettableClock()
+  val config = AllConf.withTestConfig()
 
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
     acceptedResourceRoles = Set(ResourceRole.Unreserved),

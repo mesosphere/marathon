@@ -17,7 +17,7 @@ object Availability {
       val start: Timestamp = offer.getUnavailability.getStart
       if (now.after(start - drainingTime)) {
         offer.getUnavailability.hasDuration &&
-          now.after(start + offer.getUnavailability.getDuration)
+          now.after(start + offer.getUnavailability.getDuration.toDuration)
       } else true
     } else true
   }
@@ -26,7 +26,7 @@ object Availability {
     * Convert Mesos DurationInfo to FiniteDuration.
     * @return FiniteDuration for DurationInfo
     */
-  implicit def toDuration(durationInfo: DurationInfo): FiniteDuration = {
-    FiniteDuration(durationInfo.getNanoseconds, NANOSECONDS)
+  implicit class DurationInfoHelper(val di: DurationInfo) extends AnyVal {
+    def toDuration: FiniteDuration = FiniteDuration(di.getNanoseconds, NANOSECONDS)
   }
 }
