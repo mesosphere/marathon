@@ -37,6 +37,7 @@ deployment_name: $DEPLOYMENT_NAME
 provider: aws
 aws_region: us-west-2
 template_parameters:
+    DefaultInstanceType: m4.large
     KeyName: default
     AdminLocation: 0.0.0.0/0
     PublicSlaveInstanceCount: 1
