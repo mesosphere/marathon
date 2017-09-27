@@ -1,26 +1,24 @@
 package mesosphere.mesos
 
-import java.time.Clock
-
 import com.google.protobuf.TextFormat
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ App, Resources }
-import mesosphere.marathon.state.Container.{ Docker, PortMapping }
+import mesosphere.marathon.raml.{App, Resources}
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
+import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.marathon.{ Protos, _ }
-import mesosphere.mesos.protos.{ Resource, _ }
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.marathon.{Protos, _}
+import mesosphere.mesos.protos.{Resource, _}
 import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.{ Protos => MesosProtos }
-import org.joda.time.{ DateTime, DateTimeZone }
+import org.apache.mesos.{Protos => MesosProtos}
+import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.duration._
 
@@ -28,7 +26,7 @@ class TaskBuilderTest extends UnitTest {
 
   import mesosphere.mesos.protos.Implicits._
 
-  implicit val clock = Clock.systemUTC()
+  implicit val clock = new SettableClock()
   val labels = Map("foo" -> "bar", "test" -> "test")
   val runSpecId = PathId("/test")
 
