@@ -82,6 +82,17 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       some should have size 2 // we do have two migrations now, 1.4.2 and 1.4.6
     }
 
+    "fail if a persistence store sync() fails" in {
+      val mockedStore = mock[PersistenceStore[_, _, _]]
+      mockedStore.sync() throws new StoreCommandFailedException("Failed to sync")
+
+      val f = new Fixture(mockedStore)
+      val migration = f.migration
+
+      val thrown = the[StoreCommandFailedException] thrownBy migration.migrate()
+      thrown.getMessage should equal ("Failed to sync")
+    }
+
     "migrate on an empty database will set the storage version" in {
       val mockedStore = mockStore()
       val f = new Fixture(mockedStore)

@@ -48,9 +48,12 @@ class GroupManagerImpl(
   override def rootGroup(): RootGroup =
     root.get() match { // linter:ignore:UseGetOrElseNotPatMatch
       case None =>
-        val group = Await.result(groupRepository.root(), config.zkTimeoutDuration)
-        root := Some(group)
-        group
+        root.update {
+          case None =>
+            Some(Await.result(groupRepository.root(), config.zkTimeoutDuration))
+          case group =>
+            group
+        }.get
       case Some(group) => group
     }
 
