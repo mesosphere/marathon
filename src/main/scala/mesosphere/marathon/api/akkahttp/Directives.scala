@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package api.akkahttp
-import akka.http.scaladsl.model.Uri.Path
-import akka.http.scaladsl.server.PathMatcher.{ Matched, Unmatched }
-import akka.http.scaladsl.model.{ DateTime, HttpHeader, HttpMethods, HttpProtocols }
-import akka.http.scaladsl.server.{ PathMatcher1, Directive0, Directives => AkkaDirectives }
+
 import akka.http.scaladsl.model.headers._
+import akka.http.scaladsl.model.{ DateTime, HttpHeader, HttpMethods, HttpProtocols }
+import akka.http.scaladsl.server.{ Directive0, Directives => AkkaDirectives }
+
 import scala.concurrent.duration._
 
 /**
@@ -13,17 +13,6 @@ import scala.concurrent.duration._
   * These should be imported by the respective controllers
   */
 object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectives {
-
-  /**
-    * Path matcher, that matches a segment only, if it is defined in the given set.
-    * @param set the allowed path segments.
-    */
-  class PathIsAvailableInSet(set: Set[String]) extends PathMatcher1[String] {
-    def apply(path: Path) = path match {
-      case Path.Segment(segment, tail) if set(segment) ⇒ Matched(tail, Tuple1(segment))
-      case _ ⇒ Unmatched
-    }
-  }
 
   /**
     * Use this directive to enable Cross Origin Resource Sharing for a given set of origins.
