@@ -53,7 +53,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
 
     val resourceController = new ResourceController
     val systemController = new SystemController(config)
-    val eventsController = new EventsController(conf, eventBus)
+    val eventsController = new EventsController(conf.eventStreamMaxOutstandingMessages(), eventBus)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
     val v2Controller = new V2Controller(appsController, eventsController, pluginsController)
 
