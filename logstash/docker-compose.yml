@@ -37,6 +37,7 @@ services:
     # Provide a simple pipeline configuration for Logstash with a bind-mounted file.
     volumes:
       - ./config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ${DCOS_LOG_BUNDLE}:/usr/share/logstash/bundle
     networks: ['stack']
     depends_on: ['elasticsearch', 'setup_logstash']
 
