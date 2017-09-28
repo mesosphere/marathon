@@ -281,14 +281,14 @@ class MarathonSchedulerActor private (
   }
 
   def deploymentSuccess(plan: DeploymentPlan): Unit = {
-    logger.info(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} finished")
+    logger.info(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} finished")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
-    logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} failed", reason)
+    logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} failed", reason)
     Future.sequence(plan.affectedRunSpecIds.map(launchQueue.asyncPurge))
-      .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id}", error); Done }
+      .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id} for ${plan.targetIdsString}", error); Done }
       .foreach { _ => eventBus.publish(core.event.DeploymentFailed(plan.id, plan)) }
   }
 }
