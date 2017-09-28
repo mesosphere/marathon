@@ -24,8 +24,6 @@ import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.Inside
 
-import scala.concurrent.duration.Duration
-
 class ResourceMatcherTest extends UnitTest with Inside {
 
   implicit val clock = new SettableClock()
@@ -856,7 +854,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
     }
 
     "match offers with maintenance mode and not enabled feature should not match" in {
-      val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now, Duration.Inf).build
+      val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
         id = "/test".toRootPath,
         resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
@@ -874,7 +872,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
 
     "match offers with maintenance mode and enabled feature should match" in {
       val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300", "--enable_features", Features.MAINTENANCE_MODE)
-      val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now, Duration.Inf).build
+      val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
         id = "/test".toRootPath,
         resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)

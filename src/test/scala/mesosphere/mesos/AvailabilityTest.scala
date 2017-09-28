@@ -33,7 +33,7 @@ class AvailabilityTest extends UnitTest {
     }
   }
 
-  def makeBasicOfferWithUnavailability(startTime: Timestamp = now, duration: Duration = Duration.Inf): Offer.Builder = {
+  def makeBasicOfferWithUnavailability(startTime: Timestamp = now, duration: FiniteDuration = Duration(5, DAYS)): Offer.Builder = {
     MarathonTestHelper.makeBasicOfferWithUnavailability(startTime, duration)
   }
 }

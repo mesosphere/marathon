@@ -7,7 +7,6 @@ import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.{ DurationInfo, Offer }
 
 import scala.concurrent.duration._
-import scala.language.implicitConversions
 
 object Availability {
 
@@ -17,7 +16,7 @@ object Availability {
       val start: Timestamp = offer.getUnavailability.getStart
 
       if (currentlyInDrainingState(now, start, drainingTime)) {
-        isAgentCurrentlyUnavailable(offer, start, now)
+        isAgentOutsideUnavailabilityWindow(offer, start, now)
       } else true
     } else true
   }
@@ -30,7 +29,7 @@ object Availability {
     offer.hasUnavailability && offer.getUnavailability.hasStart
   }
 
-  private def isAgentCurrentlyUnavailable(offer: Offer, start: Timestamp, now: Timestamp) = {
+  private def isAgentOutsideUnavailabilityWindow(offer: Offer, start: Timestamp, now: Timestamp) = {
     offer.getUnavailability.hasDuration && now.after(start + offer.getUnavailability.getDuration.toDuration)
   }
 

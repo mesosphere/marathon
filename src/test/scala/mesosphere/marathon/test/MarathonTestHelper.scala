@@ -36,7 +36,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.util.Random
 
 object MarathonTestHelper {
@@ -126,7 +126,7 @@ object MarathonTestHelper {
     offerBuilder
   }
 
-  def makeBasicOfferWithUnavailability(startTime: Timestamp, duration: Duration): Offer.Builder = {
+  def makeBasicOfferWithUnavailability(startTime: Timestamp, duration: FiniteDuration = Duration(5, MINUTES)): Offer.Builder = {
     val unavailableOfferBuilder = Unavailability.newBuilder()
       .setStart(TimeInfo.newBuilder().setNanoseconds(startTime.nanos))
 
