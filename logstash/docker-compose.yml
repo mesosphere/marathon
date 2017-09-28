@@ -1,0 +1,54 @@
+---
+version: '3'
+services:
+  # The environment variable "TAG" is used throughout this file to
+  # specify the version of the images to run. The default is set in the
+  # '.env' file in this folder. It can be overridden with any normal
+  # technique for setting environment variables, for example:
+  #
+  #   TAG=6.0.0-beta1 docker-compose up
+  #
+  # REF: https://docs.docker.com/compose/compose-file/#variable-substitution
+  #
+  # Also to be sure to set ELASTIC_VERSION variable. For released versions,
+  # ${TAG} and ${ELASTIC_VERSION} will be identical, but for pre-release
+  # versions, ${TAG} might contain an extra build identifier, like
+  # "6.0.0-beta1-3eab5b40", so a full invocation might look like:
+  #
+  #   ELASTIC_VERSION=6.0.0-beta1 TAG=6.0.0-beta1-3eab5b40 docker-compose up
+  #
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${TAG}
+    environment: ['http.host=0.0.0.0', 'transport.host=127.0.0.1', 'ELASTIC_PASSWORD=${ELASTIC_PASSWORD}']
+    ports: ['127.0.0.1:9200:9200']
+    networks: ['stack']
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${TAG}
+    environment: ['ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}']
+    ports: ['127.0.0.1:5601:5601']
+    networks: ['stack']
+    depends_on: ['elasticsearch']
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${TAG}
+    environment:
+      - 'xpack.monitoring.elasticsearch.password=${ELASTIC_PASSWORD}'
+    # Provide a simple pipeline configuration for Logstash with a bind-mounted file.
+    volumes:
+      - ./config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    networks: ['stack']
+    depends_on: ['elasticsearch', 'setup_logstash']
+
+  # Run a short-lived container to set up Logstash.
+  setup_logstash:
+    image: centos:7
+    volumes: ['./scripts/setup-logstash.sh:/usr/local/bin/setup-logstash.sh:ro']
+    # The script may have CR/LF line endings if using Docker for Windows, so
+    # make sure that they don't confuse Bash.
+    command: ['/bin/bash', '-c', 'cat /usr/local/bin/setup-logstash.sh | tr -d "\r" | bash']
+    environment: ['ELASTIC_PASSWORD=${ELASTIC_PASSWORD}']
+    networks: ['stack']
+    depends_on: ['elasticsearch']
+
+networks: {stack: {}}
