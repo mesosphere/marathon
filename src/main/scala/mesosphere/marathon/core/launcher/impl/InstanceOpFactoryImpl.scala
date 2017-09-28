@@ -69,7 +69,8 @@ class InstanceOpFactoryImpl(
       config.mesosBridgeName())
 
     val matchedOffer =
-      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances, builderConfig.acceptedResourceRoles)
+      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
+        builderConfig.acceptedResourceRoles, config)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -91,7 +92,8 @@ class InstanceOpFactoryImpl(
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
 
     val matchResponse =
-      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq,
+        config.defaultAcceptedResourceRolesSet, config)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = Task.Id.forRunSpec(app.id)
@@ -156,7 +158,7 @@ class InstanceOpFactoryImpl(
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels),
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
             schedulerPlugins
           )
 
@@ -183,8 +185,8 @@ class InstanceOpFactoryImpl(
       }
 
       val resourceMatchResponse =
-        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream, ResourceSelector.reservable,
-          schedulerPlugins)
+        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream,
+          ResourceSelector.reservable, config, schedulerPlugins)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)
