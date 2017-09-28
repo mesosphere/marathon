@@ -205,7 +205,7 @@ object ResourceMatcher extends StrictLogging {
         // Add unavailability to noOfferMatchReasons
         noOfferMatchReasons += NoOfferMatchReason.AgentUnavailable
         logger.info(
-          s"Offer [${offer.getId.getValue}]. Agent unavailable.\n"
+          s"Offer [${offer.getId.getValue}]. Agent [${offer.getSlaveId}] on host [${offer.getHostname}] unavailable.\n"
         )
         result
       } else true
