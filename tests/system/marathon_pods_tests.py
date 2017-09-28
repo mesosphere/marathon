@@ -112,7 +112,7 @@ def test_event_channel_for_pods():
     # doesn't have permissions to write files.
     if shakedown.ee_version() == 'strict':
         pod_def['user'] = 'root'
-        common.add_dcos_marathon_root_user_acls()
+        common.add_dcos_marathon_user_acls()
 
     client = marathon.create_client()
     client.add_pod(pod_def)
@@ -399,7 +399,7 @@ def test_pod_with_container_network():
     # doesn't have permissions to write to /var/log within the container.
     if shakedown.ee_version() == 'strict':
         pod_def['user'] = 'root'
-        common.add_dcos_marathon_root_user_acls()
+        common.add_dcos_marathon_user_acls()
 
     client = marathon.create_client()
     client.add_pod(pod_def)
@@ -428,7 +428,7 @@ def test_pod_with_container_bridge_network():
     # doesn't have permissions to write to /var/log within the container.
     if shakedown.ee_version() == 'strict':
         pod_def['user'] = 'root'
-        common.add_dcos_marathon_root_user_acls()
+        common.add_dcos_marathon_user_acls()
 
     client = marathon.create_client()
     client.add_pod(pod_def)
