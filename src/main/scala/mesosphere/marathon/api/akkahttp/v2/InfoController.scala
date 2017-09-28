@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.plugin.auth.{Authenticator, AuthorizedResource, Authorizer, ViewResource}
+import mesosphere.marathon.plugin.auth.{ Authenticator, AuthorizedResource, Authorizer, ViewResource }
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json._
@@ -13,14 +13,15 @@ import play.api.libs.json._
 import scala.async.Async._
 import scala.concurrent.ExecutionContext
 
-case class InfoController(mesosLeaderInfo: MesosLeaderInfo,
-  val frameworkIdRepository: FrameworkIdRepository,
-  val config: MarathonConf)(
-  implicit
-  val authenticator: Authenticator,
-  val authorizer: Authorizer,
-  val electionService: ElectionService,
-  val executionContext: ExecutionContext) extends Controller with StrictLogging {
+case class InfoController(
+    val mesosLeaderInfo: MesosLeaderInfo,
+    val frameworkIdRepository: FrameworkIdRepository,
+    val config: MarathonConf)(
+    implicit
+    val authenticator: Authenticator,
+    val authorizer: Authorizer,
+    val electionService: ElectionService,
+    val executionContext: ExecutionContext) extends Controller with StrictLogging {
 
   import mesosphere.marathon.api.akkahttp.Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
@@ -57,10 +58,10 @@ case class InfoController(mesosLeaderInfo: MesosLeaderInfo,
     "zk_max_versions" -> config.maxVersions()
   )
 
-//  lazy val httpConfigValues = Json.obj(
-//    "http_port" -> config.httpPort.get,
-//    "https_port" -> config.httpsPort.get
-//  )
+  //  lazy val httpConfigValues = Json.obj(
+  //    "http_port" -> config.httpPort.get,
+  //    "https_port" -> config.httpsPort.get
+  //  )
 
   def info(): Route =
     authenticated.apply { implicit identity =>
@@ -72,7 +73,8 @@ case class InfoController(mesosLeaderInfo: MesosLeaderInfo,
             // Current lead might change so we have to fetch it each time.
             val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
 
-            Json.obj("name" -> BuildInfo.name,
+            Json.obj(
+              "name" -> BuildInfo.name,
               "name" -> BuildInfo.name,
               "version" -> BuildInfo.version,
               "buildref" -> BuildInfo.buildref,
@@ -81,7 +83,7 @@ case class InfoController(mesosLeaderInfo: MesosLeaderInfo,
               "frameworkId" -> frameworkId,
               "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
               "zookeeper_config" -> zookeeperConfigValues
-              //          "http_config" -> httpConfigValues)).build()
+            //          "http_config" -> httpConfigValues)).build()
             )
           }
         }

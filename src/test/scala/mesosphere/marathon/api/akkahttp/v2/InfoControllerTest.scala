@@ -2,13 +2,13 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import akka.http.scaladsl.model.{StatusCodes, Uri}
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import mesosphere.UnitTest
-import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
-import mesosphere.marathon.api.akkahttp.AuthDirectives.{NotAuthenticated, NotAuthorized}
+import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
+import mesosphere.marathon.api.akkahttp.AuthDirectives.{ NotAuthenticated, NotAuthorized }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
-import mesosphere.util.state.{FrameworkId, MesosLeaderInfo}
+import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Inside
 
@@ -86,8 +86,9 @@ class InfoControllerTest extends UnitTest with ScalatestRouteTest with Inside {
       Get(Uri./) ~> controller.route ~> check {
         Then("we receive a NotAuthenticated response")
         rejection shouldBe a[NotAuthenticated]
-        inside(rejection) { case NotAuthenticated(response) =>
-          response.status should be(StatusCodes.Forbidden)
+        inside(rejection) {
+          case NotAuthenticated(response) =>
+            response.status should be(StatusCodes.Forbidden)
         }
       }
     }
@@ -103,8 +104,9 @@ class InfoControllerTest extends UnitTest with ScalatestRouteTest with Inside {
       Get(Uri./) ~> controller.route ~> check {
         Then("we receive a NotAuthenticated response")
         rejection shouldBe a[NotAuthorized]
-        inside(rejection) { case NotAuthorized(response) =>
-          response.status should be(StatusCodes.Unauthorized)
+        inside(rejection) {
+          case NotAuthorized(response) =>
+            response.status should be(StatusCodes.Unauthorized)
         }
       }
     }

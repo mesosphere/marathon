@@ -8,7 +8,7 @@ import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
+import mesosphere.marathon.state.UnreachableStrategy
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
