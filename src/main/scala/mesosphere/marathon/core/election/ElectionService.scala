@@ -58,7 +58,15 @@ trait ElectionService {
     */
   def abdicateLeadership(): Unit
 
+  /**
+    * Materializable stream which, upon materialization, repeats the last event sent prior to materialization.
+    */
   def leaderStateEvents: Source[LeadershipState, Cancellable]
+
+  /**
+    * Stream of events describing leadership transition events; ObtainedLeadership, and LostLeadership. Does not emit
+    * the leader changes between two Marathon instances that aren't this one
+    */
   def leaderTransitionEvents: Source[LeadershipTransition, Cancellable]
 }
 
