@@ -1,4 +1,5 @@
 import os.path
+import uuid
 
 from utils import make_id, get_resource
 
@@ -30,8 +31,12 @@ def ucr_docker_http_server():
     return load_app('ucr-docker-http-server')
 
 
-def sleep_app():
-    return load_app('sleep-app')
+def sleep_app(app_id=None):
+    if app_id is None:
+        app_id = '/sleep-{}'.format(uuid.uuid4().hex)
+    app = load_app('sleep-app')
+    app['id'] = app_id
+    return app
 
 
 def docker_nginx_ssl():

@@ -487,7 +487,7 @@ def test_app_file_based_secret(secret_fixture):
     app_def = {
         "id": app_id,
         "instances": 1,
-        "cpus": 0.1,
+        "cpus": 0.5,
         "mem": 64,
         "cmd": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $PORT_API".format(
             secret_container_path, secret_container_path),
@@ -542,7 +542,7 @@ def test_app_secret_env_var(secret_fixture):
     app_def = {
         "id": app_id,
         "instances": 1,
-        "cpus": 0.1,
+        "cpus": 0.5,
         "mem": 64,
         "cmd": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $PORT_API",
         "env": {
@@ -682,7 +682,7 @@ def test_pod_secret_env_var(secret_fixture):
         "containers": [{
             "name": "container-1",
             "resources": {
-                "cpus": 0.1,
+                "cpus": 0.5,
                 "mem": 64
             },
             "endpoints": [{
@@ -717,7 +717,7 @@ def test_pod_secret_env_var(secret_fixture):
 
     client = marathon.create_client()
     client.add_pod(pod_def)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=pod_id)
 
     instances = client.show_pod(pod_id)['instances']
     assert len(instances) == 1, 'Failed to start the secret environment variable pod'
@@ -744,7 +744,7 @@ def test_pod_file_based_secret(secret_fixture):
         "containers": [{
             "name": "container-1",
             "resources": {
-                "cpus": 0.1,
+                "cpus": 0.5,
                 "mem": 64
             },
             "endpoints": [{
@@ -781,7 +781,7 @@ def test_pod_file_based_secret(secret_fixture):
 
     client = marathon.create_client()
     client.add_pod(pod_def)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=pod_id)
 
     instances = client.show_pod(pod_id)['instances']
     assert len(instances) == 1, 'Failed to start the file based secret pod'
