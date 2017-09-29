@@ -100,6 +100,7 @@ object PluginManagerImpl {
         case (id, value) =>
           JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))).as[PluginDefinition]
       }(collection.breakOut)
+      .filter(_.enabled.getOrElse(true))
     PluginDefinitions(plugins)
   }
 

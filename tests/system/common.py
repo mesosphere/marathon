@@ -5,6 +5,7 @@ import shakedown
 import shlex
 import time
 import uuid
+import sys
 
 from datetime import timedelta
 from dcos import http, mesos
@@ -587,22 +588,48 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
        `{action}`. For more information consult the DC/OS documentation:
        https://docs.mesosphere.com/1.9/administration/id-and-access-mgt/permissions/user-service-perms/
     """
-    print('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
-    url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
-    req = http.put(url)
-    assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
-
-
-def add_dcos_marathon_root_user_acls():
     try:
-        set_service_account_permissions('dcos_marathon', resource='dcos:mesos:master:task:user:root', action='create')
+        print('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
+        url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
+        req = http.put(url)
+        assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
-            print('Service account dcos_marathon already has "dcos:mesos:master:task:user:root" permissions set')
+            print('Service account {} already has {} permissions set'.format(service_account, resource))
         else:
+            print("Unexpected HTTP error: {}".format(e.response))
             raise
     except:
+        print("Unexpected error:", sys.exc_info()[0])
         raise
+
+
+def add_acs_resource(resource):
+    """Create given ACS `{resource}`. For more information consult the DC/OS documentation:
+       https://docs.mesosphere.com/1.9/administration/id-and-access-mgt/permissions/user-service-perms/
+    """
+    import json
+    try:
+        print('Adding ACS resource: {}'.format(resource))
+        url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}'.format(resource))
+        extra_args = {'headers': {'Content-Type': 'application/json'}}
+        req = http.put(url, data=json.dumps({'description' : resource}), **extra_args)
+        assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
+    except DCOSHTTPException as e:
+        if (e.response.status_code == 409):
+            print('ACS resource {} already exists'.format(resource))
+        else:
+            print("Unexpected HTTP error: {}, {}".format(e.response, e.response.text))
+            raise
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
+        raise
+
+
+def add_dcos_marathon_user_acls(user='root'):
+    resource = 'dcos:mesos:master:task:user:{}'.format(user)
+    add_acs_resource(resource)
+    set_service_account_permissions('dcos_marathon', resource, action='create')
 
 
 def get_marathon_endpoint(path, marathon_name='marathon'):

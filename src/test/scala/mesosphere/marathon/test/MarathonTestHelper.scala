@@ -36,6 +36,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
+import scala.concurrent.duration._
 import scala.util.Random
 
 object MarathonTestHelper {
@@ -123,6 +124,17 @@ object MarathonTestHelper {
     portsResource.foreach(offerBuilder.addResources)
 
     offerBuilder
+  }
+
+  def makeBasicOfferWithUnavailability(startTime: Timestamp, duration: FiniteDuration = Duration(5, MINUTES)): Offer.Builder = {
+    val unavailableOfferBuilder = Unavailability.newBuilder()
+      .setStart(TimeInfo.newBuilder().setNanoseconds(startTime.nanos))
+
+    if (duration.isFinite()) {
+      unavailableOfferBuilder.setDuration(DurationInfo.newBuilder().setNanoseconds(duration.toNanos))
+    }
+
+    MarathonTestHelper.makeBasicOffer().setUnavailability(unavailableOfferBuilder.build())
   }
 
   def mountSource(path: Option[String]): Mesos.Resource.DiskInfo.Source = {

@@ -98,11 +98,19 @@ object PathId {
     else PathId(in.split("_").toList, absolute = true)
   }
 
+  /**
+    * Removes empty path segments
+    * @param pieces collection with path segments
+    * @param absolute is path absolute
+    * @return created path
+    */
   def sanitized(pieces: TraversableOnce[String], absolute: Boolean = true) =
     PathId(pieces.filter(_.nonEmpty).toList, absolute)
 
-  def apply(in: String): PathId =
-    sanitized(in.replaceAll("""(^/+)|(/+$)""", "").split("/"), in.startsWith("/"))
+  def apply(in: String): PathId = {
+    val raw = in.replaceAll("""(^/+)|(/+$)""", "").split("/")
+    sanitized(raw, in.startsWith("/"))
+  }
 
   def empty: PathId = PathId(Nil)
 

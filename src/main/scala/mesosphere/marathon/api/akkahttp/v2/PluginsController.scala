@@ -26,6 +26,7 @@ class PluginsController(
 
   import mesosphere.marathon.api.akkahttp.Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
+  import mesosphere.marathon.api.akkahttp.PathMatchers._
 
   private[this] val pluginIdToHandler: Map[String, HttpRequestHandler] = definitions.plugins
     .withFilter(_.plugin == classOf[HttpRequestHandler].getName)
