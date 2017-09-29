@@ -8,10 +8,10 @@ import akka.event.EventStream
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.v2.{ AppNormalization, AppTasksResource, InfoEmbedResolver, LabelSelectorParsers }
+import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
-import mesosphere.marathon.api.v2.AppsResource.{ NormalizationConfig, authzSelector }
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
+import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -139,17 +139,14 @@ class AppsController(
     }
   }
 
-  private val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.get, config.mesosBridgeName())
-  private implicit val normalizeApp: Normalization[raml.App] =
-    appNormalization(NormalizationConfig(config.availableFeatures, normalizationConfig))(AppNormalization.withCanonizedIds())
-}
+  private val normalizationConfig = AppNormalization.Configuration(
+    config.defaultNetworkName.get,
+    config.mesosBridgeName()
+  )
 
-object AppsController {
+  private implicit val validateAndNormalizeApp: Normalization[raml.App] =
+    appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-  def appNormalization(config: NormalizationConfig): Normalization[raml.App] = Normalization { app =>
-    validateOrThrow(app)(AppValidation.validateOldAppAPI)
-    val migrated = AppNormalization.forDeprecated(config.config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.config.defaultNetworkName))
-    AppNormalization(config.config).normalized(migrated)
-  }
+  private implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
+    appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 }
