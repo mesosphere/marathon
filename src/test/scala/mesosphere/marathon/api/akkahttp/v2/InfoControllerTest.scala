@@ -51,8 +51,6 @@ class InfoControllerTest extends UnitTest with ScalatestRouteTest with Inside {
             |    "local_port_max" : 20000,
             |    "executor" : "//cmd",
             |    "hostname" : "Karstens-MacBook-Pro.local",
-            |    "webui_url" : null,
-            |    "mesos_role" : null,
             |    "task_launch_timeout" : 300000,
             |    "task_reservation_timeout" : 20000,
             |    "reconciliation_initial_delay" : 15000,
@@ -69,6 +67,10 @@ class InfoControllerTest extends UnitTest with ScalatestRouteTest with Inside {
             |    "zk_connection_timeout" : 10000,
             |    "zk_session_timeout" : 10000,
             |    "zk_max_versions" : 50
+            |  },
+            |  "http_config" : {
+            |    "http_port" : 8080,
+            |    "https_port" : 8081
             |  }
             |}""".stripMargin
         JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)

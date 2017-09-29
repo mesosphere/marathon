@@ -9,7 +9,6 @@ import mesosphere.marathon.plugin.auth.{ Authenticator, AuthorizedResource, Auth
 import mesosphere.marathon.raml.{ HttpConfig, MarathonConfig, MarathonInfo, ZooKeeperConfig }
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.util.state.MesosLeaderInfo
-import play.api.libs.json._
 
 import scala.async.Async._
 import scala.concurrent.ExecutionContext
@@ -33,7 +32,7 @@ case class InfoController(
     config.frameworkName.get,
     config.highlyAvailable.get,
     config.checkpoint.get,
-    config.localPortMax.get,
+    config.localPortMin.get,
     config.localPortMax.get,
     config.defaultExecutor.get,
     config.hostname.get,
