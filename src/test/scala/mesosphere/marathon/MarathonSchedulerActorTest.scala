@@ -471,7 +471,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     holder.driver = Some(driver)
     val taskFailureEventRepository: TaskFailureRepository = mock[TaskFailureRepository]
     val (inputLeaderStateEvents, leaderStateEvents) = Source.queue[LeadershipState](16, OverflowStrategy.fail)
-      .toMat(Repeater.sink(16, OverflowStrategy.fail))(Keep.both)
+      .toMat(Repeater(16, OverflowStrategy.fail))(Keep.both)
       .run()
     val schedulerActions: SchedulerActions = new SchedulerActions(
       groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(system.dispatcher)

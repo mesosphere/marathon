@@ -13,7 +13,7 @@ import scala.concurrent.duration.Duration
 class RepeaterTest extends AkkaUnitTest {
   "it propagates results to streams that register at any time during the stream" in {
     val (input, newSubscribers) = Source.queue[Int](32, OverflowStrategy.fail)
-      .toMat(Repeater.sink(32, OverflowStrategy.fail))(Keep.both)
+      .toMat(Repeater(32, OverflowStrategy.fail))(Keep.both)
       .run
 
     val result1 = newSubscribers.runWith(Sink.last)
@@ -28,14 +28,14 @@ class RepeaterTest extends AkkaUnitTest {
 
   /* This test takes a while to run. If you modify Repeater's code, you should run this at least once to ensure there
    * are no races. */
-  "it behaves identically when called in stochastic, asynchronous contexts" taggedAs WhenEnvSet("ASYNC_STRESS") in {
+  "it behaves deterministically called in stochastic, asynchronous contexts" taggedAs WhenEnvSet("ASYNC_STRESS") in {
     val executor = Executors.newFixedThreadPool(32)
     val stressTestEc = ExecutionContext.fromExecutor(executor)
     try {
       val s = Source(1 to 10000)
         .mapAsyncUnordered(8) { i =>
           val (input, newSubscribers) = Source.queue[Int](32, OverflowStrategy.fail)
-            .toMat(Repeater.sink(32, OverflowStrategy.fail))(Keep.both)
+            .toMat(Repeater(32, OverflowStrategy.fail))(Keep.both)
             .run
 
           Future {

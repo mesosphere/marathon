@@ -107,8 +107,8 @@ class ElectionServiceImpl(
         ()
     }
 
-    val leadershipTransitionsBroadcast = Repeater.sink[LeadershipTransition](32, OverflowStrategy.fail)(system.dispatcher)
-    val leaderEventsBroadcastSink = Repeater.sink[LeadershipState](32, OverflowStrategy.fail)(system.dispatcher)
+    val leadershipTransitionsBroadcast = Repeater[LeadershipTransition](32, OverflowStrategy.fail)
+    val leaderEventsBroadcastSink = Repeater[LeadershipState](32, OverflowStrategy.fail)
 
     val (leaderStream, leaderStreamDone, leaderTransitionEvents, leaderStateEvents) =
       RunnableGraph.fromGraph(GraphDSL.create(

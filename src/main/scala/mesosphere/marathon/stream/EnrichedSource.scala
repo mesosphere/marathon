@@ -12,8 +12,8 @@ object EnrichedSource {
     * Stream that produces no elements, but is cancellable
     */
   val emptyCancellable: Source[Nothing, Cancellable] =
-    Source.queue[Nothing](1, OverflowStrategy.fail).mapMaterializedValue { m =>
-      new CancellableOnce(() => m.complete())
+    Source.maybe[Nothing].mapMaterializedValue { m =>
+      new CancellableOnce(() => m.success(None))
     }
 
   /**

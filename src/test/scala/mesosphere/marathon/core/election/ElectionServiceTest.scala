@@ -13,7 +13,7 @@ import mesosphere.marathon.test.TestCrashStrategy
 class ElectionServiceTest extends AkkaUnitTest with Eventually {
   trait Fixture {
     val (input, output) = Source.queue[LeadershipState](32, OverflowStrategy.fail)
-      .toMat(Repeater.sink(32, OverflowStrategy.fail))(Keep.both)
+      .toMat(Repeater(32, OverflowStrategy.fail))(Keep.both)
       .run
 
     @volatile var subscribed = false
