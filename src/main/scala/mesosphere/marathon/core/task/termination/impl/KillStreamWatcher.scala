@@ -46,7 +46,7 @@ object KillStreamWatcher extends StrictLogging {
     val instanceIdsSet = instanceIds.toSet
     if (instanceIdsSet.isEmpty) {
       logger.info("Asked to watch no instances. Completing immediately.")
-      EnrichedFlow.ignore[Instance.Id].prepend(Source.single(Done)).take(1)
+      EnrichedFlow.ignore.prepend(Source.single(Done)).take(1)
     } else {
       Flow[Instance.Id].
         filter(instanceIdsSet).
