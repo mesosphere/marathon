@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
 import mesosphere.marathon.raml.AppUpdate
 import mesosphere.marathon.state.ResourceRole
 import play.api.libs.json.Json
@@ -10,10 +10,9 @@ import play.api.libs.json.Json
 class AppUpdateFormatTest extends UnitTest {
 
   def normalizedAndValidated(appUpdate: AppUpdate): AppUpdate =
-    AppsResource.appUpdateNormalization(
-      AppsResource.NormalizationConfig(
-        Set.empty,
-        AppNormalization.Configuration(None, "mesos-bridge-name"))).normalized(appUpdate)
+    AppHelpers.appUpdateNormalization(
+      Set.empty,
+      AppNormalization.Configuration(None, "mesos-bridge-name")).normalized(appUpdate)
 
   def fromJson(json: String): AppUpdate =
     normalizedAndValidated(Json.parse(json).as[AppUpdate])

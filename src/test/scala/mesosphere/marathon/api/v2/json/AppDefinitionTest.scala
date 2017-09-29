@@ -3,7 +3,7 @@ package api.v2.json
 
 import com.wix.accord._
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
@@ -24,9 +24,8 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val validAppDefinition = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
-    AppsResource.appNormalization(
-      AppsResource.NormalizationConfig(
-        enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name"))).normalized(app)
+    AppHelpers.appNormalization(
+      enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name")).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
