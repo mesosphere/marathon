@@ -101,7 +101,7 @@ class ElectionServiceImpl(
     }
     val crashOnLostLeaderSink = Sink.foreach[LeadershipTransition] {
       case LeadershipTransition.LostLeadership =>
-        logger.error(s"Lost leadership; crashing")
+        logger.error("Lost leadership; crashing")
         crashStrategy.crash()
       case _ =>
         ()
@@ -136,10 +136,10 @@ class ElectionServiceImpl(
     // When the leadership stream terminates, for any reason, we suicide
     leaderStreamDone.onComplete {
       case Failure(ex) =>
-        logger.info(s"Leadership ended with failure; exiting", ex)
+        logger.info("Leadership ended with failure; exiting", ex)
         crashStrategy.crash()
       case Success(_) =>
-        logger.info(s"Leadership ended gracefully; exiting")
+        logger.info("Leadership ended gracefully; exiting")
         crashStrategy.crash()
     }(ExecutionContexts.callerThread)
 

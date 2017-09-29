@@ -71,7 +71,6 @@ class CoreModuleImpl @Inject() (
     actorSystem,
     eventStream,
     hostPort,
-    lifecycleState,
     crashStrategy,
     electionExecutor
   )

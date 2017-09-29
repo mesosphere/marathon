@@ -36,6 +36,7 @@ object EnrichedFlow {
     *
     * @param filterInitial If the first value is this, then drop it
     */
+  @SuppressWarnings(Array("NullAssignment"))
   def dedup[T](filterInitial: T = null): Flow[T, T, NotUsed] = {
     Flow[T].statefulMapConcat { () =>
       var lastElement: T = filterInitial

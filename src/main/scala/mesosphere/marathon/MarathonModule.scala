@@ -116,7 +116,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
         driverHolder,
         electionService.leaderStateEvents,
         eventBus
-      )(mat).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
+      ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
 

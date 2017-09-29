@@ -4,7 +4,7 @@ package core.event.impl.stream
 import akka.actor._
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
-import mesosphere.marathon.core.election.{ ElectionService, LeadershipState }
+import mesosphere.marathon.core.election.LeadershipState
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.{ ApiMetric, Metrics, SettableGauge }

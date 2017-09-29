@@ -59,6 +59,7 @@ object CuratorElectionStream extends StrictLogging {
       }
   }
 
+  @SuppressWarnings(Array("CatchThrowable"))
   private class CuratorEventEmitter(
       singleThreadExecutor: ExecutorService,
       clientCloseable: LifeCycledCloseableLike[CuratorFramework],

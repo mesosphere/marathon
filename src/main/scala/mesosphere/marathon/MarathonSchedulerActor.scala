@@ -5,7 +5,7 @@ import akka.actor._
 import akka.pattern.pipe
 import akka.event.{ EventStream, LoggingReceive }
 import akka.stream.scaladsl.Source
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, ScalingProposition }
@@ -310,7 +310,7 @@ object MarathonSchedulerActor {
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leaderStateEvents: Source[LeadershipState, Cancellable],
-    eventBus: EventStream)(implicit mat: Materializer): Props = {
+    eventBus: EventStream): Props = {
     Props(new MarathonSchedulerActor(
       groupRepository,
       schedulerActions,

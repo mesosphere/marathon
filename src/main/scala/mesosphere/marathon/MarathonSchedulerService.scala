@@ -160,12 +160,12 @@ class MarathonSchedulerService @Inject() (
         // We reuse the electionExecutor because these methods were called in that context, previously
         // Consider removing after we rework the blocking Await.result calls in the startLeadership logic
         electionExecutor.submit(new Runnable {
-          override def run: Unit = startLeadership()
+          override def run(): Unit = startLeadership()
         })
         true
       case LeadershipTransition.LostLeadership =>
         electionExecutor.submit(new Runnable {
-          override def run: Unit = stopLeadership()
+          override def run(): Unit = stopLeadership()
         })
         false // Ends this stream instance stream
     }.runWith(Sink.ignore)
