@@ -4,6 +4,7 @@ package api.akkahttp.v2
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import mesosphere.UnitTest
+import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.api.akkahttp.AuthDirectives.{ NotAuthenticated, NotAuthorized }
 import mesosphere.marathon.core.election.ElectionService
@@ -115,7 +116,14 @@ class InfoControllerTest extends UnitTest with ScalatestRouteTest with Inside {
   }
 
   class Fixture(authenticated: Boolean = true, authorized: Boolean = true) {
-    val config: MarathonConf = new ScallopConf(Seq("--master", "foo", "--mesos_user", "Adam Douglas", "--hostname", "heart.of.gold")) with MarathonConf {
+    val options = Seq(
+      "--master", "foo",
+      "--mesos_user", "Adam Douglas",
+      "--hostname", "heart.of.gold",
+      "--http_port", "8080",
+      "--https_port", "8081"
+    )
+    val config = new ScallopConf(options) with MarathonConf with HttpConf {
       verify()
     }
     val auth = new TestAuthFixture()

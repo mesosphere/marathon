@@ -3,6 +3,7 @@ package api.akkahttp.v2
 
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth.{ Authenticator, AuthorizedResource, Authorizer, ViewResource }
@@ -16,7 +17,7 @@ import scala.concurrent.ExecutionContext
 case class InfoController(
     val mesosLeaderInfo: MesosLeaderInfo,
     val frameworkIdRepository: FrameworkIdRepository,
-    val config: MarathonConf)(
+    val config: MarathonConf with HttpConf)(
     implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
@@ -57,8 +58,9 @@ case class InfoController(
     config.maxVersions()
   )
 
-  val httpConfig = HttpConfig(8080, 8081)
+  val httpConfig = HttpConfig(config.httpPort(), config.httpsPort())
 
+  @SuppressWarnings(Array("all")) // async/await
   def info(): Route =
     authenticated.apply { implicit identity =>
       authorized(ViewResource, AuthorizedResource.SystemConfig).apply {

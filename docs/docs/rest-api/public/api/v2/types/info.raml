@@ -68,18 +68,18 @@ types:
         format: int64
       zk_max_versions:
         type: number
-        format: int64
+        format: int32
 
   HttpConfig:
     type: object
     properties:
       http_port:
         type: number
-        format: int64
+        format: int32
         minimum: 0
       https_port:
         type: number
-        format: int64
+        format: int32
         minimum: 0
 
   MarathonInfo:
