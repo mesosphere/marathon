@@ -28,7 +28,6 @@ import scala.concurrent.{ ExecutionContext, Future }
 class AppsController(
     val clock: Clock,
     val eventBus: EventStream,
-    val appTasksRes: AppTasksResource,
     val service: MarathonSchedulerService,
     val appInfoService: AppInfoService,
     val config: MarathonConf,
@@ -46,7 +45,7 @@ class AppsController(
   private implicit lazy val validateApp = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
   private implicit lazy val updateValidator = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
 
-  import AppsController._
+  import AppHelpers._
   import EntityMarshallers._
 
   import mesosphere.marathon.api.v2.json.Formats._
