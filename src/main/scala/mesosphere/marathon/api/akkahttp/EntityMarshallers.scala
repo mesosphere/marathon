@@ -18,7 +18,7 @@ import play.api.libs.json._
 
 object EntityMarshallers {
   import Directives.complete
-  import mesosphere.marathon.api.v2.json.Formats._
+  //  import mesosphere.marathon.api.v2.json.Formats._
   import mesosphere.marathon.raml.MetricsConversion._
 
   private val jsonStringUnmarshaller =

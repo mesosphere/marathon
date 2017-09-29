@@ -20,6 +20,26 @@ uses:
   killSelection: killSelection.raml
 
 types:
+  TaskCounts:
+    type: object
+    properties:
+      tasksStaged:
+        type: number
+        format: int32
+      tasksRunning:
+        type: number
+        format: int32
+      tasksHealthy:
+        type: number
+        format: int32
+      tasksUnhealthy:
+        type: number
+        format: int32
+  AppInfo:
+    type: object
+    properties:
+      # TODO: It is actually flattened
+      task_counts?: TaskCounts
   AppResidency:
     type: object
     description: |
