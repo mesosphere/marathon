@@ -59,7 +59,7 @@ object CuratorElectionStream extends StrictLogging {
       }
   }
 
-  class CuratorEventEmitter(
+  private class CuratorEventEmitter(
       singleThreadExecutor: ExecutorService,
       clientCloseable: LifeCycledCloseableLike[CuratorFramework],
       zooKeeperLeaderPath: String,

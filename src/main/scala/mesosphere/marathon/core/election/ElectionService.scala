@@ -167,10 +167,10 @@ object ElectionService extends StrictLogging {
       {
         case LeadershipState.ElectedAsLeader if !haveLeadership =>
           haveLeadership = true
-          List(LeadershipTransition.ObtainedLeadership)
+          LeadershipTransition.ObtainedLeadership :: Nil
         case LeadershipState.Standby(_) if haveLeadership =>
           haveLeadership = false
-          List(LeadershipTransition.LostLeadership)
+          LeadershipTransition.LostLeadership :: Nil
         case _ =>
           Nil
       }
