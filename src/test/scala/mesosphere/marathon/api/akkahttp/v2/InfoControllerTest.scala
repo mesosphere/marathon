@@ -50,12 +50,12 @@ class InfoControllerTest extends UnitTest with ScalatestRouteTest with Inside {
             |    "local_port_min" : 10000,
             |    "local_port_max" : 20000,
             |    "executor" : "//cmd",
-            |    "hostname" : "Karstens-MacBook-Pro.local",
+            |    "hostname" : "heart.of.gold",
             |    "task_launch_timeout" : 300000,
             |    "task_reservation_timeout" : 20000,
             |    "reconciliation_initial_delay" : 15000,
             |    "reconciliation_interval" : 600000,
-            |    "mesos_user" : "kjeschkies",
+            |    "mesos_user" : "Adam Douglas",
             |    "leader_proxy_connection_timeout_ms" : 5000,
             |    "leader_proxy_read_timeout_ms" : 10000,
             |    "features" : [ ],
@@ -115,7 +115,7 @@ class InfoControllerTest extends UnitTest with ScalatestRouteTest with Inside {
   }
 
   class Fixture(authenticated: Boolean = true, authorized: Boolean = true) {
-    val config: MarathonConf = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+    val config: MarathonConf = new ScallopConf(Seq("--master", "foo", "--mesos_user", "Adam Douglas", "--hostname", "heart.of.gold")) with MarathonConf {
       verify()
     }
     val auth = new TestAuthFixture()
