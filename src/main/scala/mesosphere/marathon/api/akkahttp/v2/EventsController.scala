@@ -6,7 +6,7 @@ import akka.event.EventStream
 import akka.http.scaladsl.model.RemoteAddress
 import akka.http.scaladsl.server.Route
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Keep, Source }
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkasse.ServerSentEvent
 import mesosphere.marathon.api.akkahttp.Controller
@@ -90,15 +90,17 @@ object EventsController extends StrictLogging {
 
     EnrichedSource.eventBusSource(classOf[MarathonEvent], eventStream, bufferSize, OverflowStrategy.fail)
       .via(EnrichedFlow.stopOnFirst(leaderLossKillSwitch))
-      .watchTermination() { (m, completed) =>
-        eventStream.publish(EventStreamAttached(remoteAddress = remoteAddress.toString()))
-        logger.info(s"EventStream attached: $remoteAddress")
+      .watchTermination()(Keep.both)
+      .mapMaterializedValue {
+        case (cancellable, completed) =>
+          eventStream.publish(EventStreamAttached(remoteAddress = remoteAddress.toString()))
+          logger.info(s"EventStream attached: $remoteAddress")
 
-        completed.onComplete { _ =>
-          eventStream.publish(EventStreamDetached(remoteAddress = remoteAddress.toString()))
-          logger.info(s"EventStream detached: $remoteAddress")
-        }(ExecutionContexts.callerThread)
-        m
+          completed.onComplete { _ =>
+            eventStream.publish(EventStreamDetached(remoteAddress = remoteAddress.toString()))
+            logger.info(s"EventStream detached: $remoteAddress")
+          }(ExecutionContexts.callerThread)
+          cancellable
       }
   }
 }
