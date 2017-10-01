@@ -3,17 +3,15 @@ package api.v2.validation
 
 import com.wix.accord.Validator
 import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.marathon.api.v2.AppNormalization
+import mesosphere.marathon.api.v2.{ AppNormalization }
 import mesosphere.marathon.raml._
 import mesosphere.{ UnitTest, ValidationTestLike }
 
-class AppValidationTest extends UnitTest with ResultMatchers with ValidationTestLike {
-
-  import Normalization._
+class AppValidationTest extends UnitTest with ValidationTestLike with ResultMatchers {
 
   val config = AppNormalization.Configuration(None, "mesos-bridge-name")
   val configWithDefaultNetworkName = AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name")
-  val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
+  implicit val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
   val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), () => config.defaultNetworkName)
   val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => configWithDefaultNetworkName.defaultNetworkName)
 
@@ -79,9 +77,8 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
             docker = Some(DockerContainer(
               image = "xyz", pullConfig = Some(DockerPullConfig("aSecret")))))))
 
-        withSecretsValidator(app).normalize should failWith(
-          "/container/docker/pullConfig" ->
-            "pullConfig.secret must refer to an existing secret")
+        shouldViolate(app, "/container/docker/pullConfig" -> "pullConfig.secret must refer to an existing secret")(
+          withSecretsValidator)
       }
     }
 
@@ -96,9 +93,8 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
               image = "xyz", pullConfig = Some(DockerPullConfig("aSecret")))))),
           secrets = Map("aSecret" -> SecretDef("/secret")))
 
-        withSecretsValidator(app).normalize should failWith(
-          "/container/docker" ->
-            "pullConfig is not supported with Docker containerizer")
+        shouldViolate(app, "/container/docker/pullConfig" -> "pullConfig is not supported with Docker containerizer")(
+          withSecretsValidator)
       }
     }
 
@@ -112,13 +108,11 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
             docker = Some(DockerContainer(
               image = "xyz", pullConfig = Some(DockerPullConfig("aSecret")))))))
 
-        basicValidator(app).normalize should failWith(
-          "/container/docker/pullConfig" ->
-            "must be empty",
-          "/container/docker/pullConfig" ->
-            "Feature secrets is not enabled. Enable with --enable_features secrets)",
-          "/container/docker/pullConfig" ->
-            "pullConfig.secret must refer to an existing secret")
+        shouldViolate(
+          app,
+          "/container/docker/pullConfig" -> "must be empty",
+          "/container/docker/pullConfig" -> "Feature secrets is not enabled. Enable with --enable_features secrets)",
+          "/container/docker/pullConfig" -> "pullConfig.secret must refer to an existing secret")
       }
     }
   }
@@ -148,23 +142,19 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
         val badApp = containerNetworkedApp(
           Seq(ContainerPortMapping(hostPort = Option(0))), networkCount = 2)
 
-        basicValidator(badApp).normalize should failWith(
-          "/container/portMappings(0)" ->
-            AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks)
+        shouldViolate(badApp, "/container/portMappings(0)" -> AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks)
       }
 
       "limit docker containers to a single network" in {
         val app = containerNetworkedApp(
           Seq(ContainerPortMapping()), networkCount = 2, true)
-        basicValidator(app).normalize should failWith(
-          "/" -> AppValidationMessages.DockerEngineLimitedToSingleContainerNetwork
-        )
+        shouldViolate(app, "/" -> AppValidationMessages.DockerEngineLimitedToSingleContainerNetwork)
       }
 
       "allow portMappings that don't declare hostPort nor networkNames" in {
         val app = containerNetworkedApp(
           Seq(ContainerPortMapping()), networkCount = 2)
-        basicValidator(app) shouldBe (aSuccess)
+        shouldSucceed(app)
       }
 
       "allow portMappings that both declare a hostPort and a networkNames" in {
@@ -172,20 +162,20 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
           ContainerPortMapping(
             hostPort = Option(0),
             networkNames = List("1"))), networkCount = 2)
-        basicValidator(app) shouldBe (aSuccess)
+        shouldSucceed(app)
       }
     }
 
     "single container network" should {
 
       "consider a valid portMapping with a name as valid" in {
-        basicValidator(
+        shouldSucceed(
           containerNetworkedApp(
             Seq(
               ContainerPortMapping(
                 hostPort = Some(80),
                 containerPort = 80,
-                networkNames = List("1"))))) shouldBe (aSuccess)
+                networkNames = List("1")))))
       }
 
       "consider a container network without name to be invalid" in {
@@ -200,68 +190,67 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
       }
 
       "consider a portMapping with a hostPort and two valid networkNames as invalid" in {
-        basicValidator(
-          containerNetworkedApp(
-            Seq(
-              ContainerPortMapping(
-                hostPort = Some(80),
-                containerPort = 80,
-                networkNames = List("1", "2"))),
-            networkCount = 3)) should containViolation(
-            "/container/portMappings(0)" -> AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks)
+        val app = containerNetworkedApp(
+          Seq(
+            ContainerPortMapping(
+              hostPort = Some(80),
+              containerPort = 80,
+              networkNames = List("1", "2"))),
+          networkCount = 3)
+        shouldViolate(app, "/container/portMappings(0)" -> AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks)
       }
 
       "consider a portMapping with no name as valid" in {
-        basicValidator(
+        shouldSucceed(
           containerNetworkedApp(
             Seq(
               ContainerPortMapping(
                 hostPort = Some(80),
                 containerPort = 80,
-                networkNames = Nil)))) shouldBe (aSuccess)
+                networkNames = Nil))))
       }
 
       "consider a portMapping without a hostport as valid" in {
-        basicValidator(
+        shouldSucceed(
           containerNetworkedApp(
             Seq(
               ContainerPortMapping(
-                hostPort = None)))) shouldBe (aSuccess)
+                hostPort = None))))
       }
 
       "consider portMapping with zero hostport as valid" in {
-        basicValidator(
+        shouldSucceed(
           containerNetworkedApp(
             Seq(
               ContainerPortMapping(
                 containerPort = 80,
-                hostPort = Some(0))))) shouldBe (aSuccess)
+                hostPort = Some(0)))))
       }
 
       "consider portMapping with a non-matching network name as invalid" in {
-        val result = basicValidator(
+        val app =
           containerNetworkedApp(
             Seq(
               ContainerPortMapping(
                 containerPort = 80,
                 hostPort = Some(80),
-                networkNames = List("undefined-network-name")))))
-        result.isFailure shouldBe true
+                networkNames = List("undefined-network-name"))))
+        shouldViolate(app, "/container/portMappings(0)/networkNames(0)" -> "is not one of (1)")
       }
 
       "consider portMapping without networkNames nor hostPort as valid" in {
-        basicValidator(
+        shouldSucceed(
           containerNetworkedApp(
             Seq(
               ContainerPortMapping(
                 containerPort = 80,
                 hostPort = None,
-                networkNames = Nil)))) shouldBe (aSuccess)
+                networkNames = Nil))))
       }
     }
 
     "general port validation" in {
-      basicValidator(
+      val app =
         containerNetworkedApp(
           Seq(
             ContainerPortMapping(
@@ -269,21 +258,21 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
               hostPort = Some(123)),
             ContainerPortMapping(
               name = Some("name"),
-              hostPort = Some(123))))).isFailure shouldBe true
+              hostPort = Some(123))))
+      shouldViolate(app, "/container/portMappings" -> "Port names must be unique.")
     }
 
     "missing hostPort is allowed for bridge networking (so we can normalize it)" in {
       // This isn't _actually_ allowed; we expect that normalization will replace the None to a Some(0) before
       // converting to an AppDefinition, in order to support legacy API
-      val app = networkedApp(
+      shouldSucceed(networkedApp(
         portMappings = Seq(ContainerPortMapping(
           containerPort = 8080,
           hostPort = None,
           servicePort = 0,
           name = Some("foo"))),
         networks = Seq(Network(mode = NetworkMode.ContainerBridge, name = None))
-      )
-      basicValidator(app) shouldBe (aSuccess)
+      ))
     }
 
   }

@@ -8,16 +8,16 @@ import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.{ Failure, Result, Success }
+import com.wix.accord.{ Failure, Result, Success, Validator }
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.test.Mockito
-import org.scalatest.matchers.{ BeMatcher, MatchResult, Matcher }
+import mesosphere.marathon.api.v2.Validation.ConstraintViolation
+import org.scalatest.matchers.{ BeMatcher, MatchResult }
 import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
 import org.scalatest.time.{ Minute, Minutes, Seconds, Span }
-import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.integration.setup.RestResult
 
 import scala.concurrent.ExecutionContextExecutor
@@ -69,7 +69,7 @@ trait ValidationTestLike extends Validation {
 
   protected implicit val normalizeResult: Normalization[Result] = Normalization {
     // normalize failures => human readable error messages
-    case f: Failure => Failure(f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
+    case f: Failure => f
     case x => x
   }
 
@@ -79,26 +79,51 @@ trait ValidationTestLike extends Validation {
     case th => throw th
   }.get
 
-  def containViolation(tuple: (String, String)): Matcher[Result] = containViolation(tuple._1, tuple._2)
+  private def describeViolation(c: ConstraintViolation) =
+    s"""- "${c.path}" -> "${c.constraint}""""
 
-  def containViolation(path: String, message: String): Matcher[Result] = {
-    Matcher {
-      case Success =>
-        MatchResult(
-          false,
-          s"result had no violations; expected ${path} -> ${message}",
-          s"result was success")
-
+  def shouldViolate[T](entity: T, expectedViolations: (String, String)*)(implicit validator: Validator[T]): Unit = {
+    validator(entity) match {
+      case Success => fail("Validation succeeded, but expected failure")
       case f: Failure =>
-        val violations = ValidationHelper.getAllRuleConstrains(f)
+        val violations = Validation.allViolations(f)
+        expectedViolations.foreach {
+          case (path, constraint) =>
+            val haveMatch = violations.exists { v => v.path == path && v.constraint == constraint }
 
-        MatchResult(
-          violations.exists { v =>
-            v.path.contains(path) && v.message == message
-          },
-          s"Violations:\n${violations.mkString("\n")} did not contain ${path} -> ${message}",
-          s"Violation contains ${path} -> ${message}"
-        )
+            if (!haveMatch)
+              fail(s"""Validation failed, but expected violation not in actual violation set
+                      |  Expected:
+                      |  - "${path}" -> "${constraint}"
+                      |  All violations:
+                      |  ${violations.map(describeViolation).mkString("\n  ")}
+                      |""".stripMargin.trim)
+        }
+    }
+  }
+
+  def shouldSucceed[T](entity: T)(implicit validator: Validator[T]): Unit = {
+    validator(entity) match {
+      case Success => Success
+      case f: Failure =>
+        val violations = Validation.allViolations(f)
+        fail(s"Validation failed, but expected success. Violations:\n${violations.map(describeViolation).mkString("\n")}")
+    }
+  }
+  def shouldNotViolate[T](entity: T, violation: (String, String))(implicit validator: Validator[T]): Unit = {
+    val (path, constraint) = violation
+    validator(entity) match {
+      case Success => Success
+      case f: Failure =>
+        val violations = Validation.allViolations(f)
+
+        if (violations.exists { v => v.path == path && v.constraint == constraint })
+          fail(s"""Validation was in validation set
+                  |  Unexpected:
+                  |  - "${path}" -> "${constraint}"
+                  |  All violations:
+                  |  ${violations.map(describeViolation).mkString("\n  ")}
+                  |""".stripMargin.trim)
     }
   }
 }

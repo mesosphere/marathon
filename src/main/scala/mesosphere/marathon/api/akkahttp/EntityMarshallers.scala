@@ -7,6 +7,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{ Rejection, RejectionError, Route }
 import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, Unmarshaller }
 import akka.util.ByteString
+import com.wix.accord.Descriptions.Explicit
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
@@ -54,7 +55,7 @@ object EntityMarshallers {
                   RuleViolation(
                     validationError.args.mkString(", "),
                     validationError.message,
-                    Some(path.toString()))
+                    path = Explicit(path.toString()))
                 }
             }
             throw RejectionError(ValidationFailed(Failure(violations.toSet)))

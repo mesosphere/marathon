@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package api.v2.json
 
-import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.marathon.api.v2.{ AppNormalization, Validation }
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.ContainerNetwork
@@ -21,7 +20,6 @@ class AppDefinitionFormatsTest extends UnitTest
     with AppAndGroupFormats
     with HealthCheckFormats
     with Matchers
-    with ResultMatchers
     with ValidationTestLike {
 
   import Formats.PathIdFormat
@@ -396,8 +394,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "FromJSON should throw a validation exception while parsing a Docker container with unsupported parameter" in {
       // credential is currently not supported
-      AppValidation.validateOldAppAPI(
-        Json.parse(
+      val app = Json.parse(
         """{
           |  "id": "test",
           |  "container": {
@@ -411,15 +408,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |    }
           |  }
           |}""".stripMargin).as[raml.App]
-      ) should failWith(
-        GroupViolationMatcher(
-          description = "container",
-          constraint = "is invalid",
-          violations = Set(
-            group("docker", "is invalid", "credential" -> "must be empty")
-          )
-        )
-      )
+      shouldViolate(app, "/container/docker/credential" -> "must be empty")(AppValidation.validateOldAppAPI)
     }
 
     "FromJSON should parse Mesos Docker container" in {
@@ -446,8 +435,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "FromJSON should throw a validation exception while parsing a Mesos Docker container with unsupported parameter" in {
       // port mappings is currently not supported
-      AppValidation.validateOldAppAPI(
-        Json.parse(
+      val app = Json.parse(
         """{
           |  "id": "/test",
           |  "container": {
@@ -458,15 +446,11 @@ class AppDefinitionFormatsTest extends UnitTest
           |    }
           |  }
           |}""".stripMargin).as[raml.App]
-      ) should failWith(GroupViolationMatcher(
-        description = "container",
-        constraint = "is invalid",
-        violations = Set(
-          group("docker", "is invalid", "portMappings" -> "must be empty")
-        )))
+
+      shouldViolate(app, "/container/docker/portMappings" -> "must be empty")(AppValidation.validateOldAppAPI)
+
       // network is currently not supported
-      AppValidation.validateOldAppAPI(
-        Json.parse(
+      val app2 = Json.parse(
         """{
           |  "id": "test",
           |  "container": {
@@ -477,15 +461,10 @@ class AppDefinitionFormatsTest extends UnitTest
           |    }
           |  }
           |}""".stripMargin).as[raml.App]
-      ) should failWith(GroupViolationMatcher(
-        description = "container",
-        constraint = "is invalid",
-        violations = Set(
-          group("docker", "is invalid", "network" -> "must be empty")
-        )))
+      shouldViolate(app2, "/container/docker/network" -> "must be empty")(AppValidation.validateOldAppAPI)
+
       // parameters are currently not supported
-      AppValidation.validateOldAppAPI(
-        Json.parse(
+      val app3 = Json.parse(
         """{
         |  "id": "test",
         |  "container": {
@@ -496,12 +475,7 @@ class AppDefinitionFormatsTest extends UnitTest
         |    }
         |  }
         |}""".stripMargin).as[raml.App]
-      ) should failWith(GroupViolationMatcher(
-        description = "container",
-        constraint = "is invalid",
-        violations = Set(
-          group("docker", "is invalid", "parameters" -> "must be empty")
-        )))
+      shouldViolate(app3, "/container/docker/parameters" -> "must be empty")(AppValidation.validateOldAppAPI)
     }
 
     "FromJSON should parse Mesos AppC container" in {
@@ -690,9 +664,8 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "container": {}
           |}""".stripMargin)
       val ramlApp = json.as[raml.App]
-      AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)(ramlApp) should failWith(
-        group("container", "is invalid", "docker" -> "not defined")
-      )
+      shouldViolate(ramlApp, "/container/docker" -> "not defined")(
+        AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName))
     }
   }
 }

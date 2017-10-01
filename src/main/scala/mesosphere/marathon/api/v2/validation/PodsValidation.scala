@@ -12,7 +12,6 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 
@@ -62,7 +61,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
           (argv.size should be > 0)(argv.size)
       }
     } else {
-      Failure(Set(RuleViolation(v1, s"Mesos Master ($mesosMasterVersion) does not support Command Health Checks", None)))
+      Failure(Set(RuleViolation(v1, s"Mesos Master ($mesosMasterVersion) does not support Command Health Checks")))
     }
   }
 
@@ -158,7 +157,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def containerValidator(pod: Pod, enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[PodContainer] =
     validator[PodContainer] { container =>
-      container.resources is valid(resourceValidator)
+      container.resources is resourceValidator
       container.endpoints is every(endpointValidator(pod.networks))
       container.image is optional(imageValidator(enabledFeatures, pod.secrets))
       container.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -179,7 +178,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
   val scalingValidator: Validator[PodScalingPolicy] = new Validator[PodScalingPolicy] {
     override def apply(v1: PodScalingPolicy): Result = v1 match {
       case fsf: FixedPodScalingPolicy => fixedPodScalingPolicyValidator(fsf)
-      case _ => Failure(Set(RuleViolation(v1, "Not a fixed scaling policy", None)))
+      case _ => Failure(Set(RuleViolation(v1, "Not a fixed scaling policy")))
     }
   }
 
@@ -198,12 +197,16 @@ trait PodsValidation extends GeneralPurposeCombinators {
     hostPorts.distinct.size == hostPorts.size
   }
 
+  // When https://github.com/wix/accord/issues/120 is resolved, we can inline this expression again
+  private def podSecretVolumes(pod: Pod) =
+    pod.volumes.collect { case sv: PodSecretVolume => sv }
+
   def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
-    pod.volumes.filterPF { case sv: PodSecretVolume => true } is empty or featureEnabled(enabledFeatures, Features.SECRETS)
-    pod.volumes.collect { case sv: PodSecretVolume => sv } is empty or every(secretVolumesValidator(pod.secrets))
+    podSecretVolumes(pod) is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+    podSecretVolumes(pod) is empty or every(secretVolumesValidator(pod.secrets))
     pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[PodVolume] =>
       val names = volumeNames(volumes)
       names.distinct.size == names.size
@@ -213,8 +216,8 @@ trait PodsValidation extends GeneralPurposeCombinators {
       val names = pod.containers.map(_.name)
       names.distinct.size == names.size
     }
-    pod.secrets is empty or (valid(secretValidator) and featureEnabled(enabledFeatures, Features.SECRETS))
-    pod.networks is valid(ramlNetworksValidator)
+    pod.secrets is empty or (secretValidator and featureEnabled(enabledFeatures, Features.SECRETS))
+    pod.networks is ramlNetworksValidator
     pod.networks is defaultNetworkNameValidator(() => defaultNetworkName)
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)

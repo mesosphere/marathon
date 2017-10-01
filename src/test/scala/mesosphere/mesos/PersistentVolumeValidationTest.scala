@@ -1,11 +1,10 @@
 package mesosphere.mesos
 
-import com.wix.accord._
-import mesosphere.UnitTest
+import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.state.{ PersistentVolume, PersistentVolumeInfo, Volume }
 import org.apache.mesos
 
-class PersistentVolumeValidationTest extends UnitTest {
+class PersistentVolumeValidationTest extends UnitTest with ValidationTestLike {
   "PersistentVolumeValidation" should {
     "create a PersistentVolume with no validation violations" in {
       Given("a PersistentVolume with no validation violations")
@@ -28,16 +27,9 @@ class PersistentVolumeValidationTest extends UnitTest {
       When("The volume is created and validation failed")
       volume should not be null
       volume.containerPath should be (path)
-      val validation = Volume.validVolume(Set())(volume)
-      validation.isSuccess should be (false)
 
       Then("A validation exists with a readable error message")
-      validation match {
-        case Failure(violations) =>
-          violations should contain (RuleViolation("/path", "value must not contain \"/\"", Some("containerPath")))
-        case Success =>
-          fail("validation should fail!")
-      }
+      shouldViolate(volume, "/containerPath" -> "value must not contain \"/\"")(Volume.validVolume(Set()))
     }
   }
 }
