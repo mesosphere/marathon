@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.condition
 
-import play.api.libs.json.Json
+import play.api.libs.json._
 import org.apache.mesos.Protos.{ TaskState => MesosTaskState }
 import scala.collection.breakOut
 
@@ -140,5 +140,15 @@ object Condition {
 
   def unapply(condition: Condition): Option[String] = Some(condition.toString.toLowerCase)
 
-  implicit val conditionFormat = Json.format[Condition]
+  val conditionReader = new Reads[Condition] {
+    private def readString(j: JsReadable) = j.validate[String].map(Condition(_))
+    override def reads(json: JsValue): JsResult[Condition] =
+      readString(json).orElse {
+        json.validate[JsObject].flatMap { obj => readString(obj \ "str") }
+      }
+  }
+
+  implicit val conditionFormat = Format[Condition](
+    conditionReader,
+    Writes(condition => JsString(condition.toString)))
 }

@@ -2,8 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
-import play.api.data.validation.ValidationError
-import play.api.libs.json.{ JsPath, JsResultException, Json }
+import play.api.libs.json.{ JsonValidationError, JsPath, JsResultException, Json }
 
 class RamlConstraintsTest extends UnitTest {
 
@@ -28,7 +27,7 @@ class RamlConstraintsTest extends UnitTest {
           """.stripMargin
 
         val errorPath = JsPath \ "containers" \ 0 \ "environment" \ "bad variable name"
-        val expectedError = errorPath -> Seq(ValidationError("error.pattern", Pod.ConstraintEnvironmentKeypattern.regex))
+        val expectedError = errorPath -> Seq(JsonValidationError("error.pattern", Pod.ConstraintEnvironmentKeypattern.regex))
 
         val ex = intercept[JsResultException](Json.parse(raw).as[Pod])
         ex.errors should contain(expectedError)
