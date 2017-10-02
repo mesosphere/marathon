@@ -92,14 +92,14 @@ object Dependency {
     val AkkaSSE = "2.0.0"
     val ApacheCommonsCompress = "1.13"
     val ApacheCommonsIO = "2.5"
-    val AsyncAwait = "0.9.6"
+    val AsyncAwait = "0.9.7"
     val Jersey = "1.18.6"
     val JettyServlets = "9.3.6.v20151106"
     val JodaTime = "2.9.9"
     val JodaConvert = "1.8.1"
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
-    val Diffson = "2.0.2"
+    val Diffson = "2.2.2"
     val PlayJson = "2.6.6"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.5"
@@ -188,7 +188,7 @@ object Dependency {
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
     val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % V.AkkaHttp
-    val diffson = "org.gnieh" %% "diffson" % V.Diffson
+    val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator

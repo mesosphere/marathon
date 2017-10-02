@@ -19,7 +19,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.2")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.25")
-addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.10.6")
+addSbtPlugin("com.lightbend.sbt" % "sbt-aspectj" % "0.11.0")
 addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-M15")
 
 libraryDependencies ++= Seq(
