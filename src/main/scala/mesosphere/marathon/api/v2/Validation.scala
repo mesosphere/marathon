@@ -53,43 +53,71 @@ trait Validation {
     override def apply(t: T): Result = if (!b(t)) Success else validator(t)
   }
 
-  implicit def everyKeyValue[T](implicit validator: Validator[T]): Validator[Iterable[(String, T)]] = {
-    def mapViolation(violation: Violation, desc: Description): Violation = {
-      violation match {
-        case RuleViolation(value, constraint, path) =>
-          RuleViolation(value, constraint, desc +: path)
-        case GroupViolation(value, constraint, children, path) =>
-          GroupViolation(value, constraint, children, desc +: path)
+  implicit class RichViolation(v: Violation) {
+    def withPath(path: Path): Violation =
+      v match {
+        case RuleViolation(value, constraint, _) =>
+          RuleViolation(value, constraint, path)
+        case GroupViolation(value, constraint, children, _) =>
+          GroupViolation(value, constraint, children, path)
       }
-    }
+  }
+
+  /**
+    * Given a key-value collection (such as a Map), applies the validator to each value, with the key being preppended
+    * to the validation Path for each respective violation.
+    *
+    * Does not validate keys.
+    *
+    * @param validator The validation to apply to each value of the key-value collection.
+    */
+  def everyKeyValue[T](validator: Validator[T]): Validator[Iterable[(String, T)]] = {
     new Validator[Iterable[(String, T)]] {
       override def apply(seq: Iterable[(String, T)]): Result = {
         seq.foldLeft[Result](Success) {
-          case (result, (key, value)) =>
+          case (accum, (key, value)) =>
             validator(value) match {
-              case Success => result
-              case Failure(violations) => result.and(Failure(violations.map(mapViolation(_, Generic(key)))))
+              case Success => accum
+              case Failure(violations) =>
+                val scopedViolations = violations.map { violation =>
+                  violation.withPath(Generic(key) +: violation.path) }
+                accum.and(Failure(scopedViolations))
             }
         }
       }
     }
   }
-  implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
-    def mapViolation(violation: Violation, desc: Description): Violation = {
-      violation match {
-        case RuleViolation(value, constraint, path) =>
-          RuleViolation(value, constraint, desc +: path)
-        case GroupViolation(value, constraint, children, path) =>
-          GroupViolation(value, constraint, children, desc +: path)
-      }
-    }
+
+  /**
+    * Apply a validation to each member of the provided (ordered) collection, appropriately appending the index of said
+    * sequence to the validation Path.
+    *
+    * You can use this to validate a Set, but this is not recommended as the index of failures will be
+    * non-deterministic.
+    *
+    * Note that wix accord provide the built in `each` DSL keyword. However, this approach does not lend itself well to
+    * composable validations. One can write, just fine:
+    *
+    *     model.values.each is notEmpty
+    *
+    * But this approach does lend itself well for cases such as this:
+    *
+    *     model.values is (condition) or every(notEmpty)
+    *     model.values is optional(every(notEmpty))
+    *
+    * @param validator The validation to apply to each element of the collection
+    */
+  implicit def every[T](validator: Validator[T]): Validator[Iterable[T]] = {
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
         seq.zipWithIndex.foldLeft[Result](Success) {
-          case (result, (item, index)) =>
+          case (accum, (item, index)) =>
             validator(item) match {
-              case Success => result
-              case Failure(violations) => result.and(Failure(violations.map(mapViolation(_, Indexed(index.toLong)))))
+              case Success => accum
+              case Failure(violations) =>
+                val scopedViolations = violations.map { violation =>
+                  violation.withPath(Indexed(index.toLong) +: violation.path) }
+                accum.and(Failure(scopedViolations))
             }
         }
       }
@@ -264,6 +292,12 @@ trait Validation {
 
   def validateAll[T](x: T, all: Validator[T]*): Result = all.map(v => validate(x)(v)).fold(Success)(_ and _)
 
+  /**
+    * Given a wix accord violation, return a sequence of our own ConstraintViolation model, rendering the wix accord
+    * paths down to a string representation.
+    *
+    * @param result The wix accord validation result
+    */
   def allViolations(result: Result): Seq[ConstraintViolation] = {
     def renderPath(desc: Description): String = desc match {
       case Explicit(s) => s"/${s}"
@@ -294,10 +328,6 @@ trait Validation {
 object Validation extends Validation {
 
   case class ConstraintViolation(path: String, constraint: String)
-
-  implicit class AsDescription(val optional: Option[String]) extends AnyVal {
-    def asDescription: Description = ??? //optional.fold[Description](Empty)(Explicit)
-  }
 
   def forAll[T](all: Validator[T]*): Validator[T] = new Validator[T] {
     override def apply(x: T): Result = validateAll(x, all: _*)

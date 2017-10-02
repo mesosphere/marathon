@@ -3,6 +3,7 @@ package api.v2.json
 
 import com.wix.accord.Descriptions.Generic
 import com.wix.accord._
+import mesosphere.marathon.api.akkahttp.EntityMarshallers
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.api.JsonTestHelper
@@ -19,15 +20,14 @@ import scala.collection.immutable.Seq
 
 class AppUpdateTest extends UnitTest with ValidationTestLike {
 
-  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(Set("secrets"), () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName)
+  implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(
+    Set("secrets"), () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName)
 
   val roundTripValidator = new Validator[AppUpdate] {
     override def apply(update: AppUpdate) = {
       Json.fromJson[AppUpdate](Json.toJson(update)) match {
         case err: JsError =>
-          Failure(ValidationHelper.getAllRuleConstrains(err).map { cv =>
-            RuleViolation(None, cv.constraint, cv.path.split("/").filter(_ != "").map(Generic(_)).toSeq)
-          })
+          EntityMarshallers.jsErrorToFailure(err)
         case obj => appUpdateValidator(obj.get)
       }
     }

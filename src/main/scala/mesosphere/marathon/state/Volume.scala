@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package state
 
+import com.wix.accord.Descriptions.{ Generic, Path => WixPath }
 import java.util.regex.Pattern
 
-import com.wix.accord.Descriptions.Generic
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
@@ -169,7 +169,7 @@ object PersistentVolumeInfo {
       if (!c.hasField || !c.hasOperator) {
         Failure(Set(RuleViolation(c, "Missing field and operator")))
       } else if (c.getField != "path") {
-        Failure(Set(RuleViolation(c, "Unsupported field", Generic(c.getField))))
+        Failure(Set(RuleViolation(c, "Unsupported field", WixPath(Generic(c.getField)))))
       } else {
         c.getOperator match {
           case LIKE | UNLIKE =>
@@ -181,13 +181,13 @@ object PersistentVolumeInfo {
                   Failure(Set(RuleViolation(
                     c,
                     "Invalid regular expression",
-                    Generic("value"))))
+                    WixPath(Generic("value")))))
               }
             } else {
-              Failure(Set(RuleViolation(c, "A regular expression value must be provided", Generic("value"))))
+              Failure(Set(RuleViolation(c, "A regular expression value must be provided", WixPath(Generic("value")))))
             }
           case _ =>
-            Failure(Set(RuleViolation(c, "Operator must be one of LIKE, UNLIKE", Generic("operator"))))
+            Failure(Set(RuleViolation(c, "Operator must be one of LIKE, UNLIKE", WixPath(Generic("operator")))))
         }
       }
     }
