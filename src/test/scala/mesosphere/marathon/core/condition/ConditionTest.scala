@@ -72,4 +72,12 @@ class ConditionTest extends UnitTest {
       "be terminal" in { condition.isTerminal should be(true) }
     }
   }
+
+  "Condition apply/unapply" should {
+    "round trip all instances" in {
+      Condition.all.foreach { condition =>
+        Condition(Condition.unapply(condition).get) shouldBe condition
+      }
+    }
+  }
 }
