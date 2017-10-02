@@ -238,7 +238,7 @@ class SchedulerActionsTest
     f.instanceTracker.countSpecInstancesSync(eq(app.id), any) returns 7
     f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
     When("the app is scaled")
-    Await.ready(f.scheduler.scale(app), atMost)
+    f.scheduler.scale(app).futureValue
 
     Then("the queue is purged")
     verify(f.queue, times(1)).asyncPurge(app.id)
@@ -280,7 +280,7 @@ class SchedulerActionsTest
     f.instanceTracker.countSpecInstancesSync(eq(app.id), any) returns 5
     f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
     When("the app is scaled")
-    Await.ready(f.scheduler.scale(app), atMost)
+    f.scheduler.scale(app).futureValue
 
     Then("the queue is purged")
     verify(f.queue, times(1)).asyncPurge(app.id)
