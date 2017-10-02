@@ -11,7 +11,7 @@ import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo.AppInfo
-import mesosphere.marathon.raml.{ LoggerChange, Metrics }
+import mesosphere.marathon.raml.{ LoggerChange, MarathonInfo, Metrics }
 import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.state.AppDefinition
 import play.api.libs.json._
@@ -105,6 +105,8 @@ object EntityMarshallers {
   implicit val wixResultMarshaller = playJsonMarshaller[com.wix.accord.Failure](Validation.failureWrites)
   implicit val messageMarshaller = playJsonMarshaller[Rejections.Message]
   implicit val appInfoMarshaller = playJsonMarshaller[AppInfo]
+  implicit val infoMarshaller = playJsonMarshaller[MarathonInfo]
+  implicit val infoUnmarshaller = playJsonUnmarshaller[MarathonInfo]
   implicit val metricsMarshaller = internalToRamlJsonMarshaller[TickMetricSnapshot, Metrics]
   implicit val loggerChangeMarshaller = playJsonMarshaller[LoggerChange]
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[LoggerChange]

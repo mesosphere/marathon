@@ -101,9 +101,9 @@ trait AuthDirectives extends AkkaDirectives {
 
 object AuthDirectives {
 
-  private[AuthDirectives] case object AuthServiceUnavailable extends Rejection
-  private[AuthDirectives] case class NotAuthorized(toResponse: HttpResponse) extends Rejection
-  private[AuthDirectives] case class NotAuthenticated(toResponse: HttpResponse) extends Rejection
+  private[akkahttp] case object AuthServiceUnavailable extends Rejection
+  private[akkahttp] case class NotAuthorized(toResponse: HttpResponse) extends Rejection
+  private[akkahttp] case class NotAuthenticated(toResponse: HttpResponse) extends Rejection
 
   def handleAuthRejections: PartialFunction[Rejection, Route] = {
     case AuthServiceUnavailable => Directives.complete(StatusCodes.ServiceUnavailable -> "Auth Service currently not available.")

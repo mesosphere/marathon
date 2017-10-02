@@ -6,7 +6,6 @@ import org.apache.commons.io.IOUtils
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyFilter }
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.io.IO
 import mesosphere.util.PortAllocator
 import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.time.{ Milliseconds, Seconds, Span }
