@@ -16,6 +16,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.raml.{ Container => RamlContainer }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -23,6 +24,7 @@ import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
 import org.mockito.Matchers
 import play.api.libs.json._
+import mesosphere.marathon.api.v2.validation.AppValidation
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -53,7 +55,18 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       PluginManager.None
     )(auth.auth, auth.auth)
 
+    implicit val authenticator: Authenticator = auth.auth
+    implicit val authorizer: Authorizer = auth.auth
+
     val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.get, config.mesosBridgeName())
+    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(PluginManager.None)
+    implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => config.defaultNetworkName.get)
+
+    implicit val validateAndNormalizeApp: Normalization[raml.App] =
+      AppHelpers.appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+
+    implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
+      AppHelpers.appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
     def normalize(app: App): App = {
       val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
@@ -1276,13 +1289,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = false)
 
       Then("the application is updated")
-      val app1 = appsResource.updateOrCreate(
-        app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true)(auth.identity)
+      implicit val identity = auth.identity
+      val app1 = AppHelpers.updateOrCreate(
+        app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
       val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
-      val app2 = appsResource.updateOrCreate(
-        app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false)(auth.identity)
+      val app2 = AppHelpers.updateOrCreate(
+        app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 
       app1 should be(app2)
     }
@@ -1516,12 +1530,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       )
 
       val updateCmd = AppUpdate(cmd = Some("sleep 2"))
-      val updatedApp = appsResource.updateOrCreate(
+      val updatedApp = AppHelpers.updateOrCreate(
         appId = app.id,
         existing = Some(app),
         appUpdate = updateCmd,
         allowCreation = false,
-        partialUpdate = true
+        partialUpdate = true,
+        now = clock.now(),
+        service = service
       )
       assert(updatedApp.versionInfo == app.versionInfo)
     }

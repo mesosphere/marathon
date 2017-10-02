@@ -40,7 +40,7 @@ class AppsResource @Inject() (
   val authenticator: Authenticator,
     val authorizer: Authorizer) extends RestResource with AuthResource {
 
-  import AppsResource._
+  import AppHelpers._
   import Normalization._
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
@@ -52,10 +52,10 @@ class AppsResource @Inject() (
     config.mesosBridgeName())
 
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
-    appNormalization(NormalizationConfig(config.availableFeatures, normalizationConfig))(AppNormalization.withCanonizedIds())
+    appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
   private implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
-    appUpdateNormalization(NormalizationConfig(config.availableFeatures, normalizationConfig))(AppNormalization.withCanonizedIds())
+    appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
   @GET
   def index(
@@ -296,9 +296,7 @@ class AppsResource @Inject() (
     assumeValid {
       val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
       val version = clock.now()
-      val plan = result(groupManager.updateApp(
-        appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation),
-        version, force))
+      val plan = result(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
       val response = plan.original.app(appId)
         .map(_ => Response.ok())
         .getOrElse(Response.created(new URI(appId.toString)))
@@ -328,64 +326,12 @@ class AppsResource @Inject() (
 
       def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
         update.id.map(PathId(_)) match {
-          case Some(id) =>
-            group.updateApp(
-              id, updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation), version)
+          case Some(id) => group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service), version)
           case None => group
         }
       }
 
       deploymentResult(result(groupManager.updateRoot(PathId.empty, updateGroup, version, force)))
-    }
-  }
-
-  private[v2] def updateOrCreate(
-    appId: PathId,
-    existing: Option[AppDefinition],
-    appUpdate: raml.AppUpdate,
-    partialUpdate: Boolean,
-    allowCreation: Boolean)(implicit identity: Identity): AppDefinition = {
-    def createApp(): AppDefinition = {
-      val app = withoutPriorAppDefinition(appUpdate, appId).normalize
-      // versionInfo doesn't change - it's never overridden by an AppUpdate.
-      // the call to fromRaml loses the original versionInfo; it's just the current time in this case
-      // so we just query for that (using a more predictable clock than AppDefinition has access to)
-      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())))
-      checkAuthorization(CreateRunSpec, appDef)
-    }
-
-    def updateApp(current: AppDefinition): AppDefinition = {
-      val app =
-        if (partialUpdate)
-          Raml.fromRaml(appUpdate -> current).normalize
-        else
-          withoutPriorAppDefinition(appUpdate, appId).normalize
-
-      // versionInfo doesn't change - it's never overridden by an AppUpdate.
-      // the call to fromRaml loses the original versionInfo; we take special care to preserve it
-      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = current.versionInfo))
-      checkAuthorization(UpdateRunSpec, appDef)
-    }
-
-    def rollback(current: AppDefinition, version: Timestamp): AppDefinition = {
-      val app = service.getApp(appId, version).getOrElse(throw AppNotFoundException(appId))
-      checkAuthorization(ViewRunSpec, app)
-      checkAuthorization(UpdateRunSpec, current)
-      app
-    }
-
-    def updateOrRollback(current: AppDefinition): AppDefinition = appUpdate.version
-      .map(v => rollback(current, Timestamp(v)))
-      .getOrElse(updateApp(current))
-
-    existing match {
-      case Some(app) =>
-        // we can only rollback existing apps because we deleted all old versions when dropping an app
-        updateOrRollback(app)
-      case None if allowCreation =>
-        createApp()
-      case None =>
-        throw AppNotFoundException(appId)
     }
   }
 
@@ -404,45 +350,5 @@ class AppsResource @Inject() (
 
   def selectAuthorized(fn: => AppSelector)(implicit identity: Identity): AppSelector = {
     Selector.forall(Seq(authzSelector, fn))
-  }
-}
-
-object AppsResource {
-
-  case class NormalizationConfig(enabledFeatures: Set[String], config: AppNormalization.Config)
-
-  def appNormalization(config: NormalizationConfig): Normalization[raml.App] = Normalization { app =>
-    validateOrThrow(app)(AppValidation.validateOldAppAPI)
-    val migrated = AppNormalization.forDeprecated(config.config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.config.defaultNetworkName))
-    AppNormalization(config.config).normalized(migrated)
-  }
-
-  def appUpdateNormalization(config: NormalizationConfig): Normalization[raml.AppUpdate] = Normalization { app =>
-    validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
-    val migrated = AppNormalization.forDeprecatedUpdates(config.config).normalized(app)
-    validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(config.enabledFeatures, () => config.config.defaultNetworkName))
-    AppNormalization.forUpdates(config.config).normalized(migrated)
-  }
-
-  def authzSelector(implicit authz: Authorizer, identity: Identity): AppSelector = Selector[AppDefinition] { app =>
-    authz.isAuthorized(identity, ViewRunSpec, app)
-  }
-
-  /**
-    * Create an App from an AppUpdate. This basically applies when someone uses our API to create apps
-    * using the `PUT` method: an AppUpdate is submitted for an App that doesn't actually exist: we convert the
-    * "update" operation into a "create" operation. This helper func facilitates that.
-    */
-  def withoutPriorAppDefinition(update: raml.AppUpdate, appId: PathId): raml.App = {
-    val selectedStrategy = AppConversion.ResidencyAndUpgradeStrategy(
-      residency = update.residency.map(Raml.fromRaml(_)),
-      upgradeStrategy = update.upgradeStrategy.map(Raml.fromRaml(_)),
-      hasPersistentVolumes = update.container.exists(_.volumes.existsAn[AppPersistentVolume]),
-      hasExternalVolumes = update.container.exists(_.volumes.existsAn[AppExternalVolume])
-    )
-    val template = AppDefinition(
-      appId, residency = selectedStrategy.residency, upgradeStrategy = selectedStrategy.upgradeStrategy)
-    Raml.fromRaml(update -> template)
   }
 }

@@ -44,7 +44,7 @@ class GroupsResource @Inject() (
     val appNormalizationConfig = AppNormalization.Configuration(
       config.defaultNetworkName.get,
       config.mesosBridgeName())
-    AppsResource.appNormalization(AppsResource.NormalizationConfig(config.availableFeatures, appNormalizationConfig))
+    AppHelpers.appNormalization(config.availableFeatures, appNormalizationConfig)
   }
 
   /**
@@ -355,7 +355,7 @@ class GroupsResource @Inject() (
 
   def authorizationSelectors(implicit identity: Identity): GroupInfoService.Selectors = {
     GroupInfoService.Selectors(
-      AppsResource.authzSelector,
+      AppHelpers.authzSelector,
       PodsResource.authzSelector,
       authzSelector)
   }

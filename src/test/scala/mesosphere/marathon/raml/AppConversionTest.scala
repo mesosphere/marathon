@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ BridgeNetwork, HostNetwork }
 import mesosphere.marathon.state._
@@ -61,8 +61,8 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val features = Set(Features.SECRETS)
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
-          AppsResource.appNormalization(
-            AppsResource.NormalizationConfig(features, AppNormalization.Configuration(None, "bridge-name"))).normalized(ramlApp)
+          AppHelpers.appNormalization(
+            features, AppNormalization.Configuration(None, "bridge-name")).normalized(ramlApp)
         )
       }
       Then("The app is identical")

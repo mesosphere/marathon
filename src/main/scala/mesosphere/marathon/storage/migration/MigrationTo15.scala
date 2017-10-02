@@ -8,7 +8,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
@@ -58,14 +58,14 @@ private[migration] object MigrationTo15 {
     val mbn = mesosBridgeName
     // lazily evaluate the special environment variable and configured network name: we might never need them, and in
     // that case we don't want to abort migration (because there's no reason to).
-    AppsResource.appNormalization(AppsResource.NormalizationConfig(
+    AppHelpers.appNormalization(
       enabledFeatures, new AppNormalization.Config {
       override def defaultNetworkName: Option[String] =
         env.vars.get(DefaultNetworkNameForMigratedApps).orElse(networkName).orElse(throw SerializationFailedException(
           MigrationFailedMissingNetworkEnvVar))
       override def mesosBridgeName =
         mbn
-    }))
+    })
   }
 
   /**
