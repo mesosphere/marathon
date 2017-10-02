@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.election
 
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ Executors }
@@ -21,7 +21,14 @@ import scala.util.{ Failure, Try }
 class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperServerTest with Eventually {
   val underlyingZkClient = zkClient().client
   val prefixId = new AtomicInteger(0)
-
+  /*
+   * There is a period of time in which ZooKeeper will be inconsistent between the time of querying for leader nodes,
+   * and getting the leaders data. This is expected, and eventually, the leadership state becomes consistent. It is also
+   * racy and not possible to control as it depends on an external system (ZooKeeper).
+   *
+   * By skipping these events, our streams can be made deterministic for our testing purposes.
+   */
+  val skipStandbyNone = Flow[LeadershipState].filter { _ != LeadershipState.Standby(None) }
   case class Fixture(prefix: String = "curator") {
     val leaderPath = s"/curator-${prefixId.getAndIncrement}"
     private def newStubClient =
@@ -100,6 +107,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     leader1.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
 
     val (cancellable2, leader2) = CuratorElectionStream(f.client2, f.leaderPath, 15000.millis, "host:2", f.executorService)
+      .via(skipStandbyNone)
       .toMat(Sink.queue())(Keep.both)
       .run
 
@@ -121,12 +129,14 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     leader1.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
 
     val (cancellable2, leader2) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "changehost:2", f.executorService)
+      .via(skipStandbyNone)
       .toMat(Sink.queue())(Keep.both)
       .run
 
     leader2.pull().futureValue shouldBe Some(LeadershipState.Standby(Some("changehost:1")))
 
     val (cancellable3, leader3) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "changehost:3", f.executorService)
+      .via(skipStandbyNone)
       .toMat(Sink.queue())(Keep.both)
       .run
 

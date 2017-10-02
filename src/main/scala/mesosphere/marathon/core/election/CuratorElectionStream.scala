@@ -117,7 +117,14 @@ object CuratorElectionStream extends StrictLogging {
           None
         } else {
           try {
-            Some(latch.getLeader.getId)
+            val leaderId = latch.getLeader.getId
+            /* In certain inconsistent situations, Curator will return a leader with an empty id. This happens when the
+             * recently defeated leader record was just cleaned up as we were reading from it.
+             *
+             * For our purposes, we will treat this empty id for what it is: no current leader. Another ZooKeeper watch
+             * will fire later shortly after and we will ultimately get the real leader */
+            assert(leaderId.nonEmpty)
+            Some(leaderId)
           } catch {
             case ex: Throwable =>
               logger.error("Error while getting current leader", ex)
