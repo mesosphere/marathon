@@ -16,7 +16,7 @@ import play.api.libs.json._
 
 object EntityMarshallers {
   import Directives.complete
-  import mesosphere.marathon.api.v2.json.Formats._
+  //import mesosphere.marathon.api.v2.json.Formats._
   import mesosphere.marathon.raml.MetricsConversion._
 
   private val jsonStringUnmarshaller =
@@ -109,7 +109,7 @@ object EntityMarshallers {
   implicit val loggerChangeMarshaller = playJsonMarshaller[raml.LoggerChange]
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[raml.LoggerChange]
   implicit val stringMapMarshaller = playJsonMarshaller[Map[String, String]]
-  implicit val pluginDefinitionsMarshaller = playJsonMarshaller[PluginDefinitions]
+  implicit val pluginDefinitionsMarshaller = playJsonMarshaller[raml.PluginDefinitions]
 
   private def validEntityRaml[A, B](um: FromEntityUnmarshaller[A])(
     implicit

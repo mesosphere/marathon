@@ -1,0 +1,19 @@
+#%RAML 1.0 Library
+types:
+  PluginDefinition:
+    type: object
+    properties:
+      id:
+        type: string
+      plugin:
+        type: string
+      implementation:
+        type: string
+      tags?:
+        type: string[]
+      info?:
+        type: any
+  PluginDefinitions:
+    type: object
+    properties:
+      plugins: PluginDefinition[]

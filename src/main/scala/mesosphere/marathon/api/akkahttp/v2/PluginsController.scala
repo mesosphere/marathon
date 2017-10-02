@@ -8,6 +8,7 @@ import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.plugin.auth.AuthorizedResource.Plugins
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpRequestHandler
+import mesosphere.marathon.raml.Raml
 
 /**
   * The PluginsController can list all available installed plugins,
@@ -39,7 +40,18 @@ class PluginsController(
     * GET /v2/plugins
     * @return plugin definitions for all available plugins
     */
-  def plugins: Route = complete(definitions)
+  def plugins: Route = {
+    val plugins: Seq[raml.PluginDefinition] = definitions.plugins.map { internal =>
+      raml.PluginDefinition(
+        id = internal.id,
+        plugin = internal.plugin,
+        implementation = internal.implementation,
+        tags = internal.tags.getOrElse(Nil).toIndexedSeq,
+        additionalProperties = internal.info)
+    }
+    val ramlPluginDefinitions = raml.PluginDefinitions(plugins = plugins)
+    complete(ramlPluginDefinitions)
+  }
 
   /**
     * METHOD /v2/plugins/{pluginId}/{path}

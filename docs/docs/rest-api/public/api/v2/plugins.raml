@@ -6,6 +6,7 @@ get:
       description: The list of all loaded plugins
       body:
         application/json:
+          type: pluginDefinition.PluginDefinitions
           example: |
             {
                 "plugins": [
@@ -26,6 +27,11 @@ get:
 /{plugin_id}/{path}:
   get:
     description: Get request is handled by the plugin.
+    responses:
+      200:
+        body:
+          application/json:
+            type: pluginDefinition.PluginDefinition
   put:
     description: Put request is handled by the plugin.
   post:
