@@ -47,7 +47,7 @@ class PluginsController(
         plugin = internal.plugin,
         implementation = internal.implementation,
         tags = internal.tags.getOrElse(Nil).toIndexedSeq,
-        additionalProperties = internal.info)
+        additionalProperties = internal.info.get) //Bug: this should be info: Option[JsObject] = internal.info
     }
     val ramlPluginDefinitions = raml.PluginDefinitions(plugins = plugins)
     complete(ramlPluginDefinitions)

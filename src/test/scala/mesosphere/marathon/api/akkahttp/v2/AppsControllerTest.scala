@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
-import akka.http.scaladsl.model.{HttpEntity, StatusCodes, Uri}
+import akka.http.scaladsl.model.{ HttpEntity, StatusCodes, Uri }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
-import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
-import mesosphere.marathon.core.appinfo.{AppInfo, AppInfoService}
+import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
+import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager

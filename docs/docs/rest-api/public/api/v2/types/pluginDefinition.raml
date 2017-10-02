@@ -3,16 +3,11 @@ types:
   PluginDefinition:
     type: object
     properties:
-      id:
-        type: string
-      plugin:
-        type: string
-      implementation:
-        type: string
-      tags?:
-        type: string[]
-      info?:
-        type: any
+      id: string
+      plugin: string
+      implementation: string
+      tags?: string[]
+      info: object
   PluginDefinitions:
     type: object
     properties:

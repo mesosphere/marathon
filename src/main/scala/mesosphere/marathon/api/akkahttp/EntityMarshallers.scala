@@ -10,13 +10,11 @@ import akka.util.ByteString
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.state.AppDefinition
 import play.api.libs.json._
 
 object EntityMarshallers {
   import Directives.complete
-  //import mesosphere.marathon.api.v2.json.Formats._
   import mesosphere.marathon.raml.MetricsConversion._
 
   private val jsonStringUnmarshaller =
