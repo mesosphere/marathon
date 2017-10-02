@@ -90,7 +90,7 @@ class ForwarderService {
       override def buffer[T](f: => T): T = f
     }
     val process = Process(cmd).run(log)
-    Await.result(up.future, 30.seconds)
+    Await.result(up.future, 60.seconds)
     children(_ += process)
   }
 }
