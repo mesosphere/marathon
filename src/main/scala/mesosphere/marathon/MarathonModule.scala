@@ -32,6 +32,7 @@ object ModuleNames {
   final val HISTORY_ACTOR_PROPS = "HISTORY_ACTOR_PROPS"
 
   final val MESOS_HEARTBEAT_ACTOR = "MesosHeartbeatActor"
+  final val ELECTION_EXECUTOR = "ELECTION_EXECUTOR"
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSystem)
@@ -113,9 +114,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
         killService,
         launchQueue,
         driverHolder,
-        electionService,
+        electionService.leaderStateEvents,
         eventBus
-      )(mat).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
+      ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
 

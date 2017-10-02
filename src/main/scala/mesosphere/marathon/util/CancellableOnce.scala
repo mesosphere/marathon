@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package util
 
-import akka.actor.{ ActorRef, Cancellable, PoisonPill }
+import akka.actor.Cancellable
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
-  * Cancellable implementation which sends the provided actorRef at most one PoisonPill.
+  * Cancellable implementation which calls the provided function once and only once
   */
-class ActorCancellable(actorRef: ActorRef) extends Cancellable {
+class CancellableOnce(onCancel: () => Unit) extends Cancellable {
   private var cancelled = new AtomicBoolean(false)
 
   /**
@@ -15,7 +15,7 @@ class ActorCancellable(actorRef: ActorRef) extends Cancellable {
     */
   def cancel(): Boolean = {
     if (cancelled.compareAndSet(false, true)) {
-      actorRef ! PoisonPill
+      onCancel()
       true
     } else {
       false
