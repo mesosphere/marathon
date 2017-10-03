@@ -68,7 +68,7 @@ object RamlTypeGenerator {
   val PlayJsString = RootClass.newClass("play.api.libs.json.JsString")
   val PlayJsObject = RootClass.newClass("play.api.libs.json.JsObject")
   val PlayJsArray = RootClass.newClass("play.api.libs.json.JsArray")
-  val PlayValidationError = RootClass.newClass("play.api.data.validation.ValidationError")
+  val PlayValidationError = RootClass.newClass("play.api.libs.json.JsonValidationError")
   val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
   val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
   val PlayReads = RootClass.newClass("play.api.libs.json.Reads")

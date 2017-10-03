@@ -11,7 +11,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import play.api.data.validation.ValidationError
+import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 
@@ -108,7 +108,7 @@ trait RestResource {
 object RestResource {
   val DeploymentHeader = "Marathon-Deployment-Id"
 
-  def entity(err: scala.collection.Seq[(JsPath, scala.collection.Seq[ValidationError])]): JsValue = {
+  def entity(err: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])]): JsValue = {
     val errors = err.map {
       case (path, errs) => Json.obj("path" -> path.toString(), "errors" -> errs.map(_.message).distinct)
     }

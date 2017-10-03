@@ -80,4 +80,16 @@ class ConditionTest extends UnitTest {
       }
     }
   }
+
+  "ConditionFormat" should {
+    import play.api.libs.json._
+    import Condition.conditionFormat
+    "read the legacy format" in {
+      Json.parse("""{"str":"Running"}""").as[Condition] shouldBe Condition.Running
+    }
+
+    "can round trip serialize a condition" in {
+      Json.toJson(Condition.Error).as[Condition] shouldBe (Condition.Error)
+    }
+  }
 }

@@ -65,7 +65,7 @@ object Dependencies {
     Test.scalacheck % "test",
     Test.wixAccordScalatest % "test",
     Test.curatorTest % "test"
-  ) ++ Kamon.all).map(
+  ) ++ Kamon.all ++ Jackson.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -101,7 +101,7 @@ object Dependency {
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
     val Diffson = "2.0.2"
-    val PlayJson = "2.5.14"
+    val PlayJson = "2.6.6"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.5"
     val MarathonUI = "1.2.0"
@@ -113,6 +113,7 @@ object Dependency {
     val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
     val Raven = "7.8.6"
+    val JacksonVersion = "2.8.9"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -132,7 +133,7 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % V.AkkaHttp
-  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
+  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.17.0"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
@@ -162,6 +163,14 @@ object Dependency {
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   val akkaSse = "de.heikoseeberger" %% "akka-sse" % V.AkkaSSE
+  object Jackson {
+    /* We need all of these Jackson dependencies to be in sync with one another; play-json 2.6.6 targets jackson 2.8.9;
+     * when we upgrade to Chaos 0.9.0, this will no longer be necessary */
+    val all = Seq(
+      "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.JacksonVersion,
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.JacksonVersion
+    )
+  }
 
   object Kamon {
     val Version = "0.6.7"

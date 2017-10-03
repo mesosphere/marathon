@@ -89,8 +89,7 @@ class MarathonFacade(
   val url: String, baseGroup: PathId, implicit val waitTime: FiniteDuration = 30.seconds)(
   implicit
   val system: ActorSystem, mat: Materializer)
-    extends PlayJsonSupport
-    with PodConversion with StrictLogging {
+    extends PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
   import AkkaHttpResponse._
   import mesosphere.marathon.core.async.ExecutionContexts.global
@@ -99,9 +98,9 @@ class MarathonFacade(
 
   import mesosphere.marathon.api.v2.json.Formats._
   import play.api.libs.json._
+  import PlayJsonSupport.marshaller
 
   implicit lazy val itAppDefinitionFormat = Json.format[ITAppDefinition]
-  implicit lazy val appUpdateMarshaller = playJsonMarshaller[AppUpdate]
   implicit lazy val itListAppsResultFormat = Json.format[ITListAppsResult]
   implicit lazy val itAppVersionsFormat = Json.format[ITAppVersions]
   implicit lazy val itListTasksFormat = Json.format[ITListTasks]
