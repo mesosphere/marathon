@@ -104,12 +104,12 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       val migrate = f.migration
 
+      mockedStore.isOpen returns true
       mockedStore.storageVersion() returns Future.successful(None)
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
 
       migrate.migrate()
 
-      verify(mockedStore).open()
       verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       verify(mockedStore).setStorageVersion(StorageVersions.current)
@@ -122,12 +122,12 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       val migrate = f.migration
 
+      mockedStore.isOpen returns true
       val currentPersistenceVersion =
         StorageVersions.current.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
       mockedStore.storageVersion() returns Future.successful(Some(currentPersistenceVersion))
       migrate.migrate()
 
-      verify(mockedStore).open()
       verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       noMoreInteractions(mockedStore)
