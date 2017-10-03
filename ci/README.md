@@ -47,33 +47,20 @@ The `createPackages` target assembles Marathon binary packages and generates the
 sha1 checksums for the zip and tarball packages. See `createPackageSha1s` in the
 code base for details.
 
-There are several targets in `phabricatorClient`:
+There are several targets in `githubClient`:
 
-  * `accept`
   * `reject`
   * `comment`
-  * `reportTestResults`
+  * `collectTestResults`
   * `reportSuccess`
   * `reportFailure`
 
-All Phabricator targets require the `PHABRICATOR_API_TOKEN` environment variable
-to be set to a valid Phabricator API token. One can generate a token with
-[Conduit](https://phabricator.mesosphere.com/conduit/login/).
-
-The targets can be run locally and expect diff ids and PHIDs. The later can
-either be the ID of a Phabricator Differential review, e.g. `777` for
-`https://phabricator.mesosphere.com/D777` or an ID generator by Harbormaster,
-e.g. `PHID-HMBT-76qfbscvw2vs777hu000`. The ids have to be valid, i.e. they have
-to correspong to an actuall Differential review.
-
-Methods `accept` and `reject` accept or reject a Phabriactor Differential review.
-The `comment` method posts a comment to Phabriactor Differential reviews.
-`reportTestResults` uploads unit and integration test results to a build
-triggered by Phabriactor Harbormaster. It checks `target/phabricator-test-reports/`
-for JSON files and joins them. The methods `reportSuccess` and `reportFailure`
-call the previous methods to report back.
+Method `reject` and `reportFailure` rejects a GitHub pull request review while `reportSuccess` approves it.
+The `comment` method posts a comment to the pull request.
+`collectTestResults` gathers and returns unit and integration test results. It checks `target/phabricator-test-reports/`
+for JSON files and joins them.
 
 One can comment from the CLI with
 ```
-PHABRICATOR_API_TOKEN=<secret> amm ./ci/phabricatorClient.sc comment 777 "test from pipeline"
+amm ./ci/githubClient.sc comment 777 "test from pipeline"
 ```
