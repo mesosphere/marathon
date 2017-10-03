@@ -408,7 +408,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |    }
           |  }
           |}""".stripMargin).as[raml.App]
-      shouldViolate(app, "/container/docker/credential" -> "must be empty")(AppValidation.validateOldAppAPI)
+      AppValidation.validateOldAppAPI(app) should haveViolations("/container/docker/credential" -> "must be empty")
     }
 
     "FromJSON should parse Mesos Docker container" in {
@@ -447,7 +447,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |  }
           |}""".stripMargin).as[raml.App]
 
-      shouldViolate(app, "/container/docker/portMappings" -> "must be empty")(AppValidation.validateOldAppAPI)
+      AppValidation.validateOldAppAPI(app) should haveViolations("/container/docker/portMappings" -> "must be empty")
 
       // network is currently not supported
       val app2 = Json.parse(
@@ -461,7 +461,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |    }
           |  }
           |}""".stripMargin).as[raml.App]
-      shouldViolate(app2, "/container/docker/network" -> "must be empty")(AppValidation.validateOldAppAPI)
+      AppValidation.validateOldAppAPI(app2) should haveViolations("/container/docker/network" -> "must be empty")
 
       // parameters are currently not supported
       val app3 = Json.parse(
@@ -475,7 +475,7 @@ class AppDefinitionFormatsTest extends UnitTest
         |    }
         |  }
         |}""".stripMargin).as[raml.App]
-      shouldViolate(app3, "/container/docker/parameters" -> "must be empty")(AppValidation.validateOldAppAPI)
+      AppValidation.validateOldAppAPI(app3) should haveViolations("/container/docker/parameters" -> "must be empty")
     }
 
     "FromJSON should parse Mesos AppC container" in {
@@ -664,8 +664,8 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "container": {}
           |}""".stripMargin)
       val ramlApp = json.as[raml.App]
-      shouldViolate(ramlApp, "/container/docker" -> "not defined")(
-        AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName))
+      val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
+      validator(ramlApp) should haveViolations("/container/docker" -> "not defined")
     }
   }
 }

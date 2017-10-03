@@ -1,14 +1,12 @@
 package mesosphere.marathon
 package api.v2.json
 
-import com.wix.accord.Descriptions.Generic
 import com.wix.accord._
 import mesosphere.marathon.api.akkahttp.EntityMarshallers
-import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.validation.{ AppValidation, NetworkValidationMessages }
-import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers, ValidationHelper }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, PortDefinition, PortDefinitions, Raml, SecretDef, UpgradeStrategy }
 import mesosphere.marathon.state.PathId._
@@ -48,46 +46,37 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
     "Validation" in {
       val update = AppUpdate()
 
-      shouldViolate(
-        update.copy(portDefinitions = Some(PortDefinitions(9000, 8080, 9000))),
-        "/portDefinitions" ->
-          "Ports must be unique.")
+      appUpdateValidator(update.copy(portDefinitions = Some(PortDefinitions(9000, 8080, 9000)))) should haveViolations(
+        "/portDefinitions" -> "Ports must be unique.")
 
-      shouldViolate(
+      appUpdateValidator(
         update.copy(portDefinitions = Some(Seq(
           PortDefinition(9000, name = Some("foo")),
           PortDefinition(9001, name = Some("foo"))))
-        ),
-        "/portDefinitions" ->
-          "Port names must be unique.")
+        )) should haveViolations("/portDefinitions" -> "Port names must be unique.")
 
-      shouldNotViolate(
+      appUpdateValidator(
         update.copy(portDefinitions = Some(Seq(
           PortDefinition(9000, name = Some("foo")),
           PortDefinition(9001, name = Some("bar"))))
-        ),
-        "/portDefinitions" ->
-          "Port names must be unique.")
+        )) should be(aSuccess)
 
-      shouldViolate(update.copy(mem = Some(-3.0)), "/mem" -> "error.min")(roundTripValidator)
-      shouldViolate(update.copy(cpus = Some(-3.0)), "/cpus" -> "error.min")(roundTripValidator)
-      shouldViolate(update.copy(disk = Some(-3.0)), "/disk" -> "error.min")(roundTripValidator)
-      shouldViolate(update.copy(instances = Some(-3)), "/instances" -> "error.min")(roundTripValidator)
-      shouldViolate(
-        update.copy(networks = Some(Seq(Network(mode = NetworkMode.Container)))),
+      roundTripValidator(update.copy(mem = Some(-3.0))) should haveViolations("/mem" -> "error.min")
+      roundTripValidator(update.copy(cpus = Some(-3.0))) should haveViolations("/cpus" -> "error.min")
+      roundTripValidator(update.copy(disk = Some(-3.0))) should haveViolations("/disk" -> "error.min")
+      roundTripValidator(update.copy(instances = Some(-3))) should haveViolations("/instances" -> "error.min")
+      appUpdateValidator(update.copy(networks = Some(Seq(Network(mode = NetworkMode.Container))))) should haveViolations(
         "/networks" -> NetworkValidationMessages.NetworkNameMustBeSpecified)
     }
 
     "Validate secrets" in {
       val update = AppUpdate()
 
-      shouldViolate(
-        update.copy(secrets = Some(Map("a" -> SecretDef("")))),
-        "/secrets/a/source" -> "error.minLength")(roundTripValidator)
+      roundTripValidator(update.copy(secrets = Some(Map("a" -> SecretDef(""))))) should haveViolations(
+        "/secrets/a/source" -> "error.minLength")
 
-      shouldViolate(
-        update.copy(secrets = Some(Map("" -> SecretDef("a/b/c")))),
-        "/secrets/keys(0)" -> "must not be empty")(roundTripValidator)
+      roundTripValidator(update.copy(secrets = Some(Map("" -> SecretDef("a/b/c"))))) should haveViolations(
+        "/secrets/keys(0)" -> "must not be empty")
     }
 
     "SerializationRoundtrip for empty definition" in {

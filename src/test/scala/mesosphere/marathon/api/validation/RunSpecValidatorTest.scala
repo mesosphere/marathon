@@ -107,7 +107,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         id = PathId("relative/asd"),
         cmd = Some("true"))
 
-      shouldViolate(app, "/id" -> "Path needs to be absolute")
+      validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
 
       MarathonTestHelper.validateJsonSchema(app)
     }
@@ -118,7 +118,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         id = PathId("../relative"),
         cmd = Some("true"))
 
-      shouldViolate(app, "/id" -> "Path needs to be absolute")
+      validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
       MarathonTestHelper.validateJsonSchema(app)
     }
 

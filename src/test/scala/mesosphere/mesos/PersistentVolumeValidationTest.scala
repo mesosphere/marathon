@@ -29,7 +29,8 @@ class PersistentVolumeValidationTest extends UnitTest with ValidationTestLike {
       volume.containerPath should be (path)
 
       Then("A validation exists with a readable error message")
-      shouldViolate(volume, "/containerPath" -> "value must not contain \"/\"")(Volume.validVolume(Set()))
+      Volume.validVolume(Set())(volume) should haveViolations(
+        "/containerPath" -> "value must not contain \"/\"")
     }
   }
 }

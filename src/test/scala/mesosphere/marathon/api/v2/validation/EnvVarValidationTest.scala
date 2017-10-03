@@ -15,7 +15,7 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
 
       def compliantEnv(title: String, m: Map[String, EnvVarValueOrSecret], strictNameValidation: Boolean = true): Unit = {
         s"$title is compliant with validation rules" in new Fixtures(strictNameValidation) {
-          shouldSucceed(m)
+          validator(m) should be(aSuccess)
         }
       }
 
@@ -29,21 +29,23 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
       behave like compliantEnv("numerical env", Environment("9" -> "x"), strictNameValidation = false)
 
       "fail with a numerical env variable name" in new Fixtures {
-        shouldViolate(Wrapper(Environment("9" -> "x")), "/env/keys(0)" -> MustContainOnlyAlphanumeric)
+        validator(Environment("9" -> "x")) should haveViolations(
+          "/keys(0)" -> MustContainOnlyAlphanumeric)
       }
 
       def failsWhenExpected(subtitle: String, strict: Boolean): Unit = {
         s"fail with empty variable name $subtitle" in new Fixtures(strict) {
-          shouldViolate(Wrapper(Environment("" -> "x")), "/env/keys(0)" -> "must not be empty")
-          if (strict) shouldViolate(Wrapper(Environment("" -> "x")), "/env/keys(0)" -> MustContainOnlyAlphanumeric)
+          validator(Environment("" -> "x")) should haveViolations(
+            "/keys(0)" -> "must not be empty")
+          if (strict) validator(Environment("" -> "x")) should haveViolations("/keys(0)" -> MustContainOnlyAlphanumeric)
         }
 
         s"fail with too long variable name $subtitle" in new Fixtures(strict) {
           val name = "x" * 255
           if (strict) {
-            shouldViolate(Wrapper(Environment(name -> "x")), "/env/keys(0)" -> MustContainOnlyAlphanumeric)
+            validator(Environment(name -> "x")) should haveViolations("/keys(0)" -> MustContainOnlyAlphanumeric)
           } else {
-            shouldSucceed(Wrapper(Environment(name -> "x")))
+            validator(Environment(name -> "x")) should be(aSuccess)
           }
         }
       }
@@ -59,7 +61,7 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
           "INVALIDVAR" -> EnvVarSecret("undefined-secret")
         )
 
-        shouldViolate(env, "/INVALIDVAR/secret" -> "references an undefined secret")
+        validator(env) should haveViolations("/INVALIDVAR/secret" -> "references an undefined secret")
       }
     }
   }
@@ -75,18 +77,10 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
     else
       Set.empty
 
-    implicit lazy val envVarValidation: Validator[Map[String, EnvVarValueOrSecret]] =
+    val validator: Validator[Map[String, EnvVarValueOrSecret]] =
       EnvVarValidation.envValidator(
         strictNameValidation,
         secrets = definedSecrets,
         enabledFeatures = enabledFeatures)
-
-    case class Wrapper(env: Map[String, EnvVarValueOrSecret])
-
-    object Wrapper {
-      implicit val wrapperValidation: Validator[Wrapper] = validator { wrapper =>
-        wrapper.env is envVarValidation // invoked here the same way that it is for apps and pods
-      }
-    }
   }
 }

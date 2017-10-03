@@ -80,7 +80,8 @@ trait Validation {
               case Success => accum
               case Failure(violations) =>
                 val scopedViolations = violations.map { violation =>
-                  violation.withPath(Generic(key) +: violation.path) }
+                  violation.withPath(Generic(key) +: violation.path)
+                }
                 accum.and(Failure(scopedViolations))
             }
         }
@@ -116,7 +117,8 @@ trait Validation {
               case Success => accum
               case Failure(violations) =>
                 val scopedViolations = violations.map { violation =>
-                  violation.withPath(Indexed(index.toLong) +: violation.path) }
+                  violation.withPath(Indexed(index.toLong) +: violation.path)
+                }
                 accum.and(Failure(scopedViolations))
             }
         }

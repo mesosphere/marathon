@@ -170,14 +170,15 @@ class PathIdTest extends UnitTest with ValidationTestLike {
     "passed legal characters" should {
       "be valid" in {
         val path = PathId("/foobar-0")
-        shouldSucceed(path)
+        pathIdValidator(path) shouldBe aSuccess
       }
     }
 
     "passed illegal characters" should {
       "be invalid" in {
         val path = PathId("/@§\'foobar-0")
-        shouldViolate(path, "/" -> "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
+        pathIdValidator(path) should haveViolations(
+          "/" -> "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
       }
     }
   }

@@ -11,14 +11,18 @@ class SchedulingValidationTest extends UnitTest with ValidationTestLike {
   "SchedulingValidation" when {
     "validating bogus operator" should {
       "fail with human readable error message" in {
-        shouldViolate(Seq("a", "b", "c"), "/" -> ConstraintOperatorInvalid)(complyWithAppConstraintRules)
+        complyWithAppConstraintRules(Seq("a", "b", "c")) should haveViolations("/" -> ConstraintOperatorInvalid)
       }
     }
     def validAppConstraint(subtitle: String, c: Seq[String]): Unit = {
-      subtitle in shouldSucceed(c)(complyWithAppConstraintRules)
+      subtitle in {
+        complyWithAppConstraintRules(c) should be(aSuccess)
+      }
     }
     def failsAsExpected(subtitle: String, c: Seq[String], violatedConstraint: String): Unit = {
-      subtitle in shouldViolate(c, "/" -> violatedConstraint)(complyWithAppConstraintRules)
+      subtitle in {
+        complyWithAppConstraintRules(c) should haveViolations("/" -> violatedConstraint)
+      }
     }
     "validating CLUSTER constraint" should {
 

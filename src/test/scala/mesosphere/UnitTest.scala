@@ -8,12 +8,7 @@ import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.{ Failure, Result, Success, Validator }
-import mesosphere.marathon.Normalization
-import mesosphere.marathon.ValidationFailedException
-import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import org.scalatest.matchers.{ BeMatcher, MatchResult }
 import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
@@ -62,70 +57,6 @@ trait CancelFailedTestWithKnownIssue extends TestSuite {
     case _ => super.withFixture(test)
   }
 
-}
-
-trait ValidationTestLike extends Validation {
-  this: Assertions =>
-
-  protected implicit val normalizeResult: Normalization[Result] = Normalization {
-    // normalize failures => human readable error messages
-    case f: Failure => f
-    case x => x
-  }
-
-  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
-    // handle RAML validation errors
-    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
-    case th => throw th
-  }.get
-
-  private def describeViolation(c: ConstraintViolation) =
-    s"""- "${c.path}" -> "${c.constraint}""""
-
-  def shouldViolate[T](entity: T, expectedViolations: (String, String)*)(implicit validator: Validator[T]): Unit = {
-    validator(entity) match {
-      case Success => fail("Validation succeeded, but expected failure")
-      case f: Failure =>
-        val violations = Validation.allViolations(f)
-        expectedViolations.foreach {
-          case (path, constraint) =>
-            val haveMatch = violations.exists { v => v.path == path && v.constraint == constraint }
-
-            if (!haveMatch)
-              fail(s"""Validation failed, but expected violation not in actual violation set
-                      |  Expected:
-                      |  - "${path}" -> "${constraint}"
-                      |  All violations:
-                      |  ${violations.map(describeViolation).mkString("\n  ")}
-                      |""".stripMargin.trim)
-        }
-    }
-  }
-
-  def shouldSucceed[T](entity: T)(implicit validator: Validator[T]): Unit = {
-    validator(entity) match {
-      case Success => Success
-      case f: Failure =>
-        val violations = Validation.allViolations(f)
-        fail(s"Validation failed, but expected success. Violations:\n${violations.map(describeViolation).mkString("\n")}")
-    }
-  }
-  def shouldNotViolate[T](entity: T, violation: (String, String))(implicit validator: Validator[T]): Unit = {
-    val (path, constraint) = violation
-    validator(entity) match {
-      case Success => Success
-      case f: Failure =>
-        val violations = Validation.allViolations(f)
-
-        if (violations.exists { v => v.path == path && v.constraint == constraint })
-          fail(s"""Validation was in validation set
-                  |  Unexpected:
-                  |  - "${path}" -> "${constraint}"
-                  |  All violations:
-                  |  ${violations.map(describeViolation).mkString("\n  ")}
-                  |""".stripMargin.trim)
-    }
-  }
 }
 
 /**
