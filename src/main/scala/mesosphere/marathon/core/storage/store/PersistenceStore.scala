@@ -9,6 +9,7 @@ import akka.stream.scaladsl.{ Sink, Source }
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.BackupItem
+import mesosphere.marathon.util.Openable
 
 import scala.concurrent.Future
 
@@ -83,7 +84,7 @@ import scala.concurrent.Future
   * @tparam Category The persistence store's category type.
   * @tparam Serialized The serialized format for the persistence store.
   */
-trait PersistenceStore[K, Category, Serialized] {
+trait PersistenceStore[K, Category, Serialized] extends Openable {
   /**
     * Get a list of all of the Ids of the given Value Types
     */

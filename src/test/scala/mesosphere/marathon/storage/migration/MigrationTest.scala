@@ -24,7 +24,11 @@ import scala.concurrent.{ Future, Promise }
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Eventually {
 
   class Fixture(
-      persistenceStore: PersistenceStore[_, _, _] = new InMemoryPersistenceStore(),
+      persistenceStore: PersistenceStore[_, _, _] = {
+        val store = new InMemoryPersistenceStore()
+        store.open()
+        store
+      },
       fakeMigrations: List[MigrationAction] = List.empty) {
     private val appRepository: AppRepository = mock[AppRepository]
     private val podRepository: PodRepository = mock[PodRepository]
@@ -95,6 +99,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
     "migrate on an empty database will set the storage version" in {
       val mockedStore = mockStore()
+
       val f = new Fixture(mockedStore)
 
       val migrate = f.migration
@@ -104,6 +109,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       migrate.migrate()
 
+      verify(mockedStore).open()
       verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       verify(mockedStore).setStorageVersion(StorageVersions.current)
@@ -121,6 +127,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       mockedStore.storageVersion() returns Future.successful(Some(currentPersistenceVersion))
       migrate.migrate()
 
+      verify(mockedStore).open()
       verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       noMoreInteractions(mockedStore)

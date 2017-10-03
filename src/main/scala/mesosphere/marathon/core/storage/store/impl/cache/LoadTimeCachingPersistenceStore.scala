@@ -50,6 +50,10 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   private[store] var valueCache: Future[TrieMap[K, Either[Serialized, Any]]] =
     Future.failed(new NotActiveException())
 
+  override def open(): Unit = store.open()
+  override def close(): Unit = store.close()
+  override def isOpen: Boolean = store.isOpen
+
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
 
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
