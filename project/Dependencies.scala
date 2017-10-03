@@ -63,7 +63,6 @@ object Dependencies {
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test",
-    Test.wixAccordScalatest % "test",
     Test.curatorTest % "test"
   ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
@@ -191,7 +190,6 @@ object Dependency {
     val diffson = "org.gnieh" %% "diffson" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
-    val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
   }
 }
