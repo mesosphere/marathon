@@ -217,10 +217,9 @@ class GroupManagerImpl(
     // propagation of reset group caches on repository is needed,
     // because manager and repository are holding own caches
     await(groupRepository.invalidateGroupCache())
-    val currentRoot = await(groupRepository.root())
-    root := Option(currentRoot)
 
-    registerMetrics()
+    // force fetching of the root group from the group repository
+    rootGroup()
     Done
   }
 
