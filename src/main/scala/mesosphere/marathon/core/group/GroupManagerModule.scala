@@ -22,19 +22,6 @@ class GroupManagerModule(
   val groupManager: GroupManager = {
     val groupManager = new GroupManagerImpl(config, None, groupRepo, scheduler)
 
-    // We've already released metrics using these names, so we can't use the Metrics.* methods
-    Kamon.metrics.gauge("service.mesosphere.marathon.app.count")(
-      groupManager.rootGroupOption().foldLeft(0L) { (_, group) =>
-        group.transitiveApps.size.toLong
-      }
-    )
-
-    Kamon.metrics.gauge("service.mesosphere.marathon.group.count")(
-      groupManager.rootGroupOption().foldLeft(0L) { (_, group) =>
-        group.transitiveGroupsById.size.toLong
-      }
-    )
-
     val startedAt = System.currentTimeMillis()
     Kamon.metrics.gauge("service.mesosphere.marathon.uptime", Time.Milliseconds)(
       System.currentTimeMillis() - startedAt

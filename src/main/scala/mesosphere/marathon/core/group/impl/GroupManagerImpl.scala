@@ -2,12 +2,14 @@ package mesosphere.marathon
 package core.group.impl
 
 import java.time.OffsetDateTime
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Provider
 
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
@@ -51,7 +53,9 @@ class GroupManagerImpl(
       case None =>
         root.update {
           case None =>
-            Some(Await.result(groupRepository.root(), config.zkTimeoutDuration))
+            val group = Await.result(groupRepository.root(), config.zkTimeoutDuration)
+            registerMetrics()
+            Some(group)
           case group =>
             group
         }.get
@@ -208,11 +212,33 @@ class GroupManagerImpl(
 
   @SuppressWarnings(Array("all")) // async/await
   override def invalidateGroupCache(): Future[Done] = async {
+    root := None
+
     // propagation of reset group caches on repository is needed,
     // because manager and repository are holding own caches
     await(groupRepository.invalidateGroupCache())
     val currentRoot = await(groupRepository.root())
     root := Option(currentRoot)
+
+    registerMetrics()
     Done
+  }
+
+  private[this] val metricsRegistered: AtomicBoolean = new AtomicBoolean(false)
+  private[this] def registerMetrics(): Unit = {
+    if (metricsRegistered.compareAndSet(false, true)) {
+      // We've already released metrics using these names, so we can't use the Metrics.* methods
+      Kamon.metrics.gauge("service.mesosphere.marathon.app.count") {
+        rootGroupOption().foldLeft(0L) { (_, group) =>
+          group.transitiveApps.size.toLong
+        }
+      }
+
+      Kamon.metrics.gauge("service.mesosphere.marathon.group.count") {
+        rootGroupOption().foldLeft(0L) { (_, group) =>
+          group.transitiveGroupsById.size.toLong
+        }
+      }
+    }
   }
 }
