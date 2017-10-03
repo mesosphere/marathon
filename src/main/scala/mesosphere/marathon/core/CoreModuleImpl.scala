@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.auth.AuthModule
-import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
+import mesosphere.marathon.core.base.{ ActorsModule, Clock, JvmExitsCrashStrategy, ShutdownHooks }
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.flow.FlowModule
@@ -65,16 +65,18 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val random = Random
   private[this] lazy val shutdownHookModule = ShutdownHooks()
+  private[this] lazy val crashStrategy = JvmExitsCrashStrategy
   override lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory)
   override lazy val electionModule = new ElectionModule(
     marathonConf,
+    hostPort,
     actorSystem,
     eventStream,
     metrics,
-    hostPort,
-    shutdownHookModule
+    shutdownHookModule,
+    crashStrategy
   )
 
   // TASKS

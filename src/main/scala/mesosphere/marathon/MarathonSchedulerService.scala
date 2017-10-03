@@ -10,7 +10,6 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
@@ -172,7 +171,7 @@ class MarathonSchedulerService @Inject() (
   override def triggerShutdown(): Unit = synchronized {
     log.info("Shutdown triggered")
 
-    electionService.abdicateLeadership(reoffer = false)
+    electionService.abdicateLeadership()
     stopDriver()
 
     log.info("Cancelling timer")
@@ -255,8 +254,7 @@ class MarathonSchedulerService @Inject() (
         //   1. we're being terminated (and have already abdicated)
         //   2. we've lost leadership (no need to abdicate if we've already lost)
         driver.foreach { _ =>
-          // tell leader election that we step back, but want to be re-elected if isRunning is true.
-          electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
+          electionService.abdicateLeadership()
         }
 
         driver = None
@@ -283,9 +281,6 @@ class MarathonSchedulerService @Inject() (
       // Our leadership has been defeated. Thus, stop the driver.
       stopDriver()
     }
-
-    log.error("Terminating after loss of leadership")
-    Runtime.getRuntime.asyncExit()
   }
 
   //End ElectionDelegate interface

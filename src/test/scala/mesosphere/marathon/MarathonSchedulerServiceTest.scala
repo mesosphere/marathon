@@ -7,7 +7,6 @@ import akka.testkit.TestProbe
 import mesosphere.AkkaFunTest
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
-import mesosphere.marathon.core.base.RichRuntime
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -152,33 +151,6 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
     assert(Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(driver)) == hmsg)
   }
 
-  test("Exit on loss of leadership") {
-
-    val schedulerService = new MarathonSchedulerService(
-      leadershipCoordinator,
-      config,
-      electionService,
-      prePostDriverCallbacks,
-      groupManager,
-      driverFactory(mock[SchedulerDriver]),
-      system,
-      migration,
-      schedulerActor,
-      heartbeatActor) {
-      override def newTimer() = mockTimer
-    }
-
-    schedulerService.timer = mockTimer
-
-    when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
-
-    schedulerService.startLeadership()
-
-    schedulerService.stopLeadership()
-
-    exitCalled(RichRuntime.FatalErrorSignal).futureValue should be(true)
-  }
-
   test("throw in start leadership when migration fails") {
 
     val schedulerService = new MarathonSchedulerService(
@@ -260,7 +232,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
     when(driver.run()).thenThrow(new RuntimeException("driver failure"))
 
     schedulerService.startLeadership()
-    verify(electionService, Mockito.timeout(1000)).abdicateLeadership(error = true, reoffer = true)
+    verify(electionService, Mockito.timeout(1000)).abdicateLeadership()
   }
 
   test("Pre/post driver callbacks are called") {
@@ -308,7 +280,5 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
 
     driverCompleted.countDown()
     awaitAssert(verify(cb).postDriverTerminates)
-
-    exitCalled(RichRuntime.FatalErrorSignal).futureValue should be(true)
   }
 }

@@ -21,6 +21,12 @@ trait ZookeeperConf extends ScallopConf {
     default = Some(10 * 1000L) //10 seconds
   )
 
+  lazy val zooKeeperConnectionTimeout = opt[Long](
+    "zk_connection_timeout",
+    descr = "The timeout to connect to ZooKeeper in milliseconds",
+    default = Some(Duration(10, SECONDS).toMillis)
+  )
+
   lazy val zooKeeperUrl = opt[String](
     "zk",
     descr = "ZooKeeper URL for storing state. Format: zk://host1:port1,host2:port2,.../path",
@@ -80,6 +86,7 @@ trait ZookeeperConf extends ScallopConf {
 
   lazy val zkTimeoutDuration = Duration(zooKeeperTimeout(), MILLISECONDS)
   lazy val zkSessionTimeoutDuration = Duration(zooKeeperSessionTimeout(), MILLISECONDS)
+  lazy val zkConnectionTimeoutDuration = Duration(zooKeeperConnectionTimeout(), MILLISECONDS)
 }
 
 object ZookeeperConf {
