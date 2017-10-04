@@ -2,13 +2,14 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.akkahttp.{ Controller, HttpPluginFacade }
+import mesosphere.marathon.api.akkahttp.{Controller, HttpPluginFacade}
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.plugin.auth.AuthorizedResource.Plugins
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpRequestHandler
 import mesosphere.marathon.raml.Raml
+import play.api.libs.json.JsObject
 
 /**
   * The PluginsController can list all available installed plugins,
@@ -47,7 +48,7 @@ class PluginsController(
         plugin = internal.plugin,
         implementation = internal.implementation,
         tags = internal.tags.getOrElse(Nil).toIndexedSeq,
-        additionalProperties = internal.info.get) //Bug: this should be info: Option[JsObject] = internal.info
+        additionalProperties = internal.info.getOrElse(JsObject(Seq.empty))) //Bug: this should be info: Option[JsObject] = internal.info
     }
     val ramlPluginDefinitions = raml.PluginDefinitions(plugins = plugins)
     complete(ramlPluginDefinitions)

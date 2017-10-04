@@ -1,15 +1,15 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
-import akka.http.scaladsl.model.{ HttpEntity, StatusCodes, Uri }
+import akka.http.scaladsl.model.{HttpEntity, StatusCodes, Uri}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
-import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
-import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService }
+import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
+import mesosphere.marathon.core.appinfo.{AppInfo, AppInfoService, TaskCounts}
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.state.{ AppDefinition, VersionInfo }
+import mesosphere.marathon.state.{AppDefinition, Identifiable, VersionInfo}
 import mesosphere.marathon.test.SettableClock
 
 import scala.concurrent.Future
@@ -47,7 +47,14 @@ class AppsControllerTest extends UnitTest with ScalatestRouteTest {
 
     val f = new Fixture()
     val appD = AppDefinition(id = "/a".toRootPath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()))
-    f.appInfoService.selectApp(any, any, any) returns Future.successful(Some(AppInfo(appD)))
+    val taskCounts = TaskCounts(0, 3, 2, 1)
+    val deployments = Seq(Identifiable("foo"), Identifiable("bar"))
+    val appInfo = AppInfo(
+      app = appD,
+      maybeCounts = Some(taskCounts),
+      maybeDeployments = Some(deployments)
+    )
+    f.appInfoService.selectApp(any, any, any) returns Future.successful(Some(appInfo))
 
     When("we try to fetch an app")
     Get(Uri./.withPath(Uri.Path("/a")), HttpEntity.Empty) ~> f.appsController.route ~> check {
@@ -82,7 +89,12 @@ class AppsControllerTest extends UnitTest with ScalatestRouteTest {
           |    "unreachableStrategy" : {
           |      "inactiveAfterSeconds" : 0,
           |      "expungeAfterSeconds" : 0
-          |    }
+          |    },
+          |    "tasksStaged" : 0,
+          |    "tasksRunning" : 3,
+          |    "tasksHealthy" : 2,
+          |    "tasksUnhealthy" : 1,
+          |    "deployments" : [ { "id" : "foo" }, { "id" : "bar" } ]
           |  }
           |}
         """.stripMargin

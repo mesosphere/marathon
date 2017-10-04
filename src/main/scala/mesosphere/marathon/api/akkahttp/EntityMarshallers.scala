@@ -15,6 +15,7 @@ import play.api.libs.json._
 
 object EntityMarshallers {
   import Directives.complete
+  import mesosphere.marathon.api.v2.json.Formats._
   import mesosphere.marathon.raml.MetricsConversion._
 
   private val jsonStringUnmarshaller =
@@ -100,7 +101,8 @@ object EntityMarshallers {
   implicit val jsValueMarshaller = playJsonMarshaller[JsValue]
   implicit val wixResultMarshaller = playJsonMarshaller[com.wix.accord.Failure](Validation.failureWrites)
   implicit val messageMarshaller = playJsonMarshaller[Rejections.Message]
-  implicit val appInfoMarshaller = playJsonMarshaller[raml.AppInfo]
+  //implicit val appInfoMarshaller = playJsonMarshaller[raml.AppInfo]
+  implicit val appInfoMarshaller = playJsonMarshaller[mesosphere.marathon.core.appinfo.AppInfo]
   implicit val infoMarshaller = playJsonMarshaller[raml.MarathonInfo]
   implicit val infoUnmarshaller = playJsonUnmarshaller[raml.MarathonInfo]
   implicit val metricsMarshaller = internalToRamlJsonMarshaller[TickMetricSnapshot, raml.Metrics]
