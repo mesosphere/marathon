@@ -1,5 +1,8 @@
 #%RAML 1.0 Library
 types:
+  InstanceId:
+    type: string
+    pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
   Name:
     type: string
     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -33,6 +36,9 @@ types:
     type: string
     enum: [ HTTP, HTTPS ]
     description: The http scheme to use
+  IpProtocol:
+    type: string
+    enum: [ IPv4 ]
   ReadMode:
     type: string
     enum: [RO, RW]
@@ -49,3 +55,18 @@ types:
       When Marathon receives a TASK_LOST status update indicating that the
       agent running the task is gone, this property defines whether Marathon
       will launch the task on another node or not. Defaults to WAIT_FOREVER"
+  MesosTaskState:
+    type: string
+    enum:
+      - TASK_ERROR
+      - TASK_FAILED
+      - TASK_FINISHED
+      - TASK_KILLED
+      - TASK_KILLING
+      - TASK_RUNNING
+      - TASK_STAGING
+      - TASK_STARTING
+      - TASK_UNREACHABLE
+      - TASK_UNREACHABLE
+      - TASK_GONE
+      - TASK_DROPPED

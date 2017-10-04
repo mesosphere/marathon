@@ -1,6 +1,7 @@
 #%RAML 1.0 Library
 uses:
   readiness: readinessCheckResult.raml
+  task: enrichedTask.raml
 
 types:
   Identifiable:
@@ -29,6 +30,6 @@ types:
             format: int32
           deployments?: Identifiable[]
           readinessCheckResults?: readiness.ReadinessCheckResult[]
-       #   tasks?: EnrichedTask[]
+          tasks?: task.EnrichedTask[]
        #   lastTaskFailures?: TaskFailure
        #   taskStats?: TaskStatsByVersion
