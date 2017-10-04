@@ -14,6 +14,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
@@ -59,6 +60,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
   case class Fixture() {
     val probe: TestProbe = TestProbe()
     val heartbeatProbe: TestProbe = TestProbe()
+    val persistenceStore: PersistenceStore[_, _, _] = mock[PersistenceStore[_, _, _]]
     val leadershipCoordinator: LeadershipCoordinator = mock[LeadershipCoordinator]
     val healthCheckManager: HealthCheckManager = mock[HealthCheckManager]
     val config: MarathonConf = mockConfig
@@ -87,6 +89,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
   "MarathonSchedulerService" should {
     "Start timer when elected" in new Fixture {
       val schedulerService = new MarathonSchedulerService(
+        persistenceStore,
         leadershipCoordinator,
         config,
         electionService,
@@ -110,6 +113,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
     "Cancel timer when defeated" in new Fixture {
       val driver = mock[SchedulerDriver]
       val schedulerService = new MarathonSchedulerService(
+        persistenceStore,
         leadershipCoordinator,
         config,
         electionService,
@@ -138,6 +142,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
     "throw in start leadership when migration fails" in new Fixture {
 
       val schedulerService = new MarathonSchedulerService(
+        persistenceStore,
         leadershipCoordinator,
         config,
         electionService,
@@ -171,6 +176,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
       val driverFactory = mock[SchedulerDriverFactory]
 
       val schedulerService = new MarathonSchedulerService(
+        persistenceStore,
         leadershipCoordinator,
         config,
         electionService,
@@ -199,6 +205,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
       val driverFactory = mock[SchedulerDriverFactory]
 
       val schedulerService = new MarathonSchedulerService(
+        persistenceStore,
         leadershipCoordinator,
         config,
         electionService,
@@ -231,6 +238,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
       val driverFactory = mock[SchedulerDriverFactory]
 
       val schedulerService = new MarathonSchedulerService(
+        persistenceStore,
         leadershipCoordinator,
         config,
         electionService,

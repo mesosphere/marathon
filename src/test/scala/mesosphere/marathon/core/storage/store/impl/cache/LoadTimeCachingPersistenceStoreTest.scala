@@ -25,12 +25,14 @@ class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
 
   private def cachedInMemory = {
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    store.open()
     store.preDriverStarts.futureValue
     store
   }
 
   private def cachedZk = {
     val store = new LoadTimeCachingPersistenceStore(zkStore)
+    store.open()
     store.preDriverStarts.futureValue
     store
   }
