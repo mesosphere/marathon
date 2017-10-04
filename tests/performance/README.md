@@ -42,18 +42,18 @@ The following scale tests are available:
     - _Per-App Deployment Time_ : How long a deployment takes from the time the request is completed up to the deployment success or failure event
     - _Overall Deployment Time_ : How long the bunch of deployments took to complete, from the completion of the first request til the last deployment success or failure event.
     - _Failed Deployments_ : How many deployments failed
-    - _Groups Endpoint Response_ : How long does an HTTP request to `/v2/groups` end point take to complete.
+    - _Groups Endpoint Response_ : How long does an HTTP request to `/v2/groups` endpoint take to complete.
     - _CPU Load_ : The CPU load marathon caused while running.
-    - _Memory Usage_ : The ammount of memory consumed by marathon while running.
+    - _Memory Usage_ : The amount of memory consumed by marathon while running.
     - _Thread Count_ : The number of threads in the JVM while marathon was running.
 
 * `config/perf-driver/test-1-apps-n-instances.yml` : Starts an app with 50, 100, 150, ... 500  1 instances and measures:
     - _Per-App Deployment Time_ : How long a deployment takes from the time the request is completed up to the deployment success or failure event
     - _Overall Deployment Time_ : How long the bunch of deployments took to complete, from the completion of the first request til the last deployment success or failure event.
     - _Failed Deployments_ : How many deployments failed
-    - _Groups Endpoint Response_ : How long does an HTTP request to `/v2/groups` end point take to complete.
+    - _Groups Endpoint Response_ : How long does an HTTP request to `/v2/groups` endpoint take to complete.
     - _CPU Load_ : The CPU load marathon caused while running.
-    - _Memory Usage_ : The ammount of memory consumed by marathon while running.
+    - _Memory Usage_ : The amount of memory consumed by marathon while running.
     - _Thread Count_ : The number of threads in the JVM while marathon was running.
 
 ## Test Results
@@ -62,22 +62,22 @@ The test is producing a variety of results:
 
 * _dump.json_ - Contains the raw dump of the metrics collected for various parameters during the scale test.
 * _results.csv_ - Contains a CSV with the summarised results for every parameter configuration.
-* _plot-*.png_ - Image plots with the scale test results. Every metric will have it's own image plot generated.
+* _plot-*.png_ - Image plots with the scale test results. Every metric will have its own image plot generated.
 * _S3 RAW Upload_ - In addition to the local raw dump, the results are uploaded to S3 for long-term archiving.
 * _Postgres Database_ - When used in CI, the results are posted in a Postgres database for long-term archiving and plotting through a PostgREST endpoint.
 * _Datadog_ - When used in CI, a single "indicator" result will be submitted to Datadog for long-term archiving and alerting.
 
 ## Running in CI
 
-All of the CI automation is implenented as a set of `ci_*.sh` scripts. These scripts require some configuration environment variables and are appropriately configuring and launching `dcos-scale-test-driver`.
+All of the CI automation is implemented as a set of `ci_*.sh` scripts. These scripts require some configuration environment variables and are appropriately configuring and launching `dcos-scale-test-driver`.
 
-This section describes the usage and dequirements of each script.
+This section describes the usage and requirements of each script.
 
 ### `ci_run_dcluster.sh` - Run tests against a thin cluster
 
 Installs missing dependencies, creates a local cluster  using the [macarhon-dcluster](https://github.com/wavesoft/marathon-dcluster) script and then it runs the tests on that cluster.
 
-The "thin cluster" deployed consists of 6 mesos agents (with over-commited resources), 1 mesos master, 1 zookeeper and 1 mesos containers using docker-compose. 
+The "thin cluster" deployed consists of 6 Mesos agents (with over-commited resources), 1 Mesos master, 1 Zookeeper and 1 Mesos containers using docker-compose. 
 
 #### Requirements
 

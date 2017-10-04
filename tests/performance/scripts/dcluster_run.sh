@@ -18,14 +18,14 @@ if [ -z "$MARATHON_VERSION" ]; then
   echo "ERROR: Required 'MARATHON_VERSION' environment variable"
   exit 253
 fi
-# if [ -z "$DATADOG_API_KEY" ]; then
-#   echo "ERROR: Required 'DATADOG_API_KEY' environment variable"
-#   exit 253
-# fi
-# if [ -z "$DATADOG_APP_KEY" ]; then
-#   echo "ERROR: Required 'DATADOG_APP_KEY' environment variable"
-#   exit 253
-# fi
+if [ -z "$DATADOG_API_KEY" ]; then
+  echo "ERROR: Required 'DATADOG_API_KEY' environment variable"
+  exit 253
+fi
+if [ -z "$DATADOG_APP_KEY" ]; then
+  echo "ERROR: Required 'DATADOG_APP_KEY' environment variable"
+  exit 253
+fi
 
 # Get mesos version from the cluster config
 MESOS_VERSION=$(cat $CLUSTER_CONFIG | grep 'mesos\s*=' | awk -F'=' '{print $2}' | tr -d ' ')
