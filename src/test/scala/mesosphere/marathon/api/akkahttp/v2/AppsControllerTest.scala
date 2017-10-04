@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
-import akka.http.scaladsl.model.{HttpEntity, StatusCodes, Uri}
+import akka.http.scaladsl.model.{ HttpEntity, StatusCodes, Uri }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
-import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
+import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.ElectionService
@@ -13,14 +13,14 @@ import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
+import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LaunchedEphemeral
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.ReadinessCheck
-import mesosphere.marathon.state.{AppDefinition, Identifiable, TaskFailure, VersionInfo}
+import mesosphere.marathon.state.{ AppDefinition, Identifiable, TaskFailure, VersionInfo }
 import mesosphere.marathon.test.SettableClock
-import org.apache.mesos.{Protos => mesos}
+import org.apache.mesos.{ Protos => mesos }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -123,16 +123,16 @@ class AppsControllerTest extends UnitTest with ScalatestRouteTest {
         appId = appD.id,
         task = ephermeralTask,
         agentInfo = agentInfo,
-        healthCheckResults =  Seq(health),
+        healthCheckResults = Seq(health),
         servicePorts = Seq(80, 433)
       )
-//      EnrichedTask(
-//        appD.id,
-//        task: Task,
-//        agentInfo = agentInfo,
-//        healthCheckResults = Nil,
-//        servicePorts = Nil)
-//      )
+    //      EnrichedTask(
+    //        appD.id,
+    //        task: Task,
+    //        agentInfo = agentInfo,
+    //        healthCheckResults = Nil,
+    //        servicePorts = Nil)
+    //      )
     )
     val appInfo = AppInfo(
       app = appD,
