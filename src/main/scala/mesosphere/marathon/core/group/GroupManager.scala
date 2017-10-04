@@ -21,7 +21,19 @@ import scala.collection.immutable.Seq
   */
 trait GroupManager {
 
+  /**
+    * Get a root group, fetching it from a persistence store if necessary.
+    *
+    * @return a root group
+    */
   def rootGroup(): RootGroup
+
+  /**
+    * Get a root group.
+    *
+    * @return a root group if it has been fetched already, otherwise [[None]]
+    */
+  def rootGroupOption(): Option[RootGroup]
 
   /**
     * Get all available versions for given group identifier.

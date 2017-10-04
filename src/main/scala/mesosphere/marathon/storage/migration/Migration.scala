@@ -100,6 +100,12 @@ class Migration(
 
   @SuppressWarnings(Array("all")) // async/await
   def migrateAsync(): Future[Seq[StorageVersion]] = async {
+    // Before reading to and writing from the storage, let's ensure that
+    // no stale values are read from the persistence store.
+    // Although in case of ZK it is done at the time of creation of CuratorZK,
+    // it is better to be safe than sorry.
+    await(persistenceStore.sync())
+
     val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())
     // before backup/restore called, reset the runtime configuration
     await(runtimeConfigurationRepository.store(RuntimeConfiguration(None, None)))
