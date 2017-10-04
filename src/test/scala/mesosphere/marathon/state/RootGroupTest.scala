@@ -150,7 +150,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be("Groups and Applications may not have the same identifier.")
+        .constraint should be("Groups and Applications may not have the same identifier.")
     }
 
     "cannot replace a group with pods by an app definition" in {
@@ -183,7 +183,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be("Groups and Applications may not have the same identifier.")
+        .constraint should be("Groups and Applications may not have the same identifier.")
     }
 
     "cannot replace a group with pods by an pod definition" in {
@@ -218,7 +218,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be("Groups and Pods may not have the same identifier.")
+        .constraint should be("Groups and Pods may not have the same identifier.")
     }
 
     "can turn a group with group dependencies into a dependency graph" in {

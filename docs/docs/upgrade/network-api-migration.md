@@ -55,7 +55,7 @@ The following table summarizes the API transformations when using the network AP
           }
         ]
       }
-    }
+    },
     "ipAddress": {
       "networkName": "network-name"
     }
@@ -173,7 +173,7 @@ The following table summarizes the changes when using single or multiple network
 </tr>
 </tbody>
 </table>
-
+
 ## Bridge Network
 
 The following table summarizes the API transformations when using the network API in Bridge Mode:
@@ -330,7 +330,7 @@ The following table summarizes the API transformations when using the network AP
 - An application cannot use more than one `host` networks.
 - An application cannot mix networking modes: You must specify a single `host` network, a single `container/bridge` network, or one or more `container` networks.
 
-
+
 ## Example Definitions
 
 ### Valid Definitions
@@ -410,7 +410,7 @@ The following definitions WILL be accepted by the new API.
 </tr>
 </tbody>
 </table>
-
+
 #### App with multiple container networks
 
 The following definition is now possible with the new API.
@@ -546,7 +546,7 @@ The following definition is now possible with the new API.
 </tr>
 </tbody>
 </table>
-
+
 #### App with host network
 
 <table class="table">
@@ -616,7 +616,7 @@ The following definition is now possible with the new API.
 </tr>
 </tbody>
 </table>
-
+
 ### Invalid Definitions
 
 #### Mixed Networks (Invalid)
@@ -661,7 +661,7 @@ You cannot combine network types.
 </tbody>
 </table>
 
-
+
 #### Missing container network name (Invalid)
 
 You must supply a `name` property to use a container network unless you set the `default_network_name` flag when configuring Marathon. [Learn more about command line flags](http://mesosphere.github.io/marathon/docs/command-line-flags.html).

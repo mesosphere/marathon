@@ -16,10 +16,12 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.api.akkahttp.v2.{ AppsController, EventsController, PluginsController }
+import mesosphere.marathon.api.akkahttp.v2.{ AppsController, EventsController, InfoController, PluginsController }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.http.HttpRequestHandler
+import mesosphere.marathon.storage.StorageModule
+import mesosphere.util.state.MesosLeaderInfo
 
 class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
   override def configure(): Unit = {
@@ -37,6 +39,8 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     groupManager: GroupManager,
     pluginManager: PluginManager,
     marathonSchedulerService: MarathonSchedulerService,
+    storageModule: StorageModule,
+    mesosLeaderInfo: MesosLeaderInfo,
     appTasksRes: mesosphere.marathon.api.v2.AppTasksResource)(implicit
     actorSystem: ActorSystem,
     materializer: Materializer,
@@ -51,7 +55,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val appsController = new AppsController(
       clock = clock,
       eventBus = eventBus,
-      marathonSchedulerService = marathonSchedulerService,
+      service = marathonSchedulerService,
       appInfoService = appInfoService,
       healthCheckManager = healthCheckManager,
       instanceTracker = instanceTracker,
@@ -63,8 +67,9 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val resourceController = new ResourceController
     val systemController = new SystemController(config)
     val eventsController = new EventsController(conf, eventBus)
+    val infoController = InfoController(mesosLeaderInfo, storageModule.frameworkIdRepository, conf)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
-    val v2Controller = new V2Controller(appsController, eventsController, pluginsController)
+    val v2Controller = new V2Controller(appsController, eventsController, pluginsController, infoController)
 
     new AkkaHttpMarathonService(
       conf,

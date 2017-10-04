@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package state
 
+import com.wix.accord.Descriptions.{ Generic, Path => WixPath }
 import java.util.regex.Pattern
 
 import com.wix.accord._
@@ -166,9 +167,9 @@ object PersistentVolumeInfo {
     import Constraint.Operator._
     override def apply(c: Constraint): Result = {
       if (!c.hasField || !c.hasOperator) {
-        Failure(Set(RuleViolation(c, "Missing field and operator", None)))
+        Failure(Set(RuleViolation(c, "Missing field and operator")))
       } else if (c.getField != "path") {
-        Failure(Set(RuleViolation(c, "Unsupported field", Some(c.getField))))
+        Failure(Set(RuleViolation(c, "Unsupported field", WixPath(Generic(c.getField)))))
       } else {
         c.getOperator match {
           case LIKE | UNLIKE =>
@@ -180,14 +181,13 @@ object PersistentVolumeInfo {
                   Failure(Set(RuleViolation(
                     c,
                     "Invalid regular expression",
-                    Some(s"${c.getValue}\n${e.getMessage}"))))
+                    WixPath(Generic("value")))))
               }
             } else {
-              Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
+              Failure(Set(RuleViolation(c, "A regular expression value must be provided", WixPath(Generic("value")))))
             }
           case _ =>
-            Failure(Set(
-              RuleViolation(c, "Operator must be one of LIKE, UNLIKE", None)))
+            Failure(Set(RuleViolation(c, "Operator must be one of LIKE, UNLIKE", WixPath(Generic("operator")))))
         }
       }
     }
@@ -210,7 +210,7 @@ object PersistentVolumeInfo {
     }
 
     val haveProperlyOrderedMaxSize = isTrue[PersistentVolumeInfo]("Max size must be larger than size") { info =>
-      info.maxSize.map(_ > info.size).getOrElse(true)
+      info.maxSize.forall(_ > info.size)
     }
 
     validator[PersistentVolumeInfo] { info =>
@@ -302,7 +302,7 @@ object ExternalVolumeInfo {
     info.size.each should be > 0L
     info.name should matchRegex(LabelRegex)
     info.provider should matchRegex(LabelRegex)
-    info.options is valid(validOptions)
+    info.options is validOptions
   }
 
   def fromProto(evi: Protos.Volume.ExternalVolumeInfo): ExternalVolumeInfo =
@@ -323,7 +323,7 @@ object ExternalVolume {
   def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] = validator[ExternalVolume] { ev =>
     ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
     ev.containerPath is notEmpty
-    ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
+    ev.external is ExternalVolumeInfo.validExternalVolumeInfo
   } and ExternalVolumes.validExternalVolume
 }
 

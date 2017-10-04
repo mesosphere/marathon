@@ -128,10 +128,8 @@ object PathId {
   private[this] val ID_PATH_SEGMENT_PATTERN =
     "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
 
-  private val validPathChars = new Validator[PathId] {
-    override def apply(pathId: PathId): Result = {
-      validate(pathId.path)(validator = pathId.path.each should matchRegexFully(ID_PATH_SEGMENT_PATTERN.pattern))
-    }
+  private val validPathChars = isTrue[PathId](s"must fully match regular expression '${ID_PATH_SEGMENT_PATTERN.pattern.pattern()}'") { id =>
+    id.path.forall(part => ID_PATH_SEGMENT_PATTERN.pattern.matcher(part).matches())
   }
 
   /**
