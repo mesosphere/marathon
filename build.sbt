@@ -78,10 +78,10 @@ lazy val testSettings =
 )
 
 lazy val commonSettings = testSettings ++
-  aspectjSettings ++ Seq(
+  SbtAspectj.aspectjSettings ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.11.11",
+  scalaVersion := "2.12.3",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -102,10 +102,8 @@ lazy val commonSettings = testSettings ++
     "-Ywarn-nullary-override",
     "-Ywarn-nullary-unit",
     //"-Ywarn-unused", We should turn this one on soon
-    "-Ywarn-unused-import",
+    "-Ywarn-unused-import"
     //"-Ywarn-value-discard", We should turn this one on soon.
-    "-Yclosure-elim",
-    "-Ydead-code"
   ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.
   scalacOptions in (Compile, doc) := Seq("-encoding", "UTF-8", "-deprecation", "-feature", "-Xfuture"),
@@ -130,17 +128,17 @@ lazy val commonSettings = testSettings ++
   coverageFailOnMinimum := true,
 
   fork in run := true,
-  AspectjKeys.aspectjVersion in Aspectj := "1.8.10",
-  AspectjKeys.inputs in Aspectj += compiledClasses.value,
+  aspectjVersion in Aspectj := "1.8.10",
+  aspectjInputs in Aspectj += (aspectjCompiledClasses in Aspectj).value,
   products in Compile := (products in Aspectj).value,
   products in Runtime := (products in Aspectj).value,
   products in Compile := (products in Aspectj).value,
-  AspectjKeys.showWeaveInfo := true,
-  AspectjKeys.verbose := true,
+  aspectjShowWeaveInfo := true,
+  aspectjVerbose := true,
   // required for AJC compile time weaving
   javacOptions in Compile += "-g",
-  javaOptions in run ++= (AspectjKeys.weaverOptions in Aspectj).value,
-  javaOptions in Test ++= (AspectjKeys.weaverOptions in Aspectj).value,
+  javaOptions in run ++= (aspectjWeaverOptions in Aspectj).value,
+  javaOptions in Test ++= (aspectjWeaverOptions in Aspectj).value,
   git.useGitDescribe := true,
   // TODO: There appears to be a bug where uncommitted changes is true even if nothing is committed.
   git.uncommittedSignifier := None
