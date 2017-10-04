@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.akkahttp.{Controller, HttpPluginFacade}
+import mesosphere.marathon.api.akkahttp.{ Controller, HttpPluginFacade }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.plugin.auth.AuthorizedResource.Plugins
