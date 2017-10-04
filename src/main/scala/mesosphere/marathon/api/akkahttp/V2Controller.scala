@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.http.scaladsl.server.Route
-import v2.{ AppsController, EventsController, PluginsController }
+import v2.{ AppsController, EventsController, InfoController, PluginsController }
 
 /**
   * Dispatches to various v2 controller routes
@@ -10,7 +10,8 @@ import v2.{ AppsController, EventsController, PluginsController }
 class V2Controller(
     appsController: AppsController,
     eventsController: EventsController,
-    pluginsController: PluginsController
+    pluginsController: PluginsController,
+    infoController: InfoController
 ) extends Controller {
   import Directives._
   override val route: Route = {
@@ -22,6 +23,9 @@ class V2Controller(
       } ~
       pathPrefix("plugins") {
         pluginsController.route
+      } ~
+      pathPrefix("info") {
+        infoController.route
       }
   }
 }

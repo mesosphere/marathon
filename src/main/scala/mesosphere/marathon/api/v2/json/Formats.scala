@@ -15,7 +15,7 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
-import play.api.data.validation.ValidationError
+import play.api.libs.json.JsonValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
@@ -173,7 +173,7 @@ trait Formats
    */
 
   def nonEmpty[C <: Iterable[_]](implicit reads: Reads[C]): Reads[C] =
-    Reads.filterNot[C](ValidationError("set must not be empty"))(_.isEmpty)(reads)
+    Reads.filterNot[C](JsonValidationError("set must not be empty"))(_.isEmpty)(reads)
 
   def enumFormat[A <: java.lang.Enum[A]](read: String => A, errorMsg: String => String): Format[A] = {
     val reads = Reads[A] {

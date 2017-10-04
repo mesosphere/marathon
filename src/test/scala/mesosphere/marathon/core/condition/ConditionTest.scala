@@ -72,4 +72,24 @@ class ConditionTest extends UnitTest {
       "be terminal" in { condition.isTerminal should be(true) }
     }
   }
+
+  "Condition apply/unapply" should {
+    "round trip all instances" in {
+      Condition.all.foreach { condition =>
+        Condition(Condition.unapply(condition).get) shouldBe condition
+      }
+    }
+  }
+
+  "ConditionFormat" should {
+    import play.api.libs.json._
+    import Condition.conditionFormat
+    "read the legacy format" in {
+      Json.parse("""{"str":"Running"}""").as[Condition] shouldBe Condition.Running
+    }
+
+    "can round trip serialize a condition" in {
+      Json.toJson(Condition.Error).as[Condition] shouldBe (Condition.Error)
+    }
+  }
 }

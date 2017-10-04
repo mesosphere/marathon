@@ -1,4 +1,5 @@
 import os.path
+import uuid
 
 from utils import make_id, get_resource
 
@@ -14,8 +15,12 @@ def load_pod(pod_name):
     return pod
 
 
-def simple_pod():
-    return load_pod('simple-pod')
+def simple_pod(pod_id=None):
+    if pod_id is None:
+        pod_id = '/simple-pod-{}'.format(uuid.uuid4().hex)
+    pod = load_pod('simple-pod')
+    pod['id'] = pod_id
+    return pod
 
 
 def private_docker_pod():

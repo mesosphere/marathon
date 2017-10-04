@@ -63,7 +63,6 @@ object Dependencies {
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test",
-    Test.wixAccordScalatest % "test",
     Test.curatorTest % "test"
   ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
@@ -82,7 +81,7 @@ object Dependency {
     // runtime deps versions
     val Aws = "1.11.129"
     val Alpakka  = "0.8"
-    val Chaos = "0.8.8"
+    val Chaos = "0.9.0"
     val Guava = "19.0"
     val Mesos = "1.4.0-rc3"
     // Version of Mesos to use in Dockerfile.
@@ -101,18 +100,19 @@ object Dependency {
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
     val Diffson = "2.0.2"
-    val PlayJson = "2.5.14"
+    val PlayJson = "2.6.6"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.5"
     val MarathonUI = "1.2.0"
     val MarathonApiConsole = "3.0.8-accept"
     val Logback = "1.1.3"
     val Logstash = "4.9"
-    val WixAccord = "0.5"
+    val WixAccord = "0.7.1"
     val Curator = "2.11.1"
     val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
     val Raven = "7.8.6"
+    val JacksonVersion = "2.8.9"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -132,7 +132,7 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % V.AkkaHttp
-  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
+  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.17.0"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
@@ -191,7 +191,6 @@ object Dependency {
     val diffson = "org.gnieh" %% "diffson" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
-    val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
   }
 }

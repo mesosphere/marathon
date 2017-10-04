@@ -2,14 +2,12 @@ package mesosphere.marathon
 package tasks
 
 import java.util
-import java.util.concurrent.TimeUnit
 
 import mesosphere.UnitTest
 import mesosphere.marathon.tasks.PortsMatcher.{ PortRange, PortWithRole }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
 
 class PortWithRoleRandomPortsFromRangesTest extends UnitTest {

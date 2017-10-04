@@ -641,6 +641,7 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     """
 
     app_def = apps.sleep_app()
+    app_id = app['id']
     app_def['cpus'] = 3.5
     host = common.ip_other_than_mom()
     common.pin_to_host(app_def, host)
@@ -648,12 +649,12 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    shakedown.deployment_wait()
-    client.scale_app(app_def["id"], 2)
+    shakedown.deployment_wait(app_id=app_id)
+    client.scale_app(app_id, 2)
 
     time.sleep(5)
-    deployments = client.get_deployments()
-    tasks = client.get_tasks(app_def["id"])
+    deployments = client.get_deployments(app_id=app_id)
+    tasks = client.get_tasks(app_id)
 
     # still deploying
     assert len(deployments) == 1, "The number of deployments is {}, but 1 was expected".format(len(deployments))

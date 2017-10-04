@@ -16,6 +16,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.raml.{ Container => RamlContainer }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -23,6 +24,7 @@ import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
 import org.mockito.Matchers
 import play.api.libs.json._
+import mesosphere.marathon.api.v2.validation.AppValidation
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -53,7 +55,18 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       PluginManager.None
     )(auth.auth, auth.auth)
 
+    implicit val authenticator: Authenticator = auth.auth
+    implicit val authorizer: Authorizer = auth.auth
+
     val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.get, config.mesosBridgeName())
+    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(PluginManager.None)
+    implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => config.defaultNetworkName.get)
+
+    implicit val validateAndNormalizeApp: Normalization[raml.App] =
+      AppHelpers.appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+
+    implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
+      AppHelpers.appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
     def normalize(app: App): App = {
       val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
@@ -102,7 +115,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       When("The request is processed")
 
-      appsResource.create(body.getBytes("UTF-8"), false, auth.request)
+      appsResource.create(body.getBytes("UTF-8"), force = false, auth.request)
     }
   }
 
@@ -681,7 +694,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("It fails")
       response.getStatus should be(422)
-      response.getEntity.toString should include("/env(NAMED_FOO)")
+      response.getEntity.toString should include("/env/NAMED_FOO/secret")
       response.getEntity.toString should include("references an undefined secret")
     }
 
@@ -765,7 +778,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         val (body, plan) = prepareApp(app, groupManager)
 
         Then("A constraint violation exception is thrown")
-        val response = appsResource.create(body, false, auth.request)
+        val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
       }
 
@@ -774,7 +787,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
           cpus = -1)
         val (body, _) = prepareApp(app, groupManager)
 
-        val response = appsResource.create(body, false, auth.request)
+        val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
       }
 
@@ -783,7 +796,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
           instances = -1)
         val (body, _) = prepareApp(app, groupManager)
 
-        val response = appsResource.create(body, false, auth.request)
+        val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
       }
 
@@ -825,7 +838,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val (body, _) = prepareApp(app, groupManager)
 
       Then("A constraint violation exception is thrown")
-      val response = appsResource.create(body, false, auth.request)
+      val response = appsResource.create(body, force = false, auth.request)
       response.getStatus should be(422)
     }
 
@@ -839,7 +852,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("A constraint violation exception is thrown")
       val body = invalidAppJson.getBytes("UTF-8")
-      val response = appsResource.create(body, false, auth.request)
+      val response = appsResource.create(body, force = false, auth.request)
       response.getStatus should be(422)
     }
 
@@ -1078,7 +1091,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("The return code indicates validation error")
       response.getStatus should be(422)
-      response.getEntity.toString should include("/container/volumes(0)/external/options(\\\"dvdi/iops\\\")")
+      response.getEntity.toString should include("/container/volumes(0)/external/options/\\\"dvdi/iops\\\"")
     }
 
     "Creating an app with an external volume w/ relative containerPath DOCKER containerizer should succeed (available with Mesos 1.0)" in new Fixture {
@@ -1276,13 +1289,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = false)
 
       Then("the application is updated")
-      val app1 = appsResource.updateOrCreate(
-        app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true)(auth.identity)
+      implicit val identity = auth.identity
+      val app1 = AppHelpers.updateOrCreate(
+        app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
       val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
-      val app2 = appsResource.updateOrCreate(
-        app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false)(auth.identity)
+      val app2 = AppHelpers.updateOrCreate(
+        app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 
       app1 should be(app2)
     }
@@ -1391,7 +1405,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to add an app")
-      val create = appsResource.create(app.getBytes("UTF-8"), false, req)
+      val create = appsResource.create(app.getBytes("UTF-8"), force = false, req)
       Then("we receive a NotAuthenticated response")
       create.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -1411,12 +1425,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       replaceMultiple.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to delete an app")
-      val delete = appsResource.delete(false, "", req)
+      val delete = appsResource.delete(force = false, "", req)
       Then("we receive a NotAuthenticated response")
       delete.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to restart an app")
-      val restart = appsResource.restart("", false, req)
+      val restart = appsResource.restart("", force = false, req)
       Then("we receive a NotAuthenticated response")
       restart.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -1434,7 +1448,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = """{"id":"/a","cmd":"foo","ports":[]}"""
 
       When("we try to create an app")
-      val create = appsResource.create(app.getBytes("UTF-8"), false, req)
+      val create = appsResource.create(app.getBytes("UTF-8"), force = false, req)
       Then("we receive a NotAuthorized response")
       create.getStatus should be(auth.UnauthorizedStatus)
 
@@ -1454,12 +1468,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       replaceMultiple.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to remove an app")
-      val delete = appsResource.delete(false, "/a", req)
+      val delete = appsResource.delete(force = false, "/a", req)
       Then("we receive a NotAuthorized response")
       delete.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to restart an app")
-      val restart = appsResource.restart("/a", false, req)
+      val restart = appsResource.restart("/a", force = false, req)
       Then("we receive a NotAuthorized response")
       restart.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -1502,7 +1516,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("A 404 is returned")
       val exception = intercept[AppNotFoundException] {
-        appsResource.delete(false, "/foo", req)
+        appsResource.delete(force = false, "/foo", req)
       }
       exception.getMessage should be("App '/foo' does not exist")
     }
@@ -1516,12 +1530,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       )
 
       val updateCmd = AppUpdate(cmd = Some("sleep 2"))
-      val updatedApp = appsResource.updateOrCreate(
+      val updatedApp = AppHelpers.updateOrCreate(
         appId = app.id,
         existing = Some(app),
         appUpdate = updateCmd,
         allowCreation = false,
-        partialUpdate = true
+        partialUpdate = true,
+        now = clock.now(),
+        service = service
       )
       assert(updatedApp.versionInfo == app.versionInfo)
     }

@@ -314,7 +314,7 @@ object Instance {
 
   implicit val agentFormat: Format[AgentInfo] = Json.format[AgentInfo]
   implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]
-  implicit val instanceConditionFormat: Format[Condition] = Json.format[Condition]
+  implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
 
   implicit val instanceJsonWrites: Writes[Instance] = {

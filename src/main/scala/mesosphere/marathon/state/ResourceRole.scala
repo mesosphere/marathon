@@ -16,7 +16,7 @@ object ResourceRole {
   def validAcceptedResourceRoles(isResident: Boolean): Validator[Set[String]] =
     validator[Set[String]] { acceptedResourceRoles =>
       acceptedResourceRoles is notEmpty
-      acceptedResourceRoles.each is valid(ResourceRole.validResourceRole)
+      acceptedResourceRoles.each is ResourceRole.validResourceRole
     } and isTrue("""A resident app must have `acceptedResourceRoles = ["*"]`.""") { acceptedResourceRoles =>
       !isResident || acceptedResourceRoles == Set(ResourceRole.Unreserved)
     }
@@ -42,7 +42,7 @@ object ResourceRole {
       isTrue[String](message.format("\"..\"")) { role => role != ".."; } and
       isTrue[String]("A role name must not start with a '-'.") { role => !role.startsWith("-") } and
       validator[String] { role =>
-        role.each is valid(validResourceRoleChar)
+        role.each is validResourceRoleChar
       }
   }
 }

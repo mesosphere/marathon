@@ -14,7 +14,7 @@ trait NetworkValidation {
 
   implicit val modelNetworkValidator: Validator[pod.Network] = new Validator[pod.Network] {
     val containerNetworkValidator: Validator[pod.ContainerNetwork] = validator[pod.ContainerNetwork] { net =>
-      net.name is valid(validName)
+      net.name is validName
     }
     override def apply(net: pod.Network): Result = net match {
       case ct: pod.ContainerNetwork => validate(ct)(containerNetworkValidator)

@@ -681,3 +681,23 @@ def agent_hostname_by_id(agent_id):
             return agent['hostname']
 
     return None
+
+
+def deployment_predicate(service_id=None):
+    deployments = marathon.create_client().get_deployments()
+    if (service_id is None):
+        return len(deployments) == 0
+    else:
+        filtered = [
+            deployment for deployment in deployments
+            if (service_id in deployment['affectedApps'] or service_id in deployment['affectedPods'])
+        ]
+        return len(filtered) == 0
+
+
+def deployment_wait(timeout=120, service_id=None):
+    """ Overriding default shakedown method to make it possible to wait
+        for specific pods in addition to apps. However we should probably fix
+        the dcos-cli and remove this method later.
+    """
+    shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
