@@ -42,7 +42,7 @@ class MetricsTest extends UnitTest {
       assert(instance.getClass.getName.contains('$'))
 
       assert(metrics.name(ServiceMetric, instance.getClass, "test$method") ==
-        s"${ServiceMetric.name}.mesosphere.marathon.metrics.MetricsTest.anonfun.1.anonfun.apply.mcV.sp.2.anon.1.test.method")
+        s"${ServiceMetric.name}.mesosphere.marathon.metrics.MetricsTest.anon.1.test.method")
     }
 
     "Metrics#name should use a dot to separate the class name and the method name" in {
