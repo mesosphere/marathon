@@ -65,7 +65,7 @@ object Dependencies {
     Test.scalacheck % "test",
     Test.wixAccordScalatest % "test",
     Test.curatorTest % "test"
-  ) ++ Kamon.all ++ Jackson.all).map(
+  ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -82,7 +82,7 @@ object Dependency {
     // runtime deps versions
     val Aws = "1.11.129"
     val Alpakka  = "0.8"
-    val Chaos = "0.8.8"
+    val Chaos = "0.9.0"
     val Guava = "19.0"
     val Mesos = "1.4.0-rc3"
     // Version of Mesos to use in Dockerfile.
@@ -163,14 +163,6 @@ object Dependency {
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   val akkaSse = "de.heikoseeberger" %% "akka-sse" % V.AkkaSSE
-  object Jackson {
-    /* We need all of these Jackson dependencies to be in sync with one another; play-json 2.6.6 targets jackson 2.8.9;
-     * when we upgrade to Chaos 0.9.0, this will no longer be necessary */
-    val all = Seq(
-      "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.JacksonVersion,
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.JacksonVersion
-    )
-  }
 
   object Kamon {
     val Version = "0.6.7"
