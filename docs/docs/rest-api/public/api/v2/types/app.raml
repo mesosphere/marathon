@@ -20,30 +20,6 @@ uses:
   killSelection: killSelection.raml
 
 types:
-  AppInfo:
-    type: object
-    properties:
-      app:
-        type: App
-        properties:
-        # Task counts
-          tasksStaged?:
-            type: number
-            format: int32
-          tasksRunning?:
-            type: number
-            format: int32
-          tasksHealthy?:
-            type: number
-            format: int32
-          tasksUnhealthy?:
-            type: number
-            format: int32
-       #   deployments?: Deployment[]
-       #   readinessCheckResults?: ReadinessCheckResult[]
-       #   tasks?: EnrichedTask[]
-       #   lastTaskFailures?: TaskFailure
-       #   taskStats?: TaskStatsByVersion
   AppResidency:
     type: object
     description: |
