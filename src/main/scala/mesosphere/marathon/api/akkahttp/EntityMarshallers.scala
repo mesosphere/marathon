@@ -7,6 +7,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{ Rejection, RejectionError, Route }
 import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, Unmarshaller }
 import akka.util.ByteString
+import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
@@ -15,6 +16,8 @@ import mesosphere.marathon.raml.{ LoggerChange, MarathonInfo, Metrics }
 import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.state.AppDefinition
 import play.api.libs.json._
+
+import scala.collection.breakOut
 
 object EntityMarshallers {
   import Directives.complete
@@ -32,6 +35,18 @@ object EntityMarshallers {
   private val jsonStringMarshaller =
     Marshaller.stringMarshaller(`application/json`)
 
+  def jsErrorToFailure(error: JsError): Failure = Failure(
+    error.errors.flatMap {
+      case (path, validationErrors) =>
+        validationErrors.map { validationError =>
+          RuleViolation(
+            validationError.args.mkString(", "),
+            validationError.message,
+            path = Path(path.toString.split("/").filter(_ != "").map(Generic(_)): _*))
+        }
+    }(breakOut)
+  )
+
   /**
     * HTTP entity => `A`
     *
@@ -47,17 +62,9 @@ object EntityMarshallers {
       reads
         .reads(json)
         .recoverTotal {
-          case JsError(errors) =>
-            val violations = errors.flatMap {
-              case (path, validationErrors) =>
-                validationErrors.map { validationError =>
-                  RuleViolation(
-                    validationError.args.mkString(", "),
-                    validationError.message,
-                    Some(path.toString()))
-                }
-            }
-            throw RejectionError(ValidationFailed(Failure(violations.toSet)))
+          case error: JsError =>
+            throw RejectionError(
+              ValidationFailed(jsErrorToFailure(error)))
         }
     jsonStringUnmarshaller.map(data => read(Json.parse(data)))
   }

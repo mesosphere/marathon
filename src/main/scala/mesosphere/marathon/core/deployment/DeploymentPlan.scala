@@ -339,7 +339,7 @@ object DeploymentPlan {
 
   def deploymentPlanValidator(): Validator[DeploymentPlan] = {
     validator[DeploymentPlan] { plan =>
-      plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
+      plan.createdOrUpdatedApps as "app" is every(AppDefinition.updateIsValid(plan.original))
     }
   }
 }

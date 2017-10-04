@@ -1,81 +1,80 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.scalatest.ResultMatchers
-import com.wix.accord.{ Result, Validator }
+import com.wix.accord.{ Result, Validator, Failure }
 import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, EphemeralVolume, Image, ImageType, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.{ UnitTest, ValidationTestLike }
 
-class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
+class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValidation with SchedulingValidation {
 
   "A pod definition" should {
 
-    "be rejected if the id is empty" in new Fixture {
-      private val invalid = validPod.copy(id = "/")
-      validator(invalid) should failWith("id" -> "Path must contain at least one path element")
+    "be rejected if the id is empty" in new Fixture() {
+      validator(validPod.copy(id = "/")) should haveViolations("/id" -> "Path must contain at least one path element")
     }
 
-    "be rejected if the id is not absolute" in new Fixture {
-      private val invalid = validPod.copy(id = "some/foo")
-      validator(invalid) should failWith("id" -> "Path needs to be absolute")
+    "be rejected if the id is not absolute" in new Fixture() {
+      validator(validPod.copy(id = "some/foo")) should haveViolations("/id" -> "Path needs to be absolute")
     }
 
-    "be rejected if a defined user is empty" in new Fixture {
-      private val invalid = validPod.copy(user = Some(""))
-      validator(invalid) should failWith("user" -> "must not be empty")
+    "be rejected if a defined user is empty" in new Fixture() {
+      validator(validPod.copy(user = Some(""))) should haveViolations("/user" -> "must not be empty")
     }
 
-    "be accepted if secrets defined" in new Fixture {
+    "be accepted if secrets defined" in new Fixture(validateSecrets = true) {
       private val valid = validPod.copy(secrets = Map("secret1" -> SecretDef(source = "/foo")), environment = Map("TEST" -> EnvVarSecret("secret1")))
-      secretValidator(valid) shouldBe aSuccess
+      validator(valid) should be(aSuccess)
     }
 
-    "be rejected if no container is defined" in new Fixture {
-      private val invalid = validPod.copy(containers = Seq.empty)
-      validator(invalid) should failWith("containers" -> "must not be empty")
+    "be rejected if no container is defined" in new Fixture() {
+      validator(validPod.copy(containers = Seq.empty)) should haveViolations("/containers" -> "must not be empty")
     }
 
-    "be rejected if container names are not unique" in new Fixture {
-      private val invalid = validPod.copy(containers = Seq(validContainer, validContainer))
-      validator(invalid) should failWith("containers" -> PodsValidationMessages.ContainerNamesMustBeUnique)
+    "be rejected if container names are not unique" in new Fixture() {
+      validator(validPod.copy(containers = Seq(validContainer, validContainer))) should haveViolations(
+        "/containers" -> PodsValidationMessages.ContainerNamesMustBeUnique)
     }
 
-    "be rejected if endpoint names are not unique" in new Fixture {
+    "be rejected if endpoint names are not unique" in new Fixture() {
       val endpoint1 = Endpoint("endpoint", hostPort = Some(123))
       val endpoint2 = Endpoint("endpoint", hostPort = Some(124))
       private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2))))
-      validator(invalid) should failWith("value" -> PodsValidationMessages.EndpointNamesMustBeUnique)
+      validator(invalid) should haveViolations(
+        "/" -> PodsValidationMessages.EndpointNamesMustBeUnique)
     }
 
-    "be rejected if endpoint host ports are not unique" in new Fixture {
+    "be rejected if endpoint host ports are not unique" in new Fixture() {
       val endpoint1 = Endpoint("endpoint1", hostPort = Some(123))
       val endpoint2 = Endpoint("endpoint2", hostPort = Some(123))
       private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2))))
-      validator(invalid) should failWith("value" -> PodsValidationMessages.HostPortsMustBeUnique)
+      validator(invalid) should haveViolations(
+        "/" -> PodsValidationMessages.HostPortsMustBeUnique)
     }
 
-    "be rejected if endpoint container ports are not unique" in new Fixture {
+    "be rejected if endpoint container ports are not unique" in new Fixture() {
       val endpoint1 = Endpoint("endpoint1", containerPort = Some(123))
       val endpoint2 = Endpoint("endpoint2", containerPort = Some(123))
       private val invalid = validPod.copy(
         networks = Seq(Network(mode = NetworkMode.Container, name = Some("default-network-name"))),
         containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2)))
       )
-      validator(invalid) should failWith("value" -> PodsValidationMessages.ContainerPortsMustBeUnique)
+      validator(invalid) should haveViolations(
+        "/" -> PodsValidationMessages.ContainerPortsMustBeUnique)
     }
 
-    "be rejected if volume names are not unique" in new Fixture {
+    "be rejected if volume names are not unique" in new Fixture() {
       val volume = EphemeralVolume("volume")
       val volumeMount = VolumeMount(volume.name, "/bla")
       private val invalid = validPod.copy(
         volumes = Seq(volume, volume),
         containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
       )
-      validator(invalid) should failWith("volumes" -> PodsValidationMessages.VolumeNamesMustBeUnique)
+      validator(invalid) should haveViolations(
+        "/volumes" -> PodsValidationMessages.VolumeNamesMustBeUnique)
     }
 
-    "be rejected if a secret volume is defined without a corresponding secret" in new Fixture {
+    "be rejected if a secret volume is defined without a corresponding secret" in new Fixture(validateSecrets = true) {
       val volume = PodSecretVolume("volume", "foo")
       val volumeMount = VolumeMount(volume.name, "/bla")
       private val invalid = validPod.copy(
@@ -86,39 +85,31 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       validator(invalid).toString should include(PodsValidationMessages.SecretVolumeMustReferenceSecret)
     }
 
-    "be accepted if it is a valid pod with a Docker pull config" in new Fixture {
-      secretValidator(pullConfigPod) shouldBe aSuccess
+    "be accepted if it is a valid pod with a Docker pull config" in new Fixture(validateSecrets = true) {
+      validator(pullConfigPod) should be(aSuccess)
     }
 
-    "be rejected if a pull config pod is provided when secrets features is disabled" in new Fixture {
+    "be rejected if a pull config pod is provided when secrets features is disabled" in new Fixture(validateSecrets = false) {
       val validationResult: Result = validator(pullConfigPod)
-      validationResult shouldBe aFailure
+      validationResult shouldBe a[Failure]
       val validationResultString: String = validationResult.toString
       validationResultString should include("must be empty")
       validationResultString should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
     }
 
-    "be rejected if a pull config pod doesn't have secrets" in new Fixture {
+    "be rejected if a pull config pod doesn't have secrets" in new Fixture(validateSecrets = true) {
       private val invalid = pullConfigPod.copy(secrets = Map.empty)
-      secretValidator(invalid) should failWith(
-        GroupViolationMatcher(
-          description = "containers",
-          constraint = "contains elements, which are not valid.",
-          violations = Set(group("(0)", "not valid",
-            "image" -> "pullConfig.secret must refer to an existing secret"))))
+      validator(invalid) should haveViolations(
+        "/containers(0)/image/pullConfig" -> "pullConfig.secret must refer to an existing secret")
     }
 
-    "be rejected if a pull config image is not Docker" in new Fixture {
+    "be rejected if a pull config image is not Docker" in new Fixture() {
       private val invalid = pullConfigPod.copy(
         containers = Seq(pullConfigContainer.copy(
           image = Some(pullConfigContainer.image.get.copy(kind = ImageType.Appc))
         )))
-      secretValidator(invalid) should failWith(
-        GroupViolationMatcher(
-          description = "containers",
-          constraint = "contains elements, which are not valid.",
-          violations = Set(group("(0)", "not valid",
-            "image" -> "pullConfig is supported only with Docker images"))))
+      validator(invalid) should haveViolations(
+        "/containers(0)/image/pullConfig" -> "pullConfig is supported only with Docker images")
     }
   }
 
@@ -133,7 +124,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
     }
   }
 
-  class Fixture {
+  class Fixture(validateSecrets: Boolean = false) {
     val validContainer = PodContainer(
       name = "ct1",
       resources = Resources()
@@ -155,12 +146,12 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       secrets = Map("aSecret" -> SecretDef("/pull/config"))
     )
 
-    val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, None)
-    val secretValidator: Validator[Pod] = podValidator(Set(Features.SECRETS), SemanticVersion.zero, None)
+    val features: Set[String] = if (validateSecrets) Set(Features.SECRETS) else Set.empty
+    implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None)
   }
 
   "network validation" when {
-    val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"))
+    implicit val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"))
 
     def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint] = Nil) =
       PodContainer(
@@ -195,7 +186,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         val app = networkedPod(
           Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80))))),
           networks(2))
-        validator(app) shouldBe (aSuccess)
+        validator(app) should be(aSuccess)
       }
 
       "allow endpoints for pods with bridge networking" in {
@@ -205,7 +196,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
           containers = Seq(podContainer(endpoints = Seq(Endpoint("endpoint", hostPort = Some(0), containerPort = Some(80)))))
         )
 
-        validator(pod) shouldBe (aSuccess)
+        validator(pod) should be(aSuccess)
       }
 
       "allow endpoints that both declare a hostPort and a networkNames" in {
@@ -217,7 +208,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
               containerPort = Some(80),
               networkNames = List("1"))))),
           networks(2))
-        validator(app) shouldBe (aSuccess)
+        validator(app) should be(aSuccess)
       }
     }
 
@@ -232,7 +223,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
                   "endpoint",
                   hostPort = Some(80),
                   containerPort = Some(80),
-                  networkNames = Nil)))), networks)) shouldBe (aSuccess)
+                  networkNames = Nil)))), networks)) should be(aSuccess)
         }
 
         s"${subtitle} allow endpoint without hostport" in {
@@ -243,7 +234,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
                   "endpoint",
                   hostPort = None,
                   containerPort = Some(80),
-                  networkNames = Nil)))), networks)) shouldBe (aSuccess)
+                  networkNames = Nil)))), networks)) should be(aSuccess)
         }
 
         s"${subtitle} allow endpoint with zero hostport" in {
@@ -253,33 +244,28 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
                 Endpoint(
                   "endpoint",
                   containerPort = Some(80),
-                  hostPort = Some(0))))), networks)) shouldBe (aSuccess)
+                  hostPort = Some(0))))), networks)) should be(aSuccess)
         }
 
         s"${subtitle} allows containerPort of zero" in {
-          val result = validator(
+          validator(
             networkedPod(Seq(
               podContainer(endpoints = Seq(
                 Endpoint("name1", containerPort = Some(0)),
                 Endpoint("name2", containerPort = Some(0))
-              ))), networks))
-
-          result shouldBe aSuccess
+              ))), networks)) should be(aSuccess)
         }
 
         s"${subtitle} require that hostPort is unique" in {
-          val result = validator(
-            networkedPod(Seq(
-              podContainer(endpoints = Seq(
-                Endpoint(
-                  "name1",
-                  hostPort = Some(123)),
-                Endpoint(
-                  "name2",
-                  hostPort = Some(123))))), networks))
-
-          result should containViolation(
-            "/" -> PodsValidationMessages.HostPortsMustBeUnique)
+          val pod = networkedPod(Seq(
+            podContainer(endpoints = Seq(
+              Endpoint(
+                "name1",
+                hostPort = Some(123)),
+              Endpoint(
+                "name2",
+                hostPort = Some(123))))), networks)
+          validator(pod) should haveViolations("/" -> PodsValidationMessages.HostPortsMustBeUnique)
         }
       }
 
@@ -288,14 +274,12 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
     }
 
     "container-mode: requires containerPort" in {
-      val result = validator(
-        networkedPod(Seq(
-          podContainer(endpoints = Seq(
-            Endpoint(
-              "name1",
-              hostPort = Some(123)))))))
-
-      result should containViolation(
+      val pod = networkedPod(Seq(
+        podContainer(endpoints = Seq(
+          Endpoint(
+            "name1",
+            hostPort = Some(123))))))
+      validator(pod) should haveViolations(
         "/containers(0)/endpoints(0)/containerPort" -> "is required when using container-mode networking")
     }
 
@@ -307,7 +291,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
               "endpoint",
               hostPort = Some(80),
               containerPort = Some(80),
-              networkNames = List("1"))))))) shouldBe (aSuccess)
+              networkNames = List("1"))))))) should be(aSuccess)
     }
 
     "disallow endpoint with a host port and two valid networkNames" in {
@@ -318,26 +302,24 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
               "endpoint",
               hostPort = Some(80),
               containerPort = Some(80),
-              networkNames = List("1", "2"))))))) shouldBe (aFailure)
+              networkNames = List("1", "2"))))))) shouldNot be(aSuccess)
     }
 
     "disallow endpoint with a non-matching network name" in {
-      val result = validator(
+      validator(
         networkedPod(Seq(
           podContainer(endpoints = Seq(
             Endpoint(
               "endpoint",
               containerPort = Some(80),
               hostPort = Some(80),
-              networkNames = List("invalid-network-name")))))))
-      result.isFailure shouldBe true
+              networkNames = List("invalid-network-name"))))))) shouldNot be(aSuccess)
     }
 
     "allow endpoint without hostPort for host networking" in {
-      val result = validator(networkedPod(Seq(
+      validator(networkedPod(Seq(
         podContainer(endpoints = Seq(Endpoint("ep")))
-      ), hostNetwork))
-      result shouldBe aSuccess
+      ), hostNetwork)) should be(aSuccess)
     }
   }
 }

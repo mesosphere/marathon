@@ -1,11 +1,9 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.scalatest.ResultMatchers
-import com.wix.accord.validate
 import mesosphere.{ UnitTest, ValidationTestLike }
 
-class SchedulingValidationTest extends UnitTest with ValidationTestLike with ResultMatchers {
+class SchedulingValidationTest extends UnitTest with ValidationTestLike {
 
   import SchedulingValidation._
   import SchedulingValidationMessages._
@@ -13,21 +11,17 @@ class SchedulingValidationTest extends UnitTest with ValidationTestLike with Res
   "SchedulingValidation" when {
     "validating bogus operator" should {
       "fail with human readable error message" in {
-        validate(Seq("a", "b", "c"))(complyWithAppConstraintRules) should failWith(RuleViolationMatcher(
-          constraint = ConstraintOperatorInvalid
-        ))
+        complyWithAppConstraintRules(Seq("a", "b", "c")) should haveViolations("/" -> ConstraintOperatorInvalid)
       }
     }
     def validAppConstraint(subtitle: String, c: Seq[String]): Unit = {
       subtitle in {
-        validate(c)(complyWithAppConstraintRules) should be(aSuccess)
+        complyWithAppConstraintRules(c) should be(aSuccess)
       }
     }
     def failsAsExpected(subtitle: String, c: Seq[String], violatedConstraint: String): Unit = {
       subtitle in {
-        validate(c)(complyWithAppConstraintRules) should failWith(RuleViolationMatcher(
-          constraint = violatedConstraint
-        ))
+        complyWithAppConstraintRules(c) should haveViolations("/" -> violatedConstraint)
       }
     }
     "validating CLUSTER constraint" should {

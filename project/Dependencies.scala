@@ -63,7 +63,6 @@ object Dependencies {
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test",
-    Test.wixAccordScalatest % "test",
     Test.curatorTest % "test"
   ) ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
@@ -108,7 +107,7 @@ object Dependency {
     val MarathonApiConsole = "3.0.8-accept"
     val Logback = "1.1.3"
     val Logstash = "4.9"
-    val WixAccord = "0.5"
+    val WixAccord = "0.7.1"
     val Curator = "2.11.1"
     val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
@@ -192,7 +191,6 @@ object Dependency {
     val diffson = "org.gnieh" %% "diffson" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
-    val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
     val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
   }
 }
