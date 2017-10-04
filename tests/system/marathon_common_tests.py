@@ -641,9 +641,10 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     """
 
     app_def = apps.sleep_app()
-    app_id = app['id']
+    app_id = app_def['id']
     app_def['cpus'] = 3.5
     host = common.ip_other_than_mom()
+    print('Constraint set to host: {}'.format(host))
     common.pin_to_host(app_def, host)
 
     client = marathon.create_client()
