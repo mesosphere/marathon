@@ -13,6 +13,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
+import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
@@ -35,6 +36,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
+import PathMatchers._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -269,8 +271,11 @@ class AppsController(
         }
       }
 
-      rejectingLeft(onSuccess(groupManager.updateRootEither(appId.parent, deleteApp, force = force))) { plan =>
-        completeWithDeploymentForApp(appId, plan)
+      onSuccess(groupManager.updateRootEither(appId.parent, deleteApp, force = force)) {
+        case Right(plan) =>
+          completeWithDeploymentForApp(appId, plan)
+        case Left(rej) =>
+          reject(rej)
       }
     }
 
@@ -427,7 +432,7 @@ class AppsController(
             createApp
           }
         } ~
-        extractExistingAppId(groupManager.rootGroup()) { appId =>
+        pathPrefix(ExistingAppPathId(groupManager.rootGroup)) { appId =>
           pathEndOrSingleSlash {
             get {
               showApp(appId)
@@ -466,6 +471,9 @@ class AppsController(
               getVersion(appId, version)
             }
           }
+        } ~
+        path(AppPathIdLike) { nonExistingAppId =>
+          reject(Rejections.EntityNotFound.app(nonExistingAppId))
         }
       }
     }

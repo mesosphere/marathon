@@ -55,7 +55,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val appsController = new AppsController(
       clock = clock,
       eventBus = eventBus,
-      service = marathonSchedulerService,
+      marathonSchedulerService = marathonSchedulerService,
       appInfoService = appInfoService,
       healthCheckManager = healthCheckManager,
       instanceTracker = instanceTracker,

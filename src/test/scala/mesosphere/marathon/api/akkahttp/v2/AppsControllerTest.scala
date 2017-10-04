@@ -748,7 +748,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Post(Uri./, entity) ~> route ~> check {
         Then("It fails")
         status shouldEqual StatusCodes.UnprocessableEntity
-        responseAs[String] should include("/env(NAMED_FOO)")
+        responseAs[String] should include("/env/NAMED_FOO/")
         responseAs[String] should include("references an undefined secret")
       }
     }
@@ -1179,7 +1179,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Post(Uri./, entity) ~> route ~> check {
 
         status shouldEqual StatusCodes.UnprocessableEntity
-        responseAs[String] should include("/container/volumes(0)/external/options(\\\"dvdi/iops\\\")")
+        responseAs[String] should include("/container/volumes(0)/external/options/\\\"dvdi/iops\\\"")
       }
     }
 
