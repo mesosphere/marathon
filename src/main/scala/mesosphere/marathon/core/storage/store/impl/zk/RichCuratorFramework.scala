@@ -4,6 +4,7 @@ package core.storage.store.impl.zk
 import akka.Done
 import akka.util.ByteString
 import mesosphere.marathon.stream._
+import mesosphere.marathon.util.RichLock
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pathable }
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
@@ -22,9 +23,20 @@ import scala.util.control.NonFatal
   *
   * @param client The underlying Curator client.
   */
-class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
+class RichCuratorFramework(val client: CuratorFramework) {
+
+  val lock = RichLock()
+
   def usingNamespace(namespace: String): RichCuratorFramework = {
     new RichCuratorFramework(client.usingNamespace(namespace))
+  }
+
+  def close(): Unit = lock {
+    client.close()
+  }
+
+  def start(): Unit = lock {
+    client.start()
   }
 
   def create(
@@ -129,6 +141,10 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
 
   override def toString: String =
     s"CuratorFramework(${client.getZookeeperClient.getCurrentConnectionString}/${client.getNamespace})"
+
+  def blockUntilConnected(): Unit = {
+    client.blockUntilConnected()
+  }
 }
 
 object RichCuratorFramework {

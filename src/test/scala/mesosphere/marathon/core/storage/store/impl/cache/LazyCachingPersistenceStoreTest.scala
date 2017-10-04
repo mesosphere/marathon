@@ -25,12 +25,16 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
 
   private def cachedInMemory = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    store.open()
+    store
   }
 
   private def withLazyVersionCaching = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    LazyVersionCachingPersistentStore(cachedInMemory)
+    val store = LazyVersionCachingPersistentStore(LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
+    store.open()
+    store
   }
 
   def zkStore: ZkPersistenceStore = {
@@ -43,7 +47,9 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
 
   private def cachedZk = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    LazyCachingPersistenceStore(zkStore)
+    val store = LazyCachingPersistenceStore(zkStore)
+    store.open()
+    store
   }
 
   behave like basicPersistenceStore("LazyCache(InMemory)", cachedInMemory)

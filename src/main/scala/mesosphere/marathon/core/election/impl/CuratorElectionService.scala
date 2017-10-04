@@ -109,7 +109,7 @@ class CuratorElectionService(
     if (acquiringLeadership.compareAndSet(false, true)) {
       require(leaderLatch.get.isEmpty, "leaderLatch is not empty")
 
-      startCuratorClient()
+      startCuratorClientAndConnect()
       val latch = new LeaderLatch(
         client, config.zooKeeperLeaderPath + "-curator", hostPort)
       latch.addListener(LeaderChangeListener, threadExecutor)
@@ -248,9 +248,11 @@ class CuratorElectionService(
     client
   }
 
-  private def startCuratorClient(): Unit = {
+  private def startCuratorClientAndConnect(): Unit = {
     client.start()
-    client.blockUntilConnected(config.zkTimeoutDuration.toMillis.toInt, TimeUnit.MILLISECONDS)
+    client.blockUntilConnected(
+      client.getZookeeperClient.getConnectionTimeoutMs,
+      TimeUnit.MILLISECONDS)
   }
 
   /**

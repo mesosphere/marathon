@@ -319,7 +319,11 @@ object MarathonTestHelper {
 
     implicit val ctx = ExecutionContext.global
     implicit val m = metrics
-    val instanceRepo = store.getOrElse(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
+    val instanceRepo = store.getOrElse(InstanceRepository.inMemRepository {
+      val store = new InMemoryPersistenceStore()
+      store.open()
+      store
+    })
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
     new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {

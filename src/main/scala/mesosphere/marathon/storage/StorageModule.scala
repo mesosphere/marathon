@@ -6,6 +6,7 @@ import mesosphere.marathon.PrePostDriverCallback
 import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
@@ -21,6 +22,7 @@ import scala.concurrent.ExecutionContext
   * Provides the repositories for all persistable entities.
   */
 trait StorageModule {
+  val persistenceStore: Option[PersistenceStore[_, _, _]]
   // Should _only_ be used by the GroupManager, always use the RootGroup as the one source of truth
   val appRepository: ReadOnlyAppRepository
   // Should _only_ be used by the GroupManager, always use the RootGroup as the one source of truth
@@ -83,7 +85,7 @@ object StorageModule {
         val leadershipInitializers = Seq(appStore, taskStore, deployStore, taskFailureStore,
           groupStore, frameworkIdStore, eventSubscribersStore).collect { case s: PrePostDriverCallback => s }
 
-        StorageModuleImpl(appRepository, podRepository, instanceRepository, deploymentRepository,
+        StorageModuleImpl(None, appRepository, podRepository, instanceRepository, deploymentRepository,
           taskFailureRepository, groupRepository, frameworkIdRepository, eventSubscribersRepository, migration,
           leadershipInitializers)
       case zk: CuratorZk =>
@@ -111,6 +113,7 @@ object StorageModule {
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
+          Some(store),
           appRepository,
           podRepository,
           instanceRepository,
@@ -145,6 +148,7 @@ object StorageModule {
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
+          Some(store),
           appRepository,
           podRepository,
           instanceRepository,
@@ -160,6 +164,7 @@ object StorageModule {
 }
 
 private[storage] case class StorageModuleImpl(
+  persistenceStore: Option[PersistenceStore[_, _, _]],
   appRepository: ReadOnlyAppRepository,
   podRepository: ReadOnlyPodRepository,
   instanceRepository: InstanceRepository,

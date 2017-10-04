@@ -25,7 +25,7 @@ import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag
 
@@ -273,10 +273,14 @@ case class CuratorZk(
     })
     builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
     builder.namespace(zkPath.stripPrefix("/"))
-    val client = builder.build()
+    val client = RichCuratorFramework(builder.build())
     client.start()
     client.blockUntilConnected()
-    RichCuratorFramework(client)
+
+    // make sure that we read up-to-date values from ZooKeeper
+    Await.ready(client.sync("/"), Duration.Inf)
+
+    client
   }
 
   protected def leafStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,

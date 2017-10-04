@@ -14,8 +14,6 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.{ GroupRepository, ReadOnlyAppRepository, ReadOnlyPodRepository }
 import mesosphere.marathon.util.WorkQueue
 
-import scala.concurrent.Await
-
 /**
   * Provides a [[GroupManager]] implementation.
   */
@@ -38,31 +36,15 @@ class GroupManagerModule(
       groupRepo,
       storage,
       config,
-      eventBus)
+      eventBus,
+      metrics)
     leadershipModule.startWhenLeader(props, "groupManager")
   }
 
   val groupManager: GroupManager = {
     val groupManager = new GroupManagerDelegate(config, appRepo, podRepo, groupManagerActorRef)
-
-    metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
-      override def getValue: Int = {
-        // Accessing rootGroup from the repository because getting it from groupManager will fail
-        // on non-leader marathon instance.
-        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveApps.size
-      }
-    })
-
-    metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
-      override def getValue: Int = {
-        // Accessing rootGroup from the repository because getting it from groupManager will fail
-        // on non-leader marathon instance.
-        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveGroupsById.size
-      }
-    })
-
     metrics.gauge("service.mesosphere.marathon.uptime", new Gauge[Long] {
-      val startedAt = System.currentTimeMillis()
+      val startedAt: Long = System.currentTimeMillis()
 
       override def getValue: Long = {
         System.currentTimeMillis() - startedAt

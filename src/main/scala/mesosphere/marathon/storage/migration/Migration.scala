@@ -134,6 +134,14 @@ class Migration(
   @SuppressWarnings(Array("all")) // async/await
   def migrate(): Seq[StorageVersion] = {
     val result = async { // linter:ignore UnnecessaryElseBranch
+      // Before reading to and writing from the storage, let's ensure that
+      // no stale values are read from the persistence store.
+      // Although in case of ZK it is done at the time of creation of CuratorZK,
+      // it is better to be safe than sorry.
+      persistenceStore.foreach { store =>
+        Await.ready(store.sync(), Duration.Inf)
+      }
+
       // invalidate group cache before migration
       await(groupRepository.invalidateGroupCache())
 

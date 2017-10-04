@@ -20,6 +20,7 @@ import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipMo
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.KillService
@@ -116,6 +117,12 @@ class CoreGuiceModule extends AbstractModule {
   @Provides
   @Singleton
   def materializer(coreModule: CoreModule): Materializer = coreModule.actorsModule.materializer
+
+  @Provides
+  @Singleton
+  def providePersistenceStore(coreModule: CoreModule): Option[PersistenceStore[_, _, _]] = {
+    coreModule.storageModule.persistenceStore
+  }
 
   @Provides
   @Singleton

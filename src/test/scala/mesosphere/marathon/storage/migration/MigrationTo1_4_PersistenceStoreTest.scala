@@ -31,7 +31,11 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
 
   def migration(legacyConfig: Option[LegacyStorageConfig] = None, maxVersions: Int = maxVersions): Migration = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    val persistenceStore = new InMemoryPersistenceStore()
+    val persistenceStore = {
+      val store = new InMemoryPersistenceStore()
+      store.open()
+      store
+    }
     val appRepository = AppRepository.inMemRepository(persistenceStore)
     val podRepository = PodRepository.inMemRepository(persistenceStore)
     val groupRepository = GroupRepository.inMemRepository(persistenceStore, appRepository, podRepository)

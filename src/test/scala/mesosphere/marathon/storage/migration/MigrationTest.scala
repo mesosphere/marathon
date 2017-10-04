@@ -45,6 +45,12 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     StorageVersions.current
   }
 
+  def mockPersistenceStore(): PersistenceStore[_, _, _] = {
+    val mockedStore = mock[PersistenceStore[_, _, _]]
+    mockedStore.sync() returns Future.successful(Done)
+    mockedStore
+  }
+
   "Migration" should {
     "be filterable by version" in {
       val migrate = migration()
@@ -59,7 +65,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     }
 
     "migrate on an empty database will set the storage version" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockPersistenceStore()
       val migrate = migration(persistenceStore = Option(mockedStore))
 
       mockedStore.storageVersion() returns Future.successful(None)
@@ -67,6 +73,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
       migrate.migrate()
 
+      verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       verify(mockedStore).setStorageVersion(StorageVersions.current)
       noMoreInteractions(mockedStore)
@@ -90,7 +97,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     }
 
     "migrate on a database with the same version will do nothing" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockPersistenceStore()
       val migrate = migration(persistenceStore = Option(mockedStore))
 
       val currentPersistenceVersion =
@@ -98,6 +105,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       mockedStore.storageVersion() returns Future.successful(Some(currentPersistenceVersion))
       migrate.migrate()
 
+      verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       noMoreInteractions(mockedStore)
     }
@@ -118,7 +126,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     }
 
     "migrate throws an error for early unsupported versions" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockPersistenceStore()
       val migrate = migration(persistenceStore = Option(mockedStore))
       val minVersion = migrate.minSupportedStorageVersion
 
@@ -136,7 +144,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     }
 
     "migrate throws an error for versions > current" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockPersistenceStore()
       val migrate = migration(persistenceStore = Option(mockedStore))
       val minVersion = migrate.minSupportedStorageVersion
 
@@ -195,7 +203,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     }
 
     "migrations are executed sequentially" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mockPersistenceStore()
       mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(0, 8, 0)))
       mockedStore.versions(any)(any) returns Source.empty
       mockedStore.ids()(any) returns Source.empty

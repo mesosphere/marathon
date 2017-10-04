@@ -44,6 +44,10 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
   private[this] val getHitCounters = TrieMap.empty[Category, Metrics.Counter]
   private[this] val idsHitCounters = TrieMap.empty[Category, Metrics.Counter]
 
+  override def open(): Unit = store.open()
+  override def close(): Unit = store.close()
+  override def isOpen: Boolean = store.isOpen
+
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
 
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
@@ -172,6 +176,8 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
     store.deleteVersion(k, version)
 
+  override def sync(): Future[Done] = store.sync()
+
   override def toString: String = s"LazyCachingPersistenceStore($store)"
 }
 
@@ -181,6 +187,10 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
   mat: Materializer,
     ctx: ExecutionContext,
     metrics: Metrics) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
+
+  override def open(): Unit = store.open()
+  override def close(): Unit = store.close()
+  override def isOpen: Boolean = store.isOpen
 
   private[store] val versionCache = TrieMap.empty[(Category, K), Set[OffsetDateTime]]
   private[store] val versionedValueCache = TrieMap.empty[(K, OffsetDateTime), Option[Any]]
@@ -340,6 +350,8 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
 
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
     store.setStorageVersion(storageVersion)
+
+  override def sync(): Future[Done] = store.sync()
 
   override def toString: String = s"LazyVersionCachingPersistenceStore($store)"
 }
