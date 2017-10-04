@@ -33,6 +33,27 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
     um: Unmarshaller[Serialized, TestClass1]): Unit = {
 
     name should {
+      "is open" in {
+        val store = newStore
+        store.isOpen shouldBe true
+      }
+      "cannot be opened twice" in {
+        val store = newStore
+        val thrown = the[IllegalStateException] thrownBy store.open()
+        thrown.getMessage shouldBe "it was opened before"
+      }
+      "cannot be reopened" in {
+        val store = newStore
+        store.close()
+        val thrown = the[IllegalStateException] thrownBy store.open()
+        thrown.getMessage shouldBe "it was opened before"
+      }
+      "cannot be closed twice" in {
+        val store = newStore
+        store.close()
+        val thrown = the[IllegalStateException] thrownBy store.close()
+        thrown.getMessage shouldBe "attempt to close while not being opened"
+      }
       "have no ids" in {
         val store = newStore
         store.ids().runWith(Sink.seq).futureValue should equal(Nil)

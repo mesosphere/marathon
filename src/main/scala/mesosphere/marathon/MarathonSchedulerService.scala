@@ -16,6 +16,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.stream.Sink
@@ -64,6 +65,7 @@ trait DeploymentService {
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
+  persistenceStore: PersistenceStore[_, _, _],
   leadershipCoordinator: LeadershipCoordinator,
   config: MarathonConf,
   electionService: ElectionService,
@@ -198,6 +200,9 @@ class MarathonSchedulerService @Inject() (
   override def startLeadership(): Unit = synchronized {
     log.info("As new leader running the driver")
 
+    // allow interactions with the persistence store
+    persistenceStore.open()
+
     refreshCachesAndDoMigration()
 
     // run all pre-driver callbacks
@@ -273,6 +278,9 @@ class MarathonSchedulerService @Inject() (
   override def stopLeadership(): Unit = synchronized {
     // invoked by election service upon loss of leadership (state transitioned to Idle)
     log.info("Lost leadership")
+
+    // disallow any interaction with the persistence storage
+    persistenceStore.close()
 
     leadershipCoordinator.stop()
 

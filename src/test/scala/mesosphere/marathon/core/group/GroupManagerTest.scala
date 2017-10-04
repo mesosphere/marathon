@@ -20,7 +20,7 @@ import scala.concurrent.{ Future, Promise }
 class GroupManagerTest extends AkkaUnitTest with GroupCreation {
   class Fixture(
       val servicePortsRange: Range = 1000.until(20000),
-      val initialRoot: RootGroup = RootGroup.empty) {
+      val initialRoot: Option[RootGroup] = Some(RootGroup.empty)) {
     val config = AllConf.withTestConfig("--local_port_min", servicePortsRange.start.toString, "--local_port_max", (servicePortsRange.end + 1).toString)
     val groupRepository = mock[GroupRepository]
     val deploymentService = mock[DeploymentService]
@@ -29,6 +29,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       override def get(): DeploymentService = deploymentService
     })(eventStream, ExecutionContexts.global)
   }
+
   "applications with port definitions" when {
     "apps with port definitions should map dynamic ports to a non-0 value" in new Fixture(10.to(20)) {
       val app = AppDefinition("/app".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(1)))
@@ -240,6 +241,10 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
   behave like withContainerNetworking("mesos", Container.Mesos())
 
   "GroupManager" should {
+    "return None as a root group, if the initial group has not been passed to it" in new Fixture(initialRoot = None) {
+      groupManager.rootGroupOption() shouldBe None
+    }
+
     "Don't store invalid groups" in new Fixture {
 
       val app1 = AppDefinition("/app1".toPath)
@@ -309,10 +314,10 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
     }
 
-    "Expunge removed apps from appRepo" in new Fixture(initialRoot = {
+    "Expunge removed apps from appRepo" in new Fixture(initialRoot = Option({
       val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       createRootGroup(Map(app.id -> app), version = Timestamp(1))
-    }) {
+    })) {
       val groupEmpty = createRootGroup(version = Timestamp(1))
 
       deploymentService.deploy(any, any) returns Future.successful(Done)

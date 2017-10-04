@@ -120,7 +120,10 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         noMoreInteractions(appRepo)
       }
       "retrieve a historical version" in {
-        val appRepo = AppRepository.inMemRepository(new InMemoryPersistenceStore())
+        val store = new InMemoryPersistenceStore()
+        store.open()
+
+        val appRepo = AppRepository.inMemRepository(store)
         val repo = createRepo(appRepo, mock[PodRepository], 2)
 
         val app1 = AppDefinition("app1".toRootPath)
@@ -145,6 +148,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
 
   def createInMemRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = new InMemoryPersistenceStore()
+    store.open()
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
 
@@ -156,16 +160,19 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
 
   def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = zkStore
+    store.open()
     GroupRepository.zkRepository(store, appRepository, podRepository)
   }
 
   def createLazyCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    store.open()
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
 
   def createLoadCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    store.open()
     store.preDriverStarts.futureValue
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
