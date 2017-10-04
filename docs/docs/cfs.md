@@ -1,10 +1,9 @@
 ---
 title: Slow Docker apps and deployments
 ---
-# You experience slow Docker apps and deployments
+# You experience slow Docker apps and deployments?
 
 ## The problem
-
 When using Apache Mesos you have the choice if you want to use CPU shares or strict CPU limitations. If you are using CPU shares, your task can consume more CPU cycles than initially configured in your Marathon app definition, if your host system has free CPU cycles. If you are using strict CPU limitations, your task can only consume a maximum of CPU time based on your marathon configuration. The default configuration for Mesos is to use CPU shares. CFS strict CPU limitation as default were introduced in DC/OS a while ago, but until recently this configuration are only respected by the mesos executor and not by the docker executor. This [issue](https://issues.apache.org/jira/browse/MESOS-6134) was fixed in the latest Mesos release, which is also included in DC/OS 1.10.
 
 If you recently upgraded to DC/OS 1.10 or configured `MESOS_CGROUPS_ENABLE_CFS=true` in your Mesos agent configuration and you are now seeing slow running Docker applications or slow deployments, you probably want to take action!
