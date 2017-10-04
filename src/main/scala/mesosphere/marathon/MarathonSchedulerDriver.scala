@@ -82,6 +82,10 @@ object MarathonSchedulerDriver {
     frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.PARTITION_AWARE))
     log.info("PARTITION_AWARE feature enabled.")
 
+    // Enables region awareness in Mesos to receive offers from other regions
+    frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.REGION_AWARE))
+    log.info("REGION_AWARE feature enabled")
+
     val frameworkInfo = frameworkInfoBuilder.build()
 
     log.debug("Start creating new driver")
