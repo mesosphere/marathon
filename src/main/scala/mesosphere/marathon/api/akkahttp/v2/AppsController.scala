@@ -113,30 +113,71 @@ class AppsController(
 
   val RemainingPathId = RemainingPath.map(_.toString.toRootPath)
 
+  // format: OFF
   val route: Route = {
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
-        pathEnd {
-          post {
-            (entity(as[AppDefinition]) & parameters('force.as[Boolean].?(false))) { (app, force) =>
-              createApp(app, force)
-            }
+        pathEndOrSingleSlash {
+          get {
+            listApps
           } ~
-            get {
-              listApps
-            }
+          put {
+            replaceMultipleApps
+          } ~
+          patch {
+            patchMultipleApps
+          } ~
+          post {
+            createApp
+          }
         } ~
-          path(RemainingPathId) { appId =>
+        pathPrefix(ExistingAppPathId(groupManager.rootGroup)) { appId =>
+          pathEndOrSingleSlash {
             get {
               showApp(appId)
             } ~
-              patch {
-                complete("TODO")
+            patch {
+              patchSingle(appId)
+            } ~
+            put {
+              putSingle(appId)
+            } ~
+            delete {
+              deleteSingle(appId)
+            }
+          } ~
+          (path("restart") & post) {
+            restartApp(appId)
+          } ~
+          pathPrefix("tasks") {
+            pathEndOrSingleSlash {
+              get {
+                listRunningTasks(appId)
+              } ~
+              delete {
+                killTasks(appId)
               }
+            } ~
+            (pathPrefix(RemainingTaskId) & delete) { taskId =>
+              killTask(appId, taskId)
+            }
+          } ~
+          pathPrefix("versions") {
+            (pathEnd & get) {
+              listVersions(appId)
+            } ~
+            path(Version) { version =>
+              getVersion(appId, version)
+            }
           }
+        } ~
+        path(AppPathIdLike) { nonExistingAppId =>
+          reject(Rejections.EntityNotFound.app(nonExistingAppId))
+        }
       }
     }
   }
+  // format: ON
 
   private val normalizationConfig = AppNormalization.Configuration(
     config.defaultNetworkName.get,
