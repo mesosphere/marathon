@@ -25,7 +25,12 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   val TEST_APP_NAME = PathId("/foo")
 
   case class Fixture() {
-    implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
+    val store: InMemoryPersistenceStore = {
+      val store = new InMemoryPersistenceStore()
+      store.open()
+      store
+    }
+    implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(store))
     val config: AllConf = MarathonTestHelper.defaultConfig()
     implicit val clock: SettableClock = new SettableClock()
     val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(

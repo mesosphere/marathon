@@ -110,10 +110,7 @@ object EntityMarshallers {
     validEntityRaml(playJsonUnmarshaller[raml.App]).handleValidationErrors
   }
 
-  implicit val appDefinitionMarshaller: ToEntityMarshaller[AppDefinition] =
-    playJsonMarshaller[raml.App].compose { appDefinition: AppDefinition =>
-      raml.Raml.toRaml(appDefinition)
-    }
+  implicit val appDefinitionMarshaller: ToEntityMarshaller[raml.App] = playJsonMarshaller[raml.App]
 
   def appUpdateUnmarshaller(
     appId: PathId, partialUpdate: Boolean)(
@@ -159,7 +156,7 @@ object EntityMarshallers {
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[LoggerChange]
   implicit val stringMapMarshaller = playJsonMarshaller[Map[String, String]]
   implicit val pluginDefinitionsMarshaller = playJsonMarshaller[PluginDefinitions]
-  implicit val deploymentResultMarshaller = playJsonMarshaller[Messages.DeploymentResult]
+  implicit val deploymentResultMarshaller = playJsonMarshaller[raml.DeploymentResult]
   implicit val enrichedTaskMarshaller = playJsonMarshaller[EnrichedTask]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {
@@ -197,7 +194,6 @@ object EntityMarshallers {
       complete(StatusCodes.UnprocessableEntity -> failure)
   }
 
-  import scala.language.implicitConversions
-  implicit def entityMarshallerToMessageUnmarshaller[T](um: FromEntityUnmarshaller[T]): FromMessageUnmarshaller[T] =
+  def entityUnmarshallerToMessageUnmarshaller[T](um: FromEntityUnmarshaller[T]): FromMessageUnmarshaller[T] =
     Unmarshaller.withMaterializer { implicit ec ⇒ implicit mat ⇒ request ⇒ um(request.entity) }
 }

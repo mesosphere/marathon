@@ -30,6 +30,8 @@ class MarathonScheduler @Inject() (
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
+  @volatile private[this] var homeRegion: Option[String] = Option.empty
+
   import mesosphere.marathon.core.async.ExecutionContexts.global
 
   implicit val zkTimeout = config.zkTimeoutDuration
@@ -40,6 +42,7 @@ class MarathonScheduler @Inject() (
     master: MasterInfo): Unit = {
     log.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
     masterVersionCheck(master)
+    updateHomeRegion(master)
     Await.result(frameworkIdRepository.store(FrameworkId.fromProto(frameworkId)), zkTimeout)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
@@ -48,6 +51,7 @@ class MarathonScheduler @Inject() (
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {
     log.info("Re-registered to %s".format(master))
     masterVersionCheck(master)
+    updateHomeRegion(master)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerReregisteredEvent(master.getHostname))
   }
@@ -144,8 +148,22 @@ class MarathonScheduler @Inject() (
     }
   }
 
+  protected def updateHomeRegion(masterInfo: MasterInfo): Unit = {
+    if (masterInfo.hasDomain && masterInfo.getDomain.hasFaultDomain) {
+      homeRegion = Some(masterInfo.getDomain.getFaultDomain.getRegion.getName)
+    } else {
+      homeRegion = None
+    }
+  }
+
   /** The last version of the mesos master */
   def mesosMasterVersion(): Option[SemanticVersion] = lastMesosMasterVersion
+
+  /**
+    * Current home region of the mesos master
+    * @return name of the region if it's available, None otherwise
+    */
+  def getHomeRegion: Option[String] = homeRegion
 
   /**
     * Exits the JVM process, optionally deleting Marathon's FrameworkID

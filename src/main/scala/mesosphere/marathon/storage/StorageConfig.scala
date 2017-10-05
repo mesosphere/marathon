@@ -21,7 +21,7 @@ import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.concurrent.duration._
 
 sealed trait StorageConfig extends Product with Serializable {
@@ -131,7 +131,11 @@ case class CuratorZk(
     val client = RichCuratorFramework(builder.build())
     client.start()
     client.blockUntilConnected(lifecycleState)
-    (client)
+
+    // make sure that we read up-to-date values from ZooKeeper
+    Await.ready(client.sync("/"), Duration.Inf)
+
+    client
   }
 
   def leafStore(implicit mat: Materializer, ctx: ExecutionContext,

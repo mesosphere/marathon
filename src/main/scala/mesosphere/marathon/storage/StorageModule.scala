@@ -5,17 +5,20 @@ import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
 import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
 import mesosphere.marathon.storage.migration.{ Migration, ServiceDefinitionRepository }
 import mesosphere.marathon.storage.repository._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
+import scala.language.existentials
 
 /**
   * Provides the repositories for all persistable entities.
   */
 trait StorageModule {
+  val persistenceStore: PersistenceStore[_, _, _]
   val instanceRepository: InstanceRepository
   val deploymentRepository: DeploymentRepository
   val taskFailureRepository: TaskFailureRepository
@@ -65,6 +68,7 @@ object StorageModule {
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
 
         StorageModuleImpl(
+          store,
           instanceRepository,
           deploymentRepository,
           taskFailureRepository,
@@ -100,6 +104,7 @@ object StorageModule {
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
 
         StorageModuleImpl(
+          store,
           instanceRepository,
           deploymentRepository,
           taskFailureRepository,
@@ -115,6 +120,7 @@ object StorageModule {
 }
 
 private[storage] case class StorageModuleImpl(
+  persistenceStore: PersistenceStore[_, _, _],
   instanceRepository: InstanceRepository,
   deploymentRepository: DeploymentRepository,
   taskFailureRepository: TaskFailureRepository,

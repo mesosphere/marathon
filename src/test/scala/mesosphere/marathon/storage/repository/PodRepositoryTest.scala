@@ -33,6 +33,7 @@ class PodRepositoryTest extends AkkaUnitTest {
     implicit val ctx = ExecutionContexts.global
 
     val store = new InMemoryPersistenceStore()
+    store.open()
     val repo = PodRepository.inMemRepository(store)
   }
 }

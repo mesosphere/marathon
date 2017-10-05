@@ -82,6 +82,8 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
+  private case class LazyCell[T](evalution: () => T) { lazy val value = evalution() }
+
   @SuppressWarnings(Array("all")) // async/await
   private[this] def queryForGroup(
     group: Group,
@@ -90,7 +92,7 @@ private[appinfo] class DefaultInfoService(
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] =
 
     async { // linter:ignore UnnecessaryElseBranch
-      lazy val cachedBaseData = newBaseData()
+      val cachedBaseData = LazyCell(() => newBaseData()) // Work around strange async/eval compile bug in Scala 2.12
 
       val groupEmbedApps = groupEmbed(GroupInfo.Embed.Apps)
       val groupEmbedPods = groupEmbed(GroupInfo.Embed.Pods)
@@ -100,7 +102,7 @@ private[appinfo] class DefaultInfoService(
         if (groupEmbedApps) {
           val filteredApps: IndexedSeq[AppDefinition] =
             group.transitiveApps.filterAs(selectors.appSelector.matches)(collection.breakOut)
-          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData)).map {
+          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData.value)).map {
             info => info.app.id -> info
           }(collection.breakOut)
         } else {
@@ -111,7 +113,7 @@ private[appinfo] class DefaultInfoService(
         if (groupEmbedPods) {
           val filteredPods: IndexedSeq[PodDefinition] =
             group.transitivePodsById.values.filterAs(selectors.podSelector.matches)(collection.breakOut)
-          await(resolvePodInfos(filteredPods, cachedBaseData)).map { status =>
+          await(resolvePodInfos(filteredPods, cachedBaseData.value)).map { status =>
             PathId(status.id) -> status
           }(collection.breakOut)
         } else {
