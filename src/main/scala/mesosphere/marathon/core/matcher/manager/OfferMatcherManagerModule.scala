@@ -4,6 +4,7 @@ package core.matcher.manager
 import java.time.Clock
 
 import akka.actor.{ ActorRef, Scheduler }
+import com.google.inject.Provider
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
@@ -22,7 +23,7 @@ class OfferMatcherManagerModule(
     offerMatcherConfig: OfferMatcherManagerConfig,
     scheduler: Scheduler,
     leadershipModule: LeadershipModule,
-    marathonScheduler: MarathonScheduler,
+    marathonScheduler: Provider[MarathonScheduler],
     actorName: String = "offerMatcherManager") {
 
   private[this] lazy val offersWanted: Subject[Boolean] = BehaviorSubject[Boolean](false)

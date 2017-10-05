@@ -6,6 +6,7 @@ import java.time.Clock
 import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
+import com.google.inject.Provider
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
@@ -36,7 +37,7 @@ private[launchqueue] object TaskLauncherActor {
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatisticsActor: ActorRef,
-    scheduler: MarathonScheduler)(
+    scheduler: Provider[MarathonScheduler])(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -88,7 +89,7 @@ private class TaskLauncherActor(
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int,
-    scheduler: MarathonScheduler) extends Actor with StrictLogging with Stash {
+    scheduler: Provider[MarathonScheduler]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]

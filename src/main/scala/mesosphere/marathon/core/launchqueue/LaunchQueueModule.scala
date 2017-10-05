@@ -4,6 +4,7 @@ package core.launchqueue
 import java.time.Clock
 
 import akka.actor.{ ActorRef, Props }
+import com.google.inject.Provider
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launchqueue.impl._
@@ -23,7 +24,7 @@ class LaunchQueueModule(
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: InstanceTracker,
     taskOpFactory: InstanceOpFactory,
-    scheduler: MarathonScheduler) {
+    scheduler: Provider[MarathonScheduler]) {
 
   private[this] val offerMatchStatisticsActor: ActorRef = {
     leadershipModule.startWhenLeader(OfferMatchStatisticsActor.props(), "offerMatcherStatistics")

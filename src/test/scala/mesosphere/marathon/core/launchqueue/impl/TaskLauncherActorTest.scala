@@ -4,6 +4,7 @@ package core.launchqueue.impl
 import akka.actor.{ ActorContext, ActorRef, Cancellable, Props }
 import akka.pattern.ask
 import akka.testkit.TestProbe
+import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
@@ -72,7 +73,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
       offerMatchStatisticsActor: TestProbe = TestProbe(),
-      scheduler: MarathonScheduler = mock[MarathonScheduler]) {
+      scheduler: Provider[MarathonScheduler] = new Provider[MarathonScheduler] {
+        override def get() = mock[MarathonScheduler]
+      }) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(
@@ -295,6 +298,9 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
       var scheduleCalled = false
+      val marathonScheduler = new Provider[MarathonScheduler] {
+        override def get() = mock[MarathonScheduler]
+      }
       val props = Props(
         new TaskLauncherActor(
           launchQueueConfig,
@@ -302,7 +308,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           maybeOfferReviver = None,
           instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
           f.app, instancesToLaunch = 1,
-          mock[MarathonScheduler]
+          marathonScheduler
         ) {
           override protected def scheduleTaskOperationTimeout(
             context: ActorContext, message: InstanceOpRejected): Cancellable = {

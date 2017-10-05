@@ -53,7 +53,7 @@ class CoreModuleImpl @Inject() (
   scheduler: Provider[DeploymentService],
   instanceUpdateSteps: Seq[InstanceChangeHandler],
   taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
-  marathonScheduler: MarathonScheduler
+  marathonScheduler: Provider[MarathonScheduler]
 )
     extends CoreModule {
 

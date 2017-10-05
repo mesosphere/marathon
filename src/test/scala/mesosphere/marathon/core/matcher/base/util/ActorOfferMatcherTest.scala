@@ -4,6 +4,7 @@ package core.matcher.base.util
 import akka.actor.ActorRef
 import akka.testkit.TestActor.AutoPilot
 import akka.testkit.{ TestActor, TestProbe }
+import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.test.MarathonTestHelper
@@ -28,7 +29,9 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         })
         val offer = MarathonTestHelper.makeBasicOffer().build()
 
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, mock[MarathonScheduler])(scheduler)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, new Provider[MarathonScheduler] {
+          override def get() = mock[MarathonScheduler]
+        })(scheduler)
         val offerMatch: MatchedInstanceOps = offerMatcher.matchOffer(offer).futureValue
 
         offerMatch.offerId should not be (offer.getId)
