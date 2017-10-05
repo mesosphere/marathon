@@ -7,6 +7,7 @@ import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -87,7 +88,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "slaveId": "abcd-1234"
         |}
       """.stripMargin
-      JsonTestHelper.assertThatJsonOf(f.taskWithoutIp).correspondsToJsonString(json)
+      JsonTestHelper.assertThatJsonOf(f.taskWithoutIp.toRaml).correspondsToJsonString(json)
     }
 
     "JSON serialization of a Task with multiple IPs" in {
@@ -116,7 +117,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "slaveId": "abcd-1234"
         |}
       """.stripMargin
-      JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs).correspondsToJsonString(json)
+      JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs.toRaml).correspondsToJsonString(json)
     }
 
     "JSON serialization of a Task with reserved local volumes" in {
@@ -146,7 +147,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  ]
         |}
       """.stripMargin
-      JsonTestHelper.assertThatJsonOf(f.taskWithLocalVolumes).correspondsToJsonString(json)
+      JsonTestHelper.assertThatJsonOf(f.taskWithLocalVolumes.toRaml).correspondsToJsonString(json)
     }
   }
 }
