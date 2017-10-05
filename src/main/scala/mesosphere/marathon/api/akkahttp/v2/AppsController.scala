@@ -37,6 +37,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
+import mesosphere.marathon.raml.DeploymentResult
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -62,7 +63,6 @@ class AppsController(
     val electionService: ElectionService
 ) extends Controller {
   import Directives._
-  import RichEither.RightBiased
 
   private implicit lazy val validateApp = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
   private implicit lazy val updateValidator = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
@@ -201,7 +201,7 @@ class AppsController(
       }
 
       onSuccessLegacy(None)(groupManager.updateRoot(PathId.empty, updateGroup, version, force)).apply { plan =>
-        complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), Messages.DeploymentResult(plan)))
+        complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
       }
     }
   }
@@ -209,9 +209,9 @@ class AppsController(
   private def completeWithDeploymentForApp(appId: PathId, plan: DeploymentPlan) =
     plan.original.app(appId) match {
       case Some(_) =>
-        complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), Messages.DeploymentResult(plan)))
+        complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
       case None =>
-        complete((StatusCodes.Created, List(Location(Uri(appId.toString)), Headers.`Marathon-Deployment-Id`(plan.id)), Messages.DeploymentResult(plan)))
+        complete((StatusCodes.Created, List(Location(Uri(appId.toString)), Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
     }
 
   /**
@@ -354,7 +354,7 @@ class AppsController(
         if (scale) {
           val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
           onSuccess(deploymentPlanF) { plan =>
-            complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), Messages.DeploymentResult(plan)))
+            complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
           }
         } else {
           onSuccess(taskKiller.kill(appId, findToKill, wipe)) { instances =>
@@ -384,7 +384,7 @@ class AppsController(
         if (scale) {
           val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
           onSuccess(deploymentPlanF) { plan =>
-            complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), Messages.DeploymentResult(plan)))
+            complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
           }
         } else {
           onSuccess(taskKiller.kill(appId, findToKill, wipe)) { instances =>
