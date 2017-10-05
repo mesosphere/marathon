@@ -156,7 +156,7 @@ object EntityMarshallers {
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[LoggerChange]
   implicit val stringMapMarshaller = playJsonMarshaller[Map[String, String]]
   implicit val pluginDefinitionsMarshaller = playJsonMarshaller[PluginDefinitions]
-  implicit val deploymentResultMarshaller = playJsonMarshaller[Messages.DeploymentResult]
+  implicit val deploymentResultMarshaller = playJsonMarshaller[raml.DeploymentResult]
   implicit val enrichedTaskMarshaller = playJsonMarshaller[EnrichedTask]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {

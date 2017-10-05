@@ -1,0 +1,11 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+
+types:
+  DeploymentResult:
+    type: object
+    description: Result of the deployment
+    properties:
+      deploymentId: string
+      version: datetime
