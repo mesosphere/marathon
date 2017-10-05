@@ -26,6 +26,8 @@ object AgentInfoPlaceholder {
   def apply(
     host: String = defaultHostName,
     agentId: Option[String] = Some(defaultAgentId),
+    region: Option[String] = None,
+    zone: Option[String] = None,
     attributes: Seq[mesos.Protos.Attribute] = Seq.empty
-  ): AgentInfo = AgentInfo(host, agentId, attributes)
+  ): AgentInfo = AgentInfo(host, agentId, region, zone, attributes)
 }

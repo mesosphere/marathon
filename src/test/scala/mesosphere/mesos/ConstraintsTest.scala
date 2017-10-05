@@ -7,14 +7,14 @@ import mesosphere.marathon._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.{ Attribute, Offer }
+import org.apache.mesos.Protos.{ Attribute, DomainInfo, Offer }
 
 import scala.util.Random
 
 class ConstraintsTest extends UnitTest {
-
   import mesosphere.mesos.protos.Implicits._
 
   "Constraints" should {
@@ -74,6 +74,7 @@ class ConstraintsTest extends UnitTest {
     "Does not select any task without constraint" in {
       Given("app with hostname group_by and 10 tasks even distributed on 5 hosts")
       val app = AppDefinition(id = PathId("/test"))
+
       val tasks = 0.to(9).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "blue")))
 
       When("10 tasks should be selected to kill")
@@ -132,7 +133,7 @@ class ConstraintsTest extends UnitTest {
       assert(firstOfferFirstTaskInstance, "Should not place host")
     }
 
-    "RackConstraints" in {
+    "Generic property constraints" in {
       val appId = PathId("/test")
       val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
       val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
@@ -258,8 +259,6 @@ class ConstraintsTest extends UnitTest {
       val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
       val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
       val task3_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
-      val task4_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-      val task5_rack3 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-3"))
 
       var sameRack = Seq.empty[Instance]
 
@@ -532,7 +531,6 @@ class ConstraintsTest extends UnitTest {
       val task1_host1 = makeInstanceWithHost(appId, "host1")
       val task2_host1 = makeInstanceWithHost(appId, "host1")
       val task3_host2 = makeInstanceWithHost(appId, "host2")
-      val task4_host3 = makeInstanceWithHost(appId, "host3")
 
       var groupHost = Seq.empty[Instance]
       val attributes = Seq.empty[Attribute]
@@ -788,7 +786,30 @@ class ConstraintsTest extends UnitTest {
         jdk7ConstraintUnlikeSet)
       assert(unlikeSetNoAttributeNotMet, "Should meet unlike-set-no-attribute constraints.")
     }
+
+    "DomainInfo" should {
+      "apply constraints when *region is specified" in {
+        val regionConstraintUnique = makeConstraint("*region", Constraint.Operator.UNIQUE, "")
+        val offerRegion1 = makeOffer("hostname", Nil, Some(MarathonTestHelper.newDomainInfo("region1", "zone")))
+        val offerRegion2 = makeOffer("hostname", Nil, Some(MarathonTestHelper.newDomainInfo("region2", "zone")))
+        val instanceOnRegion1 = makeInstanceWithHost(PathId("/test"), "hostname", Some("region1"), Some("zone1"))
+
+        Constraints.meetsConstraint(Seq(instanceOnRegion1), offerRegion1, regionConstraintUnique) shouldBe false
+        Constraints.meetsConstraint(Seq(instanceOnRegion1), offerRegion2, regionConstraintUnique) shouldBe true
+      }
+
+      "apply constraints when *zone is specified" in {
+        val zoneConstraintUnique = makeConstraint("*zone", Constraint.Operator.UNIQUE, "")
+        val offerZone1 = makeOffer("hostname", Nil, Some(MarathonTestHelper.newDomainInfo("region", "zone1")))
+        val offerZone2 = makeOffer("hostname", Nil, Some(MarathonTestHelper.newDomainInfo("region", "zone2")))
+        val instanceOnZone1 = makeInstanceWithHost(PathId("/test"), "hostname", Some("region"), Some("zone1"))
+
+        Constraints.meetsConstraint(Seq(instanceOnZone1), offerZone1, zoneConstraintUnique) shouldBe false
+        Constraints.meetsConstraint(Seq(instanceOnZone1), offerZone2, zoneConstraintUnique) shouldBe true
+      }
+    }
   }
+
   private def makeSampleInstanceWithTextAttrs(runSpecId: PathId, attrs: Map[String, String]): Instance = {
     val attributes: Seq[Attribute] = attrs.map {
       case (name, value) =>
@@ -870,21 +891,22 @@ class ConstraintsTest extends UnitTest {
       .getInstance()
   }
 
-  private def makeOffer(hostname: String, attributes: Seq[Attribute]) = {
-    Offer.newBuilder
+  private def makeOffer(hostname: String, attributes: Seq[Attribute], domainInfo: Option[DomainInfo] = None) = {
+    val builder = Offer.newBuilder
       .setId(OfferID(Random.nextString(9)))
       .setSlaveId(SlaveID(Random.nextString(9)))
       .setFrameworkId(FrameworkID(Random.nextString(9)))
       .setHostname(hostname)
       .addAllAttributes(attributes.asJava)
-      .build
+    domainInfo.foreach(builder.setDomain)
+    builder.build
   }
 
-  private def makeInstanceWithHost(appId: PathId, host: String): Instance = {
+  private def makeInstanceWithHost(appId: PathId, host: String, region: Option[String] = None, zone: Option[String] = None): Instance = {
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskRunning()
       .withNetworkInfo(hostName = Some(host), hostPorts = Seq(999))
       .build()
-      .withAgentInfo(hostName = Some(host))
+      .withAgentInfo(hostName = Some(host), region = region, zone = zone)
       .getInstance()
   }
 

@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.tasks.OfferUtil
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory
 
@@ -18,6 +19,8 @@ object Int {
 trait Placed {
   def attributes: Seq[Attribute]
   def hostname: String
+  def region: Option[String]
+  def zone: Option[String]
 }
 
 object Constraints {
@@ -53,14 +56,15 @@ object Constraints {
     lazy val attr = offer.getAttributesList.find(_.getName == field)
 
     def isMatch: Boolean =
-      if (field == "hostname") {
-        checkHostName
-      } else if (attr.nonEmpty) {
-        checkAttribute
-      } else {
-        // This will be reached in case we want to schedule for an attribute
-        // that's not supplied.
-        checkMissingAttribute
+      field match {
+        case "hostname" | "*hostname" =>
+          checkConstraint(Some(offer.getHostname), { p => Some(p.hostname) })
+        case "*region" =>
+          checkConstraint(OfferUtil.region(offer), { p => p.region })
+        case "*zone" =>
+          checkConstraint(OfferUtil.zone(offer), { p => p.zone })
+        case _ =>
+          checkConstraint(attr.map(getValueString), { p => p.attributes.find(_.getName == field).map(getValueString) })
       }
 
     private def checkGroupBy(constraintValue: String, groupFunc: (Placed) => Option[String]) = {
@@ -86,76 +90,50 @@ object Constraints {
       groupedTasks.find(_._1.contains(constraintValue)).forall(_._2 < maxCount)
     }
 
-    private def checkHostName =
-      constraint.getOperator match {
-        case Operator.LIKE => offer.getHostname.matches(value)
-        case Operator.UNLIKE => !offer.getHostname.matches(value)
-        // All running tasks must have a hostname that is different from the one in the offer
-        case Operator.UNIQUE => allPlaced.forall(_.hostname != offer.getHostname)
-        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (p: Placed) => Some(p.hostname))
-        case Operator.MAX_PER => checkMaxPer(offer.getHostname, value.toInt, (p: Placed) => Some(p.hostname))
-        case Operator.CLUSTER =>
-          // Hostname must match or be empty
-          (value.isEmpty || value == offer.getHostname) &&
-            // All running tasks must have the same hostname as the one in the offer
-            allPlaced.forall(_.hostname == offer.getHostname)
-        case _ => false
-      }
+    private def checkCluster(ov: String, placedValue: Placed => Option[String]) = {
+      // Hostname must match or be empty
+      (value.isEmpty || value == ov) &&
+        // All running tasks must have the same hostname as the one in the offer
+        allPlaced.forall { p => placedValue(p) contains ov }
+    }
 
-    @SuppressWarnings(Array("OptionGet"))
-    private def checkAttribute: Boolean = {
-      def matches: Seq[Placed] = matchTaskAttributes(allPlaced, field, getValueString(attr.get))
-      def groupFunc = (p: Placed) => p.attributes
-        .find(_.getName == field)
-        .map(getValueString)
-      constraint.getOperator match {
-        case Operator.UNIQUE => matches.isEmpty
-        case Operator.CLUSTER =>
-          // If no value is set, accept the first one. Otherwise check for it.
-          (value.isEmpty || getValueString(attr.get) == value) &&
-            // All running tasks should have the matching attribute
-            matches.size == allPlaced.size
-        case Operator.GROUP_BY =>
-          checkGroupBy(getValueString(attr.get), groupFunc)
-        case Operator.MAX_PER =>
-          checkMaxPer(getValueString(attr.get), value.toInt, groupFunc)
-        case Operator.LIKE => checkLike
-        case Operator.UNLIKE => checkUnlike
+    // All running tasks must have a value that is different from the one in the offer
+    private def checkUnique(offerValue: Option[String], placedValue: Placed => Option[String]) = {
+      allPlaced.forall { p => placedValue(p) != offerValue }
+    }
+
+    def checkConstraint(offerValue: Option[String], placedValue: Placed => Option[String]) = {
+      offerValue match {
+        case Some(ov) =>
+          constraint.getOperator match {
+            case Operator.LIKE => checkLike(ov)
+            case Operator.UNLIKE => checkUnlike(ov)
+            case Operator.UNIQUE => checkUnique(offerValue, placedValue)
+            case Operator.GROUP_BY => checkGroupBy(ov, placedValue)
+            case Operator.MAX_PER => checkMaxPer(ov, value.toInt, placedValue)
+            case Operator.CLUSTER => checkCluster(ov, placedValue)
+            case _ => false
+          }
+        case None =>
+          // Only unlike can be matched if this offer does not have the specified value
+          constraint.getOperator == Operator.UNLIKE
       }
     }
 
-    @SuppressWarnings(Array("OptionGet"))
-    private def checkLike: Boolean = {
+    private def checkLike(ov: String): Boolean =
       if (value.nonEmpty) {
-        getValueString(attr.get).matches(value)
+        ov.matches(value)
       } else {
         log.warn("Error, value is required for LIKE operation")
         false
       }
-    }
 
-    @SuppressWarnings(Array("OptionGet"))
-    private def checkUnlike: Boolean = {
+    private def checkUnlike(ov: String): Boolean =
       if (value.nonEmpty) {
-        !getValueString(attr.get).matches(value)
+        !ov.matches(value)
       } else {
         log.warn("Error, value is required for UNLIKE operation")
         false
-      }
-    }
-
-    private def checkMissingAttribute = constraint.getOperator == Operator.UNLIKE
-
-    /**
-      * Filters running tasks by matching their attributes to this field & value.
-      */
-    private def matchTaskAttributes(allPlaced: Seq[Placed], field: String, value: String) =
-      allPlaced.filter {
-        _.attributes
-          .exists { y =>
-            y.getName == field &&
-              getValueString(y) == value
-          }
       }
   }
 

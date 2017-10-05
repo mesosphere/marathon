@@ -102,7 +102,7 @@ class TaskStatsByVersionTest extends UnitTest {
   }
   private[this] def runningInstanceStartedAt(version: Timestamp, startingDelay: FiniteDuration): Instance = {
     val startedAt = (version + startingDelay).millis
-    val agentInfo = AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil)
+    val agentInfo = AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil)
     LegacyAppInstance(
       TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt),
       agentInfo,
