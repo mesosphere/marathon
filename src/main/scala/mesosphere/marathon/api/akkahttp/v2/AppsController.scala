@@ -50,68 +50,35 @@ class AppsController(
 
   import mesosphere.marathon.api.v2.json.Formats._
 
-  private def listApps(implicit identity: Identity): Route = {
-    parameters('cmd.?, 'id.?, 'label.?, 'embed.*) { (cmd, id, label, embed) =>
-      def index: Future[Seq[AppInfo]] = {
-        def containCaseInsensitive(a: String, b: String): Boolean = b.toLowerCase contains a.toLowerCase
+  private val forceParameter = parameter('force.as[Boolean].?(false))
 
-        val selectors = Seq[Option[Selector[AppDefinition]]](
-          cmd.map(c => Selector(_.cmd.exists(containCaseInsensitive(c, _)))),
-          id.map(s => Selector(app => containCaseInsensitive(s, app.id.toString))),
-          label.map(new LabelSelectorParsers().parsed),
-          Some(authzSelector)
-        ).flatten
-        val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.toSet) + AppInfo.Embed.Counts + AppInfo.Embed.Deployments
-        appInfoService.selectAppsBy(Selector.forall(selectors), resolvedEmbed)
-      }
-      onSuccess(index)(apps => complete(Json.obj("apps" -> apps)))
-    }
-  }
+  private def listApps(implicit identity: Identity): Route = ???
 
-  private def createApp(app: AppDefinition, force: Boolean)(implicit identity: Identity): Route = {
-    def create: Future[(DeploymentPlan, AppInfo)] = {
+  private def replaceMultipleApps(implicit identity: Identity): Route = ???
 
-      def createOrThrow(opt: Option[AppDefinition]) = opt
-        .map(_ => throw ConflictingChangeException(s"An app with id [${app.id}] already exists."))
-        .getOrElse(app)
+  private def patchMultipleApps(implicit identity: Identity): Route = ???
 
-      groupManager.updateApp(app.id, createOrThrow, app.version, force).map { plan =>
-        val appWithDeployments = AppInfo(
-          app,
-          maybeCounts = Some(TaskCounts.zero),
-          maybeTasks = Some(Seq.empty),
-          maybeDeployments = Some(Seq(Identifiable(plan.id)))
-        )
-        plan -> appWithDeployments
-      }
-    }
-    authorized(CreateRunSpec, app).apply {
-      onSuccess(create) { (plan, app) =>
-        //TODO: post ApiPostEvent
-        complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), app))
-      }
-    }
-  }
+  private def createApp(implicit identity: Identity): Route = ???
 
-  private def showApp(appId: PathId)(implicit identity: Identity): Route = {
-    parameters('embed.*) { embed =>
-      val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.toSet) ++ Set(
-        // deprecated. For compatibility.
-        AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
-      )
+  private def showApp(appId: PathId)(implicit identity: Identity): Route = ???
 
-      onSuccess(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) {
-        case None =>
-          reject(Rejections.EntityNotFound.app(appId))
-        case Some(info) =>
-          authorized(ViewResource, info.app).apply {
-            complete(Json.obj("app" -> info))
-          }
-      }
-    }
-  }
+  private def patchSingle(appId: PathId)(implicit identity: Identity): Route = ???
 
-  val RemainingPathId = RemainingPath.map(_.toString.toRootPath)
+  private def putSingle(appId: PathId)(implicit identity: Identity): Route = ???
+
+  private def deleteSingle(appId: PathId)(implicit identity: Identity): Route = ???
+
+  private def restartApp(appId: PathId)(implicit identity: Identity): Route = ???
+
+  private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = ???
+
+  private def killTasks(appId: PathId)(implicit identity: Identity): Route = ???
+
+  private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = ???
+
+  private def listVersions(appId: PathId)(implicit identity: Identity): Route = ???
+
+  private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = ???
 
   // format: OFF
   val route: Route = {
