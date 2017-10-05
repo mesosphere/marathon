@@ -33,6 +33,12 @@ types:
     type: string
     enum: [ HTTP, HTTPS ]
     description: The http scheme to use
+  IpProtocol:
+    type: string
+    enum: [ IPv4 ]
+  PersistenceId:
+    type: string
+    pattern: ^([^#]+)[#]([^#]+)[#]([^#]+)$
   ReadMode:
     type: string
     enum: [RO, RW]
