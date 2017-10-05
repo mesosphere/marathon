@@ -195,6 +195,21 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       Then("offer-1 is declined, since the actor did not respond in time")
       offerMatch1.future.futureValue.opsWithSource should be('empty)
     }
+
+    "not send offers to matchers that are not interested" in new Fixture {
+      Given("OfferMatcher not interested in offer")
+      val offer1 = offer()
+      val offerMatch1 = Promise[OfferMatcher.MatchedInstanceOps]
+      offerMatcherManager.underlyingActor.launchTokens = 100
+      val matcherMock = matcher(isInterestedIn = false)
+      offerMatcherManager.underlyingActor.matchers += matcherMock
+
+      When("Offer is sent to MatcherManager")
+      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
+
+      Then("OfferMatcher not interested in offer should not receive any offer")
+      verify(matcherMock, times(0)).matchOffer(any)
+    }
   }
 
   implicit val timeout = Timeout(3, TimeUnit.SECONDS)
@@ -209,17 +224,19 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     }
     val offerMatcherManager = TestActorRef[OfferMatcherManagerActor](OfferMatcherManagerActor.props(metrics, random, clock, Config, observer))
 
-    def matcher(precedence: Option[PathId] = None): OfferMatcher = {
+    def matcher(precedence: Option[PathId] = None, isInterestedIn: Boolean = true): OfferMatcher = {
       val matcher = mock[OfferMatcher]
       val promise = Promise[OfferMatcher.MatchedInstanceOps]
       matcher.precedenceFor returns precedence
       matcher.matchOffer(any) returns promise.future
+      matcher.isInterestedIn(any) returns isInterestedIn
       matcher
     }
 
     def matcherWith(fn: Offer => Future[OfferMatcher.MatchedInstanceOps]): OfferMatcher = {
       val matcher = mock[OfferMatcher]
       matcher.precedenceFor returns None
+      matcher.isInterestedIn(any) returns true
       matcher.matchOffer(any) answers {
         case Array(offer: Offer) => fn(offer)
       }

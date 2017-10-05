@@ -71,14 +71,15 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
-      offerMatchStatisticsActor: TestProbe = TestProbe()) {
+      offerMatchStatisticsActor: TestProbe = TestProbe(),
+      scheduler: MarathonScheduler = mock[MarathonScheduler]) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
         maybeOfferReviver = Some(offerReviver),
-        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref) _
+        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, scheduler) _
       system.actorOf(props(appToLaunch, instances))
     }
 
@@ -300,7 +301,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           offerMatcherManager, clock, instanceOpFactory,
           maybeOfferReviver = None,
           instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
-          f.app, instancesToLaunch = 1
+          f.app, instancesToLaunch = 1,
+          mock[MarathonScheduler]
         ) {
           override protected def scheduleTaskOperationTimeout(
             context: ActorContext, message: InstanceOpRejected): Cancellable = {

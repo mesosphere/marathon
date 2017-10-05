@@ -28,7 +28,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         })
         val offer = MarathonTestHelper.makeBasicOffer().build()
 
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None)(scheduler)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, mock[MarathonScheduler])(scheduler)
         val offerMatch: MatchedInstanceOps = offerMatcher.matchOffer(offer).futureValue
 
         offerMatch.offerId should not be (offer.getId)
