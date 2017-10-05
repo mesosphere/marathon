@@ -21,7 +21,10 @@ import mesosphere.marathon.plugin.auth.{ Authenticator => MarathonAuthenticator,
 import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
 import play.api.libs.json.Json
 import PathId._
+import mesosphere.marathon.state._
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.task.Task.{ Id => TaskId }
+import PathMatchers._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
