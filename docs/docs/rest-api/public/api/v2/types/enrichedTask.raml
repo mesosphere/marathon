@@ -12,6 +12,14 @@ types:
       ipAddress: string
       protocol: strings.IpProtocol
 
+  LocalVolumeId:
+    type: object
+    properties:
+      runSpecId: strings.PathId
+      containerPath: string
+      uuid: string
+      persistensId: strings.PersistenceId
+
   EnrichedTask:
     type: object
     properties:
@@ -27,5 +35,4 @@ types:
       stagedAt?: string
       startedAt?: string
       version?: string
-      #localVolumes?:
-      #  type: LocalVolumeId[]
+      localVolumes?: LocalVolumeId[]

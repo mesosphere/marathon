@@ -39,6 +39,9 @@ types:
   IpProtocol:
     type: string
     enum: [ IPv4 ]
+  PersistenceId:
+    type: string
+    pattern: ^([^#]+)[#]([^#]+)[#]([^#]+)$
   ReadMode:
     type: string
     enum: [RO, RW]
