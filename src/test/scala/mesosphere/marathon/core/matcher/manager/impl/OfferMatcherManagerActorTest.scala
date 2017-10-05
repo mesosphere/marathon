@@ -210,6 +210,21 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       Then("OfferMatcher not interested in offer should not receive any offer")
       verify(matcherMock, times(0)).matchOffer(any)
     }
+
+    "receive offer when interested in that offer" in new Fixture {
+      Given("OfferMatcher not interested in offer")
+      val offer1 = offer()
+      val offerMatch1 = Promise[OfferMatcher.MatchedInstanceOps]
+      offerMatcherManager.underlyingActor.launchTokens = 100
+      val matcherMock = matcher(isInterestedIn = true)
+      offerMatcherManager.underlyingActor.matchers += matcherMock
+
+      When("Offer is sent to MatcherManager")
+      offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
+
+      Then("OfferMatcher not interested in offer should not receive any offer")
+      verify(matcherMock, times(1)).matchOffer(any)
+    }
   }
 
   implicit val timeout = Timeout(3, TimeUnit.SECONDS)
