@@ -179,7 +179,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       marathonScheduler.registered(driver, frameworkId, masterInfo)
 
-      marathonScheduler.getDefaultRegion shouldEqual Some(regionName)
+      marathonScheduler.getHomeRegion shouldEqual Some(regionName)
     }
 
     "Store default region when reregistered" in new Fixture {
@@ -206,7 +206,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       marathonScheduler.reregistered(driver, masterInfo)
 
-      marathonScheduler.getDefaultRegion shouldEqual Some(regionName)
+      marathonScheduler.getHomeRegion shouldEqual Some(regionName)
 
     }
   }
