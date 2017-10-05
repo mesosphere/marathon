@@ -1,0 +1,35 @@
+#%RAML 1.0 Library
+uses:
+  readiness: readinessCheckResult.raml
+  task: enrichedTask.raml
+
+types:
+  Identifiable:
+    type: object
+    properties:
+      id: string
+  AppInfo:
+    type: object
+    properties:
+      app:
+        #type: App we should inherit from App
+        type: object
+        properties:
+          # Task counts
+          tasksStaged?:
+            type: number
+            format: int32
+          tasksRunning?:
+            type: number
+            format: int32
+          tasksHealthy?:
+            type: number
+            format: int32
+          tasksUnhealthy?:
+            type: number
+            format: int32
+          deployments?: Identifiable[]
+          readinessCheckResults?: readiness.ReadinessCheckResult[]
+          tasks?: task.EnrichedTask[]
+       #   lastTaskFailures?: TaskFailure
+       #   taskStats?: TaskStatsByVersion

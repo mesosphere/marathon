@@ -86,9 +86,11 @@ class AppsController(
       }
     }
     authorized(CreateRunSpec, app).apply {
-      onSuccess(create) { (plan, app) =>
+      onSuccess(create) { (plan, appInfo) =>
         //TODO: post ApiPostEvent
-        complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), app))
+        //val ramlAppInfo = raml.AppInfo(app = raml.Raml.toRaml(appInfo.app))
+        //complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlAppInfo))
+        complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), appInfo))
       }
     }
   }
@@ -105,6 +107,8 @@ class AppsController(
           reject(Rejections.EntityNotFound.app(appId))
         case Some(info) =>
           authorized(ViewResource, info.app).apply {
+            //val ramlAppInfo = raml.AppInfo(app = raml.Raml.toRaml(info.app))
+            //complete(ramlAppInfo)
             complete(Json.obj("app" -> info))
           }
       }

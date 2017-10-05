@@ -11,9 +11,6 @@ import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.core.appinfo.AppInfo
-import mesosphere.marathon.raml.{ LoggerChange, MarathonInfo, Metrics }
-import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.state.AppDefinition
 import play.api.libs.json._
 
@@ -111,14 +108,15 @@ object EntityMarshallers {
   implicit val jsValueMarshaller = playJsonMarshaller[JsValue]
   implicit val wixResultMarshaller = playJsonMarshaller[com.wix.accord.Failure](Validation.failureWrites)
   implicit val messageMarshaller = playJsonMarshaller[Rejections.Message]
-  implicit val appInfoMarshaller = playJsonMarshaller[AppInfo]
-  implicit val infoMarshaller = playJsonMarshaller[MarathonInfo]
-  implicit val infoUnmarshaller = playJsonUnmarshaller[MarathonInfo]
-  implicit val metricsMarshaller = internalToRamlJsonMarshaller[TickMetricSnapshot, Metrics]
-  implicit val loggerChangeMarshaller = playJsonMarshaller[LoggerChange]
-  implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[LoggerChange]
+  //implicit val appInfoMarshaller = playJsonMarshaller[raml.AppInfo]
+  implicit val appInfoMarshaller = playJsonMarshaller[mesosphere.marathon.core.appinfo.AppInfo]
+  implicit val infoMarshaller = playJsonMarshaller[raml.MarathonInfo]
+  implicit val infoUnmarshaller = playJsonUnmarshaller[raml.MarathonInfo]
+  implicit val metricsMarshaller = internalToRamlJsonMarshaller[TickMetricSnapshot, raml.Metrics]
+  implicit val loggerChangeMarshaller = playJsonMarshaller[raml.LoggerChange]
+  implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[raml.LoggerChange]
   implicit val stringMapMarshaller = playJsonMarshaller[Map[String, String]]
-  implicit val pluginDefinitionsMarshaller = playJsonMarshaller[PluginDefinitions]
+  implicit val pluginDefinitionsMarshaller = playJsonMarshaller[raml.PluginDefinitions]
 
   private def validEntityRaml[A, B](um: FromEntityUnmarshaller[A])(
     implicit

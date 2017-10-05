@@ -1,32 +1,26 @@
+#%RAML 1.0 Library
 types:
   MarathonConfig:
     type: object
     properties:
-      master?:
-        type: string
+      master?: string
       failover_timeout?:
         type: number
         format: int64
       framework_name?:
         type: string
-      ha?:
-        type: boolean
-      checkpoint?:
-        type: boolean
+      ha?: boolean
+      checkpoint?: boolean
       local_port_min?:
           type: number
           format: int32
       local_port_max?:
           type: number
           format: int32
-      executor?:
-        type: string
-      hostname?:
-        type: string
-      webui_url?:
-        type: string
-      mesos_role?:
-        type: string
+      executor?: string
+      hostname?: string
+      webui_url?: string
+      mesos_role?: string
       task_launch_timeout?:
         type: number
         format: int64
@@ -39,24 +33,20 @@ types:
       reconciliation_interval?:
         type: number
         format: int64
-      mesos_user?:
-        type: string
+      mesos_user?: string
       leader_proxy_connection_timeout_ms?:
         type: number
         format: int32
       leader_proxy_read_timeout_ms?:
         type: number
         format: int32
-      mesos_leader_ui_url?:
-        type: string
-      features:
-        type: string[]
+      mesos_leader_ui_url?: string
+      features: string[]
 
   ZooKeeperConfig:
     type: object
     properties:
-      zk:
-        type: string
+      zk: string
       zk_timeout:
         type: number
         format: int64

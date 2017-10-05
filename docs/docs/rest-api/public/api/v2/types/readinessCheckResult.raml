@@ -1,0 +1,18 @@
+#%RAML 1.0 Library
+
+types:
+  HttpResponse:
+    type: object
+    properties:
+      status:
+        type: number
+        format: int32
+      contentType: string
+      body: string
+  ReadinessCheckResult:
+    type: object
+    properties:
+      name: string
+      taskId: string
+      ready: boolean
+      lastResponse?: HttpResponse

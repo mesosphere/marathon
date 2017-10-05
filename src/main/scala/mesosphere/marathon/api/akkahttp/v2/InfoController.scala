@@ -7,7 +7,6 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth.{ Authenticator, AuthorizedResource, Authorizer, ViewResource }
-import mesosphere.marathon.raml.{ HttpConfig, MarathonConfig, MarathonInfo, ZooKeeperConfig }
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.util.state.MesosLeaderInfo
 
@@ -27,7 +26,7 @@ case class InfoController(
   import mesosphere.marathon.api.akkahttp.Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
 
-  val marathonConfig = MarathonConfig(
+  val marathonConfig = raml.MarathonConfig(
     config.mesosMaster.get,
     config.mesosFailoverTimeout.get,
     config.frameworkName.get,
@@ -50,7 +49,7 @@ case class InfoController(
     config.availableFeatures.toIndexedSeq
   )
 
-  val zookeeperConfig = ZooKeeperConfig(
+  val zookeeperConfig = raml.ZooKeeperConfig(
     s"zk://${config.zkHosts}${config.zkPath}",
     config.zooKeeperTimeout(),
     config.zooKeeperConnectionTimeout(),
@@ -58,7 +57,7 @@ case class InfoController(
     config.maxVersions()
   )
 
-  val httpConfig = HttpConfig(config.httpPort(), config.httpsPort())
+  val httpConfig = raml.HttpConfig(config.httpPort(), config.httpsPort())
 
   @SuppressWarnings(Array("all")) // async/await
   def info(): Route =
@@ -68,7 +67,7 @@ case class InfoController(
           async {
             val frameworkId = await(frameworkIdRepository.get()).map(_.id)
 
-            MarathonInfo(
+            raml.MarathonInfo(
               BuildInfo.name,
               BuildInfo.version,
               BuildInfo.buildref,
