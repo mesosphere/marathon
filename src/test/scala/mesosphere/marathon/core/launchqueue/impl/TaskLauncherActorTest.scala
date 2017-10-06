@@ -75,8 +75,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       rateLimiterActor: TestProbe = TestProbe(),
       offerMatchStatisticsActor: TestProbe = TestProbe(),
       homeRegionProvider: Provider[HomeRegionProvider] = new Provider[HomeRegionProvider] {
-          override def get() = mock[HomeRegionProvider]
-        }) {
+        override def get() = mock[HomeRegionProvider]
+      }) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(
@@ -299,9 +299,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
       var scheduleCalled = false
-      val homeRegionProvider = new Provider[HomeRegionProvider] {
-        override def get() = mock[HomeRegionProvider]
-      }
       val props = Props(
         new TaskLauncherActor(
           launchQueueConfig,
