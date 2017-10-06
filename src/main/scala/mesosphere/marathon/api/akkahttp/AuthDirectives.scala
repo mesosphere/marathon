@@ -54,11 +54,11 @@ trait AuthDirectives extends AkkaDirectives {
     * @param action The action for which to check authorization for the given identity
     * @param resource The entity for which authorization should be checked
     */
-  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource, onFailure: Rejection)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
+  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource, onAuthFailure: Rejection)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
     if (authorizer.isAuthorized(identity, action, resource))
       pass
     else
-      reject(onFailure)
+      reject(onAuthFailure)
 
   def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
     authorized[Resource](action, resource, NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))

@@ -112,8 +112,8 @@ class GroupManagerImpl(
 
       val from = rootGroup()
       change(from) match {
-        case Left(left) =>
-          Future.successful(Left(left))
+        case left @ Left(_) =>
+          Future.successful(left)
         case Right(changed) =>
           async {
             val unversioned = assignDynamicServicePorts(from, changed)

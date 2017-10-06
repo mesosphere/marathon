@@ -166,15 +166,15 @@ class AppsController(
     * @param identity implicit identity
     * @return http servlet response
     */
-  private[this] def update(appId: PathId, partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity) = {
+  private[this] def update(appId: PathId, partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity): Route = {
     val version = clock.now()
 
     (forceParameter &
       extractClientIP &
       extractUri &
       entity(as(appUpdateUnmarshaller(appId, partialUpdate)))) { (force, remoteAddr, requestUri, appUpdate) =>
-        /* Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
-       * exceptions to the appropriate rejections */
+//         Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
+//         exceptions to the appropriate rejections
         val fn = updateOrCreate(
           appId, _: Option[AppDefinition], appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
 
@@ -188,7 +188,7 @@ class AppsController(
       }
   }
 
-  private[this] def updateMultiple(partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity) = {
+  private[this] def updateMultiple(partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity): Route = {
     val version = clock.now()
 
     (forceParameter & entity(as(appUpdatesUnmarshaller(partialUpdate)))) { (force, appUpdates) =>
@@ -243,15 +243,15 @@ class AppsController(
       throw ex
   }
 
-  private def patchSingle(appId: PathId)(implicit identity: Identity) =
+  private def patchSingle(appId: PathId)(implicit identity: Identity): Route =
     update(appId, partialUpdate = true, allowCreation = false)
 
-  private def putSingle(appId: PathId)(implicit identity: Identity) =
+  private def putSingle(appId: PathId)(implicit identity: Identity): Route =
     parameter('partialUpdate.as[Boolean].?(true)) { partialUpdate =>
       update(appId, partialUpdate = partialUpdate, allowCreation = true)
     }
 
-  private def deleteSingle(appId: PathId)(implicit identity: Identity) =
+  private def deleteSingle(appId: PathId)(implicit identity: Identity): Route =
     forceParameter { force =>
       lazy val notFound: Either[Rejection, RootGroup] =
         Left(Rejections.EntityNotFound.app(appId))
@@ -284,7 +284,7 @@ class AppsController(
     case Right(t) => t
   }
 
-  private def restartApp(appId: PathId)(implicit identity: Identity) = {
+  private def restartApp(appId: PathId)(implicit identity: Identity): Route = {
     forceParameter { force =>
 
       def markForRestartingOrThrow(opt: Option[AppDefinition]): Either[Rejection, AppDefinition] =
@@ -305,10 +305,10 @@ class AppsController(
     }
   }
 
-  private def listRunningTasks(appId: PathId)(implicit identity: Identity) = {
+  private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = {
     val maybeApp = groupManager.app(appId)
 
-    maybeApp map { app =>
+    maybeApp.map { app =>
       authorized(ViewRunSpec, app).apply {
 
         val tasksF = instanceTracker.instancesBySpec flatMap { instancesBySpec =>
@@ -340,8 +340,8 @@ class AppsController(
       .runWith(Sink.set)
   }
 
-  private def killTasks(appId: PathId)(implicit identity: Identity) = {
-    //the line below doesn't look nice but it doesn't compile if we use parameters directive
+  private def killTasks(appId: PathId)(implicit identity: Identity): Route = {
+    // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & parameter("scale".as[Boolean].?(false)) & parameter("wipe".as[Boolean].?(false))) {
       (force, host, scale, wipe) =>
 
@@ -364,8 +364,8 @@ class AppsController(
     }
   }
 
-  private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity) = {
-    //the line below doesn't look nice but it doesn't compile if we use parameters directive
+  private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = {
+    // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & parameter("scale".as[Boolean].?(false)) & parameter("wipe".as[Boolean].?(false))) {
       (force, host, scale, wipe) =>
 
@@ -394,7 +394,7 @@ class AppsController(
     }
   }
 
-  private def listVersions(appId: PathId)(implicit identity: Identity) = {
+  private def listVersions(appId: PathId)(implicit identity: Identity): Route = {
     val versions = groupManager.appVersions(appId).runWith(Sink.seq)
     authorized(ViewRunSpec, groupManager.app(appId), Rejections.EntityNotFound.app(appId)).apply {
       onSuccess(versions) { versions =>
@@ -403,7 +403,7 @@ class AppsController(
     }
   }
 
-  private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity) = {
+  private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = {
     onSuccess(groupManager.appVersion(appId, version.toOffsetDateTime)) {
       case Some(app) =>
         authorized(ViewRunSpec, app, Rejections.EntityNotFound.app(appId)).apply {
