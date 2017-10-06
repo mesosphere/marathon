@@ -19,7 +19,7 @@ import org.apache.mesos.Protos.{ DomainInfo, FrameworkID, Offer, SlaveID, OfferI
 class ActorOfferMatcherTest extends AkkaUnitTest {
   "The ActorOfferMatcher" when {
     "receives remote region offer" should {
-      "say is not interested when from non-home region" in {
+      "say is not interested when from non-home region" in new Fixture {
         val marathonScheduler = mock[MarathonScheduler]
         marathonScheduler.getHomeRegion returns Some("home")
         val probe = TestProbe()
@@ -30,7 +30,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         offerMatcher.isInterestedIn(offerWithFaultRegion("remote")) should be (false)
       }
 
-      "say is interested when from home region" in {
+      "say is interested when from home region" in new Fixture {
         val marathonScheduler = mock[MarathonScheduler]
         marathonScheduler.getHomeRegion returns Some("home")
         val probe = TestProbe()
@@ -41,7 +41,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         offerMatcher.isInterestedIn(offerWithFaultRegion("home")) should be (true)
       }
 
-      "say is interested when fault region not set" in {
+      "say is interested when fault region not set" in new Fixture {
         val marathonScheduler = mock[MarathonScheduler]
         marathonScheduler.getHomeRegion returns Some("home")
         val probe = TestProbe()
@@ -52,6 +52,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         offerMatcher.isInterestedIn(offerWithoutFaultRegion()) should be (true)
       }
     }
+
     "asking the actor" should {
       "find a match in time" in {
         val probe = TestProbe()
@@ -77,7 +78,9 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         offerMatch.offerId.getValue should be("other")
       }
     }
+  }
 
+  class Fixture {
     def offerWithFaultRegion(faultRegion: String) = {
       Offer.newBuilder()
         .setId(MesosOfferIdProto.newBuilder().setValue(UUID.randomUUID().toString))
