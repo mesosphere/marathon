@@ -47,10 +47,4 @@ object EnrichedTaskConversion extends HealthConversion with DefaultConversions {
       localVolumes = localVolumes
     )
   }
-
-  /*
-  task.reservationWithVolumes.foreach { reservation =>
-    fields.update("localVolumes", reservation.volumeIds)
-  }
-    */
 }
