@@ -107,13 +107,13 @@ class GroupManagerImpl(
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
     // All updates to the root go through the work queue.
-    val result = serializeUpdates {
+    val result: Future[Either[T, DeploymentPlan]] = serializeUpdates {
       logger.info(s"Upgrade root group version:$version with force:$force")
 
       val from = rootGroup()
       change(from) match {
-        case left @ Left(_) =>
-          Future.successful(left)
+        case Left(left) =>
+          Future.successful(Left(left))
         case Right(changed) =>
           async {
             val unversioned = assignDynamicServicePorts(from, changed)

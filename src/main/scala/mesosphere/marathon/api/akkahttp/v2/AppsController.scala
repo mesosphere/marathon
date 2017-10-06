@@ -173,8 +173,8 @@ class AppsController(
       extractClientIP &
       extractUri &
       entity(as(appUpdateUnmarshaller(appId, partialUpdate)))) { (force, remoteAddr, requestUri, appUpdate) =>
-//         Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
-//         exceptions to the appropriate rejections
+        //         Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
+        //         exceptions to the appropriate rejections
         val fn = updateOrCreate(
           appId, _: Option[AppDefinition], appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
 
