@@ -1219,31 +1219,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
 
-    "Replacing an existing application with a Mesos docker container passes validation" in new Fixture {
-      Given("An app update to a Mesos container with a docker image")
-      val app = App(id = "/app", cmd = Some("foo"))
-      prepareApp(app, groupManager)
-
-      val body =
-        """{
-          |  "cmd": "sleep 1",
-          |  "container": {
-          |    "type": "MESOS",
-          |    "docker": {
-          |      "image": "/test:latest"
-          |    }
-          |  }
-          |}""".stripMargin.getBytes("UTF-8")
-
-      When("The application is updated")
-      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
-        Then("The return code indicates success")
-        status shouldEqual StatusCodes.OK
-        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
-      }
-    }
-
     "Replacing an existing docker application, upgrading from host to user networking" in new Fixture {
       Given("a docker app using host networking and non-empty port definitions")
       val app = AppDefinition(
@@ -1284,45 +1259,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 
       app1 should be(app2)
-    }
-
-    "Restart an existing app" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
-      val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
-      service.deploy(any, any) returns Future.successful(Done)
-      groupManager.app(PathId("/app")) returns Some(app)
-
-      groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-      groupManager.rootGroup() returns rootGroup
-
-      val entity = HttpEntity.Empty
-
-      val uri = Uri./
-        .withPath(Path(app.id.toString) / "restart")
-        .withQuery(Query("force" -> "true"))
-
-      Post(uri, entity) ~> route ~> check {
-        status shouldEqual StatusCodes.OK
-        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
-      }
-    }
-
-    "Restart a non existing app will fail" in new Fixture {
-      val missing = PathId("/app")
-      groupManager.app(PathId("/app")) returns None
-      groupManager.updateApp(any, any, any, any, any) returns Future.failed(AppNotFoundException(missing))
-      groupManager.rootGroup() returns RootGroup()
-
-      val entity = HttpEntity.Empty
-
-      val uri = Uri./
-        .withPath(Path(missing.toString) / "restart")
-        .withQuery(Query("force" -> "true"))
-
-      Post(uri, entity) ~> route ~> check {
-        status shouldEqual StatusCodes.NotFound
-      }
     }
 
     "Index has counts and deployments by default (regression for #2171)" in new Fixture {
@@ -1389,56 +1325,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       search(cmd = Some("work"), id = Some("app"), label = Some("a==1")) should be(Set(app2))
       search(cmd = Some("hard"), id = Some("service-a"), label = Some("a==1")) should be(Set(app1))
       search(cmd = Some(""), id = Some(""), label = Some("")) should be(Set(app1, app2))
-    }
-
-
-    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath)))) {
-      Given("A real Group Manager with one app")
-      val appD = AppDefinition("/a".toRootPath)
-      val rootGroup = initialRoot
-
-      Given("An unauthorized request")
-      auth.authenticated = true
-      auth.authorized = false
-      appInfoService.selectApp(any, any, any) returns Future.successful(Some(AppInfo(appD)))
-      val app = """{"id":"/a","cmd":"foo","ports":[]}"""
-      val entity = HttpEntity(app.getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)
-
-      When("we try to create an app")
-      Post(Uri./, entity) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
-
-      When("we try to fetch an app")
-      Get(Uri./.withPath(Path("/a")), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
-
-      When("we try to update an app")
-      Put(Uri./.withPath(Path("/a")), entity) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
-
-      When("we try to update multiple apps")
-      Put(Uri./, HttpEntity(s"[$app]".getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
-
-      When("we try to remove an app")
-      Delete(Uri./.withPath(Path("/a")), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
-
-      When("we try to restart an app")
-      Post(Uri./.withPath(Path("/a") / "restart"), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
     }
 
     "access with limited authorization gives a filtered apps listing" in new Fixture {
