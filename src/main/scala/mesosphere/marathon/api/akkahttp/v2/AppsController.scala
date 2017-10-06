@@ -25,15 +25,21 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
+import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.core.event.ApiPostEvent
+import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 class AppsController(
     val clock: Clock,
     val eventBus: EventStream,
-    val service: MarathonSchedulerService,
+    val marathonSchedulerService: MarathonSchedulerService,
     val appInfoService: AppInfoService,
+    val healthCheckManager: HealthCheckManager,
+    val instanceTracker: InstanceTracker,
+    val taskKiller: TaskKiller,
     val config: MarathonConf,
     val groupManager: GroupManager,
     val pluginManager: PluginManager)(
