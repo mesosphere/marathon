@@ -61,6 +61,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val infoController = InfoController(mesosLeaderInfo, storageModule.frameworkIdRepository, conf)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
     val queueController = new QueueController(clock, launchQueue)
+
     val v2Controller = new V2Controller(
       appsController,
       eventsController,

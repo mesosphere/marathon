@@ -7,13 +7,14 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.akkahttp.Controller
-import mesosphere.marathon.api.akkahttp.Directives.{asLeader, authenticated, get, parameters, pathEndOrSingleSlash, _}
+import mesosphere.marathon.api.akkahttp.Directives.{ asLeader, authenticated, get, parameters, pathEndOrSingleSlash, _ }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, ViewRunSpec}
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, ViewRunSpec }
+import mesosphere.marathon.api.akkahttp.EntityMarshallers._
 
 import scala.async.Async._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class QueueController(
     clock: Clock,
@@ -46,8 +47,9 @@ class QueueController(
 
     parameters('embed.*) { embed =>
       val embedLastUnusedOffers = embed.exists(_ == QueueController.EmbedLastUnusedOffers)
-      onComplete(listAsync) { info =>
-        complete("TODO")
+      onSuccess(listAsync) { info =>
+        val result = (info, embedLastUnusedOffers, clock)
+        complete(result)
       }
     }
   }
