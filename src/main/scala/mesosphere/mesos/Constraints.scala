@@ -90,11 +90,11 @@ object Constraints {
       groupedTasks.find(_._1.contains(constraintValue)).forall(_._2 < maxCount)
     }
 
-    private def checkCluster(ov: String, placedValue: Placed => Option[String]) = {
+    private def checkCluster(offerValue: String, placedValue: Placed => Option[String]) = {
       // Hostname must match or be empty
-      (value.isEmpty || value == ov) &&
+      (value.isEmpty || value == offerValue) &&
         // All running tasks must have the same hostname as the one in the offer
-        allPlaced.forall { p => placedValue(p) contains ov }
+        allPlaced.forall { p => placedValue(p) contains offerValue }
     }
 
     // All running tasks must have a value that is different from the one in the offer
@@ -102,16 +102,16 @@ object Constraints {
       allPlaced.forall { p => placedValue(p) != offerValue }
     }
 
-    def checkConstraint(offerValue: Option[String], placedValue: Placed => Option[String]) = {
-      offerValue match {
-        case Some(ov) =>
+    def checkConstraint(maybeOfferValue: Option[String], placedValue: Placed => Option[String]) = {
+      maybeOfferValue match {
+        case Some(offerValue) =>
           constraint.getOperator match {
-            case Operator.LIKE => checkLike(ov)
-            case Operator.UNLIKE => checkUnlike(ov)
-            case Operator.UNIQUE => checkUnique(offerValue, placedValue)
-            case Operator.GROUP_BY => checkGroupBy(ov, placedValue)
-            case Operator.MAX_PER => checkMaxPer(ov, value.toInt, placedValue)
-            case Operator.CLUSTER => checkCluster(ov, placedValue)
+            case Operator.LIKE => checkLike(offerValue)
+            case Operator.UNLIKE => checkUnlike(offerValue)
+            case Operator.UNIQUE => checkUnique(maybeOfferValue, placedValue)
+            case Operator.GROUP_BY => checkGroupBy(offerValue, placedValue)
+            case Operator.MAX_PER => checkMaxPer(offerValue, value.toInt, placedValue)
+            case Operator.CLUSTER => checkCluster(offerValue, placedValue)
             case _ => false
           }
         case None =>
@@ -120,17 +120,17 @@ object Constraints {
       }
     }
 
-    private def checkLike(ov: String): Boolean =
+    private def checkLike(offerValue: String): Boolean =
       if (value.nonEmpty) {
-        ov.matches(value)
+        offerValue.matches(value)
       } else {
         log.warn("Error, value is required for LIKE operation")
         false
       }
 
-    private def checkUnlike(ov: String): Boolean =
+    private def checkUnlike(offerValue: String): Boolean =
       if (value.nonEmpty) {
-        !ov.matches(value)
+        !offerValue.matches(value)
       } else {
         log.warn("Error, value is required for UNLIKE operation")
         false
