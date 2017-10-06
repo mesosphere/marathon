@@ -5,13 +5,14 @@ title: Backup & Restore
 # Backup and Restore
 
 As of version 1.5, Marathon has built-in backup and restore functionality.
-The complete state of Marathon, which is kept in the persistent data store, 
+The complete current state of Marathon, which is kept in the persistent data store, 
 can be backed up to an external file or to an external storage provider.
 Restoring from a backup brings Marathon to the exact state it was in at the time of backup creation.
 
 ## Limitations
 
-Marathon backups only capture the state of Marathon itself. 
+Marathon backups only capture the state of Marathon itself.
+A Marathon backup will only capture the current state and will **not** backup the application histories.
 A Marathon backup will **not** capture the state of any other system component. 
 To create a full backup of your cluster, you must back up all system components.
 
