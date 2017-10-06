@@ -26,7 +26,7 @@ object PathMatchers {
     catch { case _: IllegalArgumentException => None }
   )
 
-  private val marathonApiKeywords = Set("restart", "tasks", "versions")
+  private val marathonApiKeywords = Set("restart", "tasks", "versions", "delay")
 
   /**
     * Matches everything what's coming before api keywords as PathId
