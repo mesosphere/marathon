@@ -265,8 +265,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     lazy val instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val parentActor = newTestActor()
-    lazy val scheduler = new Provider[MarathonScheduler] {
-      override def get() = mock[MarathonScheduler]
+    lazy val homeRegionProvider = new Provider[HomeRegionProvider] {
+      override def get() = mock[HomeRegionProvider]
     }
 
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
@@ -277,7 +277,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       maybeOfferReviver = None,
       instanceTracker,
       instanceOpFactory,
-      scheduler
+      homeRegionProvider
     )
 
     def launchQueue = module.launchQueue

@@ -53,7 +53,7 @@ class CoreModuleImpl @Inject() (
   scheduler: Provider[DeploymentService],
   instanceUpdateSteps: Seq[InstanceChangeHandler],
   taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
-  marathonScheduler: Provider[MarathonScheduler]
+  homeRegionProvider: Provider[HomeRegionProvider]
 )
     extends CoreModule {
 
@@ -101,7 +101,7 @@ class CoreModuleImpl @Inject() (
     // infrastructure
     clock, random, marathonConf, actorSystem.scheduler,
     leadershipModule,
-    marathonScheduler
+    homeRegionProvider
   )
 
   private[this] lazy val offerMatcherReconcilerModule =
@@ -147,7 +147,7 @@ class CoreModuleImpl @Inject() (
     // external guice dependencies
     taskTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
-    marathonScheduler
+    homeRegionProvider
   )
 
   // PLUGINS

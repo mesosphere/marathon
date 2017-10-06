@@ -23,7 +23,7 @@ class OfferMatcherManagerModule(
     offerMatcherConfig: OfferMatcherManagerConfig,
     scheduler: Scheduler,
     leadershipModule: LeadershipModule,
-    marathonScheduler: Provider[MarathonScheduler],
+    homeRegionProvider: Provider[HomeRegionProvider],
     actorName: String = "offerMatcherManager") {
 
   private[this] lazy val offersWanted: Subject[Boolean] = BehaviorSubject[Boolean](false)
@@ -41,6 +41,6 @@ class OfferMatcherManagerModule(
     * offers.
     */
   val globalOfferMatcherWantsOffers: Observable[Boolean] = offersWanted
-  val globalOfferMatcher: OfferMatcher = new ActorOfferMatcher(offerMatcherMultiplexer, None, marathonScheduler)(scheduler)
+  val globalOfferMatcher: OfferMatcher = new ActorOfferMatcher(offerMatcherMultiplexer, None, homeRegionProvider)(scheduler)
   val subOfferMatcherManager: OfferMatcherManager = new OfferMatcherManagerDelegate(offerMatcherMultiplexer)
 }

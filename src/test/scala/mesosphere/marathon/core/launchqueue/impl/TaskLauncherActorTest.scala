@@ -6,6 +6,7 @@ import akka.pattern.ask
 import akka.testkit.TestProbe
 import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.HomeRegionProvider
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
@@ -73,16 +74,16 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
       offerMatchStatisticsActor: TestProbe = TestProbe(),
-      scheduler: Provider[MarathonScheduler] = new Provider[MarathonScheduler] {
-        override def get() = mock[MarathonScheduler]
-      }) {
+      homeRegionProvider: Provider[HomeRegionProvider] = new Provider[HomeRegionProvider] {
+          override def get() = mock[HomeRegionProvider]
+        }) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
         maybeOfferReviver = Some(offerReviver),
-        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, scheduler) _
+        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, homeRegionProvider) _
       system.actorOf(props(appToLaunch, instances))
     }
 
@@ -298,8 +299,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
       var scheduleCalled = false
-      val marathonScheduler = new Provider[MarathonScheduler] {
-        override def get() = mock[MarathonScheduler]
+      val homeRegionProvider = new Provider[HomeRegionProvider] {
+        override def get() = mock[HomeRegionProvider]
       }
       val props = Props(
         new TaskLauncherActor(
@@ -308,7 +309,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           maybeOfferReviver = None,
           instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
           f.app, instancesToLaunch = 1,
-          marathonScheduler
+          homeRegionProvider
         ) {
           override protected def scheduleTaskOperationTimeout(
             context: ActorContext, message: InstanceOpRejected): Cancellable = {
