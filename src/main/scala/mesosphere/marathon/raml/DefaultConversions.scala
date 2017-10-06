@@ -1,7 +1,10 @@
 package mesosphere.marathon
 package raml
 
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
+import org.apache.mesos.{ Protos => mesos }
 
 /**
   * All conversions for standard scala types.
@@ -36,5 +39,20 @@ trait DefaultConversions {
     map.map {
       case (k, v) => key.write(k) -> value.write(v)
     }
+  }
+
+  implicit val timestampWrites: Writes[Timestamp, String] = Writes { _.toString }
+
+  implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
+
+  implicit val instanceIdWrites: Writes[Instance.Id, String] = Writes { _.toString }
+
+  implicit val taskStateWrites: Writes[mesos.TaskState, MesosTaskState] = Writes { taskState =>
+    MesosTaskState.fromString(taskState.name()).get
+  }
+
+  implicit val ipAddressWrites: Writes[mesos.NetworkInfo.IPAddress, IpAddr] = Writes { ipAddress =>
+    val protocol = IpProtocol.fromString(ipAddress.getProtocol.name()).get
+    IpAddr(ipAddress.getIpAddress, protocol)
   }
 }

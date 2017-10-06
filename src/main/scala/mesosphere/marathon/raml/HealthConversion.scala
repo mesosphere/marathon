@@ -7,10 +7,10 @@ trait HealthConversion extends DefaultConversions {
     Health(
       alive = health.alive,
       consecutiveFailures = health.consecutiveFailures,
-      firstSuccess = health.firstSuccess.map(_.toString),
+      firstSuccess = health.firstSuccess.toRaml,
       instanceId = health.instanceId.toRaml,
-      lastSuccess = health.lastSuccess.map(_.toString),
-      lastFailure = health.lastFailure.map(_.toString),
+      lastSuccess = health.lastSuccess.toRaml,
+      lastFailure = health.lastFailure.toRaml,
       lastFailureCause = health.lastFailureCause
     )
   }

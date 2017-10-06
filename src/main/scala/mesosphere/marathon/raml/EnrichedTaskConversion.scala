@@ -6,7 +6,16 @@ import mesosphere.marathon.core.task.Task
 
 object EnrichedTaskConversion extends HealthConversion {
 
-  implicit val enrichedTaskRamlWriter: Writes[core.appinfo.EnrichedTask, EnrichedTask] = Writes { enrichedTask =>
+  implicit val localVolumeIdWrites: Writes[Task.LocalVolumeId, LocalVolumeId] = Writes { localVolumeId =>
+    LocalVolumeId(
+      runSpecId = localVolumeId.runSpecId.toRaml,
+      containerPath = localVolumeId.containerPath,
+      uuid = localVolumeId.uuid,
+      persistenceId = localVolumeId.idString
+    )
+  }
+
+  implicit val enrichedTaskRamlWrite: Writes[core.appinfo.EnrichedTask, EnrichedTask] = Writes { enrichedTask =>
     val task: Task = enrichedTask.task
 
     val (startedAt, stagedAt, ports, version) =
@@ -16,20 +25,26 @@ object EnrichedTaskConversion extends HealthConversion {
         (None, None, Nil, None)
       }
 
+    val ipAddresses = task.status.networkInfo.ipAddresses.toRaml
+
+    val localVolumes = task.reservationWithVolumes.fold(Seq.empty[LocalVolumeId]) { reservation =>
+      reservation.volumeIds.toRaml
+    }
+
     EnrichedTask(
       appId = enrichedTask.appId.toRaml,
-      healthCheckResults = enrichedTask.healthCheckResults.map(_.toRaml),
+      healthCheckResults = enrichedTask.healthCheckResults.toRaml,
       host = enrichedTask.agentInfo.host,
-      id = task.taskId.toString,
-      ipAddresses = task.status.networkInfo.ipAddresses.map(_.toRaml),
+      id = task.taskId.idString,
+      ipAddresses = ipAddresses,
       ports = ports,
       servicePorts = enrichedTask.servicePorts,
       slaveId = enrichedTask.agentInfo.agentId,
       state = Condition.toMesosTaskStateOrStaging(task.status.condition).toRaml,
-      stagedAt = stagedAt.map(_.toRaml),
-      startedAt = startedAt.map(_.toRaml),
-      version = version.map(_.toRaml),
-      localVolumes = Nil
+      stagedAt = stagedAt.toRaml,
+      startedAt = startedAt.toRaml,
+      version = version.toRaml,
+      localVolumes = localVolumes
     )
   }
 

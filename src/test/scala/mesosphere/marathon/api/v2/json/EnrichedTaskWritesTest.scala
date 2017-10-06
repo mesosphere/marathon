@@ -8,13 +8,13 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.AnyToRaml
+import mesosphere.marathon.raml.EnrichedTask._
+import mesosphere.marathon.raml.EnrichedTaskConversion._
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 class EnrichedTaskWritesTest extends UnitTest {
-
-  import Formats.EnrichedTaskWrites
 
   class Fixture {
     val time = Timestamp(1024)
@@ -78,14 +78,17 @@ class EnrichedTaskWritesTest extends UnitTest {
         s"""
         |{
         |  "appId": "${f.runSpecId}",
+        |  "healthCheckResults" : [],
         |  "id": "${f.taskWithoutIp.task.taskId.idString}",
+        |  "ipAddresses" : [],
         |  "host": "agent1.mesos",
         |  "state": "TASK_STAGING",
         |  "ports": [],
-        |  "startedAt": null,
+        |  "servicePorts" : [],
         |  "stagedAt": "1970-01-01T00:00:01.024Z",
         |  "version": "1970-01-01T00:00:01.024Z",
-        |  "slaveId": "abcd-1234"
+        |  "slaveId": "abcd-1234",
+        |  "localVolumes" : []
         |}
       """.stripMargin
       JsonTestHelper.assertThatJsonOf(f.taskWithoutIp.toRaml).correspondsToJsonString(json)
@@ -97,6 +100,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         s"""
         |{
         |  "appId": "${f.runSpecId}",
+        |  "healthCheckResults" : [],
         |  "id": "${f.taskWithMultipleIPs.task.taskId.idString}",
         |  "host": "agent1.mesos",
         |  "state": "TASK_STAGING",
@@ -111,10 +115,11 @@ class EnrichedTaskWritesTest extends UnitTest {
         |    }
         |  ],
         |  "ports": [],
-        |  "startedAt": null,
+        |  "servicePorts" : [],
         |  "stagedAt": "1970-01-01T00:00:01.024Z",
         |  "version": "1970-01-01T00:00:01.024Z",
-        |  "slaveId": "abcd-1234"
+        |  "slaveId": "abcd-1234",
+        |  "localVolumes" : []
         |}
       """.stripMargin
       JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs.toRaml).correspondsToJsonString(json)
@@ -129,10 +134,13 @@ class EnrichedTaskWritesTest extends UnitTest {
         s"""
         |{
         |  "appId": "${f.runSpecId}",
+        |  "healthCheckResults" : [],
         |  "id": "${task.taskId.idString}",
+        |  "ipAddresses" : [],
         |  "host": "agent1.mesos",
         |  "state" : "TASK_RUNNING",
         |  "ports": [],
+        |  "servicePorts" : [],
         |  "startedAt": "${status.startedAt.value.toString}",
         |  "stagedAt": "${status.stagedAt.toString}",
         |  "version": "${task.runSpecVersion}",
