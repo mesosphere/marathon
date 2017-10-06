@@ -137,7 +137,7 @@ The [Marathon-LB service](https://docs.mesosphere.com/1.10/networking/marathon-l
         }
     }]
 ```
-This configuration will create a FQN of `acme.marathon.l4lb.thisdcos.directory` at port `:10000`, which will load balance all instances of the application.
+This configuration will create a fully qualified domain name (FQDN) of `acme.marathon.l4lb.thisdcos.directory` at port `:10000`, which will load balance all instances of the application.
 
 Marathon itself does nothing with this configuration. Marathon manages it as metadata for the application. A client in DC/OS could open a connection to `acme.marathon.l4lb.thisdcos.directory` at port `:10000`, which would route to `10.0.0.2:31000`, which will in turn route to the `containerPort` of `:8080`.
 
