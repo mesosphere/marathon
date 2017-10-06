@@ -3,7 +3,7 @@ language: scala
 jdk:
   - oraclejdk8
 scala:
-  - 2.11.8
+  - 2.12.3
 cache:
   directories:
     - $HOME/.sbt
