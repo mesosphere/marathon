@@ -12,7 +12,7 @@ Restoring from a backup brings Marathon to the exact state it was in at the time
 ## Limitations
 
 Marathon backups only capture the state of Marathon itself.
-A Marathon backup will only capture the current state and **not** backup the application histories.
+A Marathon backup will only capture the current state and will **not** backup the application histories.
 A Marathon backup will **not** capture the state of any other system component. 
 To create a full backup of your cluster, you must back up all system components.
 
