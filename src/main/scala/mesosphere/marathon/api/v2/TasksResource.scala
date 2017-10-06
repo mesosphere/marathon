@@ -7,7 +7,6 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.async.ExecutionContexts

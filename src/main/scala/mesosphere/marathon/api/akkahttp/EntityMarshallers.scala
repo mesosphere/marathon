@@ -11,7 +11,7 @@ import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask }
+import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.plugin.PathId
 import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.state.AppDefinition

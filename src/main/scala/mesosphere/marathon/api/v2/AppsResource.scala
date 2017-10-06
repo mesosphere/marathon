@@ -19,7 +19,7 @@ import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{ AppConversion, AppExternalVolume, AppPersistentVolume, Raml }
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._

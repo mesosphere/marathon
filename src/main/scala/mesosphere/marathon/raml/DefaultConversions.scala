@@ -50,11 +50,14 @@ trait DefaultConversions {
   implicit val instanceIdWrites: Writes[Instance.Id, String] = Writes { _.toString }
 
   implicit val taskStateWrites: Writes[mesos.TaskState, MesosTaskState] = Writes { taskState =>
-    MesosTaskState.fromString(taskState.name()).get
+    val name = taskState.name()
+    MesosTaskState.fromString(name).getOrElse(throw new IllegalArgumentException(s"$name is an unknown Mesos task state"))
   }
 
   implicit val ipAddressWrites: Writes[mesos.NetworkInfo.IPAddress, IpAddr] = Writes { ipAddress =>
-    val protocol = IpProtocol.fromString(ipAddress.getProtocol.name()).get
+    val name = ipAddress.getProtocol.name()
+    val protocol = IpProtocol.fromString(name)
+      .getOrElse(throw new IllegalArgumentException(s"$name is an unknown protocol"))
     IpAddr(ipAddress.getIpAddress, protocol)
   }
 }
