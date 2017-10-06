@@ -12,7 +12,9 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.{ Raml }
+import mesosphere.marathon.raml.EnrichedTask._
+import mesosphere.marathon.raml.EnrichedTaskConversion._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.JsonValidationError
@@ -131,26 +133,6 @@ trait Formats
     }
 
     Json.obj(fields.to[Seq]: _*)
-  }
-
-  implicit lazy val EnrichedTaskWrites: Writes[EnrichedTask] = Writes { task =>
-    val taskJson = TaskWrites.writes(task.task).as[JsObject]
-
-    val enrichedJson = taskJson ++ Json.obj(
-      "appId" -> task.appId,
-      "slaveId" -> task.agentInfo.agentId,
-      "host" -> task.agentInfo.host
-    )
-
-    val withServicePorts = if (task.servicePorts.nonEmpty)
-      enrichedJson ++ Json.obj("servicePorts" -> task.servicePorts)
-    else
-      enrichedJson
-
-    if (task.healthCheckResults.nonEmpty)
-      withServicePorts ++ Json.obj("healthCheckResults" -> task.healthCheckResults)
-    else
-      withServicePorts
   }
 
   implicit lazy val PathIdFormat: Format[PathId] = Format(
@@ -488,7 +470,7 @@ trait AppAndGroupFormats {
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
         info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
         info.maybeReadinessCheckResults.map(readiness => Json.obj("readinessCheckResults" -> readiness)),
-        info.maybeTasks.map(tasks => Json.obj("tasks" -> tasks)),
+        info.maybeTasks.map(tasks => Json.obj("tasks" -> Raml.toRaml(tasks))),
         info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
         info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
       ).flatten

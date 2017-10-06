@@ -4,7 +4,7 @@ package raml
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.Task
 
-object EnrichedTaskConversion extends HealthConversion {
+object EnrichedTaskConversion extends HealthConversion with DefaultConversions {
 
   implicit val localVolumeIdWrites: Writes[Task.LocalVolumeId, LocalVolumeId] = Writes { localVolumeId =>
     LocalVolumeId(
