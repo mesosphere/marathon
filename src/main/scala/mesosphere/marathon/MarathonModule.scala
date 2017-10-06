@@ -47,6 +47,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
 
     // MesosHeartbeatMonitor decorates MarathonScheduler
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
+    bind(classOf[HomeRegionProvider]).to(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[Scheduler]).annotatedWith(Names.named(MesosHeartbeatMonitor.BASE)).toProvider(getProvider(classOf[MarathonScheduler]))
     bind(classOf[Scheduler]).to(classOf[MesosHeartbeatMonitor]).in(Scopes.SINGLETON)
 

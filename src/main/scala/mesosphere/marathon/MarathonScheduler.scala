@@ -25,7 +25,7 @@ class MarathonScheduler @Inject() (
     taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
-    config: MarathonConf) extends Scheduler {
+    config: MarathonConf) extends Scheduler with HomeRegionProvider {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 

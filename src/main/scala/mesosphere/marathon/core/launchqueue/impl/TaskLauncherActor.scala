@@ -6,6 +6,7 @@ import java.time.Clock
 import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
+import com.google.inject.Provider
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
@@ -35,7 +36,8 @@ private[launchqueue] object TaskLauncherActor {
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
-    offerMatchStatisticsActor: ActorRef)(
+    offerMatchStatisticsActor: ActorRef,
+    homeRegionProvider: Provider[HomeRegionProvider])(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -44,7 +46,7 @@ private[launchqueue] object TaskLauncherActor {
       clock, taskOpFactory,
       maybeOfferReviver,
       instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
-      runSpec, initialCount))
+      runSpec, initialCount, homeRegionProvider))
   }
 
   sealed trait Requests
@@ -86,7 +88,8 @@ private class TaskLauncherActor(
     offerMatchStatisticsActor: ActorRef,
 
     private[this] var runSpec: RunSpec,
-    private[this] var instancesToLaunch: Int) extends Actor with StrictLogging with Stash {
+    private[this] var instancesToLaunch: Int,
+    homeRegionProvider: Provider[HomeRegionProvider]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]
@@ -422,7 +425,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id))(context.system.scheduler)
+      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id), homeRegionProvider)(context.system.scheduler)
     }
     private[this] var registeredAsMatcher = false
 

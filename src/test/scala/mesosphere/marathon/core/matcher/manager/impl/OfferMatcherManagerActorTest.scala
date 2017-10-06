@@ -27,41 +27,69 @@ import scala.concurrent.duration._
 class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
 
   "OfferMatcherManagerActor" should {
-    "The list of OfferMatchers is random without precedence" in {
+    "The list of OfferMatchers is random without precedence" in new Fixture {
       Given("OfferMatcher with num normal matchers")
       val num = 5
-      val f = new Fixture
       val appId = PathId("/some/app")
-      val manager = f.offerMatcherManager
-      val matchers = 1.to(num).map(_ => f.matcher())
+      val manager = offerMatcherManager
+      val matchers = 1.to(num).map(_ => matcher())
       matchers.map { matcher => manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher) }
 
       When("The list of offer matchers is fetched")
-      val orderedMatchers = manager.underlyingActor.offerMatchers(f.reservedOffer(appId))
+      val orderedMatchers = manager.underlyingActor.offerMatchers(reservedOffer(appId))
 
       Then("The list is sorted in the correct order")
       orderedMatchers should have size num.toLong
       orderedMatchers should contain theSameElementsAs matchers
     }
 
-    "The list of OfferMatchers is sorted by precedence" in {
+    "The list of OfferMatchers is sorted by precedence" in new Fixture {
       Given("OfferMatcher with num precedence and num normal matchers, registered in mixed order")
       val num = 5
-      val f = new Fixture
       val appId = PathId("/some/app")
-      val manager = f.offerMatcherManager
-      1.to(num).flatMap(_ => Seq(f.matcher(), f.matcher(Some(appId)))).map { matcher =>
+      val manager = offerMatcherManager
+      1.to(num).flatMap(_ => Seq(matcher(), matcher(Some(appId)))).map { matcher =>
         manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher)
       }
 
       When("The list of offer matchers is fetched")
-      val sortedMatchers = manager.underlyingActor.offerMatchers(f.reservedOffer(appId))
+      val sortedMatchers = manager.underlyingActor.offerMatchers(reservedOffer(appId))
 
       Then("The list is sorted in the correct order")
       sortedMatchers should have size 2 * num.toLong
       val (left, right) = sortedMatchers.splitAt(num)
       left.count(_.precedenceFor.isDefined) should be(num)
       right.count(_.precedenceFor.isDefined) should be(0)
+    }
+
+    "The list of offer matchers does not contain offer matcher not interested in offer" in new Fixture {
+      Given("OfferMatcher not interested in offer")
+      val offer1 = offer()
+      val offerMatch1 = Promise[OfferMatcher.MatchedInstanceOps]
+      offerMatcherManager.underlyingActor.launchTokens = 100
+      val matcherMock = matcher(isInterestedIn = false)
+      offerMatcherManager.underlyingActor.matchers += matcherMock
+
+      When("The list of offer matchers is fetched")
+      val availableMatchers = offerMatcherManager.underlyingActor.offerMatchers(offer())
+
+      Then("OfferMatcher not interested in offer should not be in the list")
+      availableMatchers.isEmpty should be (true)
+    }
+
+    "The list of offer matchers contains offer matcher interested in offer" in new Fixture {
+      Given("OfferMatcher not interested in offer")
+      val offer1 = offer()
+      val offerMatch1 = Promise[OfferMatcher.MatchedInstanceOps]
+      offerMatcherManager.underlyingActor.launchTokens = 100
+      val matcherMock = matcher(isInterestedIn = true)
+      offerMatcherManager.underlyingActor.matchers += matcherMock
+
+      When("The list of offer matchers is fetched")
+      val availableMatchers = offerMatcherManager.underlyingActor.offerMatchers(offer())
+
+      Then("OfferMatcher not interested in offer should not receive any offer")
+      availableMatchers should contain only (matcherMock)
     }
 
     "queue offers, if the maximum number of offer matchers is busy" in new Fixture {
@@ -209,17 +237,19 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     }
     val offerMatcherManager = TestActorRef[OfferMatcherManagerActor](OfferMatcherManagerActor.props(metrics, random, clock, Config, observer))
 
-    def matcher(precedence: Option[PathId] = None): OfferMatcher = {
+    def matcher(precedence: Option[PathId] = None, isInterestedIn: Boolean = true): OfferMatcher = {
       val matcher = mock[OfferMatcher]
       val promise = Promise[OfferMatcher.MatchedInstanceOps]
       matcher.precedenceFor returns precedence
       matcher.matchOffer(any) returns promise.future
+      matcher.isInterestedIn(any) returns isInterestedIn
       matcher
     }
 
     def matcherWith(fn: Offer => Future[OfferMatcher.MatchedInstanceOps]): OfferMatcher = {
       val matcher = mock[OfferMatcher]
       matcher.precedenceFor returns None
+      matcher.isInterestedIn(any) returns true
       matcher.matchOffer(any) answers {
         case Array(offer: Offer) => fn(offer)
       }

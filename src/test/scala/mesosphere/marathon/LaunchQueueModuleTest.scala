@@ -2,6 +2,7 @@ package mesosphere.marathon
 
 import java.time.Clock
 
+import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
@@ -264,6 +265,9 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     lazy val instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val parentActor = newTestActor()
+    lazy val homeRegionProvider = new Provider[HomeRegionProvider] {
+      override def get() = mock[HomeRegionProvider]
+    }
 
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
       config,
@@ -272,7 +276,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       subOfferMatcherManager = offerMatcherManager,
       maybeOfferReviver = None,
       instanceTracker,
-      instanceOpFactory
+      instanceOpFactory,
+      homeRegionProvider
     )
 
     def launchQueue = module.launchQueue
