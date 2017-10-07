@@ -18,3 +18,4 @@ after_success:
 notifications:
   slack:
     secure: apUObVUa/OhaTEvoYw3oM1ZTTT0LtYolofJYqnWiBOusc6qgMlK2rfk5kod7vDn33cSKwGhFcyVrrFCn2qxuvYUWCpK4Yo6Hj7KIjoqMi9yHLHXAAWIfAFNMlCdaUGjlHLWn757rBkbuQUDVH8HmB6Vc3J3sybTbiFmMDP1cEVo=
+
