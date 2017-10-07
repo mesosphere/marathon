@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.Protos.Constraint.Operator.{ LIKE, UNLIKE, CLUSTER, GROUP_BY, MAX_PER, UNIQUE }
+import mesosphere.marathon.Protos.Constraint.Operator.{ IN, IS, LIKE, UNLIKE, CLUSTER, GROUP_BY, MAX_PER, UNIQUE }
 import mesosphere.marathon._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -642,6 +642,30 @@ class ConstraintsTest extends UnitTest {
         Constraints.meetsConstraint(Seq(instanceOnZone1), offerZone1, zoneConstraintUnique) shouldBe false
         Constraints.meetsConstraint(Seq(instanceOnZone1), offerZone2, zoneConstraintUnique) shouldBe true
       }
+    }
+  }
+
+  "IS operator" should {
+    "require that a value match exactly" in {
+      makeOffer("righthost.com") should meetConstraint(hostnameField, IS, "righthost.com")
+      makeOffer("wronghost.com") should meetConstraint(hostnameField, IS, "wronghost.com")
+    }
+  }
+
+  "IN operator" should {
+    "require that the offer value be in the comma delimited list of values" in {
+      makeOffer("host1") should meetConstraint(hostnameField, IN, "host1,host2")
+      makeOffer("host3") shouldNot meetConstraint(hostnameField, IN, "host1,host2")
+    }
+
+    "trims whitespace after the commas (but not before)" in {
+      makeOffer("host1") should meetConstraint(hostnameField, IN, "host1, host2")
+      makeOffer("host1") should meetConstraint(hostnameField, IN, "host1 , host2")
+      makeOffer("host1") should meetConstraint(hostnameField, IN, "host1 ,host2")
+    }
+
+    "does not match if offer does not have the value in question" in {
+      makeOffer("host1") shouldNot meetConstraint(regionField, IN, "region1")
     }
   }
 

@@ -124,6 +124,8 @@ object Constraints {
             case Operator.GROUP_BY => checkGroupBy(offerValue, placedValue)
             case Operator.MAX_PER => checkMaxPer(offerValue, constraintValue.toInt, placedValue)
             case Operator.CLUSTER => checkCluster(offerValue, placedValue)
+            case Operator.IS => offerValue == constraintValue
+            case Operator.IN => constraintValue.split(" *, *").contains(offerValue)
           }
         case None =>
           // Only unlike can be matched if this offer does not have the specified value
