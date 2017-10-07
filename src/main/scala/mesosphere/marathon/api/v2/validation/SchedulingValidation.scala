@@ -85,6 +85,13 @@ trait SchedulingValidation {
                 case util.Failure(e) => failure(InvalidRegularExpression)
               }
             }
+          case Is =>
+            c.value.getOrElse("") match {
+              case MesosLiteralOrFloatValue() =>
+                Success
+              case _ =>
+                failure(IsOnlySupportsText)
+            }
         }
       }
     }
@@ -129,6 +136,13 @@ trait SchedulingValidation {
 object SchedulingValidation extends SchedulingValidation
 
 object SchedulingValidationMessages {
+  /* IS currently supports text and scalar values. By disallowing ranges / sets, we can add support for them later
+   * without breaking the API. */
+  val MesosLiteralOrFloatValue = "^[a-zA-Z0-9_/.-]*$".r
+
+  val IsOnlySupportsText = "IS only supports Mesos text and float values (see http://mesos.apache.org/documentation/latest/attributes-resources/)"
+  val InOnlySupportsSets = "IN value expects a Mesos set value (see http://mesos.apache.org/documentation/latest/attributes-resources/)"
+
   val ConstraintRequiresField = "missing field for constraint declaration"
   val InvalidRegularExpression = "is not a valid regular expression"
   val ConstraintLikeAnUnlikeRequireRegexp = "LIKE and UNLIKE require a non-empty, regular expression value"
