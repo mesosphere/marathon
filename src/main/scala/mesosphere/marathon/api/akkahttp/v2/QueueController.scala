@@ -49,6 +49,7 @@ class QueueController(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def list(implicit identity: Identity): Route = {
     def listWithStatisticsAsync(): Future[Seq[LaunchQueue.QueuedInstanceInfoWithStatistics]] = async {
       val info = await(launchQueue.listWithStatisticsAsync)
