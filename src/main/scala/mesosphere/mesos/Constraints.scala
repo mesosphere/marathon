@@ -50,26 +50,36 @@ object Constraints {
       s"{$s}"
   }
 
+  type FieldReader = (Offer => Option[String], Placed => Option[String])
+  private val hostnameReader: FieldReader = (offer => Some(offer.getHostname), placed => Some(placed.hostname))
+  private val regionReader: FieldReader = (OfferUtil.region(_), _.region)
+  private val zoneReader: FieldReader = (OfferUtil.zone(_), _.zone)
+  private def attributeReader(field: String): FieldReader = (
+    { offer => offer.getAttributesList.find(_.getName == field).map(getValueString) },
+    { p => p.attributes.find(_.getName == field).map(getValueString) })
+
+  val hostnameField = "@hostname"
+  val regionField = "@region"
+  val zoneField = "@field"
+  def readerForField(field: String): FieldReader =
+    field match {
+      case "hostname" | `hostnameField` => hostnameReader
+      case `regionField` => regionReader
+      case `zoneField` => zoneReader
+      case _ => attributeReader(field)
+    }
+
   private final class ConstraintsChecker(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint) {
-    val field = constraint.getField
-    val value = constraint.getValue
-    lazy val attr = offer.getAttributesList.find(_.getName == field)
+    val constraintValue = constraint.getValue
 
-    def isMatch: Boolean =
-      field match {
-        case "hostname" | "*hostname" =>
-          checkConstraint(Some(offer.getHostname), { p => Some(p.hostname) })
-        case "*region" =>
-          checkConstraint(OfferUtil.region(offer), { p => p.region })
-        case "*zone" =>
-          checkConstraint(OfferUtil.zone(offer), { p => p.zone })
-        case _ =>
-          checkConstraint(attr.map(getValueString), { p => p.attributes.find(_.getName == field).map(getValueString) })
-      }
+    def isMatch: Boolean = {
+      val (offerReader, placedReader) = readerForField(constraint.getField)
+      checkConstraint(offerReader(offer), placedReader)
+    }
 
-    private def checkGroupBy(constraintValue: String, groupFunc: (Placed) => Option[String]) = {
+    private def checkGroupBy(offerValue: String, groupFunc: (Placed) => Option[String]) = {
       // Minimum group count
-      val minimum = List(GroupByDefault, getIntValue(value, GroupByDefault)).max
+      val minimum = List(GroupByDefault, getIntValue(constraintValue, GroupByDefault)).max
       // Group tasks by the constraint value, and calculate the task count of each group
       val groupedTasks = allPlaced.groupBy(groupFunc).map { case (k, v) => k -> v.size }
       // Task count of the smallest group
@@ -79,23 +89,25 @@ object Constraints {
       // a) this offer matches the smallest grouping when there
       // are >= minimum groupings
       // b) the constraint value from the offer is not yet in the grouping
-      groupedTasks.find(_._1.contains(constraintValue))
+      groupedTasks.find(_._1.contains(offerValue))
         .forall(pair => groupedTasks.size >= minimum && pair._2 == minCount)
     }
 
-    private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (Placed) => Option[String]): Boolean = {
+    private def checkMaxPer(offerValue: String, maxCount: Int, groupFunc: (Placed) => Option[String]): Boolean = {
       // Group tasks by the constraint value, and calculate the task count of each group
       val groupedTasks = allPlaced.groupBy(groupFunc).map { case (k, v) => k -> v.size }
 
-      groupedTasks.find(_._1.contains(constraintValue)).forall(_._2 < maxCount)
+      groupedTasks.find(_._1.contains(offerValue)).forall(_._2 < maxCount)
     }
 
-    private def checkCluster(offerValue: String, placedValue: Placed => Option[String]) = {
-      // Hostname must match or be empty
-      (value.isEmpty || value == offerValue) &&
-        // All running tasks must have the same hostname as the one in the offer
-        allPlaced.forall { p => placedValue(p) contains offerValue }
-    }
+    private def checkCluster(offerValue: String, placedValue: Placed => Option[String]) =
+      if (constraintValue.isEmpty)
+        // If no placements are made, then accept (and make this offerValue) the value on which all future tasks are
+        // placed
+        allPlaced.headOption.fold(true) { p => placedValue(p) contains offerValue }
+      else
+        // Is constraint
+        (offerValue == constraintValue)
 
     // All running tasks must have a value that is different from the one in the offer
     private def checkUnique(offerValue: Option[String], placedValue: Placed => Option[String]) = {
@@ -110,9 +122,8 @@ object Constraints {
             case Operator.UNLIKE => checkUnlike(offerValue)
             case Operator.UNIQUE => checkUnique(maybeOfferValue, placedValue)
             case Operator.GROUP_BY => checkGroupBy(offerValue, placedValue)
-            case Operator.MAX_PER => checkMaxPer(offerValue, value.toInt, placedValue)
+            case Operator.MAX_PER => checkMaxPer(offerValue, constraintValue.toInt, placedValue)
             case Operator.CLUSTER => checkCluster(offerValue, placedValue)
-            case _ => false
           }
         case None =>
           // Only unlike can be matched if this offer does not have the specified value
@@ -121,16 +132,16 @@ object Constraints {
     }
 
     private def checkLike(offerValue: String): Boolean =
-      if (value.nonEmpty) {
-        offerValue.matches(value)
+      if (constraintValue.nonEmpty) {
+        offerValue.matches(constraintValue)
       } else {
         log.warn("Error, value is required for LIKE operation")
         false
       }
 
     private def checkUnlike(offerValue: String): Boolean =
-      if (value.nonEmpty) {
-        !offerValue.matches(value)
+      if (constraintValue.nonEmpty) {
+        !offerValue.matches(constraintValue)
       } else {
         log.warn("Error, value is required for UNLIKE operation")
         false
@@ -159,12 +170,9 @@ object Constraints {
 
     //currently, only the GROUP_BY operator is able to select instances to kill
     val distributions = runSpec.constraints.withFilter(_.getOperator == Operator.GROUP_BY).map { constraint =>
-      def groupFn(instance: Instance): Option[String] = constraint.getField match {
-        case "hostname" => Some(instance.agentInfo.host)
-        case field: String => instance.agentInfo.attributes.find(_.getName == field).map(getValueString)
-      }
+      val (_, placed) = readerForField(constraint.getField)
       val instanceGroups: Seq[Map[Instance.Id, Instance]] =
-        runningInstances.groupBy(groupFn).values.map(Instance.instancesById)(collection.breakOut)
+        runningInstances.groupBy(placed).values.map(Instance.instancesById)(collection.breakOut)
       GroupByDistribution(constraint, instanceGroups)
     }
 
