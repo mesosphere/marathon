@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.marathon.core.appinfo._
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.{ DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
@@ -10,14 +9,14 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.{ Raml }
+import mesosphere.marathon.raml.EnrichedTask._
+import mesosphere.marathon.raml.EnrichedTaskConversion._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.JsonValidationError
 import play.api.libs.functional.syntax._
-import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 
 import scala.concurrent.duration._
@@ -110,48 +109,6 @@ trait Formats
     (__ \ "hostPorts").format[Seq[Int]] ~
     (__ \ "ipAddresses").format[Seq[mesos.NetworkInfo.IPAddress]]
   )(NetworkInfo(_, _, _), unlift(NetworkInfo.unapply))
-
-  import scala.collection.mutable
-  implicit val TaskWrites: Writes[Task] = Writes { task =>
-    val fields = mutable.HashMap[String, JsValueWrapper](
-      "id" -> task.taskId,
-      "state" -> Condition.toMesosTaskStateOrStaging(task.status.condition)
-    )
-    if (task.isActive) {
-      fields.update("startedAt", task.status.startedAt)
-      fields.update("stagedAt", task.status.stagedAt)
-      fields.update("ports", task.status.networkInfo.hostPorts)
-      fields.update("version", task.runSpecVersion)
-    }
-    if (task.status.networkInfo.ipAddresses.nonEmpty) {
-      fields.update("ipAddresses", task.status.networkInfo.ipAddresses)
-    }
-    task.reservationWithVolumes.foreach { reservation =>
-      fields.update("localVolumes", reservation.volumeIds)
-    }
-
-    Json.obj(fields.to[Seq]: _*)
-  }
-
-  implicit lazy val EnrichedTaskWrites: Writes[EnrichedTask] = Writes { task =>
-    val taskJson = TaskWrites.writes(task.task).as[JsObject]
-
-    val enrichedJson = taskJson ++ Json.obj(
-      "appId" -> task.appId,
-      "slaveId" -> task.agentInfo.agentId,
-      "host" -> task.agentInfo.host
-    )
-
-    val withServicePorts = if (task.servicePorts.nonEmpty)
-      enrichedJson ++ Json.obj("servicePorts" -> task.servicePorts)
-    else
-      enrichedJson
-
-    if (task.healthCheckResults.nonEmpty)
-      withServicePorts ++ Json.obj("healthCheckResults" -> task.healthCheckResults)
-    else
-      withServicePorts
-  }
 
   implicit lazy val PathIdFormat: Format[PathId] = Format(
     Reads.of[String](Reads.minLength[String](1)).map(PathId(_)),
@@ -488,7 +445,7 @@ trait AppAndGroupFormats {
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
         info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
         info.maybeReadinessCheckResults.map(readiness => Json.obj("readinessCheckResults" -> readiness)),
-        info.maybeTasks.map(tasks => Json.obj("tasks" -> tasks)),
+        info.maybeTasks.map(tasks => Json.obj("tasks" -> Raml.toRaml(tasks))),
         info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
         info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
       ).flatten

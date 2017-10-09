@@ -7,7 +7,6 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.async.ExecutionContexts
@@ -19,6 +18,9 @@ import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
+import mesosphere.marathon.raml.AnyToRaml
+import mesosphere.marathon.raml.EnrichedTask._
+import mesosphere.marathon.raml.EnrichedTaskConversion._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
@@ -92,7 +94,7 @@ class TasksResource @Inject() (
 
     val enrichedTasks: Iterable[EnrichedTask] = result(futureEnrichedTasks)
     ok(jsonObjString(
-      "tasks" -> enrichedTasks
+      "tasks" -> enrichedTasks.toIndexedSeq.toRaml
     ))
   }
 
@@ -148,7 +150,7 @@ class TasksResource @Inject() (
         })).flatten
       ok(jsonObjString("tasks" -> killed.flatMap { instance =>
         instance.tasksMap.valuesIterator.map { task =>
-          EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty)
+          EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty).toRaml
         }
       }))
     }

@@ -13,9 +13,9 @@ import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import org.apache.mesos
 import org.slf4j.LoggerFactory
 
-case class TestTaskBuilder(
-    task: Option[Task], instanceBuilder: TestInstanceBuilder, now: Timestamp = Timestamp.now()
-) {
+case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuilder) {
+
+  val now = instanceBuilder.now
 
   def taskFromTaskInfo(
     taskInfo: mesos.Protos.TaskInfo,
