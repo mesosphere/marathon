@@ -648,7 +648,7 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     # the size of cpus is designed to be greater than 1/2 of a node
     # such that only 1 task can land on the node.
     cores = common.cpus_on_agent(host)
-    app_def['cpus'] = cores - 0.5
+    app_def['cpus'] = max(0.6, cores - 0.5)
     common.pin_to_host(app_def, host)
 
     client = marathon.create_client()
