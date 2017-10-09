@@ -642,7 +642,10 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
 
     app_def = apps.sleep_app()
     app_id = app_def['id']
-    app_def['cpus'] = 3.5
+
+    # the size of cpus is designed to be greater than 1/2 of a node
+    # such that only 1 task can land on the node. 
+    app_def['cpus'] = 1.5
     host = common.ip_other_than_mom()
     print('Constraint set to host: {}'.format(host))
     common.pin_to_host(app_def, host)
