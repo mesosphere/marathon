@@ -248,67 +248,33 @@ class ConstraintsTest extends UnitTest {
 
     "RackGroupedByConstraints3" in {
       val appId = PathId("/test")
-      val instance1_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map(rackIdField -> 1.0))
-      val instance2_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map(rackIdField -> 2.0))
-      val instance3_rack3 = makeSampleInstanceWithScalarAttrs(appId, Map(rackIdField -> 3.0))
-      val instance4_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map(rackIdField -> 1.0))
-      val instance5_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map(rackIdField -> 2.0))
+      val instance_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map(rackIdField -> 1.0))
+      val instance_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map(rackIdField -> 2.0))
+      val instance_rack3 = makeSampleInstanceWithScalarAttrs(appId, Map(rackIdField -> 3.0))
 
-      var groupRack = Seq.empty[Instance]
+      val offer_rack1 = makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 1)))
+      val offer_rack2 = makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 2)))
+      val offer_rack3 = makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 3)))
 
-      val groupByRack = makeConstraint(rackIdField, GROUP_BY, "3")
+      offer_rack1 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements()
 
-      val clusterFreshRackMet = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 1))),
-        groupByRack)
+      offer_rack2 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1)
 
-      assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
+      offer_rack3 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2)
 
-      groupRack ++= Set(instance1_rack1)
+      offer_rack1 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2, instance_rack3)
 
-      val clusterRackMet1 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 2))),
-        groupByRack)
+      offer_rack2 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2, instance_rack3,
+        instance_rack1)
 
-      assert(clusterRackMet1, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(instance2_rack2)
-
-      val clusterRackMet2 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 3))),
-        groupByRack)
-
-      assert(clusterRackMet2, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(instance3_rack3)
-
-      val clusterRackMet3 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 1))),
-        groupByRack)
-
-      assert(clusterRackMet3, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(instance4_rack1)
-
-      val clusterRackMet4 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 2))),
-        groupByRack)
-
-      assert(clusterRackMet4, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(instance5_rack2)
-
-      val clusterRackMet5 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute(rackIdField, 2))),
-        groupByRack)
-
-      assert(!clusterRackMet5, "Should not meet clustered-in-rack constraints.")
+      offer_rack2 shouldNot meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2, instance_rack3,
+        instance_rack1, instance_rack2)
     }
 
     "HostnameGroupedByConstraints" in {
