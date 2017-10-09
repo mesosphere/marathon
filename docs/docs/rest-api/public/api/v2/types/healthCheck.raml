@@ -148,3 +148,15 @@ types:
         description: Amount of time to wait until starting the health checks.
         minimum: 0
         default: 15
+  Health:
+    type: object
+    properties:
+      alive: boolean
+      consecutiveFailures:
+        type: number
+        format: int32
+      firstSuccess?: string
+      instanceId: strings.InstanceId
+      lastSuccess?: string
+      lastFailure?: string
+      lastFailureCause?: string
