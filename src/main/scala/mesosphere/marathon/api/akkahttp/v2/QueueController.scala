@@ -19,7 +19,6 @@ import mesosphere.marathon.state.PathId
 import scala.async.Async._
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
-import mesosphere.marathon.api.akkahttp.Directives._
 
 class QueueController(
     clock: Clock,
@@ -57,7 +56,7 @@ class QueueController(
     }
 
     parameters('embed.*) { embed =>
-      val embedLastUnusedOffers = embed.exists(_ == QueueController.EmbedLastUnusedOffers)
+      val embedLastUnusedOffers = embed.toSeq.contains(QueueController.EmbedLastUnusedOffers)
       onSuccess(listWithStatisticsAsync) { info =>
         complete((info, embedLastUnusedOffers, clock))
       }
