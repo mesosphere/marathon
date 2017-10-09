@@ -33,6 +33,7 @@ case class LeaderController(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   def deleteLeader(): Route =
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
