@@ -203,6 +203,12 @@ class MarathonSchedulerService @Inject() (
     // allow interactions with the persistence store
     persistenceStore.open()
 
+    // Before reading to and writing from the storage, let's ensure that
+    // no stale values are read from the persistence store.
+    // Although in case of ZK it is done at the time of creation of CuratorZK,
+    // it is better to be safe than sorry.
+    Await.result(persistenceStore.sync(), Duration.Inf)
+
     refreshCachesAndDoMigration()
 
     // run all pre-driver callbacks
