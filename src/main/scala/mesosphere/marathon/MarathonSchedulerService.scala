@@ -201,7 +201,7 @@ class MarathonSchedulerService @Inject() (
     log.info("As new leader running the driver")
 
     // allow interactions with the persistence store
-    persistenceStore.open()
+    persistenceStore.markOpen()
 
     refreshCachesAndDoMigration()
 
@@ -280,7 +280,7 @@ class MarathonSchedulerService @Inject() (
     log.info("Lost leadership")
 
     // disallow any interaction with the persistence storage
-    persistenceStore.close()
+    persistenceStore.markClosed()
 
     leadershipCoordinator.stop()
 

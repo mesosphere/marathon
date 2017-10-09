@@ -24,13 +24,13 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
 
   private def cachedInMemory = {
     val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
-    store.open()
+    store.markOpen()
     store
   }
 
   private def withLazyVersionCaching = {
     val store = LazyVersionCachingPersistentStore(new InMemoryPersistenceStore())
-    store.open()
+    store.markOpen()
     store
   }
 
@@ -38,7 +38,7 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
     val root = UUID.randomUUID().toString
     val client = zkClient(namespace = Some(root))
     val store = LazyCachingPersistenceStore(new ZkPersistenceStore(client, Duration.Inf, 8))
-    store.open()
+    store.markOpen()
     store
   }
 

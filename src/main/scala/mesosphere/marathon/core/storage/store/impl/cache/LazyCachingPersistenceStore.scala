@@ -44,8 +44,8 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
   private[this] val getHitCounters = TrieMap.empty[Category, Counter]
   private[this] val idsHitCounters = TrieMap.empty[Category, Counter]
 
-  override def open(): Unit = store.open()
-  override def close(): Unit = store.close()
+  override def markOpen(): Unit = store.markOpen()
+  override def markClosed(): Unit = store.markClosed()
   override def isOpen: Boolean = store.isOpen
 
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
@@ -196,8 +196,8 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
   mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
-  override def open(): Unit = store.open()
-  override def close(): Unit = store.close()
+  override def markOpen(): Unit = store.markOpen()
+  override def markClosed(): Unit = store.markClosed()
   override def isOpen: Boolean = store.isOpen
 
   private[store] val versionCache = TrieMap.empty[(Category, K), Set[OffsetDateTime]]

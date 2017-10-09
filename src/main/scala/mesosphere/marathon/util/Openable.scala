@@ -8,12 +8,12 @@ import java.util.concurrent.atomic.AtomicBoolean
   * A resource can be marked as open or close only once. Also, it can be closed
   * only when it is open.
   */
-trait Openable {
+trait OpenableOnce {
   protected val opened = new AtomicBoolean(false)
   protected val wasEverOpened = new AtomicBoolean(false)
 
   /** Mark an object as open. */
-  def open(): Unit = {
+  def markOpen(): Unit = {
     if (wasEverOpened.compareAndSet(false, true)) {
       opened.set(true)
     } else {
@@ -22,7 +22,7 @@ trait Openable {
   }
 
   /** Mark an object as closed. */
-  def close(): Unit = {
+  def markClosed(): Unit = {
     val wasOpened = opened.compareAndSet(true, false)
     if (!wasOpened) {
       throw new IllegalStateException("attempt to close while not being opened")
