@@ -80,6 +80,11 @@ trait PersistentStore {
     * @return the list of available identifier.
     */
   def allIds(): Future[Seq[ID]]
+
+  /**
+    * Make sure that store read operations return up-to-date values.
+    */
+  def sync(): Future[Done]
 }
 
 /**

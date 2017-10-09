@@ -92,6 +92,12 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
       .recover(exceptionTransform(s"Can not list children of $parent"))
   }
 
+  override def sync(): Future[Done] = {
+    client.apply("/").sync().asScala
+      .map(_ => Done)
+      .recover(exceptionTransform("Failed to sync"))
+  }
+
   private[this] def exceptionTransform[T](errorMessage: => String): PartialFunction[Throwable, T] = {
     case ex: KeeperException => throw new StoreCommandFailedException(errorMessage, ex)
   }

@@ -53,11 +53,20 @@ class Migration(
     val store = config.store
     store match {
       case s: PersistentStoreManagement with PrePostDriverCallback =>
-        s.preDriverStarts.flatMap(_ => s.initialize()).map(_ => Some(store))
+        s.preDriverStarts
+          .flatMap(_ => s.sync())
+          .map(_ => s.initialize())
+          .map(_ => Some(store))
       case s: PersistentStoreManagement =>
-        s.initialize().map(_ => Some(store))
+        s.sync()
+          .map(_ => s.initialize())
+          .map(_ => Some(store))
       case s: PrePostDriverCallback =>
-        s.preDriverStarts.map(_ => Some(store))
+        s.preDriverStarts
+          .map(_ => s.sync())
+          .map(_ => Some(store))
+      case s: PersistentStore =>
+        s.sync().map(_ => Some(store))
       case _ =>
         Future.successful(Some(store))
     }

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package storage.repository.legacy.store
 
+import akka.Done
 import mesosphere.marathon.storage.repository.legacy.store.JavaFutureToFuture.Timeout
 import mesosphere.marathon.stream._
 import org.apache.mesos.state.{ State, Variable }
@@ -75,6 +76,8 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
           Seq.empty[ID]
       }
   }
+
+  override def sync(): Future[Done] = Future.successful(Done)
 
   private[this] def entityExists(variable: Variable): Boolean = variable.value().nonEmpty
 
