@@ -7,6 +7,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.api.akkahttp.AuthDirectives.{ NotAuthenticated, NotAuthorized }
+import mesosphere.marathon.api.akkahttp.LeaderDirectives.{ NoLeader, ProxyToLeader }
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
@@ -106,19 +107,38 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       }
     }
 
-    "not abdicate leadership" in {
-      Given("the host is not leader")
+    "not abdicate leadership if there is no leader" in {
+      Given("there is no leader")
       val f = new Fixture()
       val controller = f.leaderController()
       f.electionService.isLeader returns (false)
+      f.electionService.leaderHostPort returns (None)
 
       When("we try to abdicate")
       Delete(Uri./) ~> controller.route ~> check {
         Then("we receive EntityNotFound response")
-        rejection shouldBe an[EntityNotFound]
+        rejection should be(NoLeader)
+      }
+    }
+
+    "proxy the request if instance is not the leader" in {
+      Given("the instance is not the leader")
+      val f = new Fixture()
+      val controller = f.leaderController()
+      f.electionService.isLeader returns (false)
+
+      And("there is a leader")
+      f.electionService.leaderHostPort returns (Some("awesome.leader.com"))
+      f.electionService.localHostPort returns ("localhost:8080")
+
+      When("we try to abdicate")
+      Delete(Uri./) ~> controller.route ~> check {
+        Then("we receive EntityNotFound response")
+        rejection shouldBe a[ProxyToLeader]
         inside(rejection) {
-          case EntityNotFound(message) =>
-            message.message should be("There is no leader")
+          case ProxyToLeader(request, localHostPort, leaderHost) =>
+            leaderHost should be("awesome.leader.com")
+            localHostPort should be("localhost:8080")
         }
       }
     }

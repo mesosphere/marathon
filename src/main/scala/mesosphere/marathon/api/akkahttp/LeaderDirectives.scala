@@ -43,9 +43,9 @@ object LeaderDirectives extends StrictLogging {
   val HostPort: Regex = """^(.*):(\d+)$""".r
   val FilterHeaders: Set[String] = Set("Host", "Connection", "Timeout-Access")
 
-  private[LeaderDirectives] case class ProxyToLeader(request: HttpRequest, localHostPort: String, leaderHost: String) extends Rejection
-  private[LeaderDirectives] case object NoLeader extends Rejection
-  private[LeaderDirectives] case object ProxyLoop extends Rejection
+  case class ProxyToLeader(request: HttpRequest, localHostPort: String, leaderHost: String) extends Rejection
+  case object NoLeader extends Rejection
+  case object ProxyLoop extends Rejection
 
   def handleNonLeader(implicit actorSystem: ActorSystem, materializer: Materializer): PartialFunction[Rejection, Route] = {
     case ProxyLoop => complete(StatusCodes.BadGateway -> "Detected proxy loop")

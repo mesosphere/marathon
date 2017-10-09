@@ -34,12 +34,10 @@ case class LeaderController(
     }
 
   def deleteLeader(): Route =
-    authenticated.apply { implicit identity =>
-      authorized(UpdateResource, AuthorizedResource.SystemConfig).apply {
-        parameters('backup.?, 'restore.?) { (backup, restore) =>
-          // This follows the LeaderResource implementation. Seems like a bug to me. Why should we not proxy the request?
-          if (electionService.isLeader) {
-
+    asLeader(electionService) {
+      authenticated.apply { implicit identity =>
+        authorized(UpdateResource, AuthorizedResource.SystemConfig).apply {
+          parameters('backup.?, 'restore.?) { (backup, restore) =>
             //TODO: validate backup and restore parameters
             complete {
               async {
@@ -48,8 +46,6 @@ case class LeaderController(
                 raml.Message("Leadership abdicated")
               }
             }
-          } else {
-            reject(Rejections.EntityNotFound.leader())
           }
         }
       }
