@@ -7,7 +7,6 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
-import mesosphere.marathon.api.akkahttp.AuthDirectives.{ NotAuthenticated, NotAuthorized }
 import mesosphere.marathon.api.akkahttp.LeaderDirectives.{ NoLeader, ProxyToLeader }
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.election.ElectionService
@@ -16,13 +15,26 @@ import org.scalatest.Inside
 
 import scala.concurrent.Future
 
-class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike {
+class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike with RouteBehaviours {
 
   "LeaderResource" should {
+
+    {
+      val controller = Fixture(authenticated = false, isLeader = true).controller()
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./))
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete(Uri./))
+    }
+
+    {
+      val controller = Fixture(authorized = false, isLeader = true).controller()
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get(Uri./))
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete(Uri./))
+    }
+
     "return the leader info" in {
       Given("a leader has been elected")
-      val f = new Fixture()
-      val controller = f.leaderController()
+      val f = Fixture()
+      val controller = f.controller()
       f.electionService.leaderHostPort returns (Some("new.leader.com"))
 
       When("we try to fetch the info")
@@ -39,8 +51,8 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     "return 404 if no leader has been elected" in {
       Given("no leader has been elected")
-      val f = new Fixture()
-      val controller = f.leaderController()
+      val f = Fixture()
+      val controller = f.controller()
       f.electionService.leaderHostPort returns (None)
 
       When("we try to fetch the info")
@@ -54,43 +66,10 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       }
     }
 
-    "access without authentication is denied" in {
-      Given("An unauthenticated request")
-      val f = new Fixture(authenticated = false)
-      val controller = f.leaderController()
-
-      When("we try to get the leader info")
-      Get(Uri./) ~> controller.route ~> check {
-        Then("we receive a NotAuthenticated response")
-        rejection shouldBe a[NotAuthenticated]
-        inside(rejection) {
-          case NotAuthenticated(response) =>
-            response.status should be(StatusCodes.Forbidden)
-        }
-      }
-    }
-
-    "access without authorization is denied" in {
-      Given("An unauthenticated request")
-      val f = new Fixture(authorized = false)
-      val controller = f.leaderController()
-
-      When("we try to get the leader info")
-      Get(Uri./) ~> controller.route ~> check {
-        Then("we receive a NotAuthenticated response")
-        rejection shouldBe a[NotAuthorized]
-        inside(rejection) {
-          case NotAuthorized(response) =>
-            response.status should be(StatusCodes.Unauthorized)
-        }
-      }
-    }
-
     "abdicate leadership" in {
       Given("the host is leader")
-      val f = new Fixture()
-      val controller = f.leaderController()
-      f.electionService.isLeader returns (true)
+      val f = Fixture(isLeader = true)
+      val controller = f.controller()
       f.runtimeRepo.store(raml.RuntimeConfiguration(Some("s3://mybucket/foo"), None)) returns (Future.successful(Done))
 
       When("we try to abdicate")
@@ -111,7 +90,7 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     "reject an invalid backup or restore parameter" in {
       Given("the host is leader")
       val f = new Fixture()
-      val controller = f.leaderController()
+      val controller = f.controller()
       f.electionService.isLeader returns (true)
 
       When("we try to abdicate")
@@ -128,9 +107,8 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     "not abdicate leadership if there is no leader" in {
       Given("there is no leader")
-      val f = new Fixture()
-      val controller = f.leaderController()
-      f.electionService.isLeader returns (false)
+      val f = Fixture(isLeader = false)
+      val controller = f.controller()
       f.electionService.leaderHostPort returns (None)
 
       When("we try to abdicate")
@@ -142,9 +120,8 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     "proxy the request if instance is not the leader" in {
       Given("the instance is not the leader")
-      val f = new Fixture()
-      val controller = f.leaderController()
-      f.electionService.isLeader returns (false)
+      val f = Fixture(isLeader = false)
+      val controller = f.controller()
 
       And("there is a leader")
       f.electionService.leaderHostPort returns (Some("awesome.leader.com"))
@@ -163,7 +140,7 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     }
   }
 
-  class Fixture(authenticated: Boolean = true, authorized: Boolean = true) {
+  case class Fixture(authenticated: Boolean = true, authorized: Boolean = true, isLeader: Boolean = true) {
     val electionService = mock[ElectionService]
     val runtimeRepo = mock[RuntimeConfigurationRepository]
 
@@ -173,6 +150,9 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     implicit val authenticator = auth.auth
 
     val config = AllConf.withTestConfig()
-    def leaderController() = new LeaderController(electionService, runtimeRepo)
+
+    electionService.isLeader returns (isLeader)
+
+    def controller() = new LeaderController(electionService, runtimeRepo)
   }
 }
