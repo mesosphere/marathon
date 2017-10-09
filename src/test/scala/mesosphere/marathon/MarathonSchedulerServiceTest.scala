@@ -77,6 +77,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
     val mockTimer: Timer = mock[Timer]
     val deploymentManager: DeploymentManager = mock[DeploymentManager]
 
+    persistenceStore.sync() returns Future.successful(Done)
     groupManager.invalidateGroupCache() returns Future.successful(Done)
   }
 
@@ -170,6 +171,33 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
       intercept[TimeoutException] {
         schedulerService.startLeadership()
       }
+    }
+
+    "fail if a persistence store sync() fails" in new Fixture {
+      val mockedStore = mock[PersistenceStore[_, _, _]]
+      mockedStore.sync() throws new StoreCommandFailedException("Failed to sync")
+
+      val driverFactory = mock[SchedulerDriverFactory]
+
+      val schedulerService = new MarathonSchedulerService(
+        mockedStore,
+        leadershipCoordinator,
+        config,
+        electionService,
+        prePostDriverCallbacks,
+        groupManager,
+        driverFactory,
+        system,
+        migration,
+        deploymentManager,
+        schedulerActor,
+        heartbeatActor
+      )
+
+      schedulerService.timer = mockTimer
+
+      val thrown = the[StoreCommandFailedException] thrownBy schedulerService.startLeadership()
+      thrown.getMessage should equal ("Failed to sync")
     }
 
     "throw when the driver creation fails by some exception" in new Fixture {
