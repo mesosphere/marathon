@@ -34,8 +34,6 @@ update-java-alternatives -s java-1.8.0-openjdk-amd64
 
 apt-get install -y \
         git \
-        php5-cli \
-        php5-curl \
         sbt \
         docker-engine \
         curl \
@@ -48,12 +46,6 @@ apt-get install -y \
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
 systemctl stop mesos-master.service mesos-slave.service mesos_executor.slice
 
-# Add arcanist
-mkdir -p /opt/arcanist
-git clone https://github.com/phacility/libphutil.git /opt/arcanist/libphutil
-git clone https://github.com/phacility/arcanist.git /opt/arcanist/arcanist
-ln -sf /opt/arcanist/arcanist/bin/arc /usr/local/bin/
-
 # Add user to docker group
 gpasswd -a admin docker
 
@@ -64,10 +56,6 @@ apt-get install -y nodejs
 # Setup system
 systemctl enable docker
 update-ca-certificates -f
-
-echo "{\"hosts\":{\"https://phabricator.mesosphere.com/api/\":{\"token\":\"$CONDUIT_TOKEN\"}}}" > /home/admin/.arcrc
-chown admin /home/admin/.arcrc
-chmod 0600 /home/admin/.arcrc
 
 # Install jq
 curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && sudo chmod +x /usr/local/bin/jq
