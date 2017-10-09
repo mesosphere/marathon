@@ -23,6 +23,7 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
     val maxVersions = 25
     lazy val config = LegacyInMemConfig(maxVersions)
     lazy val store = config.store
+    store.markOpen()
 
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(id = PathId("/test")), prefix = "app:")
     lazy val appRepo = new AppEntityRepository(appStore, maxVersions = maxVersions)(ExecutionContext.global, metrics)

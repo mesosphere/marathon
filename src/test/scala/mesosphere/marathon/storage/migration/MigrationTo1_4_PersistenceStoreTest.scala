@@ -33,7 +33,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
     implicit val metrics = new Metrics(new MetricRegistry)
     val persistenceStore = {
       val store = new InMemoryPersistenceStore()
-      store.open()
+      store.markOpen()
       store
     }
     val appRepository = AppRepository.inMemRepository(persistenceStore)
@@ -55,6 +55,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "do nothing if it doesn't exist" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = FrameworkIdRepository.legacyRepository(config.entityStore[FrameworkId])
 
         val migrator = migration(Some(config))
@@ -66,6 +67,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "migrate an existing value" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = FrameworkIdRepository.legacyRepository(config.entityStore[FrameworkId])
         val id = FrameworkId(UUID.randomUUID.toString)
         oldRepo.store(id).futureValue
@@ -82,6 +84,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "do nothing if it doesn't exist" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = EventSubscribersRepository.legacyRepository(config.entityStore[EventSubscribers])
 
         val migrator = migration(Some(config))
@@ -93,6 +96,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "migrate an existing value" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = EventSubscribersRepository.legacyRepository(config.entityStore[EventSubscribers])
         val subscribers = EventSubscribers(Set(UUID.randomUUID().toString))
         oldRepo.store(subscribers).futureValue
@@ -109,6 +113,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "do nothing if no tasks exist" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
 
         val migrator = migration(Some(config))
@@ -121,6 +126,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "migrate all tasks" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
         val agentInfo = Instance.AgentInfo("abc", None, Nil)
         def setAgentInfo(builder: MarathonTask.Builder): MarathonTask = {
@@ -164,6 +170,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "do nothing if there are no failures" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = TaskFailureRepository.legacyRepository(config.entityStore[TaskFailure])
 
         val migrator = migration(Some(config))
@@ -175,6 +182,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "migrate the failures" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = TaskFailureRepository.legacyRepository(config.entityStore[TaskFailure])
         val failure1 = TaskFailure.empty.copy(appId = "123".toRootPath, timestamp = Timestamp(1))
 
@@ -198,6 +206,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "do nothing if there are no plans" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = DeploymentRepository.legacyRepository(config.entityStore[DeploymentPlan])
 
         val migrator = migration(Some(config))
@@ -209,6 +218,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "migrate the plans" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldRepo = DeploymentRepository.legacyRepository(config.entityStore[DeploymentPlan])
         val appRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
         val podRepo = PodRepository.legacyRepository(config.entityStore[PodDefinition], maxVersions)
@@ -243,6 +253,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
       "store an empty group if there are no groups" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
+        config.store.markOpen()
         val oldAppRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
         val oldPodRepo = PodRepository.legacyRepository(config.entityStore[PodDefinition], maxVersions)
         val oldRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, oldAppRepo, oldPodRepo)
@@ -272,6 +283,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
         implicit val metrics = new Metrics(new MetricRegistry)
         val oldMax = 3
         val config = LegacyInMemConfig(oldMax)
+        config.store.markOpen()
         val oldAppRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], oldMax)
         val oldPodRepo = PodRepository.legacyRepository(config.entityStore[PodDefinition], oldMax)
         val oldRepo = GroupRepository.legacyRepository(config.entityStore[Group], oldMax, oldAppRepo, oldPodRepo)

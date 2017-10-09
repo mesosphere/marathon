@@ -28,7 +28,7 @@ class InMemoryPersistenceStoreTest extends AkkaUnitTest with PersistenceStoreTes
 
   behave like basicPersistenceStore("InMemoryPersistenceStore", {
     val store = new InMemoryPersistenceStore()
-    store.open()
+    store.markOpen()
     store
   })
 }

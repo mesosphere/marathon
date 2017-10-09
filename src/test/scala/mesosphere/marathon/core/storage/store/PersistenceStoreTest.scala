@@ -34,19 +34,19 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
       }
       "cannot be opened twice" in {
         val store = newStore
-        val thrown = the[IllegalStateException] thrownBy store.open()
+        val thrown = the[IllegalStateException] thrownBy store.markOpen()
         thrown.getMessage shouldBe "it was opened before"
       }
       "cannot be reopened" in {
         val store = newStore
-        store.close()
-        val thrown = the[IllegalStateException] thrownBy store.open()
+        store.markClosed()
+        val thrown = the[IllegalStateException] thrownBy store.markOpen()
         thrown.getMessage shouldBe "it was opened before"
       }
       "cannot be closed twice" in {
         val store = newStore
-        store.close()
-        val thrown = the[IllegalStateException] thrownBy store.close()
+        store.markClosed()
+        val thrown = the[IllegalStateException] thrownBy store.markClosed()
         thrown.getMessage shouldBe "attempt to close while not being opened"
       }
       "have no ids" in {

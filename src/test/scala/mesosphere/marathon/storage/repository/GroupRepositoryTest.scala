@@ -129,7 +129,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       "retrieve a historical version" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val store = new InMemoryPersistenceStore()
-        store.open()
+        store.markOpen()
         val appRepo = AppRepository.inMemRepository(store)
         val repo = createRepo(appRepo, mock[PodRepository], 2)
 
@@ -156,7 +156,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   def createInMemRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new InMemoryPersistenceStore()
-    store.open()
+    store.markOpen()
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
 
@@ -170,21 +170,21 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = zkStore
-    store.open()
+    store.markOpen()
     GroupRepository.zkRepository(store, appRepository, podRepository)
   }
 
   def createLazyCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
-    store.open()
+    store.markOpen()
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
 
   def createLoadCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
-    store.open()
+    store.markOpen()
     store.preDriverStarts.futureValue
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
@@ -193,7 +193,9 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
     implicit val metrics = new Metrics(new MetricRegistry)
     val persistentStore = new InMemoryStore()
     def entityStore(name: String, newState: () => Group): EntityStore[Group] = {
-      new MarathonStore(persistentStore, metrics, newState, name)
+      val store = new MarathonStore(persistentStore, metrics, newState, name)
+      store.markOpen()
+      store
     }
     GroupRepository.legacyRepository(entityStore, maxVersions, appRepository, podRepository)
   }
@@ -203,9 +205,11 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
     val client = twitterZkClient()
     val persistentStore = new ZKStore(client, ZNode(client, s"/${UUID.randomUUID().toString}"),
       CompressionConf(true, 64 * 1024), 8, 1024)
-    persistentStore.initialize().futureValue(Timeout(5.seconds))
     def entityStore(name: String, newState: () => Group): EntityStore[Group] = {
-      new MarathonStore(persistentStore, metrics, newState, name)
+      val store = new MarathonStore(persistentStore, metrics, newState, name)
+      store.markOpen()
+      persistentStore.initialize().futureValue(Timeout(5.seconds))
+      store
     }
     GroupRepository.legacyRepository(entityStore, maxVersions, appRepository, podRepository)
   }

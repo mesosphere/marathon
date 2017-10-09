@@ -28,6 +28,8 @@ class MesosStateStoreTest extends PersistentStoreTest with ZookeeperServerTest {
       TimeUnit.MILLISECONDS,
       s"/${UUID.randomUUID}"
     )
-    new MesosStateStore(state, duration)
+    val store = new MesosStateStore(state, duration)
+    store.markOpen()
+    store
   }
 }

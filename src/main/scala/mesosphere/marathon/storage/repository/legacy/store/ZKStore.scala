@@ -36,6 +36,8 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     * The entity is returned also if it is not found in zk, since it is needed for the store operation.
     */
   override def load(key: ID): Future[Option[ZKEntity]] = limitConcurrency {
+    require(isOpen, "the store must be opened before it can be used")
+
     val node = root(key)
     node.getData().asScala
       .map { data => Some(ZKEntity(node, ZKData(data.bytes), Some(data.stat.getVersion))) }
@@ -44,6 +46,8 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   }
 
   override def create(key: ID, content: IndexedSeq[Byte]): Future[ZKEntity] = limitConcurrency {
+    require(isOpen, "the store must be opened before it can be used")
+
     val node = root(key)
     val data = ZKData(key, UUID.randomUUID(), content)
     node.create(data.toProto(compressionConf).toByteArray).asScala
@@ -58,6 +62,8 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     * @return Some value, if the store operation is successful otherwise None
     */
   override def update(entity: PersistentEntity): Future[ZKEntity] = limitConcurrency {
+    require(isOpen, "the store must be opened before it can be used")
+
     val zk = zkEntity(entity)
     val version = zk.version.getOrElse (
       throw new StoreCommandFailedException(s"Can not store entity $entity, since there is no version!")
@@ -71,6 +77,8 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     * Delete an entry with given identifier.
     */
   override def delete(key: ID): Future[Boolean] = limitConcurrency {
+    require(isOpen, "the store must be opened before it can be used")
+
     val node = root(key)
     node.exists().asScala
       .flatMap { d => node.delete(d.stat.getVersion).asScala.map(_ => true) }
@@ -79,12 +87,16 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   }
 
   override def allIds(): Future[Seq[ID]] = limitConcurrency {
+    require(isOpen, "the store must be opened before it can be used")
+
     root.getChildren().asScala
       .map(_.children.map(_.name)(collection.breakOut))
       .recover(exceptionTransform("Can not list all identifiers"))
   }
 
   override def allIds(parent: ID): Future[Seq[ID]] = limitConcurrency {
+    require(isOpen, "the store must be opened before it can be used")
+
     val rootNode = this.root(parent)
 
     rootNode.getChildren().asScala
@@ -110,6 +122,8 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   }
 
   private[this] def createPath(path: ZNode): Future[ZNode] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     def nodeExists(node: ZNode): Future[Boolean] = node.exists().asScala
       .map(_ => true)
       .recover { case ex: NoNodeException => false }
@@ -134,6 +148,8 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   override def initialize(): Future[Unit] = createPath(root).map(_ => ())
 
   override def createPath(path: String): Future[Unit] = limitConcurrency {
+    require(isOpen, "the store must be opened before it can be used")
+
     createPath(root(path)).map(_ => ())
   }
 

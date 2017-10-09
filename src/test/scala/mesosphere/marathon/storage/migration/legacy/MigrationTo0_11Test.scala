@@ -20,6 +20,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     implicit lazy val metrics = new Metrics(new MetricRegistry)
     val maxVersions = 25
     lazy val config = LegacyInMemConfig(maxVersions)
+    config.store.markOpen()
     lazy val migration = new MigrationTo0_11(Some(config))
     lazy val appRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
     lazy val podRepo = PodRepository.legacyRepository(config.entityStore[PodDefinition], maxVersions)

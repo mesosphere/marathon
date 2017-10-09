@@ -19,6 +19,8 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
   import JavaFutureToFuture.futureToFuture
 
   override def load(key: ID): Future[Option[PersistentEntity]] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     futureToFuture(state.fetch(key))
       .map(throwOnNull)
       .map { variable => if (entityExists(variable)) Some(MesosStateEntity(key, variable)) else None }
@@ -26,6 +28,8 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
   }
 
   override def create(key: ID, content: IndexedSeq[Byte]): Future[PersistentEntity] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     futureToFuture(state.fetch(key))
       .map(throwOnNull)
       .flatMap { variable =>
@@ -35,17 +39,23 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
       .recover(mapException(s"Can not create entity with key $key"))
   }
 
-  override def update(entity: PersistentEntity): Future[PersistentEntity] = entity match {
-    case MesosStateEntity(id, v) =>
-      futureToFuture(state.store(v))
-        .recover(mapException(s"Can not update entity with key ${entity.id}"))
-        .map(throwOnNull)
-        .map(MesosStateEntity(id, _))
+  override def update(entity: PersistentEntity): Future[PersistentEntity] = {
+    require(isOpen, "the store must be opened before it can be used")
 
-    case _ => throw new IllegalArgumentException("Can not handle this kind of entity")
+    entity match {
+      case MesosStateEntity(id, v) =>
+        futureToFuture(state.store(v))
+          .recover(mapException(s"Can not update entity with key ${entity.id}"))
+          .map(throwOnNull)
+          .map(MesosStateEntity(id, _))
+
+      case _ => throw new IllegalArgumentException("Can not handle this kind of entity")
+    }
   }
 
   override def delete(key: ID): Future[Boolean] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     futureToFuture(state.fetch(key))
       .map(throwOnNull)
       .flatMap { variable =>
@@ -59,6 +69,8 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
   }
 
   override def allIds(): Future[Seq[ID]] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     futureToFuture(state.names())
       .map(_.toIndexedSeq)
       .recover {

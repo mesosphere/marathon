@@ -206,7 +206,7 @@ class MarathonSchedulerService @Inject() (
     log.info("As new leader running the driver")
 
     // allow interactions with the persistence store
-    persistenceStore.foreach(_.open())
+    persistenceStore.foreach(_.markOpen())
 
     // GroupRepository is holding in memory caches of the root group. The cache is loaded when it is accessed the first time.
     // Actually this is really bad, because each marathon will log the amount of groups during startup through metrics.
@@ -276,7 +276,7 @@ class MarathonSchedulerService @Inject() (
     log.info("Lost leadership")
 
     // disallow any interaction with the persistence storage
-    persistenceStore.foreach(_.close())
+    persistenceStore.foreach(_.markClosed())
 
     leadershipCoordinator.stop()
 

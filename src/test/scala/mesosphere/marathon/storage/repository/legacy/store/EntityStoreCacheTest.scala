@@ -44,7 +44,9 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
   test("Fetching an entry will succeed without querying store in cached mode") {
     Given("A pre-filled entityCache")
     val store = mock[EntityStore[TestApp]]
+    store.isOpen returns true
     entityCache = new EntityStoreCache[TestApp](store)
+    entityCache.markOpen()
     val names = Set("a", "b", "c")
     entityCache.cacheOpt = Some(new TrieMap[String, Option[TestApp]]())
     entityCache.cacheOpt.get ++= names.map(t => t -> Some(TestApp(t)))
@@ -74,14 +76,18 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
   test("Fetching an unversioned entry will succeed with querying store in direct mode") {
     Given("A UNfilled entityCache")
     val store = mock[EntityStore[TestApp]]
+    store.isOpen returns true
     store.fetch("a") returns Future.successful(Some(TestApp("a")))
     entityCache = new EntityStoreCache[TestApp](store)
+    entityCache.markOpen()
 
     When("Fetch an existing entry from the cache")
     val a = entityCache.fetch("a").futureValue
 
     Then("The value is returned by querying the store")
     a should be(Some(TestApp("a")))
+    verify(store).markOpen()
+    verify(store).isOpen
     verify(store).fetch("a")
     noMoreInteractions(store)
   }
@@ -89,14 +95,18 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
   test("Fetching an unknown unversioned entry will succeed with querying store in direct mode") {
     Given("A UNfilled entityCache")
     val store = mock[EntityStore[TestApp]]
+    store.isOpen returns true
     store.fetch("notExisting") returns Future.successful(None)
     entityCache = new EntityStoreCache[TestApp](store)
+    entityCache.markOpen()
 
     When("Fetch an unknown entry from store")
     val notExisting = entityCache.fetch("notExisting").futureValue
 
     Then("No value is returned after querying the store")
     notExisting should be(None)
+    verify(store).markOpen()
+    verify(store).isOpen
     verify(store).fetch("notExisting")
     noMoreInteractions(store)
   }
@@ -104,6 +114,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
   test("Fetching a versioned entry will succeed with querying store in direct mode") {
     Given("A UNfilled entityCache")
     val store = mock[EntityStore[TestApp]]
+    store.isOpen returns true
     store.fetch("b:1970-01-01T00:00:00.000Z") returns Future.successful(Some(TestApp("b")))
     entityCache = new EntityStoreCache[TestApp](store)
 
@@ -112,6 +123,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
 
     Then("The value is returned by querying the store")
     aWithVersion should be(Some(TestApp("b")))
+    verify(store).isOpen
     verify(store).fetch("b:1970-01-01T00:00:00.000Z")
     noMoreInteractions(store)
   }
@@ -234,6 +246,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     content = mutable.Map.empty
     store = new TestStore[TestApp](content)
     entityCache = new EntityStoreCache(store)
+    entityCache.markOpen()
   }
 
   case class TestApp(id: String, version: Timestamp = Timestamp.zero) extends MarathonState[Protos.MarathonApp, TestApp] {

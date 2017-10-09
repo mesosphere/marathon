@@ -12,7 +12,7 @@ import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceSto
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, PersistentStore, ZKStore }
+import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore }
 import mesosphere.util.state.FrameworkId
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
@@ -45,34 +45,42 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
     }
   }
 
-  def createLegacyRepo(store: PersistentStore): FrameworkIdRepository = {
+  def createLegacyInMemoryRepo(): FrameworkIdRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
+    val store = new InMemoryStore()
     def entityStore(name: String, newState: () => FrameworkId): EntityStore[FrameworkId] = {
-      new MarathonStore(store, metrics, newState, name)
+      val marathonStore = new MarathonStore(store, metrics, newState, name)
+      marathonStore.markOpen()
+      marathonStore
     }
     FrameworkIdRepository.legacyRepository(entityStore)
   }
 
-  def zkStore(): PersistentStore = {
+  def createLegacyZkRepo(): FrameworkIdRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val client = twitterZkClient()
-    val persistentStore = new ZKStore(client, ZNode(client, s"/${UUID.randomUUID().toString}"),
+    val store = new ZKStore(client, ZNode(client, s"/${UUID.randomUUID().toString}"),
       CompressionConf(true, 64 * 1024), 8, 1024)
-    persistentStore.initialize().futureValue(Timeout(5.seconds))
-    persistentStore
+    def entityStore(name: String, newState: () => FrameworkId): EntityStore[FrameworkId] = {
+      val marathonStore = new MarathonStore(store, metrics, newState, name)
+      marathonStore.markOpen()
+      store.initialize().futureValue(Timeout(5.seconds))
+      marathonStore
+    }
+    FrameworkIdRepository.legacyRepository(entityStore)
   }
 
   def createInMemRepo(): FrameworkIdRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new InMemoryPersistenceStore()
-    store.open()
+    store.markOpen()
     FrameworkIdRepository.inMemRepository(store)
   }
 
   def createLoadTimeCachingRepo(): FrameworkIdRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
-    cached.open()
+    cached.markOpen()
     cached.preDriverStarts.futureValue
     FrameworkIdRepository.inMemRepository(cached)
   }
@@ -80,19 +88,19 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   def createZKRepo(): FrameworkIdRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new ZkPersistenceStore(zkClient(), 10.seconds)
-    store.open()
+    store.markOpen()
     FrameworkIdRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(): FrameworkIdRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
-    store.open()
+    store.markOpen()
     FrameworkIdRepository.inMemRepository(store)
   }
 
-  behave like basic("InMemEntity", createLegacyRepo(new InMemoryStore()))
-  behave like basic("ZkEntity", createLegacyRepo(zkStore()))
+  behave like basic("InMemEntity", createLegacyInMemoryRepo())
+  behave like basic("ZkEntity", createLegacyZkRepo())
   behave like basic("InMemoryPersistence", createInMemRepo())
   behave like basic("ZkPersistence", createZKRepo())
   behave like basic("LoadTimeCachingPersistence", createLoadTimeCachingRepo())

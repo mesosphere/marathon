@@ -70,7 +70,7 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
     val client = zkClient(namespace = Some(root))
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new ZkPersistenceStore(client, Duration.Inf)
-    store.open()
+    store.markOpen()
     store
   }
 
@@ -82,10 +82,11 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
       rootClient.create(s"/$root").futureValue(Timeout(5.seconds))
       implicit val metrics = new Metrics(new MetricRegistry)
       val newStore = new ZkPersistenceStore(rootClient.usingNamespace(root), Duration.Inf)
-      newStore.open()
+      newStore.markOpen()
       val twitterClient = twitterZkClient()
       val legacyStore = new ZKStore(twitterClient, ZNode(twitterClient, s"/$root"), CompressionConf(true, 64 * 1024),
         8, 1024)
+      legacyStore.markOpen()
 
       val version = StorageVersions(Random.nextInt, Random.nextInt, Random.nextInt)
       legacyStore.create(Migration.StorageVersionName, version.toByteArray.toIndexedSeq).futureValue

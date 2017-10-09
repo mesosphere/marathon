@@ -29,51 +29,74 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
   import scala.concurrent.ExecutionContext.Implicits.global
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  override def fetch(key: String): Future[Option[T]] = directOrCached(store.fetch(key)) { cache =>
-    if (noVersionKey(key)) {
-      Future.successful{
-        cache.get(key) match {
-          case Some(t) => t
-          case _ => None
+  override def markOpen(): Unit = store.markOpen()
+  override def isOpen: Boolean = store.isOpen
+  override def markClosed(): Unit = store.markClosed()
+
+  override def fetch(key: String): Future[Option[T]] = {
+    require(isOpen, "the store must be opened before it can be used")
+
+    directOrCached(store.fetch(key)) { cache =>
+
+      if (noVersionKey(key)) {
+        Future.successful{
+          cache.get(key) match {
+            case Some(t) => t
+            case _ => None
+          }
         }
-      }
-    } else {
-      //if we need to fetch a versioned entry, try if this is the latest version we have in the cache
-      //otherwise let the underlying store fetch that entry.
-      val id = idFromVersionKey(key)
-      cache.get(id) match {
-        case Some(Some(t)) if key == versionKey(id, t.version) => Future.successful(Some(t))
-        case _ => store.fetch(key)
+      } else {
+        //if we need to fetch a versioned entry, try if this is the latest version we have in the cache
+        //otherwise let the underlying store fetch that entry.
+        val id = idFromVersionKey(key)
+        cache.get(id) match {
+          case Some(Some(t)) if key == versionKey(id, t.version) => Future.successful(Some(t))
+          case _ => store.fetch(key)
+        }
       }
     }
   }
 
-  override def modify(key: String, onSuccess: (T) => Unit = _ => ())(update: Update): Future[T] =
+  override def modify(key: String, onSuccess: (T) => Unit = _ => ())(update: Update): Future[T] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     directOrCached(store.modify(key, onSuccess)(update)) { cache =>
       def onModified(t: T): Unit = {
         cache.update(key, if (noVersionKey(key)) Some(t) else None)
         onSuccess(t)
       }
+
       store.modify(key, onModified)(update)
     }
-
-  override def names(): Future[Seq[String]] = directOrCached(store.names()) { cache =>
-    Future.successful(cache.keySet.toIndexedSeq)
   }
 
-  override def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] =
+  override def names(): Future[Seq[String]] = {
+    require(isOpen, "the store must be opened before it can be used")
+
+    directOrCached(store.names()) { cache =>
+      Future.successful(cache.keySet.toIndexedSeq)
+    }
+  }
+
+  override def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     directOrCached(store.expunge(key, onSuccess)) { cache =>
       def onExpunged(): Unit = {
         cache.remove(key)
         onSuccess()
       }
+
       store.expunge(key, onExpunged)
     }
+  }
 
   /**
     * Preloads the cache. This assumes that there are no concurrent modifications.
     */
   override def preDriverStarts: Future[Unit] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     val cache = new TrieMap[String, Option[T]]()
 
     def preloadEntry(nextName: String): Future[Unit] = {
@@ -104,6 +127,8 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
   }
 
   override def postDriverTerminates: Future[Unit] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     log.debug(s"$store Clear all cached entries")
     cacheOpt = None
     Future.successful(())

@@ -51,6 +51,9 @@ class Migration(
 
   private[migration] lazy val legacyStoreFuture: Future[Option[PersistentStore]] = legacyConfig.map { config =>
     val store = config.store
+    if (!store.isOpen) {
+      store.markOpen()
+    }
     store match {
       case s: PersistentStoreManagement with PrePostDriverCallback =>
         s.preDriverStarts

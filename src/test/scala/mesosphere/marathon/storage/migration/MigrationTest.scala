@@ -92,6 +92,8 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
       migrate.migrate()
 
+      verify(mockedPersistentStore).isOpen
+      verify(mockedPersistentStore).markOpen()
       verify(mockedPersistentStore).sync()
       verify(mockedPersistentStore, times(2)).load(Migration.StorageVersionName)
       verify(mockedPersistentStore).create(Migration.StorageVersionName, StorageVersions.current.toByteArray.toIndexedSeq)
@@ -124,6 +126,8 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       val migrate = migration(legacyConfig = Some(legacyConfig), persistenceStore = None)
 
       migrate.migrate()
+      verify(mockedPersistentStore).isOpen
+      verify(mockedPersistentStore).markOpen()
       verify(mockedPersistentStore).sync()
       verify(mockedPersistentStore).load(Migration.StorageVersionName)
       noMoreInteractions(mockedPersistentStore)
@@ -202,6 +206,8 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       val migrate = migration(legacyConfig = Some(legacyConfig))
 
       migrate.migrate()
+      verify(mockedPersistentStore).isOpen
+      verify(mockedPersistentStore).markOpen()
       verify(mockedPersistentStore).sync()
       verify(mockedPersistentStore).initialize()
       verify(mockedPersistentStore).close()

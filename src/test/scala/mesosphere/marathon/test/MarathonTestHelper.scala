@@ -321,7 +321,7 @@ object MarathonTestHelper {
     implicit val m = metrics
     val instanceRepo = store.getOrElse(InstanceRepository.inMemRepository {
       val store = new InMemoryPersistenceStore()
-      store.open()
+      store.markOpen()
       store
     })
     val updateSteps = Seq.empty[InstanceChangeHandler]

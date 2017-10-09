@@ -226,6 +226,7 @@ class MigrationTo1_1_5_Test extends AkkaUnitTest with Mockito with GroupCreation
   class Fixture {
     implicit val metrics = new Metrics(new MetricRegistry)
     val config = LegacyInMemConfig(maxVersions)
+    config.store.markOpen()
     val oldAppRepo: AppEntityRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
     val oldPodRepo: PodEntityRepository = PodRepository.legacyRepository(config.entityStore[PodDefinition], maxVersions)
     val oldGroupRepo: GroupEntityRepository = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, oldAppRepo, oldPodRepo)
