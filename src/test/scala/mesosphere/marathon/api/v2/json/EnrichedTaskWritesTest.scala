@@ -23,7 +23,7 @@ class EnrichedTaskWritesTest extends UnitTest {
     val runSpecId = runSpec.id
     val hostName = "agent1.mesos"
     val agentId = "abcd-1234"
-    val agentInfo = Instance.AgentInfo(hostName, Some(agentId), attributes = Seq.empty)
+    val agentInfo = Instance.AgentInfo(hostName, Some(agentId), None, None, attributes = Seq.empty)
 
     val networkInfos = Seq(
       MesosProtos.NetworkInfo.newBuilder()

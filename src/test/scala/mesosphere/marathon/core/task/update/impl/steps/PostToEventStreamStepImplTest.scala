@@ -106,7 +106,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
     val event1 = mock[MarathonEvent]
     val event2 = mock[MarathonEvent]
 
-    val agentInfo = Instance.AgentInfo("localhost", None, Seq.empty)
+    val agentInfo = Instance.AgentInfo("localhost", None, None, None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), healthy = None)
     val instance = Instance(
       Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map.empty, clock.now(),
