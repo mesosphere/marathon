@@ -208,12 +208,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
           maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
         )
 
-        Try(JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected))
-          .recover {
-            case v: ValidationFailedException =>
-              throw new RuntimeException(s"JSON body = ${new String(body)} :: violations = ${v.failure.violations}")
-            case NonFatal(ex) => throw ex
-          }
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
       }
     }
 
@@ -320,18 +315,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         status shouldEqual StatusCodes.UnprocessableEntity
         responseAs[String] should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
       }
-    }
-
-    "Create a new app with IP/CT, no default network name, Alice does not specify a network" in new Fixture {
-      Given("An app and group")
-      val app = App(
-        id = "/app",
-        cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container))
-      )
-      the[NormalizationException] thrownBy {
-        prepareApp(app, groupManager)
-      } should have message NetworkNormalizationMessages.ContainerNetworkNameUnresolved
     }
 
     "Create a new app with IP/CT on virtual network foo" in new Fixture {
