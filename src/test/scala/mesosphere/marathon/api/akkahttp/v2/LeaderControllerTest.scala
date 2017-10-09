@@ -2,12 +2,13 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.Done
-import akka.http.scaladsl.model.{ StatusCodes, Uri }
+import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import mesosphere.UnitTest
-import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
-import mesosphere.marathon.api.akkahttp.AuthDirectives.{ NotAuthenticated, NotAuthorized }
-import mesosphere.marathon.api.akkahttp.LeaderDirectives.{ NoLeader, ProxyToLeader }
+import mesosphere.{UnitTest, ValidationTestLike}
+import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
+import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
+import mesosphere.marathon.api.akkahttp.AuthDirectives.{NotAuthenticated, NotAuthorized}
+import mesosphere.marathon.api.akkahttp.LeaderDirectives.{NoLeader, ProxyToLeader}
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
@@ -15,7 +16,7 @@ import org.scalatest.Inside
 
 import scala.concurrent.Future
 
-class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside {
+class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike {
 
   "LeaderResource" should {
     "return the leader info" in {
@@ -86,7 +87,7 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     }
 
     "abdicate leadership" in {
-      Given("the host is not leader")
+      Given("the host is leader")
       val f = new Fixture()
       val controller = f.leaderController()
       f.electionService.isLeader returns (true)
@@ -104,6 +105,23 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
             |  "message": "Leadership abdicated"
             |}""".stripMargin
         JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
+      }
+    }
+
+    "reject an invalid backup or restore parameter" in {
+      Given("the host is leader")
+      val f = new Fixture()
+      val controller = f.leaderController()
+      f.electionService.isLeader returns (true)
+
+      When("we try to abdicate")
+      Delete("/?backup=norealuri") ~> controller.route ~> check {
+        Then("then the request should be rejected")
+        rejection shouldBe a[ValidationFailed]
+        inside(rejection) {
+          case ValidationFailed(failure) =>
+            failure should haveViolations("/" -> "Invalid URI or unsupported scheme: norealuri")
+        }
       }
     }
 

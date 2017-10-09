@@ -2,12 +2,14 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.http.scaladsl.server.Route
+import com.typesafe.scalalogging.StrictLogging
+import com.wix.accord.{ Failure, Success }
 import mesosphere.marathon.api.akkahttp.{ Controller, Rejections }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
-import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.raml.RuntimeConfiguration
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
+import mesosphere.marathon.stream.UriIO
 
 import scala.async.Async._
 import scala.concurrent.ExecutionContext
@@ -38,14 +40,19 @@ case class LeaderController(
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
         authorized(UpdateResource, AuthorizedResource.SystemConfig).apply {
-          parameters('backup.?, 'restore.?) { (backup, restore) =>
+          parameters('backup.?, 'restore.?) { (backup: Option[String], restore: Option[String]) =>
             //TODO: validate backup and restore parameters
-            complete {
-              async {
-                await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
-                electionService.abdicateLeadership()
-                raml.Message("Leadership abdicated")
-              }
+            backup.map(UriIO.valid).getOrElse(Success) match {
+              case Success =>
+                complete {
+                  async {
+                    await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
+                    electionService.abdicateLeadership()
+                    raml.Message("Leadership abdicated")
+                  }
+                }
+              case failure: Failure =>
+                reject(ValidationFailed(failure))
             }
           }
         }
