@@ -15,7 +15,6 @@ import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -238,9 +237,9 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
   @Singleton
   def schedulerActions(coreModule: CoreModule): SchedulerActions = coreModule.schedulerActions
 
-  @Provides @Singleton @Named(MesosHeartbeatMonitor.BASE)
-  def heartbeatMonitorScheduler(coreModule: CoreModule): Scheduler = coreModule.marathonScheduler
-
   @Provides @Singleton
   def marathonScheduler(coreModule: CoreModule): MarathonScheduler = coreModule.marathonScheduler
+
+  @Provides @Singleton
+  def scheduler(coreModule: CoreModule): Scheduler = coreModule.mesosHeartbeatMonitor
 }

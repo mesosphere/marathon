@@ -22,8 +22,7 @@ import org.slf4j.LoggerFactory
   * @see org.apache.mesos.Scheduler
   * @see org.apache.mesos.SchedulerDriver
   */
-class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
-) extends Scheduler {
+class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef) extends Scheduler {
 
   import MesosHeartbeatMonitor._
 
@@ -141,8 +140,6 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
 }
 
 object MesosHeartbeatMonitor {
-  final val BASE = "mesosHeartbeatMonitor.base"
-
   final val DEFAULT_HEARTBEAT_INTERVAL_MS = 15000L
   final val DEFAULT_HEARTBEAT_FAILURE_THRESHOLD = 5
 
