@@ -147,11 +147,12 @@ object EntityMarshallers {
 
   implicit val jsValueMarshaller = playJsonMarshaller[JsValue]
   implicit val wixResultMarshaller = playJsonMarshaller[com.wix.accord.Failure](Validation.failureWrites)
-  implicit val messageMarshaller = playJsonMarshaller[Rejections.Message]
+  implicit val rejectionMessageMarshaller = playJsonMarshaller[Rejections.Message]
   implicit val appInfoMarshaller = playJsonMarshaller[AppInfo]
   implicit val infoMarshaller = playJsonMarshaller[MarathonInfo]
   implicit val infoUnmarshaller = playJsonUnmarshaller[MarathonInfo]
   implicit val leaderInfoMarshaller = playJsonMarshaller[raml.LeaderInfo]
+  implicit val messageMarshaller = playJsonMarshaller[raml.Message]
   implicit val metricsMarshaller = internalToRamlJsonMarshaller[TickMetricSnapshot, Metrics]
   implicit val loggerChangeMarshaller = playJsonMarshaller[LoggerChange]
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[LoggerChange]

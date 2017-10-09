@@ -49,3 +49,8 @@ types:
       When Marathon receives a TASK_LOST status update indicating that the
       agent running the task is gone, this property defines whether Marathon
       will launch the task on another node or not. Defaults to WAIT_FOREVER"
+
+  Message:
+    type: object
+    properties:
+      message: string

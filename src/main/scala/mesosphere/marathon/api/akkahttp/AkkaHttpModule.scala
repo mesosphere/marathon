@@ -6,10 +6,10 @@ import java.time.Clock
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.AbstractModule
-import com.google.inject.{Provides, Scopes, Singleton}
+import com.google.inject.{ Provides, Scopes, Singleton }
 import com.typesafe.config.Config
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{MarathonHttpService, TaskKiller}
+import mesosphere.marathon.api.{ MarathonHttpService, TaskKiller }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -61,7 +61,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val eventsController = new EventsController(conf, eventBus)
     val infoController = InfoController(mesosLeaderInfo, storageModule.frameworkIdRepository, conf)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
-    val leaderController = LeaderController(electionService)
+    val leaderController = LeaderController(electionService, storageModule.runtimeConfigurationRepository)
     val v2Controller = new V2Controller(appsController, eventsController, pluginsController, infoController, leaderController)
 
     new AkkaHttpMarathonService(
