@@ -765,8 +765,6 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
 
       assert(taskGroupInfo.getTasksCount == 2)
 
-      val task1 = taskGroupInfo.getTasksList.find(_.getName == "Foo1").get
-
       val networkInfo = executorInfo.getContainer.getNetworkInfosList.get(0)
       assert(networkInfo.getName() == defaultBuilderConfig.mesosBridgeName)
 

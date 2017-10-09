@@ -9,7 +9,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
-import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
@@ -50,7 +49,6 @@ class AppsController(
   import Directives._
 
   private implicit lazy val validateApp = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  private implicit lazy val updateValidator = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
 
   import AppHelpers._
   import EntityMarshallers._
@@ -227,7 +225,4 @@ class AppsController(
 
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
-
-  private implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
-    appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 }
