@@ -38,8 +38,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     pluginManager: PluginManager,
     marathonSchedulerService: MarathonSchedulerService,
     storageModule: StorageModule,
-    mesosLeaderInfo: MesosLeaderInfo,
-    appTasksRes: mesosphere.marathon.api.v2.AppTasksResource)(implicit
+    mesosLeaderInfo: MesosLeaderInfo)(implicit
     actorSystem: ActorSystem,
     materializer: Materializer,
     authenticator: Authenticator,
