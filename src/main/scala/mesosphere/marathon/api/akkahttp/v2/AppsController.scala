@@ -9,9 +9,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
-import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
-import mesosphere.marathon.api.v2.Validation.validateOrThrow
-import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan

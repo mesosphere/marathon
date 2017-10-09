@@ -13,12 +13,10 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import mesosphere.marathon.raml.RuntimeConfiguration
 import Validation._
-import akka.actor.ActorSystem
 import mesosphere.marathon.stream.UriIO
 
 @Path("v2/leader")
 class LeaderResource @Inject() (
-  system: ActorSystem,
   electionService: ElectionService,
   val config: MarathonConf with HttpConf,
   val runtimeConfigRepo: RuntimeConfigurationRepository,

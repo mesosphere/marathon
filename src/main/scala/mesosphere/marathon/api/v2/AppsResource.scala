@@ -12,7 +12,6 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import akka.event.EventStream
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, PATCH, RestResource }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event.ApiPostEvent
@@ -45,7 +44,6 @@ class AppsResource @Inject() (
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
   private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  private implicit lazy val validateCanonicalAppUpdateAPI = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
 
   private val normalizationConfig = AppNormalization.Configuration(
     config.defaultNetworkName.get,
