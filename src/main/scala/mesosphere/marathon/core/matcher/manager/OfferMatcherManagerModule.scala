@@ -23,7 +23,7 @@ class OfferMatcherManagerModule(
     offerMatcherConfig: OfferMatcherManagerConfig,
     scheduler: Scheduler,
     leadershipModule: LeadershipModule,
-    homeRegionProvider: Provider[HomeRegionProvider],
+    homeRegionProvider: () => HomeRegionProvider,
     actorName: String = "offerMatcherManager") {
 
   private[this] lazy val offersWanted: Subject[Boolean] = BehaviorSubject[Boolean](false)

@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent._
 import scala.util.control.NonFatal
 
-class MarathonScheduler @Inject() (
+class MarathonScheduler(
     eventBus: EventStream,
     offerProcessor: OfferProcessor,
     taskStatusProcessor: TaskStatusUpdateProcessor,

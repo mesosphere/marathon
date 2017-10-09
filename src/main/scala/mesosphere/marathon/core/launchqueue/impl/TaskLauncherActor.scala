@@ -37,7 +37,7 @@ private[launchqueue] object TaskLauncherActor {
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatisticsActor: ActorRef,
-    homeRegionProvider: Provider[HomeRegionProvider])(
+    homeRegionProvider: () => HomeRegionProvider)(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -89,7 +89,7 @@ private class TaskLauncherActor(
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int,
-    homeRegionProvider: Provider[HomeRegionProvider]) extends Actor with StrictLogging with Stash {
+    homeRegionProvider: () => HomeRegionProvider) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]

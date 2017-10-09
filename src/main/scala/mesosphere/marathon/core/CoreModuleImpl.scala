@@ -33,6 +33,7 @@ import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.StorageModule
+import mesosphere.util.state.MesosLeaderInfo
 
 import scala.util.Random
 
@@ -53,7 +54,7 @@ class CoreModuleImpl @Inject() (
   scheduler: Provider[DeploymentService],
   instanceUpdateSteps: Seq[InstanceChangeHandler],
   taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
-  homeRegionProvider: Provider[HomeRegionProvider]
+  mesosLeaderInfo: MesosLeaderInfo
 )
     extends CoreModule {
 
@@ -101,7 +102,7 @@ class CoreModuleImpl @Inject() (
     // infrastructure
     clock, random, marathonConf, actorSystem.scheduler,
     leadershipModule,
-    homeRegionProvider
+    () => marathonScheduler
   )
 
   private[this] lazy val offerMatcherReconcilerModule =
@@ -147,7 +148,7 @@ class CoreModuleImpl @Inject() (
     // external guice dependencies
     taskTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
-    homeRegionProvider
+    () => marathonScheduler
   )
 
   // PLUGINS
@@ -261,4 +262,5 @@ class CoreModuleImpl @Inject() (
     eventStream,
     taskTerminationModule.taskKillService)(ExecutionContexts.global)
 
+  override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository, mesosLeaderInfo, marathonConf)
 }

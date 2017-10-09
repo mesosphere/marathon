@@ -22,9 +22,7 @@ import org.slf4j.LoggerFactory
   * @see org.apache.mesos.Scheduler
   * @see org.apache.mesos.SchedulerDriver
   */
-class MesosHeartbeatMonitor @Inject() (
-    @Named(MesosHeartbeatMonitor.BASE) scheduler: Scheduler,
-    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
+class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
 ) extends Scheduler {
 
   import MesosHeartbeatMonitor._

@@ -74,9 +74,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
       offerMatchStatisticsActor: TestProbe = TestProbe(),
-      homeRegionProvider: Provider[HomeRegionProvider] = new Provider[HomeRegionProvider] {
-        override def get() = mock[HomeRegionProvider]
-      }) {
+      homeRegionProvider: () => HomeRegionProvider = () => mock[HomeRegionProvider]) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(

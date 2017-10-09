@@ -23,9 +23,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         val homeRegionProvider = mock[HomeRegionProvider]
         homeRegionProvider.getHomeRegion returns Some("home")
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, new Provider[HomeRegionProvider] {
-          override def get() = homeRegionProvider
-        })(scheduler)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => homeRegionProvider)(scheduler)
 
         offerMatcher.isInterestedIn(offerWithFaultRegion("remote")) should be (false)
       }
@@ -34,9 +32,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         val homeRegionProvider = mock[HomeRegionProvider]
         homeRegionProvider.getHomeRegion returns Some("home")
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, new Provider[HomeRegionProvider] {
-          override def get() = homeRegionProvider
-        })(scheduler)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => homeRegionProvider)(scheduler)
 
         offerMatcher.isInterestedIn(offerWithFaultRegion("home")) should be (true)
       }
@@ -45,9 +41,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         val homeRegionProvider = mock[HomeRegionProvider]
         homeRegionProvider.getHomeRegion returns Some("home")
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, new Provider[HomeRegionProvider] {
-          override def get() = mock[MarathonScheduler]
-        })(scheduler)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => homeRegionProvider)(scheduler)
 
         offerMatcher.isInterestedIn(offerWithoutFaultRegion()) should be (true)
       }
@@ -69,9 +63,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         })
         val offer = MarathonTestHelper.makeBasicOffer().build()
 
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, new Provider[HomeRegionProvider] {
-          override def get() = mock[HomeRegionProvider]
-        })(scheduler)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => mock[HomeRegionProvider])(scheduler)
         val offerMatch: MatchedInstanceOps = offerMatcher.matchOffer(offer).futureValue
 
         offerMatch.offerId should not be (offer.getId)

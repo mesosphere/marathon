@@ -52,14 +52,12 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val clock: Clock = Clock.systemUTC()
     val random: Random.type = Random
     val leaderModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
-    val homeRegionProvider = new Provider[HomeRegionProvider] {
-      override def get() = mock[HomeRegionProvider]
-    }
+    val homeRegionProvider = mock[HomeRegionProvider]
     val config: OfferMatcherManagerConfig = new OfferMatcherManagerConfig {
       verify()
     }
     val module: OfferMatcherManagerModule =
-      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule, homeRegionProvider,
+      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule, () => homeRegionProvider,
         actorName = UUID.randomUUID().toString)
   }
 
