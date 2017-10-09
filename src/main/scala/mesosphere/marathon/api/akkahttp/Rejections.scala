@@ -17,5 +17,8 @@ object Rejections {
     def app(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
       EntityNotFound(Message(s"App '$id' does not exist" + version.fold("")(v => s" in version $v")))
     }
+    def leader(): EntityNotFound = {
+      EntityNotFound(Message("There is no leader"))
+    }
   }
 }

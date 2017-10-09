@@ -151,6 +151,7 @@ object EntityMarshallers {
   implicit val appInfoMarshaller = playJsonMarshaller[AppInfo]
   implicit val infoMarshaller = playJsonMarshaller[MarathonInfo]
   implicit val infoUnmarshaller = playJsonUnmarshaller[MarathonInfo]
+  implicit val leaderInfoMarshaller = playJsonMarshaller[raml.LeaderInfo]
   implicit val metricsMarshaller = internalToRamlJsonMarshaller[TickMetricSnapshot, Metrics]
   implicit val loggerChangeMarshaller = playJsonMarshaller[LoggerChange]
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[LoggerChange]

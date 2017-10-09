@@ -6,6 +6,7 @@ get:
       description: The host and port of the current leading master.
       body:
         application/json:
+          type: info.LeaderInfo
           example: |
             {
                 "leader": "marathon.globalcorp.com:8080"
