@@ -22,6 +22,7 @@ private[leadership] object WhenLeaderActor {
 private[impl] class WhenLeaderActor(childProps: => Props)
     extends Actor with StrictLogging with Stash {
 
+  private[this] var delayedMessages = 0
   private[this] var leadershipCycle = 1
 
   override def receive: Receive = suspended
@@ -32,29 +33,19 @@ private[impl] class WhenLeaderActor(childProps: => Props)
       leadershipCycle += 1
       sender() ! Prepared(self)
       context.become(active(childRef))
+      delayedMessages = 0
+      unstashAll()
 
     case Stop => sender() ! Stopped
 
     case unhandled: Any =>
-      logger.debug(s"unhandled message in suspend: $unhandled")
-      sender() ! Status.Failure(new IllegalStateException(s"not currently active ($self)"))
+      delayedMessages += 1
+      if (delayedMessages > 50)
+        logger.warn(s"Message received before leader: ${unhandled.getClass} ${sender}")
+      else
+        logger.debug(s"Message #${delayedMessages} received before leader: ${unhandled.getClass} ${sender}")
+      stash
   }
-
-  private[impl] def starting(coordinatorRef: ActorRef, childRef: ActorRef): Receive =
-    LoggingReceive.withLabel("starting") {
-      case Prepared(`childRef`) =>
-        coordinatorRef ! Prepared(self)
-        unstashAll()
-        context.become(active(childRef))
-
-      case Stop =>
-        coordinatorRef ! Status.Failure(new IllegalStateException(s"starting aborted due to stop ($self)"))
-        stop(childRef)
-
-      case unhandled: Any =>
-        logger.debug(s"waiting for startup, stashing $unhandled")
-        stash()
-    }
 
   private[impl] def active(childRef: ActorRef): Receive = LoggingReceive.withLabel("active") {
     case PrepareForStart => sender() ! Prepared(self)

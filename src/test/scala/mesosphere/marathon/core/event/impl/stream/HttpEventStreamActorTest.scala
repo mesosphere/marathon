@@ -5,8 +5,9 @@ import akka.actor.{ Props, Terminated }
 import akka.event.EventStream
 import akka.testkit._
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.election.LeadershipState
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
+import mesosphere.marathon.stream.EnrichedSource
 import org.mockito.Mockito.{ when => call, _ }
 
 import scala.concurrent.duration._
@@ -14,12 +15,12 @@ import scala.concurrent.duration._
 class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
 
   case class Fixture(
-      electionService: ElectionService = mock[ElectionService],
       stream: EventStream = mock[EventStream],
       metrics: HttpEventStreamActorMetrics = new HttpEventStreamActorMetrics()) {
+
     def handleStreamProps(handle: HttpEventStreamHandle) = Props(new HttpEventStreamHandleActor(handle, stream, 1))
     val streamActor: TestActorRef[HttpEventStreamActor] = TestActorRef(Props(
-      new HttpEventStreamActor(electionService, metrics, handleStreamProps)
+      new HttpEventStreamActor(EnrichedSource.emptyCancellable, metrics, handleStreamProps)
     ))
   }
 
@@ -28,7 +29,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A handler that wants to connect and we have an active streamActor")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LocalLeadershipEvent.ElectedAsLeader
+      streamActor ! LeadershipState.ElectedAsLeader
 
       When("A connection open message is sent to the stream actor")
       streamActor ! HttpEventStreamConnectionOpen(handle)
@@ -42,13 +43,13 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A handler that wants to connect and we have an active streamActor with one connection")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LocalLeadershipEvent.ElectedAsLeader
+      streamActor ! LeadershipState.ElectedAsLeader
       streamActor ! HttpEventStreamConnectionOpen(handle)
       val handleActor = streamActor.underlyingActor.streamHandleActors.values.head
       watch(handleActor)
 
       When("The stream actor switches to standby mode")
-      streamActor ! LocalLeadershipEvent.Standby
+      streamActor ! LeadershipState.Standby(None)
 
       Then("All handler actors are stopped and the connection is closed")
       val terminated = expectMsgClass(1.second, classOf[Terminated])
@@ -76,7 +77,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A registered handler")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LocalLeadershipEvent.ElectedAsLeader
+      streamActor ! LeadershipState.ElectedAsLeader
       streamActor ! HttpEventStreamConnectionOpen(handle)
       streamActor.underlyingActor.streamHandleActors should have size 1
 

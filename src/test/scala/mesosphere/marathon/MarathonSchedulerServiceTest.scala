@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import java.util.concurrent.ExecutorService
 import java.util.{ Timer, TimerTask }
 
 import akka.Done
@@ -100,7 +101,8 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatActor,
+        mock[ExecutorService]
       )
       schedulerService.timer = mockTimer
 
@@ -124,7 +126,8 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatActor,
+        mock[ExecutorService]
       ) {
         override def startLeadership(): Unit = ()
       }
@@ -153,7 +156,8 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatActor,
+        mock[ExecutorService]
       )
       schedulerService.timer = mockTimer
 
@@ -187,7 +191,8 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatActor,
+        mock[ExecutorService]
       )
 
       schedulerService.timer = mockTimer
@@ -216,7 +221,8 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatActor,
+        mock[ExecutorService]
       )
       schedulerService.timer = mockTimer
 
@@ -249,7 +255,8 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
         migration,
         deploymentManager,
         schedulerActor,
-        heartbeatActor
+        heartbeatActor,
+        mock[ExecutorService]
       )
       schedulerService.timer = mockTimer
 

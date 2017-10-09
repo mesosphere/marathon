@@ -4,11 +4,12 @@ import akka.Done
 import akka.actor._
 import akka.pattern.pipe
 import akka.event.{ EventStream, LoggingReceive }
-import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, ScalingProposition }
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.election.LeadershipState
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -40,8 +41,8 @@ class MarathonSchedulerActor private (
   killService: KillService,
   launchQueue: LaunchQueue,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-  electionService: ElectionService,
-  eventBus: EventStream)(implicit val mat: Materializer) extends Actor
+  leaderStateEvents: Source[LeadershipState, Cancellable],
+  eventBus: EventStream) extends Actor
     with StrictLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
@@ -61,20 +62,23 @@ class MarathonSchedulerActor private (
   val lockedRunSpecs = collection.mutable.Map[PathId, Int]().withDefaultValue(0)
   var historyActor: ActorRef = _
   var activeReconciliation: Option[Future[Status]] = None
+  var stateSubscription: Cancellable = _
+  implicit val materializer = ActorMaterializer()
 
   override def preStart(): Unit = {
     historyActor = context.actorOf(historyActorProps, "HistoryActor")
-    electionService.subscribe(self)
+    // TODO - we need to wait extract out migration concerns and wait for event here
+    stateSubscription = leaderStateEvents
+      .to(Sink.foreach { leaderState => self ! leaderState })
+      .run
   }
 
-  override def postStop(): Unit = {
-    electionService.unsubscribe(self)
-  }
+  override def postStop(): Unit = { stateSubscription.cancel() }
 
   def receive: Receive = suspended
 
   def suspended: Receive = LoggingReceive.withLabel("suspended"){
-    case LocalLeadershipEvent.ElectedAsLeader =>
+    case LeadershipState.ElectedAsLeader =>
       logger.info("Starting scheduler actor")
 
       deploymentRepository.all().runWith(Sink.seq).onComplete {
@@ -95,7 +99,7 @@ class MarathonSchedulerActor private (
       context.become(started)
       self ! ReconcileHealthChecks
 
-    case LocalLeadershipEvent.Standby =>
+    case _: LeadershipState.Standby =>
     // ignored
     // FIXME: When we get this while recovering deployments, we become active anyway
     // and drop this message.
@@ -104,13 +108,13 @@ class MarathonSchedulerActor private (
   }
 
   def started: Receive = LoggingReceive.withLabel("started") {
-    case LocalLeadershipEvent.Standby =>
+    case _: LeadershipState.Standby =>
       logger.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
       lockedRunSpecs.clear()
       context.become(suspended)
 
-    case LocalLeadershipEvent.ElectedAsLeader => // ignore
+    case LeadershipState.ElectedAsLeader => // ignore
 
     case ReconcileTasks =>
       import akka.pattern.pipe
@@ -305,8 +309,8 @@ object MarathonSchedulerActor {
     killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
-    eventBus: EventStream)(implicit mat: Materializer): Props = {
+    leaderStateEvents: Source[LeadershipState, Cancellable],
+    eventBus: EventStream): Props = {
     Props(new MarathonSchedulerActor(
       groupRepository,
       schedulerActions,
@@ -317,7 +321,7 @@ object MarathonSchedulerActor {
       killService,
       launchQueue,
       marathonSchedulerDriverHolder,
-      electionService,
+      leaderStateEvents,
       eventBus
     ))
   }
