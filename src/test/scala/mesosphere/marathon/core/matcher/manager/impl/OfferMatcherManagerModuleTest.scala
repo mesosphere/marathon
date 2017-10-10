@@ -4,6 +4,7 @@ package core.matcher.manager.impl
 import java.util.UUID
 import java.time.Clock
 
+import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -51,11 +52,14 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val clock: Clock = Clock.systemUTC()
     val random: Random.type = Random
     val leaderModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
+    val homeRegionProvider = new Provider[HomeRegionProvider] {
+      override def get() = mock[HomeRegionProvider]
+    }
     val config: OfferMatcherManagerConfig = new OfferMatcherManagerConfig {
       verify()
     }
     val module: OfferMatcherManagerModule =
-      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule,
+      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule, homeRegionProvider,
         actorName = UUID.randomUUID().toString)
   }
 

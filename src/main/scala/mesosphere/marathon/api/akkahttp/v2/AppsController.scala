@@ -31,6 +31,12 @@ import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.util.RichEither
 import play.api.libs.json._
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.task.Task.{ Id => TaskId }
+import PathMatchers._
+import mesosphere.marathon.api.TaskKiller
+import mesosphere.marathon.core.event.ApiPostEvent
+import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker

@@ -1282,6 +1282,8 @@ class TaskBuilderTest extends UnitTest {
         val agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
+          region = None,
+          zone = None,
           attributes = offer.getAttributesList.toIndexedSeq
         )
         val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10))
@@ -1346,6 +1348,8 @@ class TaskBuilderTest extends UnitTest {
         val agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
+          region = None,
+          zone = None,
           attributes = offer.getAttributesList.toIndexedSeq
         )
         val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10))

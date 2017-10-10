@@ -200,20 +200,50 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
 
-        Try(JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected))
-          .recover {
-            case v: ValidationFailedException =>
-              throw new RuntimeException(s"JSON body = ${new String(body)} :: violations = ${v.failure.violations}")
-            case NonFatal(ex) => throw ex
-          }
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "mode" : "host"
+                         |  } ],
+                         |  "portDefinitions" : [ {
+                         |    "port" : 0,
+                         |    "name" : "default",
+                         |    "protocol" : "tcp"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -374,14 +404,56 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "container" : {
+                         |    "type" : "MESOS",
+                         |    "volumes" : [ ],
+                         |    "portMappings" : [ {
+                         |      "containerPort" : 0,
+                         |      "labels" : { },
+                         |      "name" : "default",
+                         |      "protocol" : "tcp",
+                         |      "servicePort" : 0
+                         |    } ]
+                         |  },
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "name" : "foo",
+                         |    "mode" : "container"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -405,14 +477,56 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "container" : {
+                         |    "type" : "MESOS",
+                         |    "volumes" : [ ],
+                         |    "portMappings" : [ {
+                         |      "containerPort" : 0,
+                         |      "labels" : { },
+                         |      "name" : "default",
+                         |      "protocol" : "tcp",
+                         |      "servicePort" : 0
+                         |    } ]
+                         |  },
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "name" : "foo",
+                         |    "mode" : "container"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -479,14 +593,48 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "mode" : "host"
+                         |  } ],
+                         |  "portDefinitions" : [ {
+                         |    "port" : 0,
+                         |    "name" : "default",
+                         |    "protocol" : "tcp"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -508,17 +656,56 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(
-            versionInfo = VersionInfo.OnlyVersion(clock.now()),
-            networks = Seq(ContainerNetwork(name = "bar"))
-          ),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "container" : {
+                         |    "type" : "MESOS",
+                         |    "volumes" : [ ],
+                         |    "portMappings" : [ {
+                         |      "containerPort" : 0,
+                         |      "labels" : { },
+                         |      "name" : "default",
+                         |      "protocol" : "tcp",
+                         |      "servicePort" : 0
+                         |    } ]
+                         |  },
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "name" : "bar",
+                         |    "mode" : "container"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -541,14 +728,56 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "container" : {
+                         |    "type" : "MESOS",
+                         |    "volumes" : [ ],
+                         |    "portMappings" : [ {
+                         |      "containerPort" : 0,
+                         |      "labels" : { },
+                         |      "name" : "default",
+                         |      "protocol" : "tcp",
+                         |      "servicePort" : 0
+                         |    } ]
+                         |  },
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "name" : "foo",
+                         |    "mode" : "container"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -580,14 +809,60 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "container" : {
+                         |    "type" : "DOCKER",
+                         |    "docker" : {
+                         |      "forcePullImage" : false,
+                         |      "image" : "jdef/helpme",
+                         |      "parameters" : [ ],
+                         |      "privileged" : false
+                         |    },
+                         |    "volumes" : [ ],
+                         |    "portMappings" : [ {
+                         |      "containerPort" : 0,
+                         |      "labels" : { },
+                         |      "protocol" : "tcp",
+                         |      "servicePort" : 0
+                         |    } ]
+                         |  },
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "name" : "foo",
+                         |    "mode" : "container"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -625,22 +900,62 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val containerDef = appDef.container
-        val expected = AppInfo(
-          appDef.copy(
-            versionInfo = VersionInfo.OnlyVersion(clock.now()),
-            container = containerDef.map(_.copyWith(
-              portMappings = Seq(
-                Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
-              )
-            ))
-          ),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "container" : {
+                         |    "type" : "DOCKER",
+                         |    "docker" : {
+                         |      "forcePullImage" : false,
+                         |      "image" : "jdef/helpme",
+                         |      "parameters" : [ ],
+                         |      "privileged" : false
+                         |    },
+                         |    "volumes" : [ ],
+                         |    "portMappings" : [ {
+                         |      "containerPort" : 0,
+                         |      "hostPort" : 0,
+                         |      "labels" : { },
+                         |      "protocol" : "tcp",
+                         |      "servicePort" : 0
+                         |    } ]
+                         |  },
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "mode" : "container/bridge"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -723,14 +1038,59 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "env" : {
+                         |    "NAMED_FOO" : {
+                         |      "secret" : "foo"
+                         |    }
+                         |  },
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "mode" : "host"
+                         |  } ],
+                         |  "portDefinitions" : [ {
+                         |    "port" : 0,
+                         |    "name" : "default",
+                         |    "protocol" : "tcp"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "secrets" : {
+                         |    "foo" : {
+                         |      "source" : "/bar"
+                         |    }
+                         |  },
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -771,14 +1131,61 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "container" : {
+                         |    "type" : "MESOS",
+                         |    "volumes" : [ {
+                         |      "containerPath" : "/path",
+                         |      "secret" : "foo"
+                         |    } ]
+                         |  },
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "mode" : "host"
+                         |  } ],
+                         |  "portDefinitions" : [ {
+                         |    "port" : 0,
+                         |    "name" : "default",
+                         |    "protocol" : "tcp"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "secrets" : {
+                         |    "foo" : {
+                         |      "source" : "/bar"
+                         |    }
+                         |  },
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
@@ -883,14 +1290,51 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         status shouldEqual StatusCodes.Created withClue s"entity=$entity, response=${responseAs[String]}"
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-        )
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonOf(expected)
+
+        val expected = s"""{
+                         |  "id" : "/app",
+                         |  "backoffFactor" : 1.15,
+                         |  "backoffSeconds" : 1,
+                         |  "cmd" : "cmd",
+                         |  "cpus" : 1,
+                         |  "disk" : 0,
+                         |  "executor" : "",
+                         |  "instances" : 1,
+                         |  "labels" : { },
+                         |  "maxLaunchDelaySeconds" : 3600,
+                         |  "mem" : 128,
+                         |  "gpus" : 0,
+                         |  "networks" : [ {
+                         |    "mode" : "host"
+                         |  } ],
+                         |  "portDefinitions" : [ {
+                         |    "port" : 1000,
+                         |    "protocol" : "tcp"
+                         |  }, {
+                         |    "port" : 1001,
+                         |    "protocol" : "tcp"
+                         |  } ],
+                         |  "requirePorts" : false,
+                         |  "upgradeStrategy" : {
+                         |    "maximumOverCapacity" : 1,
+                         |    "minimumHealthCapacity" : 1
+                         |  },
+                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "killSelection" : "YOUNGEST_FIRST",
+                         |  "unreachableStrategy" : {
+                         |    "inactiveAfterSeconds" : 0,
+                         |    "expungeAfterSeconds" : 0
+                         |  },
+                         |  "tasksStaged" : 0,
+                         |  "tasksRunning" : 0,
+                         |  "tasksHealthy" : 0,
+                         |  "tasksUnhealthy" : 0,
+                         |  "deployments" : [ {
+                         |    "id" : "${plan.id}"
+                         |  } ],
+                         |  "tasks" : [ ]
+                         |}""".stripMargin
+        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 

@@ -85,6 +85,12 @@ object AkkaHttpMarathonService {
   import Directives._
   import EntityMarshallers._
 
+  /**
+    * Top level rejection handler for all routes
+    * @param actorSystem
+    * @param materializer
+    * @return
+    */
   def rejectionHandler(implicit actorSystem: ActorSystem, materializer: Materializer): RejectionHandler =
     RejectionHandler.newBuilder()
       .handle(LeaderDirectives.handleNonLeader)

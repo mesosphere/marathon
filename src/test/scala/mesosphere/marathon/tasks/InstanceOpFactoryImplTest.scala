@@ -63,6 +63,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val expectedAgentInfo = Instance.AgentInfo(
         host = f.defaultHostName,
         agentId = Some(offer.getSlaveId.getValue),
+        region = None,
+        zone = None,
         attributes = Vector.empty
       )
 

@@ -19,7 +19,7 @@ class EndpointsHelperTest extends UnitTest {
       case (numTasks, agentIndex) =>
         val agentId = agentIndex + 1
         val hostname = s"agent$agentId"
-        val agent = AgentInfo(hostname, None, Nil)
+        val agent = AgentInfo(hostname, None, None, None, Nil)
 
         1.to(numTasks).map { taskIndex =>
           val instanceId = Instance.Id.forRunSpec(app.id)
