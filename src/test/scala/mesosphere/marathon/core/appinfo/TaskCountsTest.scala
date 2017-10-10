@@ -189,7 +189,7 @@ class TaskCountsTest extends UnitTest {
 object Fixture {
   implicit class TaskImplicits(val task: Task) extends AnyVal {
     def toInstance: Instance = LegacyAppInstance(
-      task, AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil),
+      task, AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil),
       unreachableStrategy = UnreachableStrategy.default(resident = task.reservationWithVolumes.nonEmpty)
     )
   }

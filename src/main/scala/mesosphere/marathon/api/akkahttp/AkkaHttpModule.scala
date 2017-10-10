@@ -6,15 +6,18 @@ import java.time.Clock
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
+import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.MarathonHttpService
+import mesosphere.marathon.api.{ MarathonHttpService, TaskKiller }
 import mesosphere.marathon.api.akkahttp.v2._
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpRequestHandler
 import mesosphere.marathon.storage.StorageModule
@@ -41,16 +44,23 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     appTasksRes: mesosphere.marathon.api.v2.AppTasksResource,
     launchQueue: LaunchQueue)(implicit
     actorSystem: ActorSystem,
+    materializer: Materializer,
     authenticator: Authenticator,
     authorizer: Authorizer,
-    electionService: ElectionService): AkkaHttpMarathonService = {
+    electionService: ElectionService,
+    healthCheckManager: HealthCheckManager,
+    instanceTracker: InstanceTracker,
+    taskKiller: TaskKiller): AkkaHttpMarathonService = {
 
     import actorSystem.dispatcher
     val appsController = new AppsController(
       clock = clock,
       eventBus = eventBus,
-      service = marathonSchedulerService,
+      marathonSchedulerService = marathonSchedulerService,
       appInfoService = appInfoService,
+      healthCheckManager = healthCheckManager,
+      instanceTracker = instanceTracker,
+      taskKiller = taskKiller,
       config = conf,
       groupManager = groupManager,
       pluginManager = pluginManager)

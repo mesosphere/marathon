@@ -445,7 +445,7 @@ object PodStatusConversionTest {
     maybeHealthy: Option[Boolean] = None)(implicit clock: SettableClock): InstanceFixture = {
 
     val since = clock.now()
-    val agentInfo = Instance.AgentInfo("agent1", Some("agentId1"), Seq.empty)
+    val agentInfo = Instance.AgentInfo("agent1", Some("agentId1"), None, None, Seq.empty)
     val instanceId = Instance.Id.forRunSpec(pod.id)
     val taskIds = pod.containers.map { container =>
       Task.Id.forInstanceId(instanceId, Some(container))

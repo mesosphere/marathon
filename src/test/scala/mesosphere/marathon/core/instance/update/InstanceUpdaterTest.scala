@@ -293,7 +293,7 @@ class InstanceUpdaterTest extends UnitTest {
     )
     val clock = new SettableClock()
 
-    val agentInfo = AgentInfo("localhost", None, Seq.empty)
+    val agentInfo = AgentInfo("localhost", None, None, None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None)
     val taskId: Task.Id = Task.Id("uniq")
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)

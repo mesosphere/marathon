@@ -31,6 +31,8 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
+import org.apache.mesos.Protos.DomainInfo
+import org.apache.mesos.Protos.DomainInfo.FaultDomain
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
@@ -255,6 +257,15 @@ object MarathonTestHelper {
       )
   }
 
+  def newDomainInfo(region: String, zone: String): DomainInfo = {
+    DomainInfo.newBuilder
+      .setFaultDomain(
+        FaultDomain.newBuilder
+          .setZone(FaultDomain.ZoneInfo.newBuilder.setName(zone))
+          .setRegion(FaultDomain.RegionInfo.newBuilder.setName(region)))
+      .build
+  }
+
   /**
     * @param ranges how many port ranges should be included in this offer
     * @return
@@ -362,7 +373,7 @@ object MarathonTestHelper {
 
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
-    agentInfo = Instance.AgentInfo("", None, Nil),
+    agentInfo = Instance.AgentInfo("", None, None, None, Nil),
     state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None),
     tasksMap = Map.empty[Task.Id, Task],
     runSpecVersion = clock.now(),

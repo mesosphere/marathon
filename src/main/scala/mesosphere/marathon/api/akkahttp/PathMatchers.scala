@@ -33,7 +33,7 @@ object PathMatchers {
     */
   case object AppPathIdLike extends PathMatcher1[PathId] {
 
-    @tailrec final def iter(reversePieces: List[String], remaining: Path, consumedSlash: Option[Path] = None): Matching[Tuple1[PathId]] = remaining match {
+    @tailrec def iter(reversePieces: List[String], remaining: Path, consumedSlash: Option[Path] = None): Matching[Tuple1[PathId]] = remaining match {
       case slash @ Path.Slash(rest) =>
         iter(reversePieces, rest, Some(slash))
       case Path.Segment(segment, rest) if !marathonApiKeywords(segment) =>

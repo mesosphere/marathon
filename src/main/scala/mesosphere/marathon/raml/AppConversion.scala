@@ -8,12 +8,10 @@ import mesosphere.mesos.protos.Implicits._
 
 import scala.concurrent.duration._
 
-trait AppConversion extends ConstraintConversion with EnvVarConversion with HealthCheckConversion
+trait AppConversion extends DefaultConversions with ConstraintConversion with EnvVarConversion with HealthCheckConversion
     with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion with UnreachableStrategyConversion with KillSelectionConversion {
 
   import AppConversion._
-
-  implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
 
   implicit val artifactWrites: Writes[FetchUri, Artifact] = Writes { fetch =>
     Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache, fetch.outputFile)

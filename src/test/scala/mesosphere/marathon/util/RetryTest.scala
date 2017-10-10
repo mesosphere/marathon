@@ -140,9 +140,9 @@ class RetryTest extends AkkaUnitTest with PropertyChecks {
         }.failed.futureValue
       }
       "never exceed maxDelay" in {
-        var delays = mutable.Queue.empty[FiniteDuration]
+        val delays = mutable.Queue.empty[FiniteDuration]
         implicit val scheduler = trackingScheduler(delays)
-        val result = util.Retry.blocking("failure", maxAttempts = 100, minDelay = 1.milli, maxDelay = 5.seconds) {
+        util.Retry.blocking("failure", maxAttempts = 100, minDelay = 1.milli, maxDelay = 5.seconds) {
           throw new Exception("")
         }.failed.futureValue
 

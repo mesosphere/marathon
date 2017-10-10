@@ -10,6 +10,9 @@ import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.UnreachableStrategy
 import org.scalatest.prop.TableDrivenPropertyChecks
+import org.apache.mesos.Protos.Attribute
+import org.apache.mesos.Protos.Value.{ Text, Type }
+import play.api.libs.json._
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
@@ -98,11 +101,30 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     }
   }
 
+  "agentInfo serialization" should {
+    "round trip serialize" in {
+      val agentInfo = Instance.AgentInfo(host = "host", agentId = Some("agentId"), region = Some("region"), zone = Some("zone"),
+        attributes = Seq(Attribute.newBuilder
+          .setName("name")
+          .setText(Text.newBuilder.setValue("value"))
+          .setType(Type.TEXT)
+          .build))
+      println(Json.toJson(agentInfo))
+      Json.toJson(agentInfo).as[Instance.AgentInfo] shouldBe agentInfo
+    }
+
+    "it should default region and zone fields to empty string when missing" in {
+      val agentInfo = Json.parse("""{"host": "host", "agentId": "agentId", "attributes": []}""").as[Instance.AgentInfo]
+      agentInfo.region shouldBe None
+      agentInfo.zone shouldBe None
+    }
+  }
+
   class Fixture {
     val id = "/test".toPath
     val clock = new SettableClock()
 
-    val agentInfo = Instance.AgentInfo("", None, Nil)
+    val agentInfo = Instance.AgentInfo("", None, None, None, Nil)
     def tasks(statuses: Condition*): Map[Task.Id, Task] = tasks(statuses.to[Seq])
     def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] =
       statuses.map { status =>
