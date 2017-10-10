@@ -30,7 +30,7 @@ case class LeaderController(
     authenticated.apply { implicit identity =>
       authorized(ViewResource, AuthorizedResource.SystemConfig).apply {
         electionService.leaderHostPort match {
-          case None => reject(Rejections.EntityNotFound.leader())
+          case None => reject(Rejections.EntityNotFound.noLeader())
           case Some(leader) => complete(raml.LeaderInfo(leader))
         }
       }
