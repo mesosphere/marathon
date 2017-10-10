@@ -3,7 +3,8 @@ package api.akkahttp
 
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.{ DateTime, HttpHeader, HttpMethods, HttpProtocols }
-import akka.http.scaladsl.server.{ Directive0, Directives => AkkaDirectives }
+import akka.http.scaladsl.server.{ Directive, Directive0, Route, Directives => AkkaDirectives }
+import com.wix.accord.{ Failure, Success, Result => ValidationResult }
 
 import scala.concurrent.duration._
 
@@ -60,6 +61,19 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
             `Expires`(DateTime.now)
           )
       }
+    }
+  }
+
+  /**
+    * Rejects the request if the validation result is a failure. Proceeds otherwise.
+    * @param result The result of a Wix validation.
+    * @return The passed inner route.
+    */
+  def assumeValid(result: ValidationResult): Directive0 = Directive { f: (Unit => Route) =>
+    import mesosphere.marathon.api.akkahttp.EntityMarshallers._
+    result match {
+      case failure: Failure => reject(ValidationFailed(failure))
+      case Success => f(Unit)
     }
   }
 }
