@@ -201,7 +201,7 @@ class MarathonSchedulerService @Inject() (
     log.info("As new leader running the driver")
 
     // allow interactions with the persistence store
-    persistenceStore.open()
+    persistenceStore.markOpen()
 
     // Before reading to and writing from the storage, let's ensure that
     // no stale values are read from the persistence store.
@@ -286,7 +286,7 @@ class MarathonSchedulerService @Inject() (
     log.info("Lost leadership")
 
     // disallow any interaction with the persistence storage
-    persistenceStore.close()
+    persistenceStore.markClosed()
 
     leadershipCoordinator.stop()
 
