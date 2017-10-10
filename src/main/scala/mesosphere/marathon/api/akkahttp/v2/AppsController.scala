@@ -8,6 +8,7 @@ import akka.event.EventStream
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -18,6 +19,7 @@ import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
 import play.api.libs.json.Json
 import PathId._
 import mesosphere.marathon.state._
+import play.api.libs.json._
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
