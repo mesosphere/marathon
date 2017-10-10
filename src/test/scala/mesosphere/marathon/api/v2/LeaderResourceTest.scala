@@ -53,7 +53,7 @@ class LeaderResourceTest extends UnitTest {
     val runtimeRepo = mock[RuntimeConfigurationRepository]
     val auth = new TestAuthFixture
     val config = AllConf.withTestConfig()
-    def leaderResource() = new LeaderResource(system, electionService, config, runtimeRepo, auth.auth, auth.auth)
+    def leaderResource() = new LeaderResource(electionService, config, runtimeRepo, auth.auth, auth.auth)
   }
 }
 

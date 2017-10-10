@@ -145,7 +145,7 @@ object InstanceOpFactoryImplTest {
     containers = Seq(MesosContainer(name = "ct1", resources = someRes))
   )
 
-  val agentInfo = AgentInfo("agent1", None, Seq.empty)
+  val agentInfo = AgentInfo("agent1", None, None, None, Seq.empty)
 
   case class TestCase(pod: PodDefinition, agentInfo: AgentInfo) {
     val instanceId: Instance.Id = Instance.Id.forRunSpec(pod.id)

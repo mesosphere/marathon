@@ -12,6 +12,7 @@ object Rejections {
   }
 
   val defaultEntityNotFoundMessage = Message("Entity was not found")
+
   case class EntityNotFound(message: Message = defaultEntityNotFoundMessage) extends Rejection
   object EntityNotFound {
     def noApp(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
@@ -19,6 +20,10 @@ object Rejections {
     }
     def noLeader(): EntityNotFound = {
       EntityNotFound(Message("There is no leader"))
+    }
+
+    def queueApp(appId: PathId): EntityNotFound = {
+      EntityNotFound(Message(s"Application $appId not found in tasks queue."))
     }
   }
 }

@@ -181,6 +181,7 @@ private[impl] class OfferMatcherManagerActor private (
     (random.shuffle(reserved) ++ random.shuffle(normal)).to[Queue]
   }
 
+  @SuppressWarnings(Array("ListSize"))
   def receiveProcessOffer: Receive = {
     case ActorOfferMatcher.MatchOffer(offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) if !offersWanted =>
       completeWithNoMatch("No offers wanted", offer, promise, resendThisOffer = matchers.nonEmpty)
@@ -249,6 +250,7 @@ private[impl] class OfferMatcherManagerActor private (
   /**
     * Filter all unprocessed offers that are overdue and decline.
     */
+  @SuppressWarnings(Array("ListSize"))
   def rejectElapsedOffers(): Unit = {
     // unprocessed offers are stacked in order with the newest element first: so we can use span here.
     val (valid, overdue) = unprocessedOffers.span(_.notOverdue(clock))
@@ -267,6 +269,7 @@ private[impl] class OfferMatcherManagerActor private (
   /**
     * If there are unprocessed offers, take the next one and start the process.
     */
+  @SuppressWarnings(Array("ListSize"))
   def startNextUnprocessedOffer(): Unit = {
     unprocessedOffers match {
       case head :: _ if head.isOverdue(clock) =>
