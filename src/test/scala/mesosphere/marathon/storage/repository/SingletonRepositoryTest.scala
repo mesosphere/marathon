@@ -43,26 +43,26 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
 
   def createInMemRepo(): FrameworkIdRepository = {
     val store = new InMemoryPersistenceStore()
-    store.open()
+    store.markOpen()
     FrameworkIdRepository.inMemRepository(store)
   }
 
   def createLoadTimeCachingRepo(): FrameworkIdRepository = {
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
-    cached.open()
+    cached.markOpen()
     cached.preDriverStarts.futureValue
     FrameworkIdRepository.inMemRepository(cached)
   }
 
   def createZKRepo(): FrameworkIdRepository = {
     val store = new ZkPersistenceStore(zkClient(), 10.seconds)
-    store.open()
+    store.markOpen()
     FrameworkIdRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(): FrameworkIdRepository = {
     val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
-    store.open()
+    store.markOpen()
     FrameworkIdRepository.inMemRepository(store)
   }
 

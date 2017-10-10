@@ -26,7 +26,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
   class Fixture(
       persistenceStore: PersistenceStore[_, _, _] = {
         val store = new InMemoryPersistenceStore()
-        store.open()
+        store.markOpen()
         store
       },
       fakeMigrations: List[MigrationAction] = List.empty) {
