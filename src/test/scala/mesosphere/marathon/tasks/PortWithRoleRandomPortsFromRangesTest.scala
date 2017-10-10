@@ -5,14 +5,11 @@ import java.util
 
 import mesosphere.UnitTest
 import mesosphere.marathon.tasks.PortsMatcher.{ PortRange, PortWithRole }
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.util.Random
 
 class PortWithRoleRandomPortsFromRangesTest extends UnitTest {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
 
   private[this] def portRange(role: String, begin: Long, end: Long): PortRange = {
     PortRange(role, begin.toInt, end.toInt)

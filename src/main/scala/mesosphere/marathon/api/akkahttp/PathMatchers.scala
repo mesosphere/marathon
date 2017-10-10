@@ -26,14 +26,14 @@ object PathMatchers {
     catch { case _: IllegalArgumentException => None }
   )
 
-  private val marathonApiKeywords = Set("restart", "tasks", "versions")
+  private val marathonApiKeywords = Set("restart", "tasks", "versions", "delay")
 
   /**
     * Matches everything what's coming before api keywords as PathId
     */
   case object AppPathIdLike extends PathMatcher1[PathId] {
 
-    @tailrec final def iter(reversePieces: List[String], remaining: Path, consumedSlash: Option[Path] = None): Matching[Tuple1[PathId]] = remaining match {
+    @tailrec def iter(reversePieces: List[String], remaining: Path, consumedSlash: Option[Path] = None): Matching[Tuple1[PathId]] = remaining match {
       case slash @ Path.Slash(rest) =>
         iter(reversePieces, rest, Some(slash))
       case Path.Segment(segment, rest) if !marathonApiKeywords(segment) =>

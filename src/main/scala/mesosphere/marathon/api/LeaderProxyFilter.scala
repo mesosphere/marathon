@@ -281,15 +281,12 @@ class JavaUrlConnectionRequestForwarder @Inject() (
             case Failure(ex: ConnectException) =>
               log.error(ERROR_STATUS_CONNECTION_REFUSED, ex)
               response.sendError(BadGateway.intValue, ERROR_STATUS_CONNECTION_REFUSED)
-              return
             case Failure(ex: SocketTimeoutException) =>
               log.error(ERROR_STATUS_GATEWAY_TIMEOUT, ex)
               response.sendError(GatewayTimeout.intValue, ERROR_STATUS_GATEWAY_TIMEOUT)
-              return
             case Failure(ex) =>
               log.error(ERROR_STATUS_BAD_CONNECTION, ex)
               response.sendError(InternalServerError.intValue)
-              return
             case Success(_) => // ignore
           }
           copyConnectionResponse(response)(

@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package api.akkahttp
 
+import java.time.Clock
+
 import akka.http.scaladsl.marshalling.{ Marshaller, ToEntityMarshaller }
 import akka.http.scaladsl.model.MediaTypes.`application/json`
 import akka.http.scaladsl.model.StatusCodes
@@ -13,6 +15,7 @@ import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.plugin.PathId
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.state.AppDefinition
 import play.api.libs.json._
@@ -155,6 +158,7 @@ object EntityMarshallers {
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[raml.LoggerChange]
   implicit val stringMapMarshaller = playJsonMarshaller[Map[String, String]]
   implicit val pluginDefinitionsMarshaller = playJsonMarshaller[PluginDefinitions]
+  implicit val queueMarashaller = internalToRamlJsonMarshaller[(Seq[QueuedInstanceInfoWithStatistics], Boolean, Clock), raml.Queue]
   implicit val deploymentResultMarshaller = playJsonMarshaller[raml.DeploymentResult]
   implicit val enrichedTaskMarshaller = playJsonMarshaller[raml.EnrichedTask]
 
