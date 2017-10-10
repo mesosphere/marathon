@@ -133,7 +133,7 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
 
         case None =>
           import context.dispatcher
-          resultFuture.onFailure { case NonFatal(e) => log.warn("error while checking for overdue tasks", e) }
+          resultFuture.failed.foreach { case NonFatal(e) => log.warn("error while checking for overdue tasks", e) }
       }
   }
 }

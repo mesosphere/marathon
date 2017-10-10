@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean
   * Cancellable implementation which sends the provided actorRef at most one PoisonPill.
   */
 class ActorCancellable(actorRef: ActorRef) extends Cancellable {
-  private var cancelled = new AtomicBoolean(false)
+  private val cancelled = new AtomicBoolean(false)
 
   /**
     * Send a poison pill, once

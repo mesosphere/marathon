@@ -11,14 +11,11 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
 @IntegrationTest
 class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
 
   //clean up state before running the test case
   before(cleanUp())
