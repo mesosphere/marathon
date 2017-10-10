@@ -2,13 +2,13 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.Done
-import akka.http.scaladsl.model.{StatusCodes, Uri}
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import mesosphere.{UnitTest, ValidationTestLike}
-import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
+import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
-import mesosphere.marathon.api.akkahttp.AuthDirectives.{NotAuthenticated, NotAuthorized}
-import mesosphere.marathon.api.akkahttp.LeaderDirectives.{NoLeader, ProxyToLeader}
+import mesosphere.marathon.api.akkahttp.AuthDirectives.{ NotAuthenticated, NotAuthorized }
+import mesosphere.marathon.api.akkahttp.LeaderDirectives.{ NoLeader, ProxyToLeader }
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
@@ -115,12 +115,13 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       f.electionService.isLeader returns (true)
 
       When("we try to abdicate")
-      Delete("/?backup=norealuri") ~> controller.route ~> check {
+      Delete("/?backup=norealuri&restore=alsowrong") ~> controller.route ~> check {
         Then("then the request should be rejected")
         rejection shouldBe a[ValidationFailed]
         inside(rejection) {
           case ValidationFailed(failure) =>
             failure should haveViolations("/" -> "Invalid URI or unsupported scheme: norealuri")
+            failure should haveViolations("/" -> "Invalid URI or unsupported scheme: alsowrong")
         }
       }
     }

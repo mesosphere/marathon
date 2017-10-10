@@ -4,6 +4,7 @@ package api.akkahttp.v2
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord.{ Failure, Success }
+import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.akkahttp.{ Controller, Rejections }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
@@ -20,7 +21,7 @@ case class LeaderController(
     implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val executionContext: ExecutionContext) extends Controller with StrictLogging {
+    val executionContext: ExecutionContext) extends Controller with Validation with StrictLogging {
 
   import mesosphere.marathon.api.akkahttp.Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
@@ -41,8 +42,8 @@ case class LeaderController(
       authenticated.apply { implicit identity =>
         authorized(UpdateResource, AuthorizedResource.SystemConfig).apply {
           parameters('backup.?, 'restore.?) { (backup: Option[String], restore: Option[String]) =>
-            //TODO: validate backup and restore parameters
-            backup.map(UriIO.valid).getOrElse(Success) match {
+            val validate = optional(UriIO.valid)
+            validate(backup) and validate(restore) match {
               case Success =>
                 complete {
                   async {
