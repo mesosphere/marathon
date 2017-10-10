@@ -1,20 +1,15 @@
-sudo: false
+sudo: required
+dist: trusty
+
 language: scala
 jdk:
   - oraclejdk8
 scala:
   - 2.12.3
-cache:
-  directories:
-    - $HOME/.sbt
-    - $HOME/.ivy2
-script:
-  - sbt clean scapegoat doc coverage test
+
 before_script: # the automated download fails sometimes
     - mkdir -p $HOME/.sbt/launchers/0.13.11/
     - test -r $HOME/.sbt/launchers/0.13.11/sbt-launch.jar || curl -L -o $HOME/.sbt/launchers/0.13.11/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.11/sbt-launch.jar
-after_success:
-  - sbt coverageReport coveralls
-notifications:
-  slack:
-    secure: apUObVUa/OhaTEvoYw3oM1ZTTT0LtYolofJYqnWiBOusc6qgMlK2rfk5kod7vDn33cSKwGhFcyVrrFCn2qxuvYUWCpK4Yo6Hj7KIjoqMi9yHLHXAAWIfAFNMlCdaUGjlHLWn757rBkbuQUDVH8HmB6Vc3J3sybTbiFmMDP1cEVo=
+
+script:
+  - travis_wait 40 sbt clean scapegoat coverage
