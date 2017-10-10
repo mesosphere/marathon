@@ -22,13 +22,13 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 class QueueController(
     clock: Clock,
-    launchQueue: LaunchQueue)(
+    launchQueue: LaunchQueue,
+    val electionService: ElectionService)(
     implicit
     val actorSystem: ActorSystem,
     val executionContext: ExecutionContext,
     val authenticator: Authenticator,
-    val authorizer: Authorizer,
-    val electionService: ElectionService
+    val authorizer: Authorizer
 ) extends Controller with StrictLogging {
 
   override val route = {
@@ -56,7 +56,7 @@ class QueueController(
     }
 
     parameters('embed.*) { embed =>
-      val embedLastUnusedOffers = embed.toSeq.contains(QueueController.EmbedLastUnusedOffers)
+      val embedLastUnusedOffers = embed.toSeq.contains(QueueController.EmbedLastUnusedOffersParameter)
       onSuccess(listWithStatisticsAsync) { info =>
         complete((info, embedLastUnusedOffers, clock))
       }
@@ -80,5 +80,5 @@ class QueueController(
 }
 
 object QueueController {
-  val EmbedLastUnusedOffers = "lastUnusedOffers"
+  val EmbedLastUnusedOffersParameter = "lastUnusedOffers"
 }

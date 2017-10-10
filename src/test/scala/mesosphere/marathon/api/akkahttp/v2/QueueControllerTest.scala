@@ -1,21 +1,21 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
-import akka.http.scaladsl.model.{StatusCodes, Uri}
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
-import mesosphere.marathon.api.akkahttp.AuthDirectives.{NotAuthenticated, NotAuthorized}
+import mesosphere.marathon.api.akkahttp.AuthDirectives.{ NotAuthenticated, NotAuthorized }
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
-import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
+import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.launchqueue.LaunchQueue.{QueuedInstanceInfo, QueuedInstanceInfoWithStatistics}
+import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, VersionInfo}
-import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.marathon.state.{ AppDefinition, VersionInfo }
+import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import mesosphere.mesos.NoOfferMatchReason
 import org.scalatest.Inside
 
@@ -467,11 +467,11 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
     authFixture.authenticated = authenticated
     authFixture.authorized = authorized
 
-    implicit val electionService = mock[ElectionService]
+    val electionService = mock[ElectionService]
     electionService.isLeader returns true
 
     implicit val authenticator = authFixture.auth
 
-    val controller = new QueueController(clock, launchQueue)
+    val controller = new QueueController(clock, launchQueue, electionService)
   }
 }
