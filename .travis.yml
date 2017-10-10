@@ -12,4 +12,4 @@ before_script: # the automated download fails sometimes
     - test -r $HOME/.sbt/launchers/0.13.11/sbt-launch.jar || curl -L -o $HOME/.sbt/launchers/0.13.11/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.11/sbt-launch.jar
 
 script:
-  - travis_wait 40 sbt clean scapegoat coverage
+  - sbt test
