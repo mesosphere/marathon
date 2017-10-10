@@ -1,8 +1,22 @@
 package mesosphere.marathon
 package core.election
 
-import akka.actor.{ ActorRef, Cancellable }
-import akka.stream.scaladsl.Source
+import akka.NotUsed
+import akka.actor.{ ActorRef, ActorSystem, Cancellable, PoisonPill }
+import akka.event.EventStream
+import akka.stream.ClosedShape
+import akka.stream.scaladsl.{ Broadcast, GraphDSL, RunnableGraph, Flow, Sink, Source, Keep }
+import akka.stream.OverflowStrategy
+import akka.stream.ActorMaterializer
+import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
+import kamon.metric.instrument.Time
+import mesosphere.marathon.core.async.ExecutionContexts
+import mesosphere.marathon.core.base.CrashStrategy
+import mesosphere.marathon.stream.EnrichedFlow
+import mesosphere.marathon.util.CancellableOnce
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 trait ElectionServiceLeaderInfo {
   /**
@@ -64,10 +78,10 @@ trait ElectionService extends ElectionServiceLeaderInfo {
     * Subscribe to leadership change events.
     *
     * The given actorRef will initially get the current state via the appropriate
-    * [[LocalLeadershipEvent]] message and will be informed of changes after that.
+    * [[LeadershipTransition]] message and will be informed of changes after that.
     *
-    * Upon becoming a leader, [[LocalLeadershipEvent.ElectedAsLeader]] is published. Upon leadership loss,
-    * [[LocalLeadershipEvent.Standby]] is sent.
+    * Upon becoming a leader, [[LeadershipTransition.ElectedAsLeader]] is published. Upon leadership loss,
+    * [[LeadershipTransition.Standby]] is sent.
     */
   def subscribe(self: ActorRef): Unit
 
@@ -77,12 +91,12 @@ trait ElectionService extends ElectionServiceLeaderInfo {
   def unsubscribe(self: ActorRef): Unit
 
   /**
-    * Provides LocalLeadershipEvents via a materializable Akka Stream
+    * Provides LeadershipTransitions via a materializable Akka Stream
     *
-    * The first element will be the current state. Upon becoming a leader, [[LocalLeadershipEvent.ElectedAsLeader]] is
-    * published. Upon leadership loss, [[LocalLeadershipEvent.Standby]] is sent.
+    * The first element will be the current state. Upon becoming a leader, [[LeadershipTransition.ElectedAsLeader]] is
+    * published. Upon leadership loss, [[LeadershipTransition.Standby]] is sent.
     */
-  def localLeadershipEvents: Source[LocalLeadershipEvent, Cancellable]
+  def leadershipTransitionEvents: Source[LeadershipTransition, Cancellable]
 }
 
 /**
@@ -103,10 +117,169 @@ trait ElectionCandidate {
   def startLeadership(): Unit
 }
 
-/** Local leadership events. They are not delivered via the event endpoints. */
-sealed trait LocalLeadershipEvent
+class ElectionServiceImpl(
+    eventStream: EventStream,
+    hostPort: String,
+    leaderEventsSource: Source[LeadershipState, Cancellable],
+    crashStrategy: CrashStrategy,
+    electionEC: ExecutionContext
+)(implicit system: ActorSystem) extends ElectionService with StrictLogging {
 
-object LocalLeadershipEvent {
-  case object ElectedAsLeader extends LocalLeadershipEvent
-  case object Standby extends LocalLeadershipEvent
+  import ElectionService._
+  @volatile private[this] var lastState: LeadershipState = LeadershipState.Standby(None)
+  implicit private lazy val materializer = ActorMaterializer()
+  var leaderSubscription: Option[Cancellable] = None
+
+  def subscribe(subscriber: ActorRef): Unit = {
+    eventStream.subscribe(subscriber, classOf[LeadershipTransition])
+    val currentState = if (isLeader) LeadershipTransition.ElectedAsLeader else LeadershipTransition.Standby
+    subscriber ! currentState
+  }
+
+  def unsubscribe(subscriber: ActorRef): Unit = {
+    eventStream.unsubscribe(subscriber, classOf[LeadershipTransition])
+  }
+
+  override def isLeader: Boolean =
+    lastState == LeadershipState.ElectedAsLeader
+
+  override def localHostPort: String = hostPort
+
+  override def leaderHostPort: Option[String] = lastState match {
+    case LeadershipState.ElectedAsLeader =>
+      Some(hostPort)
+    case LeadershipState.Standby(currentLeader) =>
+      currentLeader
+  }
+
+  /**
+    * Releases leadership
+    *
+    * Has no effect if called before offerLeadership
+    */
+  override def abdicateLeadership(): Unit = {
+    leaderSubscription.foreach(_.cancel())
+  }
+
+  private def initializeStream(leadershipTransitionsFlow: Flow[LeadershipState, LeadershipTransition, NotUsed]) = {
+    val localEventListenerSink = Sink.foreach[LeadershipState] { event =>
+      lastState = event
+    }
+    val localTransitionSink = Sink.foreach[LeadershipTransition] { e =>
+      eventStream.publish(e)
+      if (e == LeadershipTransition.Standby) {
+        logger.error("Lost leadership; crashing")
+        crashStrategy.crash()
+      }
+    }
+
+    val (leaderStream, leaderStreamDone) =
+      RunnableGraph.fromGraph(GraphDSL.create(
+        leaderEventsSource, localEventListenerSink)(
+        (_, _)) { implicit b =>
+          { (leaderEventsSource, localEventListenerSink) =>
+            import GraphDSL.Implicits._
+            // We defensively specify eagerCancel as true; if any of the components in the stream close or fail, then
+            // we'll help to make it obvious by closing the entire graph (and, by consequence, crashing).
+            // Akka will log all stream failures, by default.
+            val stateBroadcast = b.add(Broadcast[LeadershipState](2, eagerCancel = true))
+            val transitionBroadcast = b.add(Broadcast[LeadershipTransition](2, eagerCancel = true))
+            leaderEventsSource ~> stateBroadcast.in
+            stateBroadcast ~> localEventListenerSink
+            stateBroadcast ~> leadershipTransitionsFlow ~> transitionBroadcast.in
+
+            transitionBroadcast ~> metricsSink
+            transitionBroadcast ~> localTransitionSink
+            ClosedShape
+          }
+        }).run
+
+    // When the leadership stream terminates, for any reason, we suicide
+    leaderStreamDone.onComplete {
+      case Failure(ex) =>
+        logger.info("Leadership ended with failure; exiting", ex)
+        crashStrategy.crash()
+      case Success(_) =>
+        logger.info("Leadership ended gracefully; exiting")
+        crashStrategy.crash()
+    }(ExecutionContexts.callerThread)
+
+    leaderStream
+  }
+
+  /**
+    * offerLeadership is called to candidate for leadership. It must be called by candidate only once.
+    *
+    * @param candidate is called back once elected or defeated
+    */
+  def offerLeadership(candidate: ElectionCandidate): Unit = {
+
+    /**
+      * Deduped event stream with current leader removed. Specified this way to maintain compatibility with the rest of
+      * the code base
+      */
+    val leadershipTransitionsFlow =
+      Flow[LeadershipState]
+        .map {
+          case LeadershipState.ElectedAsLeader => LeadershipTransition.ElectedAsLeader
+          case _: LeadershipState.Standby => LeadershipTransition.Standby
+        }
+        .via(EnrichedFlow.dedup(initialFilterElement = LeadershipTransition.Standby)) // if the first elements are standby, emit nothing
+        .mapAsync(1) {
+          case LeadershipTransition.ElectedAsLeader =>
+            Future {
+              candidate.startLeadership()
+              LeadershipTransition.ElectedAsLeader
+            }(electionEC)
+          case LeadershipTransition.Standby =>
+            Future {
+              candidate.stopLeadership()
+              LeadershipTransition.Standby
+            }(electionEC)
+        }
+
+    leaderSubscription = Some(initializeStream(leadershipTransitionsFlow))
+  }
+
+  val leadershipTransitionEvents: Source[LeadershipTransition, Cancellable] = {
+    Source.actorRef[LeadershipTransition](16, OverflowStrategy.dropHead) // drop older elements
+      .watchTermination()(Keep.both)
+      .mapMaterializedValue {
+        case (ref, terminated) =>
+          subscribe(ref)
+          // If the stream terminates, for any reason, then unsubscribe from the event stream
+          terminated.onComplete(_ => unsubscribe(ref))(ExecutionContexts.callerThread)
+          // If the stream cancellable gets called, kill the actor created by Source.actorRef; this will gracefully
+          // terminate the stream
+          new CancellableOnce(() => ref ! PoisonPill)
+      }
+  }
+}
+
+object ElectionService extends StrictLogging {
+  private val leaderDurationMetric = "service.mesosphere.marathon.leaderDuration"
+
+  val metricsSink = Sink.foreach[LeadershipTransition] {
+    case LeadershipTransition.ElectedAsLeader =>
+      val startedAt = System.currentTimeMillis()
+      Kamon.metrics.gauge(leaderDurationMetric, Time.Milliseconds)(System.currentTimeMillis() - startedAt)
+    case LeadershipTransition.Standby =>
+      Kamon.metrics.removeGauge(leaderDurationMetric)
+  }
+}
+
+/**
+  * Events produced by Curator election stream; describes transitions from one leader to the next while not leader
+  */
+private[election] sealed trait LeadershipState
+private[election] object LeadershipState {
+  case object ElectedAsLeader extends LeadershipState
+  case class Standby(currentLeader: Option[String]) extends LeadershipState
+}
+
+/** Local leadership events. They are not delivered via the event endpoints. */
+sealed trait LeadershipTransition
+object LeadershipTransition {
+  case object ElectedAsLeader extends LeadershipTransition
+  case object Standby extends LeadershipTransition
 }

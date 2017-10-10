@@ -7,6 +7,15 @@ import akka.stream.scaladsl.Source
 import mesosphere.marathon.util.CancellableOnce
 
 object EnrichedSource {
+
+  /**
+    * Stream that produces no elements, but is cancellable
+    */
+  val emptyCancellable: Source[Nothing, Cancellable] =
+    Source.maybe[Nothing].mapMaterializedValue { m =>
+      new CancellableOnce(() => m.success(None))
+    }
+
   /**
     * Returns a Source which subscribes to messages of the given type
     *

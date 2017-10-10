@@ -5,7 +5,7 @@ import akka.actor.{ Props, Terminated }
 import akka.event.EventStream
 import akka.testkit._
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import org.mockito.Mockito.{ when => call, _ }
 
@@ -28,7 +28,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A handler that wants to connect and we have an active streamActor")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LocalLeadershipEvent.ElectedAsLeader
+      streamActor ! LeadershipTransition.ElectedAsLeader
 
       When("A connection open message is sent to the stream actor")
       streamActor ! HttpEventStreamConnectionOpen(handle)
@@ -42,13 +42,13 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A handler that wants to connect and we have an active streamActor with one connection")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LocalLeadershipEvent.ElectedAsLeader
+      streamActor ! LeadershipTransition.ElectedAsLeader
       streamActor ! HttpEventStreamConnectionOpen(handle)
       val handleActor = streamActor.underlyingActor.streamHandleActors.values.head
       watch(handleActor)
 
       When("The stream actor switches to standby mode")
-      streamActor ! LocalLeadershipEvent.Standby
+      streamActor ! LeadershipTransition.Standby
 
       Then("All handler actors are stopped and the connection is closed")
       val terminated = expectMsgClass(1.second, classOf[Terminated])
@@ -76,7 +76,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A registered handler")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LocalLeadershipEvent.ElectedAsLeader
+      streamActor ! LeadershipTransition.ElectedAsLeader
       streamActor ! HttpEventStreamConnectionOpen(handle)
       streamActor.underlyingActor.streamHandleActors should have size 1
 

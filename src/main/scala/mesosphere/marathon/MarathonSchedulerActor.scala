@@ -8,8 +8,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, ScalingProposition }
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
-import mesosphere.marathon.core.event.{ DeploymentSuccess }
+import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
+import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
@@ -74,7 +74,7 @@ class MarathonSchedulerActor private (
   def receive: Receive = suspended
 
   def suspended: Receive = LoggingReceive.withLabel("suspended"){
-    case LocalLeadershipEvent.ElectedAsLeader =>
+    case LeadershipTransition.ElectedAsLeader =>
       logger.info("Starting scheduler actor")
 
       deploymentRepository.all().runWith(Sink.seq).onComplete {
@@ -95,7 +95,7 @@ class MarathonSchedulerActor private (
       context.become(started)
       self ! ReconcileHealthChecks
 
-    case LocalLeadershipEvent.Standby =>
+    case LeadershipTransition.Standby =>
     // ignored
     // FIXME: When we get this while recovering deployments, we become active anyway
     // and drop this message.
@@ -104,13 +104,13 @@ class MarathonSchedulerActor private (
   }
 
   def started: Receive = LoggingReceive.withLabel("started") {
-    case LocalLeadershipEvent.Standby =>
+    case LeadershipTransition.Standby =>
       logger.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
       lockedRunSpecs.clear()
       context.become(suspended)
 
-    case LocalLeadershipEvent.ElectedAsLeader => // ignore
+    case LeadershipTransition.ElectedAsLeader => // ignore
 
     case ReconcileTasks =>
       import akka.pattern.pipe

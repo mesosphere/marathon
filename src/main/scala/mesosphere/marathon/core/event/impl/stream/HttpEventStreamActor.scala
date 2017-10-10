@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import akka.actor._
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.{ ApiMetric, Metrics, SettableGauge }
@@ -90,12 +90,12 @@ class HttpEventStreamActor(
 
   /** Switch behavior according to leadership changes. */
   private[this] def handleLeadership: Receive = {
-    case LocalLeadershipEvent.Standby =>
+    case LeadershipTransition.Standby =>
       log.info("Now standing by. Closing existing handles and rejecting new.")
       context.become(standby)
       streamHandleActors.keys.foreach(removeHandler)
 
-    case LocalLeadershipEvent.ElectedAsLeader =>
+    case LeadershipTransition.ElectedAsLeader =>
       log.info("Became active. Accepting event streaming requests.")
       context.become(active)
   }

@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core
 
 import java.time.Clock
+import java.util.concurrent.{ ExecutorService, Executors }
 import javax.inject.Named
 
 import akka.actor.{ ActorRef, Props }
@@ -208,6 +209,9 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
   @Provides
   @Singleton
   def provideExecutionContext: ExecutionContext = ExecutionContexts.global
+
+  @Provides @Singleton @Named(ModuleNames.ELECTION_EXECUTOR)
+  def electionExecutor(): ExecutorService = Executors.newSingleThreadExecutor()
 
   @Provides @Singleton @Named(ModuleNames.HISTORY_ACTOR_PROPS)
   def historyActor(coreModule: CoreModule): Props = coreModule.historyModule.historyActorProps

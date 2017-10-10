@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core
 
 import java.time.Clock
+import java.util.concurrent.ExecutorService
 import javax.inject.Named
 
 import akka.actor.{ ActorRef, ActorSystem }
@@ -56,7 +57,8 @@ class CoreModuleImpl @Inject() (
   instanceUpdateSteps: Seq[InstanceChangeHandler],
   taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
   mesosLeaderInfo: MesosLeaderInfo,
-  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
+  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef,
+  @Named(ModuleNames.ELECTION_EXECUTOR) electionExecutor: ExecutorService
 )
     extends CoreModule {
 
@@ -73,8 +75,8 @@ class CoreModuleImpl @Inject() (
     actorSystem,
     eventStream,
     hostPort,
-    lifecycleState,
-    crashStrategy
+    crashStrategy,
+    electionExecutor
   )
 
   // TASKS

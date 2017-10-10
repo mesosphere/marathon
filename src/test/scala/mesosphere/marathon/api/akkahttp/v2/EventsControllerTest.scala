@@ -10,7 +10,7 @@ import akka.stream.scaladsl.{ BroadcastHub, Keep, Source }
 import akka.stream.OverflowStrategy
 import de.heikoseeberger.akkasse.EventStreamParser
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.election.{ ElectionServiceLeaderInfo, LocalLeadershipEvent }
+import mesosphere.marathon.core.election.{ ElectionServiceLeaderInfo, LeadershipTransition }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
@@ -39,7 +39,7 @@ class EventsControllerTest extends AkkaUnitTest with Inside {
         localHostPort: String = "localhost:80") extends ElectionServiceLeaderInfo {
       def leaderHostPort: Option[String] = if (isLeader) Some(localHostPort) else None
     }
-    val (leaderStateEventsInput, leaderStateEvents) = Source.queue[LocalLeadershipEvent](16, OverflowStrategy.fail)
+    val (leaderStateEventsInput, leaderStateEvents) = Source.queue[LeadershipTransition](16, OverflowStrategy.fail)
       .toMat(BroadcastHub.sink)(Keep.both)
       .run
 
@@ -128,7 +128,7 @@ class EventsControllerTest extends AkkaUnitTest with Inside {
       case Some(Some(tpe)) => tpe shouldBe "event_stream_attached"
     }
 
-    f.leaderStateEventsInput.offer(LocalLeadershipEvent.Standby)
+    f.leaderStateEventsInput.offer(LeadershipTransition.Standby)
     events.pull().futureValue shouldBe None
   }
 }
