@@ -220,6 +220,12 @@ def restart_master_node():
     shakedown.run_command_on_master("sudo /sbin/shutdown -r now")
 
 
+def cpus_on_agent(hostname):
+    """Detects number of cores on an agent"""
+    status, output = shakedown.run_command_on_agent(hostname, "cat /proc/cpuinfo | grep processor | wc -l", noisy=False)
+    return int(output)
+
+
 def systemctl_master(command='restart'):
     shakedown.run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
 

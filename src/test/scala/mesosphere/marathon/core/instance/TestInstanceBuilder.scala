@@ -94,10 +94,18 @@ case class TestInstanceBuilder(
 
   def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
 
-  def withAgentInfo(agentId: Option[String] = None, hostName: Option[String] = None, attributes: Option[Seq[mesos.Protos.Attribute]] = None): TestInstanceBuilder =
+  def withAgentInfo(
+    agentId: Option[String] = None,
+    hostName: Option[String] = None,
+    attributes: Option[Seq[mesos.Protos.Attribute]] = None,
+    region: Option[String] = None,
+    zone: Option[String] = None
+  ): TestInstanceBuilder =
     copy(instance = instance.copy(agentInfo = instance.agentInfo.copy(
       agentId = agentId.orElse(instance.agentInfo.agentId),
       host = hostName.getOrElse(instance.agentInfo.host),
+      region = region.orElse(instance.agentInfo.region),
+      zone = zone.orElse(instance.agentInfo.zone),
       attributes = attributes.getOrElse(instance.agentInfo.attributes)
     )))
 
@@ -132,7 +140,9 @@ object TestInstanceBuilder {
     UnreachableStrategy.default()
   )
 
-  private val defaultAgentInfo = Instance.AgentInfo(host = AgentTestDefaults.defaultHostName, agentId = Some(AgentTestDefaults.defaultAgentId), attributes = Seq.empty)
+  private val defaultAgentInfo = Instance.AgentInfo(
+    host = AgentTestDefaults.defaultHostName,
+    agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 
   def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = newBuilderWithInstanceId(Instance.Id.forRunSpec(runSpecId), now, version)
 

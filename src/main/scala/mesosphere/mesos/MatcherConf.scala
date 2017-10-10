@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import org.rogach.scallop.{ ScallopConf, ScallopOption }
+import org.rogach.scallop.ScallopOption
 
 import scala.concurrent.duration._
 

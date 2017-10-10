@@ -120,7 +120,7 @@ class MarathonSchedulerActor private (
           logger.info("initiate task reconciliation")
           val newFuture = schedulerActions.reconcileTasks(driver)
           activeReconciliation = Some(newFuture)
-          newFuture.onFailure {
+          newFuture.failed.foreach {
             case NonFatal(e) => logger.error("error while reconciling tasks", e)
           }
           newFuture

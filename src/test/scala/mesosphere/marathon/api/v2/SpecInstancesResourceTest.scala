@@ -2,9 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
-import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -14,7 +12,7 @@ import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, _ }
-import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.mockito.Matchers
 import org.mockito.Mockito._
 import play.api.libs.json.Json
@@ -164,10 +162,12 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
     }
 
     "get tasks" in new Fixture {
+      val clock = new SettableClock()
+
       val appId = PathId("/my/app")
 
-      val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+      val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
+      val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
 
       config.zkTimeoutDuration returns 5.seconds
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance1, instance2))))
@@ -177,19 +177,42 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       val response = appsTaskResource.indexJson("/my/app", auth.request)
       response.getStatus shouldEqual 200
 
-      def toEnrichedTask(instance: Instance): EnrichedTask = {
-        EnrichedTask(
-          appId = appId,
-          task = instance.appTask,
-          agentInfo = instance.agentInfo,
-          healthCheckResults = Seq(),
-          servicePorts = Seq()
-        )
-      }
+      val expected =
+        s"""
+          |{ "tasks": [
+          |  {
+          |    "appId" : "/my/app",
+          |    "healthCheckResults" : [ ],
+          |    "host" : "host.some",
+          |    "id" : "${instance1.appTask.taskId.idString}",
+          |    "ipAddresses" : [ ],
+          |    "ports" : [ ],
+          |    "servicePorts" : [ ],
+          |    "slaveId" : "agent-1",
+          |    "state" : "TASK_STAGING",
+          |    "stagedAt" : "2015-04-09T12:30:00.000Z",
+          |    "version" : "2015-04-09T12:30:00.000Z",
+          |    "localVolumes" : [ ]
+          |  }, {
+          |    "appId" : "/my/app",
+          |    "healthCheckResults" : [ ],
+          |    "host" : "host.some",
+          |    "id" : "${instance2.appTask.taskId.idString}",
+          |    "ipAddresses" : [ ],
+          |    "ports" : [ ],
+          |    "servicePorts" : [ ],
+          |    "slaveId" : "agent-1",
+          |    "state" : "TASK_STAGING",
+          |    "stagedAt" : "2015-04-09T12:30:00.000Z",
+          |    "version" : "2015-04-09T12:30:00.000Z",
+          |    "localVolumes" : [ ]
+          |  } ]
+          |}
+        """.stripMargin
 
       JsonTestHelper
         .assertThatJsonString(response.getEntity.asInstanceOf[String])
-        .correspondsToJsonOf(Json.obj("tasks" -> Seq(instance1, instance2).map(toEnrichedTask)))
+        .correspondsToJsonString(expected)
     }
 
     "access without authentication is denied" in new Fixture {

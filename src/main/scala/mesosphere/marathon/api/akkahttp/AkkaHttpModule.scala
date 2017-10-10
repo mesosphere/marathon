@@ -5,6 +5,7 @@ import java.time.Clock
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
+import akka.stream.Materializer
 import com.google.inject.AbstractModule
 import com.google.inject.{ Provides, Scopes, Singleton }
 import com.typesafe.config.Config
@@ -39,19 +40,25 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     pluginManager: PluginManager,
     marathonSchedulerService: MarathonSchedulerService,
     storageModule: StorageModule,
-    mesosLeaderInfo: MesosLeaderInfo,
-    appTasksRes: mesosphere.marathon.api.v2.AppTasksResource)(implicit
+    mesosLeaderInfo: MesosLeaderInfo)(implicit
     actorSystem: ActorSystem,
+    materializer: Materializer,
     authenticator: Authenticator,
     authorizer: Authorizer,
-    electionService: ElectionService): AkkaHttpMarathonService = {
+    electionService: ElectionService,
+    healthCheckManager: HealthCheckManager,
+    instanceTracker: InstanceTracker,
+    taskKiller: TaskKiller): AkkaHttpMarathonService = {
 
     import actorSystem.dispatcher
     val appsController = new AppsController(
       clock = clock,
       eventBus = eventBus,
-      service = marathonSchedulerService,
+      marathonSchedulerService = marathonSchedulerService,
       appInfoService = appInfoService,
+      healthCheckManager = healthCheckManager,
+      instanceTracker = instanceTracker,
+      taskKiller = taskKiller,
       config = conf,
       groupManager = groupManager,
       pluginManager = pluginManager)

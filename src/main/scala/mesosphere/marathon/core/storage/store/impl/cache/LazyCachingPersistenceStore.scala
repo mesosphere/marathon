@@ -162,7 +162,6 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {
     val category = ir.category
-    val storageId = ir.toStorageId(id, None)
     lock(category.toString) {
       async {
         await(store.store(id, v, version))

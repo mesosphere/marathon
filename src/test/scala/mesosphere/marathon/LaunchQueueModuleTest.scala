@@ -167,7 +167,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       When("we ask for matching an offer")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns noMatchResult
-      val now = clock.now()
       val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       val matchedTasks = matchFuture.futureValue
 
@@ -194,7 +193,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       When("we ask for matching an offer")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
-      val now = clock.now()
       val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       val matchedTasks = matchFuture.futureValue
 
@@ -222,7 +220,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       And("a task gets launched but not confirmed")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
-      val now = clock.now()
       val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       matchFuture.futureValue
 
