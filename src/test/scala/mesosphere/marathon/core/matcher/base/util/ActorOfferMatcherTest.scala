@@ -20,28 +20,22 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
   "The ActorOfferMatcher" when {
     "receives remote region offer" should {
       "say is not interested when from non-home region" in new Fixture {
-        val homeRegionProvider = mock[HomeRegionProvider]
-        homeRegionProvider.getHomeRegion returns Some("home")
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => homeRegionProvider)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some("home"))
 
         offerMatcher.isInterestedIn(offerWithFaultRegion("remote")) should be (false)
       }
 
       "say is interested when from home region" in new Fixture {
-        val homeRegionProvider = mock[HomeRegionProvider]
-        homeRegionProvider.getHomeRegion returns Some("home")
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => homeRegionProvider)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some("home"))
 
         offerMatcher.isInterestedIn(offerWithFaultRegion("home")) should be (true)
       }
 
       "say is interested when fault region not set" in new Fixture {
-        val homeRegionProvider = mock[HomeRegionProvider]
-        homeRegionProvider.getHomeRegion returns Some("home")
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => homeRegionProvider)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some("home"))
 
         offerMatcher.isInterestedIn(offerWithoutFaultRegion()) should be (true)
       }
@@ -63,7 +57,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         })
         val offer = MarathonTestHelper.makeBasicOffer().build()
 
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => mock[HomeRegionProvider])
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => None)
         val offerMatch: MatchedInstanceOps = offerMatcher.matchOffer(offer).futureValue
 
         offerMatch.offerId should not be (offer.getId)

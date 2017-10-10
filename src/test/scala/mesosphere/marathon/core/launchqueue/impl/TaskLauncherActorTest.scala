@@ -6,7 +6,6 @@ import akka.pattern.ask
 import akka.testkit.TestProbe
 import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.HomeRegionProvider
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
@@ -74,14 +73,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
       offerMatchStatisticsActor: TestProbe = TestProbe(),
-      homeRegionProvider: () => HomeRegionProvider = () => mock[HomeRegionProvider]) {
+      homeRegion: () => Option[String] = () => None) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
         maybeOfferReviver = Some(offerReviver),
-        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, homeRegionProvider) _
+        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, homeRegion) _
       system.actorOf(props(appToLaunch, instances))
     }
 
@@ -304,7 +303,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           maybeOfferReviver = None,
           instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
           f.app, instancesToLaunch = 1,
-          homeRegionProvider
+          homeRegion
         ) {
           override protected def scheduleTaskOperationTimeout(
             context: ActorContext, message: InstanceOpRejected): Cancellable = {

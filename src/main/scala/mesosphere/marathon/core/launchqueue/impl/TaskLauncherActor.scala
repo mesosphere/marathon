@@ -37,7 +37,7 @@ private[launchqueue] object TaskLauncherActor {
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatisticsActor: ActorRef,
-    homeRegionProvider: () => HomeRegionProvider)(
+    homeRegion: () => Option[String])(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -46,7 +46,7 @@ private[launchqueue] object TaskLauncherActor {
       clock, taskOpFactory,
       maybeOfferReviver,
       instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
-      runSpec, initialCount, homeRegionProvider))
+      runSpec, initialCount, homeRegion))
   }
 
   sealed trait Requests
@@ -89,7 +89,7 @@ private class TaskLauncherActor(
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int,
-    homeRegionProvider: () => HomeRegionProvider) extends Actor with StrictLogging with Stash {
+    homeRegion: () => Option[String]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]
@@ -425,7 +425,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id), homeRegionProvider)
+      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id), homeRegion)
     }
     private[this] var registeredAsMatcher = false
 
