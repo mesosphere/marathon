@@ -44,6 +44,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
 import mesosphere.marathon.raml.DeploymentResult
+import mesosphere.marathon.raml.EnrichedTaskConversion._
+import mesosphere.marathon.raml.AnyToRaml
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -322,7 +324,7 @@ class AppsController(
         }
 
         onSuccess(tasksF) { tasks =>
-          complete(Json.obj("tasks" -> tasks))
+          complete(Json.obj("tasks" -> tasks.toRaml))
         }
       }
 
