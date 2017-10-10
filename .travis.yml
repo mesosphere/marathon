@@ -3,14 +3,12 @@ sudo: false
 # dist: trusty
 
 language: scala
+
 jdk:
   - oraclejdk8
+  
 scala:
   - 2.12.3
 
-before_script: # the automated download fails sometimes
-    - mkdir -p $HOME/.sbt/launchers/0.13.13/
-    - test -r $HOME/.sbt/launchers/0.13.13/sbt-launch.jar || curl -L -o $HOME/.sbt/launchers/0.13.13/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.13/sbt-launch.jar
-
 script:
-  - sbt test
+  - travis_wait 30 sbt test
