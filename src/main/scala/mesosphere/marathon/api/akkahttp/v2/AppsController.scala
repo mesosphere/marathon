@@ -25,8 +25,19 @@ import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.core.task.Task.{ Id => TaskId }
+import PathMatchers._
+import mesosphere.marathon.raml.DeploymentResult
+import mesosphere.marathon.raml.EnrichedTaskConversion._
+import mesosphere.marathon.raml.AnyToRaml
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
+import scala.util.control.NonFatal
 
 class AppsController(
     val clock: Clock,
