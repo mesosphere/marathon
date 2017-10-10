@@ -1,5 +1,6 @@
-sudo: required
-dist: trusty
+sudo: false
+# sudo: required
+# dist: trusty
 
 language: scala
 jdk:
@@ -8,8 +9,8 @@ scala:
   - 2.12.3
 
 before_script: # the automated download fails sometimes
-    - mkdir -p $HOME/.sbt/launchers/0.13.11/
-    - test -r $HOME/.sbt/launchers/0.13.11/sbt-launch.jar || curl -L -o $HOME/.sbt/launchers/0.13.11/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.11/sbt-launch.jar
+    - mkdir -p $HOME/.sbt/launchers/0.13.13/
+    - test -r $HOME/.sbt/launchers/0.13.13/sbt-launch.jar || curl -L -o $HOME/.sbt/launchers/0.13.13/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.13/sbt-launch.jar
 
 script:
   - sbt test
