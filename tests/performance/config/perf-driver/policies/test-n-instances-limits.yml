@@ -1,0 +1,123 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : 1 apps / N instances scale test    #
+# ----------------------------------------------------------- #
+# This fragment defines two parameters that we are going to   #
+# explore: the number of `instances`, fixing `apps` to 1.     #
+#                                                             #
+# It also defines how these parameters are going to be a      #
+# applied to the marathon instance.                           #
+#                                                             #
+# Finally, it also includes an inter-test clean-up phase that #
+# helps reduce the number of resources consumed by the test.  #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Input parameters of the test
+  parameters:
+
+    - name: instances
+      uuid: 4a003e85e8bb4a95a340eec1727cfd0d
+      units: count
+      desc: The number of instances per application deployment
+
+  # It makes no sense to run this test more than once
+  repeat: 1
+
+# Definitions
+# ===========================
+define:
+
+  # Instruct whoever is trying to normalize the indicators to do so
+  # against the number of instances
+  normalize_to: instances
+
+# Test Metadata
+# ===========================
+meta:
+  test: n-instances-limits
+
+# Test policy configuration
+# ===========================
+policies:
+
+  # Use multi-step exploration policy even if we are using only 1 step
+  - class: policy.MultiStepPolicy
+    steps:
+
+      # Scale the instances
+      - name: Scale Instances
+        values:
+          - parameter: instances
+            min: 100
+            step: 100
+
+            # This should be the maximum reachable number. For instance the
+            # maximum number of instances that can start on the over-commited
+            # cluster.
+            max: 1000000000
+
+        tasks:
+          pre_value: intertest
+
+        events:
+
+          # Wait until marathon is started before continuing with the tests
+          start: MarathonStartedEvent:single
+
+          # We advance to next values every time we receive a deployment completion
+          advance: MarathonDeploymentSuccessEvent MarathonDeploymentFailedEvent
+
+          # We finish the tests 5 minutes past the last event or when marathon
+          # shuts the SSE socket in our faces.
+          end: MarathonDeploymentSuccessEvent:after(5m) MarathonSSEDisconnectedEvent
+
+
+# Channel configuration
+# ===========================
+channels:
+
+  # Every time the `instances` parameter has changed, we are updating the
+  # marathon application to the given number of instances
+  - class: channel.MarathonUpdateChannel
+    url: "{{marathon_url}}"
+    update:
+      - action: patch_app
+        filter: "/limit-instances/scaling-app"
+
+        # We are patching the following properties
+        patch: |
+          {
+            "instances": {{instances}}
+          }
+
+# One-shot tasks
+# ===========================
+tasks:
+
+  # When we are starting the tests, create an empty app
+  - class: tasks.http.Request
+    at: setup
+
+    # Deploy an app in suspended state
+    url: "{{marathon_url}}/v2/apps/limit-instances/scaling-app"
+    verb: put
+    body: |
+      {
+        "cmd": "sleep infinity",
+        "cpus": 0.005,
+        "mem": 32,
+        "disk": 0,
+        "instances": 0,
+        "id": "/limit-instances/scaling-app",
+        "backoffFactor": 1.0,
+        "backoffSeconds": 0
+      }
+
+  # Remove all residue at teardown
+  - class: tasks.marathon.RemoveGroup
+    url: "{{marathon_url}}"
+    group: /limit-instances
+    at: teardown
