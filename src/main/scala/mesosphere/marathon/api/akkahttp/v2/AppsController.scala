@@ -197,7 +197,7 @@ class AppsController(
     case Failure(_: AppNotFoundException) =>
       reject(
         maybeAppId.map { appId =>
-          Rejections.EntityNotFound.app(appId)
+          Rejections.EntityNotFound.noApp(appId)
         } getOrElse Rejections.EntityNotFound()
       )
     case Failure(RejectionError(rejection)) =>
