@@ -92,6 +92,13 @@ trait GroupManager {
   def app(id: PathId): Option[AppDefinition]
 
   /**
+    * Get a specific app definition by its id.
+    * @param ids the ids of the apps.
+    * @return the app if it is found, otherwise false
+    */
+  def apps(ids: Set[PathId]): Map[PathId, Option[AppDefinition]]
+
+  /**
     * Get a specific pod definition by its id.
     * @param id the id of the pod.
     * @return the pod if it is found, otherwise false

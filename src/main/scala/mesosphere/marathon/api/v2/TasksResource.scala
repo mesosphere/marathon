@@ -60,9 +60,7 @@ class TasksResource @Inject() (
       }
       val appIds: Set[PathId] = instancesBySpec.allSpecIdsWithInstances
 
-      //TODO: Move to GroupManager.
-      val appIdsToApps: Map[PathId, Option[AppDefinition]] =
-        appIds.map(appId => appId -> groupManager.app(appId))(collection.breakOut)
+      val appIdsToApps = groupManager.apps(appIds)
 
       val appToPorts: Map[PathId, Seq[Int]] = appIdsToApps.map {
         case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
