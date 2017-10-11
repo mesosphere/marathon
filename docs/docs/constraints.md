@@ -16,7 +16,7 @@ All Marathon operators are supported when the field name is `hostname`.
 
 ### Attribute as field name
 
-If the field name is not the agent node hostname, it will be treated as a Mesos agent node attribute. A Mesos agent node attribute allows you to tag an agent node. See `mesos-slave --help` to learn how to set the attributes.
+If hostname is not specified as the field name, then the field name is interpreted as a Mesos agent node attribute. A Mesos agent node attribute allows you to tag an agent node. See `mesos-slave --help` to learn how to set the attributes.
 
 If the specified attribute is not defined on the agent node, most operators will refuse to run tasks on it. In fact, only the `UNLIKE` operator will (and always will) accept this offer for now, while other operators will always refuse it.
 
@@ -39,7 +39,7 @@ Naming the field name `hostname` tells Marathon that the launched tasks of the a
 * When a value for `hostname` is specified, tasks are launched on the agent whose hostname matches the value.
 * When the `hostname` value is empty or unspecified, the first instance is launched on **any** agent node and the remaining tasks are launched alongside it on the same agent.
 
-When the field name is an attribute, Mararthon handles tasks differently:
+When the field name is an attribute, Marathon handles tasks differently:
 * When a value is specified, tasks are launched on any agent with an attribute named according the field **and** with a value matching that of the constraint.
 * When the value is empty or unspecified, the first instance is launched on any agent with an attribute named according to the field; the value of the attribute on that agent is used for future constraint matches.
 
@@ -66,7 +66,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-This example uses the specifies a `hostname`, which means an app must run on a specific node.
+This example uses the specified `hostname`, which means an app must run on a specific node.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
