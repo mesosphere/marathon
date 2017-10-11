@@ -69,11 +69,11 @@ object InstanceTrackerActor {
   */
 private[impl] class InstanceTrackerActor(
     metrics: InstanceTrackerActor.ActorMetrics,
-    taskLoader: InstancesLoader,
+    instanceLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    taskUpdaterProps: ActorRef => Props) extends Actor with Stash with StrictLogging {
+    instanceUpdaterProps: ActorRef => Props) extends Actor with Stash with StrictLogging {
 
-  private[this] val updaterRef = context.actorOf(taskUpdaterProps(self), "updater")
+  private[this] val updaterRef = context.actorOf(instanceUpdaterProps(self), "updater")
 
   override val supervisorStrategy = OneForOneStrategy() { case _: Exception => Escalate }
 
@@ -85,7 +85,7 @@ private[impl] class InstanceTrackerActor(
 
     import akka.pattern.pipe
     import context.dispatcher
-    taskLoader.load().pipeTo(self)
+    instanceLoader.load().pipeTo(self)
   }
 
   override def postStop(): Unit = {
@@ -116,7 +116,7 @@ private[impl] class InstanceTrackerActor(
   private[this] def withTasks(instancesBySpec: InstanceTracker.InstancesBySpec, counts: TaskCounts): Receive = {
 
     def becomeWithUpdatedApp(appId: PathId)(instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
-      val updatedAppTasks = newInstance match {
+      val updatedAppInstances = newInstance match {
         case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
         case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))
       }
@@ -129,7 +129,7 @@ private[impl] class InstanceTrackerActor(
         counts + newTaskCount - oldTaskCount
       }
 
-      context.become(withTasks(updatedAppTasks, updatedCounts))
+      context.become(withTasks(updatedAppInstances, updatedCounts))
     }
 
     // this is run on any state change
