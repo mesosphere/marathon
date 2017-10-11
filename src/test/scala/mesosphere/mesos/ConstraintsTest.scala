@@ -658,7 +658,7 @@ class ConstraintsTest extends UnitTest {
       makeOffer("host3") shouldNot meetConstraint(hostnameField, IN, "host1,host2")
     }
 
-    "trims whitespace after the commas (but not before)" in {
+    "trims whitespace before and after the commas" in {
       makeOffer("host1") should meetConstraint(hostnameField, IN, "host1, host2")
       makeOffer("host1") should meetConstraint(hostnameField, IN, "host1 , host2")
       makeOffer("host1") should meetConstraint(hostnameField, IN, "host1 ,host2")
