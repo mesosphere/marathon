@@ -150,13 +150,13 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
   def createInMemRepo(): AppRepository = {
     val store = new InMemoryPersistenceStore()
-    store.open()
+    store.markOpen()
     AppRepository.inMemRepository(store)
   }
 
   def createLoadTimeCachingRepo(): AppRepository = {
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
-    cached.open()
+    cached.markOpen()
     cached.preDriverStarts.futureValue
     AppRepository.inMemRepository(cached)
   }
@@ -165,19 +165,19 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
     val store = new ZkPersistenceStore(rootClient, Duration.Inf)
-    store.open()
+    store.markOpen()
     AppRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(): AppRepository = {
     val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
-    store.open()
+    store.markOpen()
     AppRepository.inMemRepository(store)
   }
 
   def createLazyVersionCachingRepo(): AppRepository = {
     val store = LazyVersionCachingPersistentStore(new InMemoryPersistenceStore())
-    store.open()
+    store.markOpen()
     AppRepository.inMemRepository(store)
   }
 

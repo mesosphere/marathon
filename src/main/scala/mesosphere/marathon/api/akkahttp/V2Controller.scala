@@ -12,6 +12,7 @@ class V2Controller(
     eventsController: EventsController,
     pluginsController: PluginsController,
     infoController: InfoController,
+    leaderController: LeaderController,
     queueController: QueueController
 ) extends Controller {
   import Directives._
@@ -27,6 +28,9 @@ class V2Controller(
       } ~
       pathPrefix("info") {
         infoController.route
+      } ~
+      pathPrefix("leader") {
+        leaderController.route
       } ~
       pathPrefix("queue") {
         queueController.route

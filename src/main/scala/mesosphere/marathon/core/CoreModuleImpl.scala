@@ -4,7 +4,7 @@ package core
 import java.time.Clock
 import javax.inject.Named
 
-import akka.actor.ActorSystem
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.async.ExecutionContexts
@@ -16,6 +16,7 @@ import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.health.HealthModule
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.LauncherModule
@@ -33,6 +34,7 @@ import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.StorageModule
+import mesosphere.util.state.MesosLeaderInfo
 
 import scala.util.Random
 
@@ -53,7 +55,8 @@ class CoreModuleImpl @Inject() (
   scheduler: Provider[DeploymentService],
   instanceUpdateSteps: Seq[InstanceChangeHandler],
   taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
-  homeRegionProvider: Provider[HomeRegionProvider]
+  mesosLeaderInfo: MesosLeaderInfo,
+  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
 )
     extends CoreModule {
 
@@ -101,7 +104,7 @@ class CoreModuleImpl @Inject() (
     // infrastructure
     clock, random, marathonConf, actorSystem.scheduler,
     leadershipModule,
-    homeRegionProvider
+    () => marathonScheduler.getHomeRegion
   )
 
   private[this] lazy val offerMatcherReconcilerModule =
@@ -147,7 +150,7 @@ class CoreModuleImpl @Inject() (
     // external guice dependencies
     taskTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
-    homeRegionProvider
+    () => marathonScheduler.getHomeRegion
   )
 
   // PLUGINS
@@ -261,4 +264,8 @@ class CoreModuleImpl @Inject() (
     eventStream,
     taskTerminationModule.taskKillService)(ExecutionContexts.global)
 
+  override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository, mesosLeaderInfo, marathonConf)
+
+  // MesosHeartbeatMonitor decorates MarathonScheduler
+  override def mesosHeartbeatMonitor = new MesosHeartbeatMonitor(marathonScheduler, heartbeatActor)
 }

@@ -19,13 +19,13 @@ import org.slf4j.LoggerFactory
 import scala.concurrent._
 import scala.util.control.NonFatal
 
-class MarathonScheduler @Inject() (
+class MarathonScheduler(
     eventBus: EventStream,
     offerProcessor: OfferProcessor,
     taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
-    config: MarathonConf) extends Scheduler with HomeRegionProvider {
+    config: MarathonConf) extends Scheduler {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 

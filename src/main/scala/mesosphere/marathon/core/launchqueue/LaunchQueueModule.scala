@@ -24,7 +24,7 @@ class LaunchQueueModule(
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: InstanceTracker,
     taskOpFactory: InstanceOpFactory,
-    homeRegionProvider: Provider[HomeRegionProvider]) {
+    homeRegion: () => Option[String]) {
 
   private[this] val offerMatchStatisticsActor: ActorRef = {
     leadershipModule.startWhenLeader(OfferMatchStatisticsActor.props(), "offerMatcherStatistics")
@@ -41,7 +41,7 @@ class LaunchQueueModule(
         taskTracker,
         rateLimiterActor,
         offerMatchStatisticsActor,
-        homeRegionProvider)(runSpec, count)
+        homeRegion)(runSpec, count)
     val props = LaunchQueueActor.props(config, offerMatchStatisticsActor, runSpecActorProps)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }

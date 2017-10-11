@@ -360,7 +360,7 @@ object MarathonTestHelper {
     implicit val ctx = ExecutionContexts.global
     val instanceRepo = store.getOrElse {
       val store = new InMemoryPersistenceStore()
-      store.open()
+      store.markOpen()
       InstanceRepository.inMemRepository(store)
     }
     val updateSteps = Seq.empty[InstanceChangeHandler]

@@ -70,6 +70,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val eventsController = new EventsController(conf, eventBus)
     val infoController = InfoController(mesosLeaderInfo, storageModule.frameworkIdRepository, conf)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
+    val leaderController = LeaderController(electionService, storageModule.runtimeConfigurationRepository)
     val queueController = new QueueController(clock, launchQueue, electionService)
 
     val v2Controller = new V2Controller(
@@ -77,6 +78,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
       eventsController,
       pluginsController,
       infoController,
+      leaderController,
       queueController)
 
     new AkkaHttpMarathonService(

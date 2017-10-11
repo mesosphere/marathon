@@ -6,6 +6,7 @@ get:
       description: The host and port of the current leading master.
       body:
         application/json:
+          type: info.LeaderInfo
           example: |
             {
                 "leader": "marathon.globalcorp.com:8080"
@@ -14,6 +15,7 @@ get:
       description: If there is no current leader.
       body:
         application/json:
+          type: strings.Message
           example: |
             {
               "message":"There is no leader"

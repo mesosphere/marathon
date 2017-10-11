@@ -148,7 +148,7 @@ class AppsController(
 
       onSuccess(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) {
         case None =>
-          reject(Rejections.EntityNotFound.app(appId))
+          reject(Rejections.EntityNotFound.noApp(appId))
         case Some(info) =>
           authorized(ViewResource, info.app).apply {
             complete(Json.obj("app" -> info))
@@ -281,7 +281,7 @@ class AppsController(
           }
         } ~
         path(AppPathIdLike) { nonExistingAppId =>
-          reject(Rejections.EntityNotFound.app(nonExistingAppId))
+          reject(Rejections.EntityNotFound.noApp(nonExistingAppId))
         }
       }
     }
