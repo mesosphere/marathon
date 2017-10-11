@@ -9,6 +9,7 @@ import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.health.HealthModule
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -47,4 +48,6 @@ trait CoreModule {
   def taskTerminationModule: TaskTerminationModule
   def deploymentModule: DeploymentModule
   def schedulerActions: SchedulerActions
+  def marathonScheduler: MarathonScheduler
+  def mesosHeartbeatMonitor: MesosHeartbeatMonitor
 }
