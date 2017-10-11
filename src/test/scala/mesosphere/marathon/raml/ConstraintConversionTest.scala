@@ -14,7 +14,7 @@ class ConstraintConversionTest extends UnitTest {
         .build()
 
       When("The constraint is be converted")
-      val seq = constraint.toRaml[Seq[String]]
+      val seq = constraintProtosToStringSeq(constraint)
 
       Then("The constraint is a correct string sequence")
       seq should be(Seq("foo", "GROUP_BY", "test"))

@@ -23,7 +23,7 @@ class ConstraintTest extends UnitTest {
 
   implicit val constraintWrites: Writes[Constraint] = Writes { c =>
     import mesosphere.marathon.raml._
-    val converted = c.toRaml[Seq[String]]
+    val converted = constraintProtosToStringSeq(c)
     JsArray(converted.map(JsString))
   }
 

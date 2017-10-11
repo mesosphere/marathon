@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package state
 
+import mesosphere.marathon.raml.KillSelectionConversion
+
 /**
   * Defines a kill selection for tasks. See [[mesosphere.marathon.core.deployment.ScalingProposition]].
   */
@@ -27,7 +29,7 @@ object KillSelection {
       Protos.KillSelection.OldestFirst
   }
 
-  lazy val DefaultKillSelection: KillSelection = raml.KillSelection.DefaultValue.fromRaml
+  lazy val DefaultKillSelection: KillSelection = KillSelectionConversion.fromRaml(raml.KillSelection.DefaultValue)
 
   private[this] val proto2Model = Map(
     Protos.KillSelection.YoungestFirst -> YoungestFirst,

@@ -28,7 +28,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     case Mesos.Volume.Mode.RW => ReadMode.Rw
   }
 
-  implicit val volumeModeReads: Reads[ReadMode, Mesos.Volume.Mode] = Reads {
+  def fromRaml(raml: ReadMode): Mesos.Volume.Mode = raml match {
     case ReadMode.Ro => Mesos.Volume.Mode.RO
     case ReadMode.Rw => Mesos.Volume.Mode.RW
   }
@@ -45,7 +45,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         case DiskType.Path => PersistentVolumeType.Path
         case DiskType.Root => PersistentVolumeType.Root
       })
-      PersistentVolume(pvType, pv.size, pv.maxSize, pv.constraints.toRaml[Set[Seq[String]]])
+      PersistentVolume(pvType, pv.size, pv.maxSize, pv.constraints.map(constraintProtosToStringSeq))
     }
 
     volume match {
@@ -83,7 +83,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       provider = vol.external.provider.getOrElse(throw SerializationFailedException("external volume requires a provider")),
       options = vol.external.options
     )
-    state.ExternalVolume(containerPath = vol.containerPath, external = info, mode = vol.mode.fromRaml)
+    state.ExternalVolume(containerPath = vol.containerPath, external = info, mode = fromRaml(vol.mode))
   }
 
   implicit val volumePersistentReads: Reads[AppPersistentVolume, state.Volume] = Reads { vol =>
@@ -113,11 +113,11 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         }
       }(collection.breakOut)
     )
-    state.PersistentVolume(containerPath = vol.containerPath, persistent = info, mode = vol.mode.fromRaml)
+    state.PersistentVolume(containerPath = vol.containerPath, persistent = info, mode = fromRaml(vol.mode))
   }
 
   implicit val volumeDockerReads: Reads[AppDockerVolume, state.Volume] = Reads { vol =>
-    state.DockerVolume(containerPath = vol.containerPath, hostPath = vol.hostPath, mode = vol.mode.fromRaml)
+    state.DockerVolume(containerPath = vol.containerPath, hostPath = vol.hostPath, mode = fromRaml(vol.mode))
   }
 
   implicit val volumeSecretReads: Reads[AppSecretVolume, state.Volume] = Reads { vol =>
@@ -147,7 +147,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       `type` = vol.when(_.hasType, _.getType.toRaml).orElse(PersistentVolume.DefaultType),
       size = vol.getSize,
       maxSize = vol.when(_.hasMaxSize, _.getMaxSize).orElse(PersistentVolume.DefaultMaxSize), // TODO(jdef) protobuf serialization is broken for this
-      constraints = vol.whenOrElse(_.getConstraintsCount > 0, _.getConstraintsList.map(_.toRaml[Seq[String]])(collection.breakOut), PersistentVolume.DefaultConstraints)
+      constraints = vol.whenOrElse(_.getConstraintsCount > 0, _.getConstraintsList.map(constraintProtosToStringSeq)(collection.breakOut), PersistentVolume.DefaultConstraints)
     )
   }
 

@@ -445,7 +445,7 @@ trait AppAndGroupFormats {
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
         info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
         info.maybeReadinessCheckResults.map(readiness => Json.obj("readinessCheckResults" -> readiness)),
-        info.maybeTasks.map(tasks => Json.obj("tasks" -> Raml.toRaml(tasks))),
+        info.maybeTasks.map(tasks => Json.obj("tasks" -> tasks.map(asRaml))),
         info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
         info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
       ).flatten

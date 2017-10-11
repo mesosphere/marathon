@@ -12,7 +12,7 @@ import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.RamlConversions
 import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup }
 import mesosphere.marathon.storage.repository.GroupRepository
 
@@ -125,7 +125,7 @@ private[migration] object MigrationTo15 {
     import Normalization._
     val rawRaml = Raml.toRaml(service)
     val normalizedApp = rawRaml.normalize
-    val appDef = normalizedApp.fromRaml
+    val appDef = RamlConversions.fromRaml(normalizedApp)
     // fixup version since it's intentionally lost in the conversion from App to AppDefinition
     appDef.copy(versionInfo = AppDefinition.versionInfoFrom(service))
   }

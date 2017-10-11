@@ -25,7 +25,7 @@ trait ReadinessConversions {
     )
   }
 
-  implicit val readinessProtocolReads: Reads[HttpScheme, core.readiness.ReadinessCheck.Protocol] = Reads {
+  def fromRaml(protocol: HttpScheme): core.readiness.ReadinessCheck.Protocol = protocol match {
     case HttpScheme.Http => core.readiness.ReadinessCheck.Protocol.HTTP
     case HttpScheme.Https => core.readiness.ReadinessCheck.Protocol.HTTPS
   }
@@ -33,7 +33,7 @@ trait ReadinessConversions {
   implicit val appReadinessRamlReader: Reads[ReadinessCheck, core.readiness.ReadinessCheck] = Reads { check =>
     core.readiness.ReadinessCheck(
       name = check.name,
-      protocol = check.protocol.fromRaml,
+      protocol = fromRaml(check.protocol),
       path = check.path,
       portName = check.portName,
       interval = check.intervalSeconds.seconds,

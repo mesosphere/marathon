@@ -7,11 +7,11 @@ import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableStrategy, UnreachableDisabled, UnreachableEnabled }
+import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy }
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Placed
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.UnreachableStrategyConversion
 import org.apache._
 import org.apache.mesos.Protos.Attribute
 import play.api.libs.json._
@@ -348,7 +348,7 @@ object Instance {
       (__ \ "runSpecVersion").write[Timestamp] ~
       (__ \ "state").write[InstanceState] ~
       (__ \ "unreachableStrategy").write[raml.UnreachableStrategy]
-    ) { (i) => (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, Raml.toRaml(i.unreachableStrategy)) }
+    ) { (i) => (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, UnreachableStrategyConversion.asRaml(i.unreachableStrategy)) }
   }
 
   implicit val unreachableStrategyReads: Reads[Instance] = {
@@ -361,7 +361,7 @@ object Instance {
       (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy) =>
         val unreachableStrategy = maybeUnreachableStrategy.
-          map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
+          map(UnreachableStrategyConversion.fromRaml).getOrElse(UnreachableStrategy.default())
         new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, unreachableStrategy)
       }
   }

@@ -18,7 +18,6 @@ import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
-import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.EnrichedTask._
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -94,7 +93,7 @@ class TasksResource @Inject() (
 
     val enrichedTasks: Iterable[EnrichedTask] = result(futureEnrichedTasks)
     ok(jsonObjString(
-      "tasks" -> enrichedTasks.toIndexedSeq.toRaml
+      "tasks" -> enrichedTasks.toIndexedSeq.map(asRaml)
     ))
   }
 
@@ -150,7 +149,7 @@ class TasksResource @Inject() (
         })).flatten
       ok(jsonObjString("tasks" -> killed.flatMap { instance =>
         instance.tasksMap.valuesIterator.map { task =>
-          EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty).toRaml
+          asRaml(EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty))
         }
       }))
     }

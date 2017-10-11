@@ -6,7 +6,7 @@ import mesosphere.marathon.core.task.Task
 
 object EnrichedTaskConversion extends HealthConversion with DefaultConversions {
 
-  implicit val localVolumeIdWrites: Writes[Task.LocalVolumeId, LocalVolumeId] = Writes { localVolumeId =>
+  def asRaml(localVolumeId: Task.LocalVolumeId): LocalVolumeId = {
     LocalVolumeId(
       runSpecId = localVolumeId.runSpecId.toRaml,
       containerPath = localVolumeId.containerPath,
@@ -15,7 +15,7 @@ object EnrichedTaskConversion extends HealthConversion with DefaultConversions {
     )
   }
 
-  implicit val enrichedTaskRamlWrite: Writes[core.appinfo.EnrichedTask, EnrichedTask] = Writes { enrichedTask =>
+  def asRaml(enrichedTask: core.appinfo.EnrichedTask): EnrichedTask = {
     val task: Task = enrichedTask.task
 
     val (startedAt, stagedAt, ports, version) =
@@ -28,12 +28,12 @@ object EnrichedTaskConversion extends HealthConversion with DefaultConversions {
     val ipAddresses = task.status.networkInfo.ipAddresses.toRaml
 
     val localVolumes = task.reservationWithVolumes.fold(Seq.empty[LocalVolumeId]) { reservation =>
-      reservation.volumeIds.toRaml
+      reservation.volumeIds.map(asRaml)
     }
 
     EnrichedTask(
       appId = enrichedTask.appId.toRaml,
-      healthCheckResults = enrichedTask.healthCheckResults.toRaml,
+      healthCheckResults = enrichedTask.healthCheckResults.map(asRaml),
       host = enrichedTask.agentInfo.host,
       id = task.taskId.idString,
       ipAddresses = ipAddresses,

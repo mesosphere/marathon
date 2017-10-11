@@ -5,9 +5,9 @@ import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ FetchUri, PathId }
 import mesosphere.marathon.stream.Implicits._
 
-object AppNormalization {
+object AppNormalization extends UnreachableStrategyConversion {
 
-  import Apps._
+  import mesosphere.marathon.raml.Apps._
   import NetworkNormalization.Networks
   import Normalization._
 
@@ -298,7 +298,7 @@ object AppNormalization {
 
     val defaultUnreachable: UnreachableStrategy = {
       val hasPersistentVols = app.container.exists(_.volumes.existsAn[AppPersistentVolume])
-      state.UnreachableStrategy.default(hasPersistentVols).toRaml
+      asRaml(state.UnreachableStrategy.default(hasPersistentVols))
     }
 
     // requirePorts only applies for host-mode networking

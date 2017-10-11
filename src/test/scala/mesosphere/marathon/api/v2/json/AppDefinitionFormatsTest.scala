@@ -87,7 +87,7 @@ class AppDefinitionFormatsTest extends UnitTest
       (r1 \ "container").asOpt[String] should equal (None)
       (r1 \ "healthChecks").asOpt[Seq[AppHealthCheck]] should be (empty)
       (r1 \ "dependencies").asOpt[Set[PathId]] should be (empty)
-      (r1 \ "upgradeStrategy").as[UpgradeStrategy] should equal (DefaultUpgradeStrategy.toRaml)
+      (r1 \ "upgradeStrategy").as[UpgradeStrategy] should equal (UpgradeStrategyConversion.asRaml(DefaultUpgradeStrategy))
       (r1 \ "residency").asOpt[String] should equal (None)
       (r1 \ "secrets").asOpt[Map[String, SecretDef]] should be (empty)
       (r1 \ "taskKillGracePeriodSeconds").asOpt[Long] should equal (DefaultTaskKillGracePeriod)

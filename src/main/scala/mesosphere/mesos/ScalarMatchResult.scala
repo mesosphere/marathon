@@ -173,7 +173,7 @@ case class DiskResourceNoMatch(
   def requestedStringification(requested: Either[Double, PersistentVolume]): String = requested match {
     case Left(value) => s"disk:root:${value}"
     case Right(vol) =>
-      val constraintsJson: Seq[Seq[String]] = vol.persistent.constraints.map(_.toRaml[Seq[String]])(collection.breakOut)
+      val constraintsJson: Seq[Seq[String]] = vol.persistent.constraints.map(constraintProtosToStringSeq)(collection.breakOut)
       s"disk:${vol.persistent.`type`.toString}:${vol.persistent.size}:[${constraintsJson.mkString(",")}]"
   }
 

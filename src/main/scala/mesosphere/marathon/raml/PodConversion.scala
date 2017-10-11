@@ -16,7 +16,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       case FixedPodScalingPolicy(i) => i
     }
 
-    val networks: Seq[pod.Network] = podd.networks.map(Raml.fromRaml[Network, pod.Network])
+    val networks: Seq[pod.Network] = podd.networks.map(fromRaml)
 
     val resourceRoles = podd.scheduling.flatMap(_.placement)
       .fold(Set.empty[String])(_.acceptedResourceRoles.toSet)
@@ -25,9 +25,9 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       state.UpgradeStrategy(raml.minimumHealthCapacity, raml.maximumOverCapacity)
     }
 
-    val unreachableStrategy = podd.scheduling.flatMap(_.unreachableStrategy).fold(DefaultUnreachableStrategy)(Raml.fromRaml(_))
+    val unreachableStrategy = podd.scheduling.flatMap(_.unreachableStrategy).fold(DefaultUnreachableStrategy)(fromRaml)
     val killSelection: state.KillSelection = podd.scheduling.fold(state.KillSelection.DefaultKillSelection) {
-      _.killSelection.fold(state.KillSelection.DefaultKillSelection)(Raml.fromRaml(_))
+      _.killSelection.fold(state.KillSelection.DefaultKillSelection)(fromRaml)
     }
 
     val backoffStrategy = podd.scheduling.flatMap { policy =>
@@ -57,7 +57,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       networks = networks,
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
-      executorResources = executorResources.fromRaml,
+      executorResources = fromRaml(executorResources),
       unreachableStrategy = unreachableStrategy,
       killSelection = killSelection
     )
@@ -80,7 +80,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
         podDef.constraints.toRaml[Set[Constraint]],
         podDef.acceptedResourceRoles.toIndexedSeq)),
       Some(podDef.killSelection.toRaml),
-      Some(podDef.unreachableStrategy.toRaml)
+      Some(asRaml(podDef.unreachableStrategy))
     )
 
     val scalingPolicy = FixedPodScalingPolicy(podDef.instances)
@@ -101,7 +101,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
     )
   }
 
-  implicit val resourcesReads: Reads[ExecutorResources, Resources] = Reads { executorResources =>
+  def fromRaml(executorResources: ExecutorResources): Resources = {
     Resources(
       cpus = executorResources.cpus,
       mem = executorResources.mem,

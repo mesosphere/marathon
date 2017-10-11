@@ -94,7 +94,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
     }
   }
 
-  implicit val pullConfigReads: Reads[DockerPullConfig, state.Container.DockerPullConfig] = Reads {
+  def fromRaml(config: DockerPullConfig): state.Container.DockerPullConfig = config match {
     case DockerPullConfig(secret) => state.Container.DockerPullConfig(secret)
   }
 
@@ -118,7 +118,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
           image = docker.image,
           portMappings = portMappings, // assumed already normalized, see AppNormalization
           credential = docker.credential.map(c => state.Container.Credential(principal = c.principal, secret = c.secret)),
-          pullConfig = docker.pullConfig.map(_.fromRaml),
+          pullConfig = docker.pullConfig.map(fromRaml),
           forcePullImage = docker.forcePullImage
         )
       case (EngineType.Mesos, None, Some(appc)) =>
