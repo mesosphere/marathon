@@ -207,25 +207,25 @@ class AppsController(
       extractClientIP &
       extractUri &
       entity(as(appUpdateUnmarshaller(appId, partialUpdate)))) { (force, remoteAddr, requestUri, appUpdate) =>
-      //         Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
-      //         exceptions to the appropriate rejections
-      val fn = updateOrCreate(
-        appId, _: Option[AppDefinition], appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
+        //         Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
+        //         exceptions to the appropriate rejections
+        val fn = updateOrCreate(
+          appId, _: Option[AppDefinition], appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
 
-      onSuccessLegacy(Some(appId))(groupManager.updateApp(appId, fn, version, force)).apply { plan =>
-        plan.target.app(appId).foreach { appDef =>
-          eventBus.publish(ApiPostEvent(remoteAddr.toString, requestUri.toString, appDef))
+        onSuccessLegacy(Some(appId))(groupManager.updateApp(appId, fn, version, force)).apply { plan =>
+          plan.target.app(appId).foreach { appDef =>
+            eventBus.publish(ApiPostEvent(remoteAddr.toString, requestUri.toString, appDef))
+          }
+
+          completeWithDeploymentForApp(appId, plan)
         }
-
-        completeWithDeploymentForApp(appId, plan)
       }
-    }
   }
 
   private def deleteSingle(appId: PathId)(implicit identity: Identity): Route =
     forceParameter { force =>
       lazy val notFound: Either[Rejection, RootGroup] =
-        Left(Rejections.EntityNotFound.app(appId))
+        Left(Rejections.EntityNotFound.noApp(appId))
 
       lazy val notAuthorized: Either[Rejection, RootGroup] =
         Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
@@ -254,7 +254,7 @@ class AppsController(
     forceParameter { force =>
 
       def markForRestartingOrThrow(opt: Option[AppDefinition]): Either[Rejection, AppDefinition] =
-        opt.map(Right(_)).getOrElse(Left(Rejections.EntityNotFound.app(appId): Rejection))
+        opt.map(Right(_)).getOrElse(Left(Rejections.EntityNotFound.noApp(appId): Rejection))
           .flatMap { checkAuthorization(UpdateRunSpec, _) }
           .map(_.markedForRestarting)
 
@@ -266,8 +266,8 @@ class AppsController(
           { app => rejectLeftViaThrow(markForRestartingOrThrow(app)) },
           newVersion, force)
       ).apply { restartDeployment =>
-        completeWithDeploymentForApp(appId, restartDeployment)
-      }
+          completeWithDeploymentForApp(appId, restartDeployment)
+        }
     }
   }
 
@@ -287,7 +287,7 @@ class AppsController(
       }
 
     } getOrElse {
-      reject(Rejections.EntityNotFound.app(appId))
+      reject(Rejections.EntityNotFound.noApp(appId))
     }
   }
 
@@ -362,7 +362,7 @@ class AppsController(
 
   private def listVersions(appId: PathId)(implicit identity: Identity): Route = {
     val versions = groupManager.appVersions(appId).runWith(Sink.seq)
-    authorized(ViewRunSpec, groupManager.app(appId), Rejections.EntityNotFound.app(appId)).apply {
+    authorized(ViewRunSpec, groupManager.app(appId), Rejections.EntityNotFound.noApp(appId)).apply {
       onSuccess(versions) { versions =>
         complete(Json.obj("versions" -> versions))
       }
@@ -372,11 +372,11 @@ class AppsController(
   private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = {
     onSuccess(groupManager.appVersion(appId, version.toOffsetDateTime)) {
       case Some(app) =>
-        authorized(ViewRunSpec, app, Rejections.EntityNotFound.app(appId)).apply {
+        authorized(ViewRunSpec, app, Rejections.EntityNotFound.noApp(appId)).apply {
           complete(app)
         }
       case None =>
-        reject(Rejections.EntityNotFound.app(appId))
+        reject(Rejections.EntityNotFound.noApp(appId))
     }
   }
 
@@ -405,7 +405,7 @@ class AppsController(
     case Failure(_: AppNotFoundException) =>
       reject(
         maybeAppId.map { appId =>
-          Rejections.EntityNotFound.app(appId)
+          Rejections.EntityNotFound.noApp(appId)
         } getOrElse Rejections.EntityNotFound()
       )
     case Failure(RejectionError(rejection)) =>
