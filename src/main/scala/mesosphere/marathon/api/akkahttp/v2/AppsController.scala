@@ -158,6 +158,7 @@ class AppsController(
   }
 
   private def patchSingle(appId: PathId)(implicit identity: Identity): Route = ???
+
   private[this] def updateMultiple(partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity): Route = {
     val version = clock.now()
     (forceParameter & entity(as(appUpdatesUnmarshaller(partialUpdate)))) { (force, appUpdates) =>
@@ -204,7 +205,6 @@ class AppsController(
     case Failure(ex) =>
       throw ex
   }
-
 
   private def putSingle(appId: PathId)(implicit identity: Identity): Route = ???
 
