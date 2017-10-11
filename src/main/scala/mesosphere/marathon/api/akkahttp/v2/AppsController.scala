@@ -8,7 +8,13 @@ import akka.event.EventStream
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
+import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
+import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
+import mesosphere.marathon.api.v2.Validation.validateOrThrow
+import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
+import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
@@ -18,6 +24,7 @@ import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
 import play.api.libs.json.Json
 import PathId._
 import mesosphere.marathon.state._
+import play.api.libs.json._
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
@@ -25,8 +32,19 @@ import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.core.task.Task.{ Id => TaskId }
+import PathMatchers._
+import mesosphere.marathon.raml.DeploymentResult
+import mesosphere.marathon.raml.EnrichedTaskConversion._
+import mesosphere.marathon.raml.AnyToRaml
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
+import scala.util.control.NonFatal
 
 class AppsController(
     val clock: Clock,
@@ -49,6 +67,7 @@ class AppsController(
   import Directives._
 
   private implicit lazy val validateApp = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
+  private implicit lazy val updateValidator = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
 
   import AppHelpers._
   import EntityMarshallers._
@@ -82,7 +101,11 @@ class AppsController(
     Selector.forall(Seq(authzSelector, fn))
   }
 
-  private def replaceMultipleApps(implicit identity: Identity): Route = ???
+  private def replaceMultipleApps(implicit identity: Identity): Route = {
+    parameters('partialUpdate.?(true)) { partialUpdate =>
+      updateMultiple(partialUpdate, allowCreation = true)
+    }
+  }
 
   private def patchMultipleApps(implicit identity: Identity): Route = ???
 
@@ -135,6 +158,53 @@ class AppsController(
   }
 
   private def patchSingle(appId: PathId)(implicit identity: Identity): Route = ???
+
+  private[this] def updateMultiple(partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity): Route = {
+    val version = clock.now()
+    (forceParameter & entity(as(appUpdatesUnmarshaller(partialUpdate)))) { (force, appUpdates) =>
+      def updateGroup(rootGroup: RootGroup): RootGroup = appUpdates.foldLeft(rootGroup) { (group, update) =>
+        update.id.map(PathId(_)) match {
+          case Some(id) =>
+            group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation, clock.now(), marathonSchedulerService), version)
+          case None =>
+            group
+        }
+      }
+
+      onSuccessLegacy(None)(groupManager.updateRoot(PathId.empty, updateGroup, version, force)).apply { plan =>
+        complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+      }
+    }
+  }
+
+  /**
+    * It'd be neat if we didn't need this. Would take some heavy-ish refactoring to get all of the update functions to
+    * take an either.
+    */
+  private def onSuccessLegacy[T](maybeAppId: Option[PathId])(f: => Future[T])(implicit identity: Identity): Directive1[T] = onComplete({
+    try { f }
+    catch {
+      case NonFatal(ex) =>
+        Future.failed(ex)
+    }
+  }).flatMap {
+    case Success(t) =>
+      provide(t)
+    case Failure(ValidationFailedException(_, failure)) =>
+      reject(EntityMarshallers.ValidationFailed(failure))
+    case Failure(AccessDeniedException(msg)) =>
+      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+    case Failure(_: AppNotFoundException) =>
+      reject(
+        maybeAppId.map { appId =>
+          Rejections.EntityNotFound.noApp(appId)
+        } getOrElse Rejections.EntityNotFound()
+      )
+    case Failure(RejectionError(rejection)) =>
+      reject(rejection)
+    case Failure(ex) =>
+      throw ex
+  }
 
   private def putSingle(appId: PathId)(implicit identity: Identity): Route = ???
 
@@ -225,4 +295,7 @@ class AppsController(
 
   private implicit val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
+
+  private implicit val validateAndNormalizeAppUpdate: Normalization[raml.AppUpdate] =
+    appUpdateNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 }
