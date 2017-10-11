@@ -165,9 +165,9 @@ class AppsController(
       def updateGroup(rootGroup: RootGroup): RootGroup = appUpdates.foldLeft(rootGroup) { (group, update) =>
         update.id.map(PathId(_)) match {
           case Some(id) =>
-            val res = Try(group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation, clock.now(), marathonSchedulerService), version))
-            res.get
-          case None => group
+            group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation, clock.now(), marathonSchedulerService), version)
+          case None =>
+            group
         }
       }
 
