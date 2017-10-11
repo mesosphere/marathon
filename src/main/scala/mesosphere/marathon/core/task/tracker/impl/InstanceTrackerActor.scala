@@ -29,7 +29,7 @@ object InstanceTrackerActor {
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
   private[impl] case object List
 
-  private[impl] case class Get(taskId: Instance.Id)
+  private[impl] case class Get(instanceId: Instance.Id)
 
   /** Forward an update operation to the child [[InstanceUpdateActor]]. */
   private[impl] case class ForwardTaskOp(deadline: Timestamp, instanceId: Instance.Id, op: InstanceUpdateOperation)
@@ -140,8 +140,8 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
 
-      case InstanceTrackerActor.Get(taskId) =>
-        sender() ! instancesBySpec.instance(taskId)
+      case InstanceTrackerActor.Get(instanceId) =>
+        sender() ! instancesBySpec.instance(instanceId)
 
       case ForwardTaskOp(deadline, taskId, taskStateOp) =>
         val op = InstanceOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
