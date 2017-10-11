@@ -62,7 +62,7 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
     val root = UUID.randomUUID().toString
     val client = zkClient(namespace = Some(root))
     val store = new ZkPersistenceStore(client, Duration.Inf)
-    store.open()
+    store.markOpen()
     store
   }
 

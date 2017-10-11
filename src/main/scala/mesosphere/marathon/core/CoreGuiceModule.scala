@@ -34,6 +34,7 @@ import mesosphere.marathon.plugin.http.HttpRequestHandler
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.util.WorkQueue
+import org.apache.mesos.Scheduler
 import org.eclipse.jetty.servlets.EventSourceServlet
 
 import scala.collection.immutable
@@ -235,4 +236,10 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
   @Provides
   @Singleton
   def schedulerActions(coreModule: CoreModule): SchedulerActions = coreModule.schedulerActions
+
+  @Provides @Singleton
+  def marathonScheduler(coreModule: CoreModule): MarathonScheduler = coreModule.marathonScheduler
+
+  @Provides @Singleton
+  def scheduler(coreModule: CoreModule): Scheduler = coreModule.mesosHeartbeatMonitor
 }

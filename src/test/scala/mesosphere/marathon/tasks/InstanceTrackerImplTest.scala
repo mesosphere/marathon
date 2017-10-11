@@ -27,7 +27,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   case class Fixture() {
     val store: InMemoryPersistenceStore = {
       val store = new InMemoryPersistenceStore()
-      store.open()
+      store.markOpen()
       store
     }
     implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(store))

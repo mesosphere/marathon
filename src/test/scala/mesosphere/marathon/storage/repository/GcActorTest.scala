@@ -66,7 +66,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       testScan: Option[() => Future[ScanDone]] = None)(
       testCompact: Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = None) {
     val store = new InMemoryPersistenceStore()
-    store.open()
+    store.markOpen()
     val appRepo = AppRepository.inMemRepository(store)
     val podRepo = PodRepository.inMemRepository(store)
     val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
@@ -427,7 +427,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     "actually running" should {
       "ignore scan errors on roots" in {
         val store = new InMemoryPersistenceStore()
-        store.open()
+        store.markOpen()
         val appRepo = AppRepository.inMemRepository(store)
         val podRepo = PodRepository.inMemRepository(store)
         val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
@@ -440,7 +440,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "ignore scan errors on apps" in {
         val store = new InMemoryPersistenceStore()
-        store.open()
+        store.markOpen()
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
         val podRepo = PodRepository.inMemRepository(store)
         val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
@@ -456,7 +456,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "ignore scan errors on pods" in {
         val store = new InMemoryPersistenceStore()
-        store.open()
+        store.markOpen()
         val appRepo = AppRepository.inMemRepository(store)
         val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
         val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
@@ -472,7 +472,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "ignore errors when compacting" in {
         val store = new InMemoryPersistenceStore()
-        store.open()
+        store.markOpen()
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
         val podRepo = PodRepository.inMemRepository(store)
         val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
