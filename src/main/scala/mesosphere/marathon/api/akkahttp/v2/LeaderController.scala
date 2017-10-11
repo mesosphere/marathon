@@ -3,7 +3,6 @@ package api.akkahttp.v2
 
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.{ Failure, Success }
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.akkahttp.{ Controller, Rejections }
 import mesosphere.marathon.core.election.ElectionService
@@ -43,17 +42,14 @@ case class LeaderController(
         authorized(UpdateResource, AuthorizedResource.SystemConfig).apply {
           parameters('backup.?, 'restore.?) { (backup: Option[String], restore: Option[String]) =>
             val validate = optional(UriIO.valid)
-            validate(backup) and validate(restore) match {
-              case Success =>
-                complete {
-                  async {
-                    await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
-                    electionService.abdicateLeadership()
-                    raml.Message("Leadership abdicated")
-                  }
+            assumeValid(validate(backup) and validate(restore)) {
+              complete {
+                async {
+                  await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
+                  electionService.abdicateLeadership()
+                  raml.Message("Leadership abdicated")
                 }
-              case failure: Failure =>
-                reject(ValidationFailed(failure))
+              }
             }
           }
         }
