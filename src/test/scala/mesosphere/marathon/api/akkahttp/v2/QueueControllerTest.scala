@@ -58,7 +58,7 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
 
       When("we try to fetch the queue")
       Get(Uri./) ~> f.controller.route ~> check {
-        Then("weder receive an empty json array")
+        Then("we receive an empty json array")
         status should be(StatusCodes.OK)
 
         val expected =
