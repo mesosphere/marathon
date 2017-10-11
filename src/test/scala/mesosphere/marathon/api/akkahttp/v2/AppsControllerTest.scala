@@ -1901,7 +1901,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
           | }
           ]""".stripMargin.getBytes("UTF-8")
 
-      When("The application is updated")
       val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
       Put(Uri./, entity) ~> route ~> check {
         Then("The application is updated")
