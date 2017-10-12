@@ -100,6 +100,7 @@ class Migration(
 
   @SuppressWarnings(Array("all")) // async/await
   def migrateAsync(): Future[Seq[StorageVersion]] = async {
+
     val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())
     // before backup/restore called, reset the runtime configuration
     await(runtimeConfigurationRepository.store(RuntimeConfiguration(None, None)))
@@ -107,8 +108,14 @@ class Migration(
     await(config.backup.map(uri => backup.backup(new URI(uri))).getOrElse(Future.successful(Done)))
     // step 2: restore state from given backup
     await(config.restore.map(uri => backup.restore(new URI(uri))).getOrElse(Future.successful(Done)))
+
+    // mark migration as started
+    await(persistenceStore.startMigration())
     // last step run the migration, to ensure we can operate on the zk state
     val result = await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined))
+    // mark migration as completed
+    await(persistenceStore.endMigration())
+
     logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
     result
   }

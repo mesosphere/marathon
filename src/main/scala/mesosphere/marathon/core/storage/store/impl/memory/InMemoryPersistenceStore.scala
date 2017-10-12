@@ -148,6 +148,26 @@ class InMemoryPersistenceStore(implicit
 
     Future.successful(Done)
   }
+
+  @volatile private[this] var migrationInProgress: Boolean = false
+
+  override def startMigration(): Future[Done] = {
+    require(isOpen, "the store must be opened before it can be used")
+    if (migrationInProgress) {
+      throw new IllegalStateException("Migration is already in progress")
+    }
+    migrationInProgress = true
+    Future.successful(Done)
+  }
+
+  override def endMigration(): Future[Done] = {
+    require(isOpen, "the store must be opened before it can be used")
+    if (!migrationInProgress) {
+      throw new IllegalStateException("Migration has not been started")
+    }
+    migrationInProgress = false
+    Future.successful(Done)
+  }
 }
 
 object InMemoryPersistenceStore {
