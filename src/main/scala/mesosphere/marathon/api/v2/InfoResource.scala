@@ -53,7 +53,7 @@ class InfoResource @Inject() (
     "mesos_role" -> config.mesosRole.get,
     "mesos_user" -> config.mesosUser.get,
     "min_revive_offers_interval" -> config.minReviveOffersInterval.get,
-    "offer_matching_timeout" -> config.offerMatchingTimeout.get.get.toMillis,
+    "offer_matching_timeout" -> config.offerMatchingTimeout.get.map(_.toMillis),
     "on_elected_prepare_timeout" -> config.onElectedPrepareTimeout.get,
     "reconciliation_initial_delay" -> config.reconciliationInitialDelay.get,
     "reconciliation_interval" -> config.reconciliationInterval.get,
