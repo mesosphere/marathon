@@ -38,5 +38,5 @@ class ElectionModule(
   }
 
   lazy val service: ElectionService = new ElectionServiceImpl(eventStream, hostPort, electionBackend,
-    crashStrategy, ExecutionContext.fromExecutor(electionExecutor))(system)
+    crashStrategy, electionEC)(system)
 }

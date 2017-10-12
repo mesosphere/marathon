@@ -329,7 +329,7 @@ object ElectionService extends StrictLogging {
 
 /**
   * Events produced by Curator election stream; describes transitions from one leader to the next while not leader
-
+  *
   */
 private[election] sealed trait LeadershipState
 private[election] object LeadershipState {

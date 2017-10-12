@@ -58,8 +58,7 @@ class CoreModuleImpl @Inject() (
   instanceUpdateSteps: Seq[InstanceChangeHandler],
   taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
   mesosLeaderInfo: MesosLeaderInfo,
-  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef,
-  @Named(ModuleNames.ELECTION_EXECUTOR) electionExecutor: ExecutorService
+  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
 )
     extends CoreModule {
 
