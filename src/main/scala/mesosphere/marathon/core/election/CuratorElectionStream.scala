@@ -93,7 +93,7 @@ object CuratorElectionStream extends StrictLogging {
      *
      * We also have a retry and (very simple) back-off mechanism. This is because Curator's leader latch creates the
      * initial leader node asynchronously. If we poll for leader information before this background hook completes, then
-     * an exception is thrown.
+     * a KeeperException.NoNodeException is thrown (which we handle, and retry)
      */
     def longPollLeaderChange(retries: Int = 0): Unit = singleThreadEC.execute { () =>
       try {
