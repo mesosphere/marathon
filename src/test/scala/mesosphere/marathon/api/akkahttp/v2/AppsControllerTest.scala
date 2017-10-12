@@ -106,6 +106,18 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       (body, plan)
     }
 
+    def addAppsToRootGroupRootGroup(apps: Seq[App]): (Seq[AppDefinition], DeploymentPlan, RootGroup) = {
+      val normed = apps.map(normalize)
+      val appDefs = normed.map(Raml.fromRaml(_))
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      (appDefs, plan, rootGroup)
+    }
+
     def createAppWithVolumes(`type`: String, volumes: String, groupManager: GroupManager, auth: TestAuthFixture): HttpEntity.Strict = {
       val app = App(id = "/app", cmd = Some(
         "foo"))
@@ -1869,14 +1881,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       )
       )
 
-      val normed = apps.map(normalize)
-      val appDefs = normed.map(Raml.fromRaml(_))
-      val rootGroup = createRootGroup(
-        appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
-      )
-      val plan = DeploymentPlan(rootGroup, rootGroup)
+      val (appDefs, plan, rootGroup) = addAppsToRootGroupRootGroup(apps)
+
       groupManager.updateRoot(any, any, any, any, any) answers { args =>
         val fn = args(1).asInstanceOf[RootGroup => RootGroup]
         val updated = fn(rootGroup)
@@ -1916,23 +1922,12 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       val newApp1Cmd = "bla1"
       val newApp2Cmd = "bla2"
-      val apps = Seq(App(
-        id = app1Id,
-        cmd = Some("cmd1")
-      ), App(
-        id = app2Id,
-        cmd = Some("cmd1")
-      )
+      val apps = Seq(
+        App(id = app1Id, cmd = Some("cmd1")),
+        App(id = app2Id, cmd = Some("cmd1"))
       )
 
-      val normed = apps.map(normalize)
-      val appDefs = normed.map(Raml.fromRaml(_))
-      val rootGroup = createRootGroup(
-        appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
-      )
-      val plan = DeploymentPlan(rootGroup, rootGroup)
+      val (appDefs, plan, rootGroup) = addAppsToRootGroupRootGroup(apps)
       groupManager.updateRoot(any, any, any, any, any) answers { args =>
         val fn = args(1).asInstanceOf[RootGroup => RootGroup]
         val updated = fn(rootGroup)
@@ -1962,6 +1957,50 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         Then("The application is updated")
         status shouldEqual StatusCodes.OK
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Reject replacing multiple existing applications using Patch if appId is not found" in new Fixture {
+      Given("An app and group")
+      val app1Id = "/app1"
+      val app2Id = "/app2"
+
+      val newApp1Cmd = "bla1"
+      val newApp2Cmd = "bla2"
+      val apps = Seq(
+        App(id = app1Id, cmd = Some("cmd1")),
+        App(id = app2Id, cmd = Some("cmd1"))
+      )
+
+      val (appDefs, plan, rootGroup) = addAppsToRootGroupRootGroup(apps)
+      groupManager.updateRoot(any, any, any, any, any) answers { args =>
+        val fn = args(1).asInstanceOf[RootGroup => RootGroup]
+        val updated = fn(rootGroup)
+        updated.app(PathId(app1Id)).get.cmd.get shouldEqual newApp1Cmd
+        updated.app(PathId(app2Id)).get.cmd.get shouldEqual newApp2Cmd
+        Future.successful(plan)
+      }
+      groupManager.rootGroup() returns rootGroup
+      groupManager.app(appDefs(0).id) returns Some(appDefs(0))
+      groupManager.app(appDefs(1).id) returns Some(appDefs(1))
+
+      When("The application is updated")
+      val body =
+        s"""[
+           | {
+           |   "id": "$app1Id",
+           |   "cmd": "$newApp1Cmd"
+           | },
+           | {
+           |   "id": "/unknown",
+           |   "cmd": "$newApp2Cmd"
+           | }
+          ]""".stripMargin.getBytes("UTF-8")
+
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Patch(Uri./, entity) ~> route ~> check {
+        Then("404: Entity not found")
+        status shouldEqual StatusCodes.NotFound
       }
     }
   }
