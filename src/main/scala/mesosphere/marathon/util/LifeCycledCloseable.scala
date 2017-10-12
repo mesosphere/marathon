@@ -11,7 +11,7 @@ trait LifeCycledCloseableLike[T <: Closeable] extends Closeable {
 }
 
 class LifeCycledCloseable[T <: Closeable](val closeable: T) extends LifeCycledCloseableLike[T] {
-  @volatile private[this] var closed: Boolean = false
+  private[this] var closed: Boolean = false
   @volatile private[this] var beforeCloseHooks: List[() => Unit] = Nil
 
   override def close(): Unit = {
@@ -25,7 +25,6 @@ class LifeCycledCloseable[T <: Closeable](val closeable: T) extends LifeCycledCl
       Try(hook())
     }
     closeable.close()
-    beforeCloseHooks = Nil
   }
 
   override def beforeClose(fn: () => Unit): Unit = synchronized {

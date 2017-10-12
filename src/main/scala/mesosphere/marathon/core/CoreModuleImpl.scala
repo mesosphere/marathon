@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core
 
 import java.time.Clock
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import javax.inject.Named
 
 import akka.actor.{ ActorRef, ActorSystem }
@@ -68,6 +68,7 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val lifecycleState = LifecycleState.WatchingJVM
   override lazy val actorsModule = new ActorsModule(actorSystem)
   private[this] lazy val crashStrategy = JvmExitsCrashStrategy
+  private[this] val electionExecutor = Executors.newSingleThreadExecutor()
 
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory)
   override lazy val electionModule = new ElectionModule(

@@ -72,10 +72,17 @@ object CuratorElectionStream extends StrictLogging {
     private lazy val leaderHostPortMetric: Timer = Metrics.timer(ServiceMetric, getClass, "current-leader-host-port")
     private val curatorLeaderLatchPath = zooKeeperLeaderPath + "-curator"
     private lazy val latch = new LeaderLatch(client, curatorLeaderLatchPath, hostPort)
-    @volatile private var isStarted = false
+    private var isStarted = false
     @volatile private var _isCancelled = false
 
-    /* It is important that we re-register our watch _BEFORE_ we get the current the current leader. In Zookeeper,
+    /* Long-poll trampoline-style recursive method which calls emitLeader() each time it detects that the leadership
+     * state has changed.
+     *
+     * Given instance A, B, C, Curator's Leader latch recipe only provides A the ability to be notified if it gains or
+     * loses leadership, but not if leadership transitions between B and C. This method allows us to monitor any change
+     * in leadership state.
+     *
+     * It is important that we re-register our watch _BEFORE_ we get the current leader. In Zookeeper,
      * watches are one-time use only.
      *
      * The timeline of events looks like this
@@ -86,8 +93,12 @@ object CuratorElectionStream extends StrictLogging {
      * 4) Repeat step 1
      *
      * By re-registering the watch before querying the state, we will not miss out on the latest leader change.
+     *
+     * We also have a retry and (very simple) back-off mechanism. This is because Curator's leader latch creates the
+     * initial leader node asynchronously. If we poll for leader information before this background hook completes, then
+     * an exception is thrown.
      */
-    def longPollLeaderChange(retries: Int = 0): Unit = Future {
+    def longPollLeaderChange(retries: Int = 0): Unit = singleThreadEC.execute { () =>
       try {
         if (latch.getState == LeaderLatch.State.STARTED)
           client.getChildren
@@ -106,7 +117,7 @@ object CuratorElectionStream extends StrictLogging {
         case ex: Throwable =>
           sq.fail(ex)
       }
-    }(singleThreadEC)
+    }
 
     /**
       * Emit current leader. Does not fail on connection error
