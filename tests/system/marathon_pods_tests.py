@@ -124,6 +124,8 @@ def test_event_channel_for_pods():
     # look for created
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_deployment_message():
+        status, stdout = shakedown.run_command_on_master('cat events.exitcode')
+        assert str(stdout).strip() == '', "SSE stream disconnected (CURL exit code is {})".format(stdout.strip())
         status, stdout = shakedown.run_command_on_master('cat events.txt')
         assert 'event_stream_attached' in stdout, "event_stream_attached event has not been produced"
         assert 'pod_created_event' in stdout, "pod_created_event event has not been produced"
