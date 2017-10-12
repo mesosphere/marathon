@@ -52,8 +52,7 @@
     "DCOS_PACKAGE_FRAMEWORK_NAME": "marathon-user",
     "DCOS_SERVICE_PORT_INDEX": "0",
     "DCOS_PACKAGE_VERSION": "v1.3.5",
-    "DCOS_PACKAGE_NAME": "marathon",
-    "DCOS_PACKAGE_IS_FRAMEWORK": "true"
+    "DCOS_PACKAGE_NAME": "marathon"
   },
   "portDefinitions": [
     {
