@@ -102,31 +102,31 @@ You will configure 3 defined ports (`containerPort`, `hostPort`, and `servicePor
 
 All applications on Mesos are hosted in containers. Containers can be run in bridge or host mode.
 
-Let us assume an app called "ACME," and that the actual application opens port `:8080`.
+Let us assume an app called "ACME," and that the actual application opens port `8080`.
 
 #### Host Mode Use Case
 
-When in host mode, the container will have the host network interface defined in the container namespace. The container will not do any port mapping and the application will open up port `:8080` on the host network interface. In this case, there is no container port and the `hostPort` is `:8080`.
+When in host mode, the container will have the host network interface defined in the container namespace. The container will not do any port mapping and the application will open up port `8080` on the host network interface. In this case, there is no container port and the `hostPort` is `8080`.
 
 #### Bridge Mode Use Case
 
-If the container is run in bridge mode, it gets its own network interface and the `containerPort` is `:8080`. In bridge mode, the container will open a pseudo random port on the host and bridge/NAT communication to the container port.
+If the container is run in bridge mode, it gets its own network interface and the `containerPort` is `8080`. In bridge mode, the container will open a pseudo random port on the host and bridge/NAT communication to the container port.
 
-For example, lets say the host port port is `:31000`. Now, the `containerPort` is `:8080`, but the `hostPort` is `:31000`. Clients to this service will open port `:31000` on the host the service is running on. The container will route traffic to the internal port in the container, `:8080`.
+For example, lets say the host port port is `31000`. Now, the `containerPort` is `8080`, but the `hostPort` is `31000`. Clients to this service will open port `31000` on the host the service is running on. The container will route traffic to the internal port in the container, `8080`.
 
 ##### Multiple App Instances Use Case
 
-Now, let's say you have 3 instances of app ACME: `10.0.0.2:31000`, `10.0.0.2:31001`, and `10.0.0.3:31000`. There is a common need to have a port that will route with some algorithm to each of those instances. This "port" is metadata specific to this application.  All instances of the application will be hosted behind this port.
+Now, let's say you have 3 instances of app ACME: `10.0.0.2:31000`, `10.0.0.2:31001`, and `10.0.0.3:31000`. There is a common need to have a port that will route with an algorithm to each of those instances. The algorithm used is configured in the load balancer. This "port" is metadata specific to this application.  All instances of the application will be hosted behind this port.
 
-In Marathon, this is referred to as the service port. The service port is specified in the `servicePort` parameter of the ACME app definition. Let us assume `servicePort` is specified as `:8080`.
+In Marathon, this is referred to as the service port. The service port is specified in the `servicePort` parameter of the ACME app definition. Let us assume `servicePort` is specified as `8080`.
 
-The service port is metadata; Marathon does not do anything with this information except track it and provide it to a load balancer. The user is expected to configure a load balancer to host a port `:8080`, or refer to the `servicePort`, and route to each of the instances of the application. All metadata is queryable from Marathon.
+The service port is metadata; Marathon does not do anything with this information except track it and provide it to a load balancer. The user is expected to configure a load balancer to host a port `8080`, or refer to the `servicePort`, and route to each of the instances of the application. All metadata is queryable from Marathon.
 
-The [Marathon-LB service](https://docs.mesosphere.com/1.10/networking/marathon-lb/), when configured, does exactly this.  Marathon-LB will register all instances of an app and route to its configured `servicePort`. In the configuration in this example, a client will connect to a load balancer at port `:8080` (`servicePort`), which will route (with some algorithm) to `10.0.0.2:31000` (`hostPort`), which will in turn route to `:8080` (`containerPort`) of the internal application.
+The [Marathon-LB service](https://docs.mesosphere.com/1.10/networking/marathon-lb/), when configured, does exactly this.  Marathon-LB will register all instances of an app and route to its configured `servicePort`. In the configuration in this example, a client will connect to a load balancer at port `8080` (`servicePort`), which will route (with an algorithm) to `10.0.0.2:31000` (`hostPort`), which will in turn route to `8080` (`containerPort`) of the internal application.
 
 #### The `VIP_0` Label Use Case
 
-`VIP_0`, defined in `portDefinitions` as a label, is like `servicePort` in that it is informational and implementation-dependent. However, when used with [DC/OS](https://docs.mesosphere.com), services internal to DC/OS will make available to the cluster that DNS name and port as a routing to services.  An example configuration:
+`VIP_0`, defined in `portDefinitions` as a label, is like `servicePort` in that it is informational and implementation-dependent. However, when used with [DC/OS](https://docs.mesosphere.com), services internal to DC/OS will make available to the cluster that DNS name and port as a route to services. An example configuration:
 
 ```app_def['portDefinitions'] = [{
         "port": 0,
@@ -137,9 +137,10 @@ The [Marathon-LB service](https://docs.mesosphere.com/1.10/networking/marathon-l
         }
     }]
 ```
-This configuration will create a fully qualified domain name (FQDN) of `acme.marathon.l4lb.thisdcos.directory` at port `:10000`, which will load balance all instances of the application.
 
-Marathon itself does nothing with this configuration. Marathon manages it as metadata for the application. A client in DC/OS could open a connection to `acme.marathon.l4lb.thisdcos.directory` at port `:10000`, which would route to `10.0.0.2:31000`, which will in turn route to the `containerPort` of `:8080`.
+This configuration will create a fully qualified domain name (FQDN) according to the following schema: `<vip-name>.marathon.l4lb.thisdcos.directory:<vip-port>`, which will load balance all instances of the application. Here, the FQDN would be `acme.marathon.l4lb.thisdcos.directory:10000`.
+
+Marathon itself does nothing with this configuration. Marathon manages it as metadata for the application. A client in DC/OS could open a connection to `acme.marathon.l4lb.thisdcos.directory` at port `10000`, which would route to `10.0.0.2:31000`, which will in turn route to the `containerPort` of `8080`.
 
 #### Declaring ports in an application
 
