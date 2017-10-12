@@ -98,6 +98,8 @@ class GroupManagerImpl(
 
   override def app(id: PathId): Option[AppDefinition] = rootGroup().app(id)
 
+  override def apps(ids: Set[PathId]) = ids.map(appId => appId -> app(appId))(collection.breakOut)
+
   override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
 
   @SuppressWarnings(Array("all")) /* async/await */
