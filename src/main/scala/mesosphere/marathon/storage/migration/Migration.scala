@@ -51,13 +51,25 @@ class Migration(
 
   private[migration] lazy val legacyStoreFuture: Future[Option[PersistentStore]] = legacyConfig.map { config =>
     val store = config.store
+    if (!store.isOpen) {
+      store.markOpen()
+    }
     store match {
       case s: PersistentStoreManagement with PrePostDriverCallback =>
-        s.preDriverStarts.flatMap(_ => s.initialize()).map(_ => Some(store))
+        s.preDriverStarts
+          .flatMap(_ => s.sync())
+          .map(_ => s.initialize())
+          .map(_ => Some(store))
       case s: PersistentStoreManagement =>
-        s.initialize().map(_ => Some(store))
+        s.sync()
+          .map(_ => s.initialize())
+          .map(_ => Some(store))
       case s: PrePostDriverCallback =>
-        s.preDriverStarts.map(_ => Some(store))
+        s.preDriverStarts
+          .map(_ => s.sync())
+          .map(_ => Some(store))
+      case s: PersistentStore =>
+        s.sync().map(_ => Some(store))
       case _ =>
         Future.successful(Some(store))
     }
@@ -134,6 +146,12 @@ class Migration(
   @SuppressWarnings(Array("all")) // async/await
   def migrate(): Seq[StorageVersion] = {
     val result = async { // linter:ignore UnnecessaryElseBranch
+      // Before reading to and writing from the storage, let's ensure that
+      // no stale values are read from the persistence store.
+      // Although in case of ZK it is done at the time of creation of CuratorZK,
+      // it is better to be safe than sorry.
+      await(Future.sequence(persistenceStore.map(_.sync()).toList))
+
       // invalidate group cache before migration
       await(groupRepository.invalidateGroupCache())
 

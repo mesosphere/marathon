@@ -25,6 +25,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("Fetch") {
     val state = mock[PersistentStore]
+    when(state.isOpen).thenReturn(true)
+
     val variable = mock[PersistentEntity]
     val now = Timestamp.now()
     val appDef = AppDefinition(id = "testApp".toPath, args = Seq("arg"),
@@ -41,6 +43,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("FetchFail") {
     val state = mock[PersistentStore]
+    when(state.isOpen).thenReturn(true)
 
     when(state.load("app:testApp")).thenReturn(Future.failed(new StoreCommandFailedException("failed")))
 
@@ -56,6 +59,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("FetchInvalidProto") {
     val state = mock[PersistentStore]
+    when(state.isOpen).thenReturn(true)
+
     val variable = mock[PersistentEntity]
     when(variable.bytes).thenReturn(IndexedSeq[Byte](1, 1, 1))
 
@@ -68,6 +73,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("Modify") {
     val state = mock[PersistentStore]
+    when(state.isOpen).thenReturn(true)
+
     val variable = mock[PersistentEntity]
     val now = Timestamp.now()
     val appDef = AppDefinition(id = "testApp".toPath, args = Seq("arg"),
@@ -94,6 +101,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("ModifyFail") {
     val state = mock[PersistentStore]
+    when(state.isOpen).thenReturn(true)
+
     val variable = mock[PersistentEntity]
     val appDef = AppDefinition(id = "testApp".toPath, args = Seq("arg"))
 
@@ -118,6 +127,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("Expunge") {
     val state = mock[PersistentStore]
+    when(state.isOpen).thenReturn(true)
 
     when(state.delete("app:testApp")).thenReturn(Future.successful(true))
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
@@ -129,6 +139,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("ExpungeFail") {
     val state = mock[PersistentStore]
+    when(state.isOpen).thenReturn(true)
 
     when(state.delete("app:testApp")).thenReturn(Future.failed(new StoreCommandFailedException("failed")))
 
@@ -143,6 +154,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("Names") {
     val state = new InMemoryStore
+    val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
+    store.markOpen()
 
     def populate(key: String, value: Array[Byte]) = {
       state.load(key).futureValue match {
@@ -155,7 +168,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     populate("app:bar", Array())
     populate("no_match", Array())
 
-    val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
     val res = store.names()
 
     assert(Set("foo", "bar") == Await.result(res, 5.seconds).toSet, "Should return all application keys")
@@ -163,6 +175,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("NamesFail") {
     val state = mock[PersistentStore]
+    when(state.isOpen).thenReturn(true)
 
     when(state.allIds()).thenReturn(Future.failed(new StoreCommandFailedException("failed")))
 
@@ -174,8 +187,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("ConcurrentModifications") {
     val state = new InMemoryStore
-
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
+    store.markOpen()
 
     store.store("foo", AppDefinition(id = "foo".toPath, instances = 0)).futureValue
 
@@ -204,6 +217,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
+    store.markOpen()
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)
@@ -219,6 +233,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
+    store.markOpen()
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)
@@ -231,6 +246,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
+    store.markOpen()
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)
@@ -243,6 +259,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
+    store.markOpen()
 
     noException should be thrownBy {
       Await.result(store.names(), 1.second)

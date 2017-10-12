@@ -2,6 +2,7 @@ package mesosphere.marathon
 package storage.repository.legacy.store
 
 import akka.Done
+import mesosphere.marathon.util.OpenableOnce
 
 import scala.concurrent.Future
 
@@ -31,7 +32,7 @@ trait PersistentEntity {
 /**
   * Store abstraction for different store implementations.
   */
-trait PersistentStore {
+trait PersistentStore extends OpenableOnce {
 
   type ID = String
 
@@ -80,6 +81,11 @@ trait PersistentStore {
     * @return the list of available identifier.
     */
   def allIds(): Future[Seq[ID]]
+
+  /**
+    * Make sure that store read operations return up-to-date values.
+    */
+  def sync(): Future[Done]
 }
 
 /**

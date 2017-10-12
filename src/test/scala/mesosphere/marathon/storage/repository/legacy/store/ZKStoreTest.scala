@@ -58,6 +58,8 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest {
     val client = persistentStore.client
     val path = client("/s/o/m/e/d/e/e/p/ly/n/e/s/t/e/d/p/a/t/h")
     val store = new ZKStore(client, path, conf, 8, 1024)
+    store.markOpen()
+
     path.exists().asScala.failed.futureValue shouldBe a[NoNodeException]
     store.initialize().futureValue(Timeout(5.seconds))
     path.exists().asScala.futureValue.stat.getVersion should be(0)
@@ -70,9 +72,15 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest {
     val client = persistentStore.client
     val path = client("/some/deeply/nested/path")
     path.exists().asScala.failed.futureValue shouldBe a[NoNodeException]
-    new ZKStore(client, path, conf, 8, 1024).initialize().futureValue
+
+    val store1 = new ZKStore(client, path, conf, 8, 1024)
+    store1.markOpen()
+    store1.initialize().futureValue
     path.exists().asScala.futureValue.stat.getVersion should be(0)
-    new ZKStore(client, path, conf, 8, 1024).initialize().futureValue
+
+    val store2 = new ZKStore(client, path, conf, 8, 1024)
+    store2.markOpen()
+    store2.initialize().futureValue
     path.exists().asScala.futureValue.stat.getVersion should be(0)
   }
 
@@ -81,6 +89,7 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest {
 
     val compress = CompressionConf(true, 0)
     val store = new ZKStore(persistentStore.client, persistentStore.client("/compressed"), compress, 8, 1024)
+    store.markOpen()
     store.initialize().futureValue(Timeout(5.seconds))
     val content = 1.to(100).map(num => s"Hello number $num!").mkString(", ").getBytes("UTF-8")
 
@@ -107,7 +116,9 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest {
     implicit val timer = com.twitter.util.Timer.Nil
     val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
     val client = twitterZkClient().withAcl(Ids.OPEN_ACL_UNSAFE.toSeq)
-    new ZKStore(client, client(root), conf, 8, 1024)
+    val store = new ZKStore(client, client(root), conf, 8, 1024)
+    store.markOpen()
+    store
   }
 
   lazy val mesosStore: MesosStateStore = {
@@ -118,7 +129,9 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest {
       TimeUnit.MILLISECONDS,
       root
     )
-    new MesosStateStore(state, duration)
+    val store = new MesosStateStore(state, duration)
+    store.markOpen()
+    store
   }
 
   val root = s"/${UUID.randomUUID}"

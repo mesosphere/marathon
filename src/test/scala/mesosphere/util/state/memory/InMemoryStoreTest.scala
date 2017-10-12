@@ -20,7 +20,9 @@ class InMemoryStoreTest extends PersistentStoreTest {
     update.version should be (read.get.version + 1)
   }
 
-  lazy val persistentStore: PersistentStore = new InMemoryStore
-
+  lazy val persistentStore: PersistentStore = {
+    val store = new InMemoryStore
+    store.markOpen()
+    store
+  }
 }
-

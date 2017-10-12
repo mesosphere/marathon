@@ -35,7 +35,9 @@ class InstanceTrackerImplTest extends AkkaFunTest with MarathonShutdownHookSuppo
   var state: InstanceRepository = _
 
   before {
-    state = spy(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
+    val store = new InMemoryPersistenceStore()
+    store.markOpen()
+    state = spy(InstanceRepository.inMemRepository(store))
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), Some(state), metrics)
     instanceTracker = taskTrackerModule.instanceTracker
     stateOpProcessor = taskTrackerModule.stateOpProcessor

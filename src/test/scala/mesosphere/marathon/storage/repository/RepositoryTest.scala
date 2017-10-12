@@ -14,7 +14,7 @@ import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
-import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, PersistentStore, ZKStore }
+import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore }
 import mesosphere.marathon.stream.Sink
 import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
@@ -150,31 +150,42 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     }
   }
 
-  def createLegacyRepo(maxVersions: Int, store: PersistentStore): AppRepository = {
+  def createLegacyInMemoryRepo(maxVersions: Int): AppRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
+    val store = new InMemoryStore()
     def entityStore(name: String, newState: () => AppDefinition): EntityStore[AppDefinition] = {
-      new MarathonStore(store, metrics, newState, name)
+      val marathonStore = new MarathonStore(store, metrics, newState, name)
+      marathonStore.markOpen()
+      marathonStore
     }
     AppRepository.legacyRepository(entityStore, maxVersions)
   }
 
-  def zkStore(): PersistentStore = {
+  def createLegacyZkRepo(maxVersions: Int): AppRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val client = twitterZkClient()
-    val persistentStore = new ZKStore(client, ZNode(client, s"/${UUID.randomUUID().toString}"),
+    val store = new ZKStore(client, ZNode(client, s"/${UUID.randomUUID().toString}"),
       CompressionConf(true, 64 * 1024), 8, 1024)
-    persistentStore.initialize().futureValue(Timeout(5.seconds))
-    persistentStore
+    def entityStore(name: String, newState: () => AppDefinition): EntityStore[AppDefinition] = {
+      val marathonStore = new MarathonStore(store, metrics, newState, name)
+      marathonStore.markOpen()
+      store.initialize().futureValue(Timeout(5.seconds))
+      marathonStore
+    }
+    AppRepository.legacyRepository(entityStore, maxVersions)
   }
 
   def createInMemRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
-    AppRepository.inMemRepository(new InMemoryPersistenceStore())
+    val store = new InMemoryPersistenceStore()
+    store.markOpen()
+    AppRepository.inMemRepository(store)
   }
 
   def createLoadTimeCachingRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    cached.markOpen()
     cached.preDriverStarts.futureValue
     AppRepository.inMemRepository(cached)
   }
@@ -184,28 +195,33 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
     val store = new ZkPersistenceStore(rootClient, Duration.Inf)
+    store.markOpen()
     AppRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
-    AppRepository.inMemRepository(LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
+    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    store.markOpen()
+    AppRepository.inMemRepository(store)
   }
 
   def createLazyVersionCachingRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
-    AppRepository.inMemRepository(LazyVersionCachingPersistentStore(new InMemoryPersistenceStore()))
+    val store = LazyVersionCachingPersistentStore(new InMemoryPersistenceStore())
+    store.markOpen()
+    AppRepository.inMemRepository(store)
   }
 
-  behave like basic("InMemEntity", createLegacyRepo(_, new InMemoryStore()))
-  behave like basic("ZkEntity", createLegacyRepo(_, zkStore()))
+  behave like basic("InMemEntity", createLegacyInMemoryRepo)
+  behave like basic("ZkEntity", createLegacyZkRepo)
   behave like basic("InMemoryPersistence", createInMemRepo)
   behave like basic("ZkPersistence", createZKRepo)
   behave like basic("LoadTimeCachingPersistence", createLoadTimeCachingRepo)
   behave like basic("LazyCachingPersistence", createLazyCachingRepo)
 
-  behave like versioned("InMemEntity", createLegacyRepo(_, new InMemoryStore()))
-  behave like versioned("ZkEntity", createLegacyRepo(_, zkStore()))
+  behave like versioned("InMemEntity", createLegacyInMemoryRepo)
+  behave like versioned("ZkEntity", createLegacyZkRepo)
   behave like versioned("InMemoryPersistence", createInMemRepo)
   behave like versioned("ZkPersistence", createZKRepo)
   behave like versioned("LoadTimeCachingPersistence", createLoadTimeCachingRepo)

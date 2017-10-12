@@ -29,7 +29,13 @@ class MarathonStore[S <: MarathonState[_, S]](
   protected[this] val bytesWritten: Histogram =
     metrics.histogram(metrics.name(metricsPrefix, getClass, s"${ct.runtimeClass.getSimpleName}.write-data-size"))
 
+  override def markOpen(): Unit = store.markOpen()
+  override def isOpen: Boolean = store.isOpen
+  override def markClosed(): Unit = store.markClosed()
+
   def fetch(key: String): Future[Option[S]] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     log.debug(s"Fetch $prefix$key")
     store.load(prefix + key)
       .map {
@@ -48,6 +54,8 @@ class MarathonStore[S <: MarathonState[_, S]](
   }
 
   def modify(key: String, onSuccess: (S) => Unit = _ => ())(f: Update): Future[S] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     lock(key) {
       log.debug(s"Modify $prefix$key")
       val res = store.load(prefix + key).flatMap {
@@ -70,15 +78,21 @@ class MarathonStore[S <: MarathonState[_, S]](
     }
   }
 
-  def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] = lock(key) {
-    log.debug(s"Expunge $prefix$key")
-    store.delete(prefix + key).map { result =>
-      onSuccess()
-      result
-    }.recover(exceptionTransform(s"Could not expunge ${ct.runtimeClass.getSimpleName} with key: $key"))
+  def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] = {
+    require(isOpen, "the store must be opened before it can be used")
+
+    lock(key) {
+      log.debug(s"Expunge $prefix$key")
+      store.delete(prefix + key).map { result =>
+        onSuccess()
+        result
+      }.recover(exceptionTransform(s"Could not expunge ${ct.runtimeClass.getSimpleName} with key: $key"))
+    }
   }
 
   def names(): Future[Seq[String]] = {
+    require(isOpen, "the store must be opened before it can be used")
+
     store.allIds()
       .map {
         _.collect {

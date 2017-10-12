@@ -9,12 +9,14 @@ import akka.event.EventStream
 import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
+import com.codahale.metrics.Gauge
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PortDefinition, _ }
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
@@ -24,7 +26,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success }
 
 private[group] object GroupManagerActor {
@@ -65,14 +67,16 @@ private[group] object GroupManagerActor {
     groupRepo: GroupRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream)(implicit mat: Materializer): Props = {
+    eventBus: EventStream,
+    metrics: Metrics)(implicit mat: Materializer): Props = {
     Props(new GroupManagerActor(
       serializeUpdates,
       scheduler,
       groupRepo,
       storage,
       config,
-      eventBus))
+      eventBus,
+      metrics))
   }
 }
 
@@ -84,7 +88,8 @@ private[impl] class GroupManagerActor(
     groupRepo: GroupRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream)(implicit mat: Materializer) extends Actor with PathFun {
+    eventBus: EventStream,
+    metrics: Metrics)(implicit mat: Materializer) extends Actor with PathFun {
   import GroupManagerActor._
   import context.dispatcher
 
@@ -94,6 +99,18 @@ private[impl] class GroupManagerActor(
   override def preStart(): Unit = {
     super.preStart()
     scheduler = schedulerProvider.get()
+
+    metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
+      override def getValue: Int = {
+        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveApps.size
+      }
+    })
+
+    metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
+      override def getValue: Int = {
+        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveGroupsById.size
+      }
+    })
   }
 
   override def receive: Receive = {

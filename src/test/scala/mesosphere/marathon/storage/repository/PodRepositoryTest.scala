@@ -36,6 +36,7 @@ class PodRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
     val store = new ZkPersistenceStore(rootClient, Duration.Inf)
+    store.markOpen()
     val repo = PodRepository.zkRepository(store)
   }
 }

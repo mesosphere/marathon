@@ -49,6 +49,10 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   private[store] var valueCache: Future[TrieMap[K, Either[Serialized, Any]]] =
     Future.failed(new NotActiveException())
 
+  override def markOpen(): Unit = store.markOpen()
+  override def markClosed(): Unit = store.markClosed()
+  override def isOpen: Boolean = store.isOpen
+
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
 
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
@@ -197,6 +201,8 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     k: Id,
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
     store.deleteVersion(k, version)
+
+  override def sync(): Future[Done] = store.sync()
 
   override def toString: String = s"LoadTimeCachingPersistenceStore($store)"
 }

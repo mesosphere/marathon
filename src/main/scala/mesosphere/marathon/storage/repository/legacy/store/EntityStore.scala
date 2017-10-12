@@ -1,5 +1,7 @@
 package mesosphere.marathon.storage.repository.legacy.store
 
+import mesosphere.marathon.util.OpenableOnce
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
@@ -9,7 +11,7 @@ import scala.concurrent.Future
   *
   * @tparam T the specific type of entities that are handled by this specific store.
   */
-trait EntityStore[T] {
+trait EntityStore[T] extends OpenableOnce {
 
   type Deserialize = () => T //returns deserialized T value.
   type Update = Deserialize => T //Update function Gets an Read and returns the (modified) T
