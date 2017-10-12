@@ -7,7 +7,7 @@ import akka.stream.OverflowStrategy
 import com.typesafe.scalalogging.StrictLogging
 import java.util
 import java.util.Collections
-import java.util.concurrent.{ ExecutorService, TimeUnit }
+import java.util.concurrent.TimeUnit
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.util.LifeCycledCloseableLike
@@ -19,7 +19,6 @@ import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.{ KeeperException, WatchedEvent, ZooDefs }
 import org.apache.zookeeper.data.ACL
-import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -36,11 +35,10 @@ object CuratorElectionStream extends StrictLogging {
     zooKeeperLeaderPath: String,
     zooKeeperConnectionTimeout: FiniteDuration,
     hostPort: String,
-    singleThreadExecutor: ExecutorService): Source[LeadershipState, Cancellable] = {
-    val singleThreadEC = ExecutionContext.fromExecutor(singleThreadExecutor)
+    singleThreadEC: ExecutionContext): Source[LeadershipState, Cancellable] = {
     Source.queue[LeadershipState](16, OverflowStrategy.dropHead)
       .mapMaterializedValue { sq =>
-        val emitterLogic = new CuratorEventEmitter(singleThreadExecutor, clientCloseable, zooKeeperLeaderPath, hostPort, sq)
+        val emitterLogic = new CuratorEventEmitter(singleThreadEC, clientCloseable, zooKeeperLeaderPath, hostPort, sq)
         emitterLogic.start()
         sq.watchCompletion().onComplete { _ => emitterLogic.cancel() }(singleThreadEC)
         emitterLogic
@@ -61,14 +59,13 @@ object CuratorElectionStream extends StrictLogging {
 
   @SuppressWarnings(Array("CatchThrowable"))
   private class CuratorEventEmitter(
-      singleThreadExecutor: ExecutorService,
+      singleThreadEC: ExecutionContext,
       clientCloseable: LifeCycledCloseableLike[CuratorFramework],
       zooKeeperLeaderPath: String,
       hostPort: String,
       sq: SourceQueueWithComplete[LeadershipState]) extends Cancellable {
 
     val client = clientCloseable.closeable
-    private lazy val singleThreadEC: ExecutionContext = ExecutionContext.fromExecutor(singleThreadExecutor)
     private lazy val leaderHostPortMetric: Timer = Metrics.timer(ServiceMetric, getClass, "current-leader-host-port")
     private val curatorLeaderLatchPath = zooKeeperLeaderPath + "-curator"
     private lazy val latch = new LeaderLatch(client, curatorLeaderLatchPath, hostPort)
@@ -138,14 +135,14 @@ object CuratorElectionStream extends StrictLogging {
       }
 
       currentLeader match {
-        case Some(`hostPort`) =>
+        case Some(leader) if leader == hostPort =>
           sq.offer(LeadershipState.ElectedAsLeader)
         case otherwise =>
           sq.offer(LeadershipState.Standby(otherwise))
       }
     }
 
-    private val closeHook: () => Unit = cancel
+    private val closeHook: () => Unit = { () => cancel() }
 
     def start(): Unit = synchronized {
       assert(!isStarted, "already started")

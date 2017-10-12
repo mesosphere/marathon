@@ -36,6 +36,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.StorageModule
 import mesosphere.util.state.MesosLeaderInfo
+import scala.concurrent.ExecutionContext
 
 import scala.util.Random
 
@@ -77,7 +78,7 @@ class CoreModuleImpl @Inject() (
     eventStream,
     hostPort,
     crashStrategy,
-    electionExecutor
+    ExecutionContext.fromExecutor(electionExecutor)
   )
 
   // TASKS

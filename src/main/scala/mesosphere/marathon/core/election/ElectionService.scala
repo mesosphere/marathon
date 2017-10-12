@@ -117,6 +117,20 @@ trait ElectionCandidate {
   def startLeadership(): Unit
 }
 
+/**
+  * ElectionService implementation
+  *
+  * leaderEventsSource is a materializable Akka stream that has the following expectations:
+  *
+  * - If leadership status is in doubt, it should crash
+  * - If the leadership connection is requested to close, it should terminate (gracefully).
+  *
+  * @param eventStream The event bus over which to publish the leadership messages
+  * @param hostPort The host and port of this Marathon instance.
+  * @param leaderEventsSource The election backend, with properties as described above
+  * @param crashStrategy Called if leadership status because uncertain, or leadership abdicates.
+  * @param electionEC the execution context in which to run the synchronous, blocking leader initialization logic
+  */
 class ElectionServiceImpl(
     eventStream: EventStream,
     hostPort: String,
@@ -161,17 +175,60 @@ class ElectionServiceImpl(
     leaderSubscription.foreach(_.cancel())
   }
 
+  /**
+    * Monitor LeadershipState events, and update the state in this class so that the last received state can be easily
+    * queried (IE isLeader, leaderHostPort, etc.)
+    */
+  private val localEventListenerSink = Sink.foreach[LeadershipState] { event =>
+    lastState = event
+  }
+
+  /**
+    * Monitor leader transition events. Specifically, crashes if we lose leadership.
+    */
+  private val localTransitionSink = Sink.foreach[LeadershipTransition] { e =>
+    eventStream.publish(e)
+    if (e == LeadershipTransition.Standby) {
+      logger.error("Lost leadership; crashing")
+      crashStrategy.crash()
+    }
+  }
+
+  /**
+    * Construct the stream topology and run it.
+    *
+    * Topology looks like this:
+    *
+    * +----------------------------+    +-----------+    +----------------------------+
+    * |    leaderEventsSource      | -> | broadcast | -> |   localEventListenerSink   |
+    * | (IE CuratorElectionStream) |    +-----------+    | (keep track of last state) |
+    * |                            |          |          +----------------------------+
+    * |     [LeadershipState]      |          |
+    * +----------------------------+          |
+    *                                         V
+    *                             +--------------------------------------+
+    *                             |      leadershipTransitionFlow        |
+    *                             | (Emits LeadershipTransition when we  |
+    *                             | lost or gain leadership, but calling |
+    *                             | marathon initialization logic before |
+    *                             | emitting ObtainedLeadership          |
+    *                             |                                      |
+    *                             |      [LeadershipTransition]          |
+    *                             +--------------------------------------+
+    *                                              |
+    *                                              V
+    *          +------------------------+    +-----------+    +------------------------+
+    *          |   localTransitionSink  | <- | broadcast | -> |    metricsSink         |
+    *          | Monitors for lost      |    +-----------+    | Watches transitions,   |
+    *          | leadership; crashes if |                     | records how long we've |
+    *          | that happens.          |                     | had leadership         |
+    *          +------------------------+                     +------------------------+
+    *
+    * If any component throws an exception, or finishes, then the _whole stream_ shuts down.
+    *
+    * When the stream ends (exception or not), we report accordingly and crash.
+    */
   private def initializeStream(leadershipTransitionsFlow: Flow[LeadershipState, LeadershipTransition, NotUsed]) = {
-    val localEventListenerSink = Sink.foreach[LeadershipState] { event =>
-      lastState = event
-    }
-    val localTransitionSink = Sink.foreach[LeadershipTransition] { e =>
-      eventStream.publish(e)
-      if (e == LeadershipTransition.Standby) {
-        logger.error("Lost leadership; crashing")
-        crashStrategy.crash()
-      }
-    }
 
     val (leaderStream, leaderStreamDone) =
       RunnableGraph.fromGraph(GraphDSL.create(
@@ -216,7 +273,9 @@ class ElectionServiceImpl(
 
     /**
       * Deduped event stream with current leader removed. Specified this way to maintain compatibility with the rest of
-      * the code base
+      * the code base.
+      *
+      * Does not emit an event if the first events are Standby.
       */
     val leadershipTransitionsFlow =
       Flow[LeadershipState]
@@ -270,16 +329,34 @@ object ElectionService extends StrictLogging {
 
 /**
   * Events produced by Curator election stream; describes transitions from one leader to the next while not leader
+
   */
 private[election] sealed trait LeadershipState
 private[election] object LeadershipState {
+  /**
+    * Indicates that our election backend has said we are the leader; emitted _before_ Marathon initialization
+    * routine.
+    */
   case object ElectedAsLeader extends LeadershipState
+
+  /**
+    * Indicates that we are not the leader.
+    *
+    * @param currentLeader The id of the current leader, if any is known.
+    */
   case class Standby(currentLeader: Option[String]) extends LeadershipState
 }
 
-/** Local leadership events. They are not delivered via the event endpoints. */
+/** Local leadership transition events */
 sealed trait LeadershipTransition
 object LeadershipTransition {
+  /**
+    * Emitted when we are elected as leader, _after_ Marathon is initialized
+    */
   case object ElectedAsLeader extends LeadershipTransition
+
+  /**
+    * Indicates that we previously had leadership, but now we don't.
+    */
   case object Standby extends LeadershipTransition
 }

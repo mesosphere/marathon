@@ -16,7 +16,7 @@ class ElectionModule(
     eventStream: EventStream,
     hostPort: String,
     crashStrategy: CrashStrategy,
-    electionExecutor: ExecutorService
+    electionEC: ExecutionContext
 ) {
 
   lazy private val electionBackend: Source[LeadershipState, Cancellable] = if (config.highlyAvailable()) {
@@ -29,7 +29,7 @@ class ElectionModule(
           config.zooKeeperLeaderPath,
           config.zooKeeperConnectionTimeout().millis,
           hostPort,
-          electionExecutor)
+          electionEC)
       case backend: Option[String] =>
         throw new IllegalArgumentException(s"Leader election backend $backend not known!")
     }
