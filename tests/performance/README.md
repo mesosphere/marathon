@@ -13,7 +13,7 @@ Historically scale testing is a measure of the number of concurrent requests a s
 * [DC/OS Performance Test Driver](https://github.com/mesosphere/dcos-perf-test-driver)
 * One of:
     * A provisioned DC/OS Cluster (Enterprise or Open)
-    * A valid development environemnt that can run a development version of marathon
+    * A valid development environment that can run a development version of marathon
 
 To run the tests you can simply use the `dcos-perf-test-driver` tool. Some configurations require additional variables to be defined, for example:
 
@@ -61,7 +61,7 @@ The following scale tests are available:
 The test is producing a variety of results:
 
 * _dump.json_ - Contains the raw dump of the metrics collected for various parameters during the scale test.
-* _results.csv_ - Contains a CSV with the summarised results for every parameter configuration.
+* _results.csv_ - Contains a CSV with the summarized results for every parameter configuration.
 * _plot-*.png_ - Image plots with the scale test results. Every metric will have its own image plot generated.
 * _S3 RAW Upload_ - In addition to the local raw dump, the results are uploaded to S3 for long-term archiving.
 * _Postgres Database_ - When used in CI, the results are posted in a Postgres database for long-term archiving and plotting through a PostgREST endpoint.
@@ -75,9 +75,9 @@ This section describes the usage and requirements of each script.
 
 ### `ci_run_dcluster.sh` - Run tests against a thin cluster
 
-Installs missing dependencies, creates a local cluster  using the [macarhon-dcluster](https://github.com/wavesoft/marathon-dcluster) script and then it runs the tests on that cluster.
+Installs missing dependencies, creates a local cluster  using the [marathon-dcluster](https://github.com/wavesoft/marathon-dcluster) script and then it runs the tests on that cluster.
 
-The "thin cluster" deployed consists of 6 Mesos agents (with over-commited resources), 1 Mesos master, 1 Zookeeper and 1 Mesos containers using docker-compose. 
+The "thin cluster" deployed consists of 6 Mesos agents (with overcommitted resources), 1 Mesos master, 1 Zookeeper and 1 Mesos containers using docker-compose. 
 
 #### Requirements
 
