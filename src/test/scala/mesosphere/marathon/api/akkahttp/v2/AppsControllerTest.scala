@@ -20,6 +20,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer }
