@@ -1,0 +1,47 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : JMX Observer                       #
+# ----------------------------------------------------------- #
+# This fragment installs a JMX observer that is going to      #
+# connect on the specified Java Runtime and extract real-time #
+# measurements from the engine. The JMX port is assumed to    #
+# be openned on the local host.                               #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # We require the user to specify the JMX port to connect to
+  definitions:
+    - name: jmx_port
+      desc: The exposed JMX port where to connect in order to extract run-time metrics
+      required: yes
+
+# Observer configuration
+# ===========================
+observers:
+
+  # The events observer is subscribing to the
+  - class: observer.JMXObserver
+    connect:
+      host: 127.0.0.1
+      port: "{{jmx_port}}"
+
+    # Extract the specified values from the specified MBeans
+    metrics:
+      - field: threadCount
+        mbean: "java.lang:type=Threading"
+        attrib: ThreadCount
+
+      - field: usedMemory
+        mbean: "java.lang:type=Memory"
+        attrib: HeapMemoryUsage
+        value: "value['used']"
+
+      - field: cpuUsage
+        mbean: "java.lang:type=OperatingSystem"
+        attrib: ProcessCpuLoad
+
+    # Activate observer when marathon is started
+    events:
+      activate: MarathonStartedEvent

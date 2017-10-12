@@ -1,0 +1,15 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : CSV Summary Reporter               #
+# ----------------------------------------------------------- #
+# This fragment enables the CSVReporter that is going to      #
+# collect the summarised results in the `results/dump.json`   #
+# file.                                                       #
+# ----------------------------------------------------------- #
+
+# Reporter configuration
+# ===========================
+reporters:
+
+  # Dump summarized CSV values to results/results.csv
+  - class: reporter.CSVReporter
+    filename: results/results-{{versionspec}}.csv

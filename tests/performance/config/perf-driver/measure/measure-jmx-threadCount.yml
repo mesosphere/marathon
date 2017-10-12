@@ -1,0 +1,42 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Extract threadCount from JMX       #
+# ----------------------------------------------------------- #
+# This fragment install a tracker that extracts the thread    #
+# count metric from the JMX observer                          #
+# ----------------------------------------------------------- #
+
+
+# Global test configuration
+# ===========================
+config:
+
+  # Define the metrics we are measuring
+  metrics:
+    - name: threadCount
+      uuid: 59d7d878001f4a398b74066dbd492746
+      desc: The number of threads in marathon
+      summarize: [mean_err]
+      units: threads
+
+  # Define the indicators that can summarise our values
+  indicators:
+
+    # Calculate `meanThreadCount` by calculating the normalizing average
+    # of all the `threadCount` mean values, normalized against each test's
+    # normalization expression
+    - name: meanThreadCount
+      class: indicator.NormalizedMeanMetricIndicator
+      metric: threadCount.mean_err
+      normalizeto: "{{normalize_to}}"
+
+# Tracker configuration
+# ===========================
+trackers:
+
+  # Extract values from the JMX measurements
+  - class: tracker.EventAttributeTracker
+    event: JMXMeasurement
+    extract:
+
+      - metric: threadCount
+        attrib: "fields['threadCount']"
