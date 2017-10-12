@@ -107,7 +107,9 @@ class AppsController(
     }
   }
 
-  private def patchMultipleApps(implicit identity: Identity): Route = ???
+  private def patchMultipleApps(implicit identity: Identity): Route = {
+    updateMultiple(partialUpdate = true, allowCreation = false)
+  }
 
   private def createApp(implicit identity: Identity): Route = {
     (entity(as[AppDefinition]) & forceParameter & extractClientIP & extractUri) { (rawApp, force, remoteAddr, reqUri) =>
