@@ -16,8 +16,5 @@ sudo apt-get -y update
 # Install dependencies.
 sudo apt-get install -y --force-yes --no-install-recommends curl sbt
 
-MESOS_VERSION=$(sed -n 's/^.*MesosDebian = "\(.*\)"/\1/p' < "$WORKSPACE/project/Dependencies.scala")
-if [[ -z $MESOS_VERSION ]]; then
-    MESOS_VERSION=$(sed -n 's/^.*mesos=\(.*\)&&.*/\1/p' < "$WORKSPACE/Dockerfile")
-fi
+MESOS_VERSION=$(sed -n 's/^.*mesos=\([^[:space:]]*\) &&.*/\1/p' < "$WORKSPACE/Dockerfile")
 sudo apt-get install -y --force-yes --no-install-recommends mesos="$MESOS_VERSION"
