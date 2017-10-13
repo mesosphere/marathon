@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
 import org.apache.mesos.Protos.{ Offer, OfferID }
 
@@ -54,7 +54,7 @@ private[launcher] class OfferProcessorImpl(
     conf: OfferProcessorConfig, clock: Clock,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
-    stateOpProcessor: TaskStateOpProcessor,
+    stateOpProcessor: InstanceStateOpProcessor,
     offerStreamInput: SourceQueue[Offer]) extends OfferProcessor with StrictLogging {
   import mesosphere.marathon.core.async.ExecutionContexts.global
 

@@ -7,7 +7,7 @@ import akka.stream.scaladsl.SourceQueue
 import mesosphere.marathon.core.launcher.impl.{ InstanceOpFactoryImpl, OfferProcessorImpl, TaskLauncherImpl }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
 import org.apache.mesos.Protos.Offer
 
 /**
@@ -16,7 +16,7 @@ import org.apache.mesos.Protos.Offer
   */
 class LauncherModule(
     conf: MarathonConf,
-    stateOpProcessor: TaskStateOpProcessor,
+    stateOpProcessor: InstanceStateOpProcessor,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     offerMatcher: OfferMatcher,
     pluginManager: PluginManager,

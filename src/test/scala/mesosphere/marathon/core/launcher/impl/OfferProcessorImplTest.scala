@@ -12,7 +12,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{ AgentInfoPlaceholder, NetworkInfoPlaceholder }
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.util.NoopSourceQueue
@@ -43,7 +43,7 @@ class OfferProcessorImplTest extends UnitTest {
       clock: SettableClock = new SettableClock(),
       offerMatcher: OfferMatcher = mock[OfferMatcher],
       taskLauncher: TaskLauncher = mock[TaskLauncher],
-      stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]) {
+      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]) {
     val offerProcessor = new OfferProcessorImpl(
       conf, clock, offerMatcher, taskLauncher, stateOpProcessor,
       NoopSourceQueue()

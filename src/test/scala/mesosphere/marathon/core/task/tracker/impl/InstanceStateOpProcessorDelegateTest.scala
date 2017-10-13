@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
-import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
@@ -14,12 +13,12 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 
-class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
+class InstanceStateOpProcessorDelegateTest extends AkkaUnitTest {
   class Fixture {
     lazy val clock = new SettableClock()
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val taskTrackerProbe = TestProbe()
-    lazy val delegate = new InstanceCreationHandlerAndUpdaterDelegate(clock, config, taskTrackerProbe.ref)
+    lazy val delegate = new InstanceStateOpProcessorDelegate(clock, config, taskTrackerProbe.ref)
     lazy val timeoutDuration = delegate.timeout.duration
     def timeoutFromNow = clock.now() + timeoutDuration
   }

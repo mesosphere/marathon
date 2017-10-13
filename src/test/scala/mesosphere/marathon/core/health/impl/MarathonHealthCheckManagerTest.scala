@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder, TestTa
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule, InstanceStateOpProcessor }
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ CaptureEvents, MarathonTestHelper, SettableClock }
@@ -35,7 +35,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     val taskTracker: InstanceTracker = taskTrackerModule.instanceTracker
-    implicit val stateOpProcessor: TaskStateOpProcessor = taskTrackerModule.stateOpProcessor
+    implicit val stateOpProcessor: InstanceStateOpProcessor = taskTrackerModule.stateOpProcessor
     val groupManager: GroupManager = mock[GroupManager]
     implicit val eventStream: EventStream = new EventStream(system)
     val killService: KillService = mock[KillService]
@@ -48,7 +48,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     )
   }
 
-  def makeRunningTask(appId: PathId, version: Timestamp)(implicit stateOpProcessor: TaskStateOpProcessor): (Instance.Id, Task.Id) = {
+  def makeRunningTask(appId: PathId, version: Timestamp)(implicit stateOpProcessor: InstanceStateOpProcessor): (Instance.Id, Task.Id) = {
     val instance = TestInstanceBuilder.newBuilder(appId, version = version).addTaskStaged().getInstance()
     val (taskId, _) = instance.tasksMap.head
     val taskStatus = TestTaskBuilder.Helper.runningTask(taskId).status.mesosStatus.get

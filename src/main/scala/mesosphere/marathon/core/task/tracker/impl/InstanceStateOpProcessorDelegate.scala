@@ -8,21 +8,20 @@ import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.tracker.{ InstanceTrackerConfig, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTrackerConfig, InstanceStateOpProcessor }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 //scalastyle:on
 /**
-  * Implements the [[TaskStateOpProcessor]] trait by sending messages to the TaskTracker actor.
+  * Implements the [[InstanceStateOpProcessor]] trait by sending messages to the TaskTracker actor.
   */
-// TODO(PODS): rename to instance...
-private[tracker] class InstanceCreationHandlerAndUpdaterDelegate(
+private[tracker] class InstanceStateOpProcessorDelegate(
   clock: Clock,
   conf: InstanceTrackerConfig,
   instanceTrackerRef: ActorRef)
-    extends TaskStateOpProcessor {
+    extends InstanceStateOpProcessor {
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
 

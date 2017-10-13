@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
 import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableDisabled, UnreachableEnabled }
 
@@ -22,7 +22,7 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
 
   val config: TaskJobsConfig
   val clock: Clock
-  val stateOpProcessor: TaskStateOpProcessor
+  val stateOpProcessor: InstanceStateOpProcessor
 
   def triggerExpunge(instance: Instance): Unit = {
     val since = instance.state.since
@@ -52,7 +52,7 @@ class ExpungeOverdueLostTasksActor(
     val clock: Clock,
     val config: TaskJobsConfig,
     instanceTracker: InstanceTracker,
-    val stateOpProcessor: TaskStateOpProcessor) extends Actor with StrictLogging with ExpungeOverdueLostTasksActorLogic {
+    val stateOpProcessor: InstanceStateOpProcessor) extends Actor with StrictLogging with ExpungeOverdueLostTasksActorLogic {
 
   import ExpungeOverdueLostTasksActor._
   implicit val ec = context.dispatcher
@@ -83,7 +83,7 @@ object ExpungeOverdueLostTasksActor {
   case object Tick
 
   def props(clock: Clock, config: TaskJobsConfig,
-    instanceTracker: InstanceTracker, stateOpProcessor: TaskStateOpProcessor): Props = {
+    instanceTracker: InstanceTracker, stateOpProcessor: InstanceStateOpProcessor): Props = {
     Props(new ExpungeOverdueLostTasksActor(clock, config, instanceTracker, stateOpProcessor))
   }
 }

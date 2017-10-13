@@ -12,7 +12,7 @@ import mesosphere.marathon.storage.repository.InstanceRepository
 
 /**
   * Provides the interfaces to query the current task state ([[InstanceTracker]]) and to
-  * update the task state ([[TaskStateOpProcessor]]).
+  * update the task state ([[InstanceStateOpProcessor]]).
   */
 class InstanceTrackerModule(
     clock: Clock,
@@ -24,8 +24,8 @@ class InstanceTrackerModule(
     new InstanceTrackerDelegate(config, instanceTrackerActorRef)
   lazy val instanceTrackerUpdateStepProcessor: InstanceTrackerUpdateStepProcessor =
     new InstanceTrackerUpdateStepProcessorImpl(updateSteps)
-  lazy val stateOpProcessor: TaskStateOpProcessor =
-    new InstanceCreationHandlerAndUpdaterDelegate(clock, config, instanceTrackerActorRef)
+  lazy val stateOpProcessor: InstanceStateOpProcessor =
+    new InstanceStateOpProcessorDelegate(clock, config, instanceTrackerActorRef)
 
   private[this] def updateOpResolver(instanceTrackerRef: ActorRef): InstanceUpdateOpResolver =
     new InstanceUpdateOpResolver(
