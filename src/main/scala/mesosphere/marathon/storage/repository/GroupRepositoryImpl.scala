@@ -45,14 +45,14 @@ private[storage] case class StoredGroup(
       case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
         case NonFatal(ex) =>
           logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
-          None
+          throw ex
       }
     }
     val podFutures = podIds.map {
       case (podId, podVersion) => podRepository.getVersion(podId, podVersion).recover {
         case NonFatal(ex) =>
           logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
-          None
+          throw ex
       }
     }
 
@@ -78,7 +78,9 @@ private[storage] case class StoredGroup(
         pod.id -> pod
     }(collection.breakOut)
 
-    val groups: Map[PathId, Group] = await(Future.sequence(groupFutures)).map(group => group.id -> group)(collection.breakOut)
+    val groups: Map[PathId, Group] = await(Future.sequence(groupFutures)).map { group =>
+      group.id -> group
+    }(collection.breakOut)
 
     Group(
       id = id,
