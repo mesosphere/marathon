@@ -25,7 +25,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
@@ -59,10 +59,6 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
 
   @Provides @Singleton
   def taskKillService(coreModule: CoreModule): KillService = coreModule.taskTerminationModule.taskKillService
-
-  @Provides @Singleton
-  def taskCreationHandler(coreModule: CoreModule): InstanceCreationHandler =
-    coreModule.taskTrackerModule.instanceCreationHandler
 
   @Provides @Singleton
   def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
