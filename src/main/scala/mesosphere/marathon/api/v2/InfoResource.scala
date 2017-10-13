@@ -67,7 +67,7 @@ class InfoResource @Inject() (
     "task_lost_expunge_initial_delay" -> config.taskLostExpungeInitialDelay.toMillis,
     "task_lost_expunge_interval" -> config.taskLostExpungeInterval.toMillis,
     "task_reservation_timeout" -> config.taskReservationTimeout.get,
-    "webui_url" -> config.webuiUrl.get,
+    "webui_url" -> config.webuiUrl.get
   )
 
   // ZooKeeper congiurations
