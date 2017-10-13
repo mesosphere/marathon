@@ -3,7 +3,7 @@ package mesosphere.marathon.core.health.impl
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
-import mesosphere.marathon.core.health.{ Health, HealthCheck }
+import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId._
@@ -37,7 +37,7 @@ class HealthCheckActorTest
 
     when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
 
-    val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
+    val actor = f.actorWithLatch(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)), latch)
     actor.underlyingActor.dispatchJobs(Seq(f.task))
     latch.isOpen should be (false)
     verifyNoMoreInteractions(f.driver)
@@ -47,7 +47,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val latch = TestLatch(1)
 
-    val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
+    val actor = f.actorWithLatch(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)), latch)
 
     actor.underlyingActor.dispatchJobs(Seq(f.lostTask))
     latch.isOpen should be (false)
@@ -58,7 +58,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val latch = TestLatch(1)
 
-    val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
+    val actor = f.actorWithLatch(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)), latch)
 
     actor.underlyingActor.dispatchJobs(Seq(f.unreachableTask))
     latch.isOpen should be (false)
@@ -68,7 +68,7 @@ class HealthCheckActorTest
   // regression test for #1456
   test("task should be killed if health check fails") {
     val f = new Fixture
-    val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
+    val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)))
 
     actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
     verify(f.killService).killTask(f.task, TaskKillReason.FailedHealthChecks)
@@ -77,7 +77,7 @@ class HealthCheckActorTest
 
   test("task should not be killed if health check fails, but the task is unreachable") {
     val f = new Fixture
-    val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
+    val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)))
 
     actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.taskId, consecutiveFailures = 3))
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
@@ -111,7 +111,7 @@ class HealthCheckActorTest
 
     def actorWithLatch(healthCheck: HealthCheck, latch: TestLatch) = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(app, killService, HealthCheck(), tracker, system.eventStream) {
+        new HealthCheckActor(app, killService, MarathonHttpHealthCheck(portIndex = Some(0)), tracker, system.eventStream) {
           override val workerProps = Props {
             latch.countDown()
             new TestActors.EchoActor

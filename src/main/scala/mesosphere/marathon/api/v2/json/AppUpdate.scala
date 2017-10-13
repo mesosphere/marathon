@@ -4,8 +4,8 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Features
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state._
 
 import scala.collection.immutable.Seq
@@ -53,7 +53,7 @@ case class AppUpdate(
 
     container: Option[Container] = None,
 
-    healthChecks: Option[Set[HealthCheck]] = None,
+    healthChecks: Option[Set[_ <: HealthCheck]] = None,
 
     readinessChecks: Option[Seq[ReadinessCheck]] = None,
 

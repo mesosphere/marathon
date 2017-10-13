@@ -1,17 +1,16 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
+import mesosphere.marathon.core.health.MesosHealthCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-
+import mesosphere.marathon.state._
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
+import org.apache.mesos.Protos._
 import org.apache.mesos.Protos.Environment._
-import org.apache.mesos.Protos.{ HealthCheck => _, _ }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -84,95 +83,27 @@ class TaskBuilder(
     build(offer, resourceMatch)
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
-  private[this] def build(
-    offer: Offer,
-    resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
-    taskBuildOpt: Option[RunSpecTaskProcessor]): Some[(TaskInfo, Seq[Option[Int]])] = {
-
-    val executor: Executor = if (runSpec.executor == "") {
-      config.executor
-    } else {
-      Executor.dispatch(runSpec.executor)
-    }
-
-    val host: Option[String] = Some(offer.getHostname)
-
-    val labels = runSpec.labels.map {
-      case (key, value) =>
-        Label.newBuilder.setKey(key).setValue(value).build()
-    }
-
-    val taskId = newTaskId(runSpec.id)
-    val builder = TaskInfo.newBuilder
-      // Use a valid hostname to make service discovery easier
-      .setName(runSpec.id.toHostname)
-      .setTaskId(taskId.mesosTaskId)
-      .setSlaveId(offer.getSlaveId)
-      .addAllResources(resourceMatch.resources.asJava)
-
-    builder.setDiscovery(computeDiscoveryInfo(runSpec, resourceMatch.hostPorts))
-
-    if (labels.nonEmpty)
-      builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
-
-    volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources(_)))
-
-    val containerProto = computeContainerInfo(resourceMatch.hostPorts)
-    val envPrefix: Option[String] = config.envVarsPrefix.get
-
-    executor match {
-      case CommandExecutor() =>
-        containerProto.foreach(builder.setContainer)
-        val command = TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
-        builder.setCommand(command.build)
-
-      case PathExecutor(path) =>
-        val executorId = f"marathon-${taskId.idString}" // Fresh executor
-        val executorPath = s"'$path'" // TODO: Really escape this.
-        val cmd = runSpec.cmd orElse runSpec.args.map(_ mkString " ") getOrElse ""
-        val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
-
-        val info = ExecutorInfo.newBuilder()
-          .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
-
-        containerProto.foreach(info.setContainer)
-
-        val command =
-          TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix).setValue(shell)
-        info.setCommand(command.build)
-        builder.setExecutor(info)
-    }
-
-    runSpec.taskKillGracePeriod.foreach { period =>
-      val durationInfo = DurationInfo.newBuilder.setNanoseconds(period.toNanos)
-      val killPolicy = KillPolicy.newBuilder.setGracePeriod(durationInfo)
-      builder.setKillPolicy(killPolicy)
-    }
-
-    // Mesos supports at most one health check, and only COMMAND checks
-    // are currently implemented in the Mesos health check helper program.
-    val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
-      runSpec.healthChecks.collect {
-        case healthCheck: HealthCheck if healthCheck.protocol == Protocol.COMMAND => healthCheck.toMesos
-      }
-
-    if (mesosHealthChecks.size > 1) {
-      val numUnusedChecks = mesosHealthChecks.size - 1
-      log.warn(
-        "Mesos supports one command health check per task.\n" +
-          s"Task [$taskId] will run without " +
-          s"$numUnusedChecks of its defined health checks."
+  protected def portAssignments(
+    runSpec: RunSpec,
+    taskInfo: TaskInfo,
+    hostPorts: Seq[Int],
+    offer: Offer): Option[Seq[PortAssignment]] =
+    runSpec.portAssignments(
+      Task.LaunchedEphemeral(
+        taskId = Task.Id(taskInfo.getTaskId),
+        agentInfo = Task.AgentInfo(
+          host = offer.getHostname,
+          agentId = Some(offer.getSlaveId.getValue),
+          attributes = offer.getAttributesList.asScala
+        ),
+        runSpecVersion = runSpec.version,
+        status = Task.Status(
+          stagedAt = Timestamp.zero,
+          taskStatus = MarathonTaskStatus.Created
+        ),
+        hostPorts = hostPorts
       )
-    }
-
-    mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
-    taskBuildOpt.foreach(_(runSpec, builder)) // invoke builder plugins
-
-    Some(builder.build -> resourceMatch.hostPorts)
-  }
+    )
 
   protected def computeDiscoveryInfo(
     runSpec: RunSpec,
@@ -183,7 +114,8 @@ class TaskBuilder(
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
     val portProtos = runSpec.ipAddress match {
-      case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
+      case Some(IpAddress(_, _, mesosphere.marathon.state.DiscoveryInfo(ports), _)) if ports.nonEmpty =>
+        ports.map(_.toProto)
       case _ =>
         runSpec.container.flatMap(_.portMappings) match {
           case Some(portMappings) =>
@@ -215,6 +147,8 @@ class TaskBuilder(
     discoveryInfoBuilder.build
   }
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
   protected def computeContainerInfo(hostPorts: Seq[Option[Int]]): Option[ContainerInfo] = {
     if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) {
       None
@@ -279,6 +213,96 @@ class TaskBuilder(
     }
   }
 
+  //TODO: fix style issue and enable this scalastyle check
+  //scalastyle:off cyclomatic.complexity method.length
+  private[this] def build(
+    offer: Offer,
+    resourceMatch: ResourceMatch,
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
+    taskBuildOpt: Option[RunSpecTaskProcessor]): Some[(TaskInfo, Seq[Option[Int]])] = {
+
+    val executor: Executor = if (runSpec.executor == "") {
+      config.executor
+    } else {
+      Executor.dispatch(runSpec.executor)
+    }
+
+    val host: Option[String] = Some(offer.getHostname)
+
+    val labels = runSpec.labels.map {
+      case (key, value) =>
+        Label.newBuilder.setKey(key).setValue(value).build()
+    }
+
+    val taskId = newTaskId(runSpec.id)
+    val builder = TaskInfo.newBuilder
+      // Use a valid hostname to make service discovery easier
+      .setName(runSpec.id.toHostname)
+      .setTaskId(taskId.mesosTaskId)
+      .setSlaveId(offer.getSlaveId)
+      .addAllResources(resourceMatch.resources.asJava)
+
+    builder.setDiscovery(computeDiscoveryInfo(runSpec, resourceMatch.hostPorts))
+
+    if (labels.nonEmpty)
+      builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
+
+    volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources))
+
+    val containerProto = computeContainerInfo(resourceMatch.hostPorts)
+    val envPrefix: Option[String] = config.envVarsPrefix.get
+
+    executor match {
+      case CommandExecutor() =>
+        containerProto.foreach(builder.setContainer)
+        val command = TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
+        builder.setCommand(command.build)
+
+      case PathExecutor(path) =>
+        val executorId = f"marathon-${taskId.idString}" // Fresh executor
+        val executorPath = s"'$path'" // TODO: Really escape this.
+        val cmd = runSpec.cmd orElse runSpec.args.map(_ mkString " ") getOrElse ""
+        val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
+
+        val info = ExecutorInfo.newBuilder()
+          .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
+
+        containerProto.foreach(info.setContainer)
+
+        val command =
+          TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix).setValue(shell)
+        info.setCommand(command.build)
+        builder.setExecutor(info)
+    }
+
+    runSpec.taskKillGracePeriod.foreach { period =>
+      val durationInfo = DurationInfo.newBuilder.setNanoseconds(period.toNanos)
+      val killPolicy = KillPolicy.newBuilder.setGracePeriod(durationInfo)
+      builder.setKillPolicy(killPolicy)
+    }
+
+    // Mesos supports at most one health check
+    val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
+      runSpec.healthChecks.collect {
+        case mesosHealthCheck: MesosHealthCheck =>
+          portAssignments(runSpec, builder.build, resourceMatch.hostPorts.flatten, offer)
+            .map(mesosHealthCheck.toMesos(_))
+      }.flatten
+
+    if (mesosHealthChecks.size > 1) {
+      val numUnusedChecks = mesosHealthChecks.size - 1
+      log.warn(
+        "Mesos supports up to one health check per task.\n" +
+          s"Task [$taskId] will run without " +
+          s"$numUnusedChecks of its defined health checks."
+      )
+    }
+
+    mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
+    taskBuildOpt.foreach(_(runSpec, builder)) // invoke builder plugins
+
+    Some(builder.build -> resourceMatch.hostPorts)
+  }
 }
 
 object TaskBuilder {

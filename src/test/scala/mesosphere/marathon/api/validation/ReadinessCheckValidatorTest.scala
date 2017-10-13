@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.validation
 
-import com.wix.accord.validate
+import com.wix.accord.{ Validator, validate }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state.PortDefinition
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
@@ -121,5 +121,5 @@ class ReadinessCheckValidatorTest extends MarathonSpec with Matchers with GivenW
       PortDefinition(
         port = 123,
         name = Some(ReadinessCheck.DefaultPortName))))
-  implicit val readinessCheckValidator = ReadinessCheck.readinessCheckValidator(app)
+  implicit val readinessCheckValidator: Validator[ReadinessCheck] = ReadinessCheck.readinessCheckValidator(app)
 }
