@@ -89,7 +89,7 @@ class SystemController(
   def changeLoggers: Route = {
     authenticated.apply { implicit identity =>
       authorized(UpdateResource, SystemConfig).apply {
-        entity(as[LoggerChange]) { change =>
+        entity(as[raml.LoggerChange]) { change: raml.LoggerChange =>
           LoggerFactory.getILoggerFactory.getLogger(change.logger) match {
             case log: Logger =>
               val level = Level.valueOf(change.level.value.toUpperCase)
