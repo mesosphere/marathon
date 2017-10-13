@@ -233,7 +233,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
   }
 
-  "migrate throws an error if migration is in progress already" in {
+  "throw an error if migration is in progress already" in {
     val mockedStore = mock[PersistenceStore[_, _, _]]
     val f = new Fixture(mockedStore)
     mockedStore.startMigration() throws new StoreCommandFailedException("Migration is already in progress")
@@ -244,6 +244,31 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     thrown.getMessage should equal("Migration is already in progress")
 
     verify(mockedStore).startMigration()
+    noMoreInteractions(mockedStore)
+  }
+
+  "throw an error and remove a migration flag if migration gets cancelled" in {
+    val mockedStore = mock[PersistenceStore[_, _, _]]
+    val version = StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE)
+    val failingMigration: MigrationAction = (version,
+      () => Future.failed(MigrationCancelledException("Migration cancelled", new Exception("Failed to do something"))))
+    val f = new Fixture(mockedStore, List(failingMigration))
+
+    mockedStore.startMigration() returns Future.successful(Done)
+    mockedStore.storageVersion() returns Future.successful(
+      Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
+    mockedStore.endMigration() returns Future.successful(Done)
+
+    val migration = f.migration
+
+    val thrown = the[MigrationFailedException] thrownBy migration.migrate()
+    thrown.getMessage should equal("Migration cancelled")
+    thrown.getCause shouldBe a[Exception]
+    thrown.getCause.getMessage should equal("Failed to do something")
+
+    verify(mockedStore).startMigration()
+    verify(mockedStore).storageVersion()
+    verify(mockedStore).endMigration()
     noMoreInteractions(mockedStore)
   }
 }
