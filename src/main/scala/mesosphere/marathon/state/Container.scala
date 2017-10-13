@@ -10,6 +10,7 @@ import scala.collection.immutable.Seq
 
 sealed trait Container {
   val volumes: Seq[Volume]
+  val forceIp: Boolean
 
   // TODO(nfnt): Remove this field and use type matching instead.
   def docker(): Option[Container.Docker] = {
@@ -31,7 +32,7 @@ sealed trait Container {
 
 object Container {
 
-  case class Mesos(volumes: Seq[Volume] = Seq.empty) extends Container
+  case class Mesos(volumes: Seq[Volume] = Seq.empty, forceIp: Boolean = false) extends Container
 
   case class Docker(
     volumes: Seq[Volume] = Seq.empty,
@@ -40,7 +41,8 @@ object Container {
     override val portMappings: Option[Seq[Docker.PortMapping]] = None,
     privileged: Boolean = false,
     parameters: Seq[Parameter] = Nil,
-    forcePullImage: Boolean = false) extends Container
+    forcePullImage: Boolean = false,
+    forceIp: Boolean = false) extends Container
 
   object Docker {
 
@@ -51,7 +53,8 @@ object Container {
       portMappings: Option[Seq[Docker.PortMapping]] = None,
       privileged: Boolean = false,
       parameters: Seq[Parameter] = Seq.empty,
-      forcePullImage: Boolean = false): Docker = Docker(
+      forcePullImage: Boolean = false,
+      forceIp: Boolean = false): Docker = Docker(
       volumes = volumes,
       image = image,
       network = network,
@@ -69,7 +72,8 @@ object Container {
       },
       privileged = privileged,
       parameters = parameters,
-      forcePullImage = forcePullImage)
+      forcePullImage = forcePullImage,
+      forceIp = forceIp)
 
     /**
       * @param containerPort The container port to expose
@@ -139,7 +143,8 @@ object Container {
     volumes: Seq[Volume] = Seq.empty,
     image: String = "",
     credential: Option[Credential] = None,
-    forcePullImage: Boolean = false) extends Container
+    forcePullImage: Boolean = false,
+    forceIp: Boolean = false) extends Container
 
   object MesosDocker {
     val validMesosDockerContainer = validator[MesosDocker] { docker =>
@@ -152,7 +157,8 @@ object Container {
     image: String = "",
     id: Option[String] = None,
     labels: Map[String, String] = Map.empty[String, String],
-    forcePullImage: Boolean = false) extends Container
+    forcePullImage: Boolean = false,
+    forceIp: Boolean = false) extends Container
 
   object MesosAppC {
     val prefix = "sha512-"

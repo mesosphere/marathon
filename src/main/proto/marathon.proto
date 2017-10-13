@@ -219,6 +219,9 @@ message ExtendedContainerInfo {
     // pull the docker image from the registry even if the image
     // is already downloaded on the agent.
     optional bool force_pull_image = 6;
+
+    // Force to use ipAddressess for effectiveIp.
+    optional bool force_ip = 7;
   }
 
   // Docker on the universal Mesos engine
@@ -238,6 +241,9 @@ message ExtendedContainerInfo {
     // pull the docker image from the registry even if the image
     // is already downloaded on the agent.
     optional bool force_pull_image = 3;
+
+    // Force to use ipAddressess for effectiveIp.
+    optional bool force_ip = 4;
   }
 
   // AppC on the universal Mesos engine
@@ -258,6 +264,9 @@ message ExtendedContainerInfo {
     // pull the docker image from the registry even if the image
     // is already downloaded on the agent.
     optional bool force_pull_image = 4;
+
+    // Force to use ipAddressess for effectiveIp.
+    optional bool force_ip = 5;
   }
 
   required mesos.ContainerInfo.Type type = 1;

@@ -85,7 +85,7 @@ sealed trait Task {
   }
 
   def effectiveIpAddress(runSpec: RunSpec): Option[String] = {
-    if (runSpec.ipAddress.isDefined)
+    if (runSpec.container.exists(_.forceIp) || runSpec.ipAddress.isDefined)
       launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
     else
       Some(agentInfo.host)
