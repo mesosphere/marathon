@@ -23,7 +23,7 @@ import scala.concurrent.{ Await, blocking }
   * @param request the initial http request.
   * @param emitter the emitter to emit data
   */
-class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, conf: EventConf) extends HttpEventStreamHandle {
+class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends HttpEventStreamHandle {
 
   lazy val id: String = UUID.randomUUID().toString
 
@@ -117,7 +117,7 @@ class HttpEventStreamServlet(
     @volatile private var handler: Option[HttpEventSSEHandle] = None
 
     override def onOpen(emitter: Emitter): Unit = {
-      val handle = new HttpEventSSEHandle(request, emitter, conf)
+      val handle = new HttpEventSSEHandle(request, emitter)
       this.handler = Some(handle)
       streamActor ! HttpEventStreamConnectionOpen(handle)
     }

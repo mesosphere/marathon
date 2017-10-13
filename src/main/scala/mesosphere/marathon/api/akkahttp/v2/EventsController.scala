@@ -50,18 +50,12 @@ class EventsController(
           parameter("plan-format".?) { light =>
             extractClientIP { clientIp =>
               complete {
-                // Extract the plan-format URL argument
-                val useLightWeightEvents = light match {
-                  case Some(value) => value.contentEquals("light")
-                  case None => false
-                }
-
                 // Create event source
                 EventsController.eventStreamLogic(eventBus, leaderStateEvents,
                   eventStreamMaxOutstandingMessages, clientIp)
                   .filter(isAllowed(events.toSet))
                   .map(event => ServerSentEvent(`type` = event.eventType, data = Json.stringify(
-                    Formats.eventToJson(event, useLightWeightEvents)
+                    Formats.eventToJson(event, light.exists(_.contentEquals("light")))
                   )))
                   .keepAlive(5.second, () => ServerSentEvent.heartbeat)
               }
