@@ -155,7 +155,7 @@ class InMemoryPersistenceStore(implicit
   override def startMigration(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
     if (!migrationInProgress.compareAndSet(false, true)) {
-      throw new IllegalStateException("Migration is already in progress")
+      Future.failed(new IllegalStateException("Migration is already in progress"))
     }
     Future.successful(Done)
   }
@@ -163,7 +163,7 @@ class InMemoryPersistenceStore(implicit
   override def endMigration(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
     if (!migrationInProgress.compareAndSet(true, false)) {
-      throw new IllegalStateException("Migration has not been started")
+      Future.failed(new IllegalStateException("Migration has not been started"))
     }
     Future.successful(Done)
   }
