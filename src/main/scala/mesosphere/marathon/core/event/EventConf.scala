@@ -13,14 +13,5 @@ trait EventConf extends ScallopConf {
     noshort = true,
     default = Some(1024)
   )
-
-  lazy val eventStreamLightweight: ScallopOption[Boolean] = opt[Boolean](
-    "event_stream_lightweight",
-    descr = "Reduces the amount of information broadcasted through the SSE event",
-    default = Some(false),
-    required = false,
-    noshort = true,
-    hidden = true
-  )
   def zkTimeoutDuration: FiniteDuration
 }

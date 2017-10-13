@@ -29,6 +29,8 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, conf: Ev
 
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
 
+  private val useLightWeightEvents = request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
+
   def subscribed(eventType: String): Boolean = {
     subscribedEventTypes.isEmpty || subscribedEventTypes.contains(eventType)
   }
@@ -38,7 +40,9 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter, conf: Ev
   override def close(): Unit = emitter.close()
 
   override def sendEvent(event: MarathonEvent): Unit = {
-    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, Json.stringify(eventToJson(event)(conf.eventStreamLightweight()))))
+    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, Json.stringify(
+      eventToJson(event, useLightWeightEvents)
+    )))
   }
 
   override def toString: String = s"HttpEventSSEHandle($id on $remoteAddress on event types from $subscribedEventTypes)"
