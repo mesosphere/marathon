@@ -10,7 +10,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.AuthorizedResource.{ SystemConfig, SystemMetrics }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateResource, ViewResource }
-import mesosphere.marathon.raml.LoggerChange
+import mesosphere.marathon.raml.{ AnyToRaml, LoggerChange }
 import org.slf4j.LoggerFactory
 import stream.Implicits._
 
@@ -20,13 +20,15 @@ import scala.concurrent.ExecutionContext
 /**
   * The SystemController handles system level functionality like configuration, metrics and logging.
   */
-class SystemController(cfg: Config)(
+class SystemController(
+  config: MarathonConf,
+  cfg: Config,
+  val electionService: ElectionService)(
     implicit
     val actorSystem: ActorSystem,
     val executionContext: ExecutionContext,
     val authenticator: Authenticator,
-    val authorizer: Authorizer,
-    val electionService: ElectionService
+    val authorizer: Authorizer
 ) extends Controller with StrictLogging {
 
   import Directives._
@@ -45,6 +47,7 @@ class SystemController(cfg: Config)(
   def metrics: Route = {
     authenticated.apply { implicit identity =>
       authorized(ViewResource, SystemMetrics).apply {
+//        complete(Metrics.snapshot().toRaml)
         complete(Metrics.snapshot())
       }
     }
