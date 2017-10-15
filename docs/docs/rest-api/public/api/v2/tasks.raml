@@ -11,6 +11,7 @@ get:
       description: The list of all tasks disregarding their status, or a list of tasks matching the specified status filter.
       body:
         application/json:
+          type: enrichedTask.EnrichedTasksList
           example: !include examples/tasks.json
         text/plain:
           example: |
