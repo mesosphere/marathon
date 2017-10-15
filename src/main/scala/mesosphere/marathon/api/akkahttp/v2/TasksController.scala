@@ -54,6 +54,7 @@ class TasksController(instanceTracker: InstanceTracker, groupManager: GroupManag
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def enrichedTasks(statuses: Seq[String]): Future[Seq[EnrichedTask]] = async {
     val conditionSet: Set[Condition] = statuses.flatMap(toTaskState)(collection.breakOut)
 
