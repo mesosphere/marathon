@@ -19,6 +19,7 @@ import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.{ KeeperException, WatchedEvent, ZooDefs }
 import org.apache.zookeeper.data.ACL
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -117,21 +118,24 @@ object CuratorElectionStream extends StrictLogging {
     }
 
     /**
-      * Emit current leader. Does not fail on connection error
+      * Emit current leader. Does not fail on connection error, but throws if multiple election candidates have the same
+      * ID.
       */
     private def emitLeader(): Unit = {
       val currentLeader = leaderHostPortMetric.blocking {
-        if (client.getState == CuratorFrameworkState.STOPPED) {
-          None
-        } else {
-          try {
-            Some(latch.getLeader.getId)
-          } catch {
-            case ex: Throwable =>
-              logger.error("Error while getting current leader", ex)
-              None
-          }
+        val participants = try {
+          if (client.getState == CuratorFrameworkState.STOPPED)
+            Nil
+          else
+            latch.getParticipants.asScala.toList
+        } catch {
+          case ex: Throwable =>
+            logger.error("Error while getting current leader", ex)
+            Nil
         }
+        if (participants.iterator.filter(_.getId == hostPort).size > 1)
+          throw new IllegalStateException(s"Multiple election participants have the same ID: ${hostPort}. This is not allowed.")
+        participants.find(_.isLeader).map(_.getId)
       }
 
       currentLeader match {

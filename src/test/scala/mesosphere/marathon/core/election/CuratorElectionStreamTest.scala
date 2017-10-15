@@ -12,8 +12,8 @@ import mesosphere.marathon.util.{ LifeCycledCloseableLike, ScallopStub }
 import org.apache.curator.framework.CuratorFramework
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
-import scala.concurrent.{ ExecutionContext, Promise }
 
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Try }
 
@@ -151,5 +151,28 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     killSwitch.success(())
     events.pull().futureValue shouldBe None
     eventually { f.client.beforeCloseHooks.length shouldBe 0 }
+  }
+
+  "It fails at least one of the streams if multiple participants register with the same ID" in withFixture { f =>
+    /*
+     * It's not possible to predict which of the streams will crash; it's inherently racy. Participant 2 could connect,
+     * detect the duplicate, crash, and remove its leader record before the participant 1 has a chance to see it.
+     *
+     * Conversely, participant 2 could connect, and already connected participant 1 could spot the illegal state and
+     * remove its own participant record before participant 2 first sees any of the participant records.
+     *
+     * Or, both could see spot the illegal state, and both could crash.
+     */
+    val futures = Stream.continually {
+      CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "duplicate-host", f.electionEC)
+        .runWith(Sink.last)
+    }.take(2)
+
+    val failure = Future.firstCompletedOf(futures.map(_.failed)).futureValue
+
+    inside(failure) {
+      case ex: IllegalStateException =>
+        ex.getMessage shouldBe "Multiple election participants have the same ID: duplicate-host. This is not allowed."
+    }
   }
 }

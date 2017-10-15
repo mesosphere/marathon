@@ -1,8 +1,10 @@
 package mesosphere.marathon
 package integration
 
+import akka.stream.scaladsl.{ Sink, Source, Tcp }
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
+import mesosphere.util.PortAllocator
 import org.scalatest.concurrent.Eventually
 
 @IntegrationTest
@@ -12,17 +14,31 @@ class MarathonStartupIntegrationTest extends AkkaIntegrationTest
     with MarathonFixture
     with Eventually {
 
+  def withBoundPort(fn: Int => Unit): Unit = {
+    val port = PortAllocator.ephemeralPort()
+    val handler = Tcp().bind("127.0.0.1", port).to(Sink.foreach{ c =>
+      Source.empty.via(c.flow).runWith(Sink.ignore)
+    }).run.futureValue
+
+    try fn(port)
+    finally {
+      handler.unbind()
+    }
+
+  }
   "Marathon" should {
-    "fail during start, if the HTTP port is already bound" in withMarathon(suiteName){ (marathonServer, facade) =>
-      Given(s"a Marathon process already running on port ${marathonServer.httpPort}")
+    "fail during start, if the HTTP port is already bound" in withBoundPort { port =>
+      Given(s"Some process already running on port ${port}")
 
       When("starting another Marathon process using an HTTP port that is already bound")
 
-      val args = Map(
-        "http_port" -> marathonServer.httpPort.toString,
-        "zk_timeout" -> "2000"
-      )
-      val conflictingMarathon = LocalMarathon(true, s"$suiteName-conflict", marathonServer.masterUrl, marathonServer.zkUrl, args)
+      val conflictingMarathon = LocalMarathon(true, s"$suiteName-conflict",
+        mesosMasterUrl,
+        s"zk://${zkServer.connectUri}/marathon-$suiteName",
+        Map(
+          "http_port" -> port.toString,
+          "http_address" -> "127.0.0.1",
+          "zk_timeout" -> "2000"))
 
       Then("The Marathon process should exit with code > 0")
       try {
