@@ -240,6 +240,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
             ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024
 * [Ruby gem marathon_deploy](https://github.com/eBayClassifiedsGroup/marathon_deploy) alternative command line tool to deploy using json or yaml files with ENV macros.
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
+* [Java client](https://github.com/mesosphere/marathon-client), developed at [Mesosphere](https://mesosphere.com)
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
 * [Maven plugin](https://github.com/dcos-labs/dcos-maven-plugin), developed by [Johannes Unterstein](https://github.com/unterstein)
 * [Maven plugin](https://github.com/holidaycheck/marathon-maven-plugin), developed at [HolidayCheck](http://www.holidaycheck.com/)
