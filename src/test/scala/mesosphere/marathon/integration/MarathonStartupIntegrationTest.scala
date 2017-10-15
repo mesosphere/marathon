@@ -24,8 +24,8 @@ class MarathonStartupIntegrationTest extends AkkaIntegrationTest
     finally {
       handler.unbind()
     }
-
   }
+
   "Marathon" should {
     "fail during start, if the HTTP port is already bound" in withBoundPort { port =>
       Given(s"Some process already running on port ${port}")
