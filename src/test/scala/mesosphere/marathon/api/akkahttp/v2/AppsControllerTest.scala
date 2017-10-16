@@ -2015,5 +2015,25 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
       }
     }
+
+    "Delete a single app if it exists" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.updateRootEither(any, any, any, any, any) returns Future.successful(Right(plan))
+      groupManager.rootGroup() returns rootGroup
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./
+        .withPath(Path(app.id.toString))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
   }
 }
