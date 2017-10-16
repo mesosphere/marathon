@@ -156,16 +156,18 @@ class InMemoryPersistenceStore(implicit
     require(isOpen, "the store must be opened before it can be used")
     if (!migrationInProgress.compareAndSet(false, true)) {
       Future.failed(new IllegalStateException("Migration is already in progress"))
+    } else {
+      Future.successful(Done)
     }
-    Future.successful(Done)
   }
 
   override def endMigration(): Future[Done] = {
     require(isOpen, "the store must be opened before it can be used")
     if (!migrationInProgress.compareAndSet(true, false)) {
       Future.failed(new IllegalStateException("Migration has not been started"))
+    } else {
+      Future.successful(Done)
     }
-    Future.successful(Done)
   }
 }
 
