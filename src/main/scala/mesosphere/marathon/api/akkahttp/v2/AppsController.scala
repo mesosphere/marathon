@@ -8,6 +8,8 @@ import akka.event.EventStream
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
+import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -19,6 +21,7 @@ import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
+
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -117,24 +120,6 @@ class AppsController(
     updateMultiple(partialUpdate = true, allowCreation = false)
   }
 
-  private[this] def updateMultiple(partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity): Route = {
-    val version = clock.now()
-    (forceParameter & entity(as(appUpdatesUnmarshaller(partialUpdate)))) { (force, appUpdates) =>
-      def updateGroup(rootGroup: RootGroup): RootGroup = appUpdates.foldLeft(rootGroup) { (group, update) =>
-        update.id.map(PathId(_)) match {
-          case Some(id) =>
-            group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation, clock.now(), marathonSchedulerService), version)
-          case None =>
-            group
-        }
-      }
-
-      onSuccessLegacy(None)(groupManager.updateRoot(PathId.empty, updateGroup, version, force)).apply { plan =>
-        complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
-      }
-    }
-  }
-
   private def createApp(implicit identity: Identity): Route = {
     (entity(as[AppDefinition]) & forceParameter & extractClientIP & extractUri) { (rawApp, force, remoteAddr, reqUri) =>
 
@@ -186,6 +171,53 @@ class AppsController(
   private def patchSingle(appId: PathId)(implicit identity: Identity): Route =
     update(appId, partialUpdate = true, allowCreation = false)
 
+  private[this] def updateMultiple(partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity): Route = {
+    val version = clock.now()
+    (forceParameter & entity(as(appUpdatesUnmarshaller(partialUpdate)))) { (force, appUpdates) =>
+      def updateGroup(rootGroup: RootGroup): RootGroup = appUpdates.foldLeft(rootGroup) { (group, update) =>
+        update.id.map(PathId(_)) match {
+          case Some(id) =>
+            group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation, clock.now(), marathonSchedulerService), version)
+          case None =>
+            group
+        }
+      }
+
+      onSuccessLegacy(None)(groupManager.updateRoot(PathId.empty, updateGroup, version, force)).apply { plan =>
+        complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+      }
+    }
+  }
+
+  /**
+    * It'd be neat if we didn't need this. Would take some heavy-ish refactoring to get all of the update functions to
+    * take an either.
+    */
+  private def onSuccessLegacy[T](maybeAppId: Option[PathId])(f: => Future[T])(implicit identity: Identity): Directive1[T] = onComplete({
+    try { f }
+    catch {
+      case NonFatal(ex) =>
+        Future.failed(ex)
+    }
+  }).flatMap {
+    case Success(t) =>
+      provide(t)
+    case Failure(ValidationFailedException(_, failure)) =>
+      reject(EntityMarshallers.ValidationFailed(failure))
+    case Failure(AccessDeniedException(msg)) =>
+      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+    case Failure(_: AppNotFoundException) =>
+      reject(
+        maybeAppId.map { appId =>
+          Rejections.EntityNotFound.noApp(appId)
+        } getOrElse Rejections.EntityNotFound()
+      )
+    case Failure(RejectionError(rejection)) =>
+      reject(rejection)
+    case Failure(ex) =>
+      throw ex
+  }
+
   private def putSingle(appId: PathId)(implicit identity: Identity): Route =
     parameter('partialUpdate.as[Boolean].?(true)) { partialUpdate =>
       update(appId, partialUpdate = partialUpdate, allowCreation = true)
@@ -207,10 +239,10 @@ class AppsController(
       extractClientIP &
       extractUri &
       entity(as(appUpdateUnmarshaller(appId, partialUpdate)))) { (force, remoteAddr, requestUri, appUpdate) =>
-        //         Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
-        //         exceptions to the appropriate rejections
-        val fn = updateOrCreate(
-          appId, _: Option[AppDefinition], appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
+        // Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
+        // exceptions to the appropriate rejections
+        def fn(appDefinition: Option[AppDefinition]) = updateOrCreate(
+          appId, appDefinition, appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
 
         onSuccessLegacy(Some(appId))(groupManager.updateApp(appId, fn, version, force)).apply { plan =>
           plan.target.app(appId).foreach { appDef =>
@@ -266,8 +298,8 @@ class AppsController(
           { app => rejectLeftViaThrow(markForRestartingOrThrow(app)) },
           newVersion, force)
       ).apply { restartDeployment =>
-          completeWithDeploymentForApp(appId, restartDeployment)
-        }
+        completeWithDeploymentForApp(appId, restartDeployment)
+      }
     }
   }
 
@@ -385,35 +417,7 @@ class AppsController(
     case Right(t) => t
   }
 
-  /**
-    * It'd be neat if we didn't need this. Would take some heavy-ish refactoring to get all of the update functions to
-    * take an either.
-    */
-  private def onSuccessLegacy[T](maybeAppId: Option[PathId])(f: => Future[T])(implicit identity: Identity): Directive1[T] = onComplete({
-    try { f }
-    catch {
-      case NonFatal(ex) =>
-        Future.failed(ex)
-    }
-  }).flatMap {
-    case Success(t) =>
-      provide(t)
-    case Failure(ValidationFailedException(_, failure)) =>
-      reject(EntityMarshallers.ValidationFailed(failure))
-    case Failure(AccessDeniedException(msg)) =>
-      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-    case Failure(_: AppNotFoundException) =>
-      reject(
-        maybeAppId.map { appId =>
-          Rejections.EntityNotFound.noApp(appId)
-        } getOrElse Rejections.EntityNotFound()
-      )
-    case Failure(RejectionError(rejection)) =>
-      reject(rejection)
-    case Failure(ex) =>
-      throw ex
-  }
-
+  //TODO: we probably should refactor this into entity marshaller
   private def completeWithDeploymentForApp(appId: PathId, plan: DeploymentPlan) =
     plan.original.app(appId) match {
       case Some(_) =>

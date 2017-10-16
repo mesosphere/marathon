@@ -1,0 +1,42 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Extract cpuUsage from JMX         #
+# ----------------------------------------------------------- #
+# This fragment install a tracker that extracts the used      #
+# memory value metric from the JMX observer                   #
+# ----------------------------------------------------------- #
+
+
+# Global test configuration
+# ===========================
+config:
+
+  # Define the metrics we are measuring
+  metrics:
+    - name: cpuUsage
+      uuid: 124e89bd6eb142afa3406b6d489a8b7d
+      desc: The CPU load by marathon
+      summarize: [mean_err]
+      units: load
+
+  # Define the indicators that can summarise our values
+  indicators:
+
+    # Calculate `meanCpuUsage` by calculating the normalizing average
+    # of all the `cpuUsage` mean values, normalized against each test's
+    # normalization expression
+    - name: meanCpuUsage
+      class: indicator.NormalizedMeanMetricIndicator
+      metric: cpuUsage.mean_err
+      normalizeto: "{{normalize_to}}"
+
+# Tracker configuration
+# ===========================
+trackers:
+
+  # Extract values from the JMX measurements
+  - class: tracker.EventAttributeTracker
+    event: JMXMeasurement
+    extract:
+
+      - metric: cpuUsage
+        attrib: "fields['cpuUsage']"

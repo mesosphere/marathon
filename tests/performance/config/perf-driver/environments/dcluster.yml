@@ -1,0 +1,21 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Local Marathon Environment         #
+# ----------------------------------------------------------- #
+# This fragment instructs the driver to launch marathon with  #
+# it's own mesos simulator (locally). This fragment assumes   #
+# that the driver runs in a development environment with      #
+# scala properly configured.                                  #
+# ----------------------------------------------------------- #
+
+# Test Metadata
+# ===========================
+meta:
+  env: local-dcluster
+
+# Definitions
+# ===========================
+define:
+
+  # We are going to launch marathon ourselves, therefore we are defining
+  # `marathon_url` to point to localhost
+  marathon_url: http://127.0.0.1:8080

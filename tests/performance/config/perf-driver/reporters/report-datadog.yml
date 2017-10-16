@@ -1,0 +1,46 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Measure Deployment Time            #
+# ----------------------------------------------------------- #
+# This fragment installs a duration tracker that tracks the   #
+# duration in seconds between the beginning and the           #
+# completion of every API HTTP request.                       #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # We require datadog credentials to be given through the command-line
+  definitions:
+    - name: datadog_api_key
+      desc: The datadog API Key
+      required: yes
+    - name: datadog_app_key
+      desc: The datadog App Key
+      required: yes
+
+# Global test configuration
+# ===========================
+reporters:
+
+  - class: reporter.DataDogReporter
+    api_key: "{{datadog_api_key}}"
+    app_key: "{{datadog_app_key}}"
+    prefix: "marathon.perf.{{meta:test}}."
+    points:
+      - name: meanDeploymentTime
+        indicator: meanDeploymentTime
+      - name: meanHttpRequestTime
+        indicator: meanHttpRequestTime
+      - name: meanFailedDeployments
+        indicator: meanFailedDeployments
+      - name: meanFullDeploymentTime
+        indicator: meanFullDeploymentTime
+      - name: meangroupsResponseTime
+        indicator: meangroupsResponseTime
+      - name: meanCpuUsage
+        indicator: meanCpuUsage
+      - name: meanThreadCount
+        indicator: meanThreadCount
+      - name: meanUsedMemory
+        indicator: meanUsedMemory

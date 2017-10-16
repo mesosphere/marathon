@@ -1,0 +1,18 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Response time of grous endpoint    #
+# ----------------------------------------------------------- #
+# This fragment installs an http timing observer to the       #
+# /groups endpoint.
+# ----------------------------------------------------------- #
+
+# Observer configuration
+# ===========================
+observers:
+
+  # We are observing the response of the `/v2/groups` marathon endpoint
+  # with all the embeds the DC/OS UI is requesting
+  - class: observer.HTTPTimingObserver
+    url: "{{marathon_url}}/v2/groups?embed=group.groups&embed=group.apps&embed=group.pods&embed=group.apps.deployments&embed=group.apps.counts&embed=group.apps.tasks&embed=group.apps.taskStats&embed=group.apps.lastTaskFailure"
+
+    # We are polling every second
+    interval: 1

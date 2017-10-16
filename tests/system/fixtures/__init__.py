@@ -35,12 +35,24 @@ def wait_for_marathon_user_and_cleanup():
 def events_to_file():
     print("entering events_to_file fixture")
     shakedown.run_command_on_master('rm events.txt')
-    shakedown.run_command_on_master(
-        'curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" '
-        '-o events.txt leader.mesos:8080/v2/events &')
+
+    # In strict mode marathon runs in SSL mode on port 8443 and requires authentication
+    if shakedown.ee_version() == 'strict':
+        shakedown.run_command_on_master(
+            '(curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" ' + \
+            '-H "Authorization: token={}" '.format(shakedown.dcos_acs_token()) + \
+            '-o events.txt -k https://leader.mesos:8443/v2/events; echo $? > events.exitcode) &')
+
+    # Otherwise marathon runs on HTTP mode on port 8080
+    else:
+        shakedown.run_command_on_master(
+            '(curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" '
+            '-o events.txt http://leader.mesos:8080/v2/events; echo $? > events.exitcode) &')
+
     yield
     shakedown.kill_process_on_host(shakedown.master_ip(), '[c]url')
     shakedown.run_command_on_master('rm events.txt')
+    shakedown.run_command_on_master('rm events.exitcode')
     print("exiting events_to_file fixture")
 
 
