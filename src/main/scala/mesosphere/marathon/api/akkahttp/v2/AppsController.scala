@@ -258,10 +258,8 @@ class AppsController(
     forceParameter { force =>
       lazy val notFound: Either[Rejection, RootGroup] =
         Left(Rejections.EntityNotFound.noApp(appId))
-
       lazy val notAuthorized: Either[Rejection, RootGroup] =
         Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-
       def deleteApp(rootGroup: RootGroup): Either[Rejection, RootGroup] = {
         rootGroup.app(appId) match {
           case None =>
@@ -273,7 +271,6 @@ class AppsController(
               notAuthorized
         }
       }
-
       onSuccess(groupManager.updateRootEither(appId.parent, deleteApp, force = force)) {
         case Right(plan) =>
           completeWithDeploymentForApp(appId, plan)
@@ -284,14 +281,11 @@ class AppsController(
 
   private def restartApp(appId: PathId)(implicit identity: Identity): Route = {
     forceParameter { force =>
-
       def markForRestartingOrThrow(opt: Option[AppDefinition]): Either[Rejection, AppDefinition] =
         opt.map(Right(_)).getOrElse(Left(Rejections.EntityNotFound.noApp(appId): Rejection))
           .flatMap { checkAuthorization(UpdateRunSpec, _) }
           .map(_.markedForRestarting)
-
       val newVersion = clock.now()
-
       onSuccessLegacy(Some(appId))(
         groupManager.updateApp(
           appId,
@@ -305,14 +299,11 @@ class AppsController(
 
   private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = {
     val maybeApp = groupManager.app(appId)
-
     maybeApp.map { app =>
       authorized(ViewRunSpec, app).apply {
-
         val tasksF = instanceTracker.instancesBySpec flatMap { instancesBySpec =>
           runningTasks(Set(appId), instancesBySpec)
         }
-
         onSuccess(tasksF) { tasks =>
           complete(Json.obj("tasks" -> tasks.toRaml))
         }
@@ -342,13 +333,10 @@ class AppsController(
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & parameter("scale".as[Boolean].?(false)) & parameter("wipe".as[Boolean].?(false))) {
       (force, host, scale, wipe) =>
-
         def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
           appTasks.filter(_.agentInfo.host == host || host == "*")
         }
-
         if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
-
         if (scale) {
           val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
           onSuccess(deploymentPlanF) { plan =>
@@ -366,7 +354,6 @@ class AppsController(
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & parameter("scale".as[Boolean].?(false)) & parameter("wipe".as[Boolean].?(false))) {
       (force, host, scale, wipe) =>
-
         def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
           try {
             val instanceId = taskId.instanceId
@@ -376,9 +363,7 @@ class AppsController(
             case _: MatchError => Seq.empty
           }
         }
-
         if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
-
         if (scale) {
           val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
           onSuccess(deploymentPlanF) { plan =>
