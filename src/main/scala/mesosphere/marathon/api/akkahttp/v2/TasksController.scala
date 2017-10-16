@@ -4,6 +4,7 @@ package api.akkahttp.v2
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
+import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.api.akkahttp.Directives.pathEndOrSingleSlash
@@ -11,27 +12,29 @@ import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.{Health, HealthCheckManager}
+import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.plugin.auth.{Authenticator, _}
+import mesosphere.marathon.plugin.auth.{ Authenticator, _ }
 import play.api.libs.json.Json
-import mesosphere.marathon.raml.{AnyToRaml, EnrichedTasksList, Writes}
+import mesosphere.marathon.raml.{ AnyToRaml, EnrichedTasksList, Writes }
 import mesosphere.marathon.state.PathId
 
 import scala.async.Async._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class TasksController(
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
     healthCheckManager: HealthCheckManager,
     val electionService: ElectionService)(
-    implicit val actorSystem: ActorSystem,
+    implicit
+    val actorSystem: ActorSystem,
     val executionContext: ExecutionContext,
     val authenticator: Authenticator,
-    val authorizer: Authorizer
+    val authorizer: Authorizer,
+    val materializer: Materializer
 ) extends Controller with StrictLogging {
 
   import mesosphere.marathon.api.akkahttp.Directives._
