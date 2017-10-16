@@ -26,6 +26,7 @@ import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, Identity, Vi
 import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
 import play.api.libs.json.Json
 import PathId._
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state._
 import play.api.libs.json._
 import mesosphere.marathon.core.election.ElectionService
