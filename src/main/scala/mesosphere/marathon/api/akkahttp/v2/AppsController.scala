@@ -230,10 +230,10 @@ class AppsController(
       extractClientIP &
       extractUri &
       entity(as(appUpdateUnmarshaller(appId, partialUpdate)))) { (force, remoteAddr, requestUri, appUpdate) =>
-        //         Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
-        //         exceptions to the appropriate rejections
-        val fn = updateOrCreate(
-          appId, _: Option[AppDefinition], appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
+        // Note - this function throws exceptions and handles authorization synchronously. We need to catch and map these
+        // exceptions to the appropriate rejections
+        def fn(appDefinition: Option[AppDefinition]) = updateOrCreate(
+          appId, appDefinition, appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
 
         onSuccessLegacy(Some(appId))(groupManager.updateApp(appId, fn, version, force)).apply { plan =>
           plan.target.app(appId).foreach { appDef =>
@@ -259,6 +259,7 @@ class AppsController(
 
   private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = ???
 
+  //TODO: we probably should refactor this into entity marshaller
   private def completeWithDeploymentForApp(appId: PathId, plan: DeploymentPlan) =
     plan.original.app(appId) match {
       case Some(_) =>
