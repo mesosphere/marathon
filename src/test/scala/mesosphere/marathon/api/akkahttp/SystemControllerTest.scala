@@ -4,28 +4,27 @@ package api.akkahttp
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import ch.qos.logback.classic.{Level, Logger}
+import ch.qos.logback.classic.{ Level, Logger }
 import com.typesafe.config.Config
 import mesosphere.UnitTest
-import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
+import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.api.akkahttp.v2.RouteBehaviours
 import mesosphere.marathon.core.election.ElectionService
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.slf4j.LoggerFactory
-
 
 class SystemControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with TableDrivenPropertyChecks {
 
   "SystemController" should {
     // format: OFF
     val pingCases = Table[Option[MediaRange], ContentType, StatusCode](
-      ("AcceptMediaType",       "ResponseContentType",                "StatusCode"         ),
-      (Some(MediaRange(MediaTypes.`application/json`)), ContentTypes.`application/json`, StatusCodes.OK),
-      (Some(MediaRanges.`text/*`), ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
-      (Some(MediaRange(MediaTypes.`text/plain`)), ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
-      (Some(MediaRanges.`*/*`), ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
-      (None, ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
-      (Some(MediaRange(MediaTypes.`image/png`)), ContentTypes.NoContentType, StatusCodes.NoContent)
+      ("AcceptMediaType",                               "ResponseContentType",            "StatusCode"),
+      (Some(MediaRange(MediaTypes.`application/json`)), ContentTypes.`application/json`,  StatusCodes.OK),
+      (Some(MediaRanges.`text/*`),                      ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
+      (Some(MediaRange(MediaTypes.`text/plain`)),       ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
+      (Some(MediaRanges.`*/*`),                         ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
+      (None,                                            ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
+      (Some(MediaRange(MediaTypes.`image/png`)),        ContentTypes.NoContentType,       StatusCodes.NoContent)
     )
     // format: ON
     forAll(pingCases) { (acceptMediaType, responseContentType, statusCode) =>
@@ -33,7 +32,7 @@ class SystemControllerTest extends UnitTest with ScalatestRouteTest with RouteBe
         val controller = Fixture().controller()
 
         Given(s"a request with accept header for $acceptMediaType")
-        val request =  acceptMediaType match {
+        val request = acceptMediaType match {
           case None => Get("/ping")
           case Some(mediaType) => Get("/ping").addHeader(Accept(mediaType))
         }
@@ -51,16 +50,6 @@ class SystemControllerTest extends UnitTest with ScalatestRouteTest with RouteBe
       val controller = Fixture().controller()
       Get("/metrics") ~> controller.route ~> check {
         response.status should be(StatusCodes.OK)
-        val expected =
-          """{
-            |  "start" : "2017-10-13T09:50:55.707+02:00",
-            |  "end" : "2017-10-13T09:50:55.707+02:00",
-            |  "histograms" : { },
-            |  "counters" : { },
-            |  "gauges" : { },
-            |  "min-max-counters" : { }
-            |}""".stripMargin
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
       }
     }
 
