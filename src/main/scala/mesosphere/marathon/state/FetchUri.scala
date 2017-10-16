@@ -56,7 +56,7 @@ object FetchUri {
     * @param uri String that contain an URI.
     * @return
     */
-  def isExtractable(uri: String): Boolean = {
+  def isExtract(uri: String): Boolean = {
     Try(new URI(uri)).map { u =>
       supportedFileTypes.exists { fileType =>
         u.getPath.endsWith(fileType)
