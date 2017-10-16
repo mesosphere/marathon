@@ -31,14 +31,7 @@ case class FetchUri(
 
 object FetchUri {
 
-  lazy val supportedFileTypes = Seq(
-    ".tgz",
-    ".tar.gz",
-    ".tbz2",
-    ".txz",
-    ".tar.xz",
-    ".zip"
-  )
+  lazy val supportedFileTypes = Seq(".tgz", ".tar.gz", ".tbz2", ".txz", ".tar.xz", ".zip")
 
   val empty: Seq[FetchUri] = Seq.empty
 
@@ -57,14 +50,13 @@ object FetchUri {
     )
 
   /**
-    * Method check if the given string is a
-    * valid URI and if the file type in the
+    * Method check if the given string is a valid URI and if the file type in the
     * URI is matching a supported file type.
     *
     * @param uri String that contain an URI.
     * @return
     */
-  def isExtract(uri: String): Boolean = {
+  def isExtractable(uri: String): Boolean = {
     Try(new URI(uri)).map { u =>
       supportedFileTypes.exists { fileType =>
         u.getPath.endsWith(fileType)
