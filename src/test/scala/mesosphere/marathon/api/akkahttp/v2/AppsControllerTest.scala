@@ -20,6 +20,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer }
@@ -484,6 +485,51 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |}""".stripMargin
 
         JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
+      }
+    }
+
+    "Create a new app with IP/CT on virtual network foo, then update it to bar" in new Fixture {
+      Given("An app and group")
+      val app = App(
+        id = "/app",
+        cmd = Some("cmd"),
+        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo")))
+      )
+      prepareApp(app, groupManager)
+
+      When("The application is updated")
+      val updatedApp = app.copy(networks = Seq(Network(mode = NetworkMode.Container, name = Some("bar"))))
+      val updatedJson = Json.toJson(updatedApp).as[JsObject]
+      val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
+
+      val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
+      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
+        Then("It is successful")
+        status shouldEqual StatusCodes.OK withClue s"response=${responseAs[String]}"
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Create a new app with IP/CT on virtual network foo, then update it to nothing" in new FixtureWithRealGroupManager(
+      initialRoot = createRootGroup(apps = Map(
+        "/app".toRootPath -> AppDefinition("/app".toRootPath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")))
+      ))
+    ) {
+      Given("An app and group")
+      val updatedApp = App(
+        id = "/app",
+        cmd = Some("cmd"),
+        networks = Seq(Network(mode = NetworkMode.Container))
+      )
+
+      When("The application is updated")
+      val updatedJson = Json.toJson(updatedApp).as[JsObject]
+      val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
+      val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
+      Put(Uri./.withPath(Path(updatedApp.id)).withQuery(Query("partialUpdate" -> "true")), entity) ~> route ~> check {
+        Then("the update should fail")
+        status shouldEqual StatusCodes.UnprocessableEntity
+        responseAs[String] should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
       }
     }
 
@@ -1275,6 +1321,67 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
       Post(Uri./, entity) ~> route ~> check {
         status shouldEqual StatusCodes.UnprocessableEntity
+      }
+    }
+
+    "Replace an existing application" in new Fixture {
+      Given("An app and group")
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
+      groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.app(PathId("/app")) returns Some(app)
+      groupManager.rootGroup() returns rootGroup
+
+      When("The application is updated")
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Put(Uri./.withPath(Path(app.id.toString)), entity) ~> route ~> check {
+        Then("The application is updated")
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Replace an existing application using ports instead of portDefinitions" in new Fixture {
+      Given("An app and group")
+      val app = App(id = "/app", cmd = Some("foo"))
+      prepareApp(app, groupManager)
+
+      val appJson = Json.toJson(app).as[JsObject]
+      val appJsonWithOnlyPorts = appJson +
+        ("ports" -> Json.parse("""[1000, 1001]"""))
+      val body = Json.stringify(appJsonWithOnlyPorts).getBytes("UTF-8")
+
+      When("The application is updated")
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Put(Uri./.withPath(Path(app.id.toString)), entity) ~> route ~> check {
+        Then("The application is updated")
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Replace an existing application fails due to docker container validation" in new Fixture {
+      Given("An app update with an invalid container (missing docker field)")
+      val app = App(id = "/app", cmd = Some("foo"))
+      prepareApp(app, groupManager)
+
+      val body =
+        """{
+          |  "cmd": "sleep 1",
+          |  "container": {
+          |    "type": "DOCKER"
+          |  }
+          |}""".
+          stripMargin.getBytes("UTF-8")
+
+      Then("A validation exception is thrown")
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Put(Uri./.withPath(Path(app.id.toString)), entity) ~> route ~> check {
+        status shouldEqual StatusCodes.UnprocessableEntity
+        responseAs[String] should include("/container/docker")
+        responseAs[String] should include("not defined")
       }
     }
 
