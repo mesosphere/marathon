@@ -106,18 +106,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       (body, plan)
     }
 
-    def addAppsToRootGroupRootGroup(apps: Seq[App]): (Seq[AppDefinition], DeploymentPlan, RootGroup) = {
-      val normed = apps.map(normalize)
-      val appDefs = normed.map(Raml.fromRaml(_))
-      val rootGroup = createRootGroup(
-        appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
-      )
-      val plan = DeploymentPlan(rootGroup, rootGroup)
-      (appDefs, plan, rootGroup)
-    }
-
     def createAppWithVolumes(`type`: String, volumes: String, groupManager: GroupManager, auth: TestAuthFixture): HttpEntity.Strict = {
       val app = App(id = "/app", cmd = Some(
         "foo"))
@@ -1867,27 +1855,29 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Replace multiple existing applications using Put" in new Fixture {
       Given("An app and group")
-      val app1Id = "/app1"
-      val app2Id = "/app2"
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
 
       val newApp1Cmd = "bla1"
       val newApp2Cmd = "bla2"
-      val apps = Seq(App(
-        id = app1Id,
-        cmd = Some("cmd1")
-      ), App(
-        id = app2Id,
-        cmd = Some("cmd1")
-      )
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
       )
 
-      val (appDefs, plan, rootGroup) = addAppsToRootGroupRootGroup(apps)
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+
+      val plan = DeploymentPlan(rootGroup, rootGroup)
 
       groupManager.updateRoot(any, any, any, any, any) answers { args =>
         val fn = args(1).asInstanceOf[RootGroup => RootGroup]
         val updated = fn(rootGroup)
-        updated.app(PathId(app1Id)).get.cmd.get shouldEqual newApp1Cmd
-        updated.app(PathId(app2Id)).get.cmd.get shouldEqual newApp2Cmd
+        updated.app(app1Id).get.cmd.get shouldEqual newApp1Cmd
+        updated.app(app2Id).get.cmd.get shouldEqual newApp2Cmd
         Future.successful(plan)
       }
       groupManager.rootGroup() returns rootGroup
@@ -1917,22 +1907,28 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Replace multiple existing applications using Patch" in new Fixture {
       Given("An app and group")
-      val app1Id = "/app1"
-      val app2Id = "/app2"
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
 
       val newApp1Cmd = "bla1"
       val newApp2Cmd = "bla2"
-      val apps = Seq(
-        App(id = app1Id, cmd = Some("cmd1")),
-        App(id = app2Id, cmd = Some("cmd1"))
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
       )
 
-      val (appDefs, plan, rootGroup) = addAppsToRootGroupRootGroup(apps)
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+
       groupManager.updateRoot(any, any, any, any, any) answers { args =>
         val fn = args(1).asInstanceOf[RootGroup => RootGroup]
         val updated = fn(rootGroup)
-        updated.app(PathId(app1Id)).get.cmd.get shouldEqual newApp1Cmd
-        updated.app(PathId(app2Id)).get.cmd.get shouldEqual newApp2Cmd
+        updated.app(app1Id).get.cmd.get shouldEqual newApp1Cmd
+        updated.app(app2Id).get.cmd.get shouldEqual newApp2Cmd
         Future.successful(plan)
       }
       groupManager.rootGroup() returns rootGroup
@@ -1962,22 +1958,27 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Reject replacing multiple existing applications using Patch if appId is not found" in new Fixture {
       Given("An app and group")
-      val app1Id = "/app1"
-      val app2Id = "/app2"
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
 
       val newApp1Cmd = "bla1"
       val newApp2Cmd = "bla2"
-      val apps = Seq(
-        App(id = app1Id, cmd = Some("cmd1")),
-        App(id = app2Id, cmd = Some("cmd1"))
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
       )
 
-      val (appDefs, plan, rootGroup) = addAppsToRootGroupRootGroup(apps)
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.updateRoot(any, any, any, any, any) answers { args =>
         val fn = args(1).asInstanceOf[RootGroup => RootGroup]
         val updated = fn(rootGroup)
-        updated.app(PathId(app1Id)).get.cmd.get shouldEqual newApp1Cmd
-        updated.app(PathId(app2Id)).get.cmd.get shouldEqual newApp2Cmd
+        updated.app(app1Id).get.cmd.get shouldEqual newApp1Cmd
+        updated.app(app2Id).get.cmd.get shouldEqual newApp2Cmd
         Future.successful(plan)
       }
       groupManager.rootGroup() returns rootGroup
