@@ -1,0 +1,116 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+  group: group.raml
+  readinessCheck: readinessCheck.raml
+
+types:
+  DeploymentResult:
+    type: object
+    description: Result of the deployment
+    properties:
+      deploymentId: string
+      version: datetime
+
+  DeploymentActionName:
+    type: string
+    description: |
+      * StartApplication: starts an application, which is currently not running.
+      * StopApplication: stops an already running application.
+      * ScaleApplication: changes the number of instances of an application and allows to kill specified instances while scaling.
+      * RestartApplication: upgrades an already deployed application with a new version.
+      * StartPod: starts a pod, which is currently not running.
+      * StopPod: stops an already running pod.
+      * ScalePod: changes the number of instances of an pod and allows to kill specified instances while scaling.
+      * RestartPod: upgrades an already deployed pod with a new version.
+      * ResolveArtifacts: Resolve all artifacts of an application
+    enum:
+      - StartApplication
+      - StopApplication
+      - ScaleApplication
+      - RestartApplication
+      - StartPod
+      - StopPod
+      - ScalePod
+      - RestartPod
+      - ResolveArtifacts
+
+  DeploymentAction:
+    type: object
+    description: An action in the deployment step
+    properties:
+      action:
+        type: DeploymentActionName
+        description: The name of the action being executed
+      app?:
+        type: strings.PathId
+        description: The application ID affected by this deployment
+      pod?:
+        type: strings.PathId
+        description: The pod ID af8fected by this deployment
+
+  DeploymentActionInfo:
+    type: DeploymentAction
+    description: A deployment action with additional status information
+    properties:
+      readinessCheckResults:
+        type: readinessCheck.ReadinessCheckResults
+        description: |
+          If there are readiness checks present for this deployment this property contains
+          their status.
+
+  DeploymentStep:
+    type: object
+    description: |
+      A step in the deployment plan, represented as a list of actions to be performed
+    properties:
+      actions:
+        type: array
+        items: DeploymentAction
+
+  DeploymentPlan:
+    type: object
+    description: |
+       A deployment is a change in the service setup.
+       Note that the `orignal` and `target` properties could be missing when the plan
+       is generated in "lightweight" mode.
+    properties:
+      id:
+        type: string
+        description: The UUID of the deployment plan
+      original?:
+        type: group.Group
+        description: The current (pre-deployment) state of the root goup in marathon
+      target?:
+        type: group.Group
+        description: The target (post-deployment) state of the root goup in marathon
+      steps:
+        type: array
+        items: DeploymentStep
+        description: The total number of steps to be performed in the deployment
+      version:
+        type: datetime
+        description: The time when the deployment was created, used as deployment version
+
+  DeploymentStepInfo:
+    type: DeploymentPlan
+    description: The status of a deployment step
+    properties:
+      affectedApps:
+        type: array
+        items: strings.PathId
+        description: The IDs of the apps affected by this deployment
+      affectedPods:
+        type: array
+        items: strings.PathId
+        description: The IDs of the pods affected by this deployment
+      currentActions:
+        type: array
+        items: DeploymentActionInfo
+        description: The "actions" of the currently active deployment step
+      currentStep:
+        type: integer
+        description: The index of the current step as found in the "steps" property
+      totalSteps:
+        type: integer
+        description: The total number of steps in the deployment

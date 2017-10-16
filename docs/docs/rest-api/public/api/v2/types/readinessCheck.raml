@@ -63,3 +63,40 @@ types:
           If and only if true, preserve the last readiness check responses and
           expose them in the API as part of a deployment.
         default: false
+
+  ReadinessCheckHttpResponse:
+    type: object
+    description: The last HTTP response received for the given readiness check
+    properties:
+      status:
+        type: integer
+        description: The HTTP status code returned (ex. 200)
+      contentType:
+        type: string
+        description: The value of the Content-Type header in the response
+      body:
+        type: string
+        description: The raw payload of body of the HTTP response
+
+  TaskReadinessCheckResult:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The name of the readiness check, as defined by the user
+      taskId:
+        type: strings.InstanceId
+        description: The name of the instance
+      ready:
+        type: boolean
+        description: If `true` this readiness check is succesful on the given task
+      lastResponse?:
+        type: ReadinessCheckHttpResponse
+        description: The last HTTP response received for this readiness check
+
+  ReadinessCheckResults:
+    type: array
+    items: TaskReadinessCheckResult
+    description: |
+      The result of the readiness checks, one for every task. The key in this object
+      is the task ID.
