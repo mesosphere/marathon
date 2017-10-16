@@ -44,8 +44,8 @@ class TasksController(instanceTracker: InstanceTracker, groupManager: GroupManag
   private def listTasks(): Route = {
     authenticated.apply { implicit identity =>
       authorized(ViewResource, AuthorizedResource.SystemConfig).apply {
-        parameters("status".?, "status[]".as[String].*) { (statusParameter, statusesParameter) =>
-          val statuses = statusParameter.map(s => Seq(s) ++ statusesParameter).getOrElse(Seq[String](statusesParameter.toSeq: _*))
+        parameters("status".?, "status[]".as[String].*) { (statusParameter, statusParameters) =>
+          val statuses = statusParameter.fold(Seq.empty[String])(s => Seq(s)) ++ statusParameters
           onSuccess(enrichedTasks(statuses)) { tasks =>
             complete(TasksList(tasks).toRaml)
           }
@@ -56,7 +56,7 @@ class TasksController(instanceTracker: InstanceTracker, groupManager: GroupManag
 
   @SuppressWarnings(Array("all")) // async/await
   private def enrichedTasks(statuses: Seq[String]): Future[Seq[EnrichedTask]] = async {
-    val conditionSet: Set[Condition] = statuses.flatMap(toTaskState)(collection.breakOut)
+    val conditionSet: Set[Condition] = statuses.flatMap(toCondition)(collection.breakOut)
 
     val instancesBySpec = await(instanceTracker.instancesBySpec)
 
@@ -92,7 +92,7 @@ class TasksController(instanceTracker: InstanceTracker, groupManager: GroupManag
     Seq(enrichedTasks.flatten.toSeq: _*)
   }
 
-  private def toTaskState(state: String): Option[Condition] = state.toLowerCase match {
+  private def toCondition(state: String): Option[Condition] = state.toLowerCase match {
     case "running" => Some(Condition.Running)
     case "staging" => Some(Condition.Staging)
     case _ => None
