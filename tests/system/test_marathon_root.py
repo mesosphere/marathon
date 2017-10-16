@@ -528,7 +528,7 @@ def test_app_file_based_secret(secret_fixture):
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def value_check():
         status, data = shakedown.run_command_on_master(cmd)
-        assert status, "{} did not succeed".format(cmd)
+        assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
         assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
     value_check()
@@ -791,11 +791,14 @@ def test_pod_file_based_secret(secret_fixture):
     port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
     host = instances[0]['networks'][0]['addresses'][0]
     cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
-    status, data = shakedown.run_command_on_master(cmd)
 
-    assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
-    assert data.rstrip() == secret_value, "Got an unexpected secret data"
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def value_check():
+        status, data = shakedown.run_command_on_master(cmd)
+        assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
+        assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
+    value_check()
 
 @pytest.fixture(scope="function")
 def secret_fixture():
