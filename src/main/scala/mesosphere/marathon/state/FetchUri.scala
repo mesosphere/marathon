@@ -31,7 +31,7 @@ case class FetchUri(
 
 object FetchUri {
 
-  lazy val supportedFileTypes = Seq(".tgz", ".tar.gz", ".tbz2", ".txz", ".tar.xz", ".zip")
+  lazy val supportedFileTypes = Seq(".tar", ".tar.gz", ".tar.bz2", ".tar.xz", ".gz", ".tgz", ".tbz2", ".txz", ".zip")
 
   val empty: Seq[FetchUri] = Seq.empty
 
