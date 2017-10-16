@@ -12,6 +12,7 @@ import mesosphere.marathon.api.akkahttp.v2.RouteBehaviours
 import mesosphere.marathon.core.election.ElectionService
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.slf4j.LoggerFactory
+import play.api.libs.json.{ JsDefined, JsObject, JsString, Json }
 
 class SystemControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with TableDrivenPropertyChecks {
 
@@ -50,6 +51,12 @@ class SystemControllerTest extends UnitTest with ScalatestRouteTest with RouteBe
       val controller = Fixture().controller()
       Get("/metrics") ~> controller.route ~> check {
         response.status should be(StatusCodes.OK)
+        val metricsJson = Json.parse(responseAs[String])
+        metricsJson \ "start" shouldBe a[JsDefined]
+        metricsJson \ "end" shouldBe a[JsDefined]
+        metricsJson \ "counters" shouldBe a[JsDefined]
+        metricsJson \ "gauges" shouldBe a[JsDefined]
+        metricsJson \ "histograms" shouldBe a[JsDefined]
       }
     }
 
@@ -57,41 +64,10 @@ class SystemControllerTest extends UnitTest with ScalatestRouteTest with RouteBe
       val controller = Fixture().controller()
       Get("/logging") ~> controller.route ~> check {
         response.status should be(StatusCodes.OK)
-        val expected =
-          """{
-            |  "mesosphere.marathon.api.akkahttp.SystemControllerTest" : "INFO (inherited)",
-            |  "akka.stream" : "INFO (inherited)",
-            |  "mesosphere.marathon" : "INFO",
-            |  "org.eclipse" : "INFO",
-            |  "akka.event.EventStreamUnsubscriber" : "INFO (inherited)",
-            |  "org.apache.zookeeper" : "WARN",
-            |  "akka.actor.LocalActorRefProvider" : "INFO (inherited)",
-            |  "akka" : "INFO",
-            |  "mesosphere.marathon.api.akkahttp.SystemController" : "INFO (inherited)",
-            |  "org.apache" : "INFO (inherited)",
-            |  "mesosphere.marathon.api.akkahttp.Directives" : "INFO (inherited)",
-            |  "akka.actor.LocalActorRefProvider$Guardian" : "INFO (inherited)",
-            |  "akka.actor" : "INFO (inherited)",
-            |  "akka.event.slf4j" : "INFO (inherited)",
-            |  "mesosphere.marathon.api.akkahttp.Directives$" : "INFO (inherited)",
-            |  "akka.event.slf4j.Slf4jLogger" : "INFO (inherited)",
-            |  "akka.stream.impl.StreamSupervisor" : "INFO (inherited)",
-            |  "mesosphere.marathon.api" : "INFO (inherited)",
-            |  "akka.event" : "INFO (inherited)",
-            |  "spray" : "ERROR",
-            |  "akka.stream.impl" : "INFO (inherited)",
-            |  "native-zk-connector" : "WARN",
-            |  "org" : "INFO (inherited)",
-            |  "mesosphere" : "INFO (inherited)",
-            |  "mesosphere.marathon.api.akkahttp" : "INFO (inherited)",
-            |  "mesosphere.marathon.integration.process" : "DEBUG",
-            |  "mesosphere.marathon.integration" : "INFO (inherited)",
-            |  "ROOT" : "INFO",
-            |  "akka.event.EventStream" : "INFO (inherited)",
-            |  "akka.event.DeadLetterListener" : "INFO (inherited)",
-            |  "akka.actor.LocalActorRefProvider$SystemGuardian" : "INFO (inherited)"
-            |}""".stripMargin
-        JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
+        val loggerMap = Json.parse(responseAs[String]).as[JsObject]
+        loggerMap.values should not be empty
+        loggerMap.keys should contain ("mesosphere.marathon")
+        loggerMap.keys should contain ("ROOT")
       }
     }
 

@@ -12,6 +12,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.AuthorizedResource.{ SystemConfig, SystemMetrics }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateResource, ViewResource }
+import mesosphere.marathon.raml.{ AnyToRaml, MetricsConversion }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsString
 import stream.Implicits._
@@ -31,7 +32,7 @@ class SystemController(
     val executionContext: ExecutionContext,
     val authenticator: Authenticator,
     val authorizer: Authorizer
-) extends Controller with StrictLogging {
+) extends Controller with MetricsConversion with StrictLogging {
 
   import Directives._
   import EntityMarshallers._
@@ -67,8 +68,7 @@ class SystemController(
   def metrics: Route = {
     authenticated.apply { implicit identity =>
       authorized(ViewResource, SystemMetrics).apply {
-        //        complete(Metrics.snapshot().toRaml)
-        complete(Metrics.snapshot())
+        complete(Metrics.snapshot().toRaml)
       }
     }
   }
