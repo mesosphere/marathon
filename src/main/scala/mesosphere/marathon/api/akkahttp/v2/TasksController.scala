@@ -52,12 +52,10 @@ class TasksController(
   private def listTasks(): Route = {
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
-        authorized(ViewResource, AuthorizedResource.SystemConfig).apply {
-          parameters("status".?, "status[]".as[String].*) { (statusParameter, statusParameters) =>
-            val statuses = statusParameter.fold(Seq.empty[String])(s => Seq(s)) ++ statusParameters
-            onSuccess(enrichedTasks(statuses)) { tasks =>
-              complete(TasksList(tasks).toRaml)
-            }
+        parameters("status".?, "status[]".as[String].*) { (statusParameter, statusParameters) =>
+          val statuses = statusParameter.fold(Seq.empty[String])(s => Seq(s)) ++ statusParameters
+          onSuccess(enrichedTasks(statuses)) { tasks =>
+            complete(TasksList(tasks).toRaml)
           }
         }
       }
@@ -65,10 +63,8 @@ class TasksController(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  private def enrichedTasks(statuses: Seq[String]): Future[Seq[EnrichedTask]] = async {
+  private def enrichedTasks(statuses: Seq[String])(implicit identity: Identity): Future[Seq[EnrichedTask]] = async {
     val conditionSet: Set[Condition] = statuses.flatMap(toCondition)(collection.breakOut)
-
-    def isInterestingInstance(condition: Condition) = conditionSet.isEmpty || conditionSet(condition)
 
     val instancesBySpec = await(instanceTracker.instancesBySpec)
 
@@ -76,8 +72,9 @@ class TasksController(
       appTasks.instances.map(i => appTasks.specId -> i)
     }
     val appIds: Set[PathId] = instancesBySpec.allSpecIdsWithInstances
+    val appIdsToApps = groupManager.apps(appIds)
 
-    val appToPorts: Map[PathId, Seq[Int]] = groupManager.apps(appIds).map {
+    val appToPorts: Map[PathId, Seq[Int]] = appIdsToApps.map {
       case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
     }
 
@@ -87,8 +84,13 @@ class TasksController(
         .runFold(Map[Id, Seq[Health]]())(_ ++ _)
     )
 
+    def isInterestingInstance(condition: Condition) = conditionSet.isEmpty || conditionSet(condition)
+    def isAuthorized(appId: PathId): Boolean = appIdsToApps(appId).fold(false)(id => authorizer.isAuthorized(identity, ViewRunSpec, id))
+
     instances
-      .filter { case (_, instance) => isInterestingInstance(instance.state.condition) }
+      .filter {
+        case (appId, instance) => isAuthorized(appId) && isInterestingInstance(instance.state.condition)
+      }
       .flatMap {
         case (appId, instance) => instance.tasksMap.values.map(t => EnrichedTask(
           appId,

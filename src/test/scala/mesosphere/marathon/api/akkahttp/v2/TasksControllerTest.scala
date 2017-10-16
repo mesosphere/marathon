@@ -33,7 +33,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, clock.now()).getInstance()
 
-      instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("app".toPath, Seq(instance1, instance2))))
+      instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("/app".toPath, Seq(instance1, instance2))))
       groupManager.apps(any) returns Map(app.id -> Some(app))
       healthCheckManager.statuses(any) returns Future.successful(Map.empty)
 
@@ -44,7 +44,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
 
         val expected = s"""{
                          |  "tasks" : [ {
-                         |    "appId" : "app",
+                         |    "appId" : "/app",
                          |    "healthCheckResults" : [ ],
                          |    "host" : "${instance1.hostname}",
                          |    "ipAddresses" : [ ],
@@ -57,7 +57,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
                          |    "version" : "2015-04-09T12:30:00.000Z",
                          |    "localVolumes" : [ ]
                          |  }, {
-                         |    "appId" : "app",
+                         |    "appId" : "/app",
                          |    "healthCheckResults" : [ ],
                          |    "host" : "${instance2.hostname}",
                          |    "id" : "${instance2.appTask.taskId.idString}",
@@ -82,7 +82,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val (runningInstance, runningTask) = runningInstanceAndItsTask(app, clock)
       val (stagingInstance, stagingTask) = stagingInstanceAndItsTask(app, clock)
 
-      instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("app".toPath, Seq(runningInstance, stagingInstance))))
+      instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("/app".toPath, Seq(runningInstance, stagingInstance))))
       groupManager.apps(any) returns Map(app.id -> Some(app))
       healthCheckManager.statuses(any) returns Future.successful(Map.empty)
 
@@ -103,7 +103,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val (runningInstance, runningTask) = runningInstanceAndItsTask(app, clock)
       val (stagingInstance, stagingTask) = stagingInstanceAndItsTask(app, clock)
 
-      instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("app".toPath, Seq(stagingInstance, runningInstance))))
+      instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("/app".toPath, Seq(stagingInstance, runningInstance))))
       groupManager.apps(any) returns Map(app.id -> Some(app))
       healthCheckManager.statuses(any) returns Future.successful(Map.empty)
 
@@ -135,15 +135,36 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./))
     }
 
-    {
-      val controller = Fixture(authorized = false).controller
-      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get(Uri./))
+    "see tasks only for application to which is authorized to see" in {
+      val clock = new SettableClock()
+      val authorizedApp = AppDefinition(id = "/app".toPath, instances = 1)
+      val notAuthorizedApp = AppDefinition(id = "/app2".toPath, instances = 1)
+      val f = Fixture(authFn = resource => {
+        info(resource.asInstanceOf[AppDefinition].id.toString)
+        resource.asInstanceOf[AppDefinition].id == authorizedApp.id
+      })
+      val (authorizedInstance, authorizedTask) = f.runningInstanceAndItsTask(authorizedApp, clock)
+      val (notAuthorizedInstance, notAuthorizedTask) = f.runningInstanceAndItsTask(notAuthorizedApp, clock)
+
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(authorizedApp.id, Seq(authorizedInstance)), InstanceTracker.SpecInstances.forInstances(notAuthorizedApp.id, Seq(notAuthorizedInstance))))
+      f.groupManager.apps(any) returns Map(authorizedApp.id -> Some(authorizedApp), notAuthorizedApp.id -> Some(notAuthorizedApp))
+      f.healthCheckManager.statuses(any) returns Future.successful(Map.empty)
+
+      When("Getting the tasks list")
+      Get(Uri./) ~> f.controller.route ~> check {
+        Then("Only tasks we are authorized to see should be serialized into the response")
+        status should be(StatusCodes.OK)
+
+        responseAs[String] should include (authorizedTask.taskId.idString)
+        responseAs[String] should not include (notAuthorizedTask.taskId.idString)
+      }
     }
   }
 
   case class Fixture(
       authenticated: Boolean = true,
       authorized: Boolean = true,
+      authFn: Any => Boolean = _ => true,
       groupManager: GroupManager = mock[GroupManager],
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager]) {
@@ -151,6 +172,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
     val authFixture = new TestAuthFixture()
     authFixture.authenticated = authenticated
     authFixture.authorized = authorized
+    authFixture.authFn = authFn
 
     implicit val authenticator = authFixture.auth
 
