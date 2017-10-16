@@ -2,16 +2,18 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.server.Route
-import ch.qos.logback.classic.{ Level, Logger, LoggerContext }
-import com.typesafe.config.{ Config, ConfigRenderOptions }
+import ch.qos.logback.classic.{Level, Logger, LoggerContext}
+import com.typesafe.config.{Config, ConfigRenderOptions}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.plugin.auth.AuthorizedResource.{ SystemConfig, SystemMetrics }
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateResource, ViewResource }
-import mesosphere.marathon.raml.{ AnyToRaml, LoggerChange }
+import mesosphere.marathon.plugin.auth.AuthorizedResource.{SystemConfig, SystemMetrics}
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateResource, ViewResource}
 import org.slf4j.LoggerFactory
+import play.api.libs.json.JsString
 import stream.Implicits._
 
 import scala.concurrent.duration._
@@ -34,11 +36,29 @@ class SystemController(
   import Directives._
   import EntityMarshallers._
 
+  def acceptsTextPlain(ranges: Seq[MediaRange]): Boolean = {
+    ranges.exists(range => range.matches(MediaTypes.`text/plain`))
+  }
+  def acceptsApplicationJson(ranges: Seq[MediaRange]): Boolean = {
+    ranges.exists(range => range.matches(MediaTypes.`application/json`))
+  }
   /**
     * GET /ping
     * @return a simple pong as text/plain
     */
-  def ping: Route = complete("pong")
+  def ping: Route = extract(_.request.header[Accept]) { maybeAccept: Option[Accept] =>
+    // Match by priority. Always prefer text/plain.
+    maybeAccept match {
+      case None =>
+        complete("pong")
+      case Some(accept) if (acceptsTextPlain(accept.mediaRanges))=>
+        complete("pong")
+      case Some(accept) if (acceptsApplicationJson(accept.mediaRanges))=>
+        complete(JsString("ping"))
+      case Some(_) =>
+        complete(HttpResponse(StatusCodes.NoContent))
+    }
+  }
 
   /**
     * GET /metrics

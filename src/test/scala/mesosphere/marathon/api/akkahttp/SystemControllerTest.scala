@@ -18,87 +18,34 @@ class SystemControllerTest extends UnitTest with ScalatestRouteTest with RouteBe
 
   "SystemController" should {
     // format: OFF
-    val pingCases = Table[MediaRange, ContentType, StatusCode](
+    val pingCases = Table[Option[MediaRange], ContentType, StatusCode](
       ("AcceptMediaType",       "ResponseContentType",                "StatusCode"         ),
-      (MediaRange(MediaTypes.`application/json`), ContentTypes.`application/json`, StatusCodes.OK),
-      (MediaRanges.`text/*`, ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
-      (MediaRange(MediaTypes.`text/plain`), ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
-      (MediaRanges.`*/*`, ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK), // TODO: Maybe set none at all
-      (MediaRange(MediaTypes.`image/png`), ContentTypes.NoContentType, StatusCodes.NoContent)
+      (Some(MediaRange(MediaTypes.`application/json`)), ContentTypes.`application/json`, StatusCodes.OK),
+      (Some(MediaRanges.`text/*`), ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
+      (Some(MediaRange(MediaTypes.`text/plain`)), ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
+      (Some(MediaRanges.`*/*`), ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
+      (None, ContentTypes.`text/plain(UTF-8)`, StatusCodes.OK),
+      (Some(MediaRange(MediaTypes.`image/png`)), ContentTypes.NoContentType, StatusCodes.NoContent)
     )
     // format: ON
     forAll(pingCases) { (acceptMediaType, responseContentType, statusCode) =>
       s"reply to a ping request ${acceptMediaType} with a pong of ${responseContentType}" in {
         val controller = Fixture().controller()
-        val acceptHeader = Accept(acceptMediaType)
-        Get("/ping").addHeader(acceptHeader) ~> controller.route ~> check {
+
+        Given(s"a request with accept header for $acceptMediaType")
+        val request =  acceptMediaType match {
+          case None => Get("/ping")
+          case Some(mediaType) => Get("/ping").addHeader(Accept(mediaType))
+        }
+
+        When("the request is issued")
+        request ~> controller.route ~> check {
+          Then(s"the response has status code $statusCode")
           response.status should be(statusCode)
           response.entity.contentType should be(responseContentType)
         }
       }
     }
-//    "Do a ping with preferred JSON content type" in new Fixture {
-//      val request = mock[Request]
-//      when(request.selectVariant(Matchers.any())).thenReturn(Variant.mediaTypes(MediaType.APPLICATION_JSON_TYPE).add.build.get(0))
-//
-//      When("A ping is requested")
-//      val response = resource.ping(request)
-//
-//      Then("A pong is sent back")
-//      val pong = Json.parse(response.getEntity.asInstanceOf[String]).as[JsString]
-//      pong.value should be("pong")
-//      Option(response.getMetadata().getFirst("Content-type")).value.toString should be("application/json")
-//    }
-
-//    "Do a ping with text content type" in new Fixture {
-//      val request = mock[Request]
-//      when(request.selectVariant(Matchers.any())).thenReturn(Variant.mediaTypes(MediaType.TEXT_PLAIN_TYPE).add.build.get(0))
-//
-//      When("A ping is requested")
-//      val response = resource.ping(request)
-//
-//      Then("A pong is sent back")
-//      response.getEntity should be("pong")
-//      Option(response.getMetadata().getFirst("Content-type")).value.toString should be("text/plain")
-//    }
-
-//    "Do a ping with text/* content type" in new Fixture {
-//      val request = mock[Request]
-//      when(request.selectVariant(Matchers.any())).thenReturn(Variant.mediaTypes(MediaType.valueOf("text/*")).add.build.get(0))
-//
-//      When("A ping is requested")
-//      val response = resource.ping(request)
-//
-//      Then("A pong is sent back")
-//      response.getEntity should be("pong")
-//      Option(response.getMetadata().getFirst("Content-type")).value.toString should be("text/plain")
-//    }
-
-//    "Do a ping with */* content type" in new Fixture {
-//      val request = mock[Request]
-//      when(request.selectVariant(Matchers.any())).thenReturn(Variant.mediaTypes(MediaType.valueOf("*/*")).add.build.get(0))
-//
-//      When("A ping is requested")
-//      val response = resource.ping(request)
-//
-//      // JSON is preferred if there's no Accept header, or if Accept is */*
-//      Then("A pong is sent back")
-//      val pong = Json.parse(response.getEntity.asInstanceOf[String]).as[JsString]
-//      pong.value should be("pong")
-//      Option(response.getMetadata().getFirst("Content-type")).value.toString should be("application/json")
-//    }
-
-//    "Do a ping with text/html content type" in new Fixture {
-//      val request = mock[Request]
-//      when(request.selectVariant(Matchers.any())).thenReturn(Variant.mediaTypes(MediaType.TEXT_HTML_TYPE).add.build.get(0))
-//
-//      When("A ping is requested")
-//      val response = resource.ping(request)
-//
-//      Then("A pong is sent back")
-//      response.getEntity should be("pong")
-//      Option(response.getMetadata().getFirst("Content-type")).value.toString should be("text/html")
-//    }
 
     "return a snapshot of the metrics" in {
       val controller = Fixture().controller()
