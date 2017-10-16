@@ -308,7 +308,6 @@ class AppsController(
           complete(Json.obj("tasks" -> tasks.toRaml))
         }
       }
-
     } getOrElse {
       reject(Rejections.EntityNotFound.noApp(appId))
     }
