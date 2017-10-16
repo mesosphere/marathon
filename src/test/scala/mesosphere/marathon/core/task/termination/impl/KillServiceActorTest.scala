@@ -17,7 +17,7 @@ import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.termination.KillConfig
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
@@ -329,7 +329,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
       holder.driver = Some(driver)
       holder
     }
-    val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
+    val stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]
     val clock = new SettableClock()
 
     def mockInstance(appId: PathId, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Instance = {

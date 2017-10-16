@@ -11,7 +11,7 @@ import scala.concurrent.Future
   * * Updating an instance (due to a state change, a timeout, a mesos update)
   * * Expunging an instance
   */
-trait TaskStateOpProcessor {
+trait InstanceStateOpProcessor {
   /** Process an InstanceUpdateOperation and propagate its result. */
   def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect]
 }

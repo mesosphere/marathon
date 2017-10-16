@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.{ ExpungeOverdueLostTasksActor, ExpungeOverdueLostTasksActorLogic }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Timestamp, UnreachableEnabled, UnreachableDisabled, UnreachableStrategy }
 import mesosphere.marathon.test.MarathonTestHelper
@@ -25,7 +25,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
   class Fixture {
     val clock = new SettableClock()
     val config = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
-    val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
+    val stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]
     val taskTracker: InstanceTracker = mock[InstanceTracker]
     val fiveTen = UnreachableEnabled(inactiveAfter = 5.minutes, expungeAfter = 10.minutes)
   }
@@ -53,7 +53,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
     val businessLogic = new ExpungeOverdueLostTasksActorLogic {
       override val config: TaskJobsConfig = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
       override val clock: Clock = new SettableClock()
-      override val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
+      override val stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]
     }
 
     // format: OFF
