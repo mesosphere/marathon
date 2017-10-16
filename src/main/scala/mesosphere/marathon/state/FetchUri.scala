@@ -31,6 +31,7 @@ case class FetchUri(
 
 object FetchUri {
 
+  // Official extractable extensions of mesos fetcher: http://mesos.apache.org/documentation/latest/fetcher/
   lazy val supportedFileTypes = Seq(".tar", ".tar.gz", ".tar.bz2", ".tar.xz", ".gz", ".tgz", ".tbz2", ".txz", ".zip")
 
   val empty: Seq[FetchUri] = Seq.empty
