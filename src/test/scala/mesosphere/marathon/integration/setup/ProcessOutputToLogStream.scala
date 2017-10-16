@@ -4,25 +4,28 @@ package integration.setup
 import org.slf4j.{ LoggerFactory, Logger }
 
 import scala.sys.process.ProcessLogger
+import scala.concurrent.duration._
 
-final case class ProcessOutputToLogStream(process: String, maxLinesPerPeriod: Int = 100, periodMillis: Long = 1000L) extends ProcessLogger {
-  private[this] var nextFlush = System.currentTimeMillis() + periodMillis
-  private[this] var callsSinceLastFlush = 0
+final case class ProcessOutputToLogStream(process: String, maxLinesPerPeriod: Int = 100, period: FiniteDuration = 1.second) extends ProcessLogger {
+  private[this] var nextPeriodStart = System.currentTimeMillis() + periodMillis
+  private[this] var callsThisPeriod = 0
+  private val periodMillis = period.toMillis
+
   val log: Logger = LoggerFactory.getLogger(s"mesosphere.marathon.integration.process.$process")
 
   private def rateLimited(msg: String): Boolean = synchronized {
     val now = System.currentTimeMillis
-    if (now > nextFlush) {
-      val suppressedLines = callsSinceLastFlush - maxLinesPerPeriod
+    if (now > nextPeriodStart) {
+      val suppressedLines = callsThisPeriod - maxLinesPerPeriod
       if (suppressedLines > 0)
         log.error(s"ProcessLogger ${process} was rate limited; ${suppressedLines} lines were supressed")
 
-      callsSinceLastFlush = 1
-      nextFlush = now + periodMillis
+      callsThisPeriod = 1
+      nextPeriodStart = now + periodMillis
       false
     } else {
-      callsSinceLastFlush += 1
-      callsSinceLastFlush > maxLinesPerPeriod
+      callsThisPeriod += 1
+      callsThisPeriod > maxLinesPerPeriod
     }
   }
 
