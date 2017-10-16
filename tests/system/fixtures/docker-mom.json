@@ -1,0 +1,79 @@
+{
+  "id": "/marathon-user",
+  "backoffFactor": 1.15,
+  "backoffSeconds": 1,
+  "cmd": "LIBPROCESS_PORT=$PORT1 && ./bin/start    --checkpoint --decline_offer_duration \"120000\" --default_accepted_resource_roles \"*\"   --enable_features \"vips,task_killing\"  --event_stream_max_outstanding_messages \"50\"  --executor \"//cmd\" --failover_timeout \"604800\" --framework_name marathon-user  --ha --hostname $LIBPROCESS_IP   --http_compression   --http_event_callback_slow_consumer_timeout \"10000\" --http_event_request_timeout \"10000\"  --http_port  $PORT0  --http_realm \"Mesosphere\"   --launch_token_refresh_interval \"30000\" --launch_tokens \"100\" --leader_proxy_connection_timeout \"5000\" --leader_proxy_read_timeout \"10000\"  --local_port_max \"20000\" --local_port_min \"10000\"   --master \"zk://master.mesos:2181/mesos\"   --max_tasks_per_offer \"1\" --disable_mesos_authentication --mesos_authentication_principal marathon-user   --mesos_leader_ui_url \"/mesos\" --mesos_role marathon-user   --metrics --min_revive_offers_interval \"5000\" --offer_matching_timeout \"1000\" --on_elected_prepare_timeout \"180000\"   --reconciliation_initial_delay \"15000\" --reconciliation_interval \"600000\"   --revive_offers_repetitions \"3\" --save_tasks_to_launch_timeout \"3000\" --scale_apps_initial_delay \"15000\" --scale_apps_interval \"300000\"      --store_cache --task_launch_confirm_timeout \"300000\" --task_launch_timeout \"300000\" --task_lost_expunge_initial_delay \"300000\" --task_lost_expunge_interval \"30000\" --task_reservation_timeout \"20000\" --disable_tracing  --zk zk://master.mesos:2181/universe/marathon-user  --zk_compression --zk_compression_threshold \"65536\" --zk_max_node_size \"1024000\" --zk_max_versions \"50\" --zk_session_timeout \"10000\" --zk_timeout \"10000\"",
+  "constraints": [
+    [
+      "hostname",
+      "UNIQUE"
+    ]
+  ],
+  "container": {
+    "type": "DOCKER",
+    "volumes": [],
+    "docker": {
+      "image": "mesosphere/marathon:__VERSION_GOES_HERE__",
+      "forcePullImage": false,
+      "privileged": false,
+      "parameters": []
+    }
+  },
+  "cpus": 2,
+  "disk": 0,
+  "env": {
+    "JVM_OPTS": "-Xms256m -Xmx768m "
+  },
+  "healthChecks": [
+    {
+      "gracePeriodSeconds": 1800,
+      "ignoreHttp1xx": false,
+      "intervalSeconds": 10,
+      "maxConsecutiveFailures": 3,
+      "portIndex": 0,
+      "timeoutSeconds": 5,
+      "delaySeconds": 15,
+      "protocol": "HTTP",
+      "path": "/ping"
+    }
+  ],
+  "instances": 1,
+  "labels": {
+    "DCOS_SERVICE_SCHEME": "http",
+    "DCOS_SERVICE_NAME": "marathon-user",
+    "DCOS_PACKAGE_FRAMEWORK_NAME": "marathon-user",
+    "DCOS_SERVICE_PORT_INDEX": "0",
+    "DCOS_PACKAGE_VERSION": "__VERSION_GOES_HERE__",
+    "DCOS_PACKAGE_NAME": "marathon",
+    "DCOS_PACKAGE_IS_FRAMEWORK": "true"
+  },
+  "maxLaunchDelaySeconds": 3600,
+  "mem": 1536,
+  "gpus": 0,
+  "networks": [
+    {
+      "mode": "host"
+    }
+  ],
+  "portDefinitions": [
+    {
+      "protocol": "tcp",
+      "port": 10000
+    },
+    {
+      "protocol": "tcp",
+      "port": 10001
+    }
+  ],
+  "requirePorts": false,
+  "upgradeStrategy": {
+    "maximumOverCapacity": 1,
+    "minimumHealthCapacity": 1
+  },
+  "killSelection": "YOUNGEST_FIRST",
+  "unreachableStrategy": {
+    "inactiveAfterSeconds": 300,
+    "expungeAfterSeconds": 600
+  },
+  "fetch": []
+}
