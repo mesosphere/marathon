@@ -9,6 +9,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -153,7 +154,10 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
 
     implicit val authenticator = authFixture.auth
 
-    val controller = new TasksController(instanceTracker, groupManager, healthCheckManager)
+    val electionService = mock[ElectionService]
+    electionService.isLeader returns true
+
+    val controller = new TasksController(instanceTracker, groupManager, healthCheckManager, electionService)
 
     def runningInstanceAndItsTask(app: AppDefinition, clock: Clock): (Instance, Task) = {
       val runningInstance = TestInstanceBuilder

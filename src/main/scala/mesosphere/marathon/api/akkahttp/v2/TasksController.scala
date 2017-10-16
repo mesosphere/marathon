@@ -68,6 +68,8 @@ class TasksController(
   private def enrichedTasks(statuses: Seq[String]): Future[Seq[EnrichedTask]] = async {
     val conditionSet: Set[Condition] = statuses.flatMap(toCondition)(collection.breakOut)
 
+    def isInterestingInstance(condition: Condition) = conditionSet.isEmpty || conditionSet(condition)
+
     val instancesBySpec = await(instanceTracker.instancesBySpec)
 
     val instances: Iterable[(PathId, Instance)] = instancesBySpec.instancesMap.values.flatMap { appTasks =>
@@ -85,22 +87,17 @@ class TasksController(
         .runFold(Map[Id, Seq[Health]]())(_ ++ _)
     )
 
-    val enrichedTasks: Iterable[Iterable[EnrichedTask]] = for {
-      (appId, instance) <- instances
-      if conditionSet.isEmpty || conditionSet(instance.state.condition)
-      tasks = instance.tasksMap.values
-    } yield {
-      tasks.map { task =>
-        EnrichedTask(
+    instances
+      .filter { case (_, instance) => isInterestingInstance(instance.state.condition) }
+      .flatMap {
+        case (appId, instance) => instance.tasksMap.values.map(t => EnrichedTask(
           appId,
-          task,
+          t,
           instance.agentInfo,
           instancesHealth.getOrElse(instance.instanceId, Nil),
           appToPorts.getOrElse(appId, Nil)
-        )
-      }
-    }
-    enrichedTasks.flatten.to[Seq]
+        ))
+      }.to[Seq]
   }
 
   private def toCondition(state: String): Option[Condition] = state.toLowerCase match {
