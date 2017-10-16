@@ -247,7 +247,23 @@ class AppsController(
 
   private def deleteSingle(appId: PathId)(implicit identity: Identity): Route = ???
 
-  private def restartApp(appId: PathId)(implicit identity: Identity): Route = ???
+  private def restartApp(appId: PathId)(implicit identity: Identity): Route = {
+    forceParameter { force =>
+      def markForRestartingOrThrow(opt: Option[AppDefinition]): Either[Rejection, AppDefinition] =
+        opt.map(Right(_)).getOrElse(Left(Rejections.EntityNotFound.noApp(appId): Rejection))
+          .flatMap { checkAuthorization(UpdateRunSpec, _) }
+          .map(_.markedForRestarting)
+      val newVersion = clock.now()
+      onSuccessLegacy(Some(appId))(
+        groupManager.updateApp(
+          appId,
+          { app => rejectLeftViaThrow(markForRestartingOrThrow(app)) },
+          newVersion, force)
+      ).apply { restartDeployment =>
+        completeWithDeploymentForApp(appId, restartDeployment)
+      }
+    }
+  }
 
   private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = ???
 
@@ -258,6 +274,10 @@ class AppsController(
   private def listVersions(appId: PathId)(implicit identity: Identity): Route = ???
 
   private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = ???
+  private def rejectLeftViaThrow[T](t: Either[Rejection, T]): T = t match {
+    case Left(r) => throw RejectionError(r)
+    case Right(t) => t
+  }
 
   //TODO: we probably should refactor this into entity marshaller
   private def completeWithDeploymentForApp(appId: PathId, plan: DeploymentPlan) =
