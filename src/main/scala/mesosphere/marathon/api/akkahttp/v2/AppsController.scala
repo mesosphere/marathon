@@ -11,6 +11,8 @@ import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
+import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
+import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
