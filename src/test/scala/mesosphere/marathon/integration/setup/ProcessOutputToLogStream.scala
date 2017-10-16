@@ -15,7 +15,7 @@ final case class ProcessOutputToLogStream(process: String, maxLinesPerPeriod: In
 
   private def rateLimited(msg: String): Boolean = synchronized {
     val now = System.currentTimeMillis
-    if (now > nextPeriodStart) {
+    if (now >= nextPeriodStart) {
       val suppressedLines = callsThisPeriod - maxLinesPerPeriod
       if (suppressedLines > 0)
         log.error(s"ProcessLogger ${process} was rate limited; ${suppressedLines} lines were supressed")
