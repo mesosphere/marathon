@@ -51,11 +51,11 @@ object FetchUri {
     )
 
   /**
-    * Method check if the given string is a valid URI and if the file type in the
+    * Method that checks if the given string is a valid URI and if the file type in the
     * URI is matching a supported file type.
     *
-    * @param uri String that contain an URI.
-    * @return
+    * @param uri String that contains a URI.
+    * @return true if the extension indicates an extractable file, false otherwise.
     */
   def isExtract(uri: String): Boolean = {
     Try(new URI(uri)).map { u =>
