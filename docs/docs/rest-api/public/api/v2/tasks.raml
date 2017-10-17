@@ -1,10 +1,11 @@
 get:
   description:
-    List all running tasks.
+    List all tasks.
   is: [ secured ]
   queryParameters:
     status:
-      description: Filter the list of tasks by status
+      required: false
+      description: Filter the list of tasks by status. If status is not specified, tasks with any status will be included.
       enum: [ running, staging ]
   responses:
     200:
