@@ -133,14 +133,17 @@ case class LocalMarathon(
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
-  private def create(): Process = {
-    processBuilder.run(ProcessOutputToLogStream(s"$suiteName-LocalMarathon-$httpPort"))
+  def create(): Process = {
+    marathon.getOrElse {
+      val process = processBuilder.run(ProcessOutputToLogStream(s"$suiteName-LocalMarathon-$httpPort"))
+      marathon = Some(process)
+      process
+    }
   }
 
   def start(): Future[Done] = {
-    if (marathon.isEmpty) {
-      marathon = Some(create())
-    }
+    create()
+
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
     val future = Retry(s"Waiting for Marathon on $port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 4.minutes) {
       async {
