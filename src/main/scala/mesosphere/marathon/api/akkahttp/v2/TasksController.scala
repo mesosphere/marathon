@@ -55,7 +55,7 @@ class TasksController(
 
   private def listTasks()(implicit identity: Identity): Route = {
     parameters("status".?, "status[]".as[String].*) { (statusParameter, statusParameters) =>
-      val statuses = statusParameter.fold(Seq.empty[String])(s => Seq(s)) ++ statusParameters
+      val statuses = (statusParameter ++ statusParameters).to[Seq]
       onSuccess(enrichedTasks(statuses)) { tasks =>
         complete(TasksList(tasks).toRaml)
       }
