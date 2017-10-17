@@ -27,34 +27,59 @@ class InfoResource @Inject() (
 
   // Marathon configurations
   private[this] lazy val marathonConfigValues = Json.obj(
-    "master" -> config.mesosMaster.get,
+    "access_control_allow_origin" -> config.accessControlAllowOrigin.get,
+    "checkpoint" -> config.checkpoint.get,
+    "decline_offer_duration" -> config.declineOfferDuration.get,
+    "default_network_name" -> config.defaultNetworkName.get,
+    "env_vars_prefix" -> config.envVarsPrefix.get,
+    "executor" -> config.defaultExecutor.get,
     "failover_timeout" -> config.mesosFailoverTimeout.get,
+    "features" -> config.availableFeatures,
     "framework_name" -> config.frameworkName.get,
     "ha" -> config.highlyAvailable.get,
-    "checkpoint" -> config.checkpoint.get,
-    "local_port_min" -> config.localPortMin.get,
-    "local_port_max" -> config.localPortMax.get,
-    "executor" -> config.defaultExecutor.get,
     "hostname" -> config.hostname.get,
-    "webui_url" -> config.webuiUrl.get,
-    "mesos_role" -> config.mesosRole.get,
-    "task_launch_timeout" -> config.taskLaunchTimeout.get,
-    "task_reservation_timeout" -> config.taskReservationTimeout.get,
-    "reconciliation_initial_delay" -> config.reconciliationInitialDelay.get,
-    "reconciliation_interval" -> config.reconciliationInterval.get,
-    "mesos_user" -> config.mesosUser.get,
+    "launch_token" -> config.launchTokens.get,
+    "launch_token_refresh_interval" -> config.launchTokenRefreshInterval.get,
     "leader_proxy_connection_timeout_ms" -> config.leaderProxyConnectionTimeout.get,
     "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get,
-    "features" -> config.availableFeatures
+    "local_port_max" -> config.localPortMax.get,
+    "local_port_min" -> config.localPortMin.get,
+    "master" -> config.mesosMaster.get,
+    "max_instances_per_offer" -> config.maxInstancesPerOffer.get,
+    "mesos_bridge_name" -> config.mesosBridgeName.get,
+    "mesos_heartbeat_failure_threshold" -> config.mesosHeartbeatFailureThreshold.get,
+    "mesos_heartbeat_interval" -> config.mesosHeartbeatInterval.get,
+    "mesos_leader_ui_url" -> config.mesosLeaderUiUrl.get,
+    "mesos_role" -> config.mesosRole.get,
+    "mesos_user" -> config.mesosUser.get,
+    "min_revive_offers_interval" -> config.minReviveOffersInterval.get,
+    "offer_matching_timeout" -> config.offerMatchingTimeout.get.map(_.toMillis),
+    "on_elected_prepare_timeout" -> config.onElectedPrepareTimeout.get,
+    "reconciliation_initial_delay" -> config.reconciliationInitialDelay.get,
+    "reconciliation_interval" -> config.reconciliationInterval.get,
+    "revive_offers_for_new_apps" -> config.reviveOffersForNewApps.get,
+    "revive_offers_repetitions" -> config.reviveOffersRepetitions.get,
+    "scale_apps_initial_delay" -> config.scaleAppsInitialDelay.get,
+    "scale_apps_interval" -> config.scaleAppsInterval.get,
+    "store_cache" -> config.storeCache.get,
+    "task_launch_confirm_timeout" -> config.taskLaunchConfirmTimeout.get,
+    "task_launch_timeout" -> config.taskLaunchTimeout.get,
+    "task_lost_expunge_initial_delay" -> config.taskLostExpungeInitialDelay.toMillis,
+    "task_lost_expunge_interval" -> config.taskLostExpungeInterval.toMillis,
+    "task_reservation_timeout" -> config.taskReservationTimeout.get,
+    "webui_url" -> config.webuiUrl.get
   )
 
   // ZooKeeper congiurations
   private[this] lazy val zookeeperConfigValues = Json.obj(
     "zk" -> s"zk://${config.zkHosts}${config.zkPath}",
-    "zk_timeout" -> config.zooKeeperTimeout(),
+    "zk_compression" -> config.zooKeeperCompressionEnabled.get,
+    "zk_compression_threshold" -> config.zooKeeperCompressionThreshold.get,
     "zk_connection_timeout" -> config.zooKeeperConnectionTimeout(),
+    "zk_max_node_size" -> config.zooKeeperMaxNodeSize.get,
+    "zk_max_versions" -> config.maxVersions(),
     "zk_session_timeout" -> config.zooKeeperSessionTimeout(),
-    "zk_max_versions" -> config.maxVersions()
+    "zk_timeout" -> config.zooKeeperTimeout()
   )
 
   private[this] lazy val httpConfigValues = Json.obj(
