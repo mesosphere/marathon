@@ -32,7 +32,7 @@ node('shakedown') {
             try {
               dcos_url = sh (script: """ci/launch_cluster.sh $params.channel open""", returnStdout: true).trim().readLines().last()
               sh """ci/system_integration.sh ${dcos_url}"""
-            } finally { sh """./dcos-launch delete""""  }
+            } finally { sh """./dcos-launch delete""" }
           }
         } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
