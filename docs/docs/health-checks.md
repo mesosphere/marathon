@@ -16,9 +16,122 @@ application's tasks.
 A health check is considered passing if (1) its HTTP response code is between
 200 and 399 inclusive, and (2) its response is received within the
 `timeoutSeconds` period. If a task fails more than `maxConsecutiveFailures`
-health checks consecutively, that task is killed.
+health checks consecutively, that [task is terminated](#task-termination).
 
-##### Example usage
+## Mesos-level health checks versus Marathon-level health checks
+
+Marathon offers the following protocols for health checks. Declaring a protocol is optional: the default is `HTTP`.
+
+- `HTTP`
+- `HTTPS`
+- `TCP`
+- `COMMAND`
+- `MESOS_HTTP`
+- `MESOS_HTTPS`
+- `MESOS_TCP`
+
+### Marathon-level health checks
+
+Marathon-level health checks (HTTP, HTTPS, and TCP) are executed by Marathon and thus test reachability from the current Marathon leader. Marathon-level health checks have several limitations:
+
+- Marathon-level health checks create extra network traffic if the task and the scheduler are run on different nodes (this is usually the case).
+
+- Network failures between the task and the scheduler, and port mapping misconfigurations can make a healthy task look unhealthy.
+
+- If Marathon is managing a large number of tasks, performing health checks for every task can cause scheduler performance issues.
+
+These limitations may be acceptable for smaller clusters with low-scale tasks, but Marathon-level health checks should not be used on large clusters with highly scaled Marathon tasks.
+
+**Important:** Marathon-based health checks are deprecated and will be removed in a future version. See the [1.4.0 release notes](https://github.com/mesosphere/marathon/releases/tag/v1.4.0) for more information.
+
+### Mesos-level health checks
+
+Mesos-level health checks (`MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`, and `COMMAND`) health checks are locally
+executed by Mesos on the agent running the corresponding task and thus test reachability from the Mesos executor. Mesos-level health checks offer the following advantages over Marathon-level health checks:
+
+- Mesos-level health checks are performed as close to the task as possible, so they are are not affected by networking failures.
+
+- Mesos-level health checks are delegated to the agents running the tasks, so the number of tasks that can be checked can scale horizontally with the number of agents in the cluster.
+
+#### Limitations and considerations
+
+- Mesos-level health checks consume extra resources on the agents; moreover, there is some overhead for fork-execing a process and entering the tasks’ namespaces every time a task is checked.
+
+- The health check processes share resources with the task that they check. Your application definition must account for the extra resources consumed by the health checks.
+
+- Mesos-level health checks require tasks to listen on the container's loopback interface in addition to whatever interface they require. If you run a service in production, you will want to make sure that the users can reach it.
+
+#### `COMMAND` health checks
+
+You must escape any double quotes in your commands. This is required because Mesos runs the healthcheck command inside via `/bin/sh -c ""`.
+  See the example below and [MESOS-4812](https://issues.apache.org/jira/browse/MESOS-4812) for details.
+
+*Note:* Command health checks in combination with Dockerized tasks were
+  broken in Mesos v0.23.0 and v0.24.0. This issue has been fixed in
+  v0.23.1 and v0.24.1. See [MESOS-3136](https://issues.apache.org/jira/browse/MESOS-3136) for
+  more details.
+
+## Health Lifecycle
+
+The application health lifecycle is represented by the finite state machine in
+figure 1 below. In the diagram:
+
+- `i` is the number of requested instances
+- `r` is the number of running instances
+- `h` is the number of healthy instances
+
+<p class="text-center">
+  <img src="{{site.baseurl}}/img/app-state.png" width="481" height="797" alt=""><br>
+  <em>Figure 1: The Application Health Lifecycle</em>
+</p>
+
+## Configure health checks
+
+Declare health checks in the `healthChecks` parameter of your application definition.
+
+#### Health check options
+
+Options applicable to every protocol:
+
+* `gracePeriodSeconds` (Optional. Default: 300): Health check failures are
+  ignored within this number of seconds or until the task becomes healthy for
+  the first time.
+* `intervalSeconds` (Optional. Default: 60): Number of seconds to wait between
+  health checks.
+* `maxConsecutiveFailures`(Optional. Default: 3): Number of consecutive health
+  check failures after which the unhealthy task should be killed.
+  HTTP & TCP health checks: If this value is `0`, tasks will not be killed if
+  they fail the health check. Note that this semantic is different for mesos health checks e.g.
+  `MESOS_HTTP`. Here the task will be killed by mesos after failing `>= maxConsecutiveFailures`
+  times. This means that setting `maxConsecutiveFailures = 0` will lead to task being killed immediately after
+  first health check fails.
+* `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
+  health check is considered a failure regardless of the response.
+
+For `MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`, `TCP`, `HTTP` and `HTTPS`
+health checks, either `port` or `portIndex` may be used. If none is
+provided, `portIndex` is assumed. If `port` is provided, it takes
+precedence overriding any `portIndex` option.
+
+* `portIndex` (Optional. Default: 0): Index in this app's `ports` or
+  `portDefinitions` array to be used for health requests. An index is used
+  so the app can use random ports, like `[0, 0, 0]` for example, and tasks
+  could be started with port environment variables like `$PORT1`.
+* `port` (Optional. Default: None): Port number to be used for health requests.
+
+The following option applies only to `MESOS_HTTP`, `MESOS_HTTPS`, `HTTP`, and
+`HTTPS` health checks:
+
+* `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
+  will provide health  status. Example: "/path/to/health".
+
+The following options only apply to `HTTP` and `HTTPS` health checks:
+
+* `ignoreHttp1xx` (Optional. Default: false): Ignore HTTP informational status
+  codes 100 to 199. If the HTTP health check returns one of these, the result is
+  discarded and the health status of the task remains unchanged.
+
+#### Example usage
 
 HTTP:
 
@@ -92,15 +205,6 @@ or COMMAND:
 }
 ```
 
-*Note:* Command health checks in combination with dockerized tasks were
-broken in Mesos v0.23.0 and v0.24.0. This issue has been fixed in
-v0.23.1 and v0.24.1. See [MESOS-3136](https://issues.apache.org/jira/browse/MESOS-3136) for
-more details.
-
-*Note:* If you are using double quotes inside your commands please ensure to escape them.
-This is required as Mesos runs the healthcheck command inside via `/bin/sh -c ""`.
-See example below and [MESOS-4812](https://issues.apache.org/jira/browse/MESOS-4812) for details
-
 ```json
 {
   "protocol": "COMMAND",
@@ -108,70 +212,7 @@ See example below and [MESOS-4812](https://issues.apache.org/jira/browse/MESOS-4
 }
 ```
 
-#### Health check options
-
-The first thing you need to decide is the protocol of your health check:
-
-* `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
-  performed. One of `HTTP` / `HTTPS` / `TCP` / `COMMAND` / `MESOS_HTTP` /
-  `MESOS_HTTPS` / `MESOS_TCP`.
-
-HTTP, HTTPS and TCP health checks are executed by Marathon and thus test
-the reachability from the current Marathon leader. `MESOS_HTTP`,
-`MESOS_HTTPS`, `MESOS_TCP` and `COMMAND` health checks are locally
-executed by Mesos on the agent running the corresponding task.
-
-Options applicable to every protocol:
-
-* `gracePeriodSeconds` (Optional. Default: 300): Health check failures are
-  ignored within this number of seconds or until the task becomes healthy for
-  the first time.
-* `intervalSeconds` (Optional. Default: 60): Number of seconds to wait between
-  health checks.
-* `maxConsecutiveFailures`(Optional. Default: 3): Number of consecutive health
-  check failures after which the unhealthy task should be killed.
-  HTTP & TCP health checks: If this value is `0`, tasks will not be killed if
-  they fail the health check.
-* `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
-  health check is considered a failure regardless of the response.
-
-For `MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`, `TCP`, `HTTP` and `HTTPS`
-health checks, either `port` or `portIndex` may be used. If none is
-provided, `portIndex` is assumed. If `port` is provided, it takes
-precedence overriding any `portIndex` option.
-
-* `portIndex` (Optional. Default: 0): Index in this app's `ports` or
-  `portDefinitions` array to be used for health requests. An index is used
-  so the app can use random ports, like `[0, 0, 0]` for example, and tasks
-  could be started with port environment variables like `$PORT1`.
-* `port` (Optional. Default: None): Port number to be used for health requests.
-
-The following option applies only to `MESOS_HTTP`, `MESOS_HTTPS`, `HTTP`, and
-`HTTPS` health checks:
-
-* `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
-  will provide health  status. Example: "/path/to/health".
-
-The following options only apply to `HTTP` and `HTTPS` health checks:
-
-* `ignoreHttp1xx` (Optional. Default: false): Ignore HTTP informational status
-  codes 100 to 199. If the HTTP health check returns one of these, the result is
-  discarded and the health status of the task remains unchanged.
-
-#### Health Lifecycle
-
-The application health lifecycle is represented by the finite state machine in
-figure 1 below. In the diagram:
-
-- `i` is the number of requested instances
-- `r` is the number of running instances
-- `h` is the number of healthy instances
-
-<p class="text-center">
-  <img src="{{site.baseurl}}/img/app-state.png" width="481" height="797" alt=""><br>
-  <em>Figure 1: The Application Health Lifecycle</em>
-</p>
-
+<a name="task-termination"></a>
 # Task Termination
 
 ## TASK_KILLING

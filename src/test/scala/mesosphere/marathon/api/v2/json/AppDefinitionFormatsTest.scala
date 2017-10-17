@@ -1,12 +1,11 @@
 package mesosphere.marathon
 package api.v2.json
 
-import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.marathon.api.v2.{ AppNormalization, Validation }
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.{ EnvVarSecret, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
@@ -21,7 +20,6 @@ class AppDefinitionFormatsTest extends UnitTest
     with AppAndGroupFormats
     with HealthCheckFormats
     with Matchers
-    with ResultMatchers
     with ValidationTestLike {
 
   import Formats.PathIdFormat
@@ -43,7 +41,7 @@ class AppDefinitionFormatsTest extends UnitTest
   }
 
   def normalizeAndConvert(app: raml.App): AppDefinition = {
-    val config = AppNormalization.Configure(None, "mesos-bridge-name")
+    val config = AppNormalization.Configuration(None, "mesos-bridge-name")
     Raml.fromRaml(
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
@@ -51,7 +49,7 @@ class AppDefinitionFormatsTest extends UnitTest
         AppNormalization.apply(config)
           .normalized(Validation.validateOrThrow(
             AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
-          AppValidation.validateCanonicalAppAPI(Set.empty)
+          AppValidation.validateCanonicalAppAPI(Set.empty, () => None)
         )
     )
   }
@@ -396,8 +394,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "FromJSON should throw a validation exception while parsing a Docker container with unsupported parameter" in {
       // credential is currently not supported
-      AppValidation.validateOldAppAPI(
-        Json.parse(
+      val app = Json.parse(
         """{
           |  "id": "test",
           |  "container": {
@@ -411,15 +408,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |    }
           |  }
           |}""".stripMargin).as[raml.App]
-      ) should failWith(
-        GroupViolationMatcher(
-          description = "container",
-          constraint = "is invalid",
-          violations = Set(
-            group("docker", "is invalid", "credential" -> "must be empty")
-          )
-        )
-      )
+      AppValidation.validateOldAppAPI(app) should haveViolations("/container/docker/credential" -> "must be empty")
     }
 
     "FromJSON should parse Mesos Docker container" in {
@@ -446,8 +435,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "FromJSON should throw a validation exception while parsing a Mesos Docker container with unsupported parameter" in {
       // port mappings is currently not supported
-      AppValidation.validateOldAppAPI(
-        Json.parse(
+      val app = Json.parse(
         """{
           |  "id": "/test",
           |  "container": {
@@ -458,15 +446,11 @@ class AppDefinitionFormatsTest extends UnitTest
           |    }
           |  }
           |}""".stripMargin).as[raml.App]
-      ) should failWith(GroupViolationMatcher(
-        description = "container",
-        constraint = "is invalid",
-        violations = Set(
-          group("docker", "is invalid", "portMappings" -> "must be empty")
-        )))
+
+      AppValidation.validateOldAppAPI(app) should haveViolations("/container/docker/portMappings" -> "must be empty")
+
       // network is currently not supported
-      AppValidation.validateOldAppAPI(
-        Json.parse(
+      val app2 = Json.parse(
         """{
           |  "id": "test",
           |  "container": {
@@ -477,15 +461,10 @@ class AppDefinitionFormatsTest extends UnitTest
           |    }
           |  }
           |}""".stripMargin).as[raml.App]
-      ) should failWith(GroupViolationMatcher(
-        description = "container",
-        constraint = "is invalid",
-        violations = Set(
-          group("docker", "is invalid", "network" -> "must be empty")
-        )))
+      AppValidation.validateOldAppAPI(app2) should haveViolations("/container/docker/network" -> "must be empty")
+
       // parameters are currently not supported
-      AppValidation.validateOldAppAPI(
-        Json.parse(
+      val app3 = Json.parse(
         """{
         |  "id": "test",
         |  "container": {
@@ -496,12 +475,7 @@ class AppDefinitionFormatsTest extends UnitTest
         |    }
         |  }
         |}""".stripMargin).as[raml.App]
-      ) should failWith(GroupViolationMatcher(
-        description = "container",
-        constraint = "is invalid",
-        violations = Set(
-          group("docker", "is invalid", "parameters" -> "must be empty")
-        )))
+      AppValidation.validateOldAppAPI(app3) should haveViolations("/container/docker/parameters" -> "must be empty")
     }
 
     "FromJSON should parse Mesos AppC container" in {
@@ -562,6 +536,27 @@ class AppDefinitionFormatsTest extends UnitTest
       app.secrets("secret1").source should equal("/foo")
       app.secrets("secret2").source should equal("/foo")
       app.secrets("secret3").source should equal("/foo2")
+    }
+
+    "FromJSON should parse all different kinds of environment variables and secrets" in {
+      val app = Json.parse(
+        """{
+          |  "id": "test",
+          |  "secrets": {
+          |     "secret1": { "source": "/foo" }
+          |  },
+          |  "env": {
+          |    "env1": "value",
+          |    "env2": {
+          |      "secret": "secret1"
+          |    }
+          |  }
+          |}""".stripMargin).as[raml.App]
+
+      app.secrets("secret1").source should equal("/foo")
+      app.env("env1") shouldBe a[raml.EnvVarValue]
+      app.env("env2") shouldBe a[raml.EnvVarSecret]
+      app.env("env2").asInstanceOf[EnvVarSecret].secret should equal("secret1")
     }
 
     "ToJSON should serialize secrets" in {
@@ -632,7 +627,7 @@ class AppDefinitionFormatsTest extends UnitTest
         |}""".stripMargin)
       the[JsResultException] thrownBy {
         normalizeAndConvert(json.as[raml.App])
-      } should have message "JsResultException(errors:List((/killSelection,List(ValidationError(List(error.unknown.enum.literal),WrappedArray(KillSelection (OLDEST_FIRST, YOUNGEST_FIRST)))))))"
+      } should have message "JsResultException(errors:List((/killSelection,List(JsonValidationError(List(error.unknown.enum.literal),WrappedArray(KillSelection (OLDEST_FIRST, YOUNGEST_FIRST)))))))"
     }
 
     "ToJSON should serialize kill selection" in {
@@ -661,6 +656,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail for empty container (#4978)" in {
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name")
       val json = Json.parse(
         """{
           |  "id": "/docker-compose-demo",
@@ -668,9 +664,8 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "container": {}
           |}""".stripMargin)
       val ramlApp = json.as[raml.App]
-      AppValidation.validateCanonicalAppAPI(Set.empty)(ramlApp) should failWith(
-        group("container", "is invalid", "docker" -> "not defined")
-      )
+      val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
+      validator(ramlApp) should haveViolations("/container/docker" -> "not defined")
     }
   }
 }

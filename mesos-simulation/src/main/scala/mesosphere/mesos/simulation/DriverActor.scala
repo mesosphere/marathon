@@ -67,8 +67,10 @@ class DriverActor(schedulerProps: Props) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
   // probability of a failing start or a lost message [ 0=no error, 1=always error ]
-  private[this] val errorProbability = 0.000
-  private[this] val numberOfOffersPerCycle: Int = 10
+  private[this] val taskFailProbability = 0.1
+  private[this] val lostMessageProbability = 0.0
+
+  private[this] val numberOfOffersPerCycle: Int = 1000
   private[this] var taskUpdates = Vector.empty[SendTaskStatusAt]
 
   // use a fixed seed to get reproducible results
@@ -115,7 +117,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
               .newBuilder()
               .addRange(Value.Range.newBuilder().setBegin(10000).setEnd(20000)))
           .build()
-      ))
+      ).asJava)
       .build()
   }
   private[this] def offers: ResourceOffers =
@@ -185,20 +187,20 @@ class DriverActor(schedulerProps: Props) extends Actor {
   }
 
   private[this] def simulateTaskLaunch(offers: Seq[OfferID], tasksToLaunch: Seq[TaskInfo]): Unit = {
-    if (random.nextDouble() > errorProbability) {
+    if (random.nextDouble() > lostMessageProbability) {
       log.debug(s"launch tasksToLaunch $offers, $tasksToLaunch")
 
-      if (random.nextDouble() > errorProbability) {
+      if (random.nextDouble() > taskFailProbability) {
         tasksToLaunch.map(_.getTaskId).foreach {
-          scheduleStatusChange(toState = TaskState.TASK_RUNNING, afterDuration = 200.millis, create = true)
+          scheduleStatusChange(toState = TaskState.TASK_RUNNING, afterDuration = 5.seconds, create = true)
         }
       } else {
         tasksToLaunch.map(_.getTaskId).foreach {
-          scheduleStatusChange(toState = TaskState.TASK_FAILED, afterDuration = 5.seconds)
+          scheduleStatusChange(toState = TaskState.TASK_FAILED, afterDuration = 5.seconds, create = true)
         }
       }
     } else {
-      log.debug("simulating lost launch")
+      log.info(s"simulating lost launch for $tasksToLaunch")
     }
   }
 

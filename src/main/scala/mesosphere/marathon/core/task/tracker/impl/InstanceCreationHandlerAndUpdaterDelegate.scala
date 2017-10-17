@@ -1,10 +1,11 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 //scalastyle:off
+import java.time.Clock
+
 import akka.Done
 import akka.actor.ActorRef
 import akka.util.Timeout
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp

@@ -2,10 +2,8 @@ package mesosphere.marathon
 package core.health.impl
 
 import akka.event.EventStream
-import akka.testkit.EventFilter
 import com.typesafe.config.{ Config, ConfigFactory }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -16,21 +14,22 @@ import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, InstanceTrackerModule, TaskStateOpProcessor }
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ CaptureEvents, MarathonTestHelper }
+import mesosphere.marathon.test.{ CaptureEvents, MarathonTestHelper, SettableClock }
 import org.apache.mesos.{ Protos => mesos }
+import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Set
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class MarathonHealthCheckManagerTest extends AkkaUnitTest {
+class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
 
   override protected lazy val akkaConfig: Config = ConfigFactory.parseString(
     """akka.loggers = ["akka.testkit.TestEventListener"]"""
   )
 
   private val appId = "test".toRootPath
-  private val clock = ConstantClock()
+  private val clock = new SettableClock()
 
   case class Fixture() {
     val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
@@ -69,13 +68,11 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest {
       .setHealthy(healthy)
       .build
 
-    EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
-      hcManager.update(taskStatus, version)
-    }
+    hcManager.update(taskStatus, version)
   }
 
   "HealthCheckManager" should {
-    "Add for a known app" in new Fixture {
+    "add for a known app" in new Fixture {
       val app: AppDefinition = AppDefinition(id = appId)
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
@@ -83,7 +80,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest {
       assert(hcManager.list(appId).size == 1)
     }
 
-    "Add for not-yet-known app" in new Fixture {
+    "add for not-yet-known app" in new Fixture {
       val app: AppDefinition = AppDefinition(id = appId)
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
@@ -91,7 +88,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest {
       assert(hcManager.list(appId).size == 1)
     }
 
-    "Update" in new Fixture {
+    "update" in new Fixture {
       val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion)
 
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
@@ -111,23 +108,23 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest {
       assert(status1 == Seq(Health(instanceId)))
 
       // send unhealthy task status
-      EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
-        hcManager.update(taskStatus.toBuilder.setHealthy(false).build, app.version)
-      }
+      hcManager.update(taskStatus.toBuilder.setHealthy(false).build, app.version)
 
-      val Seq(health2) = hcManager.status(appId, instanceId).futureValue
-      assert(health2.lastFailure.isDefined)
-      assert(health2.lastSuccess.isEmpty)
+      eventually {
+        val Seq(health2) = hcManager.status(appId, instanceId).futureValue
+        assert(health2.lastFailure.isDefined)
+        assert(health2.lastSuccess.isEmpty)
+      }
 
       // send healthy task status
-      EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
-        hcManager.update(taskStatus.toBuilder.setHealthy(true).build, app.version)
-      }
+      hcManager.update(taskStatus.toBuilder.setHealthy(true).build, app.version)
 
-      val Seq(health3) = hcManager.status(appId, instanceId).futureValue
-      assert(health3.lastFailure.isDefined)
-      assert(health3.lastSuccess.isDefined)
-      assert(health3.lastSuccess > health3.lastFailure)
+      eventually {
+        val Seq(health3) = hcManager.status(appId, instanceId).futureValue
+        assert(health3.lastFailure.isDefined)
+        assert(health3.lastSuccess.isDefined)
+        assert(health3.lastSuccess > health3.lastFailure)
+      }
     }
 
     "statuses" in new Fixture {
@@ -148,40 +145,48 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest {
       }
 
       updateTaskHealth(taskId1, version, healthy = true)
-      statuses.foreach {
-        case (id, health) if id == instanceId1 =>
-          assert(health.size == 1)
-          assert(health.head.alive)
-        case (_, health) => assert(health.isEmpty)
+      eventually {
+        statuses.foreach {
+          case (id, health) if id == instanceId1 =>
+            assert(health.size == 1)
+            assert(health.head.alive)
+          case (_, health) => assert(health.isEmpty)
+        }
       }
 
       updateTaskHealth(taskId2, version, healthy = true)
-      statuses.foreach {
-        case (id, health) if id == instanceId3 =>
-          assert(health.isEmpty)
-        case (_, health) =>
-          assert(health.size == 1)
-          assert(health.head.alive)
+      eventually {
+        statuses.foreach {
+          case (id, health) if id == instanceId3 =>
+            assert(health.isEmpty)
+          case (_, health) =>
+            assert(health.size == 1)
+            assert(health.head.alive)
+        }
       }
 
       updateTaskHealth(taskId3, version, healthy = false)
-      statuses.foreach {
-        case (id, health) if id == instanceId3 =>
-          assert(health.size == 1)
-          assert(!health.head.alive)
-        case (_, health) =>
-          assert(health.size == 1)
-          assert(health.head.alive)
+      eventually {
+        statuses.foreach {
+          case (id, health) if id == instanceId3 =>
+            assert(health.size == 1)
+            assert(!health.head.alive)
+          case (_, health) =>
+            assert(health.size == 1)
+            assert(health.head.alive)
+        }
       }
 
       updateTaskHealth(taskId1, version, healthy = false)
-      statuses.foreach {
-        case (id, health) if id == instanceId2 =>
-          assert(health.size == 1)
-          assert(health.head.alive)
-        case (_, health) =>
-          assert(health.size == 1)
-          assert(!health.head.alive)
+      eventually {
+        statuses.foreach {
+          case (id, health) if id == instanceId2 =>
+            assert(health.size == 1)
+            assert(health.head.alive)
+          case (_, health) =>
+            assert(health.size == 1)
+            assert(!health.head.alive)
+        }
       }
     }
 

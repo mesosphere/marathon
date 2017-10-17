@@ -108,7 +108,7 @@ object Retry {
 
     }
     retry(0, minDelay)
-    Timeout(maxDuration)(promise.future)
+    Timeout(maxDuration, name = Some(name))(promise.future)
   }
 
   /**

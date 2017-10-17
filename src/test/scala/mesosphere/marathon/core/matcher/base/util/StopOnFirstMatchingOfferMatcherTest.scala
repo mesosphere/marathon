@@ -26,7 +26,7 @@ class StopOnFirstMatchingOfferMatcherTest extends UnitTest {
       }
 
       When("matching")
-      val m = f.stopOnFirstMatching.matchOffer(f.now, f.deadline, f.offer).futureValue
+      val m = f.stopOnFirstMatching.matchOffer(f.offer).futureValue
 
       Then("the first match is returned")
       m should be(f.someMatch)
@@ -42,7 +42,7 @@ class StopOnFirstMatchingOfferMatcherTest extends UnitTest {
       }
 
       When("matching")
-      val m = f.stopOnFirstMatching.matchOffer(f.now, f.deadline, f.offer).futureValue
+      val m = f.stopOnFirstMatching.matchOffer(f.offer).futureValue
 
       Then("the second match is returned")
       m should be(f.someMatch)
@@ -58,7 +58,7 @@ class StopOnFirstMatchingOfferMatcherTest extends UnitTest {
       }
 
       When("matching")
-      val m = f.stopOnFirstMatching.matchOffer(f.now, f.deadline, f.offer).futureValue
+      val m = f.stopOnFirstMatching.matchOffer(f.offer).futureValue
 
       Then("the last match is returned")
       m.ops should be(empty)
@@ -75,7 +75,7 @@ class StopOnFirstMatchingOfferMatcherTest extends UnitTest {
       }
 
       When("matching")
-      val m = f.stopOnFirstMatching.matchOffer(f.now, f.deadline, f.offer).futureValue
+      val m = f.stopOnFirstMatching.matchOffer(f.offer).futureValue
 
       Then("the last match is returned")
       m.ops should be(empty)
@@ -96,7 +96,7 @@ class StopOnFirstMatchingOfferMatcherTest extends UnitTest {
     }
 
     def offerMatcher(matching: OfferMatcher.MatchedInstanceOps): OfferMatcher = new OfferMatcher {
-      override def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
+      override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
         Future.successful(matching)
       }
     }

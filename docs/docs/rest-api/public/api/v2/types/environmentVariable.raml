@@ -4,7 +4,7 @@ uses:
 types:
   EnvVarValue:
     type: string
-  EnvVarSecretRef:
+  EnvVarSecret:
     type: object
     description: An environment variable set to a secret
     properties:
@@ -13,7 +13,7 @@ types:
         description: |
           The name of the secret to refer to. At runtime, the value of the
           secret will be injected into the value of the variable.
-  EnvVarValueOrSecret: (EnvVarValue | EnvVarSecretRef)
+  EnvVarValueOrSecret: (EnvVarValue | EnvVarSecret)
   EnvVars:
     type: object
     properties:

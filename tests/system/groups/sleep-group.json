@@ -1,0 +1,32 @@
+{
+  "apps": [],
+  "dependencies": [],
+  "groups": [
+    {
+      "apps": [
+        {
+          "cmd": "sleep 1000",
+          "cpus": 0.01,
+          "dependencies": [],
+          "disk": 0,
+          "id": "/sleep-group/sleep/goodnight-1",
+          "instances": 1,
+          "mem": 32
+        },
+        {
+          "cmd": "sleep 1000",
+          "cpus": 0.01,
+          "dependencies": [],
+          "disk": 0,
+          "id": "/sleep-group/sleep/goodnight-2",
+          "instances": 1,
+          "mem": 32
+        }
+      ],
+      "dependencies": [],
+      "groups": [],
+      "id": "/sleep-group/sleep"
+    }
+  ],
+  "id": "/sleep-group"
+}

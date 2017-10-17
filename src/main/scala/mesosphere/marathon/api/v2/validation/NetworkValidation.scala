@@ -14,7 +14,7 @@ trait NetworkValidation {
 
   implicit val modelNetworkValidator: Validator[pod.Network] = new Validator[pod.Network] {
     val containerNetworkValidator: Validator[pod.ContainerNetwork] = validator[pod.ContainerNetwork] { net =>
-      net.name is valid(validName)
+      net.name is validName
     }
     override def apply(net: pod.Network): Result = net match {
       case ct: pod.ContainerNetwork => validate(ct)(containerNetworkValidator)
@@ -71,6 +71,15 @@ trait NetworkValidation {
         (hostNetworks == 0 && bridgeNetworks == 1 && containerNetworks == 0) ||
         (hostNetworks == 0 && bridgeNetworks == 0 && containerNetworks > 0)
     }
+
+  def defaultNetworkNameValidator(defaultNetworkName: () => Option[String]): Validator[Seq[Network]] =
+    isTrue(NetworkValidationMessages.NetworkNameMustBeSpecified) { n =>
+      n.forall(c => c.mode != NetworkMode.Container || c.name.isDefined || defaultNetworkName().isDefined)
+    }
 }
 
 object NetworkValidation extends NetworkValidation
+
+object NetworkValidationMessages {
+  val NetworkNameMustBeSpecified = "Network name must be specified when container network is selected."
+}

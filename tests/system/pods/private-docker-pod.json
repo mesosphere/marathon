@@ -1,0 +1,34 @@
+{
+  "id": "/private-docker-pod",
+  "scaling": {
+    "kind": "fixed",
+    "instances": 1
+  },
+  "containers": [
+    {
+      "name": "simple-docker",
+      "resources": {
+        "cpus": 1,
+        "mem": 128
+      },
+      "image": {
+        "kind": "DOCKER",
+        "id": "mesosphere/simple-docker-ee:latest",
+        "pullConfig": {
+          "secret": "pullConfigSecret"
+        },
+        "force": true
+      }
+    }
+  ],
+  "networks": [
+    {
+      "mode": "host"
+    }
+  ],
+  "secrets": {
+    "pullConfigSecret": {
+      "source": "/pullConfig"
+    }
+  }
+}

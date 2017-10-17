@@ -4,7 +4,7 @@ Marathon is using Google [Protocol Buffers](https://developers.google.com/protoc
 
 ## Dependencies
 
-- Google [Protocol Buffers](https://developers.google.com/protocol-buffers) v2.5 should be installed on the system.
+- Google [Protocol Buffers](https://developers.google.com/protocol-buffers) v3.3.0 should be installed on the system.
 - The `src/main/proto/mesos/mesos.proto` should correspond to the [Mesos](http://mesos.apache.org) library
   version.
 
@@ -16,4 +16,3 @@ To rebuild the protos, open a terminal where the current working directory is th
 $> cd src/main/proto
 $> protoc --java_out=../java/ marathon.proto
 ```
-

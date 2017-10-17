@@ -4,7 +4,7 @@ package core.flow.impl
 import akka.actor._
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.TimedCheck
@@ -26,7 +26,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
         verify()
       }
     }
-    lazy val clock: ConstantClock = ConstantClock()
+    lazy val clock: SettableClock = new SettableClock()
     lazy val offersWanted: Subject[Boolean] = PublishSubject()
     lazy val driver: SchedulerDriver = mock[SchedulerDriver]
     lazy val driverHolder: MarathonSchedulerDriverHolder = {
@@ -222,27 +222,6 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.verifyNoMoreInteractions()
     }
 
-    "Revive timer is cancelled if offers not wanted anymore" in {
-      val f = new Fixture()
-      Given("we received offersWanted = true two times and thus scheduled a timer")
-      f.actorRef.start()
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(true)
-
-      Mockito.reset(f.driver)
-      Mockito.reset(f.actorRef.underlyingActor.cancellable)
-
-      When("we receive a false (= offers not wanted anymore) message")
-      f.offersWanted.onNext(false)
-
-      Then("we cancel the timer")
-      Mockito.verify(f.actorRef.underlyingActor.cancellable, Mockito.timeout(1000)).cancel()
-
-      Then("we suppress offers")
-      Mockito.verify(f.driver, Mockito.timeout(1000)).suppressOffers()
-      f.verifyNoMoreInteractions()
-    }
-
     "Check revives if last offersWanted == true and more than 5.seconds ago" in {
       val f = new Fixture()
       Given("that we received various flipping offers wanted requests")
@@ -267,28 +246,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.verifyNoMoreInteractions()
     }
 
-    "Check does not revives if last offersWanted == false and more than 5.seconds ago" in {
-      val f = new Fixture()
-      Given("that we received various flipping offers wanted requests")
-      f.actorRef.start()
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(true)
-      f.offersWanted.onNext(false)
-
-      Mockito.reset(f.driver)
-      Mockito.reset(f.actorRef.underlyingActor.cancellable)
-
-      And("we wait for 5 seconds")
-      f.clock += 5.seconds
-
-      When("we receive a Check message")
-      f.actorRef ! ReviveOffersActor.TimedCheck
-
-      Then("we do not do anything")
-      f.verifyNoMoreInteractions()
-    }
-
-    "revive on repeatedly while OffersWanted(true)" in {
+    "revive on repeatedly while OffersWanted" in {
       val f = new Fixture(repetitions = 5)
       Given("a started actor")
       f.actorRef.start()

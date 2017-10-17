@@ -38,7 +38,7 @@ Documentation for installing and configuring the full Mesosphere stack including
 
 ## Issue Tracking
 
-Marathon uses [JIRA](https://jira.mesosphere.com/projects/MARATHON) to track issues. You can [browse](https://jira.mesosphere.com/projects/MARATHON/issues/) existing issues or [file a new issue](https://jira.mesosphere.com/secure/CreateIssue!default.jspa?pid=10401) with your GitHub account. 
+Marathon uses [JIRA](https://jira.mesosphere.com/projects/MARATHON) to track issues. You can [browse](https://jira.mesosphere.com/projects/MARATHON/issues/) existing issues or [file a new issue](https://jira.mesosphere.com/secure/CreateIssue!default.jspa?pid=10401) with your GitHub account.
 
 Note for users of GitHub issues: All existing issues have been migrated and closed, and a reference to the related [JIRA](https://jira.mesosphere.com/projects/MARATHON) has been added as a comment.
 We leave the GitHub issues available for reference. Going forward please use [JIRA](https://jira.mesosphere.com/projects/MARATHON) always.
@@ -56,7 +56,7 @@ Marathon has the following compile-time dependencies:
 
 For run-time, Marathon has the following dependencies:
 * libmesos - JNI bindings for talking to Apache Mesos master. Look at the *Install Mesos* section for instructions to get libmesos.
-* Apache Zookeeper - You can have a spearate Zookeeper installation specifically for Marathon, or you can use the same Zookeeper used by Mesos.
+* Apache Zookeeper - You can have a separate Zookeeper installation specifically for Marathon, or you can use the same Zookeeper used by Mesos.
 
 ### Installation
 
@@ -64,7 +64,7 @@ For run-time, Marathon has the following dependencies:
 The by far easiest way to get Marathon running is to use [DC/OS](https://dcos.io/get-started/#marathon). Marathon is pre-bundled into [DC/OS](https://dcos.io/get-started/#marathon).
 
 #### Install Mesos
-Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos.
+Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are three options for installing Apache Mesos.
 
 ##### Installing Mesos from prepackaged releases
 Instructions on how to install prepackaged releases of Mesos are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/).
@@ -80,21 +80,80 @@ You can find the instructions for compiling Mesos from source in the [Apache Mes
 
 The `make install` will install libmesos (libmesos.so on Linux and libmesos.dylib on Mac OS X) in the install directory.
 
+##### Using the Mesos Version Manager
+**NOTE:** *Choose this option only if building Marathon from source, else there might be version incompatibility between pre-packaged releases of Marathon and Mesos built from source.*  
+
+The Mesos Version Manager (mvm) compiles, configures, and manages multiple versions of Apache Mesos.
+It allows switching between versions quickly, making it easy to test Marathon against different versions of Mesos.
+
+###### Prerequisites
+
+The Mesos Version Manager assumes that all dependencies of Apache Mesos are readily installed.  
+Please refer to the [Apache Mesos getting started docs](http://mesos.apache.org/gettingstarted/) for instructions on how to set up the build environment.
+
+MVM compiles Mesos with SSL support by default, which requires openssl and libevent to be installed.  
+On macOS, the packages can be installed using brew: `brew install openssl libevent`  
+On CentOS, the packages can be installed using yum: `sudo yum install -y libevent-devel openssl-devel`
+
+###### Usage
+
+The script can be run as follows:
+
+        cd marathon
+        cd scripts
+        ./mvm.sh <VERSION> [SHELL]
+
+The following command will launch a bash shell configured for Mesos 1.2.0: `./mvm.sh 1.2.0 bash`
+
+You should consider placing the script into a folder in your shell's `PATH` if you are using it regularly.
+
+The mvm script accepts three different formats as version name:
+
+1. Version tags from the Mesos repository. Use `./mvm.sh --tags` in order to obtain a list of available tags.
+2. Commit hashes from the Mesos repository.
+3. The `--latest` flag, which automatically chooses the latest development version: `./mvm.sh --latest`.
+
+MVM Will automatically download & compile Apache Mesos if necessary.
+It will then spawn a new bash shell with the chosen version of Mesos activated.  
+For more information see `./mvm.sh --help`.
+
+**Note**: You will have to re-run the script if you wish to use Mesos after closing the shell.
+See `./mvm.sh --help` information on how to  permanently configure your shell for mvm to avoid this.
+
 #### Install Marathon
 
 Instructions on how to install prepackaged releases are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/). Alternatively, you can build Marathon from source.
 
 ##### Building from Source
 
-1.  To build Marathon from source, check out this repo and use sbt to build a JAR:
+1.  To build Marathon from source, check out this repo and use sbt to build a universal:
 
         git clone https://github.com/mesosphere/marathon.git
         cd marathon
-        sbt assembly
+        sbt 'run --master localhost:5050 --zk zk://localhost:2181/marathon'
+    
+    **Troubleshooting**
+    1. Failure in retrieval of IP address of the local machine will result in an error and may look like this:
+    
+        `Failed to obtain the IP address for '<local-machine>'; the DNS service may not be able to resolve it: nodename nor servname provided, or not known`
+        
+        Make sure that `LIBPROCESS_IP` environment variable is set.
+        ```
+        export LIBPROCESS_IP="127.0.0.1"
+        ```
+    1. When the `MESOS_NATIVE_JAVA_LIBRARY` environment variable is not set, the following error may occur,
+        
+        `java.lang.UnsatisfiedLinkError: no mesos in java.library.path...`
+        
+        Make sure that `MESOS_NATIVE_JAVA_LIBRARY` environment variable is set.
+        ```
+        export MESOS_NATIVE_JAVA_LIBRARY="/path/to/mesos/lib/libmesos.dylib"
+        ```
+   
+1.  Run `sbt universal:packageZipTarball` to package Marathon as an txz file
+    containing bin/marathon fully packaged.
 
-1.  Run `./bin/build-distribution` to package Marathon as an
-    [executable JAR](https://mesosphere.com/blog/2013/12/07/executable-jars/)
-    (optional).
+1. Run `sbt docker:publishLocal` for a local marathon docker image.
 
 ### Running in Development Mode
 
@@ -104,7 +163,8 @@ use. Note that you still need to run ZooKeeper for storing state. The following
 command launches Marathon on Mesos in *local mode*. Point your web browser to
 `http://localhost:8080` to see the Marathon UI.
 
-    ./bin/start --master local --zk zk://localhost:2181/marathon
+        mesos-local
+        sbt 'run --master localhost:5050 --zk zk://localhost:2181/marathon'
 
 For more information on how to run Marathon in production and configuration
 options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
@@ -121,8 +181,10 @@ See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm
 
 Build it:
 
-    mesosVersion=$(sed -n 's/^.*MesosDebian = "\(.*\)"/\1/p' <./project/Dependencies.scala)
-    docker build -t marathon-head --build-arg MESOS_VERSION=$mesosVersion .
+    sbt docker:publishLocal
+
+Note the version, e.g: `[info] Built image mesosphere/marathon:1.5.0-SNAPSHOT-461-gf1cc63e` => `1.5.0-SNAPSHOT-461-gf1cc63e`
+
 
 A running zookeeper instance is required, if there isn't one already available, there is a docker image available for this:
 
@@ -134,11 +196,33 @@ Run it with zookeeper container:
 
 Or run it without zookeeper container:
 
-    docker run marathon-head --master local --zk zk://localhost:2181/marathon
+    docker run marathon:{version} --master local --zk zk://localhost:2181/marathon
 
 If you want to inspect the contents of the Docker container:
 
-    docker run -it --entrypoint=/bin/bash marathon-head -s
+    docker run -it --entrypoint=/bin/bash marathon:{version} -s
+
+### Testing
+
+The tests and integration tests a run with:
+
+    sbt test integration:test
+
+You have to set the Mesos test IP and disable Docker tests on Mac:
+
+    MESOSTEST_IP_ADDRESS="127.0.0.1" \
+    RUN_DOCKER_INTEGRATION_TESTS=false \
+    RUN_MESOS_INTEGRATION_TESTS=false \
+    sbt test integration:test
+
+The Docker integration tests are not supported on Mac. The tests start and stop
+local Mesos clusters and Marathon instances. Sometimes processes leak after
+failed test runs. You can check them with `ps aux | grep "python|java|mesos"`
+and kill all `app_mock.py` processes and Mesos and Marathon instances unless
+they do not belong to a production environment of course.
+
+Also see the [CI instructions](ci/README.md) on running specfic build pipeline
+targets.
 
 ### Marathon UI
 
@@ -156,6 +240,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
             ./chronos/target/chronos-1.0-SNAPSHOT.jar" -c 1.0 -m 1024
 * [Ruby gem marathon_deploy](https://github.com/eBayClassifiedsGroup/marathon_deploy) alternative command line tool to deploy using json or yaml files with ENV macros.
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
+* [Java client](https://github.com/mesosphere/marathon-client), developed at [Mesosphere](https://mesosphere.com)
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
 * [Maven plugin](https://github.com/dcos-labs/dcos-maven-plugin), developed by [Johannes Unterstein](https://github.com/unterstein)
 * [Maven plugin](https://github.com/holidaycheck/marathon-maven-plugin), developed at [HolidayCheck](http://www.holidaycheck.com/)
@@ -181,8 +266,10 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [bol.com](https://www.bol.com/)
 * [Brand24](https://brand24.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
+* [China Mobile](http://www.chinamobileltd.com/en/global/home.php)
+* [China Unicom](http://eng.chinaunicom.com/index/index.html)
 * [Corvisa](https://www.corvisa.com/)
-* [Criteo] (http://www.criteo.com/)
+* [Criteo](http://www.criteo.com/)
 * [Daemon](http://www.daemon.com.au/)
 * [DataMan](http://www.shurenyun.com/)
 * [DHL Parcel](https://www.dhlparcel.nl/)
@@ -224,9 +311,11 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Tapad](https://tapad.com)
 * [Teradata](http://www.teradata.com)
 * [trivago](http://www.trivago.com/)
+* [tronc / L.A. Times](http://www.tronc.com/about-us/)
 * [VANAD Enovation](http://www.vanadenovation.nl/)
 * [Viadeo](http://www.viadeo.com)
 * [Wikia](http://www.wikia.com/Wikia)
+* [William Hill](https://www.williamhill.com)
 * [WooRank](https://www.woorank.com/)
 * [Yelp](http://www.yelp.com/)
 

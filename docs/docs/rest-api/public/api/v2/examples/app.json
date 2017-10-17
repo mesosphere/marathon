@@ -123,7 +123,7 @@
   },
   "fetch": [
     { "uri": "https://foo.com/setup.py" },
-    { "uri": "https://foo.com/archive.zip", "executable": false, "extract": true, "cache": true, "outputFile": "newname.zip" }
+    { "uri": "https://foo.com/archive.zip", "executable": false, "extract": true, "cache": true, "destPath": "newname.zip" }
   ],
   "user": "root",
   "secrets": {
@@ -131,8 +131,5 @@
     "secret3": { "source": "/foo2" }
   },
   "taskKillGracePeriodSeconds": 30,
-  "tty": {
-    "columns": 80,
-    "rows": 25
-  }
+  "tty": true
 }

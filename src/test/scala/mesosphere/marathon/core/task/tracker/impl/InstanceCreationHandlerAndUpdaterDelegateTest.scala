@@ -5,7 +5,7 @@ import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
@@ -16,7 +16,7 @@ import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 
 class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
   class Fixture {
-    lazy val clock = ConstantClock()
+    lazy val clock = new SettableClock()
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val taskTrackerProbe = TestProbe()
     lazy val delegate = new InstanceCreationHandlerAndUpdaterDelegate(clock, config, taskTrackerProbe.ref)

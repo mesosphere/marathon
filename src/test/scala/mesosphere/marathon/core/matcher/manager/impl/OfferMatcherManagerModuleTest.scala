@@ -2,9 +2,10 @@ package mesosphere.marathon
 package core.matcher.manager.impl
 
 import java.util.UUID
+import java.time.Clock
 
+import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.InstanceOp
@@ -15,7 +16,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, In
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.test.MarathonTestHelper
@@ -48,14 +49,14 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
   }
 
   class Fixture {
-    val clock: Clock = Clock()
+    val clock: Clock = Clock.systemUTC()
     val random: Random.type = Random
     val leaderModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val config: OfferMatcherManagerConfig = new OfferMatcherManagerConfig {
       verify()
     }
     val module: OfferMatcherManagerModule =
-      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule,
+      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule, () => None,
         actorName = UUID.randomUUID().toString)
   }
 
@@ -76,10 +77,10 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       }
     }
 
-    protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks() // linter:ignore:UnusedParameter
+    protected def matchTasks(offer: Offer): Seq[TaskInfo] = numberedTasks() // linter:ignore:UnusedParameter
 
-    override def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
-      val opsWithSources = matchTasks(deadline, offer).map { taskInfo =>
+    override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
+      val opsWithSources = matchTasks(offer).map { taskInfo =>
         val instance = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
         val task: Task.LaunchedEphemeral = instance.appTask
         val launch = F.launch(taskInfo, task.copy(taskId = Task.Id(taskInfo.getTaskId)), instance)
@@ -116,7 +117,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       cpuValues.sum
     }
 
-    override def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = {
+    override def matchTasks(offer: Offer): Seq[TaskInfo] = {
       val cpusInOffer: Double =
         offer.getResourcesList.find(_.getName == "cpus")
           .flatMap(r => Option(r.getScalar))
@@ -130,9 +131,8 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
   "OfferMatcherModule" should {
     "no registered matchers result in empty result" in new Fixture {
       val offer: Offer = MarathonTestHelper.makeBasicOffer().build()
-      val now = clock.now()
       val matchedTasksFuture: Future[MatchedInstanceOps] =
-        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+        module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(matchedTasks.opsWithSource.isEmpty)
     }
@@ -145,9 +145,8 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       module.subOfferMatcherManager.setLaunchTokens(10)
       module.subOfferMatcherManager.addSubscription(matcher)
 
-      val now = clock.now()
       val matchedTasksFuture: Future[MatchedInstanceOps] =
-        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+        module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(matchedTasks.offerId == offer.getId)
       assert(launchedTaskInfos(matchedTasks) == Seq(makeOneCPUTask(Task.Id(task.getTaskId.getValue + "-1"))))
@@ -162,9 +161,8 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       module.subOfferMatcherManager.addSubscription(matcher)
       module.subOfferMatcherManager.removeSubscription(matcher)
 
-      val now = clock.now()
       val matchedTasksFuture: Future[MatchedInstanceOps] =
-        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+        module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(matchedTasks.opsWithSource.isEmpty)
     }
@@ -181,7 +179,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       val now = clock.now()
       val matchedTasksFuture: Future[MatchedInstanceOps] =
-        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+        module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(launchedTaskInfos(matchedTasks).toSet == Set(
         makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-1")),
@@ -198,9 +196,8 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
         val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
         module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
 
-        val now = clock.now()
         val matchedTasksFuture: Future[MatchedInstanceOps] =
-          module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+          module.globalOfferMatcher.matchOffer(offer)
         val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
         assert(matchedTasks.opsWithSource.size == launchTokens)
       }
@@ -216,9 +213,8 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val task2: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
-      val now = clock.now()
       val matchedTasksFuture: Future[MatchedInstanceOps] =
-        module.globalOfferMatcher.matchOffer(now, now + 1.second, offer)
+        module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(launchedTaskInfos(matchedTasks).toSet == Set(
         makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-1")),

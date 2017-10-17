@@ -36,6 +36,7 @@ class PhabricatorTestReportListener(outputDir: File) extends TestsListener {
           case Status.Error => ("broken", if (e.throwable().isDefined) Some(e.throwable().get.getMessage) else None)
           case Status.Failure => ("fail", if (e.throwable().isDefined) Some(e.throwable().get.getMessage) else None)
           case Status.Skipped => ("skip", None)
+          case Status.Canceled=> ("unsound", if (e.throwable().isDefined) Some(e.throwable().get.getMessage) else None)
           case _ => ("pass", None)
         }
         TestCase(namespace = name, name = testCase, duration = e.duration().toFloat / 1000.0F, result = result, details = details)

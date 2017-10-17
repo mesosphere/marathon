@@ -2,9 +2,8 @@ package mesosphere.marathon
 package api.validation
 
 import com.wix.accord.validate
-import mesosphere.UnitTest
+import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.api.v2.AppNormalization
-import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
@@ -19,9 +18,10 @@ import play.api.libs.json.Json
 import scala.collection.immutable.Seq
 import scala.reflect.ClassTag
 
-class RunSpecValidatorTest extends UnitTest {
+class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
-  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set())
+  val config = AppNormalization.Configuration(None, "mesos-bridge-name")
+  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
   private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
 
@@ -107,7 +107,7 @@ class RunSpecValidatorTest extends UnitTest {
         id = PathId("relative/asd"),
         cmd = Some("true"))
 
-      the[ValidationFailedException] thrownBy validateOrThrow(app) should have message "Validation failed: Failure(Set(RuleViolation(relative/asd,Path needs to be absolute,Some(id))))"
+      validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
 
       MarathonTestHelper.validateJsonSchema(app)
     }
@@ -118,8 +118,7 @@ class RunSpecValidatorTest extends UnitTest {
         id = PathId("../relative"),
         cmd = Some("true"))
 
-      the[ValidationFailedException] thrownBy validateOrThrow(app) should have message ("Validation failed: Failure(Set(RuleViolation(../relative,Path needs to be absolute,Some(id))))")
-
+      validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
       MarathonTestHelper.validateJsonSchema(app)
     }
 
@@ -601,7 +600,7 @@ class RunSpecValidatorTest extends UnitTest {
 
       val f = new Fixture
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
-      val config = AppNormalization.Configure(None, "bridge-name")
+      val config = AppNormalization.Configuration(None, "bridge-name")
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -614,7 +613,7 @@ class RunSpecValidatorTest extends UnitTest {
       val f = new Fixture
       val base = Json.parse(f.cassandraWithoutResidency).as[App]
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
-      val config = AppNormalization.Configure(None, "bridge-name")
+      val config = AppNormalization.Configuration(None, "bridge-name")
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(

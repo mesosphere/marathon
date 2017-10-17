@@ -2,14 +2,17 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
+import mesosphere.marathon.state.UnreachableStrategy
 import org.scalatest.prop.TableDrivenPropertyChecks
+import org.apache.mesos.Protos.Attribute
+import org.apache.mesos.Protos.Value.{ Text, Type }
+import play.api.libs.json._
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
@@ -98,26 +101,45 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     }
   }
 
+  "agentInfo serialization" should {
+    "round trip serialize" in {
+      val agentInfo = Instance.AgentInfo(host = "host", agentId = Some("agentId"), region = Some("region"), zone = Some("zone"),
+        attributes = Seq(Attribute.newBuilder
+          .setName("name")
+          .setText(Text.newBuilder.setValue("value"))
+          .setType(Type.TEXT)
+          .build))
+      println(Json.toJson(agentInfo))
+      Json.toJson(agentInfo).as[Instance.AgentInfo] shouldBe agentInfo
+    }
+
+    "it should default region and zone fields to empty string when missing" in {
+      val agentInfo = Json.parse("""{"host": "host", "agentId": "agentId", "attributes": []}""").as[Instance.AgentInfo]
+      agentInfo.region shouldBe None
+      agentInfo.zone shouldBe None
+    }
+  }
+
   class Fixture {
     val id = "/test".toPath
-    val clock = ConstantClock()
+    val clock = new SettableClock()
 
-    val agentInfo = Instance.AgentInfo("", None, Nil)
+    val agentInfo = Instance.AgentInfo("", None, None, None, Nil)
     def tasks(statuses: Condition*): Map[Task.Id, Task] = tasks(statuses.to[Seq])
     def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] =
       statuses.map { status =>
         val taskId = Task.Id.forRunSpec(id)
-        val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(status, taskId, Timestamp.now())
-        val task = TestTaskBuilder.Helper.minimalTask(taskId, Timestamp.now(), mesosStatus, status)
+        val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(status, taskId, clock.now())
+        val task = TestTaskBuilder.Helper.minimalTask(taskId, clock.now(), mesosStatus, status)
         task.taskId -> task
       }(collection.breakOut)
 
     def instanceWith(condition: Condition, conditions: Seq[Condition]): (Instance, Map[Task.Id, Task]) = {
       val currentTasks = tasks(conditions.map(_ => condition))
       val newTasks = tasks(conditions)
-      val state = Instance.InstanceState(None, currentTasks, Timestamp.now(), UnreachableStrategy.default())
+      val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default())
       val instance = Instance(Instance.Id.forRunSpec(id), agentInfo, state, currentTasks,
-        runSpecVersion = Timestamp.now(), UnreachableStrategy.default())
+        runSpecVersion = clock.now(), UnreachableStrategy.default())
       (instance, newTasks)
     }
   }

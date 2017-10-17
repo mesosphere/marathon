@@ -1,11 +1,12 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.{ ActorContext, ActorRef, Cancellable, Props, Terminated }
+import akka.actor.{ ActorContext, ActorRef, Cancellable, Props }
 import akka.pattern.ask
 import akka.testkit.TestProbe
+import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceChange
@@ -22,7 +23,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, UnreachableEnabled }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
@@ -66,19 +67,20 @@ class TaskLauncherActorTest extends AkkaUnitTest {
   case class Fixture(
       offerMatcherManager: OfferMatcherManager = mock[OfferMatcherManager],
       launchQueueConfig: LaunchQueueConfig = new LaunchQueueConfig { verify() },
-      clock: ConstantClock = ConstantClock(),
+      clock: SettableClock = new SettableClock(),
       instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory],
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
-      offerMatchStatisticsActor: TestProbe = TestProbe()) {
+      offerMatchStatisticsActor: TestProbe = TestProbe(),
+      homeRegion: () => Option[String] = () => None) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
         maybeOfferReviver = Some(offerReviver),
-        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref) _
+        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, homeRegion) _
       system.actorOf(props(appToLaunch, instances))
     }
 
@@ -183,7 +185,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, now)
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(now + 1.seconds, offer, promise)
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
       promise.future.futureValue
 
       val counts = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
@@ -206,21 +208,22 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         .setOperator(Operator.UNIQUE)
         .setValue("")
         .build
-      val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
+      val unreachableStrategy = UnreachableEnabled(5.minutes, 10.minutes)
+      val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint), unreachableStrategy = unreachableStrategy)
       val offer = MarathonTestHelper.makeBasicOffer().build()
 
-      val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance()
+      val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable(unreachableStrategy = unreachableStrategy).getInstance()
 
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
       val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
-      // we're only interested in capturing the argument, so return value doesn't matte
+      // we're only interested in capturing the argument, so return value doesn't matter
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
       val launcherRef = createLauncherRef(instances = 1, constraintApp)
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
       promise.future.futureValue
 
       Mockito.verify(instanceTracker).instancesBySpecSync
@@ -229,29 +232,34 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       verifyClean()
     }
 
-    "Wait for inflight task launches on stop" in new Fixture {
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.empty)
-      val offer = MarathonTestHelper.makeBasicOffer().build()
-      Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
+    "Restart a replacement task for an unreachable task with default unreachableStrategy instantly" in new Fixture {
+      import mesosphere.marathon.Protos.Constraint.Operator
 
-      val launcherRef = createLauncherRef(instances = 1)
-      launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
+      val uniqueConstraint = Protos.Constraint.newBuilder
+        .setField("hostname")
+        .setOperator(Operator.UNIQUE)
+        .setValue("")
+        .build
+      val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
+      val offer = MarathonTestHelper.makeBasicOffer().build()
+
+      val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance()
+
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
+      val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+      // we're only interested in capturing the argument, so return value doesn't matter
+      Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
+
+      val launcherRef = createLauncherRef(instances = 1, constraintApp)
+      launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
-      val matched: MatchedInstanceOps = promise.future.futureValue
-
-      val testProbe = TestProbe()
-      testProbe.watch(launcherRef)
-
-      launcherRef ! TaskLauncherActor.Stop
-      (launcherRef ? "waitingForInFlight").futureValue
-      matched.opsWithSource.foreach(_.reject("stuff"))
-      testProbe.expectMsgClass(classOf[Terminated])
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+      promise.future.futureValue
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1)
-      Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
+      Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
+      assert(captor.getValue.instanceMap.size == 1) // we should have one replacement task scheduled already
       verifyClean()
     }
 
@@ -264,7 +272,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
       val matchedTasks = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
@@ -294,7 +302,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           offerMatcherManager, clock, instanceOpFactory,
           maybeOfferReviver = None,
           instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
-          f.app, instancesToLaunch = 1
+          f.app, instancesToLaunch = 1,
+          homeRegion
         ) {
           override protected def scheduleTaskOperationTimeout(
             context: ActorContext, message: InstanceOpRejected): Cancellable = {
@@ -308,13 +317,13 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
       promise.future.futureValue
 
       // just make sure that prior messages have been processed, will not launch further tasks
 
       val promise2 = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise2)
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise2)
       promise2.future.futureValue
 
       assert(scheduleCalled)
@@ -334,7 +343,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
       val promise = Promise[MatchedInstanceOps]
-      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
       val matchedTasks: MatchedInstanceOps = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.accept())
 

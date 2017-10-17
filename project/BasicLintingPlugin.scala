@@ -49,7 +49,7 @@ object BasicLintingPlugin extends AutoPlugin {
 
         if (file.getName != "ExecutionContexts.scala" && (line.contains("ExecutionContext.global") || line.contains("ExecutionContext.Implicits"))) {
           logger.error(
-            s"$file:$lineNumber uses scala's global execution context. Please use mesosphere.marathon.async.ExecutionContexts.*"
+            s"$file:$lineNumber uses scala's global execution context. Please use mesosphere.marathon.core.async.ExecutionContexts.*"
           )
           otherLintError = true
         }

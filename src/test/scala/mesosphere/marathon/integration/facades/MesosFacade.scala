@@ -26,14 +26,29 @@ object MesosFacade {
 
   case class ITAgent(
     id: String,
+    attributes: ITAttributes,
     resources: ITResources,
     usedResources: ITResources,
     offeredResources: ITResources,
     reservedResourcesByRole: Map[String, ITResources],
     unreservedResources: ITResources)
 
+  case class ITAttributes(attributes: Map[String, ITResourceValue])
+
+  object ITAttributes {
+    def empty: ITAttributes = new ITAttributes(Map.empty)
+    def apply(vals: (String, Any)*): ITAttributes = {
+      val attributes: Map[String, ITResourceValue] = vals.map {
+        case (id, value: Double) => id -> ITResourceScalarValue(value)
+        case (id, portsString: String) => id -> ITResourcePortValue(portsString)
+      }(collection.breakOut)
+      ITAttributes(attributes)
+    }
+  }
+
   case class ITResources(resources: Map[String, ITResourceValue]) {
     def isEmpty: Boolean = resources.isEmpty || resources.values.forall(_.isEmpty)
+    def nonEmpty: Boolean = !isEmpty
 
     override def toString: String = {
       "{" + resources.toSeq.sortBy(_._1).map {

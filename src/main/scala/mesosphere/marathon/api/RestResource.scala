@@ -11,7 +11,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import play.api.data.validation.ValidationError
+import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 
@@ -64,16 +64,15 @@ trait RestResource {
     * See [[assumeValid]], which is preferred to this.
     *
     * @param t object to validate
-    * @param description optional description which might be injected into the failure message
     * @param fn function to execute after successful validation
     * @param validator validator to use
     * @tparam T type of object
     * @return returns a 422 response if there is a failure due to validation. Executes fn function if successful.
     */
-  protected def withValid[T](t: T, description: Option[String] = None)(fn: T => Response)(implicit validator: Validator[T]): Response = {
+  protected def withValid[T](t: T)(fn: T => Response)(implicit validator: Validator[T]): Response = {
     validator(t) match {
       case f: Failure =>
-        val entity = Json.toJson(description.map(f.withDescription).getOrElse(f)).toString
+        val entity = Json.toJson(f).toString
         Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
       case Success => fn(t)
     }
@@ -108,7 +107,7 @@ trait RestResource {
 object RestResource {
   val DeploymentHeader = "Marathon-Deployment-Id"
 
-  def entity(err: scala.collection.Seq[(JsPath, scala.collection.Seq[ValidationError])]): JsValue = {
+  def entity(err: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])]): JsValue = {
     val errors = err.map {
       case (path, errs) => Json.obj("path" -> path.toString(), "errors" -> errs.map(_.message).distinct)
     }

@@ -1,0 +1,43 @@
+{
+  "id": "/readiness-and-health-app",
+  "cmd": "/opt/mesosphere/bin/python -m http.server $PORT0",
+  "cpus": 0.5,
+  "mem": 128,
+  "disk": 0,
+  "instances": 1,
+  "readinessChecks": [
+    {
+      "name": "readiness",
+      "protocol": "HTTP",
+      "path": "/",
+      "portName": "api",
+      "intervalSeconds": 2,
+      "timeoutSeconds": 1,
+      "httpStatusCodesForReady": [
+        200
+      ]
+    }
+  ],
+  "healthChecks": [
+    {
+      "gracePeriodSeconds": 10,
+      "intervalSeconds": 2,
+      "maxConsecutiveFailures": 0,
+      "path": "/",
+      "portIndex": 0,
+      "protocol": "HTTP",
+      "timeoutSeconds": 2
+    }
+  ],
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 0,
+    "maximumOverCapacity": 0
+  },
+  "portDefinitions": [
+    {
+      "protocol": "tcp",
+      "port": 0,
+      "name": "api"
+    }
+  ]
+}

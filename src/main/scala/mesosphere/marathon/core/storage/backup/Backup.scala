@@ -24,8 +24,6 @@ abstract class BackupRestoreAction extends StrictLogging {
 
   class BackupConfig(args: Seq[String]) extends ScallopConf(args) with StorageConf with NetworkConf {
     override def availableFeatures: Set[String] = Set.empty
-    override lazy val defaultNetworkName = opt[String]()
-    override lazy val mesosBridgeName = opt[String]()
     verify()
     require(backupLocation.isDefined, "--backup_location needs to be defined!")
   }
@@ -76,7 +74,8 @@ abstract class BackupRestoreAction extends StrictLogging {
   */
 object Backup extends BackupRestoreAction {
   def main(args: Array[String]): Unit = {
-    action(new BackupConfig(args.toVector), _.backup())
+    val config = new BackupConfig(args.toVector)
+    action(config, _.backup(config.backupLocation()))
   }
 }
 
@@ -91,6 +90,7 @@ object Backup extends BackupRestoreAction {
   */
 object Restore extends BackupRestoreAction {
   def main(args: Array[String]): Unit = {
-    action(new BackupConfig(args.toVector), _.restore())
+    val config = new BackupConfig(args.toVector)
+    action(config, _.restore(config.backupLocation()))
   }
 }

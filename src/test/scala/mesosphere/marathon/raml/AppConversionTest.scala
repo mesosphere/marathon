@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ BridgeNetwork, HostNetwork }
 import mesosphere.marathon.state._
@@ -61,8 +61,8 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val features = Set(Features.SECRETS)
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
-          AppsResource.appNormalization(
-            AppsResource.NormalizationConfig(features, AppNormalization.Configure(None, "bridge-name"))).normalized(ramlApp)
+          AppHelpers.appNormalization(
+            features, AppNormalization.Configuration(None, "bridge-name")).normalized(ramlApp)
         )
       }
       Then("The app is identical")
@@ -79,7 +79,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val protoRamlApp = app.toProto.toRaml[App]
 
       Then("The direct and indirect RAML conversions are identical")
-      val config = AppNormalization.Configure(None, "bridge-name")
+      val config = AppNormalization.Configuration(None, "bridge-name")
       val normalizedProtoRamlApp = AppNormalization(
         config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
       normalizedProtoRamlApp should be(ramlApp)
@@ -106,6 +106,8 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
               .setNumber(234)
               .setName("port1")
               .setProtocol("udp")
+              .setLabels(
+                Mesos.Labels.newBuilder.addLabels(Mesos.Label.newBuilder.setKey("VIP_0").setValue("named:234")))
             )
           )
         )
@@ -126,7 +128,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
         ipAddress = Option(IpAddress(
           discovery = Option(IpDiscovery(
             ports = Seq(
-              IpDiscoveryPort(234, "port1", NetworkProtocol.Udp)
+              IpDiscoveryPort(234, "port1", NetworkProtocol.Udp, Map("VIP_0" -> "named:234"))
             )
           )),
           groups = Set("group1", "group2"),

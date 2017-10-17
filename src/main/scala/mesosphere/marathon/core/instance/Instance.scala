@@ -8,6 +8,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableStrategy, UnreachableDisabled, UnreachableEnabled }
+import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Placed
 import mesosphere.marathon.raml.Raml
@@ -69,6 +70,10 @@ case class Instance(
   override def hostname: String = agentInfo.host
 
   override def attributes: Seq[Attribute] = agentInfo.attributes
+
+  override def zone: Option[String] = agentInfo.zone
+
+  override def region: Option[String] = agentInfo.region
 }
 
 @SuppressWarnings(Array("DuplicateImport"))
@@ -76,8 +81,8 @@ object Instance {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
-  def instancesById(tasks: Seq[Instance]): Map[Instance.Id, Instance] =
-    tasks.map(task => task.instanceId -> task)(collection.breakOut)
+  def instancesById(instances: Seq[Instance]): Map[Instance.Id, Instance] =
+    instances.map(instance => instance.instanceId -> instance)(collection.breakOut)
 
   /**
     * Describes the state of an instance which is an accumulation of task states.
@@ -267,12 +272,16 @@ object Instance {
   case class AgentInfo(
     host: String,
     agentId: Option[String],
-    attributes: Seq[mesos.Protos.Attribute])
+    region: Option[String],
+    zone: Option[String],
+    attributes: Seq[Attribute])
 
   object AgentInfo {
     def apply(offer: org.apache.mesos.Protos.Offer): AgentInfo = AgentInfo(
       host = offer.getHostname,
       agentId = Some(offer.getSlaveId.getValue),
+      region = OfferUtil.region(offer),
+      zone = OfferUtil.zone(offer),
       attributes = offer.getAttributesList.toIndexedSeq
     )
   }
@@ -290,7 +299,7 @@ object Instance {
       throw new IllegalStateException(s"No task in ${instance.instanceId}"))
   }
 
-  implicit object AttributeFormat extends Format[mesos.Protos.Attribute] {
+  implicit object AttributeFormat extends Format[Attribute] {
     override def reads(json: JsValue): JsResult[Attribute] = {
       json.validate[String].map { base64 =>
         mesos.Protos.Attribute.parseFrom(Base64.getDecoder.decode(base64))
@@ -312,9 +321,23 @@ object Instance {
     }
   }
 
-  implicit val agentFormat: Format[AgentInfo] = Json.format[AgentInfo]
+  // host: String,
+  // agentId: Option[String],
+  // region: String,
+  // zone: String,
+  // attributes: Seq[mesos.Protos.Attribute])
+  // private val agentFormatWrites: Writes[AgentInfo] = Json.format[AgentInfo]
+  private val agentReads: Reads[AgentInfo] = (
+    (__ \ "host").read[String] ~
+    (__ \ "agentId").readNullable[String] ~
+    (__ \ "region").readNullable[String] ~
+    (__ \ "zone").readNullable[String] ~
+    (__ \ "attributes").read[Seq[mesos.Protos.Attribute]]
+  )(AgentInfo(_, _, _, _, _))
+
+  implicit val agentFormat: Format[AgentInfo] = Format(agentReads, Json.writes[AgentInfo])
   implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]
-  implicit val instanceConditionFormat: Format[Condition] = Json.format[Condition]
+  implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
 
   implicit val instanceJsonWrites: Writes[Instance] = {

@@ -1,0 +1,56 @@
+#!/usr/bin/env groovy
+
+timeout(90) {
+node('shakedown') {
+  wrap([$class: 'MesosSingleUseSlave']) {
+  wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
+    def timeout=360000
+
+    properties([
+      parameters([
+        string(name: 'dcos_url',
+          defaultValue: '',
+          description: 'URL to DC/OS Enterprise Cluster'
+        )]
+      )
+    ])
+
+    stage('Checkout Repo') {
+      checkout scm
+    }
+
+    stage('Run System Integration Tests'){
+      withCredentials(
+        [ [$class: 'FileBinding',
+          credentialsId: '11fcc957-5156-4470-ae34-d433da88248a',
+          variable: 'DOT_SHAKEDOWN'],
+          [$class: 'FileBinding',
+          credentialsId: '23743034-1ac4-49f7-b2e6-a661aee2d11b',
+          variable: 'CLI_TEST_SSH_KEY'],
+          [$class: 'StringBinding',
+          credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d',
+          variable: 'DOCKER_HUB_USERNAME'],
+          [$class: 'StringBinding',
+          credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825',
+          variable: 'DOCKER_HUB_PASSWORD']
+        ]) {
+          try {
+            sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
+            sh """
+              TERM=velocity shakedown \
+                --stdout all \
+                --stdout-inline \
+                --timeout ${timeout} \
+                --pytest-option "--junitxml=shakedown.xml" \
+                --ssh-key-file \"${CLI_TEST_SSH_KEY}\" \
+                --dcos-url $params.dcos_url tests/system/test_marathon_on_marathon.py tests/system/test_marathon_on_marathon_ee.py
+               """
+          } finally {
+            junit allowEmptyResults: true, testResults: 'shakedown.xml'
+          }
+        }
+    }
+  }
+  }
+}
+}

@@ -1,17 +1,21 @@
 package mesosphere.marathon
 package core.plugin.impl
 
+import java.io.File
 import java.net.{ URL, URLClassLoader }
 import java.util.ServiceLoader
 
+import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.plugin.impl.PluginManagerImpl._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions, PluginManager }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.plugin.plugin.PluginConfiguration
 import mesosphere.marathon.stream.Implicits._
+import org.apache.commons.io.FileUtils
 import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json.{ JsObject, JsString, Json }
 
+import scala.util.control.NonFatal
 import scala.reflect.ClassTag
 
 /**
@@ -21,7 +25,8 @@ import scala.reflect.ClassTag
 private[plugin] class PluginManagerImpl(
     val config: MarathonConf,
     val definitions: PluginDefinitions,
-    val urls: Seq[URL]) extends PluginManager {
+    val urls: Seq[URL],
+    val crashStrategy: CrashStrategy) extends PluginManager {
   private[this] val log: Logger = LoggerFactory.getLogger(getClass)
 
   private[this] var pluginHolders: List[PluginHolder[_]] = List.empty[PluginHolder[_]]
@@ -36,8 +41,16 @@ private[plugin] class PluginManagerImpl(
     log.info(s"Loading plugins implementing '${ct.runtimeClass.getName}' from these urls: [${urls.mkString(", ")}]")
     def configure(plugin: T, definition: PluginDefinition): T = plugin match {
       case cf: PluginConfiguration if definition.configuration.isDefined =>
-        log.info(s"Configure the plugin with this configuration: ${definition.configuration}")
-        cf.initialize(Map("frameworkName" -> config.frameworkName()), definition.configuration.get)
+        try {
+          log.info(s"Configure the plugin with this configuration: ${definition.configuration}")
+          cf.initialize(Map("frameworkName" -> config.frameworkName()), definition.configuration.get)
+        } catch {
+          case NonFatal(ex) => {
+            log.error(s"Plugin Initialization Failure: ${ex.getMessage}.", ex)
+            crashStrategy.crash()
+          }
+        }
+
         plugin
       case _ => plugin
     }
@@ -56,6 +69,7 @@ private[plugin] class PluginManagerImpl(
   /**
     * Get all the service providers that can be found in the plugin directory for the given type.
     * Each plugin is loaded once and gets cached.
+    *
     * @return the list of all service providers for the given type.
     */
   @SuppressWarnings(Array("AsInstanceOf"))
@@ -80,26 +94,27 @@ object PluginManagerImpl {
   implicit val definitionFormat = Json.format[PluginDefinition]
 
   def parse(fileName: String): PluginDefinitions = {
-    val plugins: Seq[PluginDefinition] = Json.parse(IO.readFile(fileName)).as[JsObject]
+    val plugins: Seq[PluginDefinition] = Json.parse(FileUtils.readFileToByteArray(new File(fileName))).as[JsObject]
       .\("plugins").as[JsObject]
       .fields.map {
         case (id, value) =>
           JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))).as[PluginDefinition]
       }(collection.breakOut)
+      .filter(_.enabled.getOrElse(true))
     PluginDefinitions(plugins)
   }
 
-  private[plugin] def apply(conf: MarathonConf): PluginManagerImpl = {
+  private[plugin] def apply(conf: MarathonConf, crashStrategy: CrashStrategy): PluginManagerImpl = {
     val configuredPluginManager = for {
       dirName <- conf.pluginDir
       confName <- conf.pluginConf
     } yield {
       val sources = IO.listFiles(dirName)
       val descriptor = parse(confName)
-      new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL)(collection.breakOut))
+      new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL)(collection.breakOut), crashStrategy: CrashStrategy)
     }
 
-    configuredPluginManager.get.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty))
+    configuredPluginManager.get.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty, crashStrategy: CrashStrategy))
   }
 }
 

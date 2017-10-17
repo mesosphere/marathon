@@ -1,0 +1,43 @@
+{
+  "id": "/department-a",
+  "apps": [
+    {
+      "id": "/department-a/service-common",
+      "cpus": 0.1,
+      "mem": 32,
+      "ports": [0],
+      "cmd": "python -m SimpleHTTPServer $PORT0",
+      "instances": 2
+    }
+  ],
+  "groups": [
+    {
+      "id" : "/department-a/product-a",
+      "apps":[
+        {
+          "id": "/department-a/product-a/service-a",
+          "cpus": 0.1,
+          "mem": 32,
+          "ports": [0],
+          "cmd": "python -m SimpleHTTPServer $PORT0",
+          "instances": 2,
+          "dependencies": [
+            "/department-a/service-common"
+          ]
+        },
+        {
+          "id": "/department-a/product-a/service-b",
+          "cpus": 0.1,
+          "mem": 32,
+          "ports": [0],
+          "cmd": "python -m SimpleHTTPServer $PORT0",
+          "instances": 2,
+          "dependencies": [
+            "/department-a/product-a/service-a"
+          ]
+        }
+      ]
+    }
+  ]
+}
+

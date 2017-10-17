@@ -2,22 +2,21 @@ package mesosphere.marathon
 package integration.setup
 
 import com.typesafe.scalalogging.StrictLogging
+import java.util.concurrent.atomic.AtomicBoolean
 import mesosphere.marathon.state.PathId
-import org.joda.time.DateTime
 
 import scala.concurrent.duration._
 
 /**
   * Health check helper to define health behaviour of launched applications
   */
-class IntegrationHealthCheck(val appId: PathId, val versionId: String,
-  val port: Int, var state: Boolean, var lastUpdate: DateTime = DateTime.now)
+class IntegrationHealthCheck(val appId: PathId, val versionId: String, var state: Boolean)
     extends StrictLogging {
 
   case class HealthStatusChange(deadLine: Deadline, state: Boolean)
   private[this] var changes = List.empty[HealthStatusChange]
   private[this] var healthAction = (check: IntegrationHealthCheck) => {}
-  var pinged = false
+  val pinged = new AtomicBoolean(state)
 
   def afterDelay(delay: FiniteDuration, state: Boolean): Unit = {
     val item = HealthStatusChange(delay.fromNow, state)
@@ -35,19 +34,16 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String,
 
   def healthy: Boolean = {
     healthAction(this)
-    pinged = true
+    pinged.set(true)
     val (past, future) = changes.partition(_.deadLine.isOverdue())
     state = past.lastOption.fold(state)(_.state)
     changes = future
-    lastUpdate = DateTime.now()
-    logger.debug(s"Get health state from: app=$appId port=$port -> $state")
+    logger.debug(s"Get health state from: app=$appId -> $state")
     state
   }
 
   def forVersion(versionId: String, state: Boolean) = {
-    new IntegrationHealthCheck(appId, versionId, port, state)
+    new IntegrationHealthCheck(appId, versionId, state)
   }
-
-  def pingSince(duration: Duration): Boolean = DateTime.now.minusMillis(duration.toMillis.toInt).isBefore(lastUpdate)
 }
 

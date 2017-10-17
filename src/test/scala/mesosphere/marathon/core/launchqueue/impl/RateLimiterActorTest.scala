@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, PathId }
@@ -22,10 +22,10 @@ class RateLimiterActorTest extends AkkaUnitTest {
 
   case class Fixture(
       launchQueueConfig: LaunchQueueConfig = new LaunchQueueConfig { verify() },
-      clock: ConstantClock = ConstantClock(),
+      clock: SettableClock = new SettableClock(),
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       updateReceiver: TestProbe = TestProbe()) {
-    val rateLimiter: RateLimiter = Mockito.spy(new RateLimiter(launchQueueConfig, clock))
+    val rateLimiter: RateLimiter = Mockito.spy(new RateLimiter(clock))
     val props = RateLimiterActor.props(rateLimiter, updateReceiver.ref)
     val limiterRef = system.actorOf(props)
   }

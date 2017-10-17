@@ -21,6 +21,7 @@ import mesosphere.mesos.Constraints
 
 import scala.async.Async._
 import scala.concurrent.{ Future, Promise }
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 private class DeploymentActor(
@@ -39,6 +40,32 @@ private class DeploymentActor(
 
   val steps = plan.steps.iterator
   var currentStepNr: Int = 0
+
+  // Default supervision strategy is overridden here to restart deployment child actors (responsible for individual
+  // deployment steps e.g. AppStartActor, TaskStartActor etc.) even if any exception occurs (even during initialisation).
+  // This is due to the fact that child actors tend to gather information during preStart about the tasks that are
+  // already running from the TaskTracker and LaunchQueue and those calls can timeout. In general deployment child
+  // actors are built idempotent which should make restarting them possible.
+  // Additionally a BackOffSupervisor is used to make sure child actor failures are not overloading other parts of the system
+  // (like LaunchQueue and InstanceTracker) and are not filling the log with exceptions.
+  import scala.concurrent.duration._
+  import akka.pattern.{ Backoff, BackoffSupervisor }
+
+  def childSupervisor(props: Props, name: String): Props = {
+    BackoffSupervisor.props(
+      Backoff.onFailure(
+        childProps = props,
+        childName = name,
+        minBackoff = 5.seconds,
+        maxBackoff = 1.minute,
+        randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
+      ).withSupervisorStrategy(
+        OneForOneStrategy() {
+          case NonFatal(_) => SupervisorStrategy.Restart
+          case _ => SupervisorStrategy.Escalate
+        }
+      ))
+  }
 
   override def preStart(): Unit = {
     self ! NextStep
@@ -114,8 +141,8 @@ private class DeploymentActor(
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
     instanceTracker.specInstances(runnableSpec.id).map { instances =>
-      context.actorOf(AppStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker,
-        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, instances, promise))
+      context.actorOf(childSupervisor(AppStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker,
+        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, instances, promise), s"AppStart-${plan.id}"))
     }
     promise.future
   }
@@ -123,8 +150,8 @@ private class DeploymentActor(
   @SuppressWarnings(Array("all")) /* async/await */
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
-    status: DeploymentStatus): Future[Unit] = {
-    logger.debug("Scale runnable {}", runnableSpec)
+    status: DeploymentStatus): Future[Done] = {
+    logger.debug(s"Scale runnable $runnableSpec")
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runnableSpec, notSentencedAndRunning, toKillCount)
@@ -136,22 +163,22 @@ private class DeploymentActor(
       val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
-      def killTasksIfNeeded: Future[Unit] = {
+      def killTasksIfNeeded: Future[Done] = {
         logger.debug("Kill tasks if needed")
-        tasksToKill.fold(Future.successful(())) { tasks =>
+        tasksToKill.fold(Future.successful(Done)) { tasks =>
           logger.debug("Kill tasks {}", tasks)
-          killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => ())
+          killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => Done)
         }
       }
       await(killTasksIfNeeded)
 
-      def startTasksIfNeeded: Future[Unit] = {
-        tasksToStart.fold(Future.successful(())) { tasksToStart =>
+      def startTasksIfNeeded: Future[Done] = {
+        tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
-          context.actorOf(TaskStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker, eventBus,
-            readinessCheckExecutor, runnableSpec, scaleTo, promise))
-          promise.future
+          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker, eventBus,
+            readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
+          promise.future.map(_ => Done)
         }
       }
       await(startTasksIfNeeded)
@@ -159,22 +186,30 @@ private class DeploymentActor(
   }
 
   @SuppressWarnings(Array("all")) /* async/await */
-  def stopRunnable(runnableSpec: RunSpec): Future[Unit] = async {
+  def stopRunnable(runnableSpec: RunSpec): Future[Done] = async {
+    logger.debug(s"Stop runnable $runnableSpec")
     val instances = await(instanceTracker.specInstances(runnableSpec.id))
     val launchedInstances = instances.filter(_.isLaunched)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
+
+    logger.debug(s"Killed all remaining tasks: ${launchedInstances.map(_.instanceId)}")
+
+    // Note: This is an asynchronous call. We do NOT wait for the run spec to stop. If we do, the DeploymentActorTest
+    // fails.
     scheduler.stopRunSpec(runnableSpec)
+
+    Done
   }
 
-  def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Unit] = {
+  def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Done] = {
     if (run.instances == 0) {
-      Future.successful(())
+      Future.successful(Done)
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, killService,
-        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise))
-      promise.future
+      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManager, status, killService,
+        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise), s"TaskReplace-${plan.id}"))
+      promise.future.map(_ => Done)
     }
   }
 }

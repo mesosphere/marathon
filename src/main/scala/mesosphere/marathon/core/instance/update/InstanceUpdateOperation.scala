@@ -3,7 +3,8 @@ package core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.{ TaskCondition, Task }
+import mesosphere.marathon.core.instance.Instance.AgentInfo
+import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos
 
@@ -31,18 +32,32 @@ object InstanceUpdateOperation {
     override def possibleNewState: Option[Instance] = Some(instance)
   }
 
-  // TODO(PODS): this should work on an instance, not a task
   case class Reserve(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
     override def possibleNewState: Option[Instance] = Some(instance)
   }
 
+  /**
+    * @param instanceId Designating the instance that shall be launched.
+    * @param newTaskId The id of the task that will be launched via Mesos
+    * @param runSpecVersion The runSpec version
+    * @param timestamp time
+    * @param status
+    * @param hostPorts the assigned hostPorts
+    * @param agentInfo The (possibly updated) AgentInfo based on the offer that was used to launch this task, needed to
+    *                  keep an Instance's agentInfo updated when re-launching resident tasks. Until Mesos 1.4.0, an
+    *                  agent will get a new agentId after a host reboot. Further, in dynamic IP environments, the
+    *                  hostname could potentially change after a reboot (especially important to keep up-to-date in the
+    *                  context of unique hostname constraints).
+    */
   case class LaunchOnReservation(
     instanceId: Instance.Id,
+    newTaskId: Task.Id,
     runSpecVersion: Timestamp,
     timestamp: Timestamp,
     status: Task.Status, // TODO(PODS): the taskStatus must be created for each task and not passed in here
-    hostPorts: Seq[Int]) extends InstanceUpdateOperation
+    hostPorts: Seq[Int],
+    agentInfo: AgentInfo) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.

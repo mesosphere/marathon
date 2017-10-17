@@ -3,13 +3,14 @@ package core.launchqueue.impl
 
 import akka.Done
 import akka.actor.SupervisorStrategy.Stop
-import akka.actor.{ Actor, ActorLogging, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated }
+import akka.actor.{ Actor, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated }
 import akka.event.LoggingReceive
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.state.{ PathId, RunSpec }
 import LaunchQueue.QueuedInstanceInfo
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChange
 
 import scala.concurrent.Future
@@ -35,7 +36,7 @@ private[launchqueue] object LaunchQueueActor {
 private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
     offerMatchStatisticsActor: ActorRef,
-    runSpecActorProps: (RunSpec, Int) => Props) extends Actor with ActorLogging {
+    runSpecActorProps: (RunSpec, Int) => Props) extends Actor with StrictLogging {
   import LaunchQueueDelegate._
 
   /** Currently active actors by pathId. */
@@ -87,10 +88,10 @@ private[impl] class LaunchQueueActor(
           suspendedLaunchersMessages += actorRef -> deferredMessages
           suspendedLauncherPathIds += runSpecId
           actorRef ! TaskLauncherActor.Stop
-        case None => sender() ! (())
+        case None => sender() ! Done
       }
 
-    case ConfirmPurge => sender() ! (())
+    case ConfirmPurge => sender() ! Done
 
     case Terminated(actorRef) =>
       launcherRefs.get(actorRef) match {
@@ -100,7 +101,7 @@ private[impl] class LaunchQueueActor(
 
           suspendedLaunchersMessages.get(actorRef) match {
             case None =>
-              log.warning("Got unexpected terminated for runSpec {}: {}", pathId, actorRef)
+              logger.warn(s"Got unexpected terminated for runSpec $pathId: $actorRef")
             case Some(deferredMessages) =>
               deferredMessages.foreach(msg => self.tell(msg.message, msg.sender))
 
@@ -108,7 +109,7 @@ private[impl] class LaunchQueueActor(
               suspendedLaunchersMessages -= actorRef
           }
         case None =>
-          log.warning("Don't know anything about terminated actor: {}", actorRef)
+          logger.warn(s"Don't know anything about terminated actor: $actorRef")
       }
   }
 
@@ -187,13 +188,13 @@ private[impl] class LaunchQueueActor(
           val actorRef = createAppTaskLauncher(app, count)
           val eventualCount: Future[QueuedInstanceInfo] =
             (actorRef ? TaskLauncherActor.GetCount).mapTo[QueuedInstanceInfo]
-          eventualCount.map(_ => ()).pipeTo(sender())
+          eventualCount.map(_ => Done).pipeTo(sender())
 
         case Some(actorRef) =>
           import context.dispatcher
           val eventualCount: Future[QueuedInstanceInfo] =
             (actorRef ? TaskLauncherActor.AddInstances(app, count)).mapTo[QueuedInstanceInfo]
-          eventualCount.map(_ => ()).pipeTo(sender())
+          eventualCount.map(_ => Done).pipeTo(sender())
       }
 
     case msg @ RateLimiterActor.DelayUpdate(app, _) =>

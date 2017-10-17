@@ -3,9 +3,11 @@ package api.v2
 
 import java.net._
 
+import com.wix.accord.Descriptions._
 import com.wix.accord._
 import com.wix.accord.dsl._
 import com.wix.accord.ViolationBuilder._
+import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.state.FetchUri
 import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
@@ -13,7 +15,6 @@ import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
 import scala.util.matching.Regex
-
 import scala.language.implicitConversions
 
 // TODO(jdef) move this into package "validation"
@@ -35,7 +36,7 @@ trait Validation {
   def definedAnd[T](implicit validator: Validator[T]): Validator[Option[T]] = {
     new Validator[Option[T]] {
       override def apply(option: Option[T]): Result = option.map(validator).getOrElse(
-        Failure(Set(RuleViolation(None, "not defined", None)))
+        Failure(Set(RuleViolation(None, "not defined")))
       )
     }
   }
@@ -52,35 +53,75 @@ trait Validation {
     override def apply(t: T): Result = if (!b(t)) Success else validator(t)
   }
 
-  implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
-    new Validator[Iterable[T]] {
-      override def apply(seq: Iterable[T]): Result = {
+  implicit class RichViolation(v: Violation) {
+    def withPath(path: Path): Violation =
+      v match {
+        case RuleViolation(value, constraint, _) =>
+          RuleViolation(value, constraint, path)
+        case GroupViolation(value, constraint, children, _) =>
+          GroupViolation(value, constraint, children, path)
+      }
+  }
 
-        val violations: Set[Violation] = seq match {
-          case m: Map[_, _] =>
-            m.map(item => (item, validator(item))).collect {
-              case ((k, v), f: Failure) => GroupViolation(k, "not valid", Some(s"($k)"), f.violations)
-            }(collection.breakOut)
-          case _ =>
-            seq.map(item => (item, validator(item))).zipWithIndex.collect {
-              case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"($pos)"), f.violations)
-            }(collection.breakOut)
+  /**
+    * Given a key-value collection (such as a Map), applies the validator to each value, with the key being preppended
+    * to the validation Path for each respective violation.
+    *
+    * Does not validate keys.
+    *
+    * @param validator The validation to apply to each value of the key-value collection.
+    */
+  def everyKeyValue[T](validator: Validator[T]): Validator[Iterable[(String, T)]] = {
+    new Validator[Iterable[(String, T)]] {
+      override def apply(seq: Iterable[(String, T)]): Result = {
+        seq.foldLeft[Result](Success) {
+          case (accum, (key, value)) =>
+            validator(value) match {
+              case Success => accum
+              case Failure(violations) =>
+                val scopedViolations = violations.map { violation =>
+                  violation.withPath(Generic(key) +: violation.path)
+                }
+                accum.and(Failure(scopedViolations))
+            }
         }
-
-        if (violations.isEmpty) Success
-        else Failure(Set(GroupViolation(seq, "contains elements, which are not valid.", None, violations)))
       }
     }
   }
 
-  def mapDescription[T](change: String => String)(wrapped: Validator[T]): Validator[T] = new Validator[T] {
-    override def apply(value: T): Result = {
-      wrapped(value) match {
-        case Success => Success
-        case f: Failure =>
-          Failure(
-            f.violations.map(v => v.description.fold(v)(oldDescription => v.withDescription(change(oldDescription))))
-          )
+  /**
+    * Apply a validation to each member of the provided (ordered) collection, appropriately appending the index of said
+    * sequence to the validation Path.
+    *
+    * You can use this to validate a Set, but this is not recommended as the index of failures will be
+    * non-deterministic.
+    *
+    * Note that wix accord provide the built in `each` DSL keyword. However, this approach does not lend itself well to
+    * composable validations. One can write, just fine:
+    *
+    *     model.values.each is notEmpty
+    *
+    * But this approach does lend itself well for cases such as this:
+    *
+    *     model.values is (condition) or every(notEmpty)
+    *     model.values is optional(every(notEmpty))
+    *
+    * @param validator The validation to apply to each element of the collection
+    */
+  implicit def every[T](validator: Validator[T]): Validator[Iterable[T]] = {
+    new Validator[Iterable[T]] {
+      override def apply(seq: Iterable[T]): Result = {
+        seq.zipWithIndex.foldLeft[Result](Success) {
+          case (accum, (item, index)) =>
+            validator(item) match {
+              case Success => accum
+              case Failure(violations) =>
+                val scopedViolations = violations.map { violation =>
+                  violation.withPath(Indexed(index.toLong) +: violation.path)
+                }
+                accum.and(Failure(scopedViolations))
+            }
+        }
       }
     }
   }
@@ -102,63 +143,16 @@ trait Validation {
     Json.obj(
       "message" -> "Object is not valid",
       "details" -> {
-        f.violations
-          .flatMap(allRuleViolationsWithFullDescription(_))
-          .groupBy(_.description)
+        allViolations(f)
+          .groupBy(_.path)
           .map {
-            case (description, ruleViolation) =>
+            case (path, ruleViolations) =>
               Json.obj(
-                "path" -> description,
-                "errors" -> ruleViolation.map(r => JsString(r.constraint))
+                "path" -> path,
+                "errors" -> ruleViolations.map(_.constraint)
               )
           }
       })
-  }
-
-  // TODO: fix non-tail recursion
-  def allRuleViolationsWithFullDescription(
-    violation: Violation,
-    parentDesc: Option[String] = None,
-    prependSlash: Boolean = false): Set[RuleViolation] = {
-    def concatPath(parent: String, child: Option[String], slash: Boolean): String = {
-      child.map(c => parent + { if (slash) "/" else "" } + c).getOrElse(parent)
-    }
-
-    violation match {
-      case r: RuleViolation => Set(
-        parentDesc.map {
-          p =>
-            r.description.map {
-              // Error is on object level, having a parent description. Omit 'value', prepend '/' as root.
-              case "value" => r.withDescription("/" + p)
-              // Error is on property level, having a parent description. Prepend '/' as root.
-              case s: String =>
-                // This was necessary if you validate a sub field, e.g. volume.external.size is valid(...)
-                // generates a description containing "external.size".
-                val slashPath: Some[String] = Some(s.replace('.', '/'))
-                r.withDescription(concatPath("/" + p, slashPath, prependSlash))
-              // Error is on unknown level, having a parent description. Prepend '/' as root.
-            } getOrElse r.withDescription("/" + p)
-        } getOrElse {
-          r.withDescription(r.description.map {
-            // Error is on object level, having no parent description, being a root error.
-            case "value" => "/"
-            // Error is on property level, having no parent description, being a property of root error.
-            case s: String => "/" + s
-          } getOrElse "/")
-        })
-      case g: GroupViolation => g.children.flatMap { c =>
-        val dot = g.value match {
-          case _: Iterable[_] => false
-          case _ => true
-        }
-
-        val desc: Option[String] = parentDesc.map { p =>
-          concatPath(p, g.description, prependSlash)
-        }.orElse(g.description.map(d => concatPath("", Some(d), prependSlash)))
-        allRuleViolationsWithFullDescription(c, desc, dot)
-      }
-    }
   }
 
   def urlIsValid: Validator[String] = {
@@ -168,7 +162,7 @@ trait Validation {
           new URL(url)
           Success
         } catch {
-          case e: MalformedURLException => Failure(Set(RuleViolation(url, e.getMessage, None)))
+          case e: MalformedURLException => Failure(Set(RuleViolation(url, e.getMessage)))
         }
       }
     }
@@ -181,14 +175,14 @@ trait Validation {
           new URI(uri)
           Success
         } catch {
-          case _: URISyntaxException => Failure(Set(RuleViolation(uri, "URI has invalid syntax.", None)))
+          case _: URISyntaxException => Failure(Set(RuleViolation(uri, "URI has invalid syntax.")))
         }
       }
     }
   }
 
   def fetchUriIsValid: Validator[FetchUri] = validator[FetchUri] { fetch =>
-    fetch.uri is valid(uriIsValid)
+    fetch.uri is uriIsValid
   }
 
   def elementsAreUnique[A](errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
@@ -225,7 +219,7 @@ trait Validation {
 
   private[this] def areUnique[A](seq: Seq[A], errorMessage: String): Result = {
     if (seq.size == seq.distinct.size) Success
-    else Failure(Set(RuleViolation(seq, errorMessage, None)))
+    else Failure(Set(RuleViolation(seq, errorMessage)))
   }
 
   def theOnlyDefinedOptionIn[A <: Product, B](product: A): Validator[Option[B]] =
@@ -241,7 +235,7 @@ trait Validation {
             if (n == 1)
               Success
             else
-              Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.", None)))
+              Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.")))
           case None => Success
         }
       }
@@ -274,7 +268,7 @@ trait Validation {
   def isTrue[T](constraint: T => String)(test: T => Boolean): Validator[T] = new Validator[T] {
     import ViolationBuilder._
     override def apply(value: T): Result = {
-      if (test(value)) Success else RuleViolation(value, constraint(value), None)
+      if (test(value)) Success else RuleViolation(value, constraint(value))
     }
   }
 
@@ -299,9 +293,43 @@ trait Validation {
     )
 
   def validateAll[T](x: T, all: Validator[T]*): Result = all.map(v => validate(x)(v)).fold(Success)(_ and _)
+
+  /**
+    * Given a wix accord violation, return a sequence of our own ConstraintViolation model, rendering the wix accord
+    * paths down to a string representation.
+    *
+    * @param result The wix accord validation result
+    */
+  def allViolations(result: Result): Seq[ConstraintViolation] = {
+    def renderPath(desc: Description): String = desc match {
+      case Explicit(s) => s"/${s}"
+      case Generic(s) => s"/${s}"
+      case Indexed(index) => s"($index)"
+      case _ => ""
+    }
+    def mkPath(path: Path): String =
+      if (path.isEmpty)
+        "/"
+      else
+        path.map(renderPath).mkString("")
+
+    def collectViolation(violation: Violation, parents: Path): Seq[ConstraintViolation] = {
+      violation match {
+        case RuleViolation(_, constraint, path) => Seq(ConstraintViolation(mkPath(parents ++ path), constraint))
+        case GroupViolation(_, _, children, path) => children.to[Seq].flatMap(collectViolation(_, parents ++ path))
+      }
+    }
+    result match {
+      case Success => Seq.empty
+      case Failure(violations) =>
+        violations.to[Seq].flatMap(collectViolation(_, Nil))
+    }
+  }
 }
 
 object Validation extends Validation {
+
+  case class ConstraintViolation(path: String, constraint: String)
 
   def forAll[T](all: Validator[T]*): Validator[T] = new Validator[T] {
     override def apply(x: T): Result = validateAll(x, all: _*)

@@ -10,13 +10,13 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, DeploymentStepInfo }
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.stream.Sink
@@ -65,6 +65,7 @@ trait DeploymentService {
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
+  persistenceStore: PersistenceStore[_, _, _],
   leadershipCoordinator: LeadershipCoordinator,
   config: MarathonConf,
   electionService: ElectionService,
@@ -167,7 +168,7 @@ class MarathonSchedulerService @Inject() (
   override def triggerShutdown(): Unit = synchronized {
     log.info("Shutdown triggered")
 
-    electionService.abdicateLeadership(reoffer = false)
+    electionService.abdicateLeadership()
     stopDriver()
 
     log.info("Cancelling timer")
@@ -199,8 +200,16 @@ class MarathonSchedulerService @Inject() (
   override def startLeadership(): Unit = synchronized {
     log.info("As new leader running the driver")
 
-    // execute tasks, only the leader is allowed to
-    migration.migrate()
+    // allow interactions with the persistence store
+    persistenceStore.markOpen()
+
+    // Before reading to and writing from the storage, let's ensure that
+    // no stale values are read from the persistence store.
+    // Although in case of ZK it is done at the time of creation of CuratorZK,
+    // it is better to be safe than sorry.
+    Await.result(persistenceStore.sync(), Duration.Inf)
+
+    refreshCachesAndDoMigration()
 
     // run all pre-driver callbacks
     log.info(s"""Call preDriverStarts callbacks on ${prePostDriverCallbacks.mkString(", ")}""")
@@ -239,8 +248,7 @@ class MarathonSchedulerService @Inject() (
         //   1. we're being terminated (and have already abdicated)
         //   2. we've lost leadership (no need to abdicate if we've already lost)
         driver.foreach { _ =>
-          // tell leader election that we step back, but want to be re-elected if isRunning is true.
-          electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
+          electionService.abdicateLeadership()
         }
 
         driver = None
@@ -252,9 +260,33 @@ class MarathonSchedulerService @Inject() (
     }
   }
 
+  private def refreshCachesAndDoMigration(): Unit = {
+    // GroupManager and GroupRepository are holding in memory caches of the root group. The cache is loaded when it is accessed the first time.
+    // Actually this is really bad, because each marathon will log the amount of groups during startup through Kamon.
+    // Therefore the root group state is loaded from zk when the marathon instance is started.
+    // When the marathon instance is elected as leader, this cache is still in the same state as the time marathon started.
+    // Therefore we need to re-load the root group from zk again from zookeeper when becoming leader.
+    // The same is true after doing the migration. A migration or a restore also affects the state of zookeeper, but does not
+    // update the internal hold caches. Therefore we need to refresh the internally loaded caches after the migration.
+    // Actually we need to do the fresh twice, before the migration, to perform the migration on the current zk state and after
+    // the migration to have marathon loaded the current valid state to the internal caches.
+
+    // refresh group repository cache
+    Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
+
+    // execute tasks, only the leader is allowed to
+    migration.migrate()
+
+    // refresh group repository again - migration or restore might changed zk state, this needs to be re-loaded
+    Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
+  }
+
   override def stopLeadership(): Unit = synchronized {
     // invoked by election service upon loss of leadership (state transitioned to Idle)
     log.info("Lost leadership")
+
+    // disallow any interaction with the persistence storage
+    persistenceStore.markClosed()
 
     leadershipCoordinator.stop()
 
@@ -267,9 +299,6 @@ class MarathonSchedulerService @Inject() (
       // Our leadership has been defeated. Thus, stop the driver.
       stopDriver()
     }
-
-    log.error("Terminating after loss of leadership")
-    Runtime.getRuntime.asyncExit()
   }
 
   //End ElectionDelegate interface

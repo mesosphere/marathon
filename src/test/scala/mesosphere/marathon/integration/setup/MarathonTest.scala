@@ -1,14 +1,14 @@
 package mesosphere.marathon
 package integration.setup
 
-import akka.actor.Cancellable
 import java.io.File
+import java.net.{ URLDecoder, URLEncoder }
 import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.Done
-import akka.actor.{ ActorSystem, Scheduler }
+import akka.actor.{ ActorSystem, Cancellable, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, StatusCodes }
@@ -21,14 +21,12 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITConnected, ITEvent, ITSSEEvent, ITLeaderResult, MarathonFacade, MesosFacade }
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.integration.facades._
+import mesosphere.marathon.raml.{ App, AppDockerVolume, AppHealthCheck, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.ExitDisabledTest
-import mesosphere.marathon.util.{ Lock, Retry }
+import mesosphere.marathon.util.{ Lock, Retry, Timeout }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{ Milliseconds, Span }
@@ -94,15 +92,14 @@ case class LocalMarathon(
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
+    "zk_connection_timeout" -> 20.seconds.toMillis.toString,
     "zk_session_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
-    "event_subscriber" -> "http_callback",
     "access_control_allow_origin" -> "*",
     "reconciliation_initial_delay" -> 5.minutes.toMillis.toString,
     "min_revive_offers_interval" -> "100",
     "hostname" -> "localhost",
     "logging_level" -> "debug",
-    "minimum_viable_task_execution_duration" -> "0",
     "offer_matching_timeout" -> 10.seconds.toMillis.toString // see https://github.com/mesosphere/marathon/issues/4920
   ) ++ conf
 
@@ -115,7 +112,7 @@ case class LocalMarathon(
       }
   }(collection.breakOut)
 
-  private var marathon = Option.empty[Process]
+  @volatile private var marathon = Option.empty[Process]
 
   if (autoStart) {
     start()
@@ -125,8 +122,14 @@ case class LocalMarathon(
   private lazy val processBuilder = {
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
-    val memSettings = s"-Xmx${Runtime.getRuntime.maxMemory()}"
-    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
+    val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
+      // lower the memory pressure by limiting threads.
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+      "-Dscala.concurrent.context.minThreads=2",
+      "-Dscala.concurrent.context.maxThreads=32",
+      s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
@@ -139,14 +142,14 @@ case class LocalMarathon(
       marathon = Some(create())
     }
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
-    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 90.seconds) {
+    val future = Retry(s"Waiting for Marathon on $port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 4.minutes) {
       async {
         val result = await(Http().singleRequest(Get(s"http://localhost:$port/v2/leader")))
         result.discardEntityBytes() // forget about the body
         if (result.status.isSuccess()) { // linter:ignore //async/await
           Done
         } else {
-          throw new Exception("Marathon not ready yet.")
+          throw new Exception(s"Marathon on port=$port hasn't started yet. Giving up waiting..")
         }
       }
     }
@@ -165,20 +168,30 @@ case class LocalMarathon(
 
   def exitValue(): Option[Int] = marathon.map(_.exitValue())
 
-  def stop(): Unit = {
-    marathon.foreach(_.destroy())
-    marathon = Option.empty[Process]
-
-    val pids = activePids
-    if (pids.nonEmpty) {
-      Process(s"kill -9 ${pids.mkString(" ")}").!
+  def stop(): Future[Done] = {
+    marathon.fold(Future.successful(Done)){ p =>
+      p.destroy()
+      Timeout.blocking(30.seconds){ p.exitValue(); Done }
+        .recover {
+          case NonFatal(e) =>
+            logger.warn(s"Could not shutdown Marathon $suiteName in time", e)
+            val pids = activePids
+            if (pids.nonEmpty) {
+              Process(s"kill -9 ${pids.mkString(" ")}").!
+            }
+            Done
+        }
+    }.andThen {
+      case _ =>
+        marathon = Option.empty[Process]
     }
   }
 
   def restart(): Future[Done] = {
     logger.info(s"Restarting Marathon on $httpPort")
-    stop()
-    start().map { x =>
+    async {
+      await(stop())
+      val x = await(start())
       logger.info(s"Restarted Marathon on $httpPort")
       x
     }
@@ -190,18 +203,126 @@ case class LocalMarathon(
   }
 }
 
+trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
+
+  protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
+  val registeredReadinessChecks = Lock(mutable.ListBuffer.empty[IntegrationReadinessCheck])
+
+  implicit val system: ActorSystem
+  implicit val mat: Materializer
+
+  /**
+    * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
+    * We initialize it during the before hook and wait for Marathon to respond.
+    */
+  protected[setup] lazy val healthEndpoint = {
+    val route = {
+      import akka.http.scaladsl.server.Directives._
+      val mapper = new ObjectMapper() with ScalaObjectMapper
+      mapper.registerModule(DefaultScalaModule)
+
+      implicit val unmarshal = new FromRequestUnmarshaller[Map[String, Any]] {
+        override def apply(value: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[Map[String, Any]] = {
+          value.entity.toStrict(patienceConfig.timeout)(materializer).map { entity =>
+            mapper.readValue[Map[String, Any]](entity.data.utf8String)
+          }(ec)
+        }
+      }
+
+      get {
+        path(Segment / Segment / "health") { (uriEncodedAppId, versionId) =>
+          import PathId._
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+
+          def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId })
+
+          val state = instance.fold(true)(_.healthy)
+
+          logger.info(s"Received health check request: app=$appId, version=$versionId reply=$state")
+          if (state) {
+            complete(HttpResponse(status = StatusCodes.OK))
+          } else {
+            complete(HttpResponse(status = StatusCodes.InternalServerError))
+          }
+        } ~ path(Segment / Segment / Segment / "ready") { (uriEncodedAppId, versionId, taskId) =>
+          import PathId._
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+
+          // Find a fitting registred readiness check. If the check has no task id set we ignore it.
+          def check: Option[IntegrationReadinessCheck] = registeredReadinessChecks(_.find { c =>
+            c.appId == appId && c.versionId == versionId && c.taskId.fold(true)(_ == taskId)
+          })
+
+          // An app is not ready by default to avoid race conditions.
+          val isReady = check.fold(false)(_.call)
+
+          logger.info(s"Received readiness check request: app=$appId, version=$versionId taskId=$taskId reply=$isReady")
+
+          if (isReady) {
+            complete(HttpResponse(status = StatusCodes.OK))
+          } else {
+            complete(HttpResponse(status = StatusCodes.InternalServerError))
+          }
+        } ~ path(Remaining) { path =>
+          require(false, s"$path was unmatched!")
+          complete(HttpResponse(status = StatusCodes.InternalServerError))
+        }
+      }
+    }
+    val port = PortAllocator.ephemeralPort()
+    logger.info(s"Starting health check endpoint on port $port.")
+    val server = Http().bindAndHandle(route, "0.0.0.0", port).futureValue
+    logger.info(s"Listening for health events on $port")
+    server
+  }
+
+  /**
+    * Add an integration health check to internal health checks. The integration health check is used to control the
+    * health check replies for our app mock.
+    *
+    * @param appId The app id of the app mock
+    * @param versionId The version of the app mock
+    * @param state The initial health status of the app mock
+    * @return The IntegrationHealthCheck object which is used to control the replies.
+    */
+  def registerAppProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
+    val check = new IntegrationHealthCheck(appId, versionId, state)
+    healthChecks { checks =>
+      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
+      checks += check
+    }
+    check
+  }
+
+  /**
+    * Adds an integration readiness check to internal readiness checks. The behaviour is similar to integration health
+    * checks.
+    *
+    * @param appId The app id of the app mock
+    * @param versionId The version of the app mock
+    * @param taskId Optional task id to identify the task of the app mock.
+    * @return The IntegrationReadinessCheck object which is used to control replies.
+    */
+  def registerProxyReadinessCheck(appId: PathId, versionId: String, taskId: Option[String] = None): IntegrationReadinessCheck = {
+    val check = new IntegrationReadinessCheck(appId, versionId, taskId)
+    registeredReadinessChecks { checks =>
+      checks.filter(c => c.appId == appId && c.versionId == versionId && c.taskId == taskId).foreach(checks -= _)
+      checks += check
+    }
+    check
+  }
+}
+
 /**
   * Base trait for tests that need a marathon
   */
-trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
+trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutures with Eventually {
   def marathonUrl: String
   def marathon: MarathonFacade
   def leadingMarathon: Future[LocalMarathon]
   def mesos: MesosFacade
   val testBasePath: PathId
   def suiteName: String
-
-  val appProxyIds = Lock(mutable.ListBuffer.empty[String])
 
   implicit val system: ActorSystem
   implicit val mat: Materializer
@@ -230,72 +351,26 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
   }
 
   protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
-  protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
 
-  /**
-    * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
-    * We initialize it during the before hook and wait for Marathon to respond.
-    */
-  protected[setup] lazy val healthEndpoint = {
-    val route = {
-      import akka.http.scaladsl.server.Directives._
-      val mapper = new ObjectMapper() with ScalaObjectMapper
-      mapper.registerModule(DefaultScalaModule)
-
-      implicit val unmarshal = new FromRequestUnmarshaller[Map[String, Any]] {
-        override def apply(value: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[Map[String, Any]] = {
-          value.entity.toStrict(5.seconds)(materializer).map { entity =>
-            mapper.readValue[Map[String, Any]](entity.data.utf8String)
-          }(ec)
-        }
-      }
-
-      get {
-        path("health" / Segments) { uriPath =>
-          import PathId._
-          val (path, remaining) = uriPath.splitAt(uriPath.size - 2)
-          val (versionId, port) = (remaining.head, remaining.tail.head.toInt)
-          val appId = path.mkString("/").toRootPath
-
-          def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId && c.port == port })
-          def definition = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId && c.port == 0 })
-          val state = instance.orElse(definition).fold(true)(_.healthy)
-
-          logger.info(s"Received health check request: app=$appId, version=$versionId appMockPort=$port reply=$state")
-          if (state) {
-            complete(HttpResponse(status = StatusCodes.OK))
-          } else {
-            complete(HttpResponse(status = StatusCodes.InternalServerError))
-          }
-        } ~ path(Remaining) { path =>
-          require(false, s"$path was unmatched!")
-          complete(HttpResponse(status = StatusCodes.InternalServerError))
-        }
-      }
-    }
-    val port = PortAllocator.ephemeralPort()
-    val server = Http().bindAndHandle(route, "localhost", port).futureValue
-    logger.info(s"Listening for health events on $port")
-    server
-  }
-
-  protected[setup] def killAppProxies(): Unit = {
-    val PIDRE = """^\s*(\d+)\s+(.*)$""".r
-    val allJavaIds = Process("jps -lv").!!.split("\n")
-    val pids = allJavaIds.collect {
-      case PIDRE(pid, exec) if appProxyIds(_.exists(exec.contains)) => pid
-    }
-    if (pids.nonEmpty) {
-      Process(s"kill -9 ${pids.mkString(" ")}").run().exitValue()
-    }
-  }
   implicit class PathIdTestHelper(path: String) {
     def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
     def toTestPath: PathId = testBasePath.append(path)
   }
 
+  /**
+    * Constructs the proper health proxy endpoint argument for the Python app mock.
+    *
+    * @param appId The app id whose health is checked
+    * @param versionId The version of the app
+    * @return URL to health check endpoint
+    */
+  def healthEndpointFor(appId: PathId, versionId: String): String = {
+    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
+    s"http://$$HOST:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId"
+  }
+
   def appProxyHealthCheck(
-    gracePeriod: FiniteDuration = 3.seconds,
+    gracePeriod: FiniteDuration = 1.seconds,
     interval: FiniteDuration = 1.second,
     maxConsecutiveFailures: Int = Int.MaxValue,
     portIndex: Option[Int] = Some(0)): AppHealthCheck =
@@ -314,7 +389,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
     val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
-      s"""$$PORT0 $appId $versionId http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$appId/$versionId""")
+      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 
     App(
       id = appId.toString,
@@ -331,8 +406,9 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
 
+    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
     val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-      s"""$$PORT0 $appId $versionId http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$appId/$versionId""")
+      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 
     App(
       id = appId.toString,
@@ -340,18 +416,18 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       container = Some(raml.Container(
         `type` = raml.EngineType.Docker,
         docker = Some(raml.DockerContainer(
-          image = "python:3.4.6-alpine",
-          network = Some(raml.DockerNetwork.Host)
+          image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
-          new AppVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+          new AppDockerVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,
       cpus = 0.5,
       mem = 128,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies.map(_.toString)
+      dependencies = dependencies.map(_.toString),
+      networks = Seq(Network(mode = NetworkMode.Host))
     )
   }
 
@@ -364,59 +440,43 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     }
   }
 
-  def cleanUp(withSubscribers: Boolean = false): Unit = {
-    logger.info("Starting to CLEAN UP !!!!!!!!!!")
+  // We shouldn't eat exceptions in clenaUp() methods: it's a source of hard to find bugs if
+  // we just move on to the next test, that expects a "clean state". We should fail loud and
+  // proud here and find out why the clean-up fails.
+  def cleanUp(): Unit = {
+    logger.info(">>> Starting to CLEAN UP...")
     events.clear()
 
-    try {
-      // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
-      logger.info("Clean Marathon State")
-      lazy val group = marathon.group(testBasePath).value
-      lazy val deployments = marathon.listDeploymentsForBaseGroup().value
-      if (deployments.nonEmpty || group.apps.nonEmpty || group.pods.nonEmpty || group.groups.nonEmpty) {
-        //do not fail here, since the require statements will ensure a correct setup and fail otherwise
-        Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
-      }
+    // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
+    logger.info("Clean Marathon State")
+    //do not fail here, since the require statements will ensure a correct setup and fail otherwise
+    Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
 
-      WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
-        val occupiedAgents = mesos.state.value.agents.filter { agent => !agent.usedResources.isEmpty && agent.reservedResourcesByRole.nonEmpty }
-        occupiedAgents.foreach { agent =>
-          import mesosphere.marathon.integration.facades.MesosFormats._
-          val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
-          val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
-          logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
-        }
-        occupiedAgents.isEmpty
+    WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
+      val occupiedAgents = mesos.state.value.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
+      occupiedAgents.foreach { agent =>
+        import mesosphere.marathon.integration.facades.MesosFormats._
+        val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
+        val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
+        logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
       }
-
-      val apps = marathon.listAppsInBaseGroup
-      require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
-      val pods = marathon.listPodsInBaseGroup
-      require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
-      val groups = marathon.listGroupsInBaseGroup
-      require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
-      events.clear()
-      healthChecks(_.clear())
-      killAppProxies()
-      if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
-    } catch {
-      case NonFatal(e) => logger.error("Clean up failed with", e)
+      occupiedAgents.isEmpty
     }
 
-    logger.info("CLEAN UP finished !!!!!!!!!")
-  }
+    val apps = marathon.listAppsInBaseGroup
+    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+    val pods = marathon.listPodsInBaseGroup
+    require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
+    val groups = marathon.listGroupsInBaseGroup
+    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
+    events.clear()
+    healthChecks(_.clear())
 
-  def appProxyCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
-    val check = new IntegrationHealthCheck(appId, versionId, 0, state)
-    healthChecks { checks =>
-      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
-      checks += check
-    }
-    check
+    logger.info("... CLEAN UP finished <<<")
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
-    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged }
+    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged.get }
   }
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
@@ -459,6 +519,42 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       None
     case _: TestFailedDueToTimeoutException =>
       None
+  }
+
+  /**
+    * Method waits for events and calls their callbacks independently of the events order. It receives a
+    * map of EventId -> Callback e.g.:
+    * Map("deployment_failed" -> _.id == deploymentId, "deployment_successful" -> _.id == rollbackId)),
+    * checks every event for it's existence in the map and if found, calls it's callback method. If successful, the entry
+    * is removed from the map. Returns if the map is empty.
+    */
+  def waitForEventsWith(
+    description: String,
+    eventsMap: Map[String, CallbackEvent => Boolean],
+    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
+    val waitingFor = mutable.Map(eventsMap.toSeq: _*)
+    waitForEventMatching(description, maxWait) { event =>
+      if (waitingFor.get(event.eventType).fold(false)(fn => fn(event))) {
+        waitingFor -= event.eventType
+      }
+      waitingFor.isEmpty
+    }
+  }
+
+  /**
+    * Method waits for ANY (and only one) of the given events. It receives a map of EventId -> Callback e.g.:
+    * Map("deployment_failed" -> _.id == deploymentId, "deployment_successful" -> _.id == rollbackId)),
+    * and checks every incoming event for it's existence in the map and if found, calls it's callback method.
+    * Returns if event found and callback returns true.
+    */
+  def waitForAnyEventWith(
+    description: String,
+    eventsMap: Map[String, CallbackEvent => Boolean],
+    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
+    val waitingForAny = mutable.Map(eventsMap.toSeq: _*)
+    waitForEventMatching(description, maxWait) { event =>
+      waitingForAny.get(event.eventType).fold(false)(fn => fn(event))
+    }
   }
 
   def waitForEventMatching(
@@ -556,7 +652,6 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       mesos.teardown(frameworkId).futureValue
     }
     Try(healthEndpoint.unbind().futureValue)
-    Try(killAppProxies())
   }
 
   /**
@@ -659,6 +754,7 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       f(marathonServer, marathonTest)
     } finally {
       sseStream.cancel()
+      if (marathonServer.isRunning()) marathonTest.cleanUp()
       marathonTest.teardown()
       marathonServer.stop()
     }
@@ -681,7 +777,7 @@ trait MarathonSuite extends Suite with StrictLogging with ScalaFutures with Befo
 /**
   * Base trait that starts a local marathon but doesn't have mesos/zookeeper yet
   */
-trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFutures
+trait LocalMarathonTest extends MarathonTest with ScalaFutures
     with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
 
   def marathonArgs: Map[String, String] = Map.empty
@@ -706,7 +802,7 @@ trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFut
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
-    marathonServer.start().futureValue(Timeout(90.seconds))
+    marathonServer.start().futureValue
     sseStream = Some(startEventSubscriber())
     waitForSSEConnect()
   }
@@ -754,7 +850,7 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    Future.sequence(additionalMarathons.map(_.start())).futureValue(Timeout(60.seconds))
+    Future.sequence(additionalMarathons.map(_.start())).futureValue
   }
 
   override def afterAll(): Unit = {
@@ -766,9 +862,9 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
     marathonFacades.find(!_.url.contains(leader.port.toString)).get
   }
 
-  override def cleanUp(withSubscribers: Boolean): Unit = {
+  override def cleanUp(): Unit = {
     Future.sequence(marathonServer.start() +: additionalMarathons.map(_.start())).futureValue
-    super.cleanUp(withSubscribers)
+    super.cleanUp()
   }
 }
 

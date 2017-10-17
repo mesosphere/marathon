@@ -7,13 +7,13 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ App, Resources, TTY }
+import mesosphere.marathon.raml.{ App, Resources }
 import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import mesosphere.marathon.{ Protos, _ }
 import mesosphere.mesos.protos.{ Resource, _ }
 import org.apache.mesos.Protos.TaskInfo
@@ -26,6 +26,7 @@ class TaskBuilderTest extends UnitTest {
 
   import mesosphere.mesos.protos.Implicits._
 
+  implicit val clock = new SettableClock()
   val labels = Map("foo" -> "bar", "test" -> "test")
   val runSpecId = PathId("/test")
 
@@ -629,6 +630,8 @@ class TaskBuilderTest extends UnitTest {
         .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
         .build
 
+      val dockerPullConfigSecret = "aConfigSecret"
+      val dockerPullConfig = Container.DockerPullConfig(dockerPullConfigSecret)
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
         id = "/testApp".toPath,
@@ -639,7 +642,8 @@ class TaskBuilderTest extends UnitTest {
           credential = Some(Container.Credential(
             principal = "aPrincipal",
             secret = Some("aSecret")
-          ))
+          )),
+          pullConfig = Some(dockerPullConfig)
         )),
         portDefinitions = Seq.empty,
         networks = Seq(ContainerNetwork("vnet"))
@@ -657,6 +661,8 @@ class TaskBuilderTest extends UnitTest {
       taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getPrincipal should be ("aPrincipal")
       taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.hasSecret should be (true)
       taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getSecret should be ("aSecret")
+      taskInfo.getContainer.getMesos.getImage.getDocker.hasConfig shouldBe true
+      taskInfo.getContainer.getMesos.getImage.getDocker.getConfig.getReference.getName shouldBe dockerPullConfigSecret
     }
 
     "build creates task for MESOS AppC container" in {
@@ -1206,22 +1212,21 @@ class TaskBuilderTest extends UnitTest {
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
-        id = "testApp".toPath,
+        id = "/testApp".toPath,
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         container = Some(Docker(
           image = "busybox"
         ))
-      ), None, None, None,
-        _ => Task.Id("mesos_task_id")
-      )
+      ), None, None, None)
       assert(task.isDefined, "expected task to match offer")
       val (taskInfo, _) = task.get
+      val taskId = Task.Id(taskInfo.getTaskId())
 
       assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
       val param = taskInfo.getContainer.getDocker.getParametersList.get(0)
       assert(param.getKey == "label", "expected docker having a parameter key: label")
-      assert(param.getValue == "MESOS_TASK_ID=mesos_task_id", s"expected docker having a parameter value for key 'label': MESOS_TASK_ID=mesos_task_id but ${param.getValue}")
+      assert(param.getValue == s"MESOS_TASK_ID=${taskId.idString}", s"expected docker having a parameter value for key 'label': MESOS_TASK_ID=${taskId.idString} but ${param.getValue}")
     }
 
     "BuildIfMatchesWithRackIdConstraint" in {
@@ -1243,7 +1248,8 @@ class TaskBuilderTest extends UnitTest {
       val s = Seq(t1, t2)
 
       val config = MarathonTestHelper.defaultConfig()
-      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet)
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet,
+        config)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       // TODO test for resources etc.
     }
@@ -1263,12 +1269,11 @@ class TaskBuilderTest extends UnitTest {
       var runningInstances = Set.empty[Instance]
       val config = MarathonTestHelper.defaultConfig()
 
-      val builder = new TaskBuilder(
-        app,
-        s => Task.Id.forRunSpec(s), config)
-
+      val taskId = Task.Id.forRunSpec(app.id)
+      val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(message: String, offer: Offer): Unit = {
-        val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+        val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
+          config.defaultAcceptedResourceRolesSet, config)
         withClue(message) {
           assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
         }
@@ -1277,6 +1282,8 @@ class TaskBuilderTest extends UnitTest {
         val agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
+          region = None,
+          zone = None,
           attributes = offer.getAttributesList.toIndexedSeq
         )
         val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10))
@@ -1287,7 +1294,8 @@ class TaskBuilderTest extends UnitTest {
       }
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
-        val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+        val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
+          config.defaultAcceptedResourceRolesSet, config)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 
@@ -1328,19 +1336,20 @@ class TaskBuilderTest extends UnitTest {
 
       var runningInstances = Set.empty[Instance]
 
+      val taskId = Task.Id.forRunSpec(app.id)
       val config = MarathonTestHelper.defaultConfig()
-      val builder = new TaskBuilder(
-        app,
-        s => Task.Id.forRunSpec(s), config)
-
+      val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(offer: Offer): Unit = {
-        val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+        val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
+          config.defaultAcceptedResourceRolesSet, config)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
         val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
         val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None)
         val agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
+          region = None,
+          zone = None,
           attributes = offer.getAttributesList.toIndexedSeq
         )
         val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10))
@@ -1352,7 +1361,8 @@ class TaskBuilderTest extends UnitTest {
       }
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
-        val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+        val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
+          config.defaultAcceptedResourceRolesSet, config)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 
@@ -1800,10 +1810,12 @@ class TaskBuilderTest extends UnitTest {
 
       val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
       val config = MarathonTestHelper.defaultConfig()
-      val builder = new TaskBuilder(app, s => Task.Id(s.toString), config)
+      val taskId = Task.Id.forRunSpec(app.id)
+      val builder = new TaskBuilder(app, taskId, config)
       val runningInstances = Set.empty[Instance]
 
-      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
+        config.defaultAcceptedResourceRolesSet, config)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
       val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None)
@@ -1818,19 +1830,19 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "tty defined in an app will render ContainerInfo correctly" in {
-      val tty = TTY(rows = 50, columns = 120)
-      val appWithTTY = AppDefinition(id = PathId("/tty"), container = Some(Docker()), tty = Some(tty))
-      val builder = new TaskBuilder(appWithTTY, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      val appWithTTY = AppDefinition(id = PathId("/tty"), container = Some(Docker()), tty = Some(true))
+      val taskId = Task.Id.forRunSpec(appWithTTY.id)
+      val builder = new TaskBuilder(appWithTTY, taskId, MarathonTestHelper.defaultConfig())
       val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forRunSpec(appWithTTY.id))
       containerInfo should be(defined)
       containerInfo.get.hasTtyInfo should be(true)
-      containerInfo.get.getTtyInfo.getWindowSize.getColumns should be(tty.columns)
-      containerInfo.get.getTtyInfo.getWindowSize.getRows should be(tty.rows)
+      containerInfo.get.getTtyInfo.hasWindowSize should be(false)
     }
 
     "no tty defined in an app will render ContainerInfo without tty" in {
-      val appNoTTY = MarathonTestHelper.makeBasicApp().copy(tty = None)
-      val builder = new TaskBuilder(appNoTTY, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      val appNoTTY = MarathonTestHelper.makeBasicApp().copy(tty = Some(false))
+      val taskId = Task.Id.forRunSpec(appNoTTY.id)
+      val builder = new TaskBuilder(appNoTTY, taskId, MarathonTestHelper.defaultConfig())
       val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id.forRunSpec(appNoTTY.id))
       containerInfo should be(empty)
     }
@@ -1840,18 +1852,19 @@ class TaskBuilderTest extends UnitTest {
     app: AppDefinition,
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
-    envVarsPrefix: Option[String] = None,
-    newTaskId: PathId => Task.Id = s => Task.Id.forRunSpec(s)): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
+    envVarsPrefix: Option[String] = None): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
+    val taskId = Task.Id.forRunSpec(app.id)
     val builder = new TaskBuilder(
       app,
-      newTaskId,
+      taskId,
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,
         envVarsPrefix = envVarsPrefix))
 
     val config = MarathonTestHelper.defaultConfig()
-    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty, acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet))
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty,
+      acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet), config)
 
     resourceMatch match {
       case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None))
@@ -1937,9 +1950,8 @@ class TaskBuilderTest extends UnitTest {
     }
 
     def mesosPorts(ports: MesosProtos.Port*) =
-      ports.fold(MesosProtos.Ports.newBuilder){
-        case (builder: MesosProtos.Ports.Builder, p: MesosProtos.Port) =>
-          builder.addPorts(p)
-      }.asInstanceOf[MesosProtos.Ports.Builder]
+      ports.foldLeft(MesosProtos.Ports.newBuilder) { (builder, p) =>
+        builder.addPorts(p)
+      }
   }
 }

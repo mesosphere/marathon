@@ -32,7 +32,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val appId = PathId("/test_id")
       val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
-      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
         val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
         val hostPorts = Seq(socketPort)
@@ -47,7 +47,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       finally { socket.close() }
 
       expectMsgPF(patienceConfig.timeout) {
-        case Healthy(taskId, _, _, _) => ()
+        case Healthy(_, _, _, _) => ()
       }
     }
 
@@ -62,7 +62,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val appId = PathId("/test_id")
       val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
-      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
         val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
         val hostPorts = Seq(socketPort)

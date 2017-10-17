@@ -110,6 +110,9 @@ Our testing guidelines regarding fixtures are as follows:
   trivial subtypes of a _sealed trait_.  In that case, the file name must be
   the plural form of the trait, and it must begin with a lowercase letter.
 
+- Some of the source files have diagrams as part of the comments using the [PlantUML](http://plantuml.com) language.  
+  To see a rendered diagram use the [online version](http://plantuml.com) or install locally.
+
 ## Style
 
 ### Style Checker

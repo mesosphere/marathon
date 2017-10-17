@@ -1,9 +1,10 @@
 package mesosphere.marathon
 package core.externalvolume
 
+import com.wix.accord.Descriptions.{ Path, Explicit }
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
-import mesosphere.marathon.raml.AppVolume
+import mesosphere.marathon.raml.AppExternalVolume
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo
 
@@ -20,16 +21,16 @@ object ExternalVolumes {
   def validExternalVolume: Validator[ExternalVolume] = new Validator[ExternalVolume] {
     def apply(ev: ExternalVolume) = providers.get(ev.external.provider) match {
       case Some(p) => p.validations.volume(ev)
-      case None => Failure(Set(RuleViolation(None, "is unknown provider", Some("external/provider"))))
+      case None => Failure(Set(RuleViolation(None, "is unknown provider", Path(Explicit("external"), Explicit("provider")))))
     }
   }
 
-  def validRamlVolume(container: raml.Container): Validator[AppVolume] = new Validator[AppVolume] {
-    def apply(ev: AppVolume) = ev.external.flatMap(e => e.provider.flatMap(providers.get)) match {
+  def validRamlVolume(container: raml.Container): Validator[AppExternalVolume] = new Validator[AppExternalVolume] {
+    def apply(ev: AppExternalVolume) = ev.external.provider.flatMap(providers.get(_)) match {
       case Some(p) =>
         validate(ev)(p.validations.ramlVolume(container))
       case None =>
-        Failure(Set(RuleViolation(None, "is unknown provider", Some("external/provider"))))
+        Failure(Set(RuleViolation(None, "is unknown provider", Path(Explicit("external"), Explicit("provider")))))
     }
   }
 
@@ -49,7 +50,7 @@ object ExternalVolumes {
     override def apply(app: raml.App): Result = {
       val appProviders: Set[ExternalVolumeProvider] = {
         val wantedProviders: Set[String] = app.container.fold(Set.empty[String]) {
-          _.volumes.flatMap(_.external.flatMap(_.provider))(collection.breakOut)
+          _.volumes.collect{ case v: AppExternalVolume => v }.flatMap(_.external.provider)(collection.breakOut)
         }
         wantedProviders.flatMap(wanted => providers.get(wanted))
       }

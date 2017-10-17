@@ -1,41 +1,38 @@
 package mesosphere.marathon
 package state
 
-import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.UnitTest
+import mesosphere.{ UnitTest, ValidationTestLike }
 
 import scala.concurrent.duration._
 
-class UnreachableStrategyTest extends UnitTest with ResultMatchers {
+class UnreachableStrategyTest extends UnitTest with ValidationTestLike {
 
-  def validate = UnreachableStrategy.unreachableStrategyValidator
+  implicit def validator = UnreachableStrategy.unreachableStrategyValidator
 
   "UnreachableStrategy.unreachableStrategyValidator" should {
     "validate default strategy" in {
       val strategy = UnreachableEnabled()
-      validate(strategy) shouldBe aSuccess
+      validator(strategy) shouldBe aSuccess
     }
 
     "validate with other parameters successfully" in {
       val strategy = UnreachableEnabled(13.minutes, 37.minutes)
-      validate(strategy) shouldBe aSuccess
+      validator(strategy) shouldBe aSuccess
     }
 
     "sees disabled as valid" in {
       val strategy = UnreachableDisabled
-      validate(strategy) shouldBe aSuccess
+      validator(strategy) shouldBe aSuccess
     }
 
     "fail when time until expunge is smaller" in {
       val strategy = UnreachableEnabled(inactiveAfter = 2.seconds, expungeAfter = 1.second)
-      validate(strategy) should failWith(
-        "inactiveAfter" -> "got 2 seconds, expected less than 1 second")
+      validator(strategy) should haveViolations("/inactiveAfter" -> "got 2 seconds, expected 1 second or less")
     }
 
-    "fail when time until expunge is equal to time until inactive" in {
+    "succeed when time until expunge is equal to time until inactive" in {
       val strategy = UnreachableEnabled(inactiveAfter = 2.seconds, expungeAfter = 2.seconds)
-      validate(strategy) should failWith(
-        "inactiveAfter" -> "got 2 seconds, expected less than 2 seconds")
+      validator(strategy) shouldBe aSuccess
     }
   }
 

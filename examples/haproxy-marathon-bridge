@@ -9,7 +9,7 @@ set -o errexit -o nounset -o pipefail
 ##########################################################
 
 function -h {
-cat <<USAGE
+  cat <<USAGE
  USAGE: $name <marathon host:port>+
         $name install_haproxy_system <marathon host:port>+
 
@@ -66,7 +66,7 @@ function install_haproxy_system {
 
   sudo=""
   if [[ $EUID -ne 0 ]]
-    then sudo="sudo"
+  then sudo="sudo"
   fi
 
   current_path=$(dirname $0)
@@ -88,20 +88,20 @@ function install_haproxy_system {
   then
     os="SuSE"
   fi
-     
+
   if [[ $os == "CentOS" ]] || [[ $os == "RHEL" ]] || [[ $os == "AmazonAMI" ]] || [[ $os == "OracleServer" ]]
   then
     $sudo yum install -y haproxy
     $sudo chkconfig haproxy on
   elif [[ $os == "Ubuntu" ]] || [[ $os == "Debian" ]]
-  then 
+  then
     $sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
     $sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
   elif [[ $os == "SuSE" ]]
   then
     $sudo zypper -n --no-gpg-checks --non-interactive install --auto-agree-with-licenses haproxy
     $sudo chkconfig haproxy on
-  else 
+  else
     echo "$os is not a supported OS for this feature."
     exit 1
   fi
@@ -121,7 +121,7 @@ function install_cronjob {
 }
 
 function cronjob {
-cat <<EOF
+  cat <<EOF
 * * * * * root $script_path logged refresh_system_haproxy \$(cat $cronjob_conf_file)
 EOF
 }
@@ -132,7 +132,7 @@ function config {
 }
 
 function header {
-cat <<\EOF
+  cat <<\EOF
 global
   daemon
   log 127.0.0.1 local0

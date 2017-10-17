@@ -18,7 +18,7 @@ import scala.collection.immutable.Seq
 
 class TaskBuilder(
     runSpec: AppDefinition,
-    newTaskId: PathId => Task.Id,
+    taskId: Task.Id,
     config: MarathonConf,
     runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty) extends StrictLogging {
 
@@ -34,14 +34,12 @@ class TaskBuilder(
     }
 
     val host: Option[String] = Some(offer.getHostname)
-
-    val taskId = newTaskId(runSpec.id)
     val builder = TaskInfo.newBuilder
       // Use a valid hostname to make service discovery easier
       .setName(runSpec.id.toHostname)
       .setTaskId(taskId.mesosTaskId)
       .setSlaveId(offer.getSlaveId)
-      .addAllResources(resourceMatch.resources)
+      .addAllResources(resourceMatch.resources.asJava)
 
     builder.setDiscovery(computeDiscoveryInfo(runSpec, resourceMatch.hostPorts))
 
@@ -118,7 +116,7 @@ class TaskBuilder(
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder
-    portsProto.addAllPorts(PortDiscovery.generateForApp(runSpec, hostPorts))
+    portsProto.addAllPorts(PortDiscovery.generateForApp(runSpec, hostPorts).asJava)
 
     discoveryInfoBuilder.setPorts(portsProto)
     discoveryInfoBuilder.build
@@ -163,7 +161,7 @@ class TaskBuilder(
       }
 
       // attach a tty if specified
-      runSpec.tty.foreach(builder.setTtyInfo(_))
+      runSpec.tty.filter(tty => tty).foreach(builder.setTtyInfo(_))
 
       // Set container type to MESOS by default (this is a required field)
       if (!builder.hasType)
@@ -213,7 +211,7 @@ object TaskBuilder {
     // args take precedence over command, if supplied
     if (runSpec.args.nonEmpty) {
       builder.setShell(false)
-      builder.addAllArguments(runSpec.args)
+      builder.addAllArguments(runSpec.args.asJava)
       //mesos command executor expects cmd and arguments
       runSpec.args.headOption.foreach { value =>
         if (runSpec.container.isEmpty) builder.setValue(value)
@@ -221,7 +219,7 @@ object TaskBuilder {
     }
 
     if (runSpec.fetch.nonEmpty) {
-      builder.addAllUris(runSpec.fetch.map(_.toProto))
+      builder.addAllUris(runSpec.fetch.map(_.toProto).asJava)
     }
 
     runSpec.user.foreach(builder.setUser)

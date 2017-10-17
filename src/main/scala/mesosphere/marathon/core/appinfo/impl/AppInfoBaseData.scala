@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
+import java.time.Clock
+
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
@@ -178,7 +179,7 @@ class AppInfoBaseData(
         }
       )).toMap
       val instanceStatus = instances.flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
-      val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
+      val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
       val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
       // TODO(jdef) pods need termination history

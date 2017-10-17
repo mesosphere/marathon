@@ -3,7 +3,7 @@ package api.v2.validation
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.raml.{ EnvVarSecretRef, EnvVarValueOrSecret, SecretDef }
+import mesosphere.marathon.raml.{ EnvVarSecret, EnvVarValueOrSecret, SecretDef }
 
 /**
   * RAML-generated validation doesn't cover environment variable names yet
@@ -21,33 +21,27 @@ trait EnvVarValidation {
     *                             var names for pod environments is already enforced by the RAML code generator.
     *                             See https://jira.mesosphere.com/browse/MARATHON-7183.
     */
-  def validEnvVar(strictNameValidation: Boolean): Validator[(String, EnvVarValueOrSecret)] = {
-
-    val validName = validator[String] { name =>
-      name is implied(strictNameValidation)(matchRegexWithFailureMessage(EnvVarNamePattern, MustContainOnlyAlphanumeric))
-      name is notEmpty
-    }
-
-    validator[(String, EnvVarValueOrSecret)] { t =>
-      // use of "value" relies on special behavior in Validation that humanizes generated error messages
-      t._1 as "value" is validName
-    }
+  def validEnvVar(strictNameValidation: Boolean): Validator[String] = validator[String] { name =>
+    name is implied(strictNameValidation)(matchRegexWithFailureMessage(EnvVarNamePattern, MustContainOnlyAlphanumeric))
+    name is notEmpty
   }
 
-  def envValidator(strictNameValidation: Boolean, secrets: Map[String, SecretDef], enabledFeatures: Set[String]) = forAll(
+  def envValidator(strictNameValidation: Boolean, secrets: Map[String, SecretDef], enabledFeatures: Set[String]): Validator[Map[String, mesosphere.marathon.raml.EnvVarValueOrSecret]] = forAll(
     validator[Map[String, EnvVarValueOrSecret]] { env =>
-      env is every(validEnvVar(strictNameValidation))
+      env.keys is every(validEnvVar(strictNameValidation))
     },
     isTrue(UseOfSecretRefsRequiresSecretFeature) { (env: Map[String, EnvVarValueOrSecret]) =>
       // if the secrets feature is not enabled then don't allow EnvVarSecretRef's in the environment
       if (!enabledFeatures.contains(Features.SECRETS))
         env.values.count {
-          case _: EnvVarSecretRef => true
+          case _: EnvVarSecret => true
           case _ => false
         } == 0
       else true
     },
-    every(SecretValidation.secretRefValidator(secrets))
+    everyKeyValue(SecretValidation.secretValidator(secrets.map {
+      case (secretName, secretValue) => secretName -> EnvVarSecret(secretValue.source)
+    }))
   )
 }
 

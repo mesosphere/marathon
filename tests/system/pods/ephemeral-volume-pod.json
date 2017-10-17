@@ -1,0 +1,59 @@
+{
+  "id": "/ephemeral-volume-pod",
+  "scaling": {
+    "kind": "fixed",
+    "instances": 1
+  },
+  "containers": [
+    {
+      "name": "ct1",
+      "resources": {
+        "cpus": 0.1,
+        "mem": 32
+      },
+      "image": {
+        "kind": "DOCKER",
+        "id": "busybox"
+      },
+      "exec": {
+        "command": {
+          "shell": "while true; do echo the current time is $(date) > ./ct1-v1/clock; sleep 1; done"
+        }
+      },
+      "volumeMounts": [
+        {
+          "name": "v1",
+          "mountPath": "ct1-v1"
+        }
+      ]
+    },
+    {
+      "name": "ct2",
+      "resources": {
+        "cpus": 0.1,
+        "mem": 32
+      },
+      "exec": {
+        "command": {
+          "shell": "sleep 2; while true; do cat ./etc/clock; if [ $? -eq 1 ]; then exit; fi; sleep 1; done"
+        }
+      },
+      "volumeMounts": [
+        {
+          "name": "v1",
+          "mountPath": "etc"
+        }
+      ]
+    }
+  ],
+  "networks": [
+    {
+      "mode": "host"
+    }
+  ],
+  "volumes": [
+    {
+      "name": "v1"
+    }
+  ]
+}

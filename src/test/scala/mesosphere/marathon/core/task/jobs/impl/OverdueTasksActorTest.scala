@@ -6,7 +6,7 @@ import java.util.UUID
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
@@ -29,7 +29,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       taskStateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor],
       driver: SchedulerDriver = mock[SchedulerDriver],
       killService: KillService = mock[KillService],
-      clock: ConstantClock = ConstantClock()) {
+      clock: SettableClock = new SettableClock()) {
     val driverHolder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config: AllConf = MarathonTestHelper.defaultConfig()

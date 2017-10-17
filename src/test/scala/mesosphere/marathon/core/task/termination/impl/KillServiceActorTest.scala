@@ -8,7 +8,7 @@ import akka.actor.{ ActorRef, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdateOperation }
@@ -330,7 +330,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
       holder
     }
     val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
-    val clock = ConstantClock()
+    val clock = new SettableClock()
 
     def mockInstance(appId: PathId, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Instance = {
       TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskForStatus(mesosState, stagedAt).build().getInstance()

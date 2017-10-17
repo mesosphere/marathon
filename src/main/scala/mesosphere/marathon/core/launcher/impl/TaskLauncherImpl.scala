@@ -28,7 +28,7 @@ private[launcher] class TaskLauncherImpl(
       if (log.isDebugEnabled) {
         log.debug(s"Operations on $offerID:\n${operations.mkString("\n")}")
       }
-      driver.acceptOffers(Collections.singleton(offerID), operations, noFilter)
+      driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
     }
     if (accepted) {
       usedOffersMeter.increment()

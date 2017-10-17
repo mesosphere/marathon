@@ -14,8 +14,8 @@ In a production environment, you would typically script this process and integra
 
 - A Marathon-based app with health checks that accurately reflect the health of the application.
 - The app must expose a metric endpoint to determine whether the app has any pending operations. For example, the application could expose a global atomic gauge of the number of currently queued DB transactions.
-- The [jq] (https://stedolan.github.io/jq/) command-line JSON processor. 
-- If you are using open source Mesos, [configure the DC/OS CLI] ( https://github.com/mesosphere/dcos-cli#using-the-cli-without-dcos).
+- The [jq](https://stedolan.github.io/jq/) command-line JSON processor.
+- If you are using open source Mesos, [configure the DC/OS CLI](https://github.com/mesosphere/dcos-cli#using-the-cli-without-dcos).
 
 ## Procedure
 
@@ -40,7 +40,7 @@ We will replace the current app version (BLUE) with a new version (GREEN).
     dcos marathon app update /green-myapp instances=1
     ```
 
-3. Wait until all tasks from the GREEN app have passed health checks. This step requires [jq] (https://stedolan.github.io/jq/).
+3. Wait until all tasks from the GREEN app have passed health checks. This step requires [jq](https://stedolan.github.io/jq/).
 
     ```sh
     # wait until healthy
@@ -62,7 +62,7 @@ We will replace the current app version (BLUE) with a new version (GREEN).
 
 8. Wait until the task instances from the BLUE app have 0 pending operations. Use the metrics endpoint in the application to determine the number of pending operations.
 
-9. Once all operations are complete from the BLUE tasks, kill and scale the BLUE app using [the API] (https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-tasks-delete). In the snippet below, ``<hosturl>`` is the hostname of your master node prefixed with ``http://``.
+9. Once all operations are complete from the BLUE tasks, kill and scale the BLUE app using [the API](https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-tasks-delete). In the snippet below, ``<hosturl>`` is the hostname of your master node prefixed with ``http://``.
 
     ```sh
     # kill and scale blue tasks
@@ -74,7 +74,7 @@ We will replace the current app version (BLUE) with a new version (GREEN).
 10. Repeat steps 2-9 until there are no more BLUE tasks.
 
 11. Remove the BLUE app from Marathon.
-    
+
     ```sh
     # remove blue
     dcos marathon app remove /blue-myapp

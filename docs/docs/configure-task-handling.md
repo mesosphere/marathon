@@ -8,18 +8,30 @@ You can configure Marathon's actions on unreachable tasks. The `unreachableStrat
 
 ```json
 "unreachableStrategy": {
-	"inactiveAfterSeconds": "<integer>",
-	"expungeAfterSeconds": "<integer>"
+    "inactiveAfterSeconds": "<integer>",
+    "expungeAfterSeconds": "<integer>"
 }
 ```
 
 ## `unreachableStrategy` Configuration Options
 
-- `inactiveAfterSeconds`: If a task instance is unreachable for longer than this value, it is marked inactive and a new instance will launch. At this point, the unreachable task is not yet expunged. The minimum value for this parameter is 1. The default value is 300 seconds.
+- `inactiveAfterSeconds`: If a task instance is unreachable for longer than this value, it is marked inactive and a new instance will launch. At this point, the unreachable task is not yet expunged. The minimum value for this parameter is 0. The default value is 300 seconds.
 
-- `expungeAfterSeconds`: If an instance is unreachable for longer than this value, it will be expunged. An expunged task will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged, but that is not required. This parameter must be larger than `unreachableInactiveAfterSeconds`. The default value is 600 seconds.
+- `expungeAfterSeconds`: If an instance is unreachable for longer than this value, it will be expunged. An expunged task will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged, but that is not required. This parameter must be larger than or equal to `unreachableInactiveAfterSeconds`. The default value is 600 seconds.
 
 You can use `inactiveAfterSeconds` and `expungeAfterSeconds` in conjunction with one another. For example, if you configure `inactiveAfterSeconds = 60` and `expungeAfterSeconds = 120`, a task instance will be expunged if it has been unreachable for more than 120 seconds and a second instance will be started if it has been unreachable for more than 60 seconds.
+
+You can configure `unreachableStrategy` to replace unreachable apps or pods as soon as Marathon is aware of them. To enable this behavior, configure your app or pod as shown below:
+```
+ unreachableStrategy: {
+     "inactiveAfterSeconds": 0,
+     "expunceAfterSeconds": 0
+ }
+ ```
+
+## Mesos configuration
+
+By default, Mesos notifies Marathon of an unreachable task after 75 seconds. Change this duration in Mesos by configuring `agent_ping_timeout` and `max_agent_ping_timeouts`.
 
 ## Kill Selection
 You call also define a kill selection to declare whether Marathon kills the youngest or oldest tasks first when rescaling or otherwise killing multiple tasks. The default value for this parameter is `YoungestFirst`. You can also specify `OldestFirst`.

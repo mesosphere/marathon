@@ -20,6 +20,7 @@ types:
         description: |
           The container port that a task's process is actually listening on.
           Required if the network mode is container
+        usage: Specify 0 to tell Marathon to match the dynamically allocated host port.
       hostPort?:
         type: numbers.AnyPort
         description: |
@@ -90,6 +91,9 @@ types:
       protocol?:
         type: strings.NetworkProtocol
         default: tcp
+      labels?:
+        type: label.KVLabels
+        (pragma.omitEmpty):
   IpDiscovery:
     type: object
     description: Information useful for service discovery

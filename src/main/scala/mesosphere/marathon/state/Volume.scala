@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package state
 
+import com.wix.accord.Descriptions.{ Generic, Path => WixPath }
 import java.util.regex.Pattern
 
 import com.wix.accord._
@@ -8,6 +9,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.plugin.AppSecretVolumeSpec
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Volume.Mode
@@ -15,47 +17,12 @@ import org.apache.mesos.{ Protos => Mesos }
 
 import scala.util.Try
 
-sealed trait Volume {
-  def containerPath: String
-  def mode: Mesos.Volume.Mode
+sealed trait Volume extends plugin.AppVolumeSpec {
+  val containerPath: String
+  val mode: Mesos.Volume.Mode
 }
 
 object Volume {
-  def apply(
-    containerPath: String,
-    hostPath: Option[String],
-    mode: Mesos.Volume.Mode,
-    persistent: Option[PersistentVolumeInfo],
-    external: Option[ExternalVolumeInfo]): Volume = {
-
-    persistent match {
-      case Some(persistentVolumeInfo) =>
-        if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
-        if (external.isDefined) throw new IllegalArgumentException("external may not be set with persistent")
-        PersistentVolume(
-          containerPath = containerPath,
-          persistent = persistentVolumeInfo,
-          mode = mode
-        )
-      case None =>
-        external match {
-          case Some(externalVolumeInfo) =>
-            if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
-            ExternalVolume(
-              containerPath = containerPath,
-              external = externalVolumeInfo,
-              mode = mode
-            )
-          case None =>
-            DockerVolume(
-              containerPath = containerPath,
-              hostPath = hostPath.getOrElse(""),
-              mode = mode
-            )
-        }
-    }
-  }
-
   def apply(proto: Protos.Volume): Volume = {
     if (proto.hasPersistent)
       PersistentVolume(
@@ -77,22 +44,12 @@ object Volume {
       )
   }
 
-  type TupleV = (String, Option[String], Mesos.Volume.Mode, Option[PersistentVolumeInfo], Option[ExternalVolumeInfo])
-  def unapply(volume: Volume): Option[TupleV] =
-    volume match {
-      case persistentVolume: PersistentVolume =>
-        Some((persistentVolume.containerPath, None, persistentVolume.mode, Some(persistentVolume.persistent), None))
-      case ev: ExternalVolume =>
-        Some((ev.containerPath, None, ev.mode, None, Some(ev.external)))
-      case dockerVolume: DockerVolume =>
-        Some((dockerVolume.containerPath, Some(dockerVolume.hostPath), dockerVolume.mode, None, None))
-    }
-
   def validVolume(enabledFeatures: Set[String]): Validator[Volume] = new Validator[Volume] {
     override def apply(volume: Volume): Result = volume match {
       case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
       case dv: DockerVolume => validate(dv)(DockerVolume.validDockerVolume)
       case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
+      case _: SecretVolume => Success // validation is done in raml
     }
   }
 }
@@ -210,9 +167,9 @@ object PersistentVolumeInfo {
     import Constraint.Operator._
     override def apply(c: Constraint): Result = {
       if (!c.hasField || !c.hasOperator) {
-        Failure(Set(RuleViolation(c, "Missing field and operator", None)))
+        Failure(Set(RuleViolation(c, "Missing field and operator")))
       } else if (c.getField != "path") {
-        Failure(Set(RuleViolation(c, "Unsupported field", Some(c.getField))))
+        Failure(Set(RuleViolation(c, "Unsupported field", WixPath(Generic(c.getField)))))
       } else {
         c.getOperator match {
           case LIKE | UNLIKE =>
@@ -224,14 +181,13 @@ object PersistentVolumeInfo {
                   Failure(Set(RuleViolation(
                     c,
                     "Invalid regular expression",
-                    Some(s"${c.getValue}\n${e.getMessage}"))))
+                    WixPath(Generic("value")))))
               }
             } else {
-              Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
+              Failure(Set(RuleViolation(c, "A regular expression value must be provided", WixPath(Generic("value")))))
             }
           case _ =>
-            Failure(Set(
-              RuleViolation(c, "Operator must be one of LIKE, UNLIKE", None)))
+            Failure(Set(RuleViolation(c, "Operator must be one of LIKE, UNLIKE", WixPath(Generic("operator")))))
         }
       }
     }
@@ -254,7 +210,7 @@ object PersistentVolumeInfo {
     }
 
     val haveProperlyOrderedMaxSize = isTrue[PersistentVolumeInfo]("Max size must be larger than size") { info =>
-      info.maxSize.map(_ > info.size).getOrElse(true)
+      info.maxSize.forall(_ > info.size)
     }
 
     validator[PersistentVolumeInfo] { info =>
@@ -346,7 +302,7 @@ object ExternalVolumeInfo {
     info.size.each should be > 0L
     info.name should matchRegex(LabelRegex)
     info.provider should matchRegex(LabelRegex)
-    info.options is valid(validOptions)
+    info.options is validOptions
   }
 
   def fromProto(evi: Protos.Volume.ExternalVolumeInfo): ExternalVolumeInfo =
@@ -367,6 +323,12 @@ object ExternalVolume {
   def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] = validator[ExternalVolume] { ev =>
     ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
     ev.containerPath is notEmpty
-    ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
+    ev.external is ExternalVolumeInfo.validExternalVolumeInfo
   } and ExternalVolumes.validExternalVolume
+}
+
+case class SecretVolume(
+    containerPath: String,
+    secret: String) extends Volume with AppSecretVolumeSpec {
+  override val mode: Mesos.Volume.Mode = Mesos.Volume.Mode.RO
 }

@@ -2,10 +2,10 @@ package mesosphere.marathon
 package core.task.jobs
 
 import akka.actor.{ ActorRef, PoisonPill, Terminated }
-import akka.event.LoggingAdapter
 import akka.testkit.TestProbe
+import java.time.Clock
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.{ Clock, ConstantClock }
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -23,8 +23,8 @@ import scala.concurrent.duration._
 class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenPropertyChecks {
 
   class Fixture {
-    val clock = ConstantClock()
-    val config = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
+    val clock = new SettableClock()
+    val config = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
     val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
     val taskTracker: InstanceTracker = mock[InstanceTracker]
     val fiveTen = UnreachableEnabled(inactiveAfter = 5.minutes, expungeAfter = 10.minutes)
@@ -51,10 +51,9 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
     val f = new Fixture
 
     val businessLogic = new ExpungeOverdueLostTasksActorLogic {
-      override val config: TaskJobsConfig = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
-      override val clock: Clock = ConstantClock()
+      override val config: TaskJobsConfig = MarathonTestHelper.defaultConfig(maxInstancesPerOffer = 10)
+      override val clock: Clock = new SettableClock()
       override val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
-      override def log = mock[LoggingAdapter]
     }
 
     // format: OFF

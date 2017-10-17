@@ -33,7 +33,7 @@ class TaskLauncherImplTest extends UnitTest {
   private[this] val launch1 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId, None)))
   private[this] val launch2 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId, None)))
   private[this] val ops = Seq(launch1, launch2)
-  private[this] val opsAsJava = ops.flatMap(_.offerOperations)
+  private[this] val opsAsJava = ops.flatMap(_.offerOperations).asJava
   private[this] val filter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
 
   case class Fixture(driver: Option[SchedulerDriver] = Some(mock[SchedulerDriver])) {

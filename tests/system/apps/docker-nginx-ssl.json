@@ -1,0 +1,27 @@
+{
+  "id": "/docker-nginx-ssl",
+  "instances": 1,
+  "cpus": 1,
+  "mem": 128,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "mesosphere/simple-docker:with-ssl",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 0,
+          "protocol": "tcp",
+          "name": "http"
+        },
+        {
+          "containerPort": 443,
+          "hostPort": 0,
+          "protocol": "tcp",
+          "name": "https"
+        }
+      ]
+    }
+  }
+}

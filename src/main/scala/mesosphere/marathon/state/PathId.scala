@@ -61,7 +61,7 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
   }
 
   def safePath: String = {
-    require(absolute, "Path is not absolute. Can not create safe path.")
+    require(absolute, s"Path absolute flag is not true for path ${this.toString}. Can not create safe path.")
     path.mkString("_")
   }
 
@@ -84,12 +84,12 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case that: PathId => (that eq this) || (that.toString == toString)
+      case that: PathId => (that eq this) || (that.hashCode == hashCode && that.absolute == absolute && that.path == path)
       case _ => false
     }
   }
 
-  override def hashCode(): Int = toString.hashCode()
+  override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
 }
 
 object PathId {
@@ -97,8 +97,21 @@ object PathId {
     if (in.isEmpty) PathId.empty
     else PathId(in.split("_").toList, absolute = true)
   }
-  def apply(in: String): PathId =
-    PathId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").filter(_.nonEmpty).toList, in.startsWith("/"))
+
+  /**
+    * Removes empty path segments
+    * @param pieces collection with path segments
+    * @param absolute is path absolute
+    * @return created path
+    */
+  def sanitized(pieces: TraversableOnce[String], absolute: Boolean = true) =
+    PathId(pieces.filter(_.nonEmpty).toList, absolute)
+
+  def apply(in: String): PathId = {
+    val raw = in.replaceAll("""(^/+)|(/+$)""", "").split("/")
+    sanitized(raw, in.startsWith("/"))
+  }
+
   def empty: PathId = PathId(Nil)
 
   implicit class StringPathId(val stringPath: String) extends AnyVal {
@@ -115,10 +128,8 @@ object PathId {
   private[this] val ID_PATH_SEGMENT_PATTERN =
     "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
 
-  private val validPathChars = new Validator[PathId] {
-    override def apply(pathId: PathId): Result = {
-      validate(pathId.path)(validator = pathId.path.each should matchRegexFully(ID_PATH_SEGMENT_PATTERN.pattern))
-    }
+  private val validPathChars = isTrue[PathId](s"must fully match regular expression '${ID_PATH_SEGMENT_PATTERN.pattern.pattern()}'") { id =>
+    id.path.forall(part => ID_PATH_SEGMENT_PATTERN.pattern.matcher(part).matches())
   }
 
   /**

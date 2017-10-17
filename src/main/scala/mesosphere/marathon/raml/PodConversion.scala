@@ -11,49 +11,49 @@ import scala.concurrent.duration._
 trait PodConversion extends NetworkConversion with ConstraintConversion with ContainerConversion with EnvVarConversion
     with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion {
 
-  implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podDef =>
-    val instances = podDef.scaling.fold(DefaultInstances) {
+  implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podd =>
+    val instances = podd.scaling.fold(DefaultInstances) {
       case FixedPodScalingPolicy(i) => i
     }
 
-    val networks: Seq[pod.Network] = podDef.networks.map(Raml.fromRaml[Network, pod.Network])
+    val networks: Seq[pod.Network] = podd.networks.map(Raml.fromRaml[Network, pod.Network])
 
-    val resourceRoles = podDef.scheduling.flatMap(_.placement)
+    val resourceRoles = podd.scheduling.flatMap(_.placement)
       .fold(Set.empty[String])(_.acceptedResourceRoles.toSet)
 
-    val upgradeStrategy = podDef.scheduling.flatMap(_.upgrade).fold(DefaultUpgradeStrategy) { raml =>
+    val upgradeStrategy = podd.scheduling.flatMap(_.upgrade).fold(DefaultUpgradeStrategy) { raml =>
       state.UpgradeStrategy(raml.minimumHealthCapacity, raml.maximumOverCapacity)
     }
 
-    val unreachableStrategy = podDef.scheduling.flatMap(_.unreachableStrategy).fold(DefaultUnreachableStrategy)(Raml.fromRaml(_))
-    val killSelection: state.KillSelection = podDef.scheduling.fold(state.KillSelection.DefaultKillSelection) {
+    val unreachableStrategy = podd.scheduling.flatMap(_.unreachableStrategy).fold(DefaultUnreachableStrategy)(Raml.fromRaml(_))
+    val killSelection: state.KillSelection = podd.scheduling.fold(state.KillSelection.DefaultKillSelection) {
       _.killSelection.fold(state.KillSelection.DefaultKillSelection)(Raml.fromRaml(_))
     }
 
-    val backoffStrategy = podDef.scheduling.flatMap { policy =>
+    val backoffStrategy = podd.scheduling.flatMap { policy =>
       policy.backoff.map { strategy =>
         state.BackoffStrategy(strategy.backoff.seconds, strategy.maxLaunchDelay.seconds, strategy.backoffFactor)
       }
     }.getOrElse(DefaultBackoffStrategy)
 
     val constraints: Set[Protos.Constraint] =
-      podDef.scheduling.flatMap(_.placement.map(_.constraints.map(Raml.fromRaml(_))))
+      podd.scheduling.flatMap(_.placement.map(_.constraints.map(Raml.fromRaml(_))))
         .getOrElse(Set.empty[Protos.Constraint])
 
-    val executorResources: ExecutorResources = podDef.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
+    val executorResources: ExecutorResources = podd.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
 
     new PodDefinition(
-      id = PathId(podDef.id).canonicalPath(),
-      user = podDef.user,
-      env = Raml.fromRaml(podDef.environment),
-      labels = podDef.labels,
+      id = PathId(podd.id).canonicalPath(),
+      user = podd.user,
+      env = Raml.fromRaml(podd.environment),
+      labels = podd.labels,
       acceptedResourceRoles = resourceRoles,
-      secrets = Raml.fromRaml(podDef.secrets),
-      containers = podDef.containers.map(Raml.fromRaml(_)),
+      secrets = Raml.fromRaml(podd.secrets),
+      containers = podd.containers.map(Raml.fromRaml(_)),
       instances = instances,
       constraints = constraints,
-      version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
-      podVolumes = podDef.volumes.map(Raml.fromRaml(_)),
+      version = podd.version.fold(Timestamp.now())(Timestamp(_)),
+      podVolumes = podd.volumes.map(Raml.fromRaml(_)),
       networks = networks,
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
@@ -63,41 +63,41 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
     )
   }
 
-  implicit val podRamlWriter: Writes[PodDefinition, Pod] = Writes { pod =>
+  implicit val podRamlWriter: Writes[PodDefinition, Pod] = Writes { podDef =>
 
     val ramlUpgradeStrategy = PodUpgradeStrategy(
-      pod.upgradeStrategy.minimumHealthCapacity,
-      pod.upgradeStrategy.maximumOverCapacity)
+      podDef.upgradeStrategy.minimumHealthCapacity,
+      podDef.upgradeStrategy.maximumOverCapacity)
 
     val ramlBackoffStrategy = PodSchedulingBackoffStrategy(
-      backoff = pod.backoffStrategy.backoff.toMillis.toDouble / 1000.0,
-      maxLaunchDelay = pod.backoffStrategy.maxLaunchDelay.toMillis.toDouble / 1000.0,
-      backoffFactor = pod.backoffStrategy.factor)
+      backoff = podDef.backoffStrategy.backoff.toMillis.toDouble / 1000.0,
+      maxLaunchDelay = podDef.backoffStrategy.maxLaunchDelay.toMillis.toDouble / 1000.0,
+      backoffFactor = podDef.backoffStrategy.factor)
     val schedulingPolicy = PodSchedulingPolicy(
       Some(ramlBackoffStrategy),
       Some(ramlUpgradeStrategy),
       Some(PodPlacementPolicy(
-        pod.constraints.toRaml[Set[Constraint]],
-        pod.acceptedResourceRoles.toIndexedSeq)),
-      Some(pod.killSelection.toRaml),
-      Some(pod.unreachableStrategy.toRaml)
+        podDef.constraints.toRaml[Set[Constraint]],
+        podDef.acceptedResourceRoles.toIndexedSeq)),
+      Some(podDef.killSelection.toRaml),
+      Some(podDef.unreachableStrategy.toRaml)
     )
 
-    val scalingPolicy = FixedPodScalingPolicy(pod.instances)
+    val scalingPolicy = FixedPodScalingPolicy(podDef.instances)
 
     Pod(
-      id = pod.id.toString,
-      version = Some(pod.version.toOffsetDateTime),
-      user = pod.user,
-      containers = pod.containers.map(Raml.toRaml(_)),
-      environment = Raml.toRaml(pod.env),
-      labels = pod.labels,
+      id = podDef.id.toString,
+      version = Some(podDef.version.toOffsetDateTime),
+      user = podDef.user,
+      containers = podDef.containers.map(Raml.toRaml(_)),
+      environment = Raml.toRaml(podDef.env),
+      labels = podDef.labels,
       scaling = Some(scalingPolicy),
-      secrets = Raml.toRaml(pod.secrets),
+      secrets = Raml.toRaml(podDef.secrets),
       scheduling = Some(schedulingPolicy),
-      volumes = pod.podVolumes.map(Raml.toRaml(_)),
-      networks = pod.networks.map(Raml.toRaml(_)),
-      executorResources = Some(pod.executorResources.toRaml)
+      volumes = podDef.podVolumes.map(Raml.toRaml(_)),
+      networks = podDef.networks.map(Raml.toRaml(_)),
+      executorResources = Some(podDef.executorResources.toRaml)
     )
   }
 

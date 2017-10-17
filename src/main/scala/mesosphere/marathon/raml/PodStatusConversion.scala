@@ -79,6 +79,7 @@ trait PodStatusConversion {
       id = instance.instanceId.idString,
       status = derivedStatus,
       statusSince = instance.state.since.toOffsetDateTime,
+      agentId = instance.agentInfo.agentId,
       agentHostname = Some(instance.agentInfo.host),
       resources = Some(resources),
       networks = networkStatus,

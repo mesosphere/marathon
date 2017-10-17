@@ -4,10 +4,13 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId._
 import org.scalatest.Inside
 
-@SerialIntegrationTest
+import scala.concurrent.duration._
+
+@IntegrationTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
   override lazy val mesosNumMasters = 1
@@ -82,21 +85,57 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       marathon.tasks(app.id.toPath).value.head.state should be("TASK_RUNNING")
     }
 
+    "A task unreachable update with inactiveAfterSeconds 0 will trigger a replacement task instantly" in {
+      Given("a new app with proper timeouts")
+      val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 60)
+      val app = appProxy(testBasePath / "unreachable-instant", "v1", instances = 1, healthCheck = None).copy(
+        unreachableStrategy = Option(strategy)
+      )
+      waitForDeployment(marathon.createAppV2(app))
+      val task = waitForTasks(app.id.toPath, 1).head
+
+      When("the slave is partitioned")
+      mesosCluster.agents(0).stop()
+      mesosCluster.agents(1).start() // Start an alternative agent
+
+      Then("the task is declared unreachable")
+      waitForEventMatching("Task is declared unreachable") {
+        matchEvent("TASK_UNREACHABLE", task)
+      }
+
+      Then("the replacement task is running")
+      // wait not longer than 1 second, because it should be replaced even faster
+      waitForEventMatching("Replacement task is declared running", 6.seconds) {
+        matchEvent("TASK_RUNNING", app)
+      }
+
+      // immediate replacement should be started
+      val tasks = marathon.tasks(app.id.toPath).value
+      tasks should have size 2
+      tasks.groupBy(_.state).keySet should be(Set("TASK_RUNNING", "TASK_UNREACHABLE"))
+    }
+
     // regression test for https://github.com/mesosphere/marathon/issues/4059
     "Scaling down an app with constraints and unreachable task will succeed" in {
       Given("an app that is constrained to a unique hostname")
-      val constraint = raml.Constraints("hostname" -> "UNIQUE")
+      val constraint = Set(Seq("node", "MAX_PER", "1"))
 
       // start both slaves
       mesosCluster.agents.foreach(_.start())
 
-      val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 5 * 60, expungeAfterSeconds = 10 * 60)
+      val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 3 * 60, expungeAfterSeconds = 4 * 60)
       val app = appProxy(testBasePath / "regression", "v1", instances = 2, healthCheck = None)
         .copy(constraints = constraint, unreachableStrategy = Option(strategy))
 
       waitForDeployment(marathon.createAppV2(app))
       val enrichedTasks = waitForTasks(app.id.toPath, num = 2)
-      val task = enrichedTasks.find(t => t.host == "0").getOrElse(throw new RuntimeException("No matching task found on slave1"))
+      val clusterState = mesosCluster.state.value
+      val slaveId = clusterState.agents.find(_.attributes.attributes("node").toString.toDouble.toInt == 0).getOrElse(
+        throw new RuntimeException(s"failed to find agent1: attributes by agent=${clusterState.agents.map(_.attributes.attributes)}")
+      )
+      val task = enrichedTasks.find(t => t.slaveId.contains(slaveId.id)).getOrElse(
+        throw new RuntimeException("No matching task found on slave1")
+      )
 
       When("agent1 is stopped")
       mesosCluster.agents.head.stop()
@@ -130,6 +169,12 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       marathon.listDeploymentsForBaseGroup().value should have size 0
     }
   }
+
+  def matchEvent(status: String, app: App): CallbackEvent => Boolean = { event =>
+    event.info.get("taskStatus").contains(status) &&
+      event.info.get("appId").contains(app.id)
+  }
+
   def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&
       event.info.get("taskId").contains(task.id)

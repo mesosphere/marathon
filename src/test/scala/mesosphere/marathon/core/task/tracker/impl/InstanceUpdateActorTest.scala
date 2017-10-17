@@ -7,7 +7,7 @@ import akka.actor.{ Status, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.integration.setup.WaitTestSupport
@@ -237,7 +237,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
     }
   }
   class Fixture {
-    lazy val clock = ConstantClock()
+    lazy val clock = new SettableClock()
     lazy val opInitiator = TestProbe()
     lazy val actorMetrics = new InstanceUpdateActor.ActorMetrics()
     lazy val processor = mock[InstanceOpProcessor]

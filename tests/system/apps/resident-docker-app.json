@@ -1,0 +1,46 @@
+{
+  "id": "/resident-docker-app",
+  "instances": 1,
+  "cpus": 0.1,
+  "mem": 128,
+  "disk": 100,
+  "gpus": 0,
+  "container": {
+    "type": "DOCKER",
+    "volumes": [
+      {
+        "containerPath": "data",
+        "mode": "RW",
+        "persistent": {
+          "size": 100,
+          "type": "root"
+        }
+      }
+    ],
+    "docker": {
+      "image": "nginx",
+      "network": "USER",
+      "privileged": false,
+      "forcePullImage": false
+    }
+  },
+  "ipAddress": {
+    "networkName": "dcos"
+  },
+  "residency": {
+    "relaunchEscalationTimeoutSeconds": 3600,
+    "taskLostBehavior": "WAIT_FOREVER"
+  },
+  "healthChecks": [
+    {
+      "gracePeriodSeconds": 240,
+      "intervalSeconds": 10,
+      "timeoutSeconds": 10,
+      "maxConsecutiveFailures": 10,
+      "port": 80,
+      "path": "/",
+      "protocol": "HTTP",
+      "ignoreHttp1xx": false
+    }
+  ]
+}

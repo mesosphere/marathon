@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
@@ -24,7 +24,7 @@ class TaskTest extends UnitTest with Inside {
 
   class Fixture {
 
-    val clock = ConstantClock()
+    val clock = new SettableClock()
 
     val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
     val appVirtualNetworks = Seq(ContainerNetwork("whatever"))
@@ -45,7 +45,7 @@ class TaskTest extends UnitTest with Inside {
     val networkWithOneIp1 = MesosProtos.NetworkInfo.newBuilder.addIpAddresses(ipAddress1).build()
     val networkWithOneIp2 = MesosProtos.NetworkInfo.newBuilder.addIpAddresses(ipAddress2).build()
 
-    val networkWithMultipleIps = MesosProtos.NetworkInfo.newBuilder.addAllIpAddresses(Seq(ipAddress1, ipAddress2)).build()
+    val networkWithMultipleIps = MesosProtos.NetworkInfo.newBuilder.addAllIpAddresses(Seq(ipAddress1, ipAddress2).asJava).build()
 
     val host: String = "agent1.mesos"
 
@@ -244,8 +244,9 @@ class TaskTest extends UnitTest with Inside {
       val reservation = mock[Task.Reservation]
       val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
       val task = Task.Reserved(taskId, reservation, status, f.clock.now)
+      val newTaskId = Task.Id.forResidentTask(task.taskId)
 
-      val op = TaskUpdateOperation.LaunchOnReservation(f.clock.now, status)
+      val op = TaskUpdateOperation.LaunchOnReservation(newTaskId, f.clock.now, status)
 
       val effect = task.update(op)
 
@@ -278,8 +279,11 @@ class TaskTest extends UnitTest with Inside {
       val reservedTask: Task.Reserved = TestTaskBuilder.Helper.residentReservedTask(
         f.appWithoutIpAddress.id,
         taskReservationState = Task.Reservation.State.New(None),
-        LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
-        LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000"))
+        Seq(
+          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
+          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000")
+        )
+      )
 
       Json.toJson(reservedTask).as[Task] shouldBe reservedTask
     }
@@ -288,8 +292,11 @@ class TaskTest extends UnitTest with Inside {
       val f = new Fixture
       val launchedTask: Task.LaunchedOnReservation = TestTaskBuilder.Helper.residentLaunchedTask(
         f.appWithoutIpAddress.id,
-        LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
-        LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000"))
+        Seq(
+          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
+          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000")
+        )
+      )
 
       Json.toJson(launchedTask).as[Task] shouldBe launchedTask
     }

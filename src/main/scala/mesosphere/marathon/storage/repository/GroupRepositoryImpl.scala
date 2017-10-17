@@ -26,7 +26,7 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
-private[storage] case class StoredGroup(
+case class StoredGroup(
     id: PathId,
     appIds: Map[PathId, OffsetDateTime],
     podIds: Map[PathId, OffsetDateTime],
@@ -45,14 +45,14 @@ private[storage] case class StoredGroup(
       case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
         case NonFatal(ex) =>
           logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
-          None
+          throw ex
       }
     }
     val podFutures = podIds.map {
       case (podId, podVersion) => podRepository.getVersion(podId, podVersion).recover {
         case NonFatal(ex) =>
           logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
-          None
+          throw ex
       }
     }
 
@@ -78,7 +78,9 @@ private[storage] case class StoredGroup(
         pod.id -> pod
     }(collection.breakOut)
 
-    val groups: Map[PathId, Group] = await(Future.sequence(groupFutures)).map(group => group.id -> group)(collection.breakOut)
+    val groups: Map[PathId, Group] = await(Future.sequence(groupFutures)).map { group =>
+      group.id -> group
+    }(collection.breakOut)
 
     Group(
       id = id,
@@ -180,7 +182,8 @@ class StoredGroupRepositoryImpl[K, C, S](
   This gives us read-after-write consistency.
    */
   private val lock = RichLock()
-  private var rootFuture = Future.failed[RootGroup](new Exception("Root not yet loaded"))
+  private val rootNotLoaded: Future[RootGroup] = Future.failed[RootGroup](new Exception("Root not yet loaded"))
+  private var rootFuture: Future[RootGroup] = rootNotLoaded
   private[storage] var beforeStore = Option.empty[(StoredGroup) => Future[Done]]
   private val versionCache = TrieMap.empty[OffsetDateTime, Group]
 
@@ -240,6 +243,13 @@ class StoredGroupRepositoryImpl[K, C, S](
           root
       }
     }
+
+  override def invalidateGroupCache(): Future[Done] = {
+    lock {
+      rootFuture = rootNotLoaded
+      Future.successful(Done)
+    }
+  }
 
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     storedRepo.versions(RootId)

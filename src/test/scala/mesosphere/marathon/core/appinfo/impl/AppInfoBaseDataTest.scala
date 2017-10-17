@@ -3,7 +3,7 @@ package core.appinfo.impl
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep, DeploymentStepInfo }
 import mesosphere.marathon.core.group.GroupManager
@@ -29,7 +29,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
   class Fixture {
     val runSpecId = PathId("/test")
-    lazy val clock = ConstantClock()
+    lazy val clock = new SettableClock()
     lazy val instanceTracker = mock[InstanceTracker]
     lazy val healthCheckManager = mock[HealthCheckManager]
     lazy val marathonSchedulerService = mock[MarathonSchedulerService]
@@ -413,7 +413,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       Instance(
         instanceId = instanceId,
-        agentInfo = Instance.AgentInfo("", None, Nil),
+        agentInfo = Instance.AgentInfo("", None, None, None, Nil),
         state = InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default()),
         tasksMap = tasks,
         runSpecVersion = pod.version,
@@ -468,6 +468,26 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val maybeStatus3 = f.baseData.podInstanceStatus(instanceV3)(findPodSpecByVersion)
 
       maybeStatus3 should be ('empty)
+    }
+
+    "pod status for instances already removed from the group repo doesn't throw an exception" in { //DCOS-16151
+      implicit val f = new Fixture
+
+      Given("a pod definition")
+      val instance1 = fakeInstance(pod)
+
+      import mesosphere.marathon.core.async.ExecutionContexts.global
+      f.instanceTracker.instancesBySpec() returns
+        Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(pod.id, Seq(instance1))))
+
+      And("with no instances in the repo")
+      f.groupManager.podVersion(any, any) returns Future.successful(None)
+      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
+
+      When("requesting pod status")
+      val status = f.baseData.podStatus(pod).futureValue
+
+      Then("no exception was thrown so status was successfully fetched")
     }
   }
 }

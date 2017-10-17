@@ -5,6 +5,7 @@ uses:
   volumes: volumes.raml
   strings: stringTypes.raml
   pragma: pragma.raml
+  docker: docker.raml
 
 types:
   EngineType:
@@ -14,6 +15,7 @@ types:
       Container engine type. Supported engine types at the moment are DOCKER and MESOS.
   DockerCredentials:
     type: object
+    (pragma.deprecated): Deprecated since v1.5
     description: Credential to authenticate with the docker registry
     properties:
       principal:
@@ -114,6 +116,13 @@ types:
         description: |
           The credentials to fetch this container.
           Please note: this property is supported only with the Mesos containerizer, not the docker containerizer.
+        (pragma.deprecated): Deprecated since Marathon v1.5 in favor of pullConfig
+      pullConfig?:
+        type: docker.DockerPullConfig
+        description: |
+          Docker's config.json given as a secret name into a secret store
+          which corresponding value is a content of `~/.docker/config.json`.
+          It is supported only with Mesos containerizer.
       forcePullImage?:
         type: boolean
         description: |
@@ -176,7 +185,9 @@ types:
         default: DOCKER
       docker?: DockerContainer
       appc?: AppCContainer
-      volumes?: volumes.AppVolume[]
+      volumes?:
+        type: array
+        items: volumes.AppVolume
       portMappings?:
         type: ContainerPortMapping[]
         description: |

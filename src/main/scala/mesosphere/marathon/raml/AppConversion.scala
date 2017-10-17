@@ -8,15 +8,13 @@ import mesosphere.mesos.protos.Implicits._
 
 import scala.concurrent.duration._
 
-trait AppConversion extends ConstraintConversion with EnvVarConversion with HealthCheckConversion
+trait AppConversion extends DefaultConversions with ConstraintConversion with EnvVarConversion with HealthCheckConversion
     with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion with UnreachableStrategyConversion with KillSelectionConversion {
 
   import AppConversion._
 
-  implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
-
   implicit val artifactWrites: Writes[FetchUri, Artifact] = Writes { fetch =>
-    Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache)
+    Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache, fetch.outputFile)
   }
 
   implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, UpgradeStrategy] = Writes { strategy =>
@@ -128,8 +126,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
     val selectedStrategy = ResidencyAndUpgradeStrategy(
       app.residency.map(Raml.fromRaml(_)),
       app.upgradeStrategy.map(Raml.fromRaml(_)),
-      app.container.exists(_.volumes.exists(_.persistent.nonEmpty)),
-      app.container.exists(_.volumes.exists(_.external.nonEmpty))
+      hasPersistentVolumes = app.container.exists(_.volumes.existsAn[AppPersistentVolume]),
+      hasExternalVolumes = app.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
 
     val backoffStrategy = BackoffStrategy(
@@ -271,7 +269,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
     IpDiscoveryPort(
       number = port.whenOrElse(_.hasNumber, _.getNumber, IpDiscoveryPort.DefaultNumber),
       name = port.getName,
-      protocol = port.when(_.hasProtocol, _.getProtocol).flatMap(NetworkProtocol.fromString).getOrElse(IpDiscoveryPort.DefaultProtocol)
+      protocol = port.when(_.hasProtocol, _.getProtocol).flatMap(NetworkProtocol.fromString).getOrElse(IpDiscoveryPort.DefaultProtocol),
+      labels = port.getLabels.getLabelsList.map { label => label.getKey -> label.getValue }(collection.breakOut)
     )
   }
 
@@ -346,7 +345,7 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
       versionInfo = versionInfo, // we restore this but App-to-AppDefinition conversion drops it...
       killSelection = service.whenOrElse(_.hasKillSelection, _.getKillSelection.toRaml, App.DefaultKillSelection),
       unreachableStrategy = service.when(_.hasUnreachableStrategy, _.getUnreachableStrategy.toRaml).orElse(App.DefaultUnreachableStrategy),
-      tty = service.when(_.hasTty, _.getTty: TTY).orElse(App.DefaultTty)
+      tty = service.when(_.hasTty, _.getTty: Boolean).orElse(App.DefaultTty)
     )
     // special ports normalization when converting from protobuf, because the protos don't allow us to distinguish
     // between "I specified an empty set of ports" and "I specified a null set of ports" (for definitions and mappings).

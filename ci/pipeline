@@ -1,0 +1,187 @@
+#!/usr/bin/env amm
+
+// Get a logging backend into classpath.
+import $ivy.`org.slf4j:slf4j-simple:1.7.25`
+
+import ammonite.ops._
+import ammonite.ops.ImplicitWd._
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration._
+import scala.util.control.NonFatal
+import scala.util.Try
+
+import $file.awsClient
+import $file.fileUtil
+import $file.githubClient
+import $file.provision
+import $file.upgrade
+import $file.utils
+
+val PACKAGE_DIR: Path = pwd / 'target / 'universal
+val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
+
+/**
+ * Compile Marathon and run unit and integration tests followed by scapegoat.
+ */
+@main
+def compileAndTest(): Unit = utils.stage("Compile and Test") {
+
+  def run(cmd: String *) = utils.runWithTimeout(1.hour)(cmd)
+
+  run("sbt", "clean", "test", "integration:test", "scapegoat")
+
+  // Compile other projects.
+  run("sbt", "benchmark/compile")
+  run("sbt", "mesos-simulation/compile")
+  run("sbt", "plugin-interface/compile")
+}
+
+@main
+def zipSandboxLogs(): Unit = {
+  Try(%("tar", "-zcf", "sandboxes.tar.gz", "sandboxes"))
+}
+
+@main
+/**
+ * Upload Marathon tgz tarballs and its cha1 checksum to S3.
+ *
+ * @return Artifact description if it was uploaded.
+ */
+def uploadTarballToS3(): Option[awsClient.Artifact] = utils.stage("Upload Packages") {
+  import scala.collection.breakOut
+
+  PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
+    .headOption.flatMap(file => awsClient.archiveArtifact(Path(file)))
+}
+
+@main
+/**
+ * Packages Marathon and uploads its artifacts alongside sha1 checksum to S3.
+ *
+ * @return Version and artifact description of Marathon build.
+ */
+def createAndUploadPackages(): (String, Option[awsClient.Artifact]) = {
+  val version = createPackages()
+  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
+  val artifact = uploadTarballToS3()
+  awsClient.upload(docsPath)
+
+  createDockerAndLinux()
+  (version, artifact)
+}
+
+/**
+ * Creates the zip and txz files of the Marathon runnable package with their
+ * associated sha1
+ *
+ * @return version of build.
+ */
+@main
+def createPackages(): String = utils.stage("Package") {
+  val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball", "version")
+
+  // Regex is for version:
+  // starting with random chars, match $number$dot$number$dot$number followed by optional alpha numberic chars plus `-`
+  // ending with random characters
+  // we need to regex this string because we do have colored output in the `sbt version` command
+  val VersionLineRegex = "^.*(\\d+\\.\\d+\\.\\d+[-A-Za-z\\d]+).*$".r
+
+  // Nothing is what it seems. This is a poor man's way to extract the version
+  // from sbt's console output until we run our Ammonite scripts in sbt.
+  val version = result.out.lines.last match {
+    case VersionLineRegex(v) => v
+    case _ =>
+        val commit = %%('git, "log", "--pretty=format:%h", "-n1").out.lines.last
+        s"unkown version in commit $commit"
+  }
+  println(s"Built tarballs for Marathon $version.")
+  version
+}
+
+/**
+ * Create Docker, rpm and deb packages.
+ */
+@main
+def createDockerAndLinux(): Unit = utils.stage("Package Docker Image, Debian and RedHat Packages") {
+  %('sbt, "docker:publishLocal", "packageLinux")
+}
+
+/**
+ * The pipeline target for GitHub pull request builds. It wraps other targets
+ * and does some additional reporting to GitHub.
+ */
+def asPullRequest(run: => (String, Option[awsClient.Artifact])): Unit = {
+  val pullNumber: String = sys.env.getOrElse("CHANGE_ID", throw new IllegalArgumentException("No CHANGE_ID was defined."))
+  val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
+  val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
+
+  try {
+    githubClient.reject(pullNumber, buildUrl, buildTag)
+    val (_, maybeArtifact) = run
+    githubClient.reportSuccess(pullNumber, buildUrl, buildTag, maybeArtifact)
+  } catch {
+    case NonFatal(e) =>
+      githubClient.reportFailure(pullNumber, buildUrl, buildTag, e.getMessage())
+      throw e
+  }
+}
+
+/**
+ * Update DC/OS repository and triggers build of update DC/OS image.
+ *
+ * @param version The newly built Marathon version.
+ * @param artifactUrl Url for the saved Marathon artifact.
+ * @param sha1 The sah1 checksum of the artifact.
+ */
+@main
+def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
+  upgrade.updateMarathon(artifactUrl, sha1, s"Update Marathon to $version")
+  upgrade.updateMarathonEE(artifactUrl, sha1, s"Update Marathon to $version")
+}
+
+/**
+ * Run the main pipeline.
+ *
+ * @return Version and artifact description of Marathon build.
+ */
+@main
+def run(): (String, Option[awsClient.Artifact]) = {
+  utils.stage("Provision") {
+
+    // Set port range for random port 0 allocation.
+    %('sudo, "ci/set_port_range.sh")
+
+    provision.killStaleTestProcesses()
+    provision.installMesos()
+  }
+
+  try {
+    compileAndTest()
+  } finally {
+    zipSandboxLogs()    // Try to archive logs in any case
+  }
+
+  val (version, maybeArtifact) = createAndUploadPackages()
+
+  if(utils.isMasterBuild) {
+    maybeArtifact.foreach { artifact =>
+      updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
+    }
+  }
+
+  (version, maybeArtifact)
+}
+
+/**
+ * The main pipeline target for builds on Jenkins.
+ *
+ * @return Version and artifact description of Marathon build.
+ */
+@main
+def jenkins(): Unit = {
+  if(utils.isPullRequest) {
+    asPullRequest { run() }
+  } else {
+    run()
+  }
+}

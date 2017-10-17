@@ -225,7 +225,7 @@ class ResourceUtilTest extends UnitTest {
       .newBuilder()
       .setName(name)
       .setType(Value.Type.SET)
-      .setSet(Value.Set.newBuilder().addAllItem(labels))
+      .setSet(Value.Set.newBuilder().addAllItem(labels.asJava))
       .build()
   }
 
@@ -253,7 +253,7 @@ class ResourceUtilTest extends UnitTest {
       .newBuilder()
       .setName(name)
       .setType(Value.Type.RANGES)
-      .setRanges(Value.Ranges.newBuilder().addAllRange(ranges.map(toRange)))
+      .setRanges(Value.Ranges.newBuilder().addAllRange(ranges.map(toRange).asJava))
       .build()
   }
 

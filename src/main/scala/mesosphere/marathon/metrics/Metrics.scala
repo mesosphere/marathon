@@ -4,6 +4,7 @@ package metrics
 import akka.Done
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, Props }
 import akka.stream.scaladsl.Source
+import java.time.Clock
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.Histogram.DynamicRange
@@ -46,7 +47,7 @@ trait MinMaxCounter {
 
 trait Timer {
   def apply[T](f: => Future[T]): Future[T]
-  def forSource[T, M](f: => Source[T, M]): Source[T, M]
+  def forSource[T, M](f: => Source[T, M])(implicit clock: Clock = Clock.systemUTC): Source[T, M]
   def blocking[T](f: => T): T
   def update(value: Long): Timer
   def update(duration: FiniteDuration): Timer

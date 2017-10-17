@@ -8,25 +8,19 @@ import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.{ Failure, Result, Success }
-import kamon.Kamon
-import mesosphere.marathon.Normalization
-import mesosphere.marathon.ValidationFailedException
-import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
-import org.scalatest.matchers.{ Matcher, MatchResult }
+import mesosphere.marathon.test.Mockito
+import org.scalatest.matchers.{ BeMatcher, MatchResult }
 import org.scalatest._
-import org.scalatest.concurrent.{ JavaFutures, ScalaFutures }
-import org.scalatest.time.{ Seconds, Span }
-import mesosphere.marathon.api.v2.ValidationHelper
+import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
+import org.scalatest.time.{ Minute, Minutes, Seconds, Span }
+import mesosphere.marathon.integration.setup.RestResult
 
 import scala.concurrent.ExecutionContextExecutor
 
 /**
-  * Tests which are still unreliable should be marked with this tag until
-  * they sufficiently pass on master. Prefer this over ignored.
+  * Tests which fail due to a known issue can be tagged. They are executed but are marked as canceled when they fail.
   */
-object Unstable extends Tag("mesosphere.marathon.UnstableTest")
+case class KnownIssue(jira: String) extends Tag(s"mesosphere.marathon.KnownIssue:$jira")
 
 /**
   * All integration tests should be marked with this tag.
@@ -36,67 +30,33 @@ object Unstable extends Tag("mesosphere.marathon.UnstableTest")
 object IntegrationTag extends Tag("mesosphere.marathon.IntegrationTest")
 
 /**
-  * All time-sensitive integration tests should be marked with this tag.
-  *
-  * Some integrations are time dependent and excessive resource contention has been known to introduce probabilistic
-  * failure.
-  */
-object SerialIntegrationTag extends Tag("mesosphere.marathon.SerialIntegrationTest")
-
-/**
   * Tag that will conditionally enable a specific test case if an environment variable is set.
   * @param envVarName The name of the environment variable to check if it is set to "true"
+  * @param default The default value of the variable.
   * {{{
   *   "Something" should "do something" taggedAs WhenEnvSet("ABC") in {...}
   * }}}
   */
-case class WhenEnvSet(envVarName: String) extends Tag(if (sys.env.getOrElse(envVarName, "false") == "true") "" else classOf[Ignore].getName)
+case class WhenEnvSet(envVarName: String, default: String = "false") extends Tag(if (sys.env.getOrElse(envVarName, default) == "true") "" else classOf[Ignore].getName)
 
-/**
-  * Mixing in this trait will result in retrying a failed test again.
-  * If the second run succeeds, the result will be Canceled.
-  */
-trait RetryOnFailed extends TestSuite with Retries {
-  override def withFixture(test: NoArgTest): Outcome = withRetryOnFailure { super.withFixture(test) }
-}
+trait CancelFailedTestWithKnownIssue extends TestSuite {
 
-trait ValidationTestLike extends Validation {
-  this: Assertions =>
+  val cancelFailedTestsWithKnownIssue = sys.env.getOrElse("MARATHON_CANCEL_TESTS", "false") == "true"
+  val containsJira = """mesosphere\.marathon\.KnownIssue\:(\S+)""".r
 
-  protected implicit val normalizeResult: Normalization[Result] = Normalization {
-    // normalize failures => human readable error messages
-    case f: Failure => Failure(f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
-    case x => x
-  }
+  def knownIssue(testData: TestData): Option[String] = testData.tags.collectFirst{ case containsJira(jira) => jira }
 
-  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
-    // handle RAML validation errors
-    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
-    case th => throw th
-  }.get
-
-  def containViolation(tuple: (String, String)): Matcher[Result] = containViolation(tuple._1, tuple._2)
-
-  def containViolation(path: String, message: String): Matcher[Result] = {
-    Matcher {
-      case Success =>
-        MatchResult(
-          false,
-          s"result had no violations; expected ${path} -> ${message}",
-          s"result was success")
-
-      case f: Failure =>
-        val violations = ValidationHelper.getAllRuleConstrains(f)
-
-        MatchResult(
-          violations.exists { v =>
-            v.path.contains(path) && v.message == message
-          },
-          s"Violations:\n${violations.mkString("\n")} did not contain ${path} -> ${message}",
-          s"Violation contains ${path} -> ${message}"
-        )
+  def markAsCanceledOnFailure(jira: String)(blk: => Outcome): Outcome =
+    blk match {
+      case Failed(ex) => Canceled(s"Known issue $jira: ${ex.getMessage}", ex)
+      case other => other
     }
+
+  override def withFixture(test: NoArgTest): Outcome = knownIssue(test) match {
+    case Some(jira) if cancelFailedTestsWithKnownIssue => markAsCanceledOnFailure(jira) { super.withFixture(test) }
+    case _ => super.withFixture(test)
   }
+
 }
 
 /**
@@ -115,14 +75,13 @@ trait UnitTestLike extends WordSpecLike
     with AppendedClues
     with StrictLogging
     with Mockito
-    with ExitDisabledTest {
+    with BeforeAndAfterAll
+    with TimeLimitedTests
+    with CancelFailedTestWithKnownIssue {
 
-  override def beforeAll(): Unit = {
-    Kamon.start()
-    super.beforeAll()
-  }
+  override val timeLimit = Span(1, Minute)
 
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(3, Seconds))
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(5, Seconds))
 }
 
 abstract class UnitTest extends WordSpec with UnitTestLike
@@ -133,7 +92,6 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
       |akka.test.default-timeout=${patienceConfig.timeout.millisPart}
     """.stripMargin).withFallback(ConfigFactory.load())
   implicit lazy val system: ActorSystem = {
-    Kamon.start()
     ActorSystem(suiteName, akkaConfig)
   }
   implicit lazy val scheduler: Scheduler = system.scheduler
@@ -154,17 +112,40 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
 abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 
 trait IntegrationTestLike extends UnitTestLike {
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(90, Seconds), interval = Span(2, Seconds))
+  override val timeLimit = Span(15, Minutes)
+
+  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(300, Seconds))
+
+  /**
+    * Custom matcher for HTTP responses that print response body.
+    * @param status The expected status code.
+    */
+  class RestResultMatcher(status: Int) extends BeMatcher[RestResult[_]] {
+    def apply(left: RestResult[_]) =
+      MatchResult(
+        left.code == status,
+        s"Response code was not $status but ${left.code} with body '${left.entityString}'",
+        s"Response code was $status with body '${left.entityString}'"
+      )
+  }
+
+  val Accepted = new RestResultMatcher(202)
+  val BadGateway = new RestResultMatcher(502)
+  val Created = new RestResultMatcher(201)
+  val Conflict = new RestResultMatcher(409)
+  val Deleted = new RestResultMatcher(202)
+  val OK = new RestResultMatcher(200)
+  val NotFound = new RestResultMatcher(404)
+  val ServerError = new RestResultMatcher(500)
 }
 
-abstract class IntegrationTest extends WordSpec with IntegrationTestLike with RetryOnFailed
+abstract class IntegrationTest extends WordSpec with IntegrationTestLike
 
 trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike {
   protected override lazy val akkaConfig: Config = ConfigFactory.parseString(
     s"""
-       |akka.test.default-timeout=${patienceConfig.timeout.millisPart}
+       |akka.test.default-timeout=${patienceConfig.timeout.toMillis}
     """.stripMargin).withFallback(ConfigFactory.load())
 }
 
 abstract class AkkaIntegrationTest extends IntegrationTest with AkkaIntegrationTestLike
-

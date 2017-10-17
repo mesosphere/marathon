@@ -3,14 +3,19 @@ package core.storage.store.impl.zk
 
 import akka.Done
 import akka.util.ByteString
+import mesosphere.marathon.core.async.ExecutionContexts
+import mesosphere.marathon.core.base._
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.RichLock
 import org.apache.curator.RetryPolicy
-import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pathable }
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
+import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pathable }
+import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ ACL, Stat }
-import scala.annotation.tailrec
+
 import mesosphere.marathon.core.base.LifecycleState
+import org.apache.curator.framework.state.{ ConnectionState, ConnectionStateListener }
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -24,16 +29,19 @@ import scala.util.control.NonFatal
   *
   * @param client The underlying Curator client.
   */
-class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
+class RichCuratorFramework(val client: CuratorFramework) {
+
+  val lock = RichLock()
+
   def usingNamespace(namespace: String): RichCuratorFramework = {
     new RichCuratorFramework(client.usingNamespace(namespace))
   }
 
-  def close(): Unit = {
+  def close(): Unit = lock {
     client.close()
   }
 
-  def start(): Unit = {
+  def start(): Unit = lock {
     client.start()
   }
 
@@ -51,7 +59,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
       if (`protected`) builder.withProtection()
       if (creatingParentsIfNeeded) builder.creatingParentsIfNeeded()
       if (creatingParentContainersIfNeeded) builder.creatingParentContainersIfNeeded()
-      if (acls.nonEmpty) builder.withACL(acls)
+      if (acls.nonEmpty) builder.withACL(acls.asJava)
       builder.withMode(createMode)
       data.fold(builder.forPath(path)) { bytes =>
         builder.forPath(path, bytes.toArray)
@@ -120,13 +128,14 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
     // sadly, the builder doesn't export BackgroundPathable, but the impl is.
     build(builder.asInstanceOf[BackgroundPathable[_]], ZkFuture.setAcl) { _ =>
       version.foreach(builder.withVersion)
-      builder.withACL(acls)
+      builder.withACL(acls.asJava)
       // it doesn't export Pathable either?
       builder.asInstanceOf[Pathable[_]].forPath(path)
     }
   }
 
-  private def build[A <: Backgroundable[_], B](builder: A, future: ZkFuture[B])(f: A => Unit): Future[B] = {
+  private def build[A <: Backgroundable[_], B](builder: A, future: ZkFuture[B])(f: A => Unit): Future[B] = lock {
+    if (client.getState() == CuratorFrameworkState.STOPPED) future.fail(new IllegalStateException("Curator connection to ZooKeeper has been stopped."))
     try {
       builder.inBackground(future)
       f(builder)
@@ -149,30 +158,51 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
     */
   @SuppressWarnings(Array("CatchFatal"))
   def blockUntilConnected(lifecycleState: LifecycleState): Unit = {
-    val timeoutAt: Long = System.currentTimeMillis() + client.getZookeeperClient.getConnectionTimeoutMs
+    val zkTimeout: Int = client.getZookeeperClient.getConnectionTimeoutMs
+    val timeoutAt: Long = System.currentTimeMillis() + zkTimeout
+    var connected = false
 
-    @tailrec def poll(): Unit = {
-      if (System.currentTimeMillis > timeoutAt)
-        throw new InterruptedException("timed out while waiting for zookeeper connection")
-      else if (!lifecycleState.isRunning)
+    while (!connected && System.currentTimeMillis <= timeoutAt) {
+      if (!lifecycleState.isRunning) {
         throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")
-      else try {
-        client.blockUntilConnected(1, java.util.concurrent.TimeUnit.SECONDS)
+      }
+
+      try {
+        connected = client.blockUntilConnected(zkTimeout, java.util.concurrent.TimeUnit.MILLISECONDS)
       } catch {
-        case _: InterruptedException =>
-          poll()
+        case _: InterruptedException => // ignore
       }
     }
 
-    poll()
+    if (!connected) {
+      throw new InterruptedException("timed out while waiting for zookeeper connection")
+    }
   }
 }
 
 object RichCuratorFramework {
-  def apply(client: CuratorFramework): RichCuratorFramework = new RichCuratorFramework(client)
+
+  /**
+    * Listen to connection state changes and suicide if the connection to ZooKeeper is lost.
+    */
+  object ConnectionLostListener extends ConnectionStateListener {
+    override def stateChanged(client: CuratorFramework, newState: ConnectionState): Unit = {
+      if (!newState.isConnected) {
+        client.close()
+        Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
+      }
+    }
+  }
+
+  def apply(client: CuratorFramework): RichCuratorFramework = {
+    client.getConnectionStateListenable().addListener(ConnectionLostListener)
+    new RichCuratorFramework(client)
+  }
   def apply(uri: String, retryPolicy: RetryPolicy): RichCuratorFramework = {
     val c = CuratorFrameworkFactory.newClient(uri, retryPolicy)
+    c.getConnectionStateListenable().addListener(ConnectionLostListener)
     c.start()
+
     new RichCuratorFramework(c)
   }
 }

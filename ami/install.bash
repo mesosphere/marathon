@@ -18,53 +18,54 @@ apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E8
 
 # Add Mesos repo.
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
-echo "deb http://repos.mesosphere.com/debian jessie-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
-echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
-echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+  echo "deb http://repos.mesosphere.com/debian jessie-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+  echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+  echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
 
-apt-get -y update
+  apt-get -y update
+
+# Add github.com to known hosts
+ssh-keyscan github.com >> /home/admin/.ssh/known_hosts
+ssh-keyscan github.com >> /root/.ssh/known_hosts
 
 # Install dependencies
-apt-get install -y \
-    git \
-    php5-cli \
-    php5-curl \
-    sbt \
-    docker-engine \
-    curl \
-    build-essential \
-    rpm \
-    ruby \
-    ruby-dev
-
 apt install -t jessie-backports -y openjdk-8-jdk
+update-java-alternatives -s java-1.8.0-openjdk-amd64
 
-# Install fpm which is used for deb and rpm packaging.
-gem install fpm
+apt-get install -y \
+        git \
+        sbt \
+        docker-engine \
+        curl \
+        build-essential \
+        rpm \
+        npm
 
 # Download (but don't install) Mesos and its dependencies.
 # The CI task will install Mesos later.
-apt-get install -y -d mesos
-
-# Add arcanist
-mkdir -p /opt/arcanist
-git clone https://github.com/phacility/libphutil.git /opt/arcanist/libphutil
-git clone https://github.com/phacility/arcanist.git /opt/arcanist/arcanist
-ln -sf /opt/arcanist/arcanist/bin/arc /usr/local/bin/
+apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
+systemctl stop mesos-master.service mesos-slave.service mesos_executor.slice
 
 # Add user to docker group
 gpasswd -a admin docker
 
+# Nodejs: add the NodeSource APT repository for Debian-based distributions repository AND the PGP key for verifying packages
+curl -sL https://deb.nodesource.com/setup_6.x | bash -
+apt-get install -y nodejs
+
 # Setup system
 systemctl enable docker
 update-ca-certificates -f
-update-java-alternatives -s java-1.8.0-openjdk-amd64
 
-echo "{\"hosts\":{\"https://phabricator.mesosphere.com/api/\":{\"token\":\"$CONDUIT_TOKEN\"}}}" > /home/admin/.arcrc
-chown admin /home/admin/.arcrc
-curl -o /usr/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64
+# Install jq
+curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && sudo chmod +x /usr/local/bin/jq
 
-# Warmup ivy2 cache
+# Install Ammonite
+curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm
+
+# Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
+# so we need ivy2 cache in `/root`
 git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
-su - admin -c "cd /home/admin/marathon && sbt update"
+cd /home/admin/marathon
+sbt update
 rm -rf /home/admin/marathon

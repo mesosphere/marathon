@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package util
 
+import com.typesafe.scalalogging.StrictLogging
 import java.util.concurrent.locks.{ ReentrantLock, ReentrantReadWriteLock }
 
 class RichLock(val lock: ReentrantLock) extends AnyVal {
@@ -19,23 +20,30 @@ object RichLock {
   def apply(lock: ReentrantLock): RichLock = new RichLock(lock)
 }
 
-class Lock[T](private val value: T, fair: Boolean = true) {
+class Lock[T](private val value: T, fair: Boolean = true) extends StrictLogging {
   private val lock = RichLock(fair)
 
   def apply[R](f: T => R): R = lock {
     f(value)
   }
 
-  override def equals(o: Any): Boolean = o match {
-    case r: Lock[T] => lock {
-      r.lock {
-        value.equals(r.value)
-      }
-    }
-    case r: T @unchecked => lock {
-      value.equals(r)
-    }
-    case _ => false
+  /**
+    * Previously, this method was too smart and had a serious flaw. Given lock a and lock b, the following could
+    * deadlock:
+    *
+    *     Future { a == b }
+    *     Future { b == a }
+    *
+    * Throwing an exception seems safer than changing the behavior, as this way existing attempts to rely on this
+    * behavior are much more obvious.
+    *
+    * After some time, we can remove the exception and use the default Java equals method (compare identity).
+    */
+  override def equals(o: Any): Boolean = {
+    val ex = new RuntimeException(
+      "Comparing two locked values was not safe and is no longer allowed.")
+    logger.error("attempted usage of equals; remove!", ex)
+    throw ex
   }
 
   override def hashCode(): Int = lock(value.hashCode())

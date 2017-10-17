@@ -1,90 +1,96 @@
 """Tests for root marathon specific to frameworks and readinessChecks """
-import pytest
+
+import apps
 import time
-import uuid
 import shakedown
 
-from common import fake_framework_app
+from datetime import timedelta
 from dcos import marathon
-from dcos.errors import DCOSException
+from dcos.errors import DCOSUnprocessableException
 
 
 def test_deploy_custom_framework():
-    """ Launches an app that has elements necessary to create a service endpoint in DCOS.
-        This test confirms that the endpoint is created from the root marathon.
+    """Launches an app that has necessary elements to create a service endpoint in DCOS.
+       This test confirms that the endpoint is created by the root Marathon.
     """
 
     client = marathon.create_client()
-    client.add_app(fake_framework_app())
-    shakedown.deployment_wait()
+    client.add_app(apps.fake_framework())
+    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
 
-    assert shakedown.wait_for_service_endpoint('pyfw')
+    assert shakedown.wait_for_service_endpoint('pyfw', timedelta(minutes=5).total_seconds()), \
+        "The framework has not showed up"
 
 
-def test_readiness_time_check():
-    """ Test that an app is still in deployment until the readiness check.
-    """
-    client = marathon.create_client()
-    fw = fake_framework_app()
-    # testing 30 sec interval
+def test_framework_readiness_time_check():
+    """Tests that an app is being in deployment until the readiness check is done."""
+
+    fw = apps.fake_framework()
     readiness_time = 30
     fw['readinessChecks'][0]['intervalSeconds'] = readiness_time
+
+    client = marathon.create_client()
     deployment_id = client.add_app(fw)
+
     time.sleep(readiness_time - 10)  # not yet.. still deploying
     deployment = client.get_deployment(deployment_id)
-    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False
+    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
+        "The application is read"
 
-    # time after 30 secs
     time.sleep(readiness_time + 1)
-    assert client.get_deployment(deployment_id) is None
+    assert client.get_deployment(deployment_id) is None, "The application is still being deployed"
 
 
-def test_rollback_before_ready():
-    """ Tests the rollback of an app that didn't complete readiness.
-    """
-    client = marathon.create_client()
-    fw = fake_framework_app()
-    # testing 30 sec interval
+def test_framework_rollback_before_ready():
+    """Tests the rollback of an app that didn't complete readiness."""
+
+    fw = apps.fake_framework()
     readiness_time = 30
     fw['readinessChecks'][0]['intervalSeconds'] = readiness_time
+
+    client = marathon.create_client()
     deployment_id = client.add_app(fw)
 
-    # 2 secs later it is still deploying
+    # 2 secs later it is still being deployed
     time.sleep(2)
     deployment = client.get_deployment(deployment_id)
-    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False
+    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
+        "The application is ready, but it should not be"
 
     client.rollback_deployment(deployment_id)
     # normally deployment would take another 28 secs
 
-    assert client.get_deployment(deployment_id) is None
+    assert client.get_deployment(deployment_id) is None, "The application is still being deployed"
 
 
-def test_single_instance():
-    """ Tests to see that marathon honors instance instance apps (such as a framework).
-        They do not scale past 1.
+def test_framework_has_single_instance():
+    """Verifies that Marathon honors the maximum number of instances in cases of frameworks,
+       which cannot be greater than 1.
     """
-    client = marathon.create_client()
-    fw = fake_framework_app()
-    # testing 30 sec interval
+
+    fw = apps.fake_framework()
     fw['instances'] = 2
 
-    try:
-        deployment_id = client.add_app(fw)
-    except DCOSException as e:
-        assert e.status() == 422
-    else:
-        assert False, "Exception expected for number of instances requested"
-
-
-def test_readiness_test_timeout():
-    """ Tests a poor readiness check.
-    """
     client = marathon.create_client()
-    fw = fake_framework_app()
+    try:
+        client.add_app(fw)
+    except DCOSUnprocessableException as e:
+        assert e.status() == 422, "HTTP status code {} is NOT 422".format(e.status())
+    else:
+        assert False, "Exception was expected"
+
+
+def test_framework_never_deploys_due_to_bad_readiness_check():
+    """Tests a poor readiness check."""
+
+    fw = apps.fake_framework()
     fw['readinessChecks'][0]['path'] = '/bad-path'
+
+    client = marathon.create_client()
     deployment_id = client.add_app(fw)
     time.sleep(60)
     deployment = client.get_deployment(deployment_id)
-    assert deployment is not None
-    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False
+
+    assert deployment is not None, "The deployment finished, but it should not"
+    assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False, \
+        "The application is ready, but it is expected not to be"

@@ -2,12 +2,14 @@ package mesosphere.marathon
 package core.group.impl
 
 import java.time.OffsetDateTime
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Provider
 
-import akka.NotUsed
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
+import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
@@ -22,13 +24,13 @@ import mesosphere.marathon.util.{ LockedVar, WorkQueue }
 import scala.async.Async._
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class GroupManagerImpl(
     config: GroupManagerConfig,
-    initialRoot: RootGroup,
+    initialRoot: Option[RootGroup],
     groupRepository: GroupRepository,
     deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
   /**
@@ -45,7 +47,22 @@ class GroupManagerImpl(
     */
   private[this] val root = LockedVar(initialRoot)
 
-  override def rootGroup(): RootGroup = root.get()
+  @SuppressWarnings(Array("OptionGet"))
+  override def rootGroup(): RootGroup =
+    root.get() match { // linter:ignore:UseGetOrElseNotPatMatch
+      case None =>
+        root.update {
+          case None =>
+            val group = Await.result(groupRepository.root(), config.zkTimeoutDuration)
+            registerMetrics()
+            Some(group)
+          case group =>
+            group
+        }.get
+      case Some(group) => group
+    }
+
+  override def rootGroupOption(): Option[RootGroup] = root.get()
 
   override def versions(id: PathId): Source[Timestamp, NotUsed] = {
     groupRepository.rootVersions().mapAsync(Int.MaxValue) { version =>
@@ -81,6 +98,8 @@ class GroupManagerImpl(
 
   override def app(id: PathId): Option[AppDefinition] = rootGroup().app(id)
 
+  override def apps(ids: Set[PathId]) = ids.map(appId => appId -> app(appId))(collection.breakOut)
+
   override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
 
   @SuppressWarnings(Array("all")) /* async/await */
@@ -105,13 +124,13 @@ class GroupManagerImpl(
         await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
         logger.info(s"Updated groups/apps/pods according to plan ${plan.id}")
         // finally update the root under the write lock.
-        root := plan.target
+        root := Option(plan.target)
         plan
       }
     }
     deployment.onComplete {
       case Success(plan) =>
-        logger.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
+        logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.target.id} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
       case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event
@@ -190,6 +209,37 @@ class GroupManagerImpl(
 
     dynamicApps.foldLeft(to) { (rootGroup, app) =>
       rootGroup.updateApp(app.id, _ => app, app.version)
+    }
+  }
+
+  @SuppressWarnings(Array("all")) // async/await
+  override def invalidateGroupCache(): Future[Done] = async {
+    root := None
+
+    // propagation of reset group caches on repository is needed,
+    // because manager and repository are holding own caches
+    await(groupRepository.invalidateGroupCache())
+
+    // force fetching of the root group from the group repository
+    rootGroup()
+    Done
+  }
+
+  private[this] val metricsRegistered: AtomicBoolean = new AtomicBoolean(false)
+  private[this] def registerMetrics(): Unit = {
+    if (metricsRegistered.compareAndSet(false, true)) {
+      // We've already released metrics using these names, so we can't use the Metrics.* methods
+      Kamon.metrics.gauge("service.mesosphere.marathon.app.count") {
+        rootGroupOption().foldLeft(0L) { (_, group) =>
+          group.transitiveApps.size.toLong
+        }
+      }
+
+      Kamon.metrics.gauge("service.mesosphere.marathon.group.count") {
+        rootGroupOption().foldLeft(0L) { (_, group) =>
+          group.transitiveGroupsById.size.toLong
+        }
+      }
     }
   }
 }

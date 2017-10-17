@@ -6,6 +6,7 @@ get:
       description: The host and port of the current leading master.
       body:
         application/json:
+          type: info.LeaderInfo
           example: |
             {
                 "leader": "marathon.globalcorp.com:8080"
@@ -14,6 +15,7 @@ get:
       description: If there is no current leader.
       body:
         application/json:
+          type: strings.Message
           example: |
             {
               "message":"There is no leader"
@@ -21,7 +23,33 @@ get:
 
 
 delete:
-  description: Causes the current leader to abdicate, triggering a new election.
+  description: |
+    Causes the current leader to abdicate, triggering a new election.
+
+    Abdicating a Marathon instance causes this instance to exit.
+    The underlying system is responsible for restarting this instance.
+
+    Every abdication triggers a new leader election.
+    The next elected leader will read the state from the persistent store and continue the work from the previous leader.
+
+    It is possible to use this endpoint to trigger a backup or restore operation for the persistent data store.
+    The requested operation will be perfomed by the next leading Marathon master.
+    Currently two providers are allowed:
+    - File provider: file:///path/to/file
+    - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1
+      Please note: access_key and secret_key are optional.
+      If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
+
+
+  queryParameters:
+    backup?:
+      required: false
+      description: URI to backup zk state.
+      example: file:///var/backup/marathon/backup
+    restore?:
+      required: false
+      description: URI to restore zk state.
+      example: file:///var/backup/marathon/backup
   responses:
     200:
       description: The abdication message from the current leader.

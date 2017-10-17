@@ -9,7 +9,7 @@ import kamon.metric.instrument.Time
 import mesosphere.marathon.core.group.impl.GroupManagerImpl
 import mesosphere.marathon.storage.repository.GroupRepository
 
-import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.ExecutionContext
 
 /**
   * Provides a [[GroupManager]] implementation.
@@ -20,16 +20,7 @@ class GroupManagerModule(
     groupRepo: GroupRepository)(implicit ctx: ExecutionContext, eventStream: EventStream) {
 
   val groupManager: GroupManager = {
-    val groupManager = new GroupManagerImpl(config, Await.result(groupRepo.root(), config.zkTimeoutDuration), groupRepo, scheduler)
-
-    // We've already released metrics using these names, so we can't use the Metrics.* methods
-    Kamon.metrics.gauge("service.mesosphere.marathon.app.count")(
-      groupManager.rootGroup().transitiveApps.size.toLong
-    )
-
-    Kamon.metrics.gauge("service.mesosphere.marathon.group.count")(
-      groupManager.rootGroup().transitiveGroupsById.size.toLong
-    )
+    val groupManager = new GroupManagerImpl(config, None, groupRepo, scheduler)
 
     val startedAt = System.currentTimeMillis()
     Kamon.metrics.gauge("service.mesosphere.marathon.uptime", Time.Milliseconds)(

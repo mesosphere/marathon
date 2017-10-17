@@ -22,7 +22,7 @@ private[deployment] object DeploymentPlanReverter {
     * If there were concurrent changes, this method tries to revert the changes
     * of this deployment only without affecting the other deployments.
     */
-  def revert(original: RootGroup, target: RootGroup, newVersion: Timestamp = Timestamp.now()): RootGroup => RootGroup = {
+  def revert(original: RootGroup, target: RootGroup, newVersion: Timestamp = Group.defaultVersion): RootGroup => RootGroup = {
 
     def changesOnIds[T](originalById: Map[PathId, T], targetById: Map[PathId, T]): Seq[(Option[T], Option[T])] = {
       val ids = originalById.keys ++ targetById.keys
@@ -51,8 +51,8 @@ private[deployment] object DeploymentPlanReverter {
     * because groups are not locked by deployments and concurrent changes are allowed.
     */
   private[this] def revertGroupChanges(
-    version: Timestamp, groupChanges: Seq[(Option[Group], Option[Group])])(
-    rootGroup: RootGroup): RootGroup = {
+    version: Timestamp = Group.defaultVersion,
+    groupChanges: Seq[(Option[Group], Option[Group])])(rootGroup: RootGroup): RootGroup = {
 
     def revertGroupRemoval(oldGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {
       log.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)

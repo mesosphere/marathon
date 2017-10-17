@@ -37,11 +37,27 @@ class HttpEventStreamServletTest extends UnitTest {
       Then("we receive a Unauthorized response")
       verify(response).setStatus(f.auth.UnauthorizedStatus)
     }
+
+    "Have TRACE disabled for /v2/events" in {
+      Given("A request response mock")
+      val f = new Fixture
+      val resource = f.streamServlet()
+      val response = mock[HttpServletResponse]
+      f.auth.authenticated = true
+      f.auth.authorized = true
+
+      When("TRACE is fired for /v2/events")
+      resource.doTrace(f.auth.request, response)
+
+      Then("TRACE is not allowed")
+      verify(response, atLeastOnce).sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED)
+    }
   }
+
   class Fixture {
     val actor = mock[ActorRef]
     val auth = new TestAuthFixture
-    val config = AllConf.withTestConfig("--event_subscriber", "http_callback")
+    val config = AllConf.withTestConfig()
     def streamServlet() = new HttpEventStreamServlet(actor, config, auth.auth, auth.auth)
   }
 }

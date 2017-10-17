@@ -142,7 +142,7 @@ def create_scale_graph(stats, metadata, file_name='scale.png'):
 
     # figure size, borders and padding
     fig.subplots_adjust(left=0.12, bottom=0.08, right=0.90, top=0.90, wspace=0.25, hspace=0.40)
-    fig.set_size_inches(8.5, 6)
+    fig.set_size_inches(9.5, 9.5)
 
     # Titles and X&Y setup
     time_plot.title.set_text('Marathon Scale Test for v{}'.format(metadata['marathon-version']))
@@ -162,7 +162,7 @@ def create_scale_graph(stats, metadata, file_name='scale.png'):
     # graph of all the things
     for test_type in test_types:
         plot_test_timing(time_plot, stats, marathon_type, test_type, xticks)
-    time_plot.legend(loc='upper left')
+    time_plot.legend(loc='upper center', bbox_to_anchor=(0.47, -0.15),fancybox=False, shadow=False, ncol=5)
 
     # graph the errors if they exist
     if error_plot is not None:
@@ -172,7 +172,7 @@ def create_scale_graph(stats, metadata, file_name='scale.png'):
             if largest > top:
                 top = largest
 
-        error_plot.legend(loc='upper left')
+        error_plot.legend(loc='upper center', bbox_to_anchor=(0.47, -0.10),fancybox=False, shadow=False, ncol=5)
         error_plot.set_ylim(bottom=0, top=roundup_to_nearest_10(top))
 
     plt.savefig(file_name)

@@ -1,6 +1,7 @@
 package mesosphere.mesos
 
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.serialization.SecretSerializer
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHealthCheck }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod._
@@ -27,7 +28,8 @@ object TaskGroupBuilder extends StrictLogging {
 
   case class BuilderConfig(
     acceptedResourceRoles: Set[String],
-    envVarsPrefix: Option[String])
+    envVarsPrefix: Option[String],
+    mesosBridgeName: String)
 
   def build(
     podDefinition: PodDefinition,
@@ -41,7 +43,7 @@ object TaskGroupBuilder extends StrictLogging {
 
     val allEndpoints = podDefinition.containers.flatMap(_.endpoints)
 
-    val mesosNetworks = buildMesosNetworks(podDefinition.networks, allEndpoints, resourceMatch.hostPorts)
+    val mesosNetworks = buildMesosNetworks(podDefinition.networks, allEndpoints, resourceMatch.hostPorts, config.mesosBridgeName)
 
     val executorInfo = computeExecutorInfo(
       podDefinition,
@@ -60,13 +62,13 @@ object TaskGroupBuilder extends StrictLogging {
 
     val taskGroup = mesos.TaskGroupInfo.newBuilder.addAllTasks(
       podDefinition.containers.map { container =>
-        val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
-        val portAssignments = computePortAssignments(podDefinition, endpoints)
+      val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
+      val portAssignments = computePortAssignments(podDefinition, endpoints)
 
-        computeTaskInfo(container, podDefinition, offer, instanceId, resourceMatch.hostPorts, config, portAssignments)
-          .setDiscovery(taskDiscovery(podDefinition, endpoints))
-          .build
-      }
+      computeTaskInfo(container, podDefinition, offer, instanceId, resourceMatch.hostPorts, config, portAssignments)
+        .setDiscovery(taskDiscovery(podDefinition, endpoints))
+        .build
+    }.asJava
     )
 
     // call all configured run spec customizers here (plugin)
@@ -81,7 +83,8 @@ object TaskGroupBuilder extends StrictLogging {
   private[mesos] def buildMesosNetworks(
     networks: Seq[Network],
     endpoints: Seq[raml.Endpoint],
-    hostPorts: Seq[Option[Int]]): Seq[mesos.NetworkInfo] = {
+    hostPorts: Seq[Option[Int]],
+    mesosBridgeName: String): Seq[mesos.NetworkInfo] = {
 
     assume(
       endpoints.size == hostPorts.size,
@@ -125,6 +128,12 @@ object TaskGroupBuilder extends StrictLogging {
               b.addPortMappings(pm)
         }
         b.build
+      case bridgeNetwork: BridgeNetwork =>
+        val b = mesos.NetworkInfo.newBuilder
+          .setName(mesosBridgeName)
+          .setLabels(bridgeNetwork.labels.toMesosLabels)
+        portMappings.foreach{ case (_, pm) => b.addPortMappings(pm) }
+        b.build()
     }
   }
 
@@ -155,7 +164,7 @@ object TaskGroupBuilder extends StrictLogging {
       builder.setLabels(mesos.Labels.newBuilder.addAllLabels(container.labels.map {
         case (key, value) =>
           mesos.Label.newBuilder.setKey(key).setValue(value).build
-      }))
+      }.asJava))
 
     val commandInfo = computeCommandInfo(
       podDefinition,
@@ -194,7 +203,7 @@ object TaskGroupBuilder extends StrictLogging {
     executorInfo.addResources(scalarResource("mem", podDefinition.executorResources.mem))
     executorInfo.addResources(scalarResource("disk", podDefinition.executorResources.disk))
     executorInfo.addResources(scalarResource("gpus", podDefinition.executorResources.gpus.toDouble))
-    executorInfo.addAllResources(portsMatch.resources)
+    executorInfo.addAllResources(portsMatch.resources.asJava)
 
     if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
       val containerInfo = mesos.ContainerInfo.newBuilder
@@ -247,7 +256,7 @@ object TaskGroupBuilder extends StrictLogging {
           commandInfo.setValue(shell)
         case raml.ArgvCommand(argv) =>
           commandInfo.setShell(false)
-          commandInfo.addAllArguments(argv)
+          commandInfo.addAllArguments(argv.asJava)
           if (exec.overrideEntrypoint.getOrElse(false)) {
             argv.headOption.foreach(commandInfo.setValue)
           }
@@ -270,7 +279,7 @@ object TaskGroupBuilder extends StrictLogging {
       uri.build
     }
 
-    commandInfo.addAllUris(uris)
+    commandInfo.addAllUris(uris.asJava)
 
     val podEnvVars = podDefinition.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 
@@ -297,7 +306,7 @@ object TaskGroupBuilder extends StrictLogging {
           mesos.Environment.Variable.newBuilder.setName(name).setValue(value).build
       }
 
-    commandInfo.setEnvironment(mesos.Environment.newBuilder.addAllVariables(envVars))
+    commandInfo.setEnvironment(mesos.Environment.newBuilder.addAllVariables(envVars.asJava))
   }
 
   private[mesos] def computeContainerInfo(
@@ -334,6 +343,8 @@ object TaskGroupBuilder extends StrictLogging {
               ))
 
           containerInfo.addVolumes(volume)
+
+        case _: SecretVolume => // Is handled in the plugins
       }
     }
 
@@ -345,7 +356,9 @@ object TaskGroupBuilder extends StrictLogging {
       im.kind match {
         case raml.ImageType.Docker =>
           val docker = mesos.Image.Docker.newBuilder.setName(im.id)
-
+          im.pullConfig.foreach { pullConfig =>
+            docker.setConfig(SecretSerializer.toSecretReference(pullConfig.secret))
+          }
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
         case raml.ImageType.Appc =>
           val appcLabels = (LinuxAmd64 ++ im.labels).toMesosLabels
@@ -358,7 +371,7 @@ object TaskGroupBuilder extends StrictLogging {
     }
 
     // attach a tty if specified
-    container.tty.foreach(containerInfo.setTtyInfo(_))
+    container.tty.filter(tty => tty).foreach(containerInfo.setTtyInfo(_))
 
     // Only create a 'ContainerInfo' when some of it's fields are set.
     // If no fields other than the type have been set, then we shouldn't pass the container info
@@ -458,7 +471,7 @@ object TaskGroupBuilder extends StrictLogging {
 
   private def taskDiscovery(pod: PodDefinition, endpoints: Seq[Endpoint]): mesos.DiscoveryInfo = {
     val ports = PortDiscovery.generateForPod(pod.networks, endpoints)
-    mesos.DiscoveryInfo.newBuilder.setPorts(mesos.Ports.newBuilder.addAllPorts(ports))
+    mesos.DiscoveryInfo.newBuilder.setPorts(mesos.Ports.newBuilder.addAllPorts(ports.asJava))
       .setName(pod.id.toHostname)
       .setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
       .build

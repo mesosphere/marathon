@@ -18,3 +18,7 @@ start.sh
 *.iws
 __pycache__
 .history
+native/
+sandboxes/
+sandboxes.tar.gz
+tests/performance/results

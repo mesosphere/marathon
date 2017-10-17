@@ -90,7 +90,7 @@ object InstanceOp {
         if (withDisk.nonEmpty) {
           val destroyOp =
             MesosProtos.Offer.Operation.Destroy.newBuilder()
-              .addAllVolumes(withDisk)
+              .addAllVolumes(withDisk.asJava)
 
           val op =
             MesosProtos.Offer.Operation.newBuilder()
@@ -104,8 +104,8 @@ object InstanceOp {
       val maybeUnreserve: Option[MesosProtos.Offer.Operation] =
         if (withDisk.nonEmpty || reservationsForDisks.nonEmpty) {
           val unreserveOp = MesosProtos.Offer.Operation.Unreserve.newBuilder()
-            .addAllResources(withoutDisk)
-            .addAllResources(reservationsForDisks)
+            .addAllResources(withoutDisk.asJava)
+            .addAllResources(reservationsForDisks.asJava)
             .build()
           val op =
             MesosProtos.Offer.Operation.newBuilder()

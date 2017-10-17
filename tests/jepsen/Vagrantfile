@@ -1,0 +1,25 @@
+VAGRANTFILE_API_VERSION = "2"
+
+cluster_size = 3
+if ENV['JEPSEN_CLUSTER_SIZE']
+  cluster_size = ENV['JEPSEN_CLUSTER_SIZE']
+end
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  (1..Integer("#{cluster_size}")).each do |i|
+    nodename = "n#{i}"
+    config.vm.box = "ubuntu/xenial64"
+    config.vm.provision "shell", inline: <<-SHELL
+       echo "ubuntu:ubuntu" | sudo chpasswd;
+       echo "127.0.0.1  n#{i}" | sudo tee -a /etc/hosts
+    SHELL
+    config.vm.define nodename do |node|
+      node.vm.hostname = nodename
+      node.vm.network :private_network, ip: "10.20.30.#{i+1}"
+      node.vm.provider :virtualbox do |vb|
+        vb.name = nodename
+        vb.customize ["modifyvm", :id, "--memory", 2048, "--natdnshostresolver1", "on"]
+      end
+    end
+  end
+end

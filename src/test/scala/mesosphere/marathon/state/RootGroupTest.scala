@@ -150,7 +150,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be("Groups and Applications may not have the same identifier.")
+        .constraint should be("Groups and Applications may not have the same identifier.")
     }
 
     "cannot replace a group with pods by an app definition" in {
@@ -183,7 +183,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be("Groups and Applications may not have the same identifier.")
+        .constraint should be("Groups and Applications may not have the same identifier.")
     }
 
     "cannot replace a group with pods by an pod definition" in {
@@ -218,7 +218,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be("Groups and Pods may not have the same identifier.")
+        .constraint should be("Groups and Pods may not have the same identifier.")
     }
 
     "can turn a group with group dependencies into a dependency graph" in {
@@ -476,6 +476,53 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       Then("validation is successful")
       validResult.isSuccess should be(true)
+    }
+
+    "should receive a non-root Group with nested groups as an updated and properly propagate transitiveAppsById" in {
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain/developers"),
+        groups = Set(
+          createGroup(
+            PathId("/domain/developers/gitlab"),
+            apps = Map(appPath -> app))))
+
+      val newVersion = Timestamp.now()
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+      updated.transitiveAppsById.keySet should contain(appPath)
+    }
+
+    "should receive a non-root Group with nested groups as an updated and properly propagate transitiveAppsByI2 2" in {
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain"),
+        groups = Set(createGroup(
+          PathId("/domain/developers"),
+          groups = Set(
+            createGroup(
+              PathId("/domain/developers/gitlab"),
+              apps = Map(appPath -> app))))))
+
+      val newVersion = Timestamp.now()
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+      updated.transitiveAppsById.keySet should contain(appPath)
+    }
+
+    "should receive a non-root Group without nested groups as an updated and properly propagate transitiveAppsById 3" in {
+      val appPath = "/domain/developers/gitlab/git".toPath
+      val app = AppDefinition(appPath)
+
+      val groupUpdate = createGroup(
+        PathId("/domain/developers/gitlab"),
+        apps = Map(appPath -> app))
+
+      val newVersion = Timestamp.now()
+      val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
+      updated.transitiveAppsById.keySet should contain(appPath)
     }
   }
 }

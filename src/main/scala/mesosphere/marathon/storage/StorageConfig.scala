@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package storage
 
+import java.net.URI
 import java.util
 import java.util.Collections
 
@@ -20,10 +21,12 @@ import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.concurrent.duration._
 
-sealed trait StorageConfig extends Product with Serializable
+sealed trait StorageConfig extends Product with Serializable {
+  def backupLocation: Option[URI]
+}
 
 sealed trait CacheType
 case object NoCaching extends CacheType
@@ -102,9 +105,9 @@ case class CuratorZk(
     maxVersions: Int,
     versionCacheConfig: Option[VersionCacheConfig],
     availableFeatures: Set[String],
-    backupLocation: Option[String],
     lifecycleState: LifecycleState,
-    defaultNetworkName: Option[String]
+    defaultNetworkName: Option[String],
+    backupLocation: Option[URI]
 ) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
 
   lazy val client: RichCuratorFramework = {
@@ -128,10 +131,14 @@ case class CuratorZk(
     val client = RichCuratorFramework(builder.build())
     client.start()
     client.blockUntilConnected(lifecycleState)
-    (client)
+
+    // make sure that we read up-to-date values from ZooKeeper
+    Await.ready(client.sync("/"), Duration.Inf)
+
+    client
   }
 
-  protected def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
+  def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[ZkId, String, ZkSerialized] = {
 
     actorSystem.registerOnTermination {
@@ -148,7 +155,7 @@ object CuratorZk {
     CuratorZk(
       cacheType = if (conf.storeCache()) LazyCaching else NoCaching,
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
-      connectionTimeout = None,
+      connectionTimeout = Some(conf.zkConnectionTimeoutDuration),
       timeout = conf.zkTimeoutDuration,
       zkHosts = conf.zkHosts,
       zkPath = conf.zooKeeperStatePath,
@@ -177,7 +184,7 @@ object CuratorZk {
     CuratorZk(
       cacheType = CacheType(config.string("cache-type", "lazy")),
       sessionTimeout = config.optionalDuration("session-timeout"),
-      connectionTimeout = config.optionalDuration("connect-timeout"),
+      connectionTimeout = config.optionalDuration("connection-timeout"),
       timeout = config.duration("timeout", 10.seconds),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
       zkPath = s"${config.string("path", "marathon")}/state",
@@ -192,9 +199,9 @@ object CuratorZk {
       versionCacheConfig =
         if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = config.stringList("available-features", Seq.empty).to[Set],
-      backupLocation = config.optionalString("backup-location"),
       lifecycleState = lifecycleState,
-      defaultNetworkName = config.optionalString("default-network-name")
+      defaultNetworkName = config.optionalString("default-network-name"),
+      backupLocation = config.optionalString("backup-location").map(new URI(_))
     )
   }
 }
@@ -202,8 +209,8 @@ object CuratorZk {
 case class InMem(
     maxVersions: Int,
     availableFeatures: Set[String],
-    backupLocation: Option[String],
-    defaultNetworkName: Option[String]
+    defaultNetworkName: Option[String],
+    backupLocation: Option[URI]
 ) extends PersistenceStorageConfig[RamId, String, Identity] {
   override val cacheType: CacheType = NoCaching
   override val versionCacheConfig: Option[VersionCacheConfig] = None
@@ -217,14 +224,14 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.availableFeatures, conf.backupLocation.get, conf.defaultNetworkName.get)
+    InMem(conf.maxVersions(), conf.availableFeatures, conf.defaultNetworkName.get, conf.backupLocation.get)
 
   def apply(conf: Config): InMem =
     InMem(
       conf.int("max-versions", StorageConfig.DefaultMaxVersions),
       availableFeatures = conf.stringList("available-features", Seq.empty).to[Set],
-      backupLocation = conf.optionalString("backup-location"),
-      defaultNetworkName = conf.optionalString("default-network-name")
+      defaultNetworkName = conf.optionalString("default-network-name"),
+      backupLocation = conf.optionalString("backup-location").map(new URI(_))
     )
 }
 

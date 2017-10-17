@@ -1,16 +1,22 @@
 package mesosphere.marathon
 package core.deployment.impl
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.Done
+import akka.pattern._
+import akka.actor.{ Actor, ActorRef, Props }
 import akka.event.EventStream
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
-import scala.concurrent.Promise
+import scala.async.Async.{ async, await }
+import scala.concurrent.{ Future, Promise }
+import mesosphere.marathon.core.async.ExecutionContexts.global
 
+@SuppressWarnings(Array("all")) // async/await
 class TaskStartActor(
     val deploymentManager: ActorRef,
     val status: DeploymentStatus,
@@ -21,14 +27,22 @@ class TaskStartActor(
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
     val scaleTo: Int,
-    promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
+    promise: Promise[Unit]) extends Actor with StrictLogging with StartingBehavior {
 
-  val nrToStart: Int = Math.max(
-    0,
-    scaleTo - launchQueue.get(runSpec.id).map(_.finalInstanceCount)
-      .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id)))
+  override val nrToStart: Future[Int] = async {
+    val alreadyLaunched = await(launchQueue.getAsync(runSpec.id)) match {
+      case Some(info) => info.finalInstanceCount
+      case None => await(instanceTracker.countLaunchedSpecInstances(runSpec.id))
+    }
+    Math.max(0, scaleTo - alreadyLaunched)
+  }.pipeTo(self)
 
-  def initializeStart(): Unit = if (nrToStart > 0) launchQueue.add(runSpec, nrToStart)
+  @SuppressWarnings(Array("all")) // async/await
+  override def initializeStart(): Future[Done] = async {
+    val toStart = await(nrToStart)
+    if (toStart > 0) await(launchQueue.addAsync(runSpec, toStart))
+    else Done
+  }.pipeTo(self)
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
@@ -36,8 +50,10 @@ class TaskStartActor(
   }
 
   override def success(): Unit = {
-    log.info(s"Successfully started $nrToStart instances of ${runSpec.id}")
-    promise.success(())
+    logger.info(s"Successfully started $nrToStart instances of ${runSpec.id}")
+    // Since a lot of StartingBehavior and this actor's code happens asynchronously now
+    // it can happen that this promise might succeed twice.
+    promise.trySuccess(())
     context.stop(self)
   }
 }

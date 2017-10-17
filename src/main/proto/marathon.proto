@@ -1,6 +1,8 @@
 //
 // protoc --java_out=src/main/java/ --proto_path=/path/to/mesos/include/mesos/ --proto_path=src/main/proto/ src/main/proto/marathon.proto
 //
+syntax = "proto2";
+
 package mesosphere.marathon;
 
 option java_package = "mesosphere.marathon";
@@ -155,72 +157,6 @@ message ResourceRoles {
   repeated string role = 1;
 }
 
-message MarathonTask {
-  message Reservation {
-    message State {
-      enum Type {
-        New = 1;
-        Launched = 2;
-        Suspended = 3;
-        Garbage = 4;
-        Unknown = 5;
-      }
-      message Timeout {
-        enum Reason {
-          RelaunchEscalationTimeout = 1;
-          ReservationTimeout = 2;
-        }
-
-        required int64 initiated = 1;
-        required int64 deadline = 2;
-        required Reason reason = 3;
-      }
-      required Type type = 1;
-      optional Timeout timeout = 2;
-    }
-
-    repeated string local_volume_ids = 1;
-    required State state = 2;
-  }
-  enum Condition {
-    Invalid = 0;
-    Reserved = 1;
-    Created = 2;
-    Error = 3;
-    Failed = 4;
-    Finished = 5;
-    Killed = 6;
-    Killing = 7;
-    Lost = 8;
-    Running = 9;
-    Staging = 10;
-    Starting = 11;
-    Unreachable = 12;
-    Gone = 13;
-    Unknown = 14;
-    Dropped = 15;
-  }
-
-  required string id = 1;
-  optional string OBSOLETE_host = 2;
-  repeated uint32 ports = 3;
-  repeated mesos.Attribute OBSOLETE_attributes = 4;
-  optional int64 staged_at = 5;
-  optional int64 started_at = 6;
-  repeated mesos.TaskStatus OBSOLETE_statuses = 7;
-  optional string version = 8 [default = "1970-01-01T00:00:00.000Z"]; // since 0.7.0
-  optional mesos.TaskStatus status = 9;
-  optional mesos.SlaveID OBSOLETE_slaveId = 10;
-  repeated mesos.NetworkInfo OBSOLETE_networks = 11; // status already contained this, so this field was redundant
-  optional Reservation reservation = 12; // since 0.16, a list of volumes can be associated with the task ID
-  optional Condition condition = 13;
-}
-
-message MarathonApp {
-  optional string name = 1;
-  repeated MarathonTask tasks = 2;
-}
-
 message ContainerInfo {
   required bytes image = 1 [default = ""];
   repeated bytes options = 2;
@@ -232,6 +168,20 @@ message ExtendedContainerInfo {
 
   // Docker on a Docker engine
   message DockerInfo {
+    message ImagePullConfig {
+      enum Type {
+        SECRET = 1;
+      }
+
+      required Type type = 1;
+
+      // The UTF-8 character encoded byte data, which is expected as
+      // a docker config file in JSON format. This field is used for
+      // supporting docker private registry credential per container.
+      // Users can specify different docker config files for pulling
+      // their private images from different registries.
+      optional mesos.Secret secret = 2;
+    }
 
     required string image = 1;
 
@@ -276,12 +226,15 @@ message ExtendedContainerInfo {
     // Credential to authenticate with docker registry.
     // NOTE: This is not encrypted, therefore framework and operators
     // should enable SSL when passing this information.
-    optional mesos.Credential credential = 2;
+    optional mesos.Credential deprecated_credential = 2; // Deprecated since 1.5
 
     // With this flag set to true, the universal Mesos containerizer will
     // pull the docker image from the registry even if the image
     // is already downloaded on the agent.
     optional bool force_pull_image = 3;
+
+    // Docker config.json which is used when pulling Docker images.
+    optional DockerInfo.ImagePullConfig pull_config = 4;
   }
 
   // AppC on the universal Mesos engine
@@ -344,6 +297,11 @@ message Volume {
     repeated mesos.Label options = 4;
   }
 
+  // Defining properties of secret volumes
+  message SecretVolumeInfo {
+    required string secret = 1;
+  }
+
   required mesos.Volume.Mode mode = 3;
 
   // Path pointing to a directory or file in the container. If the
@@ -368,10 +326,9 @@ message Volume {
 
   // Defines an External Volume; implies no hostPath or persistent.
   optional ExternalVolumeInfo external = 6;
-}
 
-message EventSubscribers {
-  repeated string callback_urls = 1;
+  // Defines a SecretVolume; implies no hostPath, persistent or external.
+  optional SecretVolumeInfo secret = 7;
 }
 
 message StorageVersion {

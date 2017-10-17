@@ -14,6 +14,10 @@ object GroupVersioningUtil {
     * Calculate a new group from the given `to` parameter that sets the version of all changed apps
     * to the given `version`.
     *
+    * The `RootGroup` object returned from this function, has its version set to the given `version`.
+    * Therefore even if there are no changed apps, the version of `RootGroup` object returned is always
+    * set to `version`.
+    *
     * @param version the version of all changed apps
     * @param from the original group
     * @param to the updated group
@@ -49,7 +53,8 @@ object GroupVersioningUtil {
       val updated = updateAppVersionInfo(originalApps.get(newApp.id), newApp)
       if (updated.versionInfo != newApp.versionInfo) Some(updated) else None
     }
-    updatedTargetApps.foldLeft(to) { (resultGroup, updatedApp) =>
+    val updatedTo = to.updateVersion(version)
+    updatedTargetApps.foldLeft(updatedTo) { (resultGroup, updatedApp) =>
       resultGroup.updateApp(updatedApp.id, _ => updatedApp, version)
     }
   }

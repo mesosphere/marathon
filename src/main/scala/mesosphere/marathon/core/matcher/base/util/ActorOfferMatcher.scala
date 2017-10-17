@@ -2,12 +2,11 @@ package mesosphere.marathon
 package core.matcher.base.util
 
 import akka.actor.ActorRef
+import com.google.inject.Provider
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.util.{ Timeout, TimeoutException }
-import mesosphere.util._
+import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.Offer
 
 import scala.concurrent.duration._
@@ -19,32 +18,24 @@ import scala.concurrent.{ Future, Promise }
   * @param actorRef Reference to actor that matches offers.
   * @param precedenceFor Defines which matcher receives offers first. See [[mesosphere.marathon.core.matcher.base.OfferMatcher.precedenceFor]].
   */
-class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[PathId])(implicit scheduler: akka.actor.Scheduler)
+class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[PathId], homeRegion: () => Option[String])
     extends OfferMatcher with StrictLogging {
 
-  def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
-    import mesosphere.marathon.core.async.ExecutionContexts.global
-
-    val timeout: FiniteDuration = now.until(deadline)
-
-    if (timeout <= ActorOfferMatcher.MinimalOfferComputationTime) {
-      // if deadline is exceeded return no match
-      logger.warn(s"Could not process offer '${offer.getId.getValue}' within ${timeout.toHumanReadable}. (See --offer_matching_timeout)")
-      Future.successful(MatchedInstanceOps.noMatch(offer.getId))
-    } else {
-
-      val p = Promise[MatchedInstanceOps]()
-      actorRef ! ActorOfferMatcher.MatchOffer(deadline, offer, p)
-
-      Timeout(timeout)(p.future).recover {
-        case e: TimeoutException =>
-          logger.warn(s"Could not process offer '${offer.getId.getValue}' within ${timeout.toHumanReadable}. (See --offer_matching_timeout)")
-          MatchedInstanceOps.noMatch(offer.getId)
-      }
-    }
+  def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
+    val p = Promise[MatchedInstanceOps]()
+    actorRef ! ActorOfferMatcher.MatchOffer(offer, p)
+    p.future
   }
 
   override def toString: String = s"ActorOfferMatcher($actorRef)"
+
+  override def isInterestedIn(offer: Offer) = {
+    def isFromHomeRegion(offer: Offer): Boolean = {
+      !offer.hasDomain || !offer.getDomain.hasFaultDomain || homeRegion().forall(_ == offer.getDomain.getFaultDomain.getRegion.getName)
+    }
+
+    isFromHomeRegion(offer)
+  }
 }
 
 object ActorOfferMatcher {
@@ -59,9 +50,8 @@ object ActorOfferMatcher {
     * This should always be replied to with a LaunchTasks message.
     * TODO(jdef) pods will probably require a non-LaunchTasks message
     *
-    * @param matchingDeadline Don't match after deadline.
     * @param remainingOffer Part of the offer that has not been matched.
     * @param promise The promise to fullfil with match.
     */
-  case class MatchOffer(matchingDeadline: Timestamp, remainingOffer: Offer, promise: Promise[MatchedInstanceOps])
+  case class MatchOffer(remainingOffer: Offer, promise: Promise[MatchedInstanceOps])
 }

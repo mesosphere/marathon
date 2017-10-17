@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
@@ -142,7 +142,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
 
   class Fixture {
     val id = "/test".toPath
-    val clock = ConstantClock()
+    val clock = new SettableClock()
 
     def tasks(statuses: Condition*): Map[Task.Id, Task] = tasks(statuses.to[Seq])
 

@@ -1,0 +1,12 @@
+{
+  "id": "/ucr-docker-http-server",
+  "cmd": "python3 -m http.server $PORT0",
+  "cpus": 0.5,
+  "mem": 32,
+  "container": {
+    "type": "MESOS",
+    "docker": {
+      "image": "python:3.5-alpine"
+    }
+  }
+}

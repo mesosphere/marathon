@@ -1,0 +1,16 @@
+#%RAML 1.0 Library
+uses:
+  secrets: secrets.raml
+
+types:
+  DockerPullConfig:
+    type: object
+    properties:
+      secret:
+        type: string
+        minLength: 1
+    description: |
+      Docker's config.json. It should be specifed only as a secret
+      name into a secret store, and the corresponding value should be
+      a stringified valid JSON object which can be found in
+      `~/.docker/config.json`.

@@ -1,8 +1,0 @@
-{
-  "id": "unique-sleep",
-  "cmd": "sleep 42000",
-  "cpus": 0.5,
-  "mem": 128,
-  "disk": 0,
-  "instances": 1
-}

@@ -18,28 +18,30 @@ object Timeout {
   /**
     * Timeout a blocking call
     * @param timeout The maximum duration the method may execute in
+    * @param name Name of the operation
     * @param f The blocking call
     * @param scheduler The akka scheduler
     * @param ctx The execution context to execute 'f' in
     * @tparam T The result type of 'f'
     * @return The eventual result of calling 'f' or TimeoutException if it didn't complete in time.
     */
-  def blocking[T](timeout: FiniteDuration)(f: => T)(implicit
+  def blocking[T](timeout: FiniteDuration, name: Option[String] = None)(f: => T)(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext,
     clock: Clock = Clock.systemDefaultZone()): Future[T] =
-    apply(timeout)(Future(blockingCall(f))(ctx))(scheduler, ctx, clock)
+    apply(timeout, name)(Future(blockingCall(f))(ctx))(scheduler, ctx, clock)
 
   /**
     * Timeout a non-blocking call.
     * @param timeout The maximum duration the method may execute in
+    * @param name Name of the operation
     * @param f The blocking call
     * @param scheduler The akka scheduler
     * @param ctx The execution context to execute 'f' in
     * @tparam T The result type of 'f'
     * @return The eventual result of calling 'f' or TimeoutException if it didn't complete
     */
-  def apply[T](timeout: Duration)(f: => Future[T])(implicit
+  def apply[T](timeout: Duration, name: Option[String] = None)(f: => Future[T])(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext,
     clock: Clock = Clock.systemDefaultZone()): Future[T] = {
@@ -49,7 +51,7 @@ object Timeout {
       val promise = Promise[T]()
       val finiteTimeout = FiniteDuration(timeout.toNanos, TimeUnit.NANOSECONDS)
       val token = scheduler.scheduleOnce(finiteTimeout) {
-        promise.tryFailure(new TimeoutException(s"Timed out after ${timeout.toHumanReadable}"))
+        promise.tryFailure(new TimeoutException(s"$name timed out after ${timeout.toHumanReadable}"))
       }
       val result = RunContext.withContext(Instant.now(clock))(f)
       result.onComplete { res =>

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package tasks
 
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -25,9 +25,14 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   val TEST_APP_NAME = PathId("/foo")
 
   case class Fixture() {
-    implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
+    val store: InMemoryPersistenceStore = {
+      val store = new InMemoryPersistenceStore()
+      store.markOpen()
+      store
+    }
+    implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(store))
     val config: AllConf = MarathonTestHelper.defaultConfig()
-    implicit val clock: ConstantClock = ConstantClock()
+    implicit val clock: SettableClock = new SettableClock()
     val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(
       AlwaysElectedLeadershipModule.forRefFactory(system), Some(state))
     implicit val instanceTracker: InstanceTracker = taskTrackerModule.instanceTracker
@@ -194,7 +199,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testStatusUpdateForTerminalState(TaskState.TASK_ERROR)
     }
 
-    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker, clock: ConstantClock, state: InstanceRepository): Unit = {
+    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
       val sampleTask = makeSampleInstance(TEST_APP_NAME)
       val terminalStatusUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, taskState), clock.now())
 

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-import sys
 import logging
 import os
 import platform
-import time
+import signal
+import socket
+import sys
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -33,7 +34,7 @@ else:
         return response.getcode()
 
 
-def make_handler(appId, version, url):
+def make_handler(app_id, version, task_id, base_url):
     """
     Factory method that creates a handler class.
     """
@@ -45,13 +46,34 @@ def make_handler(appId, version, url):
             self.send_header('Content-type', 'text/html')
             self.end_headers()
 
-            marathonId = os.getenv("MARATHON_APP_ID", "NO_MARATHON_APP_ID_SET")
-            msg = "Pong {}".format(marathonId)
+            msg = "Pong {}".format(app_id)
 
             self.wfile.write(byte_type(msg, "UTF-8"))
+
+        def check_readiness(self):
+
+            url = "{}/{}/ready".format(base_url, task_id)
+
+            logging.debug("Query %s for readiness", url)
+            url_req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            response = urlopen(url_req)
+            res = response.read()
+            status = response_status(response)
+            logging.debug("Current readiness is %s, %s", res, status)
+
+            self.send_response(status)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
+            self.wfile.write(res)
+
+            logging.debug("Done processing readiness request.")
             return
 
         def check_health(self):
+
+            url = "{}/health".format(base_url)
+
             logging.debug("Query %s for health", url)
             url_req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
             response = urlopen(url_req)
@@ -73,19 +95,19 @@ def make_handler(appId, version, url):
                 logging.debug("Got GET request")
                 if self.path == '/ping':
                     return self.handle_ping()
+                elif self.path == '/ready':
+                    return self.check_readiness()
                 else:
                     return self.check_health()
-            except:
+            except Exception:
                 logging.exception('Could not handle GET request')
-                raise
 
         def do_POST(self):
             try:
                 logging.debug("Got POST request")
                 return self.check_health()
-            except:
+            except Exception:
                 logging.exception('Could not handle POST request')
-                raise
 
     return Handler
 
@@ -98,22 +120,42 @@ if __name__ == "__main__":
     logging.debug(sys.argv)
 
     port = int(sys.argv[1])
-    appId = sys.argv[2]
+    app_id = sys.argv[2]
     version = sys.argv[3]
-    url = "{}/{}".format(sys.argv[4], port)
-    taskId = os.getenv("MESOS_TASK_ID", "<UNKNOWN>")
+    base_url = sys.argv[4]
+    task_id = os.getenv("MESOS_TASK_ID", "<UNKNOWN>")
 
-    HTTPServer.allow_reuse_address = True
-    httpd = HTTPServer(("", port), make_handler(appId, version, url))
+    # Defer binding and activating the server to a later point, allowing to set
+    # allow_reuse_address=True option.
+    httpd = HTTPServer(("", port),
+                       make_handler(app_id, version, task_id, base_url),
+                       bind_and_activate=False)
+    httpd.allow_reuse_address = True
+
     msg = "AppMock[%s %s]: %s has taken the stage at port %d. "\
-          "Will query %s for health status."
-    logging.info(msg, appId, version, taskId, port, url)
+          "Will query %s for health and readiness status."
+    logging.info(msg, app_id, version, task_id, port, base_url)
+
+    # Trigger proper shutdown on SIGTERM.
+    def handle_sigterm(signum, frame):
+        logging.warning("Received {} signal. Closing the server...".format(signum))
+        httpd.server_close()
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
 
     try:
+        httpd.server_bind()
+        httpd.server_activate()
         httpd.serve_forever()
-    except KeyboardInterrupt:
-        pass
-
-    logging.info("Shutting down.")
-    httpd.shutdown()
-    httpd.socket.close()
+    except socket.error as e:
+        # If "[Errno 48] Address already in use" then grep for the process using the port
+        if e.errno == 48:
+            logging.error("Failed to bind to port %d. Trying to grep blocking process:", port)
+            os.system("ps -a | grep $(lsof -ti :{})".format(port))
+        else:
+            logging.exception("Socket.error in the main thread: ")
+    except:
+        logging.exception("Exception in the main thread: ")
+    finally:
+        logging.info("Closing the server...")
+        httpd.server_close()

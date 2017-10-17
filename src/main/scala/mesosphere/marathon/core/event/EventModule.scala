@@ -3,19 +3,12 @@ package core.event
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
-import akka.pattern.ask
 import akka.stream.Materializer
-import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.impl.callback._
 import mesosphere.marathon.core.event.impl.stream._
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.storage.repository.EventSubscribersRepository
 import org.eclipse.jetty.servlets.EventSourceServlet
 import org.slf4j.LoggerFactory
-
-import scala.util.control.NonFatal
 
 /**
   * Exposes everything necessary to provide an internal event stream, an HTTP events stream and HTTP event callbacks.
@@ -24,49 +17,10 @@ class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
     conf: EventConf,
-    clock: Clock,
-    eventSubscribersStore: EventSubscribersRepository,
     electionService: ElectionService,
     authenticator: Authenticator,
     authorizer: Authorizer)(implicit val materializer: Materializer) {
   val log = LoggerFactory.getLogger(getClass.getName)
-
-  private[this] lazy val statusUpdateActor: ActorRef =
-    actorSystem.actorOf(Props(
-      new HttpEventActor(conf, subscribersKeeperActor, new HttpEventActor.HttpEventActorMetrics(), clock))
-    )
-
-  private[this] lazy val subscribersKeeperActor: ActorRef = {
-    implicit val timeout = conf.eventRequestTimeout
-
-    val actor = actorSystem.actorOf(Props(new SubscribersKeeperActor(eventSubscribersStore)))
-    conf.httpEventEndpoints.get foreach { urls =>
-      log.info(s"http_endpoints($urls) are specified at startup. Those will be added to subscribers list.")
-      urls foreach { url =>
-        val f = (actor ? Subscribe(conf.hostname(), url)).mapTo[MarathonSubscriptionEvent]
-        f.onFailure {
-          case NonFatal(th) =>
-            log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
-        }(ExecutionContexts.global)
-      }
-    }
-
-    eventBus.subscribe(statusUpdateActor, classOf[MarathonEvent])
-
-    actor
-  }
-
-  lazy val httpCallbackSubscriptionService: HttpCallbackSubscriptionService = {
-    if (conf.httpCallbacksEnabled) {
-      log.info("Using HttpCallbackEventSubscriber for event notification")
-      log.warn("HttpCallbackEventSubscriber support is deprecated with Marathon 1.4 and will be removed in an " +
-        "upcoming version. Please use the event stream instead.")
-      new ActorHttpCallbackSubscriptionService(subscribersKeeperActor, eventBus, conf)
-    } else {
-      log.info("Event notification disabled.")
-      NoopHttpCallbackSubscriptionService
-    }
-  }
 
   lazy val httpEventStreamActor: ActorRef = {
     val outstanding = conf.eventStreamMaxOutstandingMessages()

@@ -5,6 +5,7 @@ import java.net.URI
 import javax.servlet.http.{ HttpServlet, HttpServletRequest, HttpServletResponse }
 
 import mesosphere.marathon.io.IO
+import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
 class WebJarServlet extends HttpServlet {
@@ -18,7 +19,8 @@ class WebJarServlet extends HttpServlet {
         resp.setContentType(mime)
         resp.setContentLength(stream.available())
         resp.setStatus(200)
-        IO.transfer(stream, resp.getOutputStream)
+        IOUtils.copy(stream, resp.getOutputStream)
+        IOUtils.closeQuietly(stream)
       } getOrElse {
         resp.sendError(404)
       }
@@ -64,6 +66,14 @@ class WebJarServlet extends HttpServlet {
     else if (!file.contains(".")) sendRedirect(resp, req.getRequestURI + "/") //request /ui -> /ui/
     //if we come here, it must be a resource
     else sendResourceNormalized(resourceURI, mime)
+  }
+
+  override def doTrace(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
+    resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED)
+  }
+
+  override def doOptions(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
+    resp.setHeader("Allow", "GET, HEAD, OPTIONS")
   }
 
   private[this] def mimeType(mediaType: String): String = {

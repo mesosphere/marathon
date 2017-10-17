@@ -12,7 +12,7 @@ import org.scalatest.Matchers
 import play.api.libs.json.Json
 
 class AppUpdateValidatorTest extends UnitTest with Matchers {
-  implicit val appUpdateValidator = AppValidation.validateCanonicalAppUpdateAPI(Set.empty)
+  implicit val appUpdateValidator = AppValidation.validateCanonicalAppUpdateAPI(Set.empty, () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName)
   implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
 
   "validation that considers container types" should {
@@ -71,7 +71,7 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
           |}
         """.stripMargin).as[App]
 
-      val config = AppNormalization.Configure(None, "mesos-bridge-name")
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name")
       val appDef = Raml.fromRaml(
         AppNormalization.apply(config)
           .normalized(AppNormalization.forDeprecated(config).normalized(originalApp)))
@@ -80,33 +80,33 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
         AppNormalization.forDeprecatedUpdates(config).normalized(Json.parse(
           """
           |{
-          |	"id": "/sleepy-moby",
-          |	"cmd": "sleep 1000",
-          |	"instances": 1,
-          |	"cpus": 1,
-          |	"mem": 128,
-          |	"disk": 0,
-          |	"gpus": 0,
-          |	"backoffSeconds": 1,
-          |	"backoffFactor": 1.15,
-          |	"maxLaunchDelaySeconds": 3600,
-          |	"container": {
-          |		"docker": {
-          |			"image": "alpine",
-          |			"forcePullImage": false,
-          |			"privileged": false,
-          |			"network": "USER"
-          |		}
-          |	},
-          |	"upgradeStrategy": {
-          |		"minimumHealthCapacity": 0.5,
-          |		"maximumOverCapacity": 0
-          |	},
-          | "portDefinitions": [],
-          |	"ipAddress": {
-          |		"networkName": "dcos"
-          |	},
-          |	"requirePorts": false
+          |  "id": "/sleepy-moby",
+          |  "cmd": "sleep 1000",
+          |  "instances": 1,
+          |  "cpus": 1,
+          |  "mem": 128,
+          |  "disk": 0,
+          |  "gpus": 0,
+          |  "backoffSeconds": 1,
+          |  "backoffFactor": 1.15,
+          |  "maxLaunchDelaySeconds": 3600,
+          |  "container": {
+          |    "docker": {
+          |      "image": "alpine",
+          |      "forcePullImage": false,
+          |      "privileged": false,
+          |      "network": "USER"
+          |    }
+          |  },
+          |  "upgradeStrategy": {
+          |    "minimumHealthCapacity": 0.5,
+          |    "maximumOverCapacity": 0
+          |  },
+          |  "portDefinitions": [],
+          |  "ipAddress": {
+          |    "networkName": "dcos"
+          |  },
+          |  "requirePorts": false
           |}
         """.stripMargin).as[AppUpdate]))
 

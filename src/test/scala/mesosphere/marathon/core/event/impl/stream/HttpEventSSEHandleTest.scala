@@ -16,7 +16,7 @@ class HttpEventSSEHandleTest extends UnitTest {
       val emitter = mock[Emitter]
       Given("An request with params")
       val req = mock[HttpServletRequest]
-      req.getParameterMap returns Map("event_type" -> Array(unsubscribe.eventType))
+      req.getParameterMap returns Map("event_type" -> Array(unsubscribe.eventType)).asJava
 
       Given("handler for request is created")
       val handle = new HttpEventSSEHandle(req, emitter)

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package stream
 
-import java.io.File
+import java.io.{ File, IOException }
 import java.net.URI
 
 import akka.stream.scaladsl.Source
@@ -43,6 +43,23 @@ class UriIOTest extends AkkaUnitTest {
       Source.single(ByteString(content)).runWith(UriIO.writer(new URI(s"file://${file.getAbsolutePath}"))).futureValue
       FileUtils.readFileToString(file) shouldBe content
       file.delete()
+    }
+
+    "read from a file that is not readable fails" in {
+      // note: we try to read from a directory, which should always fail
+      // creating a file and disable reading does not work with root privileges.
+      val tmpDir = new File(sys.props("java.io.tmpdir"))
+      val future = UriIO.reader(new URI(s"file://${tmpDir.getAbsolutePath}")).runWith(Sink.ignore)
+      future.failed.futureValue shouldBe a[IOException]
+    }
+
+    "write to a file that is not writable fails" in {
+      // note: we try to write to a directory, which should always fail
+      // creating a file and disable writing does not work with root privileges.
+      val tmpDir = new File(sys.props("java.io.tmpdir"))
+      val content = s"Hello World ${System.currentTimeMillis()}"
+      val future = Source.single(ByteString(content)).runWith(UriIO.writer(new URI(s"file://${tmpDir.getAbsolutePath}")))
+      future.failed.futureValue shouldBe a[IOException]
     }
   }
 }

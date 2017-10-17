@@ -1,0 +1,17 @@
+{
+  "id": "/private-docker-app",
+  "instances": 1,
+  "cpus": 1,
+  "mem": 128,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "mesosphere/simple-docker-ee:latest"
+    }
+  },
+  "fetch": [
+    {
+      "uri": "file:///home/core/docker.tar.gz"
+    }
+  ]
+}

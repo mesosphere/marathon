@@ -3,7 +3,6 @@ package api.v2
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
@@ -11,7 +10,7 @@ import mesosphere.marathon.raml.{ App, Raml }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import mesosphere.mesos.NoOfferMatchReason
 import play.api.libs.json._
 
@@ -20,7 +19,7 @@ import scala.concurrent.duration._
 
 class QueueResourceTest extends UnitTest {
   case class Fixture(
-      clock: Clock = ConstantClock(),
+      clock: SettableClock = new SettableClock(),
       config: MarathonConf = mock[MarathonConf],
       auth: TestAuthFixture = new TestAuthFixture,
       queue: LaunchQueue = mock[LaunchQueue]) {
@@ -55,7 +54,7 @@ class QueueResourceTest extends UnitTest {
       )
 
       //when
-      val response = queueResource.index(auth.request, Set("lastUnusedOffers"))
+      val response = queueResource.index(auth.request, Set("lastUnusedOffers").asJava)
 
       //then
       response.getStatus should be(200)
@@ -92,7 +91,7 @@ class QueueResourceTest extends UnitTest {
         )
       )
       //when
-      val response = queueResource.index(auth.request, Set.empty[String])
+      val response = queueResource.index(auth.request, Set.empty[String].asJava)
 
       //then
       response.getStatus should be(200)
@@ -141,7 +140,7 @@ class QueueResourceTest extends UnitTest {
       val req = auth.request
 
       When("the index is fetched")
-      val index = queueResource.index(req, Set.empty[String])
+      val index = queueResource.index(req, Set.empty[String].asJava)
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
 

@@ -1,0 +1,87 @@
+#! /bin/bash
+
+### BEGIN INIT INFO
+# Provides:	${{app_name}}
+# Required-Start: ${{start_facilities}}
+# Required-Stop: ${{stop_facilities}}
+# Default-Start: ${{start_runlevels}}
+# Default-Stop: ${{stop_runlevels}}
+# Short-Description: ${{descr}}
+### END INIT INFO
+
+source /lib/init/vars.sh
+source /lib/lsb/init-functions
+
+# Source from package defined config. Defaults to,
+# bashScriptEnvConfigLocation := Some("/etc/default/" + (packageName in Linux).value)
+[[ -f ${{env_config}} ]] && . ${{env_config}}
+
+# $JAVA_OPTS used in $RUN_CMD wrapper
+export JAVA_OPTS
+
+# If program manages its own PID file then it
+# should declare its location in PIDFILE
+if [ -z "$PIDFILE" ]; then
+  create_pidfile=true
+  PIDFILE=/var/run/${{app_name}}/running.pid
+fi
+
+if [ -z "$DAEMON_USER" ]; then
+  DAEMON_USER=${{daemon_user}}
+fi
+
+if [ -z "$DAEMON_GROUP" ]; then
+  DAEMON_GROUP=${{daemon_group}}
+fi
+
+RUN_CMD="${{chdir}}/bin/${{exec}}"
+
+start_daemon() {
+  log_daemon_msg "Starting" "${{app_name}}"
+  [ -d "/var/run/${{app_name}}" ] || install -d -o "$DAEMON_USER" -g "$DAEMON_GROUP" -m755 "/var/run/${{app_name}}"
+  logfile="${{daemon_log_file}}"
+  stdout_redirect=""
+  if [ ! -z "${logfile:-}" ]; then
+    stdout_redirect=" >> ${{logdir}}/${{app_name}}/$logfile 2>&1"
+  fi
+
+  if [ "$create_pidfile" = true ]; then
+    start-stop-daemon --background --chdir ${{chdir}} --chuid "$DAEMON_USER" --make-pidfile --pidfile "$PIDFILE" --startas /bin/sh --start -- -c "exec $RUN_CMD $RUN_OPTS ${stdout_redirect}"
+  else
+    start-stop-daemon --background --chdir ${{chdir}} --chuid "$DAEMON_USER" --pidfile "$PIDFILE" --startas /bin/sh --start -- -c "exec $RUN_CMD $RUN_OPTS ${stdout_redirect}"
+  fi
+  log_end_msg $?
+}
+
+
+stop_daemon() {
+  log_daemon_msg "Stopping" "${{app_name}}"
+  start-stop-daemon --stop --quiet --oknodo --pidfile "$PIDFILE" --retry=TERM/${{term_timeout}}/KILL/${{kill_timeout}}
+  log_end_msg $?
+  if [ "$create_pidfile" = true ]; then
+    rm -f "$PIDFILE"
+  fi
+}
+
+case "$1" in
+  start)
+    start_daemon
+    exit $?
+    ;;
+  stop)
+    stop_daemon
+    exit $?
+    ;;
+  restart|force-reload)
+    stop_daemon
+    start_daemon
+    exit $?
+    ;;
+  status)
+    status_of_proc -p "$PIDFILE" "$RUN_CMD" ${{app_name}} && exit 0 || exit $?
+    ;;
+  *)
+    log_daemon_msg "Usage: /etc/init.d/${{app_name}} {start|stop|restart|status}"
+    ;;
+esac
+exit 0

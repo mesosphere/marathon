@@ -1,12 +1,12 @@
 package mesosphere.marathon
 package core.task.update.impl
 
+import java.time.Clock
 import javax.inject.Inject
 
 import akka.event.EventStream
 import com.google.inject.name.Names
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.UnknownInstanceTerminated
 import mesosphere.marathon.core.instance.Instance

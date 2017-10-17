@@ -1,0 +1,50 @@
+{
+	"id":"/department-1",
+	"groups":[
+		{
+			"id":"/department-1/database",
+			"apps":[
+				{
+					"id":"/department-1/database/mesos-docker",
+					"container":{
+						"docker":{
+							"image":"python:3"
+						},
+						"type":"MESOS"
+					},
+					"cmd":"sleep 20 && python3 -m http.server $PORT0",
+					"cpus":0.2,
+					"mem":16.0,
+					"instances":1,
+					"healthChecks":[
+						{
+							"gracePeriodSeconds":300,
+							"intervalSeconds":60,
+							"timeoutSeconds":20,
+							"maxConsecutiveFailures":3,
+							"portIndex":0,
+							"path":"/",
+							"protocol":"HTTP",
+							"ignoreHttp1xx":false
+						}
+					]
+				}
+			]
+		},
+		{
+			"id":"/department-1/service",
+			"dependencies":[
+				"/department-1/database"
+			],
+			"apps":[
+				{
+					"id":"/department-1/service/basic-app-1",
+					"cmd":"sleep 2000",
+					"instances":1,
+					"cpus":0.5,
+					"mem":32
+				}
+			]
+		}
+	]
+}

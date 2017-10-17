@@ -77,7 +77,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       Given("no apps")
       config.zkTimeoutDuration returns 5.seconds
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.rootGroup() returns createRootGroup()
+      groupManager.apps(any) returns Map.empty
 
       When("Getting the tasks index")
       val response = taskResource.indexJson("status", new java.util.ArrayList[String], auth.request)

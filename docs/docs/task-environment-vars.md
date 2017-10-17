@@ -68,5 +68,5 @@ All keys and values longer than 512 chars will be omitted.
 
 This is by no means exhaustive!
 
-- `MESOS_SANDBOX` (set by the Docker containerizer)  
+- `MESOS_SANDBOX` 
   Path within the container to the mount point of the sandbox directory.

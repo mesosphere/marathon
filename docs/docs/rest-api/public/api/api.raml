@@ -7,7 +7,10 @@ baseUri: ../
 
 uses:
   app: v2/types/app.raml
+  enrichedTask: v2/types/enrichedTask.raml
   error: v2/types/error.raml
+  deploymentResult: v2/types/deploymentResult.raml
+  info: v2/types/info.raml
   queue: v2/types/queue.raml
   group: v2/types/group.raml
   strings: v2/types/stringTypes.raml
@@ -15,6 +18,7 @@ uses:
   podStatus: v2/types/podStatus.raml
   metrics: v2/types/metrics.raml
   logging: v2/types/logging.raml
+  runtimeConfig: v2/types/runtimeConfiguration.raml
 
 
 traits: !include traits.raml
@@ -34,7 +38,6 @@ traits: !include traits.raml
 
 # considered less used endpoints in alphabetical order
 /v2/events: !include v2/events.raml
-/v2/eventSubscriptions: !include v2/eventSubscriptions.raml
 /v2/info: !include v2/info.raml
 /v2/leader: !include v2/leader.raml
 /v2/plugins: !include v2/plugins.raml

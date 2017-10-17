@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package raml
 
+import java.time.Clock
 import java.time.OffsetDateTime
 
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.pod.PodDefinition

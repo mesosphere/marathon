@@ -15,19 +15,20 @@ addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.1.0")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.2.0")
 addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "1.0.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.1.5")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.2")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
-addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.15")
-addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.10.6")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.25")
+addSbtPlugin("com.lightbend.sbt" % "sbt-aspectj" % "0.11.0")
 addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-M15")
-
 
 libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.0",
   "com.eed3si9n" %% "treehugger" % "0.4.1",
   "org.slf4j" % "slf4j-nop" % "1.7.22",
-  "org.vafer" % "jdeb" % "1.3" artifacts Artifact("jdeb", "jar", "jar")
+  "org.vafer" % "jdeb" % "1.3" artifacts Artifact("jdeb", "jar", "jar"),
+  "com.typesafe.play" %% "play-json" % "2.4.11"
 )
 
 sbtPlugin := true
+

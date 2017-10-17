@@ -9,7 +9,8 @@ case class PluginDefinition(
   implementation: String,
   tags: Option[Set[String]],
   configuration: Option[JsObject],
-  info: Option[JsObject])
+  info: Option[JsObject],
+  enabled: Option[Boolean])
 
 case class PluginDefinitions(plugins: Seq[PluginDefinition])
 

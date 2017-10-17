@@ -1,0 +1,42 @@
+#!/usr/bin/env groovy
+
+timeout(120) {
+node('shakedown') {
+  wrap([$class: 'MesosSingleUseSlave']) {
+  wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
+
+    // Hardcoded default values are:
+    // DC/OS OS: channel="testing/pull/1739", for open cluster
+    // DC/OS EE: channel="testing/pull/1296", for strict, permissive or disabled clusters
+    // The channel can be passed to the job in Jenkins (Build with Parameters) so that this job can be executed against any PR/cluster.
+    properties([
+            pipelineTriggers([cron('0 */8 * * *')]),
+            parameters([
+                    string(name: 'channel',
+                            defaultValue: 'testing/pull/1296',
+                            description: 'PR to start the cluster from e.g. testing/pull/1739'
+                    )]
+            )
+    ])
+
+    stage("Run System Integration Test Pipeline") {
+      try {
+        checkout scm
+        withCredentials(
+          [ [$class: 'FileBinding', credentialsId: '23743034-1ac4-49f7-b2e6-a661aee2d11b', variable: 'CLI_TEST_SSH_KEY'],
+            [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: '7155bd15-767d-4ae3-a375-e0d74c90a2c4', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'],
+            [$class: 'FileBinding', credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'],
+            [$class: 'StringBinding', credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'],
+            [$class: 'StringBinding', credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD']
+          ]) {
+            dcos_url = sh (script: """ci/launch_cluster.sh $params.channel permissive""", returnStdout: true).trim().readLines().last()
+            sh """ci/system_integration.sh ${dcos_url}"""
+          }
+        } finally {
+            junit allowEmptyResults: true, testResults: 'shakedown.xml'
+        }
+    }
+  }
+  }
+}
+}

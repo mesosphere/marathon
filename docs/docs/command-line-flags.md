@@ -7,7 +7,6 @@ title: Command Line Flags
 * `JAVA_OPTS`  Default: `-Xmx512m`
     Any options that should be passed to the JVM that marathon will run in.
 
-
 # Marathon Command Line Flags
 
 ## Core Functionality
@@ -43,6 +42,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     - "vips" can be used to enable the networking VIP integration UI.
     - "task\_killing" can be used to enable the TASK\_KILLING state in Mesos (0.28 or later)
     - "external\_volumes" can be used if the cluster is configured to use external volumes.
+    - "maintenance_mode" can be used to respect maintenance window during offer matching.
     Example: `--enable_features vips,task_killing,external_volumes`
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
@@ -78,7 +78,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     service ports to apps. If you assign your service port statically in your app definition, it does
     not have to be in this range.
 * `--mesos_role` (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
-    for the specified role in addition to resources with the role designation '*'.
+    for the specified role in addition to resources with the role designation '*'. This parameter is only applied the first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, this will not have an effect on the role for which Marathon is registered.
 * <span class="label label-default">v0.9.0</span> `--default_accepted_resource_roles` (Optional. Default: all roles):
     Default for the `"acceptedResourceRoles"`
     attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
@@ -99,26 +99,24 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--task_launch_timeout` (Optional. Default: 300000 (5 minutes)):
     Time, in milliseconds, to wait for a task to enter the `TASK_RUNNING` state
     before killing it.
-* `--event_subscriber` (Optional. Default: None): Event subscriber module to
-    enable. Currently the only valid value is `http_callback`.
-* `--http_endpoints` (Optional. Default: None): Pre-configured http callback
-    URLs. Valid only in conjunction with `--event_subscriber http_callback`.
-    Additional callback URLs may also be set dynamically via the REST API.
 * `--zk` (Optional. Default: `zk://localhost:2181/marathon`): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
     - <span class="label label-default">v1.1.2</span> Format: `zk://user@pass:host1:port1,user@pass:host2:port2,.../path`.
     When authentication is enabled the default ACL will be changed and all subsequent reads must be done using the same auth.
-* `--zk_max_versions` (Optional. Default: None): Limit the number of versions
+* `--zk_max_versions` (Optional. Default: 50): Limit the number of versions
     stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)):
-    Timeout for ZooKeeper operations in milliseconds. 
+    Timeout for ZooKeeper operations in milliseconds.
     If this timeout is exceeded, the ZooKeeper operation is marked as failed.
     This timeout is also used for all REST endpoint operations: if an operation takes longer than this timeout, the request will be answered with a failure.
-*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 10000 (10 seconds)): 
-    Timeout for ZooKeeper sessions in milliseconds. 
-    If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout then the session will expire and the connection will be closed. 
+*  <span class="label label-default">v1.5.0</span> `--zk_connection_timeout` (Optional. Default: 10000 (10 seconds)):
+    Timeout to connect to ZooKeeper in milliseconds.
+    If Marathon is unable to connect to the ZK cluster during this timeout, Marathon will give up after a few retries.
+    In Marathon versions prior to v1.5.0 `--zk_timeout` is used instead.
+*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 10000 (10 seconds)):
+    Timeout for ZooKeeper sessions in milliseconds.
+    If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout then the session will expire and the connection will be closed.
     If this happens to the leader then the leader will abdicate.
-    This timeout is also used for the zookeeper connection timeout.
     The default value from Marathon version 0.9 to 0.13 (including) was 30 minutes instead of 10 seconds.
 * <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
     Maximum allowed ZooKeeper node size (in bytes).
@@ -150,12 +148,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.13.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
 * <span class="label label-default">v0.13.0</span> `--on_elected_prepare_timeout` (Optional. Default: 3 minutes):
     The timeout for preparing the Marathon instance when elected as leader.
-* <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
-    A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
 * `--default_network_name` (Optional.): Network name, injected into applications' `ipAddress{}` specs that do not define their own `networkName`.
 * <span class="label label-default">v0.15.4 Deprecated since v1.4.0</span>`--task_lost_expunge_gc` (Optional. Default: 75 seconds):
     This is the length of time in milliseconds, until a lost task is garbage collected and expunged from the task tracker and task repository.
-    Since v1.4.0 an UnreachableStrategy can be defined per application or pod definition. 
+    Since v1.4.0 an UnreachableStrategy can be defined per application or pod definition.
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_initial_delay` (Optional. Default: 5 minutes):
     This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_interval` (Optional. Default: 30 seconds):
@@ -168,15 +164,17 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     disconnected from the master.
 * `--mesos_bridge_name` (Optional. Default: mesos-bridge):
     The name of the Mesos CNI network used by MESOS-type containers configured to use bridged networking
-* <span class="label label-default">v1.5.0</span>`--minimum_viable_task_execution_duration` (Optional. Default: 60 seconds):
-    Delay (in ms) after which a task is considered viable. If the task starts up correctly, but fails during this timeout, the application is backed off. 
 * <span class="label label-default">v1.5.0</span>`--backup_location` (Optional. Default: None):
-    Create a backup before a migration is applied to the persistent store. 
-    This backup can be used to restore the state at that time. 
-    Currently two providers are allowed: 
+    Create a backup before a migration is applied to the persistent store.
+    This backup can be used to restore the state at that time.
+    Currently two providers are allowed:
     - File provider: file:///path/to/file
-    - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1 
-    
+    - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1
+      Please note: access_key and secret_key are optional.
+      If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
+* <span class="label label-default">v1.5.0</span>`--draining_seconds` (Optional. Default: 0):
+    Time (in seconds) when marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
+    **Note:** In order to activate the `--draining_seconds` configuration, you must add `maintenance_mode` to the set of `--enable_features`.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
@@ -193,10 +191,10 @@ resource offers Marathon receives from Mesos more efficiently, we added a new of
 to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is
 configurable with the following startup parameters:
 
-* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 5): Launch at most this
-    number of tasks per Mesos offer. Usually,
+* <span class="label label-default">v1.4.0</span> `--max_instances_per_offer` (Optional. Default: 5): Launch at most this
+    number of instances per Mesos offer. Usually,
     there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
-
+    
 To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
 By default, we allow 100 unconfirmed task launches every 30 seconds. In addition, Marathon launches
 more tasks when it gets feedback about running and healthy tasks from Mesos.
@@ -209,19 +207,14 @@ more tasks when it gets feedback about running and healthy tasks from Mesos.
 To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
 incoming resource offer, i.e. finding suitable tasks to launch for incoming offers.
 
-* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 1000):
+* <span class="label label-default">v0.11.0</span> `--offer_matching_timeout` (Optional. Default: 3000):
+  <span class="label label-default">v1.5.0</span> The default value was 1000 in Version 0.11.0 until 1.5.0
     Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.
     All already matched tasks are launched.
+    Note: A small timeout could lead to ineffective offer matching. 
+          A big timeout can lead to offer starvation in a cluster with a lot of frameworks. 
 
 All launched tasks are stored before launching them. There is also a timeout for this:
-
-* <span class="label label-default">v0.11.0</span> `--save_tasks_to_launch_timeout` (Optional. Default: 3000):
-    Timeout (ms) after matching an offer for saving all matched tasks that we are about to launch.
-    When reaching the timeout, only the tasks that we could save within the timeout are also launched.
-    All other task launches are temporarily rejected and retried later.
-
-If the Mesos master fails over or in other unusual circumstances, a launch task request might get lost.
-You can configure how long Marathon waits for the first `TASK_STAGING` update.
 
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 300000 (5 minutes)):
   Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.

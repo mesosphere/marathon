@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
@@ -55,7 +55,7 @@ class TaskStatusUpdateTest extends UnitTest {
       val f = new Fixture
 
       val volumeId = Task.LocalVolumeId(f.appId, "persistent-volume", "uuid")
-      val task = TestTaskBuilder.Helper.residentLaunchedTask(f.appId, volumeId)
+      val task = TestTaskBuilder.Helper.residentLaunchedTask(f.appId, Seq(volumeId))
 
       f.clock += 5.seconds
 
@@ -70,6 +70,6 @@ class TaskStatusUpdateTest extends UnitTest {
 
   class Fixture {
     val appId = PathId("/app")
-    val clock = ConstantClock()
+    val clock = new SettableClock()
   }
 }

@@ -2,20 +2,17 @@ package mesosphere.marathon
 package core.flow.impl
 
 import akka.actor.{ Actor, Cancellable, Props }
+import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.flow.LaunchTokenConfig
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdated }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.bus.TaskChangeObservables
-import rx.lang.scala.{ Observable, Subscription }
 
 import scala.concurrent.duration._
 
 private[flow] object OfferMatcherLaunchTokensActor {
   def props(
     conf: LaunchTokenConfig,
-    taskStatusObservables: TaskChangeObservables,
     offerMatcherManager: OfferMatcherManager): Props = {
-    Props(new OfferMatcherLaunchTokensActor(conf, taskStatusObservables, offerMatcherManager))
+    Props(new OfferMatcherLaunchTokensActor(conf, offerMatcherManager))
   }
 }
 
@@ -27,16 +24,12 @@ private[flow] object OfferMatcherLaunchTokensActor {
   *
   * In addition, we periodically reset our token count to a fixed number.
   */
-private[impl] class OfferMatcherLaunchTokensActor(
-  conf: LaunchTokenConfig,
-  taskStatusObservables: TaskChangeObservables, offerMatcherManager: OfferMatcherManager)
+private[impl] class OfferMatcherLaunchTokensActor(conf: LaunchTokenConfig, offerMatcherManager: OfferMatcherManager)
     extends Actor {
-  var taskStatusUpdateSubscription: Subscription = _
   var periodicSetToken: Cancellable = _
 
   override def preStart(): Unit = {
-    val all: Observable[InstanceChange] = taskStatusObservables.forAll
-    taskStatusUpdateSubscription = all.subscribe(self ! _)
+    context.system.eventStream.subscribe(self, classOf[InstanceChanged])
 
     import context.dispatcher
     periodicSetToken = context.system.scheduler.schedule(0.seconds, conf.launchTokenRefreshInterval().millis)(
@@ -45,12 +38,11 @@ private[impl] class OfferMatcherLaunchTokensActor(
   }
 
   override def postStop(): Unit = {
-    taskStatusUpdateSubscription.unsubscribe()
     periodicSetToken.cancel()
   }
 
   override def receive: Receive = {
-    case InstanceUpdated(instance, _, _) if instance.isRunning && instance.state.healthy.fold(true)(_ == true) =>
+    case InstanceChanged(_, _, _, _, instance) if instance.isRunning && instance.state.healthy.fold(true)(_ == true) =>
       offerMatcherManager.addLaunchTokens(1)
   }
 }

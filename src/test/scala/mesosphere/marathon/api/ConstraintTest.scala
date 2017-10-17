@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.v2.validation.{ SchedulingValidation, SchedulingValidationMessages }
 import mesosphere.marathon.raml.Raml
-import play.api.data.validation.ValidationError
+import play.api.libs.json.JsonValidationError
 import play.api.libs.json._
 
 class ConstraintTest extends UnitTest {
@@ -17,7 +17,7 @@ class ConstraintTest extends UnitTest {
       JsSuccess(Raml.fromRaml(validateOrThrow(js.as[Seq[String]])(SchedulingValidation.complyWithAppConstraintRules)))
     } catch {
       case vfe: ValidationFailedException =>
-        JsError(ValidationError(messages = vfe.failure.violations.map(_.constraint)(collection.breakOut)))
+        JsError(JsonValidationError(messages = vfe.failure.violations.map(_.constraint)(collection.breakOut)))
     }
   }
 

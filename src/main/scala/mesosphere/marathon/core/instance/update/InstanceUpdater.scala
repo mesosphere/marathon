@@ -77,9 +77,9 @@ object InstanceUpdater extends StrictLogging {
           InstanceUpdateEffect.Failure(cause)
 
         case _ =>
-          InstanceUpdateEffect.Failure("ForceExpunge should never delegated to an instance")
+          InstanceUpdateEffect.Failure("ForceExpunge should never be delegated to an instance")
       }
-    }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in ${instance.instanceId}"))
+    }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in ${instance.instanceId}: ${instance.tasksMap.keySet}"))
   }
 
   private[marathon] def launchOnReservation(instance: Instance, op: LaunchOnReservation): InstanceUpdateEffect = {
@@ -87,8 +87,8 @@ object InstanceUpdater extends StrictLogging {
       require(instance.tasksMap.size == 1, "Residency is not yet implemented for task groups")
 
       // TODO(PODS): make this work for taskGroups
-      val task: Task = instance.appTask
-      val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(op.runSpecVersion, op.status))
+      val currentTask: Task = instance.appTask
+      val taskEffect = currentTask.update(TaskUpdateOperation.LaunchOnReservation(op.newTaskId, op.runSpecVersion, op.status))
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated = instance.copy(
@@ -96,8 +96,10 @@ object InstanceUpdater extends StrictLogging {
               condition = Condition.Staging,
               since = op.timestamp
             ),
-            tasksMap = instance.tasksMap.updated(task.taskId, updatedTask),
-            runSpecVersion = op.runSpecVersion
+            tasksMap = Map(updatedTask.taskId -> updatedTask),
+            runSpecVersion = op.runSpecVersion,
+            // The AgentInfo might have changed if the agent re-registered with a new ID after a reboot
+            agentInfo = op.agentInfo
           )
           val events = eventsGenerator.events(updated, task = None, op.timestamp, previousCondition = Some(instance.state.condition))
           InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
@@ -117,6 +119,9 @@ object InstanceUpdater extends StrictLogging {
         state = instance.state.copy(condition = Condition.Killed)
       )
       val events = eventsGenerator.events(updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+
+      logger.debug(s"Expunge reserved ${instance.instanceId}")
+
       InstanceUpdateEffect.Expunge(instance, events)
     } else {
       InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
@@ -130,6 +135,9 @@ object InstanceUpdater extends StrictLogging {
     )
     val events = InstanceChangedEventsGenerator.events(
       updatedInstance, task = None, now, previousCondition = Some(instance.state.condition))
+
+    logger.debug(s"Force expunge ${instance.instanceId}")
+
     InstanceUpdateEffect.Expunge(updatedInstance, events)
   }
 

@@ -49,18 +49,18 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
   )
 
   "GroupVersioningUtil" should {
-    "No changes for empty group" in {
+    "No changes for empty group should result in the resulting root group version set to the given one" in {
       When("Calculating version infos for an empty group")
       val updated = GroupVersioningUtil.updateVersionInfoForChangedApps(Timestamp(10), emptyGroup, emptyGroup)
-      Then("nothing is changed")
-      updated should be(emptyGroup)
+      Then("the version is updated anyway")
+      updated should be(emptyGroup.updateVersion(Timestamp(10)))
     }
 
-    "No changes for nested app" in {
+    "No changes for nested app should result in the resulting root group version set to the given one" in {
       When("Calculating version infos with no changes")
       val updated = GroupVersioningUtil.updateVersionInfoForChangedApps(Timestamp(10), nestedApp, nestedApp)
-      Then("nothing is changed")
-      updated should be(nestedApp)
+      Then("the version is updated anyway")
+      updated should be(nestedApp.updateVersion(Timestamp(10)))
     }
 
     "A new app should get proper versionInfo" in {

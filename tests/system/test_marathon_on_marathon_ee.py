@@ -3,12 +3,18 @@
     https://wiki.mesosphere.com/display/DCOS/MoM+1.4
 """
 
+import apps
+import common
+import fixtures
 import os
+import pytest
+import shakedown
 
-from common import *
-from shakedown import *
 from dcos import http
+from shakedown import marathon
 from urllib.parse import urljoin
+from utils import get_resource
+
 
 MOM_EE_NAME = 'marathon-user-ee'
 MOM_EE_SERVICE_ACCOUNT = 'marathon_user_ee'
@@ -18,9 +24,10 @@ PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
 
 DEFAULT_MOM_IMAGES = {
-    'MOM_EE_1.4': '1.4.2_1.9.8',
-    'MOM_EE_1.3': '1.3.10_1.1.5'
+    'MOM_EE_1.4': 'v1.4.7_1.9.8',
+    'MOM_EE_1.3': '1.3.13_1.1.5'
 }
+
 
 def is_mom_ee_deployed():
     mom_ee_id = '/{}'.format(MOM_EE_NAME)
@@ -40,14 +47,14 @@ def remove_mom_ee():
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
-        print('Removing {}...'.format(endpoint))
-        if service_available_predicate(endpoint):
-            with marathon_on_marathon(name=endpoint):
-                delete_all_apps()
+        if shakedown.service_available_predicate(endpoint):
+            print('Removing {}...'.format(endpoint))
+            with shakedown.marathon_on_marathon(name=endpoint):
+                shakedown.delete_all_apps()
 
     client = marathon.create_client()
     client.remove_app(MOM_EE_NAME)
-    deployment_wait()
+    shakedown.deployment_wait()
     print('Successfully removed {}'.format(MOM_EE_NAME))
 
 
@@ -59,6 +66,7 @@ def mom_ee_image(version):
         default_image = DEFAULT_MOM_IMAGES[image_name]
         print('No environment override found for MoM-EE  v{}. Using default image {}'.format(version, default_image))
         return default_image
+
 
 def mom_ee_endpoint(version, security_mode):
     # '1.3', 'permissive' -> marathon-user-ee-permissive-1-3
@@ -73,7 +81,7 @@ def assert_mom_ee(version, security_mode='permissive'):
     ensure_docker_credentials()
 
     # Deploy MoM-EE in permissive mode
-    app_def_file = '{}/mom-ee-{}-{}.json'.format(fixture_dir(), security_mode, version)
+    app_def_file = '{}/mom-ee-{}-{}.json'.format(fixtures.fixtures_dir(), security_mode, version)
     assert os.path.isfile(app_def_file), "Couldn't find appropriate MoM-EE definition: {}".format(app_def_file)
 
     image = mom_ee_image(version)
@@ -84,68 +92,89 @@ def assert_mom_ee(version, security_mode='permissive'):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    deployment_wait()
-    wait_for_service_endpoint(mom_ee_endpoint(version, security_mode))
+    shakedown.deployment_wait()
+    shakedown.wait_for_service_endpoint(mom_ee_endpoint(version, security_mode))
 
 
-# MoM-ee tests can only run on enterprise DC/OS cluster
-# with at least 2 private nodes.
-@pytest.mark.skipif("ee_version() is None")
-@pytest.mark.skipif('required_private_agents(2)')
+# strict security mode
+@pytest.mark.skipif('shakedown.required_private_agents(2)')
+@pytest.mark.skipif("shakedown.ee_version() != 'strict'")
 @pytest.mark.parametrize("version,security_mode", [
-pytest.mark.skipif("ee_version() != 'strict'")(('1.4', 'strict')),
-        ('1.4', 'permissive'),
-        ('1.4', 'disabled'),
-pytest.mark.skipif("ee_version() != 'strict'")(('1.3', 'strict')),
-        ('1.3', 'permissive'),
-        ('1.3', 'disabled')
+    ('1.4', 'strict'),
+    ('1.3', 'strict')
 ])
-def test_mom_ee(version, security_mode):
+def test_strict_mom_ee(version, security_mode):
+    assert_mom_ee(version, security_mode)
+    assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
+
+
+# permissive security mode
+@pytest.mark.skipif('shakedown.required_private_agents(2)')
+@pytest.mark.skipif("shakedown.ee_version() != 'permissive'")
+@pytest.mark.parametrize("version,security_mode", [
+    ('1.4', 'permissive'),
+    ('1.4', 'disabled'),
+    ('1.3', 'permissive'),
+    ('1.3', 'disabled')
+])
+def test_permissive_mom_ee(version, security_mode):
+    assert_mom_ee(version, security_mode)
+    assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
+
+
+# disabled security mode
+@pytest.mark.skipif('shakedown.required_private_agents(2)')
+@pytest.mark.skipif("shakedown.ee_version() != 'disabled'")
+@pytest.mark.parametrize("version,security_mode", [
+    ('1.4', 'disabled'),
+    ('1.3', 'disabled')
+])
+def test_disabled_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
     assert simple_sleep_app(mom_ee_endpoint(version, security_mode))
 
 
 def simple_sleep_app(name):
     # Deploy a simple sleep app in the MoM-EE
-    with marathon_on_marathon(name=name):
+    with shakedown.marathon_on_marathon(name=name):
         client = marathon.create_client()
 
-        app_id = uuid.uuid4().hex
-        app_def = app(app_id)
+        app_def = apps.sleep_app()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
-        tasks = get_service_task(name, app_id)
+        tasks = shakedown.get_service_task(name, app_def["id"].lstrip("/"))
         print('MoM-EE tasks: {}'.format(tasks))
         return tasks is not None
 
 
 def ensure_prerequisites_installed():
-    if not is_enterprise_cli_package_installed():
-        install_enterprise_cli_package()
-    assert is_enterprise_cli_package_installed() == True
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+    assert common.is_enterprise_cli_package_installed()
 
 
 def ensure_service_account():
-    if has_service_account(MOM_EE_SERVICE_ACCOUNT):
-        delete_service_account(MOM_EE_SERVICE_ACCOUNT)
-    create_service_account(MOM_EE_SERVICE_ACCOUNT, PRIVATE_KEY_FILE, PUBLIC_KEY_FILE)
-    assert has_service_account(MOM_EE_SERVICE_ACCOUNT)
+    if common.has_service_account(MOM_EE_SERVICE_ACCOUNT):
+        common.delete_service_account(MOM_EE_SERVICE_ACCOUNT)
+    common.create_service_account(MOM_EE_SERVICE_ACCOUNT, PRIVATE_KEY_FILE, PUBLIC_KEY_FILE)
+    assert common.has_service_account(MOM_EE_SERVICE_ACCOUNT)
 
 
 def ensure_permissions():
-    set_service_account_permissions(MOM_EE_SERVICE_ACCOUNT)
+    common.set_service_account_permissions(MOM_EE_SERVICE_ACCOUNT)
 
-    url = urljoin(dcos_url(), 'acs/api/v1/acls/dcos:superuser/users/{}'.format(MOM_EE_SERVICE_ACCOUNT))
+    url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/dcos:superuser/users/{}'.format(MOM_EE_SERVICE_ACCOUNT))
     req = http.get(url)
-    assert req.json()['array'][0]['url'] == '/acs/api/v1/acls/dcos:superuser/users/{}/full'.format(MOM_EE_SERVICE_ACCOUNT), "Service account permissions couldn't be set"
+    assert req.json()['array'][0]['url'] == '/acs/api/v1/acls/dcos:superuser/users/{}/full'.format(MOM_EE_SERVICE_ACCOUNT), \
+        "Service account permissions couldn't be set"
 
 
 def ensure_secret(strict=False):
-    if has_secret(MOM_EE_SECRET_NAME):
-        delete_secret(MOM_EE_SECRET_NAME)
-    create_secret(MOM_EE_SECRET_NAME, MOM_EE_SERVICE_ACCOUNT, strict)
-    assert has_secret(MOM_EE_SECRET_NAME)
+    if common.has_secret(MOM_EE_SECRET_NAME):
+        common.delete_secret(MOM_EE_SECRET_NAME)
+    common.create_sa_secret(MOM_EE_SECRET_NAME, MOM_EE_SERVICE_ACCOUNT, strict)
+    assert common.has_secret(MOM_EE_SECRET_NAME)
 
 
 def ensure_docker_credentials():
@@ -157,20 +186,23 @@ def ensure_docker_credentials():
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
 
-    create_docker_credentials_file(username, password)
-    copy_docker_credentials_file(get_private_agents())
+    common.create_docker_credentials_file(username, password)
+    common.copy_docker_credentials_file(shakedown.get_private_agents())
 
 
 def cleanup():
     if is_mom_ee_deployed():
         remove_mom_ee()
-    delete_service_account(MOM_EE_SERVICE_ACCOUNT)
-    delete_secret(MOM_EE_SECRET_NAME)
+    if common.has_service_account(MOM_EE_SERVICE_ACCOUNT):
+        common.delete_service_account(MOM_EE_SERVICE_ACCOUNT)
+    if common.has_secret(MOM_EE_SECRET_NAME):
+        common.delete_secret(MOM_EE_SECRET_NAME)
 
 
 def setup_function(function):
     if is_mom_ee_deployed():
         remove_mom_ee()
+
 
 # An additional cleanup in case one/more tests failed and left mom-ee running
 def teardown_module(module):

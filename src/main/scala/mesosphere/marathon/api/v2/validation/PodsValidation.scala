@@ -4,23 +4,26 @@ package api.v2.validation
 // scalastyle:off
 
 import com.wix.accord._
+import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Endpoint, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, Resources, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
+import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.plugin.validation.RunSpecValidator
+import mesosphere.marathon.raml._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
-
 // scalastyle:on
 
 /**
   * Defines implicit validation for pods
   */
 @SuppressWarnings(Array("all")) // wix breaks stuff
-trait PodsValidation {
-  import PodsValidationMessages._
+trait PodsValidation extends GeneralPurposeCombinators {
   import EnvVarValidation._
   import NameValidation._
   import NetworkValidation._
+  import PodsValidationMessages._
   import SchedulingValidation._
   import SecretValidation._
   import Validation._
@@ -58,7 +61,7 @@ trait PodsValidation {
           (argv.size should be > 0)(argv.size)
       }
     } else {
-      Failure(Set(RuleViolation(v1, s"Mesos Master ($mesosMasterVersion) does not support Command Health Checks", None)))
+      Failure(Set(RuleViolation(v1, s"Mesos Master ($mesosMasterVersion) does not support Command Health Checks")))
     }
   }
 
@@ -86,12 +89,6 @@ trait PodsValidation {
     val normalValidation = validator[Endpoint] { endpoint =>
       endpoint.networkNames is every(oneOf(networkNamess: _*))
 
-      // host-mode networking implies that hostPort is required
-      endpoint.hostPort is isTrue("is required when using host-mode networking") { hp =>
-        if (networks.exists(_.mode == NetworkMode.Host)) hp.nonEmpty
-        else true
-      }
-
       // host-mode networking implies that containerPort is disallowed
       endpoint.containerPort is isTrue("is not allowed when using host-mode networking") { cp =>
         if (networks.exists(_.mode == NetworkMode.Host)) cp.isEmpty
@@ -114,16 +111,38 @@ trait PodsValidation {
     normalValidation and implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
   }
 
-  val imageValidator = validator[Image] { image =>
-    image.id.length is between(1, 1024)
+  def imageValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Image] = new Validator[Image] {
+    override def apply(image: Image): Result = {
+      val dockerImageValidator: Validator[Image] = validator[Image] { image =>
+        image.pullConfig is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+        image.pullConfig is optional(
+          isTrue("pullConfig.secret must refer to an existing secret")(
+            config => secrets.contains(config.secret)))
+      }
+
+      val appcImageValidator: Validator[Image] = validator[Image] { image =>
+        image.pullConfig is isTrue("pullConfig is supported only with Docker images")(_.isEmpty)
+      }
+
+      image.kind match {
+        case ImageType.Docker => validate(image)(dockerImageValidator)
+        case ImageType.Appc => validate(image)(appcImageValidator)
+      }
+    }
   }
 
-  def volumeMountValidator(volumes: Seq[Volume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
+  def volumeMountValidator(volumes: Seq[PodVolume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
     volumeMount.name.length is between(1, 63)
     volumeMount.name should matchRegexFully(NamePattern)
     volumeMount.mountPath.length is between(1, 1024)
     volumeMount.name is isTrue("Referenced Volume in VolumeMount should exist") { name =>
-      volumes.exists(_.name == name)
+      volumeNames(volumes).contains(name)
+    }
+  }
+
+  def secretVolumesValidator(secrets: Map[String, SecretDef]): Validator[PodSecretVolume] = validator[PodSecretVolume] { vol =>
+    vol.secret is isTrue(SecretVolumeMustReferenceSecret) {
+      secrets.contains(_)
     }
   }
 
@@ -138,20 +157,19 @@ trait PodsValidation {
 
   def containerValidator(pod: Pod, enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[PodContainer] =
     validator[PodContainer] { container =>
-      container.resources is valid(resourceValidator)
+      container.resources is resourceValidator
       container.endpoints is every(endpointValidator(pod.networks))
-      container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
+      container.image is optional(imageValidator(enabledFeatures, pod.secrets))
       container.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
       container.healthCheck is optional(healthCheckValidator(container.endpoints, mesosMasterVersion))
       container.volumeMounts is every(volumeMountValidator(pod.volumes))
       container.artifacts is every(artifactValidator)
     }
 
-  def volumeValidator(containers: Seq[PodContainer]): Validator[Volume] = validator[Volume] { volume =>
-    volume.host is optional(notEmpty)
-  } and isTrue[Volume]("volume must be referenced by at least one container") { v =>
-    containers.exists(_.volumeMounts.exists(_.name == v.name))
-  }
+  def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] =
+    isTrue[PodVolume]("volume must be referenced by at least one container") { v =>
+      containers.exists(_.volumeMounts.exists(_.name == volumeName(v)))
+    }
 
   val fixedPodScalingPolicyValidator = validator[FixedPodScalingPolicy] { f =>
     f.instances should be >= 0
@@ -160,7 +178,7 @@ trait PodsValidation {
   val scalingValidator: Validator[PodScalingPolicy] = new Validator[PodScalingPolicy] {
     override def apply(v1: PodScalingPolicy): Result = v1 match {
       case fsf: FixedPodScalingPolicy => fixedPodScalingPolicyValidator(fsf)
-      case _ => Failure(Set(RuleViolation(v1, "Not a fixed scaling policy", None)))
+      case _ => Failure(Set(RuleViolation(v1, "Not a fixed scaling policy")))
     }
   }
 
@@ -170,7 +188,7 @@ trait PodsValidation {
   }
 
   val endpointContainerPortsUnique: Validator[Pod] = isTrue(ContainerPortsMustBeUnique) { pod: Pod =>
-    val containerPorts = pod.containers.flatMap(_.endpoints.flatMap(_.containerPort))
+    val containerPorts = pod.containers.flatMap(_.endpoints.flatMap(_.containerPort)).filter(_ != 0)
     containerPorts.distinct.size == containerPorts.size
   }
 
@@ -179,12 +197,18 @@ trait PodsValidation {
     hostPorts.distinct.size == hostPorts.size
   }
 
-  def podDefValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[Pod] = validator[Pod] { pod =>
+  // When https://github.com/wix/accord/issues/120 is resolved, we can inline this expression again
+  private def podSecretVolumes(pod: Pod) =
+    pod.volumes.collect { case sv: PodSecretVolume => sv }
+
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
-    pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[Volume] =>
-      val names = volumes.map(_.name)
+    podSecretVolumes(pod) is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+    podSecretVolumes(pod) is empty or every(secretVolumesValidator(pod.secrets))
+    pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[PodVolume] =>
+      val names = volumeNames(volumes)
       names.distinct.size == names.size
     }
     pod.containers is notEmpty and every(containerValidator(pod, enabledFeatures, mesosMasterVersion))
@@ -192,17 +216,32 @@ trait PodsValidation {
       val names = pod.containers.map(_.name)
       names.distinct.size == names.size
     }
-    pod.secrets is empty or (valid(secretValidator) and featureEnabled(enabledFeatures, Features.SECRETS))
-    pod.networks is valid(ramlNetworksValidator)
+    pod.secrets is empty or (secretValidator and featureEnabled(enabledFeatures, Features.SECRETS))
+    pod.networks is ramlNetworksValidator
+    pod.networks is defaultNetworkNameValidator(() => defaultNetworkName)
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
   }
+
+  def volumeNames(volumes: Seq[PodVolume]) = volumes.map(volumeName)
+  def volumeName(volume: PodVolume): String = volume match {
+    case EphemeralVolume(name) => name
+    case HostVolume(name, _) => name
+    case PodSecretVolume(name, _) => name
+  }
+
+  def pluginValidators(implicit pluginManager: PluginManager): Validator[PodDefinition] =
+    new Validator[PodDefinition] {
+      override def apply(pod: PodDefinition): Result = {
+        val plugins = pluginManager.plugins[RunSpecValidator]
+        new And(plugins: _*).apply(pod)
+      }
+    }
 }
 
 object PodsValidation extends PodsValidation {
-  // TODO: Change this value when mesos supports command checks for pods.
-  val MinCommandCheckMesosVersion = SemanticVersion(Int.MaxValue, Int.MaxValue, Int.MaxValue)
+  val MinCommandCheckMesosVersion = SemanticVersion(1, 3, 0)
 }
 
 object PodsValidationMessages {
@@ -211,6 +250,7 @@ object PodsValidationMessages {
   val HostPortsMustBeUnique = "host ports must be unique across all containers"
   val VolumeNamesMustBeUnique = "volume names must be unique"
   val ContainerNamesMustBeUnique = "container names must be unique"
+  val SecretVolumeMustReferenceSecret = "volume.secret must refer to an existing secret"
   // Note: we should keep this in sync with AppValidationMessages
   val NetworkNameRequiredForMultipleContainerNetworks =
     "networkNames must be a single item list when hostPort is specified and more than 1 container network is defined"
