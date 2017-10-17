@@ -12,7 +12,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
@@ -26,7 +26,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
   case class Fixture(
       taskTracker: InstanceTracker = mock[InstanceTracker],
-      taskStateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor],
+      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor],
       driver: SchedulerDriver = mock[SchedulerDriver],
       killService: KillService = mock[KillService],
       clock: SettableClock = new SettableClock()) {
@@ -34,7 +34,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     driverHolder.driver = Some(driver)
     val config: AllConf = MarathonTestHelper.defaultConfig()
     val checkActor: ActorRef = system.actorOf(
-      OverdueTasksActor.props(config, taskTracker, taskStateOpProcessor, killService, clock),
+      OverdueTasksActor.props(config, taskTracker, stateOpProcessor, killService, clock),
       "check-" + UUID.randomUUID.toString)
 
     def verifyClean(): Unit = {
@@ -50,7 +50,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       noMoreInteractions(taskTracker)
       noMoreInteractions(driver)
-      noMoreInteractions(taskStateOpProcessor)
+      noMoreInteractions(stateOpProcessor)
     }
   }
 
@@ -148,7 +148,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
       val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
       val app = InstanceTracker.SpecInstances.forInstances(appId, Seq(recentReserved, overdueReserved))
       taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
-      taskStateOpProcessor.process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId)) returns
+      stateOpProcessor.process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId)) returns
         Future.successful(InstanceUpdateEffect.Expunge(overdueReserved, Nil))
 
       When("the check is initiated")
@@ -158,7 +158,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
 
       Then("the reservation gets processed")
       verify(taskTracker).instancesBySpec()(any[ExecutionContext])
-      verify(taskStateOpProcessor).process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId))
+      verify(stateOpProcessor).process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId))
       verifyClean()
     }
   }
