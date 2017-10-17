@@ -46,9 +46,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
-import mesosphere.marathon.raml.DeploymentResult
+import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
-import mesosphere.marathon.raml.AnyToRaml
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -174,17 +173,33 @@ class AppsController(
   private[this] def updateMultiple(partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity): Route = {
     val version = clock.now()
     (forceParameter & entity(as(appUpdatesUnmarshaller(partialUpdate)))) { (force, appUpdates) =>
-      def updateGroup(rootGroup: RootGroup): RootGroup = appUpdates.foldLeft(rootGroup) { (group, update) =>
-        update.id.map(PathId(_)) match {
-          case Some(id) =>
-            group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation, clock.now(), marathonSchedulerService), version)
-          case None =>
-            group
-        }
-      }
-
-      onSuccessLegacy(None)(groupManager.updateRoot(PathId.empty, updateGroup, version, force)).apply { plan =>
+      val updateGroupFn = updateAppsRootGroupModifier(appUpdates, partialUpdate, allowCreation, version)
+      onSuccessLegacy(None)(groupManager.updateRoot(PathId.empty, updateGroupFn, version, force)).apply { plan =>
         complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+      }
+    }
+  }
+
+  /**
+    * Helper function to update apps inside rootgroup
+    *
+    * @param appUpdates application updates
+    * @param partialUpdate do we allow partial updates or not
+    * @param allowCreation can we create a new app if appId is missing
+    * @param version version
+    * @return function for updating rootgroup
+    */
+  private[v2] def updateAppsRootGroupModifier(
+    appUpdates: Seq[AppUpdate],
+    partialUpdate: Boolean,
+    allowCreation: Boolean,
+    version: Timestamp)(implicit identity: Identity): RootGroup => RootGroup = { rootGroup: RootGroup =>
+    appUpdates.foldLeft(rootGroup) { (group, update) =>
+      update.id.map(PathId(_)) match {
+        case Some(id) =>
+          group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation, clock.now(), marathonSchedulerService), version)
+        case None =>
+          group
       }
     }
   }
