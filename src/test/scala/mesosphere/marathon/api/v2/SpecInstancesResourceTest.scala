@@ -9,7 +9,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, _ }
 import mesosphere.marathon.test.{ GroupCreation, SettableClock }
@@ -26,7 +26,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       taskTracker: InstanceTracker = mock[InstanceTracker],
-      stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor],
+      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor],
       taskKiller: TaskKiller = mock[TaskKiller],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       config: MarathonConf = mock[MarathonConf],
@@ -49,7 +49,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       taskTracker: InstanceTracker = mock[InstanceTracker],
-      stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor],
+      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       config: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager]) {

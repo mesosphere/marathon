@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
-import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
+import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
 import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
 import org.apache.mesos.Protos.{ Offer, OfferID }
 
@@ -54,7 +54,7 @@ private[launcher] class OfferProcessorImpl(
     conf: OfferProcessorConfig, clock: Clock,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
-    taskCreationHandler: InstanceCreationHandler,
+    stateOpProcessor: InstanceStateOpProcessor,
     offerStreamInput: SourceQueue[Offer]) extends OfferProcessor with StrictLogging {
   import mesosphere.marathon.core.async.ExecutionContexts.global
 
@@ -123,11 +123,11 @@ private[launcher] class OfferProcessorImpl(
       terminatedFuture.flatMap { _ =>
         nextOp.oldInstance match {
           case Some(existingInstance) =>
-            taskCreationHandler.created(InstanceUpdateOperation.Revert(existingInstance))
+            stateOpProcessor.process(InstanceUpdateOperation.Revert(existingInstance))
           case None =>
-            taskCreationHandler.terminated(InstanceUpdateOperation.ForceExpunge(nextOp.instanceId))
+            stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(nextOp.instanceId))
         }
-      }
+      }.map(_ => Done)
     }.recover {
       case NonFatal(e) =>
         throw new RuntimeException("while reverting task ops", e)
@@ -144,8 +144,8 @@ private[launcher] class OfferProcessorImpl(
     def saveTask(taskOpWithSource: InstanceOpWithSource): Future[Option[InstanceOpWithSource]] = {
       val taskId = taskOpWithSource.instanceId
       logger.info(s"Processing ${taskOpWithSource.op.stateOp} for ${taskOpWithSource.instanceId}")
-      taskCreationHandler
-        .created(taskOpWithSource.op.stateOp)
+      stateOpProcessor
+        .process(taskOpWithSource.op.stateOp)
         .map(_ => Some(taskOpWithSource))
         .recoverWith {
           case NonFatal(e) =>
