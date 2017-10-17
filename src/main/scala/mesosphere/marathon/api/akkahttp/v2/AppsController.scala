@@ -171,7 +171,7 @@ class AppsController(
   }
 
   /**
-    * Helper function to update apps insude rootgroup
+    * Helper function to update apps inside rootgroup
     *
     * @param appUpdates application updates
     * @param partialUpdate do we allow partial updates or not

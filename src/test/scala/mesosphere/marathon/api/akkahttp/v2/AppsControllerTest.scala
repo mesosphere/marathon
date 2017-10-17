@@ -2038,7 +2038,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         Timestamp.now()
       )(new Identity {})
       Then("rootgroup is not updated")
-      Try(rootGroupUpdatefn(rootGroup)).isFailure shouldEqual true
+      an[AppNotFoundException] should be thrownBy rootGroupUpdatefn(rootGroup)
     }
   }
 }
