@@ -21,7 +21,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity }
 import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -36,6 +36,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.Try
 
 class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest {
 
@@ -1873,13 +1874,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       val plan = DeploymentPlan(rootGroup, rootGroup)
 
-      groupManager.updateRoot(any, any, any, any, any) answers { args =>
-        val fn = args(1).asInstanceOf[RootGroup => RootGroup]
-        val updated = fn(rootGroup)
-        updated.app(app1Id).get.cmd.get shouldEqual newApp1Cmd
-        updated.app(app2Id).get.cmd.get shouldEqual newApp2Cmd
-        Future.successful(plan)
-      }
+      groupManager.updateRoot(any, any, any, any, any) returns Future.successful(plan)
       groupManager.rootGroup() returns rootGroup
       groupManager.app(appDefs(0).id) returns Some(appDefs(0))
       groupManager.app(appDefs(1).id) returns Some(appDefs(1))
@@ -1924,13 +1919,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       )
       val plan = DeploymentPlan(rootGroup, rootGroup)
 
-      groupManager.updateRoot(any, any, any, any, any) answers { args =>
-        val fn = args(1).asInstanceOf[RootGroup => RootGroup]
-        val updated = fn(rootGroup)
-        updated.app(app1Id).get.cmd.get shouldEqual newApp1Cmd
-        updated.app(app2Id).get.cmd.get shouldEqual newApp2Cmd
-        Future.successful(plan)
-      }
+      groupManager.updateRoot(any, any, any, any, any) returns Future.successful(plan)
       groupManager.rootGroup() returns rootGroup
       groupManager.app(appDefs(0).id) returns Some(appDefs(0))
       groupManager.app(appDefs(1).id) returns Some(appDefs(1))
@@ -1974,13 +1963,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }.toMap
       )
       val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.updateRoot(any, any, any, any, any) answers { args =>
-        val fn = args(1).asInstanceOf[RootGroup => RootGroup]
-        val updated = fn(rootGroup)
-        updated.app(app1Id).get.cmd.get shouldEqual newApp1Cmd
-        updated.app(app2Id).get.cmd.get shouldEqual newApp2Cmd
-        Future.successful(plan)
-      }
+      groupManager.updateRoot(any, any, any, any, any) returns Future.failed(AppNotFoundException(PathId("/unknown")))
       groupManager.rootGroup() returns rootGroup
       groupManager.app(appDefs(0).id) returns Some(appDefs(0))
       groupManager.app(appDefs(1).id) returns Some(appDefs(1))
@@ -2003,6 +1986,59 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         Then("404: Entity not found")
         status shouldEqual StatusCodes.NotFound
       }
+    }
+
+    "Correctly update the RootGroup when updating multiple apps and app creation is allowed" in new Fixture {
+      Given("A root group")
+      val appDefs = Seq(
+        AppDefinition(id = PathId("/app1"), cmd = Some("cmd1")),
+        AppDefinition(id = PathId("/app2"), cmd = Some("cmd2"))
+      )
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      When("update of multiple apps is done and creation is allowed")
+      val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
+        List(
+          AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
+          AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
+        ),
+        partialUpdate = true,
+        allowCreation = true,
+        Timestamp.now()
+      )(new Identity {})
+      val updatedRootGroup = rootGroupUpdatefn(rootGroup)
+      Then("rootgroup is updated")
+      updatedRootGroup.app(PathId("/app1")).get.cmd shouldEqual Some("newCmd")
+      updatedRootGroup.app(PathId("/newapp")).get.cmd shouldEqual Some("newCmd2")
+
+    }
+
+    "Do not update a RootGroup when updating multiple apps and creation in not allowed" in new Fixture {
+      Given("A root group")
+      val appDefs = Seq(
+        AppDefinition(id = PathId("/app1"), cmd = Some("cmd1")),
+        AppDefinition(id = PathId("/app2"), cmd = Some("cmd2"))
+      )
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      When("update of multiple apps is done and creation is allowed")
+      val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
+        List(
+          AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
+          AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
+        ),
+        partialUpdate = true,
+        allowCreation = false,
+        Timestamp.now()
+      )(new Identity {})
+      Then("rootgroup is not updated")
+      Try(rootGroupUpdatefn(rootGroup)).isFailure shouldEqual true
     }
   }
 }
