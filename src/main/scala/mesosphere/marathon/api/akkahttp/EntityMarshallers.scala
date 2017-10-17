@@ -163,6 +163,7 @@ object EntityMarshallers {
   implicit val queueMarashaller = internalToRamlJsonMarshaller[(Seq[QueuedInstanceInfoWithStatistics], Boolean, Clock), raml.Queue]
   implicit val deploymentResultMarshaller = playJsonMarshaller[raml.DeploymentResult]
   implicit val enrichedTaskMarshaller = playJsonMarshaller[raml.EnrichedTask]
+  implicit val enrichedTasksListMarshaller = playJsonMarshaller[raml.EnrichedTasksList]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {
     def handleValidationErrors: FromEntityUnmarshaller[T] = um.recover(_ ⇒ _ ⇒ {
