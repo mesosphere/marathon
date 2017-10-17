@@ -42,22 +42,22 @@ class TasksController(
   import mesosphere.marathon.raml.EnrichedTaskConversion._
 
   override val route = {
-    get {
-      pathEndOrSingleSlash {
-        listTasks()
+    asLeader(electionService) {
+      authenticated.apply { implicit identity =>
+        get {
+          pathEndOrSingleSlash {
+            listTasks()
+          }
+        }
       }
     }
   }
 
-  private def listTasks(): Route = {
-    asLeader(electionService) {
-      authenticated.apply { implicit identity =>
-        parameters("status".?, "status[]".as[String].*) { (statusParameter, statusParameters) =>
-          val statuses = statusParameter.fold(Seq.empty[String])(s => Seq(s)) ++ statusParameters
-          onSuccess(enrichedTasks(statuses)) { tasks =>
-            complete(TasksList(tasks).toRaml)
-          }
-        }
+  private def listTasks()(implicit identity: Identity): Route = {
+    parameters("status".?, "status[]".as[String].*) { (statusParameter, statusParameters) =>
+      val statuses = statusParameter.fold(Seq.empty[String])(s => Seq(s)) ++ statusParameters
+      onSuccess(enrichedTasks(statuses)) { tasks =>
+        complete(TasksList(tasks).toRaml)
       }
     }
   }
