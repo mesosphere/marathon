@@ -22,3 +22,5 @@ native/
 sandboxes/
 sandboxes.tar.gz
 tests/performance/results
+ci.log
+ci.tar.gz
