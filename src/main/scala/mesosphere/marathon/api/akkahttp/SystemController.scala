@@ -23,10 +23,7 @@ import scala.concurrent.ExecutionContext
 /**
   * The SystemController handles system level functionality like configuration, metrics and logging.
   */
-class SystemController(
-    config: MarathonConf,
-    cfg: Config,
-    val electionService: ElectionService)(
+class SystemController(val marathonConfig: MarathonConf, val cfg: Config, val electionService: ElectionService)(
     implicit
     val actorSystem: ActorSystem,
     val executionContext: ExecutionContext,
