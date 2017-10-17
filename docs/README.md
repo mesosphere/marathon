@@ -78,6 +78,9 @@ following the instructions.
         
         $ cd /path/to/marathon
         $ git checkout releases/1.x
+        $ # to make sure we also remove deleted documentation, we need to delete all files first.
+        $ # please note, rm -r ../marathon-gh-pages/* will not delete dot-files
+        $ rm -r ../marathon-gh-pages/*
         $ cp -r docs/** ../marathon-gh-pages
 
 4. Change to the marathon-gh-pages directory, commit, and push the changes
