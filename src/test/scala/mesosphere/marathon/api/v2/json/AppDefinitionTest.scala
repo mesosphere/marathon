@@ -612,7 +612,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = fromJson(json)
 
-      app.fetch(0).uri shoulbBe "http://example.com/file1.tar.gz?foo=10&bar=meh"
+      app.fetch(0).uri shouldBe "http://example.com/file1.tar.gz?foo=10&bar=meh"
       app.fetch(0).extract shouldBe true
 
       app.fetch(1).uri shouldBe "http://example.com/file?foo=10&bar=meh"
