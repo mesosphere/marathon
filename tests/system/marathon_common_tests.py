@@ -39,7 +39,7 @@ def test_launch_docker_container():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     tasks = client.get_tasks(app_def["id"])
     app = client.get_app(app_def["id"])
@@ -55,7 +55,7 @@ def test_launch_mesos_container_with_docker_image():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     tasks = client.get_tasks(app_def["id"])
     app = client.get_app(app_def["id"])
@@ -83,7 +83,7 @@ def test_launch_mesos_grace_period(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     tasks = shakedown.get_service_task(marathon_service_name, app_id)
     assert tasks is not None
@@ -119,7 +119,7 @@ def test_launch_docker_grace_period(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     tasks = shakedown.get_service_task(marathon_service_name, app_id)
     assert tasks is not None
@@ -146,7 +146,7 @@ def test_docker_port_mappings():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     tasks = client.get_tasks(app_def["id"])
     host = tasks[0]['host']
@@ -166,7 +166,7 @@ def test_docker_dns_mapping(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     bad_cmd = 'ping -c 1 docker-test.marathon-user.mesos-bad'
     status, output = shakedown.run_command_on_master(bad_cmd)
@@ -215,7 +215,7 @@ def test_task_failure_recovers():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     tasks = client.get_tasks(app_def["id"])
     old_task_id = tasks[0]['id']
@@ -242,7 +242,7 @@ def test_run_app_with_specified_user():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     tasks = client.get_tasks(app_def["id"])
     task = tasks[0]
@@ -449,7 +449,7 @@ def test_app_with_no_health_check_not_healthy():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     app = client.get_app(app_def["id"])
 
