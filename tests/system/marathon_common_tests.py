@@ -241,12 +241,13 @@ def test_run_app_with_specified_user():
 
     app_def = apps.sleep_app()
     app_def['user'] = 'core'
+    app_id = app_def['id']
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_def["id"])
+    shakedown.deployment_wait(app_id=app_id)
 
-    tasks = client.get_tasks(app_def["id"])
+    tasks = client.get_tasks(app_id)
     task = tasks[0]
     assert task['state'] == 'TASK_RUNNING', "The task is not running: {}".format(task['state'])
 
@@ -448,12 +449,13 @@ def test_app_with_no_health_check_not_healthy():
     """Makes sure that no task is marked as healthy if no health check is defined for the corresponding app."""
 
     app_def = apps.sleep_app()
+    app_id = app_def["id"]
     client = marathon.create_client()
     client.add_app(app_def)
 
-    shakedown.deployment_wait(app_id=app_def["id"])
+    shakedown.deployment_wait(app_id=app_id)
 
-    app = client.get_app(app_def["id"])
+    app = client.get_app(app_id)
 
     assert app['tasksRunning'] == 1, \
         "The number of running tasks is {}, but 1 was expected".format(app['tasksRunning'])
