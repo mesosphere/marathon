@@ -4,13 +4,10 @@
 
 - Ammonite (v1.0.1 Scala 2.12 version tested; later should work too)
 - Docker
-- rpmbuild (discussed later)
-
-This will require the `rpmbuild` executable, available via:
-
-- The `alien` package in debian distros
-- The `rpm-build` package in redhat-based distros
-- This [docker-based hack](https://gist.github.com/timcharper/f1f821fad32fac6751ddc7ce7bceb189) for OS X.
+- `rpmbuild`. Available via:
+  - The `alien` package in Debian/Ubuntu distros
+  - The `rpm-build` package in Redhat based distros
+  - This [docker-based hack](https://gist.github.com/timcharper/f1f821fad32fac6751ddc7ce7bceb189) for OS X.
 
 ## Running
 
