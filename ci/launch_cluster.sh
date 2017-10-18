@@ -62,11 +62,11 @@ function create-junit-xml {
 
 if ! ./dcos-launch create; then
   create-junit-xml "dcos-launch" "cluster.create" "Cluster launch failed."
-  exit 1
+  exit 0
 fi
 if ! ./dcos-launch wait; then
   create-junit-xml "dcos-launch" "cluster.create" "Cluster did not start in time."
-  exit 1
+  exit 0
 fi
 
 # Return dcos_url
