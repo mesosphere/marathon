@@ -37,8 +37,9 @@ def compileAndTest(): Unit = utils.stage("Compile and Test") {
 }
 
 @main
-def zipSandboxLogs(): Unit = {
+def zipLogs(): Unit = {
   Try(%("tar", "-zcf", "sandboxes.tar.gz", "sandboxes"))
+  Try(%("tar", "-zcf", "ci.tar.gz", "--remove-files", "ci.log"))
 }
 
 @main
@@ -158,7 +159,7 @@ def run(): (String, Option[awsClient.Artifact]) = {
   try {
     compileAndTest()
   } finally {
-    zipSandboxLogs()    // Try to archive logs in any case
+    zipLogs()    // Try to archive ci and sandbox logs in any case
   }
 
   val (version, maybeArtifact) = createAndUploadPackages()

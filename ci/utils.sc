@@ -6,8 +6,17 @@ import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
+import java.io.File
+
 
 import $file.provision
+
+def ciLogFile(name: String = "ci.log"): File = {
+  val log = new File(name)
+  if (!log.exists())
+    log.createNewFile()
+  log
+}
 
 // Color definitions
 object Colors {
@@ -66,6 +75,7 @@ def runWithTimeout(timeout: FiniteDuration)(commands: Seq[String]): Unit = {
     .directory(new java.io.File(pwd.toString))
     .command(commands.asJava)
     .inheritIO()
+    .redirectOutput(ProcessBuilder.Redirect.appendTo(ciLogFile()))
     .start()
 
   try {
