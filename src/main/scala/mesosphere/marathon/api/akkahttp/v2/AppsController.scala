@@ -275,6 +275,12 @@ class AppsController(
       }
     }
 
+  /**
+    * We have to pass this function to the groupManager to make sure updates are serialized
+    * @param appId id of the app
+    * @param identity
+    * @return updated RootGroup in case of success, Rejection otherwise
+    */
   private[v2] def deleteAppRootGroupModifier(appId: PathId)(implicit identity: Identity): RootGroup => Either[Rejection, RootGroup] = { rootGroup: RootGroup =>
     rootGroup.app(appId) match {
       case None =>
