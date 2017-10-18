@@ -80,7 +80,7 @@ trait ElectionService extends ElectionServiceLeaderInfo {
     * The given actorRef will initially get the current state via the appropriate
     * [[LeadershipTransition]] message and will be informed of changes after that.
     *
-    * Upon becoming a leader, [[LeadershipTransition.ElectedAsLeader]] is published. Upon leadership loss,
+    * Upon becoming a leader, [[LeadershipTransition.ElectedAsLeaderAndReady]] is published. Upon leadership loss,
     * [[LeadershipTransition.Standby]] is sent.
     */
   def subscribe(self: ActorRef): Unit
@@ -93,7 +93,7 @@ trait ElectionService extends ElectionServiceLeaderInfo {
   /**
     * Provides LeadershipTransitions via a materializable Akka Stream
     *
-    * The first element will be the current state. Upon becoming a leader, [[LeadershipTransition.ElectedAsLeader]] is
+    * The first element will be the current state. Upon becoming a leader, [[LeadershipTransition.ElectedAsLeaderAndReady]] is
     * published. Upon leadership loss, [[LeadershipTransition.Standby]] is sent.
     */
   def leadershipTransitionEvents: Source[LeadershipTransition, Cancellable]
@@ -147,7 +147,7 @@ class ElectionServiceImpl(
 
   def subscribe(subscriber: ActorRef): Unit = {
     eventStream.subscribe(subscriber, classOf[LeadershipTransition])
-    val currentState = if (isLeader) LeadershipTransition.ElectedAsLeader else LeadershipTransition.Standby
+    val currentState = if (isLeader) LeadershipTransition.ElectedAsLeaderAndReady else LeadershipTransition.Standby
     subscriber ! currentState
   }
 
@@ -190,7 +190,7 @@ class ElectionServiceImpl(
   private val localTransitionSink = Sink.foreach[LeadershipTransition] { e =>
     eventStream.publish(e)
     e match {
-      case LeadershipTransition.ElectedAsLeader =>
+      case LeadershipTransition.ElectedAsLeaderAndReady =>
         _leaderAndReady = true
       case LeadershipTransition.Standby =>
         _leaderAndReady = false
@@ -285,17 +285,17 @@ class ElectionServiceImpl(
     val leadershipTransitionsFlow =
       Flow[LeadershipState]
         .map {
-          case LeadershipState.ElectedAsLeader => LeadershipTransition.ElectedAsLeader
-          case _: LeadershipState.Standby => LeadershipTransition.Standby
+          case LeadershipState.ElectedAsLeader => true
+          case _: LeadershipState.Standby => false
         }
-        .via(EnrichedFlow.dedup(initialFilterElement = LeadershipTransition.Standby)) // if the first elements are standby, emit nothing
-        .mapAsync(1) {
-          case LeadershipTransition.ElectedAsLeader =>
+        .via(EnrichedFlow.dedup(initialFilterElement = false)) // Until we become leader, we emit nothing
+        .mapAsync(1) { becameLeader =>
+          if (becameLeader)
             Future {
               candidate.startLeadership()
-              LeadershipTransition.ElectedAsLeader
+              LeadershipTransition.ElectedAsLeaderAndReady
             }(electionEC)
-          case LeadershipTransition.Standby =>
+          else
             Future {
               candidate.stopLeadership()
               LeadershipTransition.Standby
@@ -324,7 +324,7 @@ object ElectionService extends StrictLogging {
   private val leaderDurationMetric = "service.mesosphere.marathon.leaderDuration"
 
   val metricsSink = Sink.foreach[LeadershipTransition] {
-    case LeadershipTransition.ElectedAsLeader =>
+    case LeadershipTransition.ElectedAsLeaderAndReady =>
       val startedAt = System.currentTimeMillis()
       Kamon.metrics.gauge(leaderDurationMetric, Time.Milliseconds)(System.currentTimeMillis() - startedAt)
     case LeadershipTransition.Standby =>
@@ -358,7 +358,7 @@ object LeadershipTransition {
   /**
     * Emitted when we are elected as leader, _after_ Marathon is initialized
     */
-  case object ElectedAsLeader extends LeadershipTransition
+  case object ElectedAsLeaderAndReady extends LeadershipTransition
 
   /**
     * Indicates that we previously had leadership, but now we don't.

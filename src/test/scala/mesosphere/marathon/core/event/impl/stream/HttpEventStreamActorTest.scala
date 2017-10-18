@@ -28,7 +28,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A handler that wants to connect and we have an active streamActor")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LeadershipTransition.ElectedAsLeader
+      streamActor ! LeadershipTransition.ElectedAsLeaderAndReady
 
       When("A connection open message is sent to the stream actor")
       streamActor ! HttpEventStreamConnectionOpen(handle)
@@ -42,7 +42,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A handler that wants to connect and we have an active streamActor with one connection")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LeadershipTransition.ElectedAsLeader
+      streamActor ! LeadershipTransition.ElectedAsLeaderAndReady
       streamActor ! HttpEventStreamConnectionOpen(handle)
       val handleActor = streamActor.underlyingActor.streamHandleActors.values.head
       watch(handleActor)
@@ -76,7 +76,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A registered handler")
       val handle = mock[HttpEventStreamHandle]
       call(handle.id).thenReturn("1")
-      streamActor ! LeadershipTransition.ElectedAsLeader
+      streamActor ! LeadershipTransition.ElectedAsLeaderAndReady
       streamActor ! HttpEventStreamConnectionOpen(handle)
       streamActor.underlyingActor.streamHandleActors should have size 1
 

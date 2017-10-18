@@ -95,7 +95,7 @@ class HttpEventStreamActor(
       context.become(standby)
       streamHandleActors.keys.foreach(removeHandler)
 
-    case LeadershipTransition.ElectedAsLeader =>
+    case LeadershipTransition.ElectedAsLeaderAndReady =>
       log.info("Became active. Accepting event streaming requests.")
       context.become(active)
   }

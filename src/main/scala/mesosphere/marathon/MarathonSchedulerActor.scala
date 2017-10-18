@@ -74,7 +74,7 @@ class MarathonSchedulerActor private (
   def receive: Receive = suspended
 
   def suspended: Receive = LoggingReceive.withLabel("suspended"){
-    case LeadershipTransition.ElectedAsLeader =>
+    case LeadershipTransition.ElectedAsLeaderAndReady =>
       logger.info("Starting scheduler actor")
 
       deploymentRepository.all().runWith(Sink.seq).onComplete {
@@ -110,7 +110,7 @@ class MarathonSchedulerActor private (
       lockedRunSpecs.clear()
       context.become(suspended)
 
-    case LeadershipTransition.ElectedAsLeader => // ignore
+    case LeadershipTransition.ElectedAsLeaderAndReady => // ignore
 
     case ReconcileTasks =>
       import akka.pattern.pipe
