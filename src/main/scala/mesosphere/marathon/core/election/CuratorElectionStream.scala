@@ -149,7 +149,7 @@ object CuratorElectionStream extends StrictLogging {
     private val closeHook: () => Unit = { () => cancel() }
 
     def start(): Unit = synchronized {
-      assert(!isStarted, "already started")
+      require(!isStarted, "already started")
       isStarted = true
       // We register the beforeClose hook to ensure that we have an opportunity to remove the latch entry before we lose
       // our connection to Zookeeper
