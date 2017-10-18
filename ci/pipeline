@@ -26,7 +26,7 @@ val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 @main
 def compileAndTest(): Unit = utils.stage("Compile and Test") {
 
-  def run(cmd: String *) = utils.runWithTimeout(1.hour)(cmd)
+  def run(cmd: String *) = utils.runWithTimeout(30.minutes)(cmd)
 
   run("sbt", "clean", "test", "integration:test", "scapegoat")
 
