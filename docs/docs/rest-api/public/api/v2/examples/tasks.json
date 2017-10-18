@@ -11,6 +11,7 @@
       "version": "2015-09-17T09:32:36.583Z",
       "slaveId": "20150707-153709-201330860-5050-12052-S0",
       "appId": "/frontend-foosball",
+      "state": "TASK_RUNNING",
       "servicePorts": [
         10019
       ]
@@ -24,7 +25,8 @@
       "startedAt": "2015-08-19T21:26:50.864Z",
       "stagedAt": "2015-08-19T21:26:49.040Z",
       "version": "2015-08-19T21:26:47.616Z",
-      "slaveId": null,
+      "slaveId": "1cc9e7d0-63d6-4e99-9c58-c0b950401ae2-S24",
+      "state": "TASK_RUNNING",
       "appId": "/tools/docker/registry",
       "servicePorts": [
         5000

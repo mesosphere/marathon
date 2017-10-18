@@ -13,7 +13,8 @@ class V2Controller(
     pluginsController: PluginsController,
     infoController: InfoController,
     leaderController: LeaderController,
-    queueController: QueueController
+    queueController: QueueController,
+    tasksController: TasksController
 ) extends Controller {
   import Directives._
   override val route: Route = {
@@ -33,6 +34,9 @@ class V2Controller(
         leaderController.route
       } ~
       pathPrefix("queue") {
+        queueController.route
+      } ~
+      pathPrefix("tasks") {
         queueController.route
       }
   }

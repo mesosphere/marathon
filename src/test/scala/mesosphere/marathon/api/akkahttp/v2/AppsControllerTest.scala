@@ -22,7 +22,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity }
 import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -37,6 +37,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.Try
 
 class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest {
 
@@ -1999,37 +2000,27 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
 
-    "Replace multiple existing applications" in new Fixture {
+    "Replace multiple existing applications using Put" in new Fixture {
       Given("An app and group")
-      val app1Id = "/app1"
-      val app2Id = "/app2"
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
 
       val newApp1Cmd = "bla1"
       val newApp2Cmd = "bla2"
-      val apps = Seq(App(
-        id = app1Id,
-        cmd = Some("cmd1")
-      ), App(
-        id = app2Id,
-        cmd = Some("cmd1")
-      )
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
       )
 
-      val normed = apps.map(normalize)
-      val appDefs = normed.map(Raml.fromRaml(_))
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
         appDef.id -> appDef
       }.toMap
       )
+
       val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.updateRoot(any, any, any, any, any) answers { args =>
-        val fn = args(1).asInstanceOf[RootGroup => RootGroup]
-        val updated = fn(rootGroup)
-        updated.app(PathId(app1Id)).get.cmd.get shouldEqual newApp1Cmd
-        updated.app(PathId(app2Id)).get.cmd.get shouldEqual newApp2Cmd
-        Future.successful(plan)
-      }
+
+      groupManager.updateRoot(any, any, any, any, any) returns Future.successful(plan)
       groupManager.rootGroup() returns rootGroup
       groupManager.app(appDefs(0).id) returns Some(appDefs(0))
       groupManager.app(appDefs(1).id) returns Some(appDefs(1))
@@ -2053,6 +2044,147 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         status shouldEqual StatusCodes.OK
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
       }
+    }
+
+    "Replace multiple existing applications using Patch" in new Fixture {
+      Given("An app and group")
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
+
+      val newApp1Cmd = "bla1"
+      val newApp2Cmd = "bla2"
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
+      )
+
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+
+      groupManager.updateRoot(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.rootGroup() returns rootGroup
+      groupManager.app(appDefs(0).id) returns Some(appDefs(0))
+      groupManager.app(appDefs(1).id) returns Some(appDefs(1))
+
+      When("The application is updated")
+      val body =
+        s"""[
+           | {
+           |   "id": "$app1Id",
+           |   "cmd": "$newApp1Cmd"
+           | },
+           | {
+           |   "id": "$app2Id",
+           |   "cmd": "$newApp2Cmd"
+           | }
+          ]""".stripMargin.getBytes("UTF-8")
+
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Patch(Uri./, entity) ~> route ~> check {
+        Then("The application is updated")
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Reject replacing multiple existing applications using Patch if appId is not found" in new Fixture {
+      Given("An app and group")
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
+
+      val newApp1Cmd = "bla1"
+      val newApp2Cmd = "bla2"
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
+      )
+
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.updateRoot(any, any, any, any, any) returns Future.failed(AppNotFoundException(PathId("/unknown")))
+      groupManager.rootGroup() returns rootGroup
+      groupManager.app(appDefs(0).id) returns Some(appDefs(0))
+      groupManager.app(appDefs(1).id) returns Some(appDefs(1))
+
+      When("The application is updated")
+      val body =
+        s"""[
+           | {
+           |   "id": "$app1Id",
+           |   "cmd": "$newApp1Cmd"
+           | },
+           | {
+           |   "id": "/unknown",
+           |   "cmd": "$newApp2Cmd"
+           | }
+          ]""".stripMargin.getBytes("UTF-8")
+
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Patch(Uri./, entity) ~> route ~> check {
+        Then("404: Entity not found")
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+
+    "Correctly update the RootGroup when updating multiple apps and app creation is allowed" in new Fixture {
+      Given("A root group")
+      val appDefs = Seq(
+        AppDefinition(id = PathId("/app1"), cmd = Some("cmd1")),
+        AppDefinition(id = PathId("/app2"), cmd = Some("cmd2"))
+      )
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      When("update of multiple apps is done and creation is allowed")
+      val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
+        List(
+          AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
+          AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
+        ),
+        partialUpdate = true,
+        allowCreation = true,
+        Timestamp.now()
+      )(new Identity {})
+      val updatedRootGroup = rootGroupUpdatefn(rootGroup)
+      Then("rootgroup is updated")
+      updatedRootGroup.app(PathId("/app1")).get.cmd shouldEqual Some("newCmd")
+      updatedRootGroup.app(PathId("/newapp")).get.cmd shouldEqual Some("newCmd2")
+
+    }
+
+    "Do not update a RootGroup when updating multiple apps and creation in not allowed" in new Fixture {
+      Given("A root group")
+      val appDefs = Seq(
+        AppDefinition(id = PathId("/app1"), cmd = Some("cmd1")),
+        AppDefinition(id = PathId("/app2"), cmd = Some("cmd2"))
+      )
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      When("update of multiple apps is done and creation is allowed")
+      val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
+        List(
+          AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
+          AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
+        ),
+        partialUpdate = true,
+        allowCreation = false,
+        Timestamp.now()
+      )(new Identity {})
+      Then("rootgroup is not updated")
+      an[AppNotFoundException] should be thrownBy rootGroupUpdatefn(rootGroup)
     }
   }
 }

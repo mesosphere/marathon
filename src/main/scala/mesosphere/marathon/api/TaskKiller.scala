@@ -11,7 +11,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 
@@ -21,7 +21,7 @@ import scala.util.control.NonFatal
 
 class TaskKiller @Inject() (
     instanceTracker: InstanceTracker,
-    stateOpProcessor: TaskStateOpProcessor,
+    stateOpProcessor: InstanceStateOpProcessor,
     groupManager: GroupManager,
     service: MarathonSchedulerService,
     val config: MarathonConf,

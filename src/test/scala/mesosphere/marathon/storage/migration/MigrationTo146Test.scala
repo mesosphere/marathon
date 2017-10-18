@@ -49,7 +49,7 @@ class MigrationTo146Test extends AkkaUnitTest with GroupCreation with StrictLogg
     implicit lazy val mat: Materializer = ActorMaterializer()
     implicit lazy val ctx: ExecutionContextExecutor = system.dispatcher
     val app = AppDefinition(PathId("/app"), unreachableStrategy = UnreachableEnabled(1.seconds, 5.seconds))
-    val app2 = AppDefinition(PathId("/app2"), unreachableStrategy = UnreachableEnabled())
+    val app2 = AppDefinition(PathId("/app2"), unreachableStrategy = UnreachableEnabled(5.minutes, 10.minutes))
     val pod = PodDefinition(PathId("/pod"), unreachableStrategy = UnreachableEnabled(1.seconds, 2.seconds))
     appRepository.all() returns Source(Seq(app, app2))
     appRepository.store(any) returns Future.successful(Done)

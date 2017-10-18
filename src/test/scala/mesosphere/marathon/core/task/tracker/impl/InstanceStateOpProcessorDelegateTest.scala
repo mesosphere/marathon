@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
-import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
@@ -14,12 +13,12 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 
-class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
+class InstanceStateOpProcessorDelegateTest extends AkkaUnitTest {
   class Fixture {
     lazy val clock = new SettableClock()
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val taskTrackerProbe = TestProbe()
-    lazy val delegate = new InstanceCreationHandlerAndUpdaterDelegate(clock, config, taskTrackerProbe.ref)
+    lazy val delegate = new InstanceStateOpProcessorDelegate(clock, config, taskTrackerProbe.ref)
     lazy val timeoutDuration = delegate.timeout.duration
     def timeoutFromNow = clock.now() + timeoutDuration
   }
@@ -32,8 +31,8 @@ class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
       val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
       val expectedStateChange = InstanceUpdateEffect.Update(instance, None, events = Nil)
 
-      When("created is called")
-      val create = f.delegate.created(stateOp)
+      When("process is called")
+      val create = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
       f.taskTrackerProbe.expectMsg(
@@ -43,7 +42,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
       When("the request is acknowledged")
       f.taskTrackerProbe.reply(expectedStateChange)
       Then("The reply is Unit, because task updates are deferred")
-      create.futureValue should be(Done)
+      create.futureValue shouldBe a[InstanceUpdateEffect.Update]
     }
 
     "Launch fails" in {
@@ -52,8 +51,8 @@ class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
       val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
 
-      When("created is called")
-      val create = f.delegate.created(stateOp)
+      When("process is called")
+      val create = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
       f.taskTrackerProbe.expectMsg(
@@ -71,7 +70,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
       createValue.getCause should be(cause)
     }
 
-    "Terminated succeeds" in {
+    "Expunge succeeds" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
@@ -92,14 +91,14 @@ class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
       terminated.futureValue should be(expectedStateChange)
     }
 
-    "Terminated fails" in {
+    "Expunge fails" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
       val stateOp = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
 
-      When("terminated is called")
-      val terminated = f.delegate.terminated(stateOp)
+      When("process is called")
+      val terminated = f.delegate.process(stateOp)
 
       Then("an expunge operation is requested")
       f.taskTrackerProbe.expectMsg(
@@ -128,7 +127,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest extends AkkaUnitTest {
       val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskIdString)).buildPartial()
       val stateOp = InstanceUpdateOperation.MesosUpdate(instance, update, now)
 
-      When("created is called")
+      When("process is called")
       val statusUpdate = f.delegate.process(stateOp)
 
       Then("an update operation is requested")
