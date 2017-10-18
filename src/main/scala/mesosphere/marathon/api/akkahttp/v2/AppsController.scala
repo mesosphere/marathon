@@ -267,28 +267,25 @@ class AppsController(
 
   private def deleteSingle(appId: PathId)(implicit identity: Identity): Route =
     forceParameter { force =>
-      lazy val notFound: Either[Rejection, RootGroup] =
-        Left(Rejections.EntityNotFound.noApp(appId))
-      lazy val notAuthorized: Either[Rejection, RootGroup] =
-        Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-      def deleteApp(rootGroup: RootGroup): Either[Rejection, RootGroup] = {
-        rootGroup.app(appId) match {
-          case None =>
-            notFound
-          case Some(app) =>
-            if (authorizer.isAuthorized(identity, DeleteRunSpec, app))
-              Right(rootGroup.removeApp(appId))
-            else
-              notAuthorized
-        }
-      }
-      onSuccess(groupManager.updateRootEither(appId.parent, deleteApp, force = force)) {
+      onSuccess(groupManager.updateRootEither(appId.parent, deleteAppRootGroupModifier(appId), force = force)) {
         case Right(plan) =>
           completeWithDeploymentForApp(appId, plan)
         case Left(rej) =>
           reject(rej)
       }
     }
+
+  private[v2] def deleteAppRootGroupModifier(appId: PathId)(implicit identity: Identity): RootGroup => Either[Rejection, RootGroup] = { rootGroup: RootGroup =>
+    rootGroup.app(appId) match {
+      case None =>
+        Left(Rejections.EntityNotFound.noApp(appId))
+      case Some(app) =>
+        if (authorizer.isAuthorized(identity, DeleteRunSpec, app))
+          Right(rootGroup.removeApp(appId))
+        else
+          Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+    }
+  }
 
   private def restartApp(appId: PathId)(implicit identity: Identity): Route = ???
 
