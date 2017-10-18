@@ -4,9 +4,7 @@ title: Data migration
 
 # Data migration
 
-Marathon can store its data either in ZooKeeper or in-memory. If data is stored in ZooKeeper, your data will be migrated when you upgrade Marathon.
-
-Different versions of Marathon can have different data layouts in ZooKeeper. When a newer version of Marathon becomes leader for the first time, it moves the data in ZooKeeper to the new layout.
+Marathon stores its data in ZooKeeper. When you upgrade Marathon, your data will be migrated, because different versions of Marathon can have different data layouts in ZooKeeper. When a newer version of Marathon becomes leader for the first time, it moves the data in ZooKeeper to the new layout.
 
 The following tips will help you avoid data loss during a Marathon upgrade.
 
