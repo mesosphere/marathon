@@ -10,10 +10,10 @@ First authenticate with your cluster with
 dcos cluster setup --no-check --username=$DCOS_USER --password=$DCOS_PWD https://...
 ```
 
-Then run a test with
+Then run a specific test with
 
 ```
-shakedown test_marathon...py
+shakedown test_marathon_root.py::test_private_repository_mesos_app
 ```
 
 

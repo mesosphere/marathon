@@ -36,13 +36,14 @@ def test_launch_docker_container():
     """Launches a Docker container on Marathon."""
 
     app_def = apps.docker_http_server()
+    app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_def["id"])
+    shakedown.deployment_wait(app_id=app_id)
 
-    tasks = client.get_tasks(app_def["id"])
-    app = client.get_app(app_def["id"])
+    tasks = client.get_tasks(app_id)
+    app = client.get_app(app_id)
 
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
     assert app['container']['type'] == 'DOCKER', "The container type is not DOCKER"
@@ -52,13 +53,14 @@ def test_launch_mesos_container_with_docker_image():
     """Launches a Mesos container with a Docker image."""
 
     app_def = apps.ucr_docker_http_server()
+    app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(app_id=app_def["id"])
+    shakedown.deployment_wait(app_id=app_id)
 
-    tasks = client.get_tasks(app_def["id"])
-    app = client.get_app(app_def["id"])
+    tasks = client.get_tasks(app_id)
+    app = client.get_app(app_id)
 
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
     assert app['container']['type'] == 'MESOS', "The container type is not MESOS"
