@@ -9,10 +9,11 @@ import sys
 
 from datetime import timedelta
 from dcos import http, mesos
+from dcos.errors import DCOSException, DCOSHTTPException
 from distutils.version import LooseVersion
+from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
-from dcos.errors import DCOSHTTPException
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -24,14 +25,6 @@ def ignore_exception(exc):
     """Used with @retrying.retry to ignore exceptions in a retry loop.
        ex.  @retrying.retry( retry_on_exception=ignore_exception)
        It does verify that the object passed is an exception
-    """
-    return isinstance(exc, Exception)
-
-
-def ignore_exception(exc):
-    """ Used with @retrying.retry to igmore exceptions in a retry loop.
-    ex.  @retrying.retry( retry_on_exception=ignore_exception)
-    It does verify that the object passed is an exception
     """
     return isinstance(exc, Exception)
 
@@ -369,7 +362,11 @@ def install_enterprise_cli_package():
 def is_enterprise_cli_package_installed():
     """Returns `True` if `dcos-enterprise-cli` package is installed."""
     stdout, stderr, return_code = shakedown.run_dcos_command('package list --json')
-    result_json = json.loads(stdout)
+    print('package list command returned code:{}, stderr:{}, stdout: {}'.format(return_code, stderr, stdout))
+    try:
+        result_json = json.loads(stdout)
+    except JSONDecodeError as error:
+        raise DCOSException('Could not parse: "{}"'.format(stdout)) from error
     return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
@@ -619,7 +616,7 @@ def add_acs_resource(resource):
         print('Adding ACS resource: {}'.format(resource))
         url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}'.format(resource))
         extra_args = {'headers': {'Content-Type': 'application/json'}}
-        req = http.put(url, data=json.dumps({'description' : resource}), **extra_args)
+        req = http.put(url, data=json.dumps({'description': resource}), **extra_args)
         assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
