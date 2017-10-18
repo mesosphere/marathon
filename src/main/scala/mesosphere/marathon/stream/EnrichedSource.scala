@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package stream
 
-import akka.actor.Cancellable
+import akka.actor.{ Cancellable, PoisonPill }
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Source
-import mesosphere.marathon.util.ActorCancellable
+import mesosphere.marathon.util.CancellableOnce
 
 object EnrichedSource {
   /**
@@ -37,7 +37,7 @@ object EnrichedSource {
     source.
       mapMaterializedValue { ref =>
         eventStream.subscribe(ref, message)
-        new ActorCancellable(ref)
+        new CancellableOnce(() => ref ! PoisonPill)
       }
   }
 }
