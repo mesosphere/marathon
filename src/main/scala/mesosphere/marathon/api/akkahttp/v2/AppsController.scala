@@ -11,6 +11,8 @@ import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
+import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
+import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TaskKiller
@@ -29,9 +31,13 @@ import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, Identity, ViewResource, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
+import play.api.libs.json.Json
+import PathId._
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.util.RichEither
 import play.api.libs.json._
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
@@ -271,28 +277,37 @@ class AppsController(
 
   private def deleteSingle(appId: PathId)(implicit identity: Identity): Route =
     forceParameter { force =>
-      lazy val notFound: Either[Rejection, RootGroup] =
-        Left(Rejections.EntityNotFound.noApp(appId))
-      lazy val notAuthorized: Either[Rejection, RootGroup] =
-        Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-      def deleteApp(rootGroup: RootGroup): Either[Rejection, RootGroup] = {
-        rootGroup.app(appId) match {
-          case None =>
-            notFound
-          case Some(app) =>
-            if (authorizer.isAuthorized(identity, DeleteRunSpec, app))
-              Right(rootGroup.removeApp(appId))
-            else
-              notAuthorized
-        }
-      }
-      onSuccess(groupManager.updateRootEither(appId.parent, deleteApp, force = force)) {
+      onSuccess(groupManager.updateRootEither(appId.parent, deleteAppRootGroupModifier(appId), force = force)) {
         case Right(plan) =>
           completeWithDeploymentForApp(appId, plan)
         case Left(rej) =>
           reject(rej)
       }
     }
+
+  /**
+    * We have to pass this function to the groupManager to make sure updates are serialized
+	  *
+    * Another request might remove the app before we call the update.
+    * That is why we cannot check if the app exists before the update call.
+    * We have to do so during the call. Since we do some app handling anyways we can also check if the caller is authroized.
+    *
+    *
+    * @param appId id of the app
+    * @param identity
+    * @return updated RootGroup in case of success, Rejection otherwise
+    */
+  private[v2] def deleteAppRootGroupModifier(appId: PathId)(implicit identity: Identity): RootGroup => Either[Rejection, RootGroup] = { rootGroup: RootGroup =>
+    rootGroup.app(appId) match {
+      case None =>
+        Left(Rejections.EntityNotFound.noApp(appId))
+      case Some(app) =>
+        if (authorizer.isAuthorized(identity, DeleteRunSpec, app))
+          Right(rootGroup.removeApp(appId))
+        else
+          Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+    }
+  }
 
   private def restartApp(appId: PathId)(implicit identity: Identity): Route = {
     forceParameter { force =>

@@ -109,7 +109,7 @@ class GroupManagerImpl(
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
     // All updates to the root go through the work queue.
-    val result: Future[Either[T, DeploymentPlan]] = serializeUpdates {
+    val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
       logger.info(s"Upgrade root group version:$version with force:$force")
 
       val from = rootGroup()
@@ -135,7 +135,7 @@ class GroupManagerImpl(
       }
     }
 
-    result.onComplete {
+    maybeDeploymentPlan.onComplete {
       case Success(Right(plan)) =>
         logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.target.id} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
@@ -148,7 +148,7 @@ class GroupManagerImpl(
         logger.warn(s"Deployment failed for change: $version", ex)
         eventStream.publish(GroupChangeFailed(id, version.toString, ex.getMessage))
     }
-    result
+    maybeDeploymentPlan
   } catch {
     case NonFatal(ex) => Future.failed(ex)
   }
