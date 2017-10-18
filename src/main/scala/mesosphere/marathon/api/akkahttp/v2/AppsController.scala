@@ -277,7 +277,7 @@ class AppsController(
 
   /**
     * We have to pass this function to the groupManager to make sure updates are serialized
-	  *
+    *
     * Another request might remove the app before we call the update.
     * That is why we cannot check if the app exists before the update call.
     * We have to do so during the call. Since we do some app handling anyways we can also check if the caller is authroized.

@@ -6,39 +6,54 @@
 - Docker
 - rpmbuild (discussed later)
 
-## Running
-
-### 1) Build all packages
-
 This will require the `rpmbuild` executable, available via:
 
 - The `alien` package in debian distros
 - The `rpm-build` package in redhat-based distros
-- This [docker-based back](https://gist.github.com/timcharper/f1f821fad32fac6751ddc7ce7bceb189) for OS X.
+- This [docker-based hack](https://gist.github.com/timcharper/f1f821fad32fac6751ddc7ce7bceb189) for OS X.
 
-Packages should be in folder `../../target/packages`
+## Running
+
+### 1) Build docker and all linux packages (deb/rpm)
+
+Packages will land in `{marathon_project_dir}/target/packages`.
 
 **Only one** version of the package should exist for each package format and service loader. You should clean the folder out prior to running.
 
 Build with:
 
 ```
-cd ../../
+cd {marathon_project_dir}
 rm -rf target/packages
 sbt docker:publishLocal packageLinux
 ```
 
-### 2) Build the docker images
+### 2) Build the test bed docker images
 
-The docker images must be built prior to running the tests. If you don't build them, the tests will fail.
+There are docker images created for:
 
-Simply run `make all` to build the prerequisite docker images.
+  * centos systemd
+  * centos systemv
+  * debian systemd
+  * debian systemv
+  * ubuntu upstart
+
+The Dockerfiles for these images in subfolders of this directory.  
+These test bed docker images must be built prior to running the tests. If you don't build them, the tests will fail.
+
+To build the prerequisite test bed docker images.
+
+```
+cd {marathon_project_dir}/tests/package
+make all
+```
 
 ### 3) Run the tests
 
-**Check that again** - Exactly one version of each package should be in `../target/packages`.
+**Check that again** - Exactly one version of each package should be in `{marathon_project_dir}/target/packages`.
 
 ```
+# from {marathon_project_dir}/tests/package
 amm test.sc all
 ```
 
