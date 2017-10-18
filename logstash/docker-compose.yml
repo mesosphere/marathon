@@ -1,0 +1,39 @@
+---
+version: '3'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${TAG}
+    environment: ['http.host=0.0.0.0', 'transport.host=127.0.0.1', 'ELASTIC_PASSWORD=changeme']
+    ports: ['127.0.0.1:9200:9200']
+    networks: ['stack']
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${TAG}
+    environment: ['ELASTICSEARCH_PASSWORD=changeme']
+    ports: ['127.0.0.1:5601:5601']
+    networks: ['stack']
+    depends_on: ['elasticsearch']
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${TAG}
+    environment:
+      - 'xpack.monitoring.elasticsearch.password=changeme'
+    # Provide a simple pipeline configuration for Logstash with a bind-mounted file.
+    volumes:
+      - ./config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ${DCOS_LOG_BUNDLE}:/usr/share/logstash/bundle
+    networks: ['stack']
+    depends_on: ['elasticsearch', 'setup_logstash']
+
+  # Run a short-lived container to set up Logstash.
+  setup_logstash:
+    image: centos:7
+    volumes: ['./scripts/setup-logstash.sh:/usr/local/bin/setup-logstash.sh:ro']
+    # The script may have CR/LF line endings if using Docker for Windows, so
+    # make sure that they don't confuse Bash.
+    command: ['/bin/bash', '-c', 'cat /usr/local/bin/setup-logstash.sh | tr -d "\r" | bash']
+    environment: ['ELASTIC_PASSWORD=${ELASTIC_PASSWORD}']
+    networks: ['stack']
+    depends_on: ['elasticsearch']
+
+networks: {stack: {}}

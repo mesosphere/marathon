@@ -118,11 +118,11 @@ class GroupManagerImpl(
         Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
         val plan = DeploymentPlan(from, to, version, toKill)
         Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
-        logger.info(s"Computed new deployment plan:\n$plan")
+        logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")
         await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
         await(deploymentService.get().deploy(plan, force))
         await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
-        logger.info(s"Updated groups/apps/pods according to plan ${plan.id}")
+        logger.info(s"Updated groups/apps/pods according to plan ${plan.id} for ${plan.targetIdsString}")
         // finally update the root under the write lock.
         root := Option(plan.target)
         plan
@@ -130,7 +130,7 @@ class GroupManagerImpl(
     }
     deployment.onComplete {
       case Success(plan) =>
-        logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.target.id} acknowledged. Waiting to get processed")
+        logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.targetIdsString} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
       case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event

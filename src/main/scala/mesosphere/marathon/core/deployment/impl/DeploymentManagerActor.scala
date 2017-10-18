@@ -147,17 +147,17 @@ class DeploymentManagerActor(
 
     case DeploymentFinished(plan) =>
       runningDeployments.remove(plan.id).map { _ =>
-        logger.info(s"Removing ${plan.id} from list of running deployments")
+        logger.info(s"Removing ${plan.id} for ${plan.targetIdsString} from list of running deployments")
         deploymentStatus -= plan.id
         deploymentRepository.delete(plan.id)
       }
 
     case LaunchDeploymentActor(plan) if isScheduledDeployment(plan.id) =>
-      logger.info(s"Launching DeploymentActor for ${plan.id}")
+      logger.info(s"Launching DeploymentActor for ${plan.id} for ${plan.targetIdsString}")
       startDeployment(runningDeployments(plan.id))
 
     case LaunchDeploymentActor(plan) =>
-      logger.info(s"Deployment ${plan.id} was already canceled or overridden by another one. Not proceeding with it")
+      logger.info(s"Deployment ${plan.id} for ${plan.targetIdsString} was already canceled or overridden by another one. Not proceeding with it")
 
     case stepInfo: DeploymentStepInfo => deploymentStatus += stepInfo.plan.id -> stepInfo
 
@@ -191,7 +191,7 @@ class DeploymentManagerActor(
   }
 
   private def giveUpConflictingDeployment(plan: DeploymentPlan, origSender: ActorRef): Future[Done] = {
-    logger.info(s"Received new deployment plan ${plan.id}. Conflicts are detected and it is not forced, so it will not start")
+    logger.info(s"Received new deployment plan ${plan.id} for ${plan.targetIdsString}. Conflicts are detected and it is not forced, so it will not start")
     val reason = AppLockedException(conflictingDeployments(plan).map(_.plan.id))
     origSender ! DeploymentFailed(plan, reason)
 
@@ -200,19 +200,19 @@ class DeploymentManagerActor(
 
   @SuppressWarnings(Array("all")) // async/await
   private def startNonConflictingDeployment(plan: DeploymentPlan, origSender: ActorRef) = {
-    logger.info(s"Received new deployment plan ${plan.id}, no conflicts detected")
+    logger.info(s"Received new deployment plan ${plan.id} for ${plan.targetIdsString}, no conflicts detected")
     val result: Future[Done] = markScheduled(plan)
 
     async {
       await(deploymentRepository.store(plan))
-      logger.info(s"Stored new deployment plan ${plan.id}")
+      logger.info(s"Stored new deployment plan ${plan.id} for ${plan.targetIdsString}")
 
       if (origSender != Actor.noSender) origSender ! DeploymentStarted(plan)
 
       self ! LaunchDeploymentActor(plan)
     }.recover {
       case NonFatal(e) =>
-        logger.error(s"Couldn't start deployment ${plan.id}. Repository store failed with:", e)
+        logger.error(s"Couldn't start deployment ${plan.id} for ${plan.targetIdsString}. Repository store failed with:", e)
         self ! FailedRepositoryOperation(plan, e)
     }
     result
@@ -220,7 +220,7 @@ class DeploymentManagerActor(
 
   @SuppressWarnings(Array("all")) // async/await
   private def startConflictingDeployment(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo], origSender: ActorRef) = {
-    logger.info(s"Received new forced deployment plan ${plan.id} Proceeding with canceling conflicts ${conflicts.map(_.plan.id)}")
+    logger.info(s"Received new forced deployment plan ${plan.id} for ${plan.targetIdsString}. Proceeding with canceling conflicts ${conflicts.map(_.plan.id)}")
 
     val result: Future[Done] = markScheduled(plan)
 
@@ -230,7 +230,7 @@ class DeploymentManagerActor(
       self ! CancelDeletedConflicts(plan, conflicts, origSender)
     }.recover {
       case NonFatal(e) =>
-        logger.info(s"Failed to start deployment ${plan.id}. Repository delete failed with: $e")
+        logger.info(s"Failed to start deployment ${plan.id} for ${plan.targetIdsString}. Repository delete failed with: $e")
         self ! FailedRepositoryOperation(plan, e)
     }
     result
@@ -265,14 +265,14 @@ class DeploymentManagerActor(
 
     async {
       await(deploymentRepository.store(plan))
-      logger.info(s"Stored new deployment plan ${plan.id}")
+      logger.info(s"Stored new deployment plan ${plan.id} for ${plan.targetIdsString}")
 
       if (origSender != Actor.noSender) origSender ! DeploymentStarted(plan)
 
       self ! WaitForCanceledConflicts(plan, conflicts)
     }.recover{
       case NonFatal(e) =>
-        logger.error(s"Couldn't start deployment ${plan.id}. Repository store failed with: $e")
+        logger.error(s"Couldn't start deployment ${plan.id} for ${plan.targetIdsString}. Repository store failed with: $e")
         self ! FailedRepositoryOperation(plan, e)
     }
   }
