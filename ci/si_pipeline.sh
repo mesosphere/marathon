@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x -e -o pipefail
+set -x -o pipefail
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of four custer variants: open, strict, permissive and disabled
