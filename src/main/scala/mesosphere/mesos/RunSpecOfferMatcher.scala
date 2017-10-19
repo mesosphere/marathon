@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, RunSpec }
+import mesosphere.marathon.util.FaultDomain
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import org.apache.mesos.Protos.Offer
 
@@ -21,7 +22,7 @@ object RunSpecOfferMatcher extends StrictLogging {
     * @param givenAcceptedResourceRoles The resource roles for which to look.
     */
   def matchOffer(runSpec: RunSpec, offer: Offer, knownInstances: => Seq[Instance],
-    givenAcceptedResourceRoles: Set[String], conf: MatcherConf, homeRegion: Option[String])(implicit clock: Clock): ResourceMatchResponse = {
+    givenAcceptedResourceRoles: Set[String], conf: MatcherConf, homeFaultDomain: Option[FaultDomain])(implicit clock: Clock): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles
@@ -33,7 +34,7 @@ object RunSpecOfferMatcher extends StrictLogging {
     }
 
     val resourceMatchResponse =
-      ResourceMatcher.matchResources(offer, runSpec, knownInstances, ResourceSelector.any(acceptedResourceRoles), conf, homeRegion = homeRegion)
+      ResourceMatcher.matchResources(offer, runSpec, knownInstances, ResourceSelector.any(acceptedResourceRoles), conf, homeFaultDomain = homeFaultDomain)
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = runSpec match {

@@ -10,6 +10,7 @@ import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.{ OfferUtil, PortsMatch, PortsMatcher, ResourceUtil }
+import mesosphere.marathon.util.FaultDomain
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
@@ -133,7 +134,7 @@ object ResourceMatcher extends StrictLogging {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, knownInstances: => Seq[Instance],
-    selector: ResourceSelector, conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty, homeRegion: Option[String])(implicit clock: Clock): ResourceMatchResponse = {
+    selector: ResourceSelector, conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty, homeFaultDomain: Option[FaultDomain])(implicit clock: Clock): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 
@@ -179,8 +180,7 @@ object ResourceMatcher extends StrictLogging {
     val meetsFaultDomainRequirements: Boolean = {
       val faultDomainFields = Set(Constraints.regionField, Constraints.zoneField)
       val hasFaultDomainConstraints = runSpec.constraints.exists(c => faultDomainFields.contains(c.getField))
-
-      hasFaultDomainConstraints || homeRegion == OfferUtil.region(offer)
+      hasFaultDomainConstraints || homeFaultDomain.map(_.region) == OfferUtil.region(offer)
     }
 
     val meetsAllConstraints: Boolean = {

@@ -1295,7 +1295,7 @@ class TaskBuilderTest extends UnitTest {
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, homeRegion = None)
+          config.defaultAcceptedResourceRolesSet, config, homeFaultDomain = None)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 

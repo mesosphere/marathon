@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.state.PathId
+import mesosphere.marathon.util.FaultDomain
 import org.apache.mesos.Protos.Offer
 
 import scala.concurrent.duration._
@@ -18,7 +19,7 @@ import scala.concurrent.{ Future, Promise }
   * @param actorRef Reference to actor that matches offers.
   * @param precedenceFor Defines which matcher receives offers first. See [[mesosphere.marathon.core.matcher.base.OfferMatcher.precedenceFor]].
   */
-class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[PathId], homeRegion: () => Option[String])
+class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[PathId], homeFaultDomain: () => Option[FaultDomain])
     extends OfferMatcher with StrictLogging {
 
   def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
@@ -29,14 +30,6 @@ class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[P
 
   override def toString: String = s"ActorOfferMatcher($actorRef)"
 
-  override def isInterestedIn(offer: Offer) = {
-    def isFromHomeRegion(offer: Offer): Boolean = {
-      !offer.hasDomain || !offer.getDomain.hasFaultDomain || homeRegion().forall(_ == offer.getDomain.getFaultDomain.getRegion.getName)
-    }
-
-    isFromHomeRegion(offer)
-    true
-  }
 }
 
 object ActorOfferMatcher {

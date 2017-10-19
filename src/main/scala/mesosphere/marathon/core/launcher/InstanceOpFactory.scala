@@ -3,6 +3,7 @@ package core.launcher
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.util.FaultDomain
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -29,7 +30,7 @@ object InstanceOpFactory {
     * @param additionalLaunches the number of additional launches that has been requested
     */
   case class Request(runSpec: RunSpec, offer: Mesos.Offer, instanceMap: Map[Instance.Id, Instance],
-      additionalLaunches: Int, homeRegion: Option[String]) {
+      additionalLaunches: Int, homeFaultDomain: Option[FaultDomain]) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
     lazy val reserved: Seq[Instance] = instances.filter(_.isReserved)

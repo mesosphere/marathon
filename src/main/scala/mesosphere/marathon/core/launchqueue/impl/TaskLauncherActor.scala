@@ -22,6 +22,7 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.FaultDomain
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Promise
@@ -37,7 +38,7 @@ private[launchqueue] object TaskLauncherActor {
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatisticsActor: ActorRef,
-    homeRegion: () => Option[String])(
+    homeFaultDomain: () => Option[FaultDomain])(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -46,7 +47,7 @@ private[launchqueue] object TaskLauncherActor {
       clock, taskOpFactory,
       maybeOfferReviver,
       instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
-      runSpec, initialCount, homeRegion))
+      runSpec, initialCount, homeFaultDomain))
   }
 
   sealed trait Requests
@@ -89,7 +90,7 @@ private class TaskLauncherActor(
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int,
-    homeRegion: () => Option[String]) extends Actor with StrictLogging with Stash {
+    homeFaultDomain: () => Option[FaultDomain]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]
@@ -325,7 +326,7 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
-      val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch, homeRegion())
+      val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch, homeFaultDomain())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
           offerMatchStatisticsActor ! matched
@@ -425,7 +426,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id), homeRegion)
+      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id), homeFaultDomain)
     }
     private[this] var registeredAsMatcher = false
 

@@ -11,6 +11,8 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.util.FaultDomain
+import mesosphere.mesos.Constraints
 
 import scala.concurrent.duration._
 
@@ -18,12 +20,21 @@ import scala.concurrent.duration._
 class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   override lazy val mesosNumMasters = 1
-  override lazy val mesosNumSlaves = 2
+  override lazy val mesosNumSlaves = 3
 
-  val homeRegionName = "home"
-  override def mastersFaultDomains = Seq(Some(FaultDomain(region = homeRegionName, zone = "zone1")))
+  val homeRegionName = "home_region"
+  val homeZoneName = "home_zone"
 
-  override def agentsFaultDomains = Seq(Some(FaultDomain(region = "remote1", zone = "zone1")), Some(FaultDomain(region = homeRegionName, zone = "zone1")))
+  val remoteRegionName = "remote_region"
+  val remoteZone1Name = "remote_zone"
+  val remoteZone2Name = "remote_zone"
+
+  override def mastersFaultDomains = Seq(Some(FaultDomain(region = homeRegionName, zone = homeZoneName)))
+
+  override def agentsFaultDomains = Seq(
+    Some(FaultDomain(region = remoteRegionName, zone = remoteZone1Name)),
+    Some(FaultDomain(region = remoteRegionName, zone = remoteZone2Name)),
+    Some(FaultDomain(region = homeRegionName, zone = homeZoneName)))
 
   before(cleanUp())
 
@@ -46,17 +57,63 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       waitForTasks(app.id.toPath, 1)
       logger.info("tasks started")
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
-      val foo = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
+      val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
 
-      foo match {
-        case ITResourceStringValue(value) => value shouldEqual "remote1"
+      agentRegion match {
+        case ITResourceStringValue(value) => value shouldEqual homeRegionName
       }
-
     }
-    "Launch an instance of the app in the specified region" in {}
-    "Launch an instance of the app in the specified region and zone" in {}
-    "Respond with a validation error if zone is specified without region" in {}
-    "Apply UNIQUE constraint for remote regions" in {}
+    "Launch an instance of the app in the specified region" in {
+      val applicationId = appId(Some("must-be-placed-in-remote-region"))
+      val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(Constraints.regionField :: "LIKE" :: remoteRegionName :: Nil))
+
+      When("The app is deployed without specifying region")
+      logger.info("creating app")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created in the default region")
+      result should be(Created)
+      logger.info("app created")
+      extractDeploymentIds(result)
+      waitForDeployment(result)
+      waitForTasks(app.id.toPath, 1)
+      logger.info("tasks started")
+      val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
+      val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
+
+      agentRegion match {
+        case ITResourceStringValue(value) => value shouldEqual remoteRegionName
+      }
+    }
+    "Launch an instance of the app in the specified region and zone" in {
+      val applicationId = appId(Some("must-be-placed-in-remote-region"))
+      val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(
+        Constraints.regionField :: "LIKE" :: remoteRegionName :: Nil,
+        Constraints.zoneField :: "LIKE" :: remoteZone2Name :: Nil
+      ))
+
+      When("The app is deployed without specifying region")
+      logger.info("creating app")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created in the default region")
+      result should be(Created)
+      logger.info("app created")
+      extractDeploymentIds(result)
+      waitForDeployment(result)
+      waitForTasks(app.id.toPath, 1)
+      logger.info("tasks started")
+      val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
+      val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
+      val agentZone = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_zone")
+
+      agentRegion match {
+        case ITResourceStringValue(value) => value shouldEqual remoteRegionName
+      }
+      agentZone match {
+        case ITResourceStringValue(value) => value shouldEqual remoteZone2Name
+      }
+    }
   }
 
 }

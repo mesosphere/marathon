@@ -10,7 +10,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
 import mesosphere.marathon.integration.facades.MesosFacade
-import mesosphere.marathon.util.Retry
+import mesosphere.marathon.util.{ FaultDomain, Retry }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.Suite
@@ -28,8 +28,6 @@ case class MesosConfig(
   containerizers: String = "mesos",
   isolation: Option[String] = None,
   imageProviders: Option[String] = None)
-
-case class FaultDomain(region: String, zone: String)
 
 case class MesosCluster(
     suiteName: String,
@@ -50,8 +48,8 @@ case class MesosCluster(
   require(agentsFaultDomains.isEmpty || agentsFaultDomains.size == numSlaves)
 
   lazy val masters = 0.until(numMasters).map { i =>
-    val faultDomainJson = if (agentsFaultDomains.nonEmpty && agentsFaultDomains(i).nonEmpty) {
-      val fd = agentsFaultDomains(i).get
+    val faultDomainJson = if (mastersFaultDomains.nonEmpty && mastersFaultDomains(i).nonEmpty) {
+      val fd = mastersFaultDomains(i).get
       val faultDomainJson = s"""
                                |{
                                |  "fault_domain":
@@ -106,9 +104,6 @@ case class MesosCluster(
     val attributes: Map[String, Option[String]] = Map("node" -> Some(i.toString)) ++ additionalAttributes
 
     val renderedAttributes = attributes.map { case (key, maybeVal) => s"$key${maybeVal.map(v => s":$v").getOrElse("")}" }.mkString(";")
-
-    println("-" * 100)
-    println("attributes: " + renderedAttributes)
 
     Agent(resources = new Resources(ports = PortAllocator.portsRange()), extraArgs = Seq(
       s"--attributes=node:$renderedAttributes" // uniquely identify each agent node, useful for constraint matching
