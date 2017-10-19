@@ -15,17 +15,17 @@ import mesosphere.marathon.test.GroupCreation
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContextExecutor, Future }
 
-class MigrationTo149Test extends AkkaUnitTest with GroupCreation with StrictLogging {
+class MigrationTo152Test extends AkkaUnitTest with GroupCreation with StrictLogging {
 
   "Migration to 1.4.9" should {
     "do nothing if env var is not configured" in new Fixture {
-      MigrationTo149.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
+      MigrationTo152.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
       verify(instanceRepository, never).all()
       verify(instanceRepository, never).store(_: Instance)
     }
 
     "do migration if env var is configured" in new Fixture(Map(MigrationTo146.MigrateUnreachableStrategyEnvVar -> "true")) {
-      MigrationTo149.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
+      MigrationTo152.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
       val targetInstance = instance.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 5.seconds)) // case 2
       val targetInstance2 = instance2.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 0.seconds)) // case 1
       val targetInstance3 = instance3.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 0.seconds)) // case 3
