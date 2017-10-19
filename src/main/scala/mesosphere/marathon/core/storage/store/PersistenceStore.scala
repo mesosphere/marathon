@@ -205,4 +205,15 @@ trait PersistenceStore[K, Category, Serialized] extends OpenableOnce {
     * Make sure that store read operations return up-to-date values.
     */
   def sync(): Future[Done]
+
+  /**
+    * Mark migration as started. It is supposed to be used to ensure that
+    * no other Marathon instance performs migration at the same time.
+    */
+  def startMigration(): Future[Done]
+
+  /**
+    * Mark migration as completed. It does the opposite of what [[startMigration]] does.
+    */
+  def endMigration(): Future[Done]
 }

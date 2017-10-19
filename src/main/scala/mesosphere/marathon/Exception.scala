@@ -89,3 +89,11 @@ class ResolveArtifactsCanceledException(msg: String) extends DeploymentFailedExc
 class StoreCommandFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
 @SuppressWarnings(Array("NullAssignment"))
 class MigrationFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
+
+/**
+  * Instances of this exception class are expected to be used to cancel
+  * an on-going migration. It is imperative to throw such an exception
+  * before writing anything to a persistence store.
+  */
+case class MigrationCancelledException(msg: String, cause: Throwable)
+  extends mesosphere.marathon.Exception(msg, cause)

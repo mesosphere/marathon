@@ -100,7 +100,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
@@ -204,10 +204,11 @@ def test_launch_app_on_public_agent():
     """
     client = marathon.create_client()
     app_def = common.add_role_constraint_to_app_def(apps.mesos_app(), ['slave_public'])
+    app_id = app_def["id"]
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
-    tasks = client.get_tasks(app_def["id"])
+    tasks = client.get_tasks(app_id)
     task_ip = tasks[0]['host']
 
     assert task_ip in shakedown.get_public_agents(), "The application task got started on a private agent"
@@ -226,7 +227,7 @@ def test_event_channel():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     master_ip = shakedown.master_ip()
 
@@ -265,7 +266,7 @@ def test_external_volume():
     try:
         client = marathon.create_client()
         client.add_app(app_def)
-        shakedown.deployment_wait()
+        shakedown.deployment_wait(app_id=app_id)
 
         # Create the app: the volume should be successfully created
         common.assert_app_tasks_running(client, app_def)
@@ -323,7 +324,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1, "The number of running tasks is {}, but 1 was expected".format(app["tasksRunning"])
@@ -528,7 +529,7 @@ def test_app_file_based_secret(secret_fixture):
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def value_check():
         status, data = shakedown.run_command_on_master(cmd)
-        assert status, "{} did not succeed".format(cmd)
+        assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
         assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
     value_check()
@@ -791,11 +792,14 @@ def test_pod_file_based_secret(secret_fixture):
     port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
     host = instances[0]['networks'][0]['addresses'][0]
     cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
-    status, data = shakedown.run_command_on_master(cmd)
 
-    assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
-    assert data.rstrip() == secret_value, "Got an unexpected secret data"
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def value_check():
+        status, data = shakedown.run_command_on_master(cmd)
+        assert status, "{} did not succeed. status = {}, data = {}".format(cmd, status, data)
+        assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
+    value_check()
 
 @pytest.fixture(scope="function")
 def secret_fixture():
