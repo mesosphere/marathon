@@ -44,7 +44,7 @@ template_parameters:
     SlaveInstanceCount: 5
 EOF
 
-exit 2
+exit 3
 
 if ! ./dcos-launch create; then
   exit 2
