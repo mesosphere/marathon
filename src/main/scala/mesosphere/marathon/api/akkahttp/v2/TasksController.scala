@@ -2,10 +2,16 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.marshalling.{ Marshaller, ToEntityMarshaller }
+import akka.http.scaladsl.model.headers.Accept
+import akka.http.scaladsl.model.{ HttpResponse, MediaRange, MediaTypes, StatusCodes }
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
 import akka.stream.Materializer
+import akka.http.scaladsl.model.MediaTypes.`text/plain`
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.EndpointsHelper
+import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.api.akkahttp.Directives.pathEndOrSingleSlash
 import mesosphere.marathon.core.appinfo.EnrichedTask
@@ -17,8 +23,9 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, _ }
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsString, Json }
 import mesosphere.marathon.raml.{ AnyToRaml, EnrichedTasksList, Writes }
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.state.PathId
 
 import scala.async.Async._
@@ -45,15 +52,32 @@ class TasksController(
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
         get {
-          pathEndOrSingleSlash {
-            listTasks()
+          (accepts(MediaTypes.`text/plain`) & pathEndOrSingleSlash) {
+            listTasksTxt()
+          } ~
+          (accepts(MediaTypes.`application/json`) & pathEndOrSingleSlash) {
+            listTasksJson()
+          } ~
+          acceptsAnything {
+            listTasksJson() // when no accept header present, json is the default choice
           }
         }
       }
     }
   }
 
-  private def listTasks()(implicit identity: Identity): Route = {
+  @SuppressWarnings(Array("all")) // async/await
+  private def listTasksTxt()(implicit identity: Identity): Route = {
+    onSuccess(async {
+      val instancesBySpec = await(instanceTracker.instancesBySpec)
+      val apps = groupManager.rootGroup().transitiveApps.filterAs(app => authorizer.isAuthorized(identity, ViewRunSpec, app))(collection.breakOut)
+      ListTasks(instancesBySpec, apps)
+    }) { data =>
+      complete(data)
+    }
+  }
+
+  private def listTasksJson()(implicit identity: Identity): Route = {
     parameters("status".?, "status[]".as[String].*) { (statusParameter, statusParameters) =>
       val statuses = (statusParameter ++ statusParameters).to[Seq]
       onSuccess(enrichedTasks(statuses)) { tasks =>
@@ -101,6 +125,11 @@ class TasksController(
         ))
       }.to[Seq]
   }
+
+  implicit val listTasksMarshaller: ToEntityMarshaller[ListTasks] =
+    Marshaller
+      .stringMarshaller(`text/plain`)
+      .compose(data => EndpointsHelper.appsToEndpointString(data))
 
   private def toCondition(state: String): Option[Condition] = state.toLowerCase match {
     case "running" => Some(Condition.Running)
