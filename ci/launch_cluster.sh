@@ -60,6 +60,9 @@ function create-junit-xml {
 	EOF
 }
 
+create-junit-xml "dcos-launch" "cluster.create" "Cluster launch failed."
+exit 0
+
 if ! ./dcos-launch create; then
   create-junit-xml "dcos-launch" "cluster.create" "Cluster launch failed."
   exit 0
