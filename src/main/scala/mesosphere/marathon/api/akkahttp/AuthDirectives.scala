@@ -76,17 +76,6 @@ trait AuthDirectives extends AkkaDirectives {
     extractAuthorizedAction(actionSet).flatMap(authorized(_, resource))
 
   /**
-    * Like authorized, but returns an Either rather than a directive
-    */
-  def checkAuthorization[T, Resource <: T](action: AuthorizedAction[T], resource: Resource)(
-    implicit
-    authorizer: Authorizer, identity: Identity): Either[Rejection, Resource] =
-    if (authorizer.isAuthorized(identity, action, resource))
-      Right(resource)
-    else
-      Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-
-  /**
     * This will extract the authorized action for resource type R based on the HTTP method.
     * Use this extraction only, if the HTTP verb defines the underlying action.
     * @param actionSet the related action set for the given resource.

@@ -2187,7 +2187,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       an[AppNotFoundException] should be thrownBy rootGroupUpdatefn(rootGroup)
     }
 
-
     "Delete a single app if it exists" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
