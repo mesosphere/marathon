@@ -185,8 +185,6 @@ class TasksController(
     DeploymentResult(deploymentPlan.id, deploymentPlan.version.toOffsetDateTime)
   }
 
-  case class InvalidTaskIdException(id: String, cause: Throwable) extends Exception(s"Invalid task id '$id'. [${cause.getMessage}]")
-
   case class TasksList(tasks: Seq[EnrichedTask])
   implicit val tasksListWrite: Writes[TasksList, EnrichedTasksList] = Writes { tasksList =>
     EnrichedTasksList(tasksList.tasks.map(_.toRaml))
