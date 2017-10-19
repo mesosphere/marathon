@@ -28,7 +28,7 @@ import org.mockito.{ ArgumentCaptor, Mockito }
 import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 /**
@@ -166,7 +166,6 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val launcherRef = createLauncherRef(instances = 1, constraintApp)
     launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
-    val promise = Promise[MatchedInstanceOps]
     Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedInstanceOps]
 
     Mockito.verify(instanceTracker).instancesBySpecSync
