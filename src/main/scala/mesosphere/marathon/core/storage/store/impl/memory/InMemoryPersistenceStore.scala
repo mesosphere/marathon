@@ -1,22 +1,23 @@
 package mesosphere.marathon
 package core.storage.store.impl.memory
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream }
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.time.OffsetDateTime
+import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.BackupItem
-import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
+import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.storage.migration.{ Migration, StorageVersions }
+import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.util.Lock
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])
@@ -147,6 +148,26 @@ class InMemoryPersistenceStore(implicit
     require(isOpen, "the store must be opened before it can be used")
 
     Future.successful(Done)
+  }
+
+  private[this] val migrationInProgress: AtomicBoolean = new AtomicBoolean()(false)
+
+  override def startMigration(): Future[Done] = {
+    require(isOpen, "the store must be opened before it can be used")
+    if (!migrationInProgress.compareAndSet(false, true)) {
+      Future.failed(new IllegalStateException("Migration is already in progress"))
+    } else {
+      Future.successful(Done)
+    }
+  }
+
+  override def endMigration(): Future[Done] = {
+    require(isOpen, "the store must be opened before it can be used")
+    if (!migrationInProgress.compareAndSet(true, false)) {
+      Future.failed(new IllegalStateException("Migration has not been started"))
+    } else {
+      Future.successful(Done)
+    }
   }
 }
 

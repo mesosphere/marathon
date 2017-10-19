@@ -13,13 +13,16 @@ import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.storage.StorageConfig
 import mesosphere.marathon.storage.repository._
+import mesosphere.marathon.util.toRichFuture
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 import mesosphere.marathon.raml.RuntimeConfiguration
+
+import scala.util.{Failure, Success}
 
 /**
   * @param persistenceStore Optional "new" PersistenceStore for new migrations, the repositories
@@ -86,6 +89,7 @@ class Migration(
         }
 
         change.apply().recover {
+          case e: MigrationCancelledException => throw e
           case NonFatal(e) =>
             throw new MigrationFailedException(s"while migrating storage to $migrateVersion", e)
         }.map { _ =>
@@ -107,10 +111,28 @@ class Migration(
     await(config.backup.map(uri => backup.backup(new URI(uri))).getOrElse(Future.successful(Done)))
     // step 2: restore state from given backup
     await(config.restore.map(uri => backup.restore(new URI(uri))).getOrElse(Future.successful(Done)))
-    // last step run the migration, to ensure we can operate on the zk state
-    val result = await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined))
-    logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
-    result
+
+    // mark migration as started
+    await(persistenceStore.startMigration())
+
+    // run the migration, to ensure we can operate on the zk state
+    await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined).asTry) match {
+      case Success(result) =>
+        // mark migration as completed
+        await(persistenceStore.endMigration())
+
+        logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
+        result
+      case Failure(ex: MigrationCancelledException) =>
+        logger.error(ex.getMessage)
+
+        // mark migration as completed
+        await(persistenceStore.endMigration())
+
+        throw new MigrationFailedException("Migration cancelled", ex.getCause)
+      case Failure(ex) =>
+        throw ex
+    }
   }
 
   def migrate(): Seq[StorageVersion] =
@@ -150,6 +172,7 @@ class Migration(
       }
       migrations
     }.recover {
+      case ex: MigrationCancelledException => throw ex
       case ex: MigrationFailedException => throw ex
       case NonFatal(ex) =>
         throw new MigrationFailedException(s"Migration Failed: ${ex.getMessage}", ex)
