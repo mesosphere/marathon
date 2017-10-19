@@ -5,8 +5,10 @@ import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 
+import mesosphere.marathon.state.UnreachableEnabled
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Second, Seconds, Span }
+import scala.concurrent.duration._
 
 /**
   * Integration test to simulate the issues discovered a verizon where a network partition caused Marathon to be
@@ -46,7 +48,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest
 
   test("Loss of ZK and Loss of Slave will not kill the task when slave comes back") {
     Given("a new app")
-    val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None).copy(unreachableStrategy = UnreachableEnabled(5.minutes, 10.minutes))
     waitForDeployment(marathon.createAppV2(app))
     val task = waitForTasks(app.id, 1).head
 
