@@ -101,12 +101,13 @@ case class MesosCluster(
       Map("fault_domain_region" -> Some(fd.region), "fault_domain_zone" -> Some(fd.zone)) -> Some(faultDomainJson)
     } else Map.empty -> None
 
+    // uniquely identify each agent node, useful for constraint matching
     val attributes: Map[String, Option[String]] = Map("node" -> Some(i.toString)) ++ additionalAttributes
 
     val renderedAttributes = attributes.map { case (key, maybeVal) => s"$key${maybeVal.map(v => s":$v").getOrElse("")}" }.mkString(";")
 
     Agent(resources = new Resources(ports = PortAllocator.portsRange()), extraArgs = Seq(
-      s"--attributes=node:$renderedAttributes" // uniquely identify each agent node, useful for constraint matching
+      s"--attributes=$renderedAttributes"
     ) ++ faultDomainJson.map(fd => s"--domain=$fd"))
   }
 
