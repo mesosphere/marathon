@@ -1,26 +1,10 @@
 package mesosphere.marathon
 package core.election
 
-import akka.actor.ActorRef
+import akka.actor.{ ActorRef, Cancellable }
+import akka.stream.scaladsl.Source
 
-/**
-  * ElectionService is implemented by leadership election mechanisms.
-  *
-  * This trait is used in conjunction with [[ElectionCandidate]]. From their point of view,
-  * a leader election works as follow:
-  *
-  * -> ElectionService.offerLeadership(candidate)     |      - A leader election is triggered.
-  *                                                          — Once `candidate` is elected as a leader,
-  *                                                            its `startLeadership` is called.
-  *
-  * Please note that upon a call to [[ElectionService.abdicateLeadership]], or
-  * any error in any of method of [[ElectionService]], or a leadership loss,
-  * [[ElectionCandidate.stopLeadership]] is called if [[ElectionCandidate.startLeadership]]
-  * has been called before, and JVM gets shutdown.
-  *
-  * It effectively means that a particular instance of Marathon can be elected at most once during its lifetime.
-  */
-trait ElectionService {
+trait ElectionServiceLeaderInfo {
   /**
     * isLeader checks whether this instance is the leader
     *
@@ -41,6 +25,26 @@ trait ElectionService {
     * @return Some(host:port) of the leader, or None if no leader exists or is known
     */
   def leaderHostPort: Option[String]
+}
+
+/**
+  * ElectionService is implemented by leadership election mechanisms.
+  *
+  * This trait is used in conjunction with [[ElectionCandidate]]. From their point of view,
+  * a leader election works as follow:
+  *
+  * -> ElectionService.offerLeadership(candidate)     |      - A leader election is triggered.
+  *                                                          — Once `candidate` is elected as a leader,
+  *                                                            its `startLeadership` is called.
+  *
+  * Please note that upon a call to [[ElectionService.abdicateLeadership]], or
+  * any error in any of method of [[ElectionService]], or a leadership loss,
+  * [[ElectionCandidate.stopLeadership]] is called if [[ElectionCandidate.startLeadership]]
+  * has been called before, and JVM gets shutdown.
+  *
+  * It effectively means that a particular instance of Marathon can be elected at most once during its lifetime.
+  */
+trait ElectionService extends ElectionServiceLeaderInfo {
 
   /**
     * offerLeadership is called to candidate for leadership. It must be called by candidate only once.
@@ -71,6 +75,14 @@ trait ElectionService {
     * Unsubscribe to any leadership change events for the given [[ActorRef]].
     */
   def unsubscribe(self: ActorRef): Unit
+
+  /**
+    * Provides LocalLeadershipEvents via a materializable Akka Stream
+    *
+    * The first element will be the current state. Upon becoming a leader, [[LocalLeadershipEvent.ElectedAsLeader]] is
+    * published. Upon leadership loss, [[LocalLeadershipEvent.Standby]] is sent.
+    */
+  def localLeadershipEvents: Source[LocalLeadershipEvent, Cancellable]
 }
 
 /**

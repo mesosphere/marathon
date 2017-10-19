@@ -61,8 +61,11 @@ private[migration] object MigrationTo15 {
     AppHelpers.appNormalization(
       enabledFeatures, new AppNormalization.Config {
       override def defaultNetworkName: Option[String] =
-        env.vars.get(DefaultNetworkNameForMigratedApps).orElse(networkName).orElse(throw SerializationFailedException(
-          MigrationFailedMissingNetworkEnvVar))
+        env.vars.get(DefaultNetworkNameForMigratedApps)
+          .orElse(networkName)
+          .orElse(throw MigrationCancelledException(
+            "Migration cancelled due to misconfiguration",
+            SerializationFailedException(MigrationFailedMissingNetworkEnvVar)))
       override def mesosBridgeName =
         mbn
     })

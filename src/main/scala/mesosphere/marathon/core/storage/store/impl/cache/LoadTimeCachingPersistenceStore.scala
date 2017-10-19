@@ -206,6 +206,10 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 
   override def sync(): Future[Done] = store.sync()
 
+  override def startMigration(): Future[Done] = store.startMigration()
+
+  override def endMigration(): Future[Done] = store.endMigration()
+
   override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
     store.versions(id)
 
