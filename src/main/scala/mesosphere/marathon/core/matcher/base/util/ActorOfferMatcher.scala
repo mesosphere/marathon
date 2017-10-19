@@ -35,6 +35,7 @@ class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[P
     }
 
     isFromHomeRegion(offer)
+    true
   }
 }
 

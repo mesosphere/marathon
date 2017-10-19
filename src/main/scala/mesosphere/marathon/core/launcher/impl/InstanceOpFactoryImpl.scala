@@ -70,7 +70,7 @@ class InstanceOpFactoryImpl(
 
     val matchedOffer =
       RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
-        builderConfig.acceptedResourceRoles, config)
+        builderConfig.acceptedResourceRoles, config, request.homeRegion)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -89,11 +89,11 @@ class InstanceOpFactoryImpl(
   }
 
   private[this] def inferNormalTaskOp(app: AppDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
-    val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
+    val InstanceOpFactory.Request(runSpec, offer, instances, _, homeRegion) = request
 
     val matchResponse =
       RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet, config)
+        config.defaultAcceptedResourceRolesSet, config, homeRegion)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = Task.Id.forRunSpec(app.id)
@@ -118,7 +118,7 @@ class InstanceOpFactoryImpl(
   }
 
   private[this] def inferForResidents(app: AppDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
-    val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches) = request
+    val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches, homeRegion) = request
 
     // TODO(jdef) pods should be supported some day
 
@@ -159,7 +159,8 @@ class InstanceOpFactoryImpl(
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
-            schedulerPlugins
+            schedulerPlugins,
+            homeRegion
           )
 
         resourceMatchResponse match {
@@ -186,7 +187,7 @@ class InstanceOpFactoryImpl(
 
       val resourceMatchResponse =
         ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream,
-          ResourceSelector.reservable, config, schedulerPlugins)
+          ResourceSelector.reservable, config, schedulerPlugins, homeRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)

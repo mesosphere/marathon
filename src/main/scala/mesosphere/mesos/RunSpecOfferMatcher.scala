@@ -21,7 +21,7 @@ object RunSpecOfferMatcher extends StrictLogging {
     * @param givenAcceptedResourceRoles The resource roles for which to look.
     */
   def matchOffer(runSpec: RunSpec, offer: Offer, knownInstances: => Seq[Instance],
-    givenAcceptedResourceRoles: Set[String], conf: MatcherConf)(implicit clock: Clock): ResourceMatchResponse = {
+    givenAcceptedResourceRoles: Set[String], conf: MatcherConf, homeRegion: Option[String])(implicit clock: Clock): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles
@@ -33,7 +33,7 @@ object RunSpecOfferMatcher extends StrictLogging {
     }
 
     val resourceMatchResponse =
-      ResourceMatcher.matchResources(offer, runSpec, knownInstances, ResourceSelector.any(acceptedResourceRoles), conf)
+      ResourceMatcher.matchResources(offer, runSpec, knownInstances, ResourceSelector.any(acceptedResourceRoles), conf, homeRegion = homeRegion)
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = runSpec match {

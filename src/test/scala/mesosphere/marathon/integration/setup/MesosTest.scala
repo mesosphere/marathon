@@ -29,6 +29,8 @@ case class MesosConfig(
   isolation: Option[String] = None,
   imageProviders: Option[String] = None)
 
+case class FaultDomain(region: String, zone: String)
+
 case class MesosCluster(
     suiteName: String,
     numMasters: Int,
@@ -37,18 +39,41 @@ case class MesosCluster(
     quorumSize: Int = 1,
     autoStart: Boolean = false,
     config: MesosConfig = MesosConfig(),
-    waitForMesosTimeout: FiniteDuration = 5.minutes)(implicit
+    waitForMesosTimeout: FiniteDuration = 5.minutes,
+    mastersFaultDomains: Seq[Option[FaultDomain]],
+    agentsFaultDomains: Seq[Option[FaultDomain]])(implicit
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable {
   require(quorumSize > 0 && quorumSize <= numMasters)
+  require(agentsFaultDomains.isEmpty || agentsFaultDomains.size == numSlaves)
 
   lazy val masters = 0.until(numMasters).map { i =>
+    val faultDomainJson = if (agentsFaultDomains.nonEmpty && agentsFaultDomains(i).nonEmpty) {
+      val fd = agentsFaultDomains(i).get
+      val faultDomainJson = s"""
+                               |{
+                               |  "fault_domain":
+                               |    {
+                               |      "region":
+                               |        {
+                               |          "name": "${fd.region}"
+                               |        },
+                               |      "zone":
+                               |        {
+                               |          "name": "${fd.zone}"
+                               |        }
+                               |    }
+                               |}
+        """.stripMargin
+      Some(faultDomainJson)
+    } else None
+
     Master(extraArgs = Seq(
       "--slave_ping_timeout=1secs",
       "--max_slave_ping_timeouts=4",
-      s"--quorum=$quorumSize"))
+      s"--quorum=$quorumSize") ++ faultDomainJson.map(fd => s"--domain=$fd"))
   }
 
   lazy val agents = 0.until(numSlaves).map { i =>
@@ -57,9 +82,37 @@ case class MesosCluster(
     // to it's marathon, leading to multiple tasks (from different IT suits) trying to use the same port!
     // First-come-first-served task will bind successfully where the others will fail leading to a lot inconsistency and
     // flakiness in tests.
+
+    val (additionalAttributes: Map[String, Option[String]], faultDomainJson) = if (agentsFaultDomains.nonEmpty && agentsFaultDomains(i).nonEmpty) {
+      val fd = agentsFaultDomains(i).get
+      val faultDomainJson = s"""
+          |{
+          |  "fault_domain":
+          |    {
+          |      "region":
+          |        {
+          |          "name": "${fd.region}"
+          |        },
+          |      "zone":
+          |        {
+          |          "name": "${fd.zone}"
+          |        }
+          |    }
+          |}
+        """.stripMargin
+      Map("fault_domain_region" -> Some(fd.region), "fault_domain_zone" -> Some(fd.zone)) -> Some(faultDomainJson)
+    } else Map.empty -> None
+
+    val attributes: Map[String, Option[String]] = Map("node" -> Some(i.toString)) ++ additionalAttributes
+
+    val renderedAttributes = attributes.map { case (key, maybeVal) => s"$key${maybeVal.map(v => s":$v").getOrElse("")}" }.mkString(";")
+
+    println("-" * 100)
+    println("attributes: " + renderedAttributes)
+
     Agent(resources = new Resources(ports = PortAllocator.portsRange()), extraArgs = Seq(
-      s"--attributes=node:$i" // uniquely identify each agent node, useful for constraint matching
-    ))
+      s"--attributes=node:$renderedAttributes" // uniquely identify each agent node, useful for constraint matching
+    ) ++ faultDomainJson.map(fd => s"--domain=$fd"))
   }
 
   if (autoStart) {
@@ -325,6 +378,10 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
 
+  def mastersFaultDomains: Seq[Option[FaultDomain]] = Seq.empty
+
+  def agentsFaultDomains: Seq[Option[FaultDomain]] = Seq.empty
+
   private val localMesosUrl = sys.env.get("USE_LOCAL_MESOS")
   lazy val mesosMasterUrl = s"zk://${zkServer.connectUri}/mesos"
   lazy val mesosNumMasters = 1
@@ -333,7 +390,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosConfig = MesosConfig()
   lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
   lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
-    autoStart = false, config = mesosConfig, mesosLeaderTimeout)
+    autoStart = false, config = mesosConfig, mesosLeaderTimeout, mastersFaultDomains, agentsFaultDomains)
   lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
 
   override def cleanMesos(): Unit = mesosCluster.clean()

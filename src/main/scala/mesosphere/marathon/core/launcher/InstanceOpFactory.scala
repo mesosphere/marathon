@@ -29,7 +29,7 @@ object InstanceOpFactory {
     * @param additionalLaunches the number of additional launches that has been requested
     */
   case class Request(runSpec: RunSpec, offer: Mesos.Offer, instanceMap: Map[Instance.Id, Instance],
-      additionalLaunches: Int) {
+      additionalLaunches: Int, homeRegion: Option[String]) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
     lazy val reserved: Seq[Instance] = instances.filter(_.isReserved)
