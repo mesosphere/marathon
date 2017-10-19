@@ -17,7 +17,7 @@ import scala.concurrent.{ ExecutionContextExecutor, Future }
 
 class MigrationTo152Test extends AkkaUnitTest with GroupCreation with StrictLogging {
 
-  "Migration to 1.4.9" should {
+  "Migration to 1.5.2" should {
     "do nothing if env var is not configured" in new Fixture {
       MigrationTo152.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
       verify(instanceRepository, never).all()
