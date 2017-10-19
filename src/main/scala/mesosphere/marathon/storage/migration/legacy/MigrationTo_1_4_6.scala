@@ -55,7 +55,7 @@ object MigrationTo_1_4_6 extends StrictLogging {
         UnreachableEnabled(0.seconds, expungeAfter)
 
       // migrate previous default - case 1
-      case UnreachableEnabled(inactiveAfter, expungeAfter) if inactiveAfter == UnreachableEnabled.DefaultInactiveAfter && expungeAfter == UnreachableEnabled.DefaultExpungeAfter =>
+      case UnreachableEnabled(inactiveAfter, expungeAfter) if inactiveAfter == 5.minutes && expungeAfter == 10.minutes =>
         UnreachableEnabled(0.seconds, 0.seconds)
     }
   }
