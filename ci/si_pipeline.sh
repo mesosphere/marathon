@@ -40,12 +40,12 @@ DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 case $CLUSTER_LAUNCH_CODE in
   0)
-      ./ci/system_integration "$DCOS_URL"
+      ./ci/system_integration.sh "$DCOS_URL"
       SI_CODE=$?
       ./dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
   3) exit-as-unstable "Cluster did not start in time.";;
-  *) echo "Unknown error in cluster launch"; exit 1;;
+  *) echo "Unknown error in cluster launch"; exit "$CLUSTER_LAUNCH_CODE";;
 esac
