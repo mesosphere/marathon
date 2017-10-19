@@ -2,12 +2,15 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.server.Route
-import akka.stream.scaladsl.Source
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.{ Rejection, Route }
+import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.api.akkahttp.Controller
-import mesosphere.marathon.api.akkahttp.Directives.pathEndOrSingleSlash
+import mesosphere.marathon.api.TaskKiller
+import mesosphere.marathon.api.akkahttp.Rejections.Message
+import mesosphere.marathon.api.akkahttp._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.ElectionService
@@ -15,19 +18,21 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, _ }
-import play.api.libs.json.Json
-import mesosphere.marathon.raml.{ AnyToRaml, EnrichedTasksList, Writes }
+import mesosphere.marathon.raml.{ AnyToRaml, DeploymentResult, EnrichedTasksList, Reads, Writes }
 import mesosphere.marathon.state.PathId
 
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 class TasksController(
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
     healthCheckManager: HealthCheckManager,
+    taskKiller: TaskKiller,
     val electionService: ElectionService)(
     implicit
     val actorSystem: ActorSystem,
@@ -48,7 +53,10 @@ class TasksController(
           pathEndOrSingleSlash {
             listTasks()
           }
-        }
+        } ~
+          (path("delete") & post) {
+            deleteTasks()
+          }
       }
     }
   }
@@ -60,6 +68,53 @@ class TasksController(
         complete(TasksList(tasks).toRaml)
       }
     }
+  }
+
+  private def deleteTasks()(implicit identity: Identity): Route = {
+    def doKill(force: Boolean, scale: Boolean, wipe: Boolean, tasksIdToAppId: Map[Id, PathId]) = {
+      def isAuthorized(tasksIdToAppId: Map[Id, PathId]): Boolean = tasksIdToAppId.values.exists(id => !authorizer.isAuthorized(identity, UpdateRunSpec, id))
+
+      // TODO authorization check is performed twice - in the taskKiller and also here, this one must remain
+      if (isAuthorized(tasksIdToAppId)) {
+        reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+      } else {
+        val maybeInstances: Future[Iterable[Option[Instance]]] = Future.sequence(tasksIdToAppId.view
+          .map { case (taskId, _) => instanceTracker.instancesBySpec.map(_.instance(taskId)) })
+        val tasksByAppId: Future[Map[PathId, Seq[Instance]]] = maybeInstances.map(i => i.flatten
+          .groupBy(instance => instance.instanceId.runSpecId)
+          .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut))
+
+        if (scale) {
+          onSuccess(killAndScale(tasksByAppId, force)) { deploymentResult =>
+            complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
+          }
+        } else {
+          onSuccess(doKillTasks(tasksByAppId, tasksIdToAppId, wipe)) { tasks =>
+            complete(TasksList(tasks).toRaml)
+          }
+        }
+      }
+    }
+
+    (entity(as[TasksToDelete])
+      & parameter('force.as[Boolean].?(false))
+      & parameter('scale.as[Boolean].?(false))
+      & parameter('wipe.as[Boolean].?(false))) { (taskIds, force, scale, wipe) =>
+        if (scale && wipe) {
+          reject(Rejections.BadRequest(Message("You cannot use scale and wipe at the same time.")))
+        } else {
+          val maybeTasksIdToAppId: Try[Map[Id, PathId]] = Try(taskIds.ids.map { id =>
+            try { Task.Id(id).instanceId -> Task.Id.runSpecId(id) }
+            catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'. [${e.getMessage}]") }
+          }(collection.breakOut))
+
+          maybeTasksIdToAppId match {
+            case Success(result) => doKill(force, scale, wipe, result)
+            case Failure(e: BadRequestException) => reject(Rejections.BadRequest(Message(e.getMessage)))
+            case Failure(e) => throw e
+          }
+        }
+      }
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -108,8 +163,43 @@ class TasksController(
     case _ => None
   }
 
+  private def doKillTasks(toKillFuture: Future[Map[PathId, Seq[Instance]]], tasksIdToAppId: Map[Id, PathId], wipe: Boolean)(implicit identity: Identity): Future[Seq[EnrichedTask]] = async {
+    val toKill = await(toKillFuture)
+    val affectedApps = tasksIdToAppId.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
+
+    val killedTasks = await(Future.sequence(toKill
+      .filter { case (appId, _) => affectedApps.exists(app => app.id == appId) }
+      .map { case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe) }))
+      .flatten
+
+    killedTasks.flatMap { instance =>
+      instance.tasksMap.valuesIterator.map { task =>
+        EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty)
+      }
+    }.to[Seq]
+  }
+
+  def killAndScale(tasksByAppIdFuture: Future[Map[PathId, Seq[Instance]]], force: Boolean)(implicit identity: Identity): Future[DeploymentResult] = async {
+    val tasksByAppId = await(tasksByAppIdFuture)
+    val deploymentPlan = await(taskKiller.killAndScale(tasksByAppId, force))
+    DeploymentResult(deploymentPlan.id, deploymentPlan.version.toOffsetDateTime)
+  }
+
+  case class InvalidTaskIdException(id: String, cause: Throwable) extends Exception(s"Invalid task id '$id'. [${cause.getMessage}]")
+
   case class TasksList(tasks: Seq[EnrichedTask])
   implicit val tasksListWrite: Writes[TasksList, EnrichedTasksList] = Writes { tasksList =>
     EnrichedTasksList(tasksList.tasks.map(_.toRaml))
+  }
+
+  implicit val deleteTasksReader: Reads[raml.DeleteTasks, TasksToDelete] = Reads {
+    tasksToDelete => TasksToDelete(tasksToDelete.ids.toSet)
+  }
+  case class TasksToDelete(ids: Set[String])
+  implicit def tasksToDeleteUnmarshaller(
+    implicit
+    um: FromEntityUnmarshaller[raml.DeleteTasks],
+    reader: raml.Reads[raml.DeleteTasks, TasksToDelete]): FromEntityUnmarshaller[TasksToDelete] = {
+    um.map { ent => reader.read(ent) }
   }
 }
