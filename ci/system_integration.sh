@@ -3,8 +3,13 @@
 set -e -o pipefail
 
 if [ "$#" -ne 1 ]; then
-    echo "Expected 1 parameter: <dcos_url> e.g. system_integration.sh http://..."
-    exit 1
+    if [ ! -f shakedown.xml ]; then
+        echo "Expected 1 parameter: <dcos_url> e.g. system_integration.sh http://..."
+        exit 1
+    else
+        echo "Cluster creation failed."
+        exit 0
+    fi
 fi
 
 DCOS_URL="$1"
