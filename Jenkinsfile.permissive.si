@@ -29,8 +29,7 @@ node('shakedown') {
             [$class: 'StringBinding', credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'],
             [$class: 'StringBinding', credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD']
           ]) {
-            dcos_url = sh (script: """ci/launch_cluster.sh $params.channel permissive""", returnStdout: true).trim().readLines().last()
-            sh """ci/system_integration.sh ${dcos_url}"""
+            sh """./ci/si_pipeline.sh $params.channel permissive"""
           }
         } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
