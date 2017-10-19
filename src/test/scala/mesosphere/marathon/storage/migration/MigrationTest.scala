@@ -68,20 +68,25 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       val mockedStore = mockPersistenceStore()
       val migrate = migration(persistenceStore = Option(mockedStore))
 
+      mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(None)
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
+      mockedStore.endMigration() returns Future.successful(Done)
 
       migrate.migrate()
 
+      verify(mockedStore).startMigration()
       verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
       verify(mockedStore).setStorageVersion(StorageVersions.current)
+      verify(mockedStore).endMigration()
       noMoreInteractions(mockedStore)
     }
 
     "migrate on an empty legacy database will set the storage version" in {
       val legacyConfig = mock[LegacyStorageConfig]
       val mockedPersistentStore = mock[PersistentStore]
+
       mockedPersistentStore.sync() returns Future.successful(Done)
       mockedPersistentStore.load(Migration.StorageVersionName) returns Future.successful(None)
       mockedPersistentStore.create(eq(Migration.StorageVersionName), eq(StorageVersions.current.toByteArray.toIndexedSeq)) returns
@@ -106,11 +111,17 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
       val currentPersistenceVersion =
         StorageVersions.current.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
+
+      mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(Some(currentPersistenceVersion))
+      mockedStore.endMigration() returns Future.successful(Done)
+
       migrate.migrate()
 
+      verify(mockedStore).startMigration()
       verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
+      verify(mockedStore).endMigration()
       noMoreInteractions(mockedStore)
     }
 
@@ -140,6 +151,8 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
       Given("An unsupported storage version")
       val unsupportedVersion = StorageVersions(0, 2, 0)
+
+      mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(Some(unsupportedVersion))
 
       When("migrate is called for that version")
@@ -158,6 +171,8 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
       Given("An unsupported storage version")
       val unsupportedVersion = StorageVersions(Int.MaxValue, Int.MaxValue, Int.MaxValue, StorageVersion.StorageFormat.PERSISTENCE_STORE)
+
+      mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(Some(unsupportedVersion))
 
       When("migrate is called for that version")
@@ -217,6 +232,8 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
     "migrations are executed sequentially" in {
       val mockedStore = mockPersistenceStore()
+
+      mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(0, 8, 0)))
       mockedStore.versions(any)(any) returns Source.empty
       mockedStore.ids()(any) returns Source.empty
@@ -225,12 +242,29 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       mockedStore.store(any, any)(any, any) returns Future.successful(Done)
       mockedStore.store(any, any, any)(any, any) returns Future.successful(Done)
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
+      mockedStore.endMigration() returns Future.successful(Done)
 
       val migrate = migration(persistenceStore = Some(mockedStore))
       migrate.appRepository.all() returns Source(Nil)
       val result = migrate.migrate()
       result should be ('nonEmpty)
       result should be(migrate.migrations.drop(1).map(_._1))
+    }
+
+    "throw an error if migration is in progress already" in {
+      val mockedStore = mockPersistenceStore()
+
+      mockedStore.startMigration() throws new StoreCommandFailedException("Migration is already in progress")
+
+      val migrate = migration(persistenceStore = Some(mockedStore))
+
+      val thrown = the[MigrationFailedException] thrownBy migrate.migrate()
+      thrown.getCause shouldBe a[StoreCommandFailedException]
+      thrown.getCause.getMessage should equal("Migration is already in progress")
+
+      verify(mockedStore).sync()
+      verify(mockedStore).startMigration()
+      noMoreInteractions(mockedStore)
     }
   }
 }

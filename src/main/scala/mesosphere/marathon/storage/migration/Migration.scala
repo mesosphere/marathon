@@ -152,6 +152,9 @@ class Migration(
       // it is better to be safe than sorry.
       await(Future.sequence(persistenceStore.map(_.sync()).toList))
 
+      // mark migration as started
+      await(Future.sequence(persistenceStore.map(_.startMigration()).toList))
+
       // invalidate group cache before migration
       await(groupRepository.invalidateGroupCache())
 
@@ -190,6 +193,10 @@ class Migration(
 
       // invalidate group cache after migration
       await(groupRepository.invalidateGroupCache())
+
+      // mark migration as completed
+      await(Future.sequence(persistenceStore.map(_.endMigration()).toList))
+
       migrations
     }.recover {
       case ex: MigrationFailedException => throw ex
@@ -198,6 +205,7 @@ class Migration(
 
     val migrations = Await.result(result, Duration.Inf)
     logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
+
     migrations
   }
 
