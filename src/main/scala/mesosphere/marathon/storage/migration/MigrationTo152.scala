@@ -27,7 +27,7 @@ object MigrationTo152 extends StrictLogging {
   }
 
   def migrateUnreachableInstances(instanceRepository: InstanceRepository)(implicit env: Environment, ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    logger.info("Starting unreachable strategy migration to 1.4.9")
+    logger.info("Starting unreachable strategy migration to 1.5.2")
 
     val instanceSink =
       Flow[Instance]
@@ -43,10 +43,10 @@ object MigrationTo152 extends StrictLogging {
         .runWith(instanceSink)
         .andThen {
           case _ =>
-            logger.info("Finished 1.4.9 migration for unreachable strategy for instances")
+            logger.info("Finished 1.5.2 migration for unreachable strategy for instances")
         }
     } else {
-      logger.info("No unreachable strategy migration to 1.4.9 wanted")
+      logger.info("No unreachable strategy migration to 1.5.2 wanted")
       Future.successful(Done)
     }
   }
