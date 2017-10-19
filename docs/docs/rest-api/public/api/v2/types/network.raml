@@ -12,7 +12,10 @@ types:
       Endpoints may also be advertised outside of a cluster.
     properties:
       name:
-        type: strings.Name
+        type: string
+        pattern: ^[a-z0-9]([-a-z0-9_]*[a-z0-9])?$
+        maxLength: 63
+        minLength: 1
         description: |
           Name of this port. Should be unique in the context of the pod.
       containerPort?:
