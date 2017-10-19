@@ -1,27 +1,22 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
-import akka.NotUsed
-import akka.actor.Actor.Receive
-import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.http.scaladsl.model.RemoteAddress
 import akka.http.scaladsl.server.Route
-import akka.stream._
-import akka.stream.scaladsl.Source
-import akka.stream.stage.GraphStageLogic.StageActor
-import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler }
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{ Keep, Source }
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkasse.ServerSentEvent
 import mesosphere.marathon.api.akkahttp.Controller
-import mesosphere.marathon.api.akkahttp.v2.EventsController.EventStreamSourceGraph
 import mesosphere.marathon.api.v2.json.Formats
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
-import mesosphere.marathon.core.event.{ EventConf, EventStreamAttached, EventStreamDetached, MarathonEvent }
+import mesosphere.marathon.core.async.ExecutionContexts
+import mesosphere.marathon.core.election.{ ElectionServiceLeaderInfo, LocalLeadershipEvent }
+import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent }
 import mesosphere.marathon.plugin.auth.{ Authenticator, AuthorizedResource, Authorizer, ViewResource }
+import mesosphere.marathon.stream.{ EnrichedFlow, EnrichedSource }
 import play.api.libs.json.Json
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -29,14 +24,14 @@ import scala.concurrent.duration._
   * The EventsController provides a route to all MarathonEvents published via the event bus.
   */
 class EventsController(
-    val conf: EventConf,
-    val eventBus: EventStream)(
+    eventStreamMaxOutstandingMessages: Int,
+    eventBus: EventStream,
+    leaderInfo: ElectionServiceLeaderInfo,
+    leaderStateEvents: Source[LocalLeadershipEvent, Any])(
     implicit
-    val actorSystem: ActorSystem,
     val executionContext: ExecutionContext,
     val authenticator: Authenticator,
-    val authorizer: Authorizer,
-    val electionService: ElectionService
+    val authorizer: Authorizer
 ) extends Controller with StrictLogging {
 
   import mesosphere.marathon.api.akkahttp.Directives._
@@ -54,10 +49,8 @@ class EventsController(
         parameters('event_type.*) { events =>
           extractClientIP { clientIp =>
             complete {
-              Source
-                .fromGraph[MarathonEvent, NotUsed](
-                  new EventStreamSourceGraph(eventBus, conf.eventStreamMaxOutstandingMessages(), clientIp)
-                )
+              EventsController.eventStreamLogic(eventBus, leaderStateEvents,
+                eventStreamMaxOutstandingMessages, clientIp)
                 .filter(isAllowed(events.toSet))
                 .map(event => ServerSentEvent(`type` = event.eventType, data = Json.stringify(Formats.eventToJson(event))))
                 .keepAlive(5.second, () => ServerSentEvent.heartbeat)
@@ -68,69 +61,46 @@ class EventsController(
     }
   }
 
-  override val route: Route = {
-    asLeader(electionService) {
+  override val route: Route =
+    asLeader(leaderInfo) {
       get {
-        pathEnd {
+        pathEndOrSingleSlash {
           eventsSSE()
         }
       }
     }
-  }
 }
 
 object EventsController extends StrictLogging {
-
   /**
-    * Represents a graph stage that implements a Source[MarathonEvent] which:
-    * - registers to the given EventStream and pushes all elements downstream.
-    * - buffers maxMessages elements. The stream fails, if the buffer is full.
-    * - is leader aware. The stream completes, if this instance abdicates.
-    * - publishes an EventStreamAttached, if the stream is materialized
-    * - publishes an EventStreamDetached, if the stream is completed or failed.
+    * An event source which:
+    * - Yields all MarathonEvent's for the event bus whilst a leader.
+    * - is leader aware. The stream completes if this instance abdicates.
+    * - publishes an EventStreamAttached when the stream is materialized
+    * - publishes an EventStreamDetached when the stream is completed or fails
     * @param eventStream the event stream to subscribe to
     * @param bufferSize the size of events to buffer, if there is no demand.
     * @param remoteAddress the remote address
     */
-  class EventStreamSourceGraph(eventStream: EventStream, bufferSize: Int, remoteAddress: RemoteAddress) extends GraphStage[SourceShape[MarathonEvent]] with StrictLogging {
-    private[this] val out: Outlet[MarathonEvent] = Outlet("EventsController.EventPublisher.out")
-    override val shape: SourceShape[MarathonEvent] = SourceShape.of(out)
+  def eventStreamLogic(eventStream: EventStream, leaderEvents: Source[LocalLeadershipEvent, Any], bufferSize: Int, remoteAddress: RemoteAddress) = {
 
-    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-      val messages: mutable.Queue[MarathonEvent] = mutable.Queue.empty
-      var actorRef: Option[StageActor] = None
+    // Used to propagate a "stream close" signal when we see a LeadershipState.Standy event
+    val leaderLossKillSwitch =
+      leaderEvents.collect { case evt @ LocalLeadershipEvent.Standby => evt }
 
-      setHandler(out, new OutHandler {
-        override def onPull(): Unit = if (messages.nonEmpty) push(out, messages.dequeue())
-      })
+    EnrichedSource.eventBusSource(classOf[MarathonEvent], eventStream, bufferSize, OverflowStrategy.fail)
+      .via(EnrichedFlow.stopOnFirst(leaderLossKillSwitch))
+      .watchTermination()(Keep.both)
+      .mapMaterializedValue {
+        case (cancellable, completed) =>
+          eventStream.publish(EventStreamAttached(remoteAddress = remoteAddress.toString()))
+          logger.info(s"EventStream attached: $remoteAddress")
 
-      override def preStart(): Unit = {
-        super.preStart()
-        val actor = getStageActor(receive)
-        eventStream.subscribe(actor.ref, classOf[MarathonEvent])
-        eventStream.subscribe(actor.ref, classOf[LocalLeadershipEvent])
-        eventStream.publish(EventStreamAttached(remoteAddress = remoteAddress.toString()))
-        logger.info(s"EventStream attached: $remoteAddress")
-        actorRef = Some(actor)
+          completed.onComplete { _ =>
+            eventStream.publish(EventStreamDetached(remoteAddress = remoteAddress.toString()))
+            logger.info(s"EventStream detached: $remoteAddress")
+          }(ExecutionContexts.callerThread)
+          cancellable
       }
-
-      override def postStop(): Unit = {
-        actorRef.foreach(actor => eventStream.unsubscribe(actor.ref))
-        eventStream.publish(EventStreamDetached(remoteAddress = remoteAddress.toString()))
-        logger.info(s"EventStream detached: $remoteAddress")
-        super.postStop()
-      }
-
-      def receive: Receive = {
-        case (_, LocalLeadershipEvent.Standby) => completeStage()
-        case (_, LocalLeadershipEvent.ElectedAsLeader) => //ignore
-        case (_, _: MarathonEvent) if messages.size > bufferSize =>
-          logger.warn(s"Buffer is full - slow receiver. Close connection: $remoteAddress")
-          failStage(BufferOverflowException(s"Buffer overflow (max capacity was: $bufferSize)!"))
-        case (_, event: MarathonEvent) =>
-          messages.enqueue(event)
-          while (isAvailable(out) && messages.nonEmpty) push(out, messages.dequeue())
-      }
-    }
   }
 }

@@ -72,8 +72,6 @@ def test_ui_registration_requirement():
             for label in task['labels']:
                 if label['key'] == 'DCOS_PACKAGE_NAME':
                     assert label['value'] == 'marathon'
-                if label['key'] == 'DCOS_PACKAGE_IS_FRAMEWORK':
-                    assert label['value'] == 'true'
                 if label['key'] == 'DCOS_SERVICE_NAME':
                     assert label['value'] == 'marathon-user'
 

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.SchedulerDriver
 
@@ -302,7 +302,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     lazy val clock: SettableClock = new SettableClock()
 
     lazy val taskTracker: InstanceTracker = mock[InstanceTracker]
-    lazy val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
+    lazy val stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
     lazy val killService: KillService = mock[KillService]
     lazy val marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder = {
