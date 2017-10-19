@@ -3,7 +3,7 @@ package api.akkahttp.v2
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.{ Rejection, Route }
+import akka.http.scaladsl.server.{ MalformedQueryParamRejection, Rejection, Route }
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -101,7 +101,7 @@ class TasksController(
       & parameter('scale.as[Boolean].?(false))
       & parameter('wipe.as[Boolean].?(false))) { (taskIds, force, scale, wipe) =>
         if (scale && wipe) {
-          reject(Rejections.BadRequest(Message("You cannot use scale and wipe at the same time.")))
+          reject(MalformedQueryParamRejection("scale, wipe", "You cannot use scale and wipe at the same time."))
         } else {
           val maybeTasksIdToAppId: Try[Map[Id, PathId]] = Try(taskIds.ids.map { id =>
             try { Task.Id(id).instanceId -> Task.Id.runSpecId(id) }

@@ -5,6 +5,7 @@ import java.time.Clock
 
 import akka.http.scaladsl.model.Uri.{ Path, Query }
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.MalformedQueryParamRejection
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
@@ -283,7 +284,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
 
       When("we ask to scale AND wipe")
       Post(Uri./.withPath(Path("/delete")).withQuery(Query("wipe" -> "true", "scale" -> "true")), HttpEntity(bodyBytes).withContentType(ContentTypes.`application/json`)) ~> controller.route ~> check {
-        rejection should be (Rejections.BadRequest(Message("You cannot use scale and wipe at the same time.")))
+        rejection should be (MalformedQueryParamRejection("scale, wipe", "You cannot use scale and wipe at the same time."))
       }
     }
 

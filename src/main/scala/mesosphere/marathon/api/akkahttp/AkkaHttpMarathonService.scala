@@ -97,8 +97,6 @@ object AkkaHttpMarathonService {
       .handle(AuthDirectives.handleAuthRejections)
       .handle {
         case Rejections.BadRequest(message) => complete(BadRequest -> message)
-      }
-      .handle {
         case Rejections.EntityNotFound(message) => complete(NotFound -> message)
       }
       .result()
