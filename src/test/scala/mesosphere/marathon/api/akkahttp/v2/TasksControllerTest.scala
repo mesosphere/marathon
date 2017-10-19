@@ -26,6 +26,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.apache.mesos
 import org.mockito.Matchers
+import org.mockito.Mockito.verifyNoMoreInteractions
 import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
@@ -335,6 +336,24 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       Post(Uri./.withPath(Path("/delete")), HttpEntity(bodyBytes).withContentType(ContentTypes.`application/json`)) ~> controller.route ~> check {
         Then("Should be rejected as not authorized")
         rejection.isInstanceOf[NotAuthorized] should be (true)
+      }
+    }
+
+    "killTasks fails for invalid taskId" in new Fixture {
+      Given("a valid and an invalid taskId")
+      val app1 = "/my/app-1".toRootPath
+      val taskId1 = Task.Id.forRunSpec(app1).idString
+      val body = s"""{"ids": ["$taskId1", "invalidTaskId"]}"""
+      val bodyBytes = body.toCharArray.map(_.toByte)
+
+      When("we ask to kill those two tasks")
+      Post(Uri./.withPath(Path("/delete")), HttpEntity(bodyBytes).withContentType(ContentTypes.`application/json`)) ~> controller.route ~> check {
+        Then("An rejection should occur that points to the invalid taskId")
+        val badRequestRejection = rejection.asInstanceOf[BadRequest]
+        badRequestRejection.message.message should include ("invalidTaskId")
+
+        And("the taskKiller should not be called at all")
+        verifyNoMoreInteractions(taskKiller)
       }
     }
   }
