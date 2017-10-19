@@ -163,6 +163,7 @@ class TasksController(
     case _ => None
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def doKillTasks(toKillFuture: Future[Map[PathId, Seq[Instance]]], tasksIdToAppId: Map[Id, PathId], wipe: Boolean)(implicit identity: Identity): Future[Seq[EnrichedTask]] = async {
     val toKill = await(toKillFuture)
     val affectedApps = tasksIdToAppId.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
@@ -179,6 +180,7 @@ class TasksController(
     }.to[Seq]
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def killAndScale(tasksByAppIdFuture: Future[Map[PathId, Seq[Instance]]], force: Boolean)(implicit identity: Identity): Future[DeploymentResult] = async {
     val tasksByAppId = await(tasksByAppIdFuture)
     val deploymentPlan = await(taskKiller.killAndScale(tasksByAppId, force))
