@@ -15,14 +15,14 @@ import mesosphere.marathon.storage.StorageConfig
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.util.toRichFuture
 
-import scala.async.Async.{async, await}
+import scala.async.Async.{ async, await }
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 import mesosphere.marathon.raml.RuntimeConfiguration
 
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 /**
   * @param persistenceStore Optional "new" PersistenceStore for new migrations, the repositories
