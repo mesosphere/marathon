@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x -o pipefail
+set -x +e -o pipefail
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of four custer variants: open, strict, permissive and disabled
@@ -28,22 +28,20 @@ function create-junit-xml {
 	EOF
 }
 
+function exit-as-unstable {
+    echo "Cluster launch failed."
+    create-junit-xml "dcos-launch" "cluster.create" "$1"
+    ./dcos-launch delete
+    exit 0
+}
+
 DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 case $CLUSTER_LAUNCH_CODE in
   0)
       ./ci/system_integration "$DCOS_URL"
       ;;
-  2)
-      echo "Cluster launch failed."
-      create-junit-xml "dcos-launch" "cluster.create" "Cluster launch failed."
-      ./dcos-launch delete
-      exit 0
-      ;;
-  3)
-      echo "Cluster did not come up";
-      create-junit-xml "dcos-launch" "cluster.create" "Cluster did not start in time."
-      ./dcos-launch delete
-      exit 0
-      ;;
+  2) exit-as-unstable "Cluster launch failed.";;
+  3) exit-as-unstable "Cluster did not start in time.";;
+  *) echo "Unknown error in cluster launch"; exit 1;;
 esac
