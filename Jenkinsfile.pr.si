@@ -20,16 +20,13 @@ node('shakedown') {
                 sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
                 sh """git checkout $params.Pull_Request_Id"""
             }
-            sh """env"""
 
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
           }
         } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
 
-            sh """./ci/github_status.py "$JOB_NAME" "$JOB_URL" \
-                '8baee695081bda146035cba22cec1918c5a058c7' $currentBuild.result
-               """
+            sh """python ./ci/github_status.py "$JOB_NAME" "$JOB_URL" $(git rev-parse HEAD) $currentBuild.result"""
         }
     }
   }
