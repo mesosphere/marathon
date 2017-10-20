@@ -431,11 +431,6 @@ class AppsController(
     }
   }
 
-  private def rejectLeftViaThrow[T](t: Either[Rejection, T]): T = t match {
-    case Left(r) => throw RejectionError(r)
-    case Right(t) => t
-  }
-
   //TODO: we probably should refactor this into entity marshaller
   private def completeWithDeploymentForApp(appId: PathId, plan: DeploymentPlan) =
     plan.original.app(appId) match {
