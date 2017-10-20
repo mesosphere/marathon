@@ -24,6 +24,7 @@ PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
 
 DEFAULT_MOM_IMAGES = {
+    'MOM_EE_1.5': 'v1.5.1_1.10.0',
     'MOM_EE_1.4': 'v1.4.7_1.9.8',
     'MOM_EE_1.3': '1.3.13_1.1.5'
 }
@@ -38,6 +39,9 @@ def is_mom_ee_deployed():
 
 def remove_mom_ee():
     mom_ee_versions = [
+        ('1.5', 'strict'),
+        ('1.5', 'permissive'),
+        ('1.5', 'disabled'),
         ('1.4', 'strict'),
         ('1.4', 'permissive'),
         ('1.4', 'disabled'),
@@ -47,6 +51,7 @@ def remove_mom_ee():
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
+        print('Checking endpoint: {}'.format(endpoint))
         if shakedown.service_available_predicate(endpoint):
             print('Removing {}...'.format(endpoint))
             with shakedown.marathon_on_marathon(name=endpoint):
@@ -100,6 +105,7 @@ def assert_mom_ee(version, security_mode='permissive'):
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
 @pytest.mark.skipif("shakedown.ee_version() != 'strict'")
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.5', 'strict'),
     ('1.4', 'strict'),
     ('1.3', 'strict')
 ])
@@ -112,6 +118,8 @@ def test_strict_mom_ee(version, security_mode):
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
 @pytest.mark.skipif("shakedown.ee_version() != 'permissive'")
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.5', 'permissive'),
+    ('1.5', 'disabled'),
     ('1.4', 'permissive'),
     ('1.4', 'disabled'),
     ('1.3', 'permissive'),
@@ -126,6 +134,7 @@ def test_permissive_mom_ee(version, security_mode):
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
 @pytest.mark.skipif("shakedown.ee_version() != 'disabled'")
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.5', 'disabled'),
     ('1.4', 'disabled'),
     ('1.3', 'disabled')
 ])
