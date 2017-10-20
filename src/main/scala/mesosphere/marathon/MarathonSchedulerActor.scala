@@ -281,14 +281,14 @@ class MarathonSchedulerActor private (
   }
 
   def deploymentSuccess(plan: DeploymentPlan): Unit = {
-    logger.info(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} finished")
+    logger.info(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} finished")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
-    logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} failed", reason)
+    logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} failed", reason)
     Future.sequence(plan.affectedRunSpecIds.map(launchQueue.asyncPurge))
-      .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id}", error); Done }
+      .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id} for ${plan.targetIdsString}", error); Done }
       .foreach { _ => eventBus.publish(core.event.DeploymentFailed(plan.id, plan)) }
   }
 }
@@ -377,35 +377,6 @@ class SchedulerActions(
   def startRunSpec(runSpec: RunSpec): Future[Done] = {
     logger.info(s"Starting runSpec ${runSpec.id}")
     scale(runSpec)
-  }
-
-  @SuppressWarnings(Array("all")) // async/await
-  def stopRunSpec(runSpec: RunSpec): Future[Done] = {
-    logger.info(s"Stopping runSpec ${runSpec.id}")
-
-    healthCheckManager.removeAllFor(runSpec.id)
-
-    async {
-      val tasks = await(instanceTracker.specInstances(runSpec.id))
-
-      tasks.foreach { instance =>
-        if (instance.isLaunched) {
-          logger.info("Killing {}", instance.instanceId)
-          killService.killInstance(instance, KillReason.DeletingApp)
-        }
-      }
-      await(launchQueue.asyncPurge(runSpec.id))
-      Done
-    }.recover {
-      case NonFatal(error) => logger.warn(s"Error in stopping runSpec ${runSpec.id}", error); Done
-    }.map { _ =>
-      launchQueue.resetDelay(runSpec)
-
-      // The tasks will be removed from the InstanceTracker when their termination
-      // was confirmed by Mesos via a task update.
-      eventBus.publish(AppTerminatedEvent(runSpec.id))
-      Done
-    }
   }
 
   /**
