@@ -204,5 +204,9 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 
   override def sync(): Future[Done] = store.sync()
 
+  override def startMigration(): Future[Done] = store.startMigration()
+
+  override def endMigration(): Future[Done] = store.endMigration()
+
   override def toString: String = s"LoadTimeCachingPersistenceStore($store)"
 }
