@@ -49,4 +49,3 @@ def marathon_leadership_changed(original_leader):
     current_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(current_leader))
     assert original_leader != current_leader
-
