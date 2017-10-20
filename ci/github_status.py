@@ -8,6 +8,7 @@ import sys
 jenkins_github = {
         'PENDING': 'pending',
         'SUCCESS': 'success',
+        'null': 'success',
         'UNSTABLE': 'failure',
         'FAILURE': 'failure'}
 
