@@ -15,20 +15,19 @@ node('shakedown') {
             string(credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'),
             string(credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD')
           ]) {
-            echo """$params.Pull_Request_Id"""
+            // Checkout commit of pull request.
             sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
                 sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
                 sh """git checkout $params.Pull_Request_Id"""
             }
             sh """env"""
+
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
           }
         } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
 
-            sh """./ci/github_status.py \
-                'continuous-integration/jenkins/system-integration' \
-                'https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/' \
+            sh """./ci/github_status.py "$JOB_NAME" "$JOB_URL" \
                 '8baee695081bda146035cba22cec1918c5a058c7' $currentBuild.result
                """
         }
