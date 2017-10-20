@@ -26,20 +26,6 @@ import scala.concurrent.{ ExecutionContext, Future }
 class SchedulerActionsTest extends AkkaUnitTest {
   "SchedulerActions" should {
 
-    "Reset rate limiter if application is stopped" in {
-      val f = new Fixture
-      val app = AppDefinition(id = PathId("/myapp"))
-
-      f.queue.asyncPurge(eq(app.id)) returns Future.successful(Done)
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty[Instance])
-
-      f.scheduler.stopRunSpec(app).futureValue(1.second)
-
-      verify(f.queue).asyncPurge(app.id)
-      verify(f.queue).resetDelay(app)
-      verifyNoMoreInteractions(f.queue)
-    }
-
     "Task reconciliation sends known running and staged tasks and empty list" in {
       val f = new Fixture
       val app = AppDefinition(id = PathId("/myapp"))
