@@ -130,7 +130,7 @@ class Migration(
         }
       },
       StorageVersions(1, 4, 9, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
-        new MigrationTo149(instanceRepo).migrate()
+        new MigrationTo_1_4_9(instanceRepo).migrate()
       }
     )
 

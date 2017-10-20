@@ -12,14 +12,14 @@ import mesosphere.marathon.storage.repository.InstanceRepository
 import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo149(instanceRepository: InstanceRepository)(implicit ctx: ExecutionContext, mat: Materializer) extends StrictLogging {
+class MigrationTo_1_4_9(instanceRepository: InstanceRepository)(implicit ctx: ExecutionContext, mat: Materializer) extends StrictLogging {
 
   def migrate(): Future[Done] = {
-    MigrationTo149.migrateUnreachableInstances(instanceRepository)(Environment(sys.env), ctx, mat)
+    MigrationTo_1_4_9.migrateUnreachableInstances(instanceRepository)(Environment(sys.env), ctx, mat)
   }
 }
 
-object MigrationTo149 extends StrictLogging {
+object MigrationTo_1_4_9 extends StrictLogging {
 
   private def changeUnreachableStrategyForInstances(instance: Instance): Instance = {
     instance.copy(unreachableStrategy = MigrationTo_1_4_6.changeUnreachableStrategy(instance.unreachableStrategy))
