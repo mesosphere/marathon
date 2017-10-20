@@ -45,7 +45,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         case DiskType.Path => PersistentVolumeType.Path
         case DiskType.Root => PersistentVolumeType.Root
       })
-      PersistentVolume(pvType, pv.size, pv.maxSize, pv.constraints.toRaml[Set[Seq[String]]])
+      PersistentVolume(pvType, pv.size, pv.maxSize, pv.profileName, pv.constraints.toRaml[Set[Seq[String]]])
     }
 
     volume match {
@@ -100,6 +100,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       size = persistent.size,
       maxSize = persistent.maxSize,
       `type` = volType,
+      profileName = persistent.profileName,
       constraints = persistent.constraints.map { constraint =>
         (constraint.headOption, constraint.lift(1), constraint.lift(2)) match {
           case (Some("path"), Some("LIKE"), Some(value)) =>
@@ -147,6 +148,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       `type` = vol.when(_.hasType, _.getType.toRaml).orElse(PersistentVolume.DefaultType),
       size = vol.getSize,
       maxSize = vol.when(_.hasMaxSize, _.getMaxSize).orElse(PersistentVolume.DefaultMaxSize), // TODO(jdef) protobuf serialization is broken for this
+      profileName = vol.when(_.hasProfileName, _.getProfileName),
       constraints = vol.whenOrElse(_.getConstraintsCount > 0, _.getConstraintsList.map(_.toRaml[Seq[String]])(collection.breakOut), PersistentVolume.DefaultConstraints)
     )
   }

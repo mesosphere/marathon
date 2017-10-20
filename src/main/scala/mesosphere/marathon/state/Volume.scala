@@ -152,6 +152,7 @@ case class PersistentVolumeInfo(
   size: Long,
   maxSize: Option[Long] = None,
   `type`: DiskType = DiskType.Root,
+  profileName: Option[String] = None,
   constraints: Set[Constraint] = Set.empty)
 
 object PersistentVolumeInfo {
@@ -160,6 +161,7 @@ object PersistentVolumeInfo {
       size = pvi.getSize,
       maxSize = if (pvi.hasMaxSize) Some(pvi.getMaxSize) else None,
       `type` = DiskType.fromMesosType(if (pvi.hasType) Some(pvi.getType) else None),
+      profileName = if (pvi.hasProfileName) Some(pvi.getProfileName) else None,
       constraints = pvi.getConstraintsList.toSet
     )
 
@@ -213,20 +215,25 @@ object PersistentVolumeInfo {
       info.maxSize.forall(_ > info.size)
     }
 
+    val haveProperProfileName = validator[String] { profileName =>
+      profileName is notEmpty
+    }
+
     validator[PersistentVolumeInfo] { info =>
       info.size should be > 0L
       info.constraints.each must complyWithVolumeConstraintRules
       info should meetMaxSizeConstraint
       info should notHaveConstraintsOnRoot
       info should haveProperlyOrderedMaxSize
+      info.profileName is optional(haveProperProfileName)
     }
   }
 }
 
 case class PersistentVolume(
-  val containerPath: String,
-  val persistent: PersistentVolumeInfo,
-  val mode: Mesos.Volume.Mode) extends Volume
+  containerPath: String,
+  persistent: PersistentVolumeInfo,
+  mode: Mesos.Volume.Mode) extends Volume
 
 object PersistentVolume {
   import PathPatterns._
