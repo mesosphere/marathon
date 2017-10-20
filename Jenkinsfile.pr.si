@@ -23,6 +23,7 @@ node('shakedown') {
           }
         } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
+            echo """result $currentBuild.result"""
         }
     }
   }
