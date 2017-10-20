@@ -351,4 +351,42 @@ class ZkPersistenceStore(
       }
     }
   }
+
+  @SuppressWarnings(Array("all")) // async/await
+  override def startMigration(): Future[Done] = {
+    require(isOpen, "the store must be opened before it can be used")
+
+    async {
+      await(client.create("/migration-in-progress").asTry) match {
+        case Success(_) =>
+          Done
+        case Failure(e: KeeperException.NodeExistsException) =>
+          throw new StoreCommandFailedException(
+            "Migration is already in progress; /migration-in-progress node already exists", e)
+        case Failure(e: KeeperException) =>
+          throw new StoreCommandFailedException("Failed to start migration", e)
+        case Failure(e) =>
+          throw e
+      }
+    }
+  }
+
+  @SuppressWarnings(Array("all")) // async/await
+  override def endMigration(): Future[Done] = {
+    require(isOpen, "the store must be opened before it can be used")
+
+    async {
+      await(client.delete("/migration-in-progress").asTry) match {
+        case Success(_) =>
+          Done
+        case Failure(e: KeeperException.NoNodeException) =>
+          throw new StoreCommandFailedException(
+            "Migration has not been started; /migration-in-progress node does not exist", e)
+        case Failure(e: KeeperException) =>
+          throw new StoreCommandFailedException("Failed to end migration", e)
+        case Failure(e) =>
+          throw e
+      }
+    }
+  }
 }
