@@ -1,0 +1,28 @@
+#!/usr/bin/env groovy
+
+timeout(120) {
+node('shakedown') {
+  wrap([$class: 'MesosSingleUseSlave']) {
+  wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
+
+    stage("Run System Integration Test Pipeline") {
+      try {
+        checkout scm
+        withCredentials(
+          [ [$class: 'FileBinding', credentialsId: '23743034-1ac4-49f7-b2e6-a661aee2d11b', variable: 'CLI_TEST_SSH_KEY'],
+            [$class: 'FileBinding', credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'],
+            [$class: 'StringBinding', credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'],
+            [$class: 'StringBinding', credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD']
+          ]) {
+            sh """git fetch origin pull/$param.Pull_Request_Id/head:$params.Pull_Request_Id"""
+            sh """git checkougt $param.Pull_Request_Id"""
+            sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
+          }
+        } finally {
+            junit allowEmptyResults: true, testResults: 'shakedown.xml'
+        }
+    }
+  }
+  }
+}
+}
