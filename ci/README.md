@@ -28,7 +28,7 @@ The `jenkins` target is excuted on every branch build by jenkins. It runs
   * `provision.killStaleTestProcesses()`
   * `provision.installMesos()`
   * `compileAndTest()`
-  * `createPackages()`
+  * `build()`
 
 The `phabricator` target runs the `jenkins` pipeline followed by Phabricator
 review reporting. It is triggered with each diff update.
@@ -43,7 +43,7 @@ gone.
 The `compileAndTest` target basically runs `sbt clean test integration:test
 scapegoat`. This is the main compilation step.
 
-The `createPackages` target assembles Marathon binary packages and generates the
+The `build` target assembles Marathon binary packages and generates the
 sha1 checksums for the zip and tarball packages. See `createPackageSha1s` in the
 code base for details.
 
