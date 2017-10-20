@@ -9,33 +9,38 @@ import akka.testkit.{ TestActor, TestProbe }
 import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
+import mesosphere.marathon.state.FaultDomain
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
-import org.apache.mesos.Protos.DomainInfo.FaultDomain
+import org.apache.mesos.Protos.DomainInfo.{ FaultDomain => FaultDomainPB }
 import org.apache.mesos.Protos.DomainInfo.FaultDomain.{ RegionInfo, ZoneInfo }
 import org.apache.mesos.Protos.{ DomainInfo, FrameworkID, Offer, SlaveID, OfferID => MesosOfferIdProto }
 
 class ActorOfferMatcherTest extends AkkaUnitTest {
+
+  val homeFaultDomain = FaultDomain("homeRegion", "homeZone")
+  val remoteFaultDomain = FaultDomain("remoteRegion", "remoteZone")
+
   "The ActorOfferMatcher" when {
     "receives remote region offer" should {
-      "say is not interested when from non-home region" in new Fixture {
+      "say it's interested in offer from non-home region" in new Fixture {
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some("home"))
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some(homeFaultDomain))
 
-        offerMatcher.isInterestedIn(offerWithFaultRegion("remote")) should be (false)
+        offerMatcher.isInterestedIn(offerWithFaultRegion(remoteFaultDomain)) should be (true)
       }
 
-      "say is interested when from home region" in new Fixture {
+      "say it's interested in offer from home region" in new Fixture {
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some("home"))
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some(homeFaultDomain))
 
-        offerMatcher.isInterestedIn(offerWithFaultRegion("home")) should be (true)
+        offerMatcher.isInterestedIn(offerWithFaultRegion(homeFaultDomain)) should be (true)
       }
 
       "say is interested when fault region not set" in new Fixture {
         val probe = TestProbe()
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some("home"))
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None, () => Some(homeFaultDomain))
 
         offerMatcher.isInterestedIn(offerWithoutFaultRegion()) should be (true)
       }
@@ -67,16 +72,16 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
   }
 
   class Fixture {
-    def offerWithFaultRegion(faultRegion: String) = {
+    def offerWithFaultRegion(faultDomain: FaultDomain) = {
       Offer.newBuilder()
         .setId(MesosOfferIdProto.newBuilder().setValue(UUID.randomUUID().toString))
         .setFrameworkId(FrameworkID.newBuilder().setValue("notanidframework"))
         .setSlaveId(SlaveID.newBuilder().setValue(s"slave1"))
         .setHostname("hostname")
         .setDomain(DomainInfo.newBuilder()
-          .setFaultDomain(FaultDomain.newBuilder()
-            .setRegion(RegionInfo.newBuilder().setName(faultRegion))
-            .setZone(ZoneInfo.newBuilder().setName("zone")))
+          .setFaultDomain(FaultDomainPB.newBuilder()
+            .setRegion(RegionInfo.newBuilder().setName(faultDomain.region))
+            .setZone(ZoneInfo.newBuilder().setName(faultDomain.zone)))
         ).build()
     }
 
