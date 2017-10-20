@@ -9,8 +9,8 @@ import akka.testkit.{ TestActor, TestProbe }
 import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
+import mesosphere.marathon.state.FaultDomain
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.marathon.util.FaultDomain
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
 import org.apache.mesos.Protos.DomainInfo.{ FaultDomain => FaultDomainPB }

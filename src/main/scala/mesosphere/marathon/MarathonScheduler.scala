@@ -7,9 +7,10 @@ import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
+import mesosphere.marathon.state.FaultDomain
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.{ FaultDomain, SemanticVersion }
+import mesosphere.marathon.util.SemanticVersion
 import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }
 import org.apache.mesos.Protos._

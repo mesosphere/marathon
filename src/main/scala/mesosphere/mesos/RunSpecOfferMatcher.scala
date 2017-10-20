@@ -6,8 +6,7 @@ import com.google.protobuf.TextFormat
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{ AppDefinition, RunSpec }
-import mesosphere.marathon.util.FaultDomain
+import mesosphere.marathon.state.{ AppDefinition, FaultDomain, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import org.apache.mesos.Protos.Offer
 

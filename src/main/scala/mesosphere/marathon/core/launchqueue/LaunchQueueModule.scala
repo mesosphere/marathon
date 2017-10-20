@@ -11,8 +11,7 @@ import mesosphere.marathon.core.launchqueue.impl._
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.RunSpec
-import mesosphere.marathon.util.FaultDomain
+import mesosphere.marathon.state.{ FaultDomain, RunSpec }
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given RunSpec.

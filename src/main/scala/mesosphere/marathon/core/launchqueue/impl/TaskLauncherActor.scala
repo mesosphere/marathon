@@ -20,9 +20,8 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, InstanceOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ RunSpec, Timestamp }
+import mesosphere.marathon.state.{ FaultDomain, RunSpec, Timestamp }
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.FaultDomain
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Promise

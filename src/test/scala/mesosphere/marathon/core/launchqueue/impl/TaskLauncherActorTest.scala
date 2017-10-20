@@ -23,9 +23,8 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, UnreachableEnabled }
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.marathon.util.FaultDomain
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
 
@@ -196,7 +195,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 0)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, homeFaultDomain = None)
+      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, faultDomain = None)
       Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
       verifyClean()
     }
@@ -286,7 +285,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 1)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, homeFaultDomain = None)
+      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, faultDomain = None)
       Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
       verifyClean()
     }
@@ -330,7 +329,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(scheduleCalled)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, homeFaultDomain = None)
+      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, faultDomain = None)
       Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
       verifyClean()
     }
@@ -356,7 +355,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 0)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, homeFaultDomain = None)
+      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, faultDomain = None)
       Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
       verifyClean()
     }

@@ -70,7 +70,7 @@ class InstanceOpFactoryImpl(
 
     val matchedOffer =
       RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
-        builderConfig.acceptedResourceRoles, config, request.homeFaultDomain)
+        builderConfig.acceptedResourceRoles, config, request.faultDomain)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>

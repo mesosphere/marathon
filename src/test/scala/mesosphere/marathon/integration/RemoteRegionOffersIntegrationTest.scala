@@ -9,9 +9,8 @@ import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentI
 import mesosphere.marathon.integration.facades.MesosFacade.ITResourceStringValue
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ FaultDomain, PathId }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.util.FaultDomain
 import mesosphere.mesos.Constraints
 
 import scala.concurrent.duration._

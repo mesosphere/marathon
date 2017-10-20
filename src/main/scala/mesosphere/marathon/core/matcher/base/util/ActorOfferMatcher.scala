@@ -6,8 +6,7 @@ import com.google.inject.Provider
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.util.FaultDomain
+import mesosphere.marathon.state.{ FaultDomain, PathId }
 import org.apache.mesos.Protos.Offer
 
 import scala.concurrent.duration._

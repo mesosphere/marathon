@@ -9,7 +9,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.impl.{ OfferMatcherManagerActor, OfferMatcherManagerActorMetrics, OfferMatcherManagerDelegate }
-import mesosphere.marathon.util.FaultDomain
+import mesosphere.marathon.state.FaultDomain
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{ Observable, Subject }
 

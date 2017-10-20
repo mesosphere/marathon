@@ -10,7 +10,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
 import mesosphere.marathon.integration.facades.MesosFacade
-import mesosphere.marathon.util.{ FaultDomain, Retry }
+import mesosphere.marathon.state.FaultDomain
+import mesosphere.marathon.util.Retry
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.Suite
@@ -49,18 +50,18 @@ case class MesosCluster(
 
   lazy val masters = 0.until(numMasters).map { i =>
     val faultDomainJson = if (mastersFaultDomains.nonEmpty && mastersFaultDomains(i).nonEmpty) {
-      val fd = mastersFaultDomains(i).get
+      val faultDomain = mastersFaultDomains(i).get
       val faultDomainJson = s"""
                                |{
                                |  "fault_domain":
                                |    {
                                |      "region":
                                |        {
-                               |          "name": "${fd.region}"
+                               |          "name": "${faultDomain.region}"
                                |        },
                                |      "zone":
                                |        {
-                               |          "name": "${fd.zone}"
+                               |          "name": "${faultDomain.zone}"
                                |        }
                                |    }
                                |}
@@ -82,23 +83,23 @@ case class MesosCluster(
     // flakiness in tests.
 
     val (additionalAttributes: Map[String, Option[String]], faultDomainJson) = if (agentsFaultDomains.nonEmpty && agentsFaultDomains(i).nonEmpty) {
-      val fd = agentsFaultDomains(i).get
+      val faultDomain = agentsFaultDomains(i).get
       val faultDomainJson = s"""
           |{
           |  "fault_domain":
           |    {
           |      "region":
           |        {
-          |          "name": "${fd.region}"
+          |          "name": "${faultDomain.region}"
           |        },
           |      "zone":
           |        {
-          |          "name": "${fd.zone}"
+          |          "name": "${faultDomain.zone}"
           |        }
           |    }
           |}
         """.stripMargin
-      Map("fault_domain_region" -> Some(fd.region), "fault_domain_zone" -> Some(fd.zone)) -> Some(faultDomainJson)
+      Map("fault_domain_region" -> Some(faultDomain.region), "fault_domain_zone" -> Some(faultDomain.zone)) -> Some(faultDomainJson)
     } else Map.empty -> None
 
     // uniquely identify each agent node, useful for constraint matching
