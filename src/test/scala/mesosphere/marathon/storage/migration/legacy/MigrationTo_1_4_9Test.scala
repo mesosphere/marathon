@@ -1,21 +1,21 @@
-package mesosphere.marathon
-package storage.migration
+package mesosphere.marathon.storage.migration.legacy
 
 import akka.Done
 import akka.stream.scaladsl.Source
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.Seq
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.migration.MigrationTo146.Environment
+import mesosphere.marathon.storage.migration.legacy.MigrationTo_1_4_6.Environment
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.test.GroupCreation
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContextExecutor, Future }
 
-class MigrationTo149Test extends AkkaUnitTest with GroupCreation with StrictLogging {
+class MigrationTo_1_4_9Test extends AkkaUnitTest with GroupCreation with StrictLogging {
 
   "Migration to 1.4.9" should {
     "do nothing if env var is not configured" in new Fixture {
@@ -24,7 +24,7 @@ class MigrationTo149Test extends AkkaUnitTest with GroupCreation with StrictLogg
       verify(instanceRepository, never).store(_: Instance)
     }
 
-    "do migration if env var is configured" in new Fixture(Map(MigrationTo146.MigrateUnreachableStrategyEnvVar -> "true")) {
+    "do migration if env var is configured" in new Fixture(Map(MigrationTo_1_4_6.MigrateUnreachableStrategyEnvVar -> "true")) {
       MigrationTo149.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
       val targetInstance = instance.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 5.seconds)) // case 2
       val targetInstance2 = instance2.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 0.seconds)) // case 1

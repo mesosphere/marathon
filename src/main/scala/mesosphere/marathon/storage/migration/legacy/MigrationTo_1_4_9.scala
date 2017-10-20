@@ -1,5 +1,4 @@
-package mesosphere.marathon
-package storage.migration
+package mesosphere.marathon.storage.migration.legacy
 
 import akka.Done
 import akka.stream.Materializer
@@ -7,7 +6,7 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.migration.MigrationTo146.Environment
+import mesosphere.marathon.storage.migration.legacy.MigrationTo_1_4_6.Environment
 import mesosphere.marathon.storage.repository.InstanceRepository
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -23,7 +22,7 @@ class MigrationTo149(instanceRepository: InstanceRepository)(implicit ctx: Execu
 object MigrationTo149 extends StrictLogging {
 
   private def changeUnreachableStrategyForInstances(instance: Instance): Instance = {
-    instance.copy(unreachableStrategy = MigrationTo146.changeUnreachableStrategy(instance.unreachableStrategy))
+    instance.copy(unreachableStrategy = MigrationTo_1_4_6.changeUnreachableStrategy(instance.unreachableStrategy))
   }
 
   def migrateUnreachableInstances(instanceRepository: InstanceRepository)(implicit env: Environment, ctx: ExecutionContext, mat: Materializer): Future[Done] = {
@@ -35,7 +34,7 @@ object MigrationTo149 extends StrictLogging {
         .toMat(Sink.ignore)(Keep.right)
 
     // we stick to already present migration indicating env variable to not confuse users
-    val migrateUnreachableStrategyWanted = env.vars.getOrElse(MigrationTo146.MigrateUnreachableStrategyEnvVar, "false")
+    val migrateUnreachableStrategyWanted = env.vars.getOrElse(MigrationTo_1_4_6.MigrateUnreachableStrategyEnvVar, "false")
 
     if (migrateUnreachableStrategyWanted == "true") {
       instanceRepository.all()
