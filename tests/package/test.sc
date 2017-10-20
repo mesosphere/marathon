@@ -397,7 +397,7 @@ class DockerImageTest extends MesosTest {
     // Round about way of testing this; the HOOK_MARATHON_START file creates an env file which sets this parameter
     implicit val patienceConfig = veryPatient
     eventually {
-      execBash(dockerMarathon.containerId, "curl localhost:8080/v2/info") should include("http://test-host:port")
+      execBash(mesos.containerId, s"curl ${dockerMarathon.ipAddress}:8080/v2/info") should include("http://test-host:port")
     }
   }
 

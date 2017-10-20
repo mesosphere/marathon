@@ -1792,6 +1792,45 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       app1 should be(app2)
     }
 
+    "Restart an existing app" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      service.deploy(any, any) returns Future.successful(Done)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.rootGroup() returns rootGroup
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./
+        .withPath(Path(app.id.toString) / "restart")
+        .withQuery(Query("force" -> "true"))
+
+      Post(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Restart a non existing app will fail" in new Fixture {
+      val missing = PathId("/app")
+      groupManager.app(PathId("/app")) returns None
+      groupManager.updateApp(any, any, any, any, any) returns Future.failed(AppNotFoundException(missing))
+      groupManager.rootGroup() returns RootGroup()
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./
+        .withPath(Path(missing.toString) / "restart")
+        .withQuery(Query("force" -> "true"))
+
+      Post(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+
     "Index has counts and deployments by default (regression for #2171)" in new Fixture {
       Given("An app and group")
       val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))

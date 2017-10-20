@@ -299,7 +299,28 @@ class AppsController(
     }
   }
 
-  private def restartApp(appId: PathId)(implicit identity: Identity): Route = ???
+  private def restartApp(appId: PathId)(implicit identity: Identity): Route = {
+    forceParameter { force =>
+      val newVersion = clock.now()
+      onSuccessLegacy(Some(appId))(
+        groupManager.updateApp(
+          appId,
+          markAppForRestarting(appId),
+          newVersion, force)
+      ).apply { restartDeployment =>
+          completeWithDeploymentForApp(appId, restartDeployment)
+        }
+    }
+  }
+
+  private[v2] def markAppForRestarting(appId: PathId)(implicit identity: Identity): Option[AppDefinition] => AppDefinition = { maybeAppDef =>
+    val appDefinition = maybeAppDef.getOrElse(throw RejectionError(Rejections.EntityNotFound.noApp(appId)))
+    if (authorizer.isAuthorized(identity, UpdateRunSpec, appDefinition)) {
+      appDefinition.markedForRestarting
+    } else {
+      throw RejectionError(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+    }
+  }
 
   private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = ???
 

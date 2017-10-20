@@ -13,6 +13,7 @@ clean:
 	cp target/mesos-version $@
 
 target/mesos-version: ../../project/Dependencies.scala
+	mkdir -p target
 	cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"' > $@.tmp
 	[ "$$(wc -l $@.tmp | awk '{print $$1}')" = 1 ]
 	mv $@.tmp $@

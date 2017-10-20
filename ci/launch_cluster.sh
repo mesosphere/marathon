@@ -44,29 +44,11 @@ template_parameters:
     SlaveInstanceCount: 5
 EOF
 
-function create-junit-xml {
-    local testsuite_name=$1
-    local testcase_name=$2
-    local error_message=$3
-
-	cat > shakedown.xml <<-EOF
-	<testsuites>
-	  <testsuite name="$testsuite_name" errors="0" skipped="0" tests="1" failures="1">
-	      <testcase classname="$testsuite_name" name="$testcase_name">
-	        <failure message="test setup failed">$error_message</failure>
-	      </testcase>
-	  </testsuite>
-	</testsuites>
-	EOF
-}
-
 if ! ./dcos-launch create; then
-  create-junit-xml "dcos-launch" "cluster.create" "Cluster launch failed."
-  exit 1
+  exit 2
 fi
 if ! ./dcos-launch wait; then
-  create-junit-xml "dcos-launch" "cluster.create" "Cluster did not start in time."
-  exit 1
+  exit 3
 fi
 
 # Return dcos_url

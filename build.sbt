@@ -175,7 +175,7 @@ lazy val packagingSettings = Seq(
   dockerRepository := Some("mesosphere"),
   daemonUser in Docker := "root",
   version in Docker := { "v" + (version in Compile).value },
-  dockerBaseImage := "buildpack-deps:jessie-curl",
+  dockerBaseImage := "debian:jessie-slim",
   (defaultLinuxInstallLocation in Docker) := "/marathon",
   dockerCommands := {
     // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
@@ -184,12 +184,15 @@ lazy val packagingSettings = Seq(
     prefixCommands ++
       Seq(Cmd("RUN",
         s"""apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\
+          |apt-get update -y && \\
+          |apt-get upgrade -y && \\
           |echo "deb http://ftp.debian.org/debian jessie-backports main" | tee -a /etc/apt/sources.list && \\
           |echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
           |echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
           |apt-get update && \\
           |
           |# jdk setup
+          |mkdir -p /usr/share/man/man1 && \\
           |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20161107~bpo8+1 && \\
           |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
