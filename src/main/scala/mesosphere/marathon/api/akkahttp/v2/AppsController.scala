@@ -365,29 +365,33 @@ class AppsController(
 
   private def killTasks(appId: PathId)(implicit identity: Identity): Route = {
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
-    (forceParameter & parameter("host") & parameter("scale".as[Boolean].?(false)) & parameter("wipe".as[Boolean].?(false))) {
-      (force, host, scale, wipe) =>
+    (forceParameter & parameter("host") & extractTaskKillingMode) {
+      (force, host, mode) =>
         def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
           appTasks.filter(_.agentInfo.host == host || host == "*")
         }
-        if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
-        if (scale) {
-          val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
-          onSuccess(deploymentPlanF) { plan =>
-            complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
-          }
-        } else {
-          onSuccess(taskKiller.kill(appId, findToKill, wipe)) { instances =>
-            complete(Json.obj("tasks" -> instances))
-          }
+        mode match {
+          case TaskKillingMode.Scale =>
+            val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
+            onSuccess(deploymentPlanF) { plan =>
+              complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+            }
+          case TaskKillingMode.Wipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
+              complete(Json.obj("tasks" -> instances))
+            }
+          case TaskKillingMode.KillWithoutWipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
+              complete(Json.obj("tasks" -> instances))
+            }
         }
     }
   }
 
   private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = {
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
-    (forceParameter & parameter("host") & parameter("scale".as[Boolean].?(false)) & parameter("wipe".as[Boolean].?(false))) {
-      (force, host, scale, wipe) =>
+    (forceParameter & parameter("host") & extractTaskKillingMode) {
+      (force, host, mode) =>
         def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
           try {
             val instanceId = taskId.instanceId
@@ -397,16 +401,20 @@ class AppsController(
             case _: MatchError => Seq.empty
           }
         }
-        if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
-        if (scale) {
-          val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
-          onSuccess(deploymentPlanF) { plan =>
-            complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
-          }
-        } else {
-          onSuccess(taskKiller.kill(appId, findToKill, wipe)) { instances =>
-            complete(Json.obj("tasks" -> instances))
-          }
+        mode match {
+          case TaskKillingMode.Scale =>
+            val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
+            onSuccess(deploymentPlanF) { plan =>
+              complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+            }
+          case TaskKillingMode.Wipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
+              complete(Json.obj("tasks" -> instances))
+            }
+          case TaskKillingMode.KillWithoutWipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
+              complete(Json.obj("tasks" -> instances))
+            }
         }
     }
   }
