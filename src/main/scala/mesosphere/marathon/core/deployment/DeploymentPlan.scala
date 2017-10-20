@@ -186,6 +186,8 @@ case class DeploymentPlan(
       } else " NO STEPS"
     s"DeploymentPlan id=$id,$version$stepString\n"
   }
+
+  def targetIdsString = affectedRunSpecIds.mkString(", ")
 }
 
 object DeploymentPlan {

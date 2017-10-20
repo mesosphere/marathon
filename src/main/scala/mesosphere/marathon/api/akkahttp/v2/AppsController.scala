@@ -277,7 +277,7 @@ class AppsController(
 
   /**
     * We have to pass this function to the groupManager to make sure updates are serialized
-	  *
+    *
     * Another request might remove the app before we call the update.
     * That is why we cannot check if the app exists before the update call.
     * We have to do so during the call. Since we do some app handling anyways we can also check if the caller is authroized.
@@ -299,7 +299,28 @@ class AppsController(
     }
   }
 
-  private def restartApp(appId: PathId)(implicit identity: Identity): Route = ???
+  private def restartApp(appId: PathId)(implicit identity: Identity): Route = {
+    forceParameter { force =>
+      val newVersion = clock.now()
+      onSuccessLegacy(Some(appId))(
+        groupManager.updateApp(
+          appId,
+          markAppForRestarting(appId),
+          newVersion, force)
+      ).apply { restartDeployment =>
+          completeWithDeploymentForApp(appId, restartDeployment)
+        }
+    }
+  }
+
+  private[v2] def markAppForRestarting(appId: PathId)(implicit identity: Identity): Option[AppDefinition] => AppDefinition = { maybeAppDef =>
+    val appDefinition = maybeAppDef.getOrElse(throw RejectionError(Rejections.EntityNotFound.noApp(appId)))
+    if (authorizer.isAuthorized(identity, UpdateRunSpec, appDefinition)) {
+      appDefinition.markedForRestarting
+    } else {
+      throw RejectionError(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+    }
+  }
 
   private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = ???
 

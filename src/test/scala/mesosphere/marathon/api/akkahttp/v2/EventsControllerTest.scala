@@ -6,7 +6,6 @@ import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, RemoteAddress, Uri }
 import akka.http.scaladsl.model.headers.`X-Real-Ip`
 import akka.http.scaladsl.server.Route
-import akka.stream.KillSwitches
 import akka.stream.scaladsl.{ BroadcastHub, Keep, Source }
 import akka.stream.OverflowStrategy
 import de.heikoseeberger.akkasse.EventStreamParser
@@ -17,7 +16,6 @@ import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.util.CancellableOnce
 import org.scalatest.Inside
 import scala.concurrent.Future
 
@@ -123,10 +121,14 @@ class EventsControllerTest extends AkkaUnitTest with Inside {
 
     val events = response.entity.dataBytes
       .via(EventStreamParser(Int.MaxValue, Int.MaxValue))
-      .runWith(Sink.seq)
+      .map(_.`type`)
+      .runWith(Sink.queue())
+
+    inside(events.pull().futureValue) {
+      case Some(Some(tpe)) => tpe shouldBe "event_stream_attached"
+    }
 
     f.leaderStateEventsInput.offer(LocalLeadershipEvent.Standby)
-
-    events.futureValue.flatMap(_.`type`) shouldBe Seq("event_stream_attached")
+    events.pull().futureValue shouldBe None
   }
 }

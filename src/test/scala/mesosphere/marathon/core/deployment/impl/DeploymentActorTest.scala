@@ -119,6 +119,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan(origGroup, targetGroup)
 
+      queue.asyncPurge(any) returns Future.successful(Done)
       scheduler.startRunSpec(any) returns Future.successful(Done)
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
       tracker.specInstancesSync(app2.id) returns Seq(instance2_1)
@@ -146,7 +147,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         killService.killed should contain(instance2_1.instanceId) // killed due to config change
         killService.killed should contain(instance4_1.instanceId) // killed because app4 does not exist anymore
         killService.numKilled should be(3)
-        verify(scheduler).stopRunSpec(app4.copy(instances = 0))
+        verify(queue).resetDelay(app4.copy(instances = 0))
       }
     }
 
