@@ -17,7 +17,7 @@ node('shakedown') {
             echo """$params.Pull_Request_Id"""
             sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
                 sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
-                sh """git checkougt $param.Pull_Request_Id"""
+                sh """git checkout $param.Pull_Request_Id"""
             }
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
           }
