@@ -21,6 +21,7 @@ node('shakedown') {
                 sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
                 sh """git checkout $params.Pull_Request_Id"""
             }
+            sh """python3 ./ci/github_status.py "$JOB_NAME" "$JOB_URL" \$(git rev-parse HEAD) PENDING"""
 
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
           }
