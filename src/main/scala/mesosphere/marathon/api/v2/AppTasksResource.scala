@@ -4,7 +4,7 @@ package api.v2
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._

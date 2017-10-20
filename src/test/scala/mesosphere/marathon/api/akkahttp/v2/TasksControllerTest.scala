@@ -137,6 +137,11 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./))
     }
 
+    {
+      val controller = Fixture(authenticated = false).controller
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./).addHeader(Accept(MediaTypes.`application/json`)), " using text/json")
+    }
+
     "see tasks only for application to which is authorized to see" in {
       val clock = new SettableClock()
       val authorizedApp = AppDefinition(id = "/app".toPath, instances = 1)
@@ -175,14 +180,14 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
       groupManager.rootGroup() returns rootGroup
 
-      assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
+      app.servicePorts.size should be > instance.appTask.status.networkInfo.hostPorts.size
 
       When("Getting the txt tasks index")
       Get(Uri./).addHeader(Accept(MediaTypes.`text/plain`)) ~> controller.route ~> check {
         Then("The status should be 200")
         status should be(StatusCodes.OK)
 
-        responseAs[String] should include (s"${app.id.safePath}\t${app.servicePorts.head}")
+        responseAs[String] should include (s"foo\t0")
       }
     }
 
@@ -208,8 +213,8 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
         Then("The status should be 200")
         status should be(StatusCodes.OK)
 
-        responseAs[String] should include (s"${authorizedApp.id.safePath}")
-        responseAs[String] should not include (s"${notAuthorizedApp.id.safePath}")
+        responseAs[String] should include (s"foo")
+        responseAs[String] should not include (s"foo2")
       }
     }
 

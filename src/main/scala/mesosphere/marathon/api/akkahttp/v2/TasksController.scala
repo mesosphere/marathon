@@ -55,12 +55,12 @@ class TasksController(
           (accepts(MediaTypes.`text/plain`) & pathEndOrSingleSlash) {
             listTasksTxt()
           } ~
-          (accepts(MediaTypes.`application/json`) & pathEndOrSingleSlash) {
-            listTasksJson()
-          } ~
-          acceptsAnything {
-            listTasksJson() // when no accept header present, json is the default choice
-          }
+            (accepts(MediaTypes.`application/json`) & pathEndOrSingleSlash) {
+              listTasksJson()
+            } ~
+            acceptsAnything {
+              listTasksJson() // when no accept header present, json is the default choice
+            }
         }
       }
     }
