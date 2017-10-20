@@ -15,7 +15,7 @@ node('shakedown') {
             [$class: 'StringBinding', credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD']
           ]) {
             echo """$params.Pull_Request_Id"""
-            sshagent(credentials: ['credentials4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
+            sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
                 sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
                 sh """git checkougt $param.Pull_Request_Id"""
             }
