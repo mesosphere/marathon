@@ -72,51 +72,52 @@ class TasksController(
 
   private def deleteTasks()(implicit identity: Identity): Route = {
     (entity(as[TasksToDelete])
-    & parameter('force.as[Boolean].?(false))
-    & parameter('scale.as[Boolean].?(false))
-    & parameter('wipe.as[Boolean].?(false))) { (taskIds, force, scale, wipe) =>
-      if (scale && wipe) {
-        reject(MalformedQueryParamRejection("scale, wipe", "You cannot use scale and wipe at the same time."))
-      } else {
-        val maybeInstanceIdToAppId: Try[Map[Id, PathId]] = Try(taskIds.ids.map { id =>
-          try { Task.Id(id).instanceId -> Task.Id.runSpecId(id) }
-          catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'. [${e.getMessage}]") }
-        }(collection.breakOut))
+      & parameter('force.as[Boolean].?(false))
+      & parameter('scale.as[Boolean].?(false))
+      & parameter('wipe.as[Boolean].?(false))) { (taskIds, force, scale, wipe) =>
+        if (scale && wipe) {
+          reject(MalformedQueryParamRejection("scale, wipe", "You cannot use scale and wipe at the same time."))
+        } else {
+          tryParseTaskIds(taskIds) match {
+            case Left(rejection) => reject(rejection)
+            case Right(instanceIdsToAppId) =>
+              if (!isAuthorized(instanceIdsToAppId.values)) {
+                reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+              } else {
+                val tasksByAppId: Future[Map[PathId, Seq[Instance]]] = getTasksByAppId(instanceIdsToAppId)
 
-        maybeInstanceIdToAppId match {
-          case Success(result) => deleteTasksCore(force, scale, wipe, result)
-          case Failure(e: BadRequestException) => reject(Rejections.BadRequest(Message(e.getMessage)))
-          case Failure(e) => throw e
+                if (scale) {
+                  onSuccess(killAndScale(tasksByAppId, force)) { deploymentResult =>
+                    complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
+                  }
+                } else {
+                  onSuccess(kill(tasksByAppId, instanceIdsToAppId, wipe)) { tasks =>
+                    complete(TasksList(tasks).toRaml)
+                  }
+                }
+              }
+          }
         }
       }
-    }
   }
+  private def getTasksByAppId(instanceIdsToAppId: Map[Id, PathId])(implicit identity: Identity): Future[Map[PathId, Seq[Instance]]] = {
+    val maybeInstances = Future.sequence(instanceIdsToAppId.view
+      .map { case (instanceId, _) => instanceTracker.instancesBySpec.map(_.instance(instanceId)) })
+    maybeInstances.map(i => i.flatten
+      .groupBy(instance => instance.instanceId.runSpecId)
+      .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut))
+  }
+  private def isAuthorized(appIds: Iterable[PathId])(implicit identity: Identity): Boolean = appIds.forall(id => authorizer.isAuthorized(identity, UpdateRunSpec, id))
+  private def tryParseTaskIds(taskIds: TasksToDelete): Either[Rejection, Map[Id, PathId]] = {
+    val maybeInstanceIdToAppId: Try[Map[Id, PathId]] = Try(taskIds.ids.map { id =>
+      try { Task.Id(id).instanceId -> Task.Id.runSpecId(id) }
+      catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'. [${e.getMessage}]") }
+    }(collection.breakOut))
 
-  /**
-    * Raw delete tasks logic after the validation of input parameters was performed
-    */
-  private def deleteTasksCore(force: Boolean, scale: Boolean, wipe: Boolean, instanceIdsToAppId: Map[Id, PathId])(implicit identity: Identity): Route = {
-    def isAuthorized(appIds: Iterable[PathId]): Boolean = appIds.forall(id => authorizer.isAuthorized(identity, UpdateRunSpec, id))
-
-    // TODO authorization check is performed twice - in the taskKiller and also here, this one must remain
-    if (!isAuthorized(instanceIdsToAppId.values)) {
-      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-    } else {
-      val maybeInstances: Future[Iterable[Option[Instance]]] = Future.sequence(instanceIdsToAppId.view
-        .map { case (instanceId, _) => instanceTracker.instancesBySpec.map(_.instance(instanceId)) })
-      val tasksByAppId: Future[Map[PathId, Seq[Instance]]] = maybeInstances.map(i => i.flatten
-        .groupBy(instance => instance.instanceId.runSpecId)
-        .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut))
-
-      if (scale) {
-        onSuccess(killAndScale(tasksByAppId, force)) { deploymentResult =>
-          complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
-        }
-      } else {
-        onSuccess(kill(tasksByAppId, instanceIdsToAppId, wipe)) { tasks =>
-          complete(TasksList(tasks).toRaml)
-        }
-      }
+    maybeInstanceIdToAppId match {
+      case Success(result) => Right(result)
+      case Failure(e: BadRequestException) => Left(Rejections.BadRequest(Message(e.getMessage)))
+      case Failure(e) => throw e
     }
   }
 
@@ -167,7 +168,7 @@ class TasksController(
   }
 
   /**
-    * Perform the task kill on the provided taskIds (without scale). Delegates the job to TaskKiller
+    * Performs the task kill on the provided taskIds (without scale). Delegates the job to TaskKiller.
     * @return list of killed tasks
     */
   @SuppressWarnings(Array("all")) // async/await
