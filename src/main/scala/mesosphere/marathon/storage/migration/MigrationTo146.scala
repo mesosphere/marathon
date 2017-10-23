@@ -63,12 +63,12 @@ object MigrationTo146 extends StrictLogging {
     logger.info("Starting unreachable strategy migration to 1.4.6")
     val appSink =
       Flow[AppDefinition]
-        .mapAsync(Int.MaxValue)(appRepository.store)
+        .mapAsync(Migration.maxConcurrency)(appRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     val podSink =
       Flow[PodDefinition]
-        .mapAsync(Int.MaxValue)(podRepository.store)
+        .mapAsync(Migration.maxConcurrency)(podRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     val migrateUnreachableStrategyWanted = env.vars.getOrElse(MigrationTo146.MigrateUnreachableStrategyEnvVar, "false")
