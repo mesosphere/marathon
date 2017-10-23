@@ -328,6 +328,28 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
 
+    "Do partial update with patch methods" in new Fixture {
+      Given("An app")
+      val id = "/app"
+      val app = App(
+        id = id,
+        cmd = Some("cmd"),
+        instances = 1
+      )
+      prepareApp(app, groupManager) // app is stored
+
+      When("The application is updated")
+      val updateRequest = App(id = id, instances = 2)
+      val updatedBody = Json.stringify(Json.toJson(updateRequest)).getBytes("UTF-8")
+
+      val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
+      Patch(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
+        Then("It is successful")
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
     "Fail creating application when network name is missing" in new Fixture {
       Given("An app and group")
       val app = App(

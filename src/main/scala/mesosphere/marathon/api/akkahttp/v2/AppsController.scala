@@ -164,7 +164,8 @@ class AppsController(
     }
   }
 
-  private def patchSingle(appId: PathId)(implicit identity: Identity): Route = ???
+  private def patchSingle(appId: PathId)(implicit identity: Identity): Route =
+    update(appId, partialUpdate = true, allowCreation = false)
 
   private[this] def updateMultiple(partialUpdate: Boolean, allowCreation: Boolean)(implicit identity: Identity): Route = {
     val version = clock.now()
