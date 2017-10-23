@@ -15,6 +15,7 @@ import mesosphere.marathon.api.v2._
 import mesosphere.marathon.api.v2.validation.{ AppValidation, NetworkValidationMessages }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, Selector, TaskCounts }
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -44,6 +45,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Try
+import scala.util.control.NonFatal
 
 class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest {
 
