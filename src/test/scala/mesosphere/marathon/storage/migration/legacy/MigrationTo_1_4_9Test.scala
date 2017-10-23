@@ -19,13 +19,13 @@ class MigrationTo_1_4_9Test extends AkkaUnitTest with GroupCreation with StrictL
 
   "Migration to 1.4.9" should {
     "do nothing if env var is not configured" in new Fixture {
-      MigrationTo149.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
+      MigrationTo_1_4_9.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
       verify(instanceRepository, never).all()
       verify(instanceRepository, never).store(_: Instance)
     }
 
     "do migration if env var is configured" in new Fixture(Map(MigrationTo_1_4_6.MigrateUnreachableStrategyEnvVar -> "true")) {
-      MigrationTo149.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
+      MigrationTo_1_4_9.migrateUnreachableInstances(instanceRepository)(env, ctx, mat).futureValue
       val targetInstance = instance.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 5.seconds)) // case 2
       val targetInstance2 = instance2.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 0.seconds)) // case 1
       val targetInstance3 = instance3.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 0.seconds)) // case 3
