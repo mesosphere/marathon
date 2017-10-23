@@ -322,7 +322,36 @@ class AppsController(
     }
   }
 
-  private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = ???
+  private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = {
+    val maybeApp = groupManager.app(appId)
+    maybeApp.map { app =>
+      authorized(ViewRunSpec, app).apply {
+        val tasksF = instanceTracker.instancesBySpec flatMap { instancesBySpec =>
+          runningTasks(Set(appId), instancesBySpec)
+        }
+        onSuccess(tasksF) { tasks =>
+          complete(Json.obj("tasks" -> tasks.toRaml))
+        }
+      }
+    } getOrElse {
+      reject(Rejections.EntityNotFound.noApp(appId))
+    }
+  }
+
+  private def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Future[Set[EnrichedTask]] = {
+    Source(appIds)
+      .filter(instancesBySpec.hasSpecInstances)
+      .mapAsync(1)(id => healthCheckManager.statuses(id).map(_ -> id))
+      .mapConcat {
+        case (health, id) =>
+          instancesBySpec.specInstances(id).flatMap { instance =>
+            instance.tasksMap.values.map { task =>
+              EnrichedTask(id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil))
+            }
+          }
+      }
+      .runWith(Sink.set)
+  }
 
   private def killTasks(appId: PathId)(implicit identity: Identity): Route = ???
 

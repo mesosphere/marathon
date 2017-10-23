@@ -2206,5 +2206,41 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
       }
     }
+
+    "List running tasks" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+      groupManager.rootGroup() returns rootGroup
+      val instance = mock[Instance]
+      instance.instanceId returns Instance.Id.forRunSpec(app.id)
+      instance.tasksMap returns Map(Task.Id("task_id") -> Task.Reserved(
+        Task.Id("task_id"),
+        Reservation(Seq.empty, Reservation.State.Launched),
+        Task.Status(
+          stagedAt = clock.now(),
+          startedAt = Some(clock.now()),
+          mesosStatus = None,
+          condition = Condition.Running,
+          networkInfo = NetworkInfoPlaceholder()
+        ),
+        clock.now()
+      ))
+      instance.agentInfo returns AgentInfo("host", None, None, None, Nil)
+
+      instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(
+        InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance))
+      ))
+      healthCheckManager.statuses(app.id) returns Future.successful(Map(instance.instanceId -> Seq(Health(instance.instanceId))))
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks")
+
+      Get(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
   }
 }
