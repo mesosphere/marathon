@@ -8,7 +8,7 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.state.FaultDomain
+import mesosphere.marathon.state.Region
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.{ FrameworkId, MutableMesosLeaderInfo }
@@ -181,7 +181,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       marathonScheduler.registered(driver, frameworkId, masterInfo)
 
-      marathonScheduler.getHomeFaultDomain shouldEqual Some(FaultDomain(regionName, zoneName))
+      marathonScheduler.getLocalRegion shouldEqual Some(Region(regionName))
     }
 
     "Store default region when reregistered" in new Fixture {
@@ -209,7 +209,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       marathonScheduler.reregistered(driver, masterInfo)
 
-      marathonScheduler.getHomeFaultDomain shouldEqual Some(FaultDomain(regionName, zoneName))
+      marathonScheduler.getLocalRegion shouldEqual Some(Region(regionName))
 
     }
   }

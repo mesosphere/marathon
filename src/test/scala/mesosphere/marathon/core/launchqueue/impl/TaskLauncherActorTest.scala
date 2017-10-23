@@ -73,14 +73,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
       offerMatchStatisticsActor: TestProbe = TestProbe(),
-      homeFaultDomain: () => Option[FaultDomain] = () => None) {
+      localRegion: () => Option[Region] = () => None) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
         maybeOfferReviver = Some(offerReviver),
-        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, homeFaultDomain) _
+        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, localRegion) _
       system.actorOf(props(appToLaunch, instances))
     }
 
@@ -195,7 +195,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 0)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, faultDomain = None)
+      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, localRegion = None)
       Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
       verifyClean()
     }
@@ -285,7 +285,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 1)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, faultDomain = None)
+      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, localRegion = None)
       Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
       verifyClean()
     }
@@ -303,7 +303,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           maybeOfferReviver = None,
           instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
           f.app, instancesToLaunch = 1,
-          homeFaultDomain
+          localRegion
         ) {
           override protected def scheduleTaskOperationTimeout(
             context: ActorContext, message: InstanceOpRejected): Cancellable = {
@@ -329,7 +329,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(scheduleCalled)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, faultDomain = None)
+      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, localRegion = None)
       Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
       verifyClean()
     }
@@ -355,7 +355,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       assert(counts.instancesLeftToLaunch == 0)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
-      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, faultDomain = None)
+      val matchRequest = InstanceOpFactory.Request(f.app, offer, Map.empty, additionalLaunches = 1, localRegion = None)
       Mockito.verify(instanceOpFactory).matchOfferRequest(matchRequest)
       verifyClean()
     }
