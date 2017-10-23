@@ -2206,5 +2206,63 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
       }
     }
+    "Kill task and scale" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
+      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("scale" -> "true", "host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Kill task and wipe" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
+      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("wipe" -> "true", "host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "Just kill task" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
+      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
   }
 }
