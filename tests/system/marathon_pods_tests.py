@@ -11,10 +11,10 @@ import time
 
 from datetime import timedelta
 from dcos import marathon, http
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents
+from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 from urllib.parse import urljoin
 
-from fixtures import wait_for_marathon_and_cleanup
+from fixtures import wait_for_marathon_and_cleanup # NOQA
 
 
 PACKAGE_NAME = 'marathon'
@@ -160,7 +160,7 @@ def test_remove_pod():
     common.deployment_wait(service_id=pod_id)
 
     try:
-        _ = client.show_pod(pod_id)
+        client.show_pod(pod_id)
     except:
         pass
     else:

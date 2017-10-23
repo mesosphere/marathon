@@ -175,8 +175,8 @@ def ensure_permissions():
 
     url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/dcos:superuser/users/{}'.format(MOM_EE_SERVICE_ACCOUNT))
     req = http.get(url)
-    assert req.json()['array'][0]['url'] == '/acs/api/v1/acls/dcos:superuser/users/{}/full'.format(MOM_EE_SERVICE_ACCOUNT), \
-        "Service account permissions couldn't be set"
+    expected = '/acs/api/v1/acls/dcos:superuser/users/{}/full'.format(MOM_EE_SERVICE_ACCOUNT)
+    assert req.json()['array'][0]['url'] == expected, "Service account permissions couldn't be set"
 
 
 def ensure_secret(strict=False):

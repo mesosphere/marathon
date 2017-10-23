@@ -34,6 +34,15 @@ def compileAndTest(): Unit = utils.stage("Compile and Test") {
   run("sbt", "benchmark/compile")
   run("sbt", "mesos-simulation/compile")
   run("sbt", "plugin-interface/compile")
+
+  // Check system integraion tests.
+  checkSystemIntegrationTests()
+}
+
+@main
+def checkSystemIntegrationTests(): Unit = {
+  def run(cmd: String *) = utils.runWithTimeout(30.minutes)(cmd)
+  run("flake8", "--max-line-length=120", "tests/system")
 }
 
 @main
