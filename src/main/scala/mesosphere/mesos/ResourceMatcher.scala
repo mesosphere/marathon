@@ -133,7 +133,7 @@ object ResourceMatcher extends StrictLogging {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, knownInstances: => Seq[Instance],
-    selector: ResourceSelector, conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty, localRegion: Option[Region])(implicit clock: Clock): ResourceMatchResponse = {
+    selector: ResourceSelector, conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty, localRegion: Option[Region] = None)(implicit clock: Clock): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 

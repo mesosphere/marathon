@@ -30,7 +30,7 @@ object InstanceOpFactory {
     * @param localRegion region where mesos master is running
     */
   case class Request(runSpec: RunSpec, offer: Mesos.Offer, instanceMap: Map[Instance.Id, Instance],
-      additionalLaunches: Int, localRegion: Option[Region]) {
+      additionalLaunches: Int, localRegion: Option[Region] = None) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
     lazy val reserved: Seq[Instance] = instances.filter(_.isReserved)

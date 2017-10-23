@@ -21,7 +21,7 @@ object RunSpecOfferMatcher extends StrictLogging {
     * @param givenAcceptedResourceRoles The resource roles for which to look.
     */
   def matchOffer(runSpec: RunSpec, offer: Offer, knownInstances: => Seq[Instance],
-    givenAcceptedResourceRoles: Set[String], conf: MatcherConf, localRegion: Option[Region])(implicit clock: Clock): ResourceMatchResponse = {
+    givenAcceptedResourceRoles: Set[String], conf: MatcherConf, localRegion: Option[Region] = None)(implicit clock: Clock): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles
