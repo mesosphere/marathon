@@ -128,6 +128,9 @@ class Migration(
         new MigrationTo_1_4_6(appRepository, podRepository).migrate().recover {
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.4.6", e)
         }
+      },
+      StorageVersions(1, 4, 9, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
+        new MigrationTo_1_4_9(instanceRepo).migrate()
       }
     )
 
