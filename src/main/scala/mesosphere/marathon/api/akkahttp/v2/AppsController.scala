@@ -333,8 +333,8 @@ class AppsController(
         }
         mode match {
           case TaskKillingMode.Scale =>
-            val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
-            onSuccess(deploymentPlanF) { plan =>
+            val deploymentPlan = taskKiller.killAndScale(appId, findToKill, force)
+            onSuccess(deploymentPlan) { plan =>
               complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
             }
           case TaskKillingMode.Wipe =>
