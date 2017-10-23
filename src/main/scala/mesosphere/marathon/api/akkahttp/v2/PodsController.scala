@@ -3,7 +3,8 @@ package api.akkahttp.v2
 
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.Controller
-import mesosphere.marathon.api.akkahttp.PathMatchers.{ExistingAppPathId, extractInstanceId}
+import mesosphere.marathon.api.akkahttp.Directives.extractInstanceId
+import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.Authenticator
