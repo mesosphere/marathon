@@ -8,9 +8,14 @@ import akka.event.EventStream
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
+import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
+import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
+import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
 import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
@@ -22,14 +27,17 @@ import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormal
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, Identity, ViewResource, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
 import play.api.libs.json.Json
 import PathId._
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Sink
 import play.api.libs.json._
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
