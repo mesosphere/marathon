@@ -144,6 +144,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       {
         val controller = Fixture(authenticated = false).controller
         behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./))
+        behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./).addHeader(Accept(MediaTypes.`application/json`)), " using text/json")
       }
 
       "see tasks only for application to which is authorized to see" in {
