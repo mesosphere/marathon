@@ -42,7 +42,6 @@ def compileAndTest(): Unit = utils.stage("Compile and Test") {
 @main
 def checkSystemIntegrationTests(): Unit = {
   def run(cmd: String *) = utils.runWithTimeout(30.minutes)(cmd)
-  run("pip", "install", "flake8")
   run("flake8", "--max-line-length=120", "tests/system")
 }
 
