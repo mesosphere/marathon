@@ -72,6 +72,7 @@ class AppsController(
     val pluginManager: PluginManager)(
     implicit
     val actorSystem: ActorSystem,
+    val materializer: Materializer,
     val executionContext: ExecutionContext,
     val authenticator: MarathonAuthenticator,
     val authorizer: Authorizer,
