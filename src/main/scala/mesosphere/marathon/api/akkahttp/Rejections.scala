@@ -26,4 +26,6 @@ object Rejections {
       EntityNotFound(Message(s"Application $appId not found in tasks queue."))
     }
   }
+
+  case class BadRequest(message: Message) extends Rejection
 }

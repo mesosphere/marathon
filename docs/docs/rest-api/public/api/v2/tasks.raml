@@ -40,6 +40,7 @@ get:
         default: false
     body:
       application/json:
+        type: deleteTasks.DeleteTasks
         example: |
           { "ids": [ "task1", "task2" ] }
     responses:
@@ -48,6 +49,7 @@ get:
           If scale=true, than a deployment is triggered and the deployment is returned.
         body:
           application/json:
+            type: enrichedTask.EnrichedTasksList | deploymentResult.DeploymentResult
             example: !include examples/tasks.json
       400:
         description: There are unknown task ids, that can not be killed.
