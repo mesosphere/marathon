@@ -15,7 +15,6 @@ from shakedown import dcos_version_less_than, marthon_version_less_than, require
 from urllib.parse import urljoin
 
 from fixtures import wait_for_marathon_and_cleanup
-from utils import parse_json
 
 
 PACKAGE_NAME = 'marathon'
@@ -33,7 +32,7 @@ def get_pod_status_url(pod_id):
 
 def get_pod_status(pod_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_status_url(pod_id))
-    return parse_json(http.get(url))
+    return http.get(url).json()
 
 
 def get_pod_instances_url(pod_id, instance_id):
@@ -50,12 +49,12 @@ def get_pod_versions_url(pod_id, version_id=""):
 
 def get_pod_versions(pod_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_versions_url(pod_id))
-    return parse_json(http.get(url))
+    return http.get(url).json()
 
 
 def get_pod_version(pod_id, version_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_versions_url(pod_id, version_id))
-    return parse_json(http.get(url))
+    return http.get(url).json()
 
 
 @shakedown.dcos_1_9
