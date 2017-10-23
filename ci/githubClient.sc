@@ -127,6 +127,10 @@ def reportSuccess(
     |
     |$buildinfoDiff
     |
+    |You can run system integration test changes of this PR against Marathon
+    |master by tirggering [this Jenkins job](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/build?delay=0sec) with the `Pull_Request_id` `$pullNumber`.
+    |The job then reports back to this PR.
+    |
     |""".stripMargin
 
   if (!hasUnsoundTests) {
