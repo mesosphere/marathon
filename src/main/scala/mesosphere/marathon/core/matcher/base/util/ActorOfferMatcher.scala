@@ -2,11 +2,10 @@ package mesosphere.marathon
 package core.matcher.base.util
 
 import akka.actor.ActorRef
-import com.google.inject.Provider
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
-import mesosphere.marathon.state.{ PathId, Region }
+import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.Offer
 
 import scala.concurrent.duration._
@@ -18,7 +17,7 @@ import scala.concurrent.{ Future, Promise }
   * @param actorRef Reference to actor that matches offers.
   * @param precedenceFor Defines which matcher receives offers first. See [[mesosphere.marathon.core.matcher.base.OfferMatcher.precedenceFor]].
   */
-class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[PathId], localRegion: () => Option[Region])
+class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[PathId])
     extends OfferMatcher with StrictLogging {
 
   def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {

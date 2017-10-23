@@ -178,8 +178,10 @@ object ResourceMatcher extends StrictLogging {
 
     val meetsFaultDomainRequirements: Boolean = {
       val faultDomainFields = Set(Constraints.regionField, Constraints.zoneField)
-      val hasFaultDomainConstraints = runSpec.constraints.exists(c => faultDomainFields.contains(c.getField))
-      hasFaultDomainConstraints || localRegion.map(_.value) == OfferUtil.region(offer)
+      val offerHasFaultDomainConstraints = runSpec.constraints.exists(c => faultDomainFields.contains(c.getField))
+      val maybeOfferRegion = OfferUtil.region(offer)
+      val offerIsFromLocalRegion = maybeOfferRegion.isEmpty || localRegion.exists(region => maybeOfferRegion.contains(region.value))
+      offerHasFaultDomainConstraints || offerIsFromLocalRegion
     }
 
     val meetsAllConstraints: Boolean = {
