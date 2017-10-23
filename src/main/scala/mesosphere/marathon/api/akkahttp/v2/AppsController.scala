@@ -23,7 +23,6 @@ import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
-
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -52,9 +51,11 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
+import akka.NotUsed
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 
+import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
@@ -332,34 +333,34 @@ class AppsController(
   }
 
   private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = {
-    val maybeApp = groupManager.app(appId)
-    maybeApp.map { app =>
-      authorized(ViewRunSpec, app).apply {
-        val tasksF = instanceTracker.instancesBySpec flatMap { instancesBySpec =>
-          runningTasks(Set(appId), instancesBySpec)
+    groupManager.app(appId) match {
+      case Some(app) =>
+        authorized(ViewRunSpec, app).apply {
+          val tasksF = async {
+            val instancesBySpec = await(instanceTracker.instancesBySpec)
+            await(runningTasks(Set(appId), instancesBySpec).runWith(Sink.seq)).map(_.toRaml)
+          }
+          onSuccess(tasksF) { tasks =>
+            complete(raml.EnrichedTasksList(tasks))
+          }
         }
-        onSuccess(tasksF) { tasks =>
-          complete(Json.obj("tasks" -> tasks.toRaml))
-        }
-      }
-    } getOrElse {
-      reject(Rejections.EntityNotFound.noApp(appId))
+      case None =>
+        reject(Rejections.EntityNotFound.noApp(appId))
     }
   }
 
-  private def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Future[Set[EnrichedTask]] = {
-    Source(appIds)
-      .filter(instancesBySpec.hasSpecInstances)
-      .mapAsync(1)(id => healthCheckManager.statuses(id).map(_ -> id))
-      .mapConcat {
-        case (health, id) =>
-          instancesBySpec.specInstances(id).flatMap { instance =>
-            instance.tasksMap.values.map { task =>
-              EnrichedTask(id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil))
-            }
-          }
+  private def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Source[EnrichedTask, NotUsed] = {
+    Source(appIds).mapAsync(1) { appId =>
+      async {
+        val instances = instancesBySpec.specInstances(appId)
+        val healthStatuses = await(healthCheckManager.statuses(appId))
+        instances.flatMap { instance =>
+          val health = healthStatuses.getOrElse(instance.instanceId, Nil)
+          instance.tasksMap.values.map { task => EnrichedTask(appId, task, instance.agentInfo, health) }
+        }
       }
-      .runWith(Sink.set)
+    }
+      .mapConcat(identity)
   }
 
   private def killTasks(appId: PathId)(implicit identity: Identity): Route = ???
