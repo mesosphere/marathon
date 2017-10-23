@@ -1,3 +1,6 @@
+uses:
+  strings: stringTypes.raml
+
 /:
   description: |
     This endpoint is used to create and query available pods.
@@ -192,9 +195,7 @@
     id:
       type: strings.PathId
       description: The path of the pod
-    instance:
-      type: string
-      pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+    instance: strings.InstanceId
   delete:
     is: [ secured, objectLocator ]
     description: |

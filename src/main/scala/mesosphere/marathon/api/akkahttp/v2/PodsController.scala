@@ -3,8 +3,9 @@ package api.akkahttp.v2
 
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.Controller
-import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
+import mesosphere.marathon.api.akkahttp.PathMatchers.{ExistingAppPathId, extractInstanceId}
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.Authenticator
 import mesosphere.marathon.state.PathId
 
@@ -38,7 +39,7 @@ class PodsController(
 
   def allStatus(): Route = ???
 
-  def killInstance(instanceId: String): Route = ???
+  def killInstance(instanceId: Instance.Id): Route = ???
 
   def killInstances(podId: PathId): Route = ???
 
@@ -72,8 +73,8 @@ class PodsController(
             pathEnd { remove(podId) } ~
               pathPrefix("::instances") {
                 pathEnd { killInstances(podId) } ~
-                  extractUnmatchedPath { instanceId =>
-                    killInstance(instanceId.toString)
+                  extractInstanceId { instanceId =>
+                    killInstance(instanceId)
                   }
               }
           }

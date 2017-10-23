@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.http.scaladsl.model.Uri.Path
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ Group, PathId, RootGroup, Timestamp }
 import akka.http.scaladsl.server.Directives._
@@ -17,6 +18,17 @@ object PathMatchers {
     * Matches the remaining path and transforms it into task id
     */
   final val RemainingTaskId = Remaining.map(s => Task.Id(s))
+
+  /**
+    * Matches the remaining path and transforms it into an instance id
+    */
+  val extractInstanceId = extract[Instance.Id] { requestContext =>
+    val id = requestContext.unmatchedPath.toString
+    id match {
+      case Instance.Id.InstanceIdRegex => Instance.Id(id)
+      case _ => reject(s"Instance id $id does not conform with id pattern")
+    }
+  }
 
   /**
     * Tries to match the remaining path as Timestamp
