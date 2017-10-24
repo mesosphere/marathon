@@ -573,7 +573,6 @@ object AppDefinition extends GeneralPurposeCombinators {
     // constraints are only validated in RAML layer
     appDef.unreachableStrategy is valid
     appDef.networks is valid(NetworkValidation.modelNetworksValidator)
-    appDef.networks is every(NetworkValidation.modelNetworkValidator)
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   @SuppressWarnings(Array("TraversableHead"))
