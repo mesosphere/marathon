@@ -260,6 +260,7 @@ class Migration(
 
 object Migration {
   val StorageVersionName = "internal:storage:version"
+  val maxConcurrency = 8
 }
 
 object StorageVersions {

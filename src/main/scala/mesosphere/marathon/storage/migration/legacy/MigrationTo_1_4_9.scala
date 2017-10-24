@@ -30,7 +30,7 @@ object MigrationTo_1_4_9 extends StrictLogging {
 
     val instanceSink =
       Flow[Instance]
-        .mapAsync(Int.MaxValue)(instanceRepository.store)
+        .mapAsync(Migration.maxConcurrency)(instanceRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     // we stick to already present migration indicating env variable to not confuse users
