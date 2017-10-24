@@ -10,8 +10,8 @@ import org.scalatest.Inside
 
 trait RouteBehaviours extends ScalatestRouteTest with Inside { this: UnitTest =>
 
-  def unauthenticatedRoute(forRoute: Route, withRequest: HttpRequest): Unit = {
-    s"deny access to ${withRequest.method.value} of ${withRequest.uri} without authentication" in {
+  def unauthenticatedRoute(forRoute: Route, withRequest: HttpRequest, customText: String = ""): Unit = {
+    s"deny access to ${withRequest.method.value} of ${withRequest.uri} without authentication $customText" in {
       When("we try to fetch the info")
       withRequest ~> forRoute ~> check {
         Then("we receive a NotAuthenticated response")

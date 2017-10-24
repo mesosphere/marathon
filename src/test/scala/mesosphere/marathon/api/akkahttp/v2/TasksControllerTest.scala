@@ -4,16 +4,16 @@ package api.akkahttp.v2
 import java.time.Clock
 
 import akka.http.scaladsl.model.Uri.{ Path, Query }
-import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.Accept
+import akka.http.scaladsl.model.{ MediaTypes, StatusCodes, Uri, _ }
 import akka.http.scaladsl.server.MalformedQueryParamRejection
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
-import mesosphere.marathon.api.akkahttp.Rejections.{ BadRequest, Message }
-import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
-import mesosphere.marathon.api.{ JsonTestHelper, RestResource, TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.akkahttp.Headers
+import mesosphere.marathon.api.akkahttp.Rejections.BadRequest
+import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -21,8 +21,8 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, PortDefinition, Timestamp }
 import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.apache.mesos
 import org.mockito.Matchers
@@ -144,6 +144,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       {
         val controller = Fixture(authenticated = false).controller
         behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./))
+        behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./).addHeader(Accept(MediaTypes.`application/json`)), " using text/json")
       }
 
       "see tasks only for application to which is authorized to see" in {
@@ -355,6 +356,63 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
         And("the taskKiller should not be called at all")
         verifyNoMoreInteractions(taskKiller)
       }
+    }
+  }
+
+  "List tasks as txt" should {
+    "list (txt) tasks with less ports than the current app version" in new Fixture {
+      // Regression test for #234
+      Given("one app with one task with less ports than required")
+      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+
+      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
+      instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
+
+      val rootGroup = createRootGroup(apps = Map(app.id -> app))
+      groupManager.rootGroup() returns rootGroup
+
+      app.servicePorts.size should be > instance.appTask.status.networkInfo.hostPorts.size
+
+      When("Getting the txt tasks index")
+      Get(Uri./).addHeader(Accept(MediaTypes.`text/plain`)) ~> controller.route ~> check {
+        Then("The status should be 200")
+        status should be(StatusCodes.OK)
+
+        responseAs[String] should include (s"foo\t0")
+      }
+    }
+
+    "see only apps you are authorized to see" in {
+      // Regression test for #234
+      Given("one app with one task with less ports than required")
+      val authorizedApp = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+      val notAuthorizedApp = AppDefinition("/foo2".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+      val instance = TestInstanceBuilder.newBuilder(authorizedApp.id).addTaskRunning().getInstance()
+      val notAuthorizedInstance = TestInstanceBuilder.newBuilder(notAuthorizedApp.id).addTaskRunning().getInstance()
+      val f = Fixture(authFn = resource => {
+        resource.asInstanceOf[AppDefinition].id == authorizedApp.id
+      })
+
+      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(notAuthorizedInstance, instance)
+      f.instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
+
+      val rootGroup = createRootGroup(apps = Map(authorizedApp.id -> authorizedApp, notAuthorizedApp.id -> notAuthorizedApp))
+      f.groupManager.rootGroup() returns rootGroup
+
+      When("Getting the txt tasks index")
+      Get(Uri./).addHeader(Accept(MediaTypes.`text/plain`)) ~> f.controller.route ~> check {
+        Then("The status should be 200")
+        status should be(StatusCodes.OK)
+
+        responseAs[String] should include (s"foo")
+        responseAs[String] should not include (s"foo2")
+      }
+    }
+
+    {
+      val controller = Fixture(authenticated = false).controller
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./).addHeader(Accept(MediaTypes.`text/plain`)))
     }
   }
 
