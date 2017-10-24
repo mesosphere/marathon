@@ -4,7 +4,7 @@ package api.akkahttp.v2
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.api.akkahttp.Directives.extractInstanceId
-import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
+import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingRunSpecId
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.Authenticator
@@ -54,7 +54,7 @@ class PodsController(
       post {
         create()
       } ~
-      pathPrefix(ExistingAppPathId(groupManager.rootGroup)) { podId =>
+      pathPrefix(ExistingRunSpecId(groupManager.rootGroup)) { podId =>
         put {
           update(podId)
         } ~

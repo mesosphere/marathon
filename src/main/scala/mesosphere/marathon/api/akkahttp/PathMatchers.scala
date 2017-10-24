@@ -61,7 +61,7 @@ object PathMatchers {
     * Given the url above, this matcher will only consume "my-group/restart" from the path,
     * leaving the rest of the matcher to match the rest
     */
-  case class ExistingAppPathId(rootGroup: () => RootGroup) extends PathMatcher1[PathId] {
+  case class ExistingRunSpecId(rootGroup: () => RootGroup) extends PathMatcher1[PathId] {
     import akka.http.scaladsl.server.PathMatcher._
 
     @tailrec final def iter(collected: Vector[String], remaining: Path, group: Group): Matching[Tuple1[PathId]] = remaining match {

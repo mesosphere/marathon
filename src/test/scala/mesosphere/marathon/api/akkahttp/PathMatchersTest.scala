@@ -30,23 +30,23 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
   "ExistingAppPathId matcher" should {
 
     "not match groups" in new PathMatchersTestFixture {
-      ExistingAppPathId(() => rootGroup)(Path("test/group1")) shouldBe Unmatched
+      ExistingRunSpecId(() => rootGroup)(Path("test/group1")) shouldBe Unmatched
     }
 
     "match apps that exist" in new PathMatchersTestFixture {
-      ExistingAppPathId(() => rootGroup)(Path("test/group1/app1")) shouldBe Matched(Path(""), Tuple1("/test/group1/app1".toPath))
+      ExistingRunSpecId(() => rootGroup)(Path("test/group1/app1")) shouldBe Matched(Path(""), Tuple1("/test/group1/app1".toPath))
     }
 
     "match not match apps that don't exist" in new PathMatchersTestFixture {
-      ExistingAppPathId(() => rootGroup)(Path("test/group1/app3")) shouldBe Unmatched
+      ExistingRunSpecId(() => rootGroup)(Path("test/group1/app3")) shouldBe Unmatched
     }
 
     "leave path components after matching appIds unconsumed" in new PathMatchersTestFixture {
-      ExistingAppPathId(() => rootGroup)(Path("test/group1/app1/restart/ponies")) shouldBe Matched(Path("/restart/ponies"), Tuple1("/test/group1/app1".toPath))
+      ExistingRunSpecId(() => rootGroup)(Path("test/group1/app1/restart/ponies")) shouldBe Matched(Path("/restart/ponies"), Tuple1("/test/group1/app1".toPath))
     }
 
     "match apps that contains 'restart'" in new PathMatchersTestFixture {
-      ExistingAppPathId(() => rootGroup)(Path("test/group2/restart/restart")) shouldBe Matched(Path("/restart"), Tuple1("/test/group2/restart".toPath))
+      ExistingRunSpecId(() => rootGroup)(Path("test/group2/restart/restart")) shouldBe Matched(Path("/restart"), Tuple1("/test/group2/restart".toPath))
     }
   }
 
