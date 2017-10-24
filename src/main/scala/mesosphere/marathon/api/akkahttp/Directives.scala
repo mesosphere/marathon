@@ -3,7 +3,7 @@ package api.akkahttp
 
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.{ DateTime, HttpHeader, HttpMethods, HttpProtocols }
-import akka.http.scaladsl.server.{ Directive, Directive0, Route, Directives => AkkaDirectives }
+import akka.http.scaladsl.server.{ Directive, Directive0, Directive1, Route, Directives => AkkaDirectives }
 import com.wix.accord.{ Failure, Success, Validator, Result => ValidationResult }
 import com.wix.accord.dsl._
 import mesosphere.marathon.core.instance.Instance
@@ -82,15 +82,16 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
   /**
     * Matches the remaining path and transforms it into an instance id or rejects if it is not a valid id.
     */
-  val extractInstanceId = Directive { f: (Instance.Id => Route) =>
-    extract[Instance.Id] { requestContext =>
-      val id = requestContext.unmatchedPath.toString
-      val validate: Validator[String] = validator[String] { id =>
-        id should matchRegexFully(Instance.Id.InstanceIdRegex)
-      }
-      assumeValid(validate(id)) {
-        f(Instance.Id(id))
-      }
+    class ExtractInstanceId extends Directive[Instance.Id] {
+      override def tapply(f: (Instance.Id) => Route): Route =
+        extract[Instance.Id] { requestContext =>
+          val id = requestContext.unmatchedPath.toString
+          val validate: Validator[String] = validator[String] { id =>
+            id should matchRegexFully(Instance.Id.InstanceIdRegex)
+          }
+          def x(): Route = f(Instance.Id(id))
+          assumeValid(validate(id)) { x }
+        }
     }
-  }
+    val foo = new ExtractInstanceId
 }
