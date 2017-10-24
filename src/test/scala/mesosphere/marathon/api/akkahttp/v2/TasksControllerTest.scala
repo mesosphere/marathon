@@ -211,7 +211,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       }
     }
 
-    "try to kill pod instances" in new Fixture {
+    "not allow to kill pod instances" in new Fixture {
       Given("two apps and 1 task each")
       val pod1 = "/pod".toRootPath
 
@@ -233,6 +233,29 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
 
         And("No task should be called on the TaskKiller")
         noMoreInteractions(taskKiller)
+      }
+    }
+
+    "not allow to kill & scale pod instances" in new Fixture {
+      Given("two apps and 1 task each")
+      val pod1 = "/pod".toRootPath
+      val instance = TestInstanceBuilder.newBuilder(pod1).addTaskRunning(Some("container1")).getInstance()
+      val (container, _) = instance.tasksMap.head
+      val body = s"""{"ids": ["${container.idString}"]}"""
+      val bodyBytes = body.toCharArray.map(_.toByte)
+
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
+      taskKiller.killAndScale(any, any)(any) returns Future.successful(DeploymentPlan(createRootGroup(), createRootGroup()))
+      groupManager.app(any) returns None
+
+      When("we ask to kill the pod container")
+      Post(Uri./.withPath(Path("/delete")).withQuery(Query("scale" -> "true")), HttpEntity(bodyBytes).withContentType(ContentTypes.`application/json`)) ~> controller.route ~> check {
+        Then("An rejection should occur that points to the invalid taskId")
+        val badRequestRejection = rejection.asInstanceOf[BadRequest]
+        badRequestRejection.message.message should be ("No tasks to kill and scale.")
+
+        And("the taskKiller should not be called at all")
+        verifyNoMoreInteractions(taskKiller)
       }
     }
 
