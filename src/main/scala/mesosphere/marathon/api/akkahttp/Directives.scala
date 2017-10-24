@@ -107,19 +107,4 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
 
   def validatePathId(possibleId: String): ValidationResult = PathId.pathIdValidator(PathId(possibleId))
 
-  /**
-    * Matches the remaining path and transforms it into an instance id or rejects if it is not a valid id.
-    */
-  val extractInstanceId: Directive1[Instance.Id] = extractRequestContext.flatMap { requestContext =>
-    import mesosphere.marathon.api.akkahttp.EntityMarshallers._
-    val id = requestContext.unmatchedPath.toString
-    val validate: Validator[String] = validator[String] { id =>
-      id should matchRegexFully(Instance.Id.InstanceIdRegex)
-    }
-    validate(id) match {
-      case failure: Failure => reject(ValidationFailed(failure))
-      case Success => provide(Instance.Id(id))
-    }
-  }
-
 }
