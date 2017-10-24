@@ -20,7 +20,7 @@ trait ValidationTestLike extends Validation {
   this: Assertions =>
 
   /**
-    * Validator which takes an object, serializes it to JSON, and then parses it back, allowing up to test validations
+    * Validator which takes an object, serializes it to JSON, and then parses it back, allowing it to test validations
     * specified in our RAML layer
     */
   def roundTripValidator[T](underlyingValidator: Option[Validator[T]])(implicit format: Format[T]) = new Validator[T] {
