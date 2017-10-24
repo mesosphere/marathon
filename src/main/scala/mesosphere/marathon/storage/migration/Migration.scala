@@ -192,6 +192,7 @@ class Migration(
 
 object Migration {
   val StorageVersionName = "internal:storage:version"
+  val maxConcurrency = 8
   val statusLoggingInterval = 10.seconds
 
   type MigrationAction = (StorageVersion, () => Future[Any])
