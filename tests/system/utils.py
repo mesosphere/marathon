@@ -1,8 +1,11 @@
 import os
+import retrying
 import uuid
 
 from dcos import http, util
 from dcos.errors import DCOSException
+import shakedown
+import common
 
 
 def make_id(prefix=None):
@@ -41,5 +44,8 @@ def get_resource(resource):
             raise DCOSException("Can't read from resource: {0}. Please check that it exists.".format(resource))
 
 
-def parse_json(response):
-    return response.json()
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+def marathon_leadership_changed(original_leader):
+    current_leader = shakedown.marathon_leader_ip()
+    print('leader: {}'.format(current_leader))
+    assert original_leader != current_leader

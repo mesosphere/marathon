@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 def test_non_authenticated_user():
     with shakedown.no_user():
         with pytest.raises(dcos.errors.DCOSAuthenticationException) as exec_info:
-            _ = dcos.http.get(urljoin(shakedown.dcos_url(), 'service/marathon/v2/apps'))
+            dcos.http.get(urljoin(shakedown.dcos_url(), 'service/marathon/v2/apps'))
             error = exec_info.value
             assert str(error) == "Authentication failed. Please run `dcos auth login`"
 
@@ -23,7 +23,7 @@ def test_non_authenticated_user():
 def test_non_authorized_user():
     with shakedown.new_dcos_user('kenny', 'kenny'):
         with pytest.raises(dcos.errors.DCOSAuthorizationException) as exec_info:
-            _ = dcos.http.get(urljoin(shakedown.dcos_url(), 'service/marathon/v2/apps'))
+            dcos.http.get(urljoin(shakedown.dcos_url(), 'service/marathon/v2/apps'))
             error = exec_info.value
             assert str(error) == "You are not authorized to perform this operation"
 
