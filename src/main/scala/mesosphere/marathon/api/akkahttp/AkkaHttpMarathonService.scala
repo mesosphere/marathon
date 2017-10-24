@@ -2,21 +2,20 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse, StatusCodes }
+import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse }
+import akka.http.scaladsl.server.{ Route, _ }
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.google.common.util.concurrent.AbstractIdleService
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.MarathonHttpService
-
-import scala.concurrent.Future
-import scala.async.Async._
-import akka.http.scaladsl.model.StatusCodes._
-import akka.http.scaladsl.server._
 import mesosphere.marathon.api.akkahttp.Rejections.Message
 import play.api.libs.json.Json
+
+import scala.async.Async._
+import scala.concurrent.Future
 
 class AkkaHttpMarathonService(
     config: MarathonConf with HttpConf,
@@ -97,6 +96,7 @@ object AkkaHttpMarathonService {
       .handle(EntityMarshallers.handleNonValid)
       .handle(AuthDirectives.handleAuthRejections)
       .handle {
+        case Rejections.BadRequest(message) => complete(BadRequest -> message)
         case Rejections.EntityNotFound(message) => complete(NotFound -> message)
       }
       .result()

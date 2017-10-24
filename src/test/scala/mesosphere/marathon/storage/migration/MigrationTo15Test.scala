@@ -85,7 +85,7 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
           }.map { ex =>
             ex.getCause shouldBe a[SerializationFailedException]
             ex.getCause.getMessage should be(MigrationFailedMissingNetworkEnvVar)
-          }
+          }.futureValue
         }
       }
 

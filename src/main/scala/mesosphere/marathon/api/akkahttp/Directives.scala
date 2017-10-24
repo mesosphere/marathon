@@ -2,7 +2,8 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.http.scaladsl.model.headers._
-import akka.http.scaladsl.model.{ DateTime, HttpHeader, HttpMethods, HttpProtocols }
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Directives.extractRequest
 import akka.http.scaladsl.server.{ Directive, Directive0, Directive1, MalformedQueryParamRejection, Route, Directives => AkkaDirectives }
 import com.wix.accord.{ Failure, Success, Result => ValidationResult }
 
@@ -40,6 +41,24 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
       headers += `Access-Control-Max-Age`(1.day.toSeconds)
 
       respondWithHeaders (headers.result())
+    }
+  }
+
+  def accepts(mediaType: MediaType): Directive0 = {
+    extractRequest.flatMap { request =>
+      request.header[Accept] match {
+        case Some(accept) if accept.mediaRanges.exists(range => range.matches(mediaType)) => pass
+        case _ => reject
+      }
+    }
+  }
+
+  def acceptsAnything: Directive0 = {
+    extractRequest.flatMap { request =>
+      request.header[Accept] match {
+        case None => pass
+        case _ => reject
+      }
     }
   }
 

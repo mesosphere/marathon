@@ -595,7 +595,8 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
         print('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
         url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
         req = http.put(url)
-        assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+        msg = 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+        assert req.status_code == 204, msg
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
             print('Service account {} already has {} permissions set'.format(service_account, resource))

@@ -1,3 +1,23 @@
+## Changes from 1.5.1 to 1.5.2 (unreleased)
+Bugfix release
+
+### Fixed issues
+- [MARATHON-7790](https://jira.mesosphere.com/browse/MARATHON-7790) Migrate UnreachableStrategy Saved in Instances
+
+### 1.5.1 New Behavior
+#### Migrating unreachableStrategy - running instances
+
+If you already migrated your apps and pods to the new default behavior for `UnreachableStrategy`, you also should consider to migrate the running instances as well.
+
+To change the `unreachableStrategy` of all running instances, set the environment variable `MIGRATION_1_4_6_UNREACHABLE_STRATEGY` to `true`, which leads to the following behavior during migration:
+
+When opting in to the unreachable migration step
+1) all instances that had a config of `UnreachableStrategy(300 seconds, 600 seconds)` (previous default) are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+2) all instances that had a config of `UnreachableStrategy(1 second, x seconds)` are migrated to have `UnreachableStrategy(0 seconds, x seconds)`
+3) all instances that had a config of `UnreachableStrategy(1 second, 2 seconds)` are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+
+**Note**: If you set this variable after upgrading to 1.4.9, it will have no effect.
+
 ## Changes from 1.5.0 to 1.5.1
 Bugfix release
 

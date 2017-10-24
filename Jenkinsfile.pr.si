@@ -1,0 +1,39 @@
+#!/usr/bin/env groovy
+
+timeout(120) {
+node('shakedown') {
+  wrap([$class: 'MesosSingleUseSlave']) {
+  wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
+
+    stage("Run System Integration Test Pipeline") {
+      try {
+        checkout scm
+        withCredentials([
+            usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
+            [$class: 'FileBinding', credentialsId: '23743034-1ac4-49f7-b2e6-a661aee2d11b', variable: 'CLI_TEST_SSH_KEY'],
+            [$class: 'FileBinding', credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'],
+            [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: '7155bd15-767d-4ae3-a375-e0d74c90a2c4', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'],
+            string(credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'),
+            string(credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD')
+          ]) {
+            // Checkout commit of pull request.
+            sshagent(credentials: ['4ff09dce-407b-41d3-847a-9e6609dd91b8']) {
+                sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
+                sh """git checkout $params.Pull_Request_Id"""
+            }
+            sh """python3 ./ci/github_status.py "$JOB_NAME" "$JOB_URL" \$(git rev-parse HEAD) PENDING"""
+
+            sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
+          }
+        } finally {
+            junit allowEmptyResults: true, testResults: 'shakedown.xml'
+
+            withCredentials([usernamePassword(credentialsId:'a7ac7f84-64ea-4483-8e66-bb204484e58f',passwordVariable:'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
+                sh """python3 ./ci/github_status.py "$JOB_NAME" "$JOB_URL" \$(git rev-parse HEAD) $currentBuild.result"""
+            }
+        }
+    }
+  }
+  }
+}
+}

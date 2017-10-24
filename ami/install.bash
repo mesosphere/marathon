@@ -33,13 +33,14 @@ apt install -t jessie-backports -y openjdk-8-jdk
 update-java-alternatives -s java-1.8.0-openjdk-amd64
 
 apt-get install -y \
-        git \
-        sbt \
-        docker-engine \
-        curl \
         build-essential \
+        curl \
+        docker-engine \
+        git \
+        npm \
+        python3-pip \
         rpm \
-        npm
+        sbt
 
 # Download (but don't install) Mesos and its dependencies.
 # The CI task will install Mesos later.
@@ -62,6 +63,9 @@ curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq
 
 # Install Ammonite
 curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm
+
+# Install falke8
+pip3 install flake8
 
 # Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
 # so we need ivy2 cache in `/root`

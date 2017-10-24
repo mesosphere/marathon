@@ -8,7 +8,6 @@ import sys
 import logging
 import os
 import platform
-import time
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -27,7 +26,7 @@ else:
     from urllib.parse import urlparse
 
 if PY2:
-    byte_type = unicode
+    byte_type = unicode # NOQA
 
     def response_status(response):
         return response.getcode()
