@@ -332,6 +332,7 @@ class AppsController(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = {
     groupManager.app(appId) match {
       case Some(app) =>
@@ -349,6 +350,7 @@ class AppsController(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Source[EnrichedTask, NotUsed] = {
     Source(appIds).mapAsync(1) { appId =>
       async {
