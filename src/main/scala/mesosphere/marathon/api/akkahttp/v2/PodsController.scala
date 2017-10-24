@@ -44,46 +44,54 @@ class PodsController(
 
   def killInstances(podId: PathId): Route = ???
 
+  // format: OFF
   override val route: Route =
     head {
       capability()
     } ~
+    get {
+      findAll()
+    } ~
+    post {
+      create()
+    } ~
+    pathPrefix(ExistingRunSpecId(groupManager.rootGroup)) { podId =>
+      put {
+        update(podId)
+      } ~
       get {
-        findAll()
-      } ~
-      post {
-        create()
-      } ~
-      pathPrefix(ExistingRunSpecId(groupManager.rootGroup)) { podId =>
-        put {
-          update(podId)
+        pathEnd {
+          find(podId)
         } ~
-          get {
-            pathEnd { find(podId) } ~
-              pathPrefix("::status") {
-                status(podId)
-              } ~
-              pathPrefix("::versions") {
-                pathEnd { versions(podId) } ~
-                  extractUnmatchedPath { v =>
-                    version(v.toString)
-                  }
-              }
+        pathPrefix("::status") {
+          status(podId)
+        } ~
+        pathPrefix("::versions") {
+          pathEnd {
+            versions(podId)
           } ~
-          delete {
-            pathEnd { remove(podId) } ~
-              pathPrefix("::instances") {
-                pathEnd {
-                  killInstances(podId)
-                } ~
-                  extractInstanceId { instanceId =>
-                    killInstance(instanceId)
-                  }
-              }
+          extractUnmatchedPath { v =>
+            version(v.toString)
           }
+        }
       } ~
-      pathPrefix("::status") {
-        allStatus()
+      delete {
+        pathEnd {
+          remove(podId)
+        } ~
+        pathPrefix("::instances") {
+          pathEnd {
+            killInstances(podId)
+          } ~
+          extractInstanceId { instanceId =>
+            killInstance(instanceId)
+          }
+        }
       }
+    } ~
+    pathPrefix("::status") {
+      allStatus()
+    }
+  // format: ON
 
 }
