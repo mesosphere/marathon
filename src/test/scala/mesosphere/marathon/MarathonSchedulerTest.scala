@@ -15,7 +15,7 @@ import mesosphere.util.state.{ FrameworkId, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos.DomainInfo.FaultDomain.{ RegionInfo, ZoneInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.apache.mesos.Protos.DomainInfo.{ FaultDomain => FaultDomainPB }
+import org.apache.mesos.Protos.DomainInfo.FaultDomain
 
 import scala.concurrent.Future
 
@@ -168,7 +168,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
         .setDomain(
           DomainInfo.newBuilder()
             .setFaultDomain(
-              FaultDomainPB.newBuilder()
+              FaultDomain.newBuilder()
                 .setRegion(RegionInfo.newBuilder().setName(regionName).build())
                 .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
                 .build()
@@ -198,7 +198,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
         .setDomain(
           DomainInfo.newBuilder()
             .setFaultDomain(
-              FaultDomainPB.newBuilder()
+              FaultDomain.newBuilder()
                 .setRegion(RegionInfo.newBuilder().setName(regionName).build())
                 .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
                 .build()
