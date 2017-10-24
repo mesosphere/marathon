@@ -7,6 +7,7 @@ import akka.http.scaladsl.server.{ Directive, Directive0, Directive1, Route, Dir
 import com.wix.accord.{ Failure, Success, Validator, Result => ValidationResult }
 import com.wix.accord.dsl._
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.state.PathId
 
 import scala.concurrent.duration._
 
@@ -96,6 +97,15 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
       case Success => pass
     }
   }
+
+  def validateInstanceId(possibleId: String): ValidationResult = {
+    val validate: Validator[String] = validator[String] { id =>
+      id should matchRegexFully(Instance.Id.InstanceIdRegex)
+    }
+    validate(possibleId)
+  }
+
+  def validatePathId(possibleId: String): ValidationResult = PathId.pathIdValidator(PathId(possibleId))
 
   /**
     * Matches the remaining path and transforms it into an instance id or rejects if it is not a valid id.

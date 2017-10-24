@@ -1,14 +1,16 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
+import akka.http.scaladsl.model.Uri.Path
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.api.akkahttp.Directives.extractInstanceId
-import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingRunSpecId
+import mesosphere.marathon.api.akkahttp.PathMatchers.{ ExistingRunSpecId, PodsPathIdLike }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.Authenticator
 import mesosphere.marathon.state.PathId
+import akka.http.scaladsl.server.PathMatchers
 
 class PodsController(
     val groupManager: GroupManager)(
@@ -36,7 +38,7 @@ class PodsController(
 
   def versions(podId: PathId): Route = ???
 
-  def version(version: String): Route = ???
+  def version(podId: PathId, v: String): Route = ???
 
   def allStatus(): Route = ???
 
@@ -50,47 +52,61 @@ class PodsController(
       capability()
     } ~
     get {
-      findAll()
-    } ~
-    post {
-      create()
-    } ~
-    pathPrefix(ExistingRunSpecId(groupManager.rootGroup)) { podId =>
-      put {
-        update(podId)
+      pathEnd {
+        findAll()
       } ~
-      get {
-        pathEnd {
-          find(podId)
-        } ~
-        pathPrefix("::status") {
-          status(podId)
-        } ~
-        pathPrefix("::versions") {
-          pathEnd {
-            versions(podId)
-          } ~
-          extractUnmatchedPath { v =>
-            version(v.toString)
-          }
+      path("::status" ~ PathEnd) {
+        allStatus()
+      } ~
+      path(PodsPathIdLike ~ PathEnd) { runSpecId: String =>
+        assumeValid(validatePathId(runSpecId)) {
+          find(PathId(runSpecId))
         }
       } ~
-      delete {
-        pathEnd {
-          remove(podId)
-        } ~
-        pathPrefix("::instances") {
-          pathEnd {
-            killInstances(podId)
-          } ~
-          extractInstanceId { instanceId =>
-            killInstance(instanceId)
-          }
+      path(PodsPathIdLike ~ "::status" ~ PathEnd) { runSpecId: String =>
+        assumeValid(validatePathId(runSpecId)) {
+          status(PathId(runSpecId))
+        }
+      } ~
+      path(PodsPathIdLike ~ "::versions" ~ PathEnd) { runSpecId: String =>
+        assumeValid(validatePathId(runSpecId)) {
+          versions(PathId(runSpecId))
+        }
+      } ~
+      path(PodsPathIdLike ~ "::versions" / PathMatchers.Segment) { (runSpecId: String, v: String) =>
+        assumeValid(validatePathId(runSpecId)) {
+          version(PathId(runSpecId), v)
         }
       }
     } ~
-    pathPrefix("::status") {
-      allStatus()
+    post {
+      pathEnd {
+        create()
+      }
+    } ~
+    delete {
+      path(PodsPathIdLike ~ PathEnd) { runSpecId: String =>
+        assumeValid(validatePathId(runSpecId)) {
+          remove(PathId(runSpecId))
+        }
+      } ~
+      path(PodsPathIdLike ~ "::instances" ~ PathEnd) { runSpecId: String =>
+        assumeValid(validatePathId(runSpecId)) {
+          killInstances(PathId(runSpecId))
+        }
+      } ~
+      path(PodsPathIdLike ~ "::instances" / PathMatchers.Segment) { (runSpecId: String, instanceId: String) =>
+        assumeValid(validatePathId(runSpecId) and validateInstanceId(instanceId)) {
+          killInstance(Instance.Id(instanceId))
+        }
+      }
+    } ~
+    put {
+      path(PodsPathIdLike ~ PathEnd) { runSpecId: String =>
+        assumeValid(validatePathId(runSpecId)) {
+          update(PathId(runSpecId))
+        }
+      }
     }
   // format: ON
 
