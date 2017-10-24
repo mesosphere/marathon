@@ -17,11 +17,15 @@ import uuid
 
 from dcos import marathon, errors
 from datetime import timedelta
+from utils import marathon_leadership_changed
 
 import dcos_service_marathon_tests
 import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
+
+from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA
+from fixtures import wait_for_marathon_and_cleanup, events_to_file # NOQA
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -46,9 +50,6 @@ for attribute in dir(marathon_common_tests):
 for attribute in dir(marathon_pods_tests):
     if attribute.startswith('test_'):
         exec("from marathon_pods_tests import {}".format(attribute))
-
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents
-from fixtures import wait_for_marathon_and_cleanup, user_billy, events_to_file
 
 
 pytestmark = [pytest.mark.usefixtures('wait_for_marathon_and_cleanup')]
@@ -81,13 +82,7 @@ def test_marathon_delete_leader(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def marathon_leadership_changed():
-        current_leader = shakedown.marathon_leader_ip()
-        print('leader: {}'.format(current_leader))
-        assert original_leader != current_leader
-
-    marathon_leadership_changed()
+    marathon_leadership_changed(original_leader)
 
 
 @shakedown.masters(3)
@@ -110,16 +105,8 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def marathon_leadership_changed():
-        current_leader = shakedown.marathon_leader_ip()
-        print('leader: {}'.format(current_leader))
-        if original_leader == current_leader:
-            common.delete_marathon_path('v2/leader')
-        assert original_leader != current_leader, "A new Marathon leader has not been elected"
-
     # wait until leader changed
-    marathon_leadership_changed()
+    marathon_leadership_changed(original_leader)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_app_existence(expected_instances):
@@ -139,7 +126,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     shakedown.deployment_wait()
 
     try:
-        _ = client.get_app(app_id)
+        client.get_app(app_id)
     except:
         pass
     else:
@@ -151,11 +138,11 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     # wait until leader changed
-    marathon_leadership_changed()
+    marathon_leadership_changed(original_leader)
 
     # check if app definition is still not there
     try:
-        _ = client.get_app(app_id)
+        client.get_app(app_id)
     except:
         pass
     else:
@@ -360,8 +347,8 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     backup_dir = '/tmp'
 
     for master_ip in shakedown.get_all_master_ips():
-        _ = shakedown.run_command(master_ip, "rm {}/{}".format(backup_dir, backup_file1))
-        _ = shakedown.run_command(master_ip, "rm {}/{}".format(backup_dir, backup_file2))
+        shakedown.run_command(master_ip, "rm {}/{}".format(backup_dir, backup_file1))
+        shakedown.run_command(master_ip, "rm {}/{}".format(backup_dir, backup_file2))
 
     backup_url1 = 'file://{}/{}'.format(backup_dir, backup_file1)
     backup_url2 = 'file://{}/{}'.format(backup_dir, backup_file2)
@@ -388,14 +375,8 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def marathon_leadership_changed():
-        current_leader = shakedown.marathon_leader_ip()
-        print('leader: {}'.format(current_leader))
-        assert original_leader != current_leader, "A new Marathon leader has not been elected"
-
     # wait until leader changed
-    marathon_leadership_changed()
+    marathon_leadership_changed(original_leader)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_app_existence(expected_instances):
@@ -435,7 +416,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     # wait until leader changed
     # if leader changed, this means that marathon was able to start again, which is great :-).
-    marathon_leadership_changed()
+    marathon_leadership_changed(original_leader)
 
     # check if app definition is still not there and no instance is running after new leader was elected
     check_app_existence(0)
@@ -800,6 +781,7 @@ def test_pod_file_based_secret(secret_fixture):
         assert data.rstrip() == secret_value, "Got an unexpected secret data"
 
     value_check()
+
 
 @pytest.fixture(scope="function")
 def secret_fixture():

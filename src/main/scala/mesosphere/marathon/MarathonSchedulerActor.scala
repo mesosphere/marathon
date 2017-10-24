@@ -379,35 +379,6 @@ class SchedulerActions(
     scale(runSpec)
   }
 
-  @SuppressWarnings(Array("all")) // async/await
-  def stopRunSpec(runSpec: RunSpec): Future[Done] = {
-    logger.info(s"Stopping runSpec ${runSpec.id}")
-
-    healthCheckManager.removeAllFor(runSpec.id)
-
-    async {
-      val tasks = await(instanceTracker.specInstances(runSpec.id))
-
-      tasks.foreach { instance =>
-        if (instance.isLaunched) {
-          logger.info("Killing {}", instance.instanceId)
-          killService.killInstance(instance, KillReason.DeletingApp)
-        }
-      }
-      await(launchQueue.asyncPurge(runSpec.id))
-      Done
-    }.recover {
-      case NonFatal(error) => logger.warn(s"Error in stopping runSpec ${runSpec.id}", error); Done
-    }.map { _ =>
-      launchQueue.resetDelay(runSpec)
-
-      // The tasks will be removed from the InstanceTracker when their termination
-      // was confirmed by Mesos via a task update.
-      eventBus.publish(AppTerminatedEvent(runSpec.id))
-      Done
-    }
-  }
-
   /**
     * Make sure all runSpecs are running the configured amount of tasks.
     *

@@ -6,6 +6,7 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
+import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.async.ExecutionContexts.global
@@ -86,7 +87,7 @@ class AppTasksResource @Inject() (
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app)))
+        ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
       }
     })
   }

@@ -13,7 +13,7 @@ import time
 
 from datetime import timedelta
 from dcos import http, marathon
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents
+from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
 def test_launch_mesos_container():

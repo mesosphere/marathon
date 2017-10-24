@@ -43,7 +43,7 @@ object MigrationTo146 extends StrictLogging {
     *
     * @return migrated app
     */
-  private def changeUnreachableStrategy(unreachableStrategy: UnreachableStrategy): UnreachableStrategy = {
+  private[migration] def changeUnreachableStrategy(unreachableStrategy: UnreachableStrategy): UnreachableStrategy = {
     unreachableStrategy match {
       // migrate previous `hack` to achieve fastest replacement - case 3
       case UnreachableEnabled(inactiveAfter, expungeAfter) if inactiveAfter == 1.seconds && expungeAfter == 2.seconds =>
