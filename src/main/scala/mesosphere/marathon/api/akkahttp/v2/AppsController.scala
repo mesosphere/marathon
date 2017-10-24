@@ -353,7 +353,7 @@ class AppsController(
     Source(appIds).mapAsync(1) { appId =>
       async {
         val instances = instancesBySpec.specInstances(appId)
-        lazy val healthStatuses = await(healthCheckManager.statuses(appId))
+        val healthStatuses = await(healthCheckManager.statuses(appId))
         instances.flatMap { instance =>
           val health = healthStatuses.getOrElse(instance.instanceId, Nil)
           instance.tasksMap.values.map { task => EnrichedTask(appId, task, instance.agentInfo, health) }
