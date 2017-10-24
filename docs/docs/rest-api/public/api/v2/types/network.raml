@@ -12,8 +12,7 @@ types:
       Endpoints may also be advertised outside of a cluster.
     properties:
       name:
-        type: string
-        pattern: ^[a-z0-9]([-a-z0-9_]*[a-z0-9])?$
+        type: strings.Name
         maxLength: 63
         minLength: 1
         description: |
@@ -67,9 +66,8 @@ types:
     type: object
     properties:
       name?:
-        type: strings.Name
-        description: |
-          Defines the name of the container network to join.
+        type: strings.NetworkName
+        description:   Defines the name of the container network to join.
           Not for use with `host` mode networking.
       mode?:
         type: NetworkMode
