@@ -91,7 +91,7 @@ private[migration] object MigrationTo15 {
   /**
     * load roots from the group repository, the flow always ends with the current root
     */
-  def loadRootsFlow(groupRepository: GroupRepository) = Flow[OffsetDateTime].mapAsync(Int.MaxValue) { version =>
+  def loadRootsFlow(groupRepository: GroupRepository) = Flow[OffsetDateTime].mapAsync(Migration.maxConcurrency) { version =>
     groupRepository.rootVersion(version)
   }.collect {
     case Some(root) => root
