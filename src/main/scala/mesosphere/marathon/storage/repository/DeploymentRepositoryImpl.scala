@@ -8,17 +8,18 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreRepository
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.state.{ RootGroup, Timestamp }
-import mesosphere.marathon.storage.repository.GcActor.{ StoreApp, StorePlan, StorePod, StoreRoot }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.state.{RootGroup, Timestamp}
+import mesosphere.marathon.storage.repository.GcActor.{StoreApp, StorePlan, StorePod, StoreRoot}
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.async.Async.{async, await}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 case class StoredPlan(
     id: String,
@@ -136,7 +137,7 @@ class DeploymentRepositoryImpl[K, C, S](
   override def ids(): Source[String, NotUsed] = repo.ids()
 
   override def all(): Source[DeploymentPlan, NotUsed] =
-    repo.ids().mapAsync(8)(get).collect { case Some(g) => g }
+    repo.ids().mapAsync(RepositoryConstants.maxConcurrency)(get).collect { case Some(g) => g }
 
   @SuppressWarnings(Array("all")) // async/await
   override def get(id: String): Future[Option[DeploymentPlan]] = async { // linter:ignore UnnecessaryElseBranch
@@ -149,6 +150,6 @@ class DeploymentRepositoryImpl[K, C, S](
   }
 
   private[storage] def lazyAll(): Source[StoredPlan, NotUsed] =
-    repo.ids().mapAsync(8)(repo.get).collect { case Some(g) => g }
+    repo.ids().mapAsync(RepositoryConstants.maxConcurrency)(repo.get).collect { case Some(g) => g }
 }
 
