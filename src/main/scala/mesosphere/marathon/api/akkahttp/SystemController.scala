@@ -116,9 +116,9 @@ class SystemController(val marathonConfig: MarathonConf, val cfg: Config, val el
     asLeader(electionService) {
       path("ping") {
         (get & acceptsAnything) { pingPlainText } ~
-          (get & accepts(MediaTypes.`text/plain`)) { pingPlainText } ~
-          (get & accepts(MediaTypes.`application/json`)) { pingJson } ~
-          get { complete(HttpResponse(StatusCodes.NoContent)) }
+        (get & accepts(MediaTypes.`text/plain`)) { pingPlainText } ~
+        (get & accepts(MediaTypes.`application/json`)) { pingJson } ~
+         get { complete(HttpResponse(StatusCodes.NoContent)) }
       } ~
         path("metrics") {
           get { metrics }
