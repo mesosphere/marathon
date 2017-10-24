@@ -73,7 +73,9 @@ class PodsController(
           delete {
             pathEnd { remove(podId) } ~
               pathPrefix("::instances") {
-                pathEnd { killInstances(podId) } ~
+                pathEnd {
+                  killInstances(podId)
+                } ~
                   extractInstanceId { instanceId =>
                     killInstance(instanceId)
                   }
