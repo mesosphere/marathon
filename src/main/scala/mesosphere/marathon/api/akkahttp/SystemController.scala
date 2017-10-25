@@ -109,7 +109,7 @@ class SystemController(val marathonConfig: MarathonConf, val cfg: Config, val el
       }
     }
   }
-
+  // format: OFF
   override val route: Route = {
     // To maintain the functionality of the original API, this endpoint is leader aware.
     // It would make sense to allow the functionality of this controller on every instance.
@@ -131,4 +131,5 @@ class SystemController(val marathonConfig: MarathonConf, val cfg: Config, val el
         }
     }
   }
+  // format: On
 }
