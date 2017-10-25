@@ -236,6 +236,11 @@ class MarathonFacade(
     res.map(_.map(Raml.fromRaml(_))).map(_.filter(pod => isInBaseGroup(pod.id)))
   }
 
+  def listPodsInBaseGroupByPodId(podId: PathId): RestResult[Seq[PodDefinition]] = {
+    val res = result(requestFor[Seq[Pod]](Get(s"$url/v2/pods")), waitTime)
+    res.map(_.map(Raml.fromRaml(_))).map(_.filter(_.id == podId))
+  }
+
   def pod(id: PathId): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
     val res = result(requestFor[Pod](Get(s"$url/v2/pods$id")), waitTime)

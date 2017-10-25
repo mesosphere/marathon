@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package integration
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod._
@@ -216,7 +214,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       createResult should be(Created)
       waitForDeployment(createResult)
       waitForPod(pod.id)
-      marathon.listPodsInBaseGroup.value should have size 1
+      marathon.listPodsInBaseGroupByPodId(pod.id).value should have size 1
 
       Then("The pod should show up as a group")
       val groupResult = marathon.group(testBasePath)
@@ -228,7 +226,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForDeployment(deleteResult)
 
       Then("The pod is deleted")
-      marathon.listPodsInBaseGroup.value should have size 0
+      marathon.listDeploymentsForPathId(pod.id).value should have size 0
     }
 
     "list pod versions" taggedAs WhenEnvSet(envVar, default = "true") in {
@@ -294,7 +292,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       deploymentId shouldBe defined
 
       Then("the deployment gets created")
-      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
+      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForPathId(pod.id).value.size == 1)
 
       When("the deployment is deleted")
       val deleteResult = marathon.deleteDeployment(deploymentId.get, force = true)
@@ -303,7 +301,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Then("the deployment should be gone")
       waitForEvent("deployment_failed")
       WaitTestSupport.waitUntil("Deployments get removed from the queue") {
-        marathon.listDeploymentsForBaseGroup().value.isEmpty
+        marathon.listDeploymentsForPathId(pod.id).value.isEmpty
       }
 
       Then("the pod should still be there")
@@ -323,7 +321,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       deploymentId shouldBe defined
 
       Then("the deployment gets created")
-      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
+      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForPathId(pod.id).value.size == 1)
 
       When("the deployment is rolled back")
       val deleteResult = marathon.deleteDeployment(deploymentId.get)
@@ -339,7 +337,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForEventsWith(s"waiting for canceled ${deploymentId.value} and successful ${deleteId.value}", waitingFor)
 
       WaitTestSupport.waitUntil("Deployments get removed from the queue") {
-        marathon.listDeploymentsForBaseGroup().value.isEmpty
+        marathon.listDeploymentsForPathId(pod.id).value.isEmpty
       }
 
       Then("the pod should also be gone")
