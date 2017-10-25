@@ -50,11 +50,38 @@ object PathMatchers {
           Tuple1(PathId.sanitized(reversePieces.reverse)))
     }
 
-    override def apply(path: Path) = iter(Nil, path)
+    def iter(remaining: Path): Matching[Tuple1[PathId]] = iter(Nil, remaining)
+
+    override def apply(path: Path): Matching[Tuple1[PathId]] = iter(path)
   }
 
+  /**
+    * Matches anything until ::. The remaining path will be :: plus everything that follows :: in the original path.
+    * The matched path up until :: will be extracted.
+    *
+    * Note: This makes the use of :: illegal in a pods path.
+    */
   case object PodsPathIdLike extends PathMatcher1[String] {
-    override def apply(path: Path) = Unmatched
+    // Simple reg ex that matches anything before and after ::
+    val keywordMatcher = "^(.*)::(.*)$".r
+
+    @tailrec def iter(accumulatedPathId: String, remaining: Path): Matching[Tuple1[String]] = remaining match {
+      case Path.Slash(rest) =>
+        if (rest.isEmpty) Unmatched
+        else iter(accumulatedPathId + "/", rest)
+      case Path.Segment(segment, rest) =>
+        segment match {
+          case keywordMatcher(before, keyword) =>
+            Matched(s"::$keyword" :: rest, Tuple1(accumulatedPathId + before))
+          case _ =>
+            iter(accumulatedPathId + segment, rest)
+        }
+      case _ => Matched(remaining, Tuple1(accumulatedPathId))
+    }
+
+    def iter(remaining: Path): Matching[Tuple1[String]] = iter("", remaining)
+
+    override def apply(path: Path) = iter(path)
   }
 
   /**
