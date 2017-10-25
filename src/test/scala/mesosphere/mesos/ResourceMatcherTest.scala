@@ -882,6 +882,62 @@ class ResourceMatcherTest extends UnitTest with Inside {
 
       resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     }
+
+    "match offers with empty region if localRegion is not available" in {
+      val offer = MarathonTestHelper.makeBasicOffer().build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config)
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "match offers with empty region if localRegion is available" in {
+      val offer = MarathonTestHelper.makeBasicOffer().build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty,
+        unreservedResourceSelector, config, localRegion = Some(Region("local_region")))
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "do not match offers with nonempty region if localRegion is empty" in {
+      val offer = MarathonTestHelper.makeBasicOffer()
+        .setDomain(MarathonTestHelper.newDomainInfo("region", "zone"))
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, localRegion = None)
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    }
+
+    "do not match offers with nonempty region if localRegion is different" in {
+      val offer = MarathonTestHelper.makeBasicOffer()
+        .setDomain(MarathonTestHelper.newDomainInfo("region", "zone"))
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, localRegion = Some(Region("local_region")))
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    }
+
   }
 
   val appId = PathId("/test")

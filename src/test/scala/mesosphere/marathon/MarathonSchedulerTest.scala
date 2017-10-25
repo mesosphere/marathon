@@ -8,14 +8,14 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.state.FaultDomain
+import mesosphere.marathon.state.Region
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.{ FrameworkId, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos.DomainInfo.FaultDomain.{ RegionInfo, ZoneInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.apache.mesos.Protos.DomainInfo.{ FaultDomain => FaultDomainPB }
+import org.apache.mesos.Protos.DomainInfo.FaultDomain
 
 import scala.concurrent.Future
 
@@ -168,7 +168,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
         .setDomain(
           DomainInfo.newBuilder()
             .setFaultDomain(
-              FaultDomainPB.newBuilder()
+              FaultDomain.newBuilder()
                 .setRegion(RegionInfo.newBuilder().setName(regionName).build())
                 .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
                 .build()
@@ -181,7 +181,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       marathonScheduler.registered(driver, frameworkId, masterInfo)
 
-      marathonScheduler.getHomeFaultDomain shouldEqual Some(FaultDomain(regionName, zoneName))
+      marathonScheduler.getLocalRegion shouldEqual Some(Region(regionName))
     }
 
     "Store default region when reregistered" in new Fixture {
@@ -198,7 +198,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
         .setDomain(
           DomainInfo.newBuilder()
             .setFaultDomain(
-              FaultDomainPB.newBuilder()
+              FaultDomain.newBuilder()
                 .setRegion(RegionInfo.newBuilder().setName(regionName).build())
                 .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
                 .build()
@@ -209,7 +209,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       marathonScheduler.reregistered(driver, masterInfo)
 
-      marathonScheduler.getHomeFaultDomain shouldEqual Some(FaultDomain(regionName, zoneName))
+      marathonScheduler.getLocalRegion shouldEqual Some(Region(regionName))
 
     }
   }

@@ -11,11 +11,10 @@ import time
 
 from datetime import timedelta
 from dcos import marathon, http
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents
+from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 from urllib.parse import urljoin
 
-from fixtures import wait_for_marathon_and_cleanup
-from utils import parse_json
+from fixtures import wait_for_marathon_and_cleanup # NOQA
 
 
 PACKAGE_NAME = 'marathon'
@@ -33,7 +32,7 @@ def get_pod_status_url(pod_id):
 
 def get_pod_status(pod_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_status_url(pod_id))
-    return parse_json(http.get(url))
+    return http.get(url).json()
 
 
 def get_pod_instances_url(pod_id, instance_id):
@@ -50,12 +49,12 @@ def get_pod_versions_url(pod_id, version_id=""):
 
 def get_pod_versions(pod_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_versions_url(pod_id))
-    return parse_json(http.get(url))
+    return http.get(url).json()
 
 
 def get_pod_version(pod_id, version_id):
     url = urljoin(DCOS_SERVICE_URL, get_pod_versions_url(pod_id, version_id))
-    return parse_json(http.get(url))
+    return http.get(url).json()
 
 
 @shakedown.dcos_1_9
@@ -161,7 +160,7 @@ def test_remove_pod():
     common.deployment_wait(service_id=pod_id)
 
     try:
-        _ = client.show_pod(pod_id)
+        client.show_pod(pod_id)
     except:
         pass
     else:

@@ -43,7 +43,7 @@ object MigrationTo146 extends StrictLogging {
     *
     * @return migrated app
     */
-  private def changeUnreachableStrategy(unreachableStrategy: UnreachableStrategy): UnreachableStrategy = {
+  private[migration] def changeUnreachableStrategy(unreachableStrategy: UnreachableStrategy): UnreachableStrategy = {
     unreachableStrategy match {
       // migrate previous `hack` to achieve fastest replacement - case 3
       case UnreachableEnabled(inactiveAfter, expungeAfter) if inactiveAfter == 1.seconds && expungeAfter == 2.seconds =>
@@ -63,12 +63,12 @@ object MigrationTo146 extends StrictLogging {
     logger.info("Starting unreachable strategy migration to 1.4.6")
     val appSink =
       Flow[AppDefinition]
-        .mapAsync(Int.MaxValue)(appRepository.store)
+        .mapAsync(Migration.maxConcurrency)(appRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     val podSink =
       Flow[PodDefinition]
-        .mapAsync(Int.MaxValue)(podRepository.store)
+        .mapAsync(Migration.maxConcurrency)(podRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     val migrateUnreachableStrategyWanted = env.vars.getOrElse(MigrationTo146.MigrateUnreachableStrategyEnvVar, "false")
