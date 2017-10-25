@@ -23,7 +23,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, UnreachableEnabled }
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
@@ -73,14 +73,14 @@ class TaskLauncherActorTest extends AkkaUnitTest {
       offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
       offerMatchStatisticsActor: TestProbe = TestProbe(),
-      homeRegion: () => Option[String] = () => None) {
+      localRegion: () => Option[Region] = () => None) {
 
     def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
         maybeOfferReviver = Some(offerReviver),
-        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, homeRegion) _
+        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref, localRegion) _
       system.actorOf(props(appToLaunch, instances))
     }
 
@@ -303,7 +303,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
           maybeOfferReviver = None,
           instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
           f.app, instancesToLaunch = 1,
-          homeRegion
+          localRegion
         ) {
           override protected def scheduleTaskOperationTimeout(
             context: ActorContext, message: InstanceOpRejected): Cancellable = {

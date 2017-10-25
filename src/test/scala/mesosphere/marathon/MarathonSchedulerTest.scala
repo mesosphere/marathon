@@ -8,6 +8,7 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
+import mesosphere.marathon.state.Region
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.{ FrameworkId, MutableMesosLeaderInfo }
@@ -157,6 +158,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
         .build()
 
       val regionName = "some_region"
+      val zoneName = "some_zone"
 
       val masterInfo = MasterInfo.newBuilder()
         .setId("")
@@ -168,7 +170,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
             .setFaultDomain(
               FaultDomain.newBuilder()
                 .setRegion(RegionInfo.newBuilder().setName(regionName).build())
-                .setZone(ZoneInfo.newBuilder().setName("some_zone").build())
+                .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
                 .build()
             )
             .build()
@@ -179,13 +181,14 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       marathonScheduler.registered(driver, frameworkId, masterInfo)
 
-      marathonScheduler.getHomeRegion shouldEqual Some(regionName)
+      marathonScheduler.getLocalRegion shouldEqual Some(Region(regionName))
     }
 
     "Store default region when reregistered" in new Fixture {
       val driver = mock[SchedulerDriver]
 
       val regionName = "some_region"
+      val zoneName = "some_zone"
 
       val masterInfo = MasterInfo.newBuilder()
         .setId("")
@@ -197,7 +200,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
             .setFaultDomain(
               FaultDomain.newBuilder()
                 .setRegion(RegionInfo.newBuilder().setName(regionName).build())
-                .setZone(ZoneInfo.newBuilder().setName("some_zone").build())
+                .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
                 .build()
             )
             .build()
@@ -206,7 +209,7 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       marathonScheduler.reregistered(driver, masterInfo)
 
-      marathonScheduler.getHomeRegion shouldEqual Some(regionName)
+      marathonScheduler.getLocalRegion shouldEqual Some(Region(regionName))
 
     }
   }
