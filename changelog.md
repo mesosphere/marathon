@@ -1,8 +1,9 @@
-## Changes from 1.5.0 to 1.5.1.1
+## Changes from 1.5.1.1 to 1.5.1.2
 
-Bugfix release
+The issue intended to be fixed by version 1.5.1.1 was not actually fixed, and the version has been pulled.
 
 ### Fixed issues
+
 - [MARATHON-7848](https://jira.mesosphere.com/browse/MARATHON-7848) Fixes regression in which underscores were no longer permitted in network names
 
 ## Changes from 1.5.0 to 1.5.1
