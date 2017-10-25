@@ -107,4 +107,10 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
 
   def validatePathId(possibleId: String): ValidationResult = PathId.pathIdValidator(PathId(possibleId))
 
+  def withValidatedPathId(possibleId: String): Directive1[PathId] = {
+    assumeValid(validatePathId(possibleId)).tflatMap { Unit =>
+      provide(PathId(possibleId))
+    }
+  }
+
 }
