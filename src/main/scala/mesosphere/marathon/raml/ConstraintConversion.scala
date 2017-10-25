@@ -50,7 +50,7 @@ trait ConstraintConversion {
     Constraint(c.getField, operator, Option(c.getValue))
   }
 
-  implicit val constraintToSeqStringWrites: Writes[Protos.Constraint, Seq[String]] = Writes { constraint =>
+  def constraintProtosToStringSeq(constraint: Protos.Constraint): Seq[String] = {
     val builder = Seq.newBuilder[String]
     builder += constraint.getField
     builder += constraint.getOperator.name

@@ -17,8 +17,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.AnyToRaml
-import mesosphere.marathon.raml.EnrichedTask._
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
@@ -53,13 +51,13 @@ class AppTasksResource @Inject() (
           val groupPath = gid.toRootPath
           val maybeGroup = groupManager.group(groupPath)
           withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
-            ok(jsonObjString("tasks" -> runningTasks(group.transitiveAppIds, instancesBySpec).toRaml))
+            ok(jsonObjString("tasks" -> runningTasks(group.transitiveAppIds, instancesBySpec).map(asRaml)))
           }
         case _ =>
           val appId = id.toRootPath
           val maybeApp = groupManager.app(appId)
           withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
-            ok(jsonObjString("tasks" -> runningTasks(Set(appId), instancesBySpec).toRaml))
+            ok(jsonObjString("tasks" -> runningTasks(Set(appId), instancesBySpec).map(asRaml)))
           }
       }
     }

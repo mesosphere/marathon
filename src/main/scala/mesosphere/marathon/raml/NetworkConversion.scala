@@ -10,19 +10,18 @@ trait NetworkConversion {
 
   import NetworkConversionMessages._
 
-  implicit val networkRamlReader: Reads[Network, pod.Network] =
-    Reads { raml =>
-      raml.mode match {
-        case NetworkMode.Host => pod.HostNetwork
-        case NetworkMode.ContainerBridge => pod.BridgeNetwork(raml.labels)
-        case NetworkMode.Container => pod.ContainerNetwork(
-          // we expect validation to catch this problem first. but it's possible that migration
-          // also runs into this problem so we handle it explicitly.
-          raml.name.getOrElse(throw SerializationFailedException(ContainerNetworkRequiresName)),
-          raml.labels
-        )
-      }
+  def fromRaml(raml: Network): pod.Network = {
+    raml.mode match {
+      case NetworkMode.Host => pod.HostNetwork
+      case NetworkMode.ContainerBridge => pod.BridgeNetwork(raml.labels)
+      case NetworkMode.Container => pod.ContainerNetwork(
+        // we expect validation to catch this problem first. but it's possible that migration
+        // also runs into this problem so we handle it explicitly.
+        raml.name.getOrElse(throw SerializationFailedException(ContainerNetworkRequiresName)),
+        raml.labels
+      )
     }
+  }
 
   implicit val networkRamlWriter: Writes[pod.Network, Network] = Writes {
     case cnet: pod.ContainerNetwork =>

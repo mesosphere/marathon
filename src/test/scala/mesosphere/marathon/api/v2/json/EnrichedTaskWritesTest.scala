@@ -91,7 +91,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "localVolumes" : []
         |}
       """.stripMargin
-      JsonTestHelper.assertThatJsonOf(f.taskWithoutIp.toRaml).correspondsToJsonString(json)
+      JsonTestHelper.assertThatJsonOf(asRaml(f.taskWithoutIp)).correspondsToJsonString(json)
     }
 
     "JSON serialization of a Task with multiple IPs" in {
@@ -122,7 +122,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "localVolumes" : []
         |}
       """.stripMargin
-      JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs.toRaml).correspondsToJsonString(json)
+      JsonTestHelper.assertThatJsonOf(asRaml(f.taskWithMultipleIPs)).correspondsToJsonString(json)
     }
 
     "JSON serialization of a Task with reserved local volumes" in {
@@ -155,7 +155,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  ]
         |}
       """.stripMargin
-      JsonTestHelper.assertThatJsonOf(f.taskWithLocalVolumes.toRaml).correspondsToJsonString(json)
+      JsonTestHelper.assertThatJsonOf(asRaml(f.taskWithLocalVolumes)).correspondsToJsonString(json)
     }
   }
 }

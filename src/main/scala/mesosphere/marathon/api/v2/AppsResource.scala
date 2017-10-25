@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2
 
 import java.time.Clock
-
 import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
@@ -18,7 +17,7 @@ import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.{ AppConversion, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -37,7 +36,7 @@ class AppsResource @Inject() (
     groupManager: GroupManager,
     pluginManager: PluginManager)(implicit
   val authenticator: Authenticator,
-    val authorizer: Authorizer) extends RestResource with AuthResource {
+    val authorizer: Authorizer) extends RestResource with AuthResource with AppConversion {
 
   import AppHelpers._
   import Normalization._
@@ -161,7 +160,7 @@ class AppsResource @Inject() (
       // some hackery here to pass initial JSON parsing.
       val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
       // the version is thrown away in conversion to AppUpdate
-      jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+      asRaml(jsObj.as[raml.App].normalize)
     }
   }
 
@@ -181,7 +180,7 @@ class AppsResource @Inject() (
       // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
       // the version is thrown away in toUpdate so just pass `zero` for now.
       Json.parse(body).as[Seq[raml.App]].map { app =>
-        app.normalize.toRaml[raml.AppUpdate]
+        asRaml(app.normalize)
       }
     }
   }

@@ -4,7 +4,7 @@ package core.pod
 // scalastyle:off
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Endpoint, ExecutorResources, Pod, Raml, Resources }
+import mesosphere.marathon.raml.{ Endpoint, ExecutorResources, NetworkConversion, Pod, PodConversion, Raml, Resources }
 import mesosphere.marathon.state._
 import play.api.libs.json.Json
 
@@ -109,7 +109,7 @@ object PodDefinition {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
-  val DefaultExecutorResources: Resources = ExecutorResources().fromRaml
+  val DefaultExecutorResources: Resources = PodConversion.fromRaml(ExecutorResources())
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
@@ -121,7 +121,7 @@ object PodDefinition {
   val DefaultConstraints = Set.empty[Protos.Constraint]
   val DefaultVersion = Timestamp.now()
   val DefaultVolumes = Seq.empty[Volume]
-  val DefaultNetworks: Seq[Network] = PodNormalization.DefaultNetworks.map(_.fromRaml)
+  val DefaultNetworks: Seq[Network] = PodNormalization.DefaultNetworks.map(NetworkConversion.fromRaml)
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
   val DefaultUnreachableStrategy = UnreachableStrategy.default(resident = false)

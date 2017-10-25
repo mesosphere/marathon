@@ -14,4 +14,8 @@ trait HealthConversion extends DefaultConversions {
       lastFailureCause = health.lastFailureCause
     )
   }
+
+  def asRaml(health: core.health.Health): Health = {
+    health.toRaml
+  }
 }

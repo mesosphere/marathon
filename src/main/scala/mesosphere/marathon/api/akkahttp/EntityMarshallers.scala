@@ -17,12 +17,13 @@ import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.plugin.PathId
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
+import mesosphere.marathon.raml.AppConversion
 import mesosphere.marathon.state.AppDefinition
 import play.api.libs.json._
 
 import scala.collection.breakOut
 
-object EntityMarshallers {
+object EntityMarshallers extends AppConversion {
   import Directives.complete
   import mesosphere.marathon.api.v2.json.Formats._
   import mesosphere.marathon.raml.MetricsConversion._
@@ -130,7 +131,7 @@ object EntityMarshallers {
         // however since this is an update, the user isn't required to specify an ID as part of the definition so we do
         // some hackery here to pass initial JSON parsing.
         val app = (jsObj + ("id" -> JsString(appId.toString))).as[raml.App]
-        appNormalization.normalized(app).toRaml[raml.AppUpdate]
+        asRaml(appNormalization.normalized(app))
       }
   }.handleValidationErrors
 
@@ -144,7 +145,7 @@ object EntityMarshallers {
       // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
       // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
       // the version is thrown away in toUpdate so just pass `zero` for now.
-      playJsonUnmarshaller[Seq[raml.App]].map(_.map(app => appNormalization.normalized(app).toRaml[raml.AppUpdate]))
+      playJsonUnmarshaller[Seq[raml.App]].map(_.map(app => asRaml(appNormalization.normalized(app))))
   }
 
   implicit val jsValueMarshaller = playJsonMarshaller[JsValue]

@@ -6,7 +6,7 @@ package raml
   */
 trait KillSelectionConversion {
 
-  implicit val ramlKillSelectionRead = Reads[KillSelection, state.KillSelection] {
+  def fromRaml(raml: KillSelection): state.KillSelection = raml match {
     case KillSelection.OldestFirst => state.KillSelection.OldestFirst
     case KillSelection.YoungestFirst => state.KillSelection.YoungestFirst
   }

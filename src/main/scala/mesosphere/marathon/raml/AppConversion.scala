@@ -9,16 +9,13 @@ import mesosphere.mesos.protos.Implicits._
 import scala.concurrent.duration._
 
 trait AppConversion extends DefaultConversions with ConstraintConversion with EnvVarConversion with HealthCheckConversion
-    with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion with UnreachableStrategyConversion with KillSelectionConversion {
+    with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion with UnreachableStrategyConversion
+    with UpgradeStrategyConversion with KillSelectionConversion {
 
   import AppConversion._
 
   implicit val artifactWrites: Writes[FetchUri, Artifact] = Writes { fetch =>
     Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache, fetch.outputFile)
-  }
-
-  implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, UpgradeStrategy] = Writes { strategy =>
-    UpgradeStrategy(strategy.maximumOverCapacity, strategy.minimumHealthCapacity)
   }
 
   implicit val appResidencyWrites: Writes[Residency, AppResidency] = Writes { residency =>
@@ -40,7 +37,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       backoffFactor = app.backoffStrategy.factor,
       backoffSeconds = app.backoffStrategy.backoff.toSeconds.toInt,
       cmd = app.cmd,
-      constraints = app.constraints.toRaml[Set[Seq[String]]],
+      constraints = app.constraints.map(constraintProtosToStringSeq),
       container = app.container.toRaml.map { container =>
         // change container.portMappings to None (vs an empty collection) depending on network mode
         if (app.networks.hasNonHostNetworking) container
@@ -67,12 +64,12 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       requirePorts = app.requirePorts,
       secrets = app.secrets.toRaml,
       taskKillGracePeriodSeconds = app.taskKillGracePeriod.map(_.toSeconds.toInt),
-      upgradeStrategy = Some(app.upgradeStrategy.toRaml),
+      upgradeStrategy = Some(asRaml(app.upgradeStrategy)),
       uris = None, // deprecated field
       user = app.user,
       version = Some(app.versionInfo.version.toOffsetDateTime),
       versionInfo = app.versionInfo.toRaml,
-      unreachableStrategy = Some(app.unreachableStrategy.toRaml),
+      unreachableStrategy = Some(asRaml(app.unreachableStrategy)),
       killSelection = app.killSelection.toRaml,
       tty = app.tty
     )
@@ -86,7 +83,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       gpus = gpus.getOrElse(App.DefaultGpus)
     )
 
-  implicit val taskLostBehaviorReader: Reads[TaskLostBehavior, ResidencyDefinition.TaskLostBehavior] = Reads { taskLost =>
+  def fromRaml(taskLost: TaskLostBehavior): ResidencyDefinition.TaskLostBehavior = {
     import ResidencyDefinition.TaskLostBehavior._
     taskLost match {
       case TaskLostBehavior.RelaunchAfterTimeout => RELAUNCH_AFTER_TIMEOUT
@@ -97,7 +94,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
   implicit val residencyRamlReader: Reads[AppResidency, Residency] = Reads { residency =>
     Residency(
       relaunchEscalationTimeoutSeconds = residency.relaunchEscalationTimeoutSeconds,
-      taskLostBehavior = residency.taskLostBehavior.fromRaml
+      taskLostBehavior = fromRaml(residency.taskLostBehavior)
     )
   }
 
@@ -160,12 +157,12 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       upgradeStrategy = selectedStrategy.upgradeStrategy,
       labels = app.labels,
       acceptedResourceRoles = app.acceptedResourceRoles.getOrElse(AppDefinition.DefaultAcceptedResourceRoles),
-      networks = app.networks.map(Raml.fromRaml(_)),
+      networks = app.networks.map(fromRaml),
       versionInfo = versionInfo,
       residency = selectedStrategy.residency,
       secrets = Raml.fromRaml(app.secrets),
-      unreachableStrategy = app.unreachableStrategy.map(_.fromRaml).getOrElse(AppDefinition.DefaultUnreachableStrategy),
-      killSelection = app.killSelection.fromRaml,
+      unreachableStrategy = app.unreachableStrategy.map(fromRaml).getOrElse(AppDefinition.DefaultUnreachableStrategy),
+      killSelection = fromRaml(app.killSelection),
       tty = app.tty
     )
     result
@@ -314,7 +311,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       backoffFactor = service.whenOrElse(_.hasBackoffFactor, _.getBackoffFactor, App.DefaultBackoffFactor),
       backoffSeconds = service.whenOrElse(_.hasBackoff, b => (b.getBackoff / 1000L).toInt, App.DefaultBackoffSeconds),
       cmd = if (service.hasCmd && service.getCmd.hasValue) Option(service.getCmd.getValue) else App.DefaultCmd,
-      constraints = service.whenOrElse(_.getConstraintsCount > 0, _.getConstraintsList.map(_.toRaml[Seq[String]])(collection.breakOut), App.DefaultConstraints),
+      constraints = service.whenOrElse(_.getConstraintsCount > 0, _.getConstraintsList.map(constraintProtosToStringSeq)(collection.breakOut), App.DefaultConstraints),
       container = service.when(_.hasContainer, _.getContainer.toRaml).orElse(App.DefaultContainer),
       cpus = resourcesMap.getOrElse(Resource.CPUS, App.DefaultCpus),
       dependencies = service.whenOrElse(_.getDependenciesCount > 0, _.getDependenciesList.to[Set], App.DefaultDependencies),
@@ -367,7 +364,8 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
     * @return an app update generated from an app, but without the `version` field (since that can only
     *         be combined with `id` for app updates)
     */
-  implicit val appToUpdate: Writes[App, AppUpdate] = Writes { app =>
+  //  implicit val appToUpdate: Writes[App, AppUpdate] = Writes { app =>
+  def asRaml(app: App): AppUpdate = {
     AppUpdate(
       id = Some(app.id),
       cmd = app.cmd,
