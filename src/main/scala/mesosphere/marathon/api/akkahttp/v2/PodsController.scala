@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.api.akkahttp.PathMatchers.PodsPathIdLike
@@ -21,7 +22,7 @@ class PodsController(
 
   def capability(): Route =
     authenticated.apply { implicit identity =>
-      complete("")
+      complete(StatusCodes.OK)
     }
 
   def create(): Route = ???

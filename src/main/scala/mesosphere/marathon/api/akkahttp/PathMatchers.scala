@@ -19,10 +19,6 @@ object PathMatchers {
   final val RemainingTaskId = Remaining.map(s => Task.Id(s))
 
   /**
-    * Matches
-    */
-
-  /**
     * Tries to match the remaining path as Timestamp
     */
   final val Version = Segment.flatMap(string =>
