@@ -99,7 +99,7 @@ case class MesosCluster(
           |    }
           |}
         """.stripMargin
-      Map("fault_domain_region" -> Some(faultDomain.region), "fault_domain_zone" -> Some(faultDomain.zone)) -> Some(faultDomainJson)
+      Map("fault_domain_region" -> Some(faultDomain.region.value), "fault_domain_zone" -> Some(faultDomain.zone.value)) -> Some(faultDomainJson)
     } else Map.empty -> None
 
     // uniquely identify each agent node, useful for constraint matching

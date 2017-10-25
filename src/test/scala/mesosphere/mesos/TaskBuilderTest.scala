@@ -1249,7 +1249,7 @@ class TaskBuilderTest extends UnitTest {
 
       val config = MarathonTestHelper.defaultConfig()
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet,
-        config, None)
+        config)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       // TODO test for resources etc.
     }
@@ -1295,7 +1295,7 @@ class TaskBuilderTest extends UnitTest {
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, homeFaultDomain = None)
+          config.defaultAcceptedResourceRolesSet, config)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 

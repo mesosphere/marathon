@@ -9,7 +9,7 @@ import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentI
 import mesosphere.marathon.integration.facades.MesosFacade.ITResourceStringValue
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.{ FaultDomain, PathId }
+import mesosphere.marathon.state.{ FaultDomain, PathId, Region, Zone }
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.Constraints
 
@@ -21,19 +21,19 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 3
 
-  val homeRegionName = "home_region"
-  val homeZoneName = "home_zone"
+  val homeRegion = Region("home_region")
+  val homeZone = Zone("home_zone")
 
-  val remoteRegionName = "remote_region"
-  val remoteZone1Name = "remote_zone"
-  val remoteZone2Name = "remote_zone"
+  val remoteRegion = Region("remote_region")
+  val remoteZone1 = Zone("remote_zone")
+  val remoteZone2 = Zone("remote_zone")
 
-  override def mastersFaultDomains = Seq(Some(FaultDomain(region = homeRegionName, zone = homeZoneName)))
+  override def mastersFaultDomains = Seq(Some(FaultDomain(region = homeRegion, zone = homeZone)))
 
   override def agentsFaultDomains = Seq(
-    Some(FaultDomain(region = remoteRegionName, zone = remoteZone1Name)),
-    Some(FaultDomain(region = remoteRegionName, zone = remoteZone2Name)),
-    Some(FaultDomain(region = homeRegionName, zone = homeZoneName)))
+    Some(FaultDomain(region = remoteRegion, zone = remoteZone1)),
+    Some(FaultDomain(region = remoteRegion, zone = remoteZone2)),
+    Some(FaultDomain(region = homeRegion, zone = homeZone)))
 
   before(cleanUp())
 
@@ -59,12 +59,13 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
 
       agentRegion match {
-        case ITResourceStringValue(value) => value shouldEqual homeRegionName
+        case ITResourceStringValue(value) => value shouldEqual homeRegion.value
       }
     }
     "Launch an instance of the app in the specified region" in {
       val applicationId = appId(Some("must-be-placed-in-remote-region"))
-      val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(Constraints.regionField :: "LIKE" :: remoteRegionName :: Nil))
+      val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints =
+        Set(Constraints.regionField :: "LIKE" :: remoteRegion.value :: Nil))
 
       When("The app is deployed without specifying region")
       logger.info("creating app")
@@ -81,14 +82,14 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
 
       agentRegion match {
-        case ITResourceStringValue(value) => value shouldEqual remoteRegionName
+        case ITResourceStringValue(value) => value shouldEqual remoteRegion.value
       }
     }
     "Launch an instance of the app in the specified region and zone" in {
       val applicationId = appId(Some("must-be-placed-in-remote-region"))
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(
-        Constraints.regionField :: "LIKE" :: remoteRegionName :: Nil,
-        Constraints.zoneField :: "LIKE" :: remoteZone2Name :: Nil
+        Constraints.regionField :: "LIKE" :: remoteRegion.value :: Nil,
+        Constraints.zoneField :: "LIKE" :: remoteZone2.value :: Nil
       ))
 
       When("The app is deployed without specifying region")
@@ -107,10 +108,10 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val agentZone = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_zone")
 
       agentRegion match {
-        case ITResourceStringValue(value) => value shouldEqual remoteRegionName
+        case ITResourceStringValue(value) => value shouldEqual remoteRegion.value
       }
       agentZone match {
-        case ITResourceStringValue(value) => value shouldEqual remoteZone2Name
+        case ITResourceStringValue(value) => value shouldEqual remoteZone2.value
       }
     }
   }
