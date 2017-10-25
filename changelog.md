@@ -1,4 +1,5 @@
 ## Changes from 1.5.1.1 to 1.5.1.2
+Bugfix release
 
 The issue intended to be fixed by version 1.5.1.1 was not actually fixed, and the version has been pulled.
 
