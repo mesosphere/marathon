@@ -163,7 +163,7 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
  * @return Version and artifact description of Marathon build.
  */
 @main
-def run(publish: Boolean = true): (String, Option[awsClient.Artifact]) = {
+def run(publish: Boolean = false): (String, Option[awsClient.Artifact]) = {
   utils.stage("Provision") {
 
     // Set port range for random port 0 allocation.
@@ -182,7 +182,7 @@ def run(publish: Boolean = true): (String, Option[awsClient.Artifact]) = {
 
   val (version, maybeArtifact) = createAndUploadPackages()
 
-  if(utils.isMasterBuild && publish) {
+  if(publish) {
     maybeArtifact.foreach { artifact =>
       updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
     }
@@ -201,7 +201,7 @@ def jenkins(): Unit = {
   if(utils.isPullRequest) {
     asPullRequest { run() }
   } else {
-    run()
+    run(publish = utils.isMasterBuild)
   }
 }
 
