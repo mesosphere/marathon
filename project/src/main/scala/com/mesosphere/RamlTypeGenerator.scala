@@ -130,6 +130,9 @@ object RamlTypeGenerator {
   def pragmaForceOptional(o: TypeDeclaration): Boolean =
     o.annotations().asScala.exists(_.name() == "(pragma.forceOptional)")
 
+  def pragmaSerializeOnly(o: TypeDeclaration): Boolean =
+    o.annotations().exists(_.name() == "(pragma.serializeOnly)")
+
   def generateUpdateTypeName(o: ObjectTypeDeclaration): Option[String] =
     if (o.`type`() == "object" && !isUpdateType(o)) {
       // use the attribute value as the type name if specified ala enumName; otherwise just append "Update"
@@ -182,6 +185,7 @@ object RamlTypeGenerator {
     override def toString: String = s"Enum($name, $values)"
 
     override def toTree(): Seq[Tree] = {
+      System.err.println(s"Enum: ${name}")
       val baseTrait = TRAITDEF(name) withParents("Product", "Serializable", "RamlGenerated") withFlags Flags.SEALED := BLOCK(
         VAL("value", StringClass),
         DEF("toString", StringClass) withFlags Flags.OVERRIDE := REF("value")
@@ -413,10 +417,11 @@ object RamlTypeGenerator {
     }
   }
 
-  case class ObjectT(name: String, fields: Seq[FieldT], parentType: Option[String], comments: Seq[String], childTypes: Seq[ObjectT] = Nil, discriminator: Option[String] = None, discriminatorValue: Option[String] = None) extends GeneratedClass {
+  case class ObjectT(name: String, fields: Seq[FieldT], parentType: Option[String], comments: Seq[String], childTypes: Seq[ObjectT] = Nil, discriminator: Option[String] = None, discriminatorValue: Option[String] = None, serializeOnly: Boolean = false) extends GeneratedClass {
     override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
 
     override def toTree(): Seq[Tree] = {
+      System.err.println(s"` ${name}")
       val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
       val params = actualFields.map(_.param)
       val klass = if (childTypes.nonEmpty) {
@@ -483,21 +488,32 @@ object RamlTypeGenerator {
         actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
         actualFields.map(_.constraints).requiredImports ++ Seq(
           OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
-            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-              actualFields.map { field =>
-                VAL(field.name) := field.playValidator
-              } ++ Seq(
-                VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
-                  CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY(REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
-                IF(REF("_errors") DOT "nonEmpty") THEN (
-                  REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
-                  ) ELSE (
-                  REF(PlayJsSuccess) APPLY (REF(name) APPLY
-                    actualFields.map { field =>
-                      REF(field.name) := (REF(field.name) DOT "get")
-                    }))
+            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
+              if (serializeOnly) BLOCK(
+                THROW(
+                  NEW(
+                    REF(s"NotImplementedError") APPLY (
+                      LIT("This type can only be de-serialized")
+                      )
+                  )
+                )
               )
-            ),
+              else BLOCK(
+                actualFields.map { field =>
+                  VAL(field.name) := field.playValidator
+                } ++ Seq(
+                  VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
+                    CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY (REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
+                  IF(REF("_errors") DOT "nonEmpty") THEN (
+                    REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
+                    ) ELSE (
+                    REF(PlayJsSuccess) APPLY (REF(name) APPLY
+                      actualFields.map { field =>
+                        REF(field.name) := (REF(field.name) DOT "get")
+                      }))
+                )
+              )
+            },
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               actualFields.withFilter(_.name != AdditionalProperties).map { field =>
                 val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
@@ -550,7 +566,7 @@ object RamlTypeGenerator {
           Seq(VAL("Default") withType (name) := REF(name) APPLY())
         } else Nil
 
-      val obj = if (childTypes.isEmpty) {
+      val obj = if (childTypes.isEmpty || serializeOnly) {
         (OBJECTDEF(name)) := BLOCK(
           playFormat ++ defaultFields ++ defaultInstance ++ fields.flatMap { f =>
             f.constraints.flatMap(_.withFieldLimit(f).limitField)
@@ -573,7 +589,7 @@ object RamlTypeGenerator {
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               REF("o") MATCH
                 childDiscriminators.map { case (k, v) =>
-                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(v.name) DOT "playJsonFormat"))
+                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY (REF(v.name) DOT "playJsonFormat"))
                 }
             )
           )) ++ defaultFields ++ defaultInstance
@@ -802,7 +818,7 @@ object RamlTypeGenerator {
                   case o: ObjectTypeDeclaration =>
                     val (name, parent) = objectName(o)
                     val fields: Seq[FieldT] = o.properties.asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
-                    ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
+                    ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
                   case s: StringTypeDeclaration =>
                     StringT(s.name, Option(s.defaultValue()))
                   case t =>
@@ -818,10 +834,10 @@ object RamlTypeGenerator {
                 val (name, parent) = objectName(o)
                 val fields: Seq[FieldT] = o.properties().asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
                 if (isUpdateType(o)) {
-                  val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
+                  val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
                   buildTypes(s.tail, results + objectType)
                 } else {
-                  val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
+                  val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
                   val updateType = generateUpdateTypeName(o).withFilter(n => !results.exists(_.name == n)).map { updateName =>
                     objectType.copy(name = updateName, fields = fields.map(_.copy(forceOptional = true)))
                   }
