@@ -185,7 +185,6 @@ object RamlTypeGenerator {
     override def toString: String = s"Enum($name, $values)"
 
     override def toTree(): Seq[Tree] = {
-      System.err.println(s"Enum: ${name}")
       val baseTrait = TRAITDEF(name) withParents("Product", "Serializable", "RamlGenerated") withFlags Flags.SEALED := BLOCK(
         VAL("value", StringClass),
         DEF("toString", StringClass) withFlags Flags.OVERRIDE := REF("value")
@@ -421,7 +420,6 @@ object RamlTypeGenerator {
     override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
 
     override def toTree(): Seq[Tree] = {
-      System.err.println(s"` ${name}")
       val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
       val params = actualFields.map(_.param)
       val klass = if (childTypes.nonEmpty) {
@@ -490,13 +488,7 @@ object RamlTypeGenerator {
           OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
               if (serializeOnly) BLOCK(
-                THROW(
-                  NEW(
-                    REF(s"NotImplementedError") APPLY (
-                      LIT("This type can only be de-serialized")
-                      )
-                  )
-                )
+                THROW( NEW( REF(s"NotImplementedError") APPLY LIT("This type can only be de-serialized") ) )
               )
               else BLOCK(
                 actualFields.map { field =>
@@ -589,7 +581,7 @@ object RamlTypeGenerator {
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               REF("o") MATCH
                 childDiscriminators.map { case (k, v) =>
-                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY (REF(v.name) DOT "playJsonFormat"))
+                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(v.name) DOT "playJsonFormat"))
                 }
             )
           )) ++ defaultFields ++ defaultInstance
