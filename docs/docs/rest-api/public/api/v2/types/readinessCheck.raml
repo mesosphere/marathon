@@ -93,10 +93,3 @@ types:
       lastResponse?:
         type: ReadinessCheckHttpResponse
         description: The last HTTP response received for this readiness check
-
-  ReadinessCheckResults:
-    type: array
-    items: TaskReadinessCheckResult
-    description: |
-      The result of the readiness checks, one for every task. The key in this object
-      is the task ID.

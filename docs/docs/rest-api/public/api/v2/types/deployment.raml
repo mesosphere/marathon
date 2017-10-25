@@ -3,6 +3,7 @@ uses:
   strings: stringTypes.raml
   group: group.raml
   readinessCheck: readinessCheck.raml
+  pragma: pragma.raml
 
 types:
   DeploymentResult:
@@ -54,10 +55,10 @@ types:
     description: A deployment action with additional status information
     properties:
       readinessCheckResults:
-        type: readinessCheck.ReadinessCheckResults
+        type: readinessCheck.TaskReadinessCheckResult[]
         description: |
           If there are readiness checks present for this deployment this property contains
-          their status.
+          their status for every task.
 
   DeploymentStep:
     type: object
@@ -70,6 +71,7 @@ types:
 
   DeploymentPlan:
     type: object
+    (pragma.serializeOnly): ;Used only for serialization
     description: |
        A deployment is a change in the service setup.
        Note that the `orignal` and `target` properties could be missing when the plan
