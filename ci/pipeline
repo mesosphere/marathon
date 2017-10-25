@@ -26,7 +26,7 @@ val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
  * @param logFileName Name of file which collects logs.
  */
 @main
-def compileAndTest(logFileName: String = "ci.log"): Unit = utils.stage("Compile and Test") {
+def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") {
 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
 
@@ -38,12 +38,12 @@ def compileAndTest(logFileName: String = "ci.log"): Unit = utils.stage("Compile 
   run("sbt", "plugin-interface/compile")
 
   // Check system integraion tests.
-  checkSystemIntegrationTests()
+  checkSystemIntegrationTests(logFileName)
 }
 
 @main
-def checkSystemIntegrationTests(): Unit = {
-  def run(cmd: String *) = utils.runWithTimeout(30.minutes)(cmd)
+def checkSystemIntegrationTests(logFileName: String): Unit = {
+  def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
   run("flake8", "--max-line-length=120", "tests/system")
 }
 
