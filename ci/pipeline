@@ -61,13 +61,19 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
 
 @main
 /**
- * Upload Marathon tgz tarballs and its cha1 checksum to S3.
+ * Upload Marathon tgz tarballs, its cha1 checksum and docs to S3.
  *
+ * @param version The version to upload.
  * @return Artifact description if it was uploaded.
  */
-def uploadTarballToS3(): Option[awsClient.Artifact] = utils.stage("Upload Packages") {
+def uploadTarballPackagesToS3(version: String): Option[awsClient.Artifact] = utils.stage("Upload Packages") {
   import scala.collection.breakOut
 
+  // Upload docs
+  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
+  awsClient.upload(docsPath)
+
+  // Upload Marathon
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file)))
 }
@@ -80,10 +86,8 @@ def uploadTarballToS3(): Option[awsClient.Artifact] = utils.stage("Upload Packag
  * @return Version and artifact description of Marathon build.
  */
 def createAndUploadPackages(upload: Boolean = true): (String, Option[awsClient.Artifact]) = {
-  val version = createPackages()
-  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
-  val artifact = if(upload) uploadTarballToS3() else None
-  if(upload) awsClient.upload(docsPath)
+  val version = createTarballPackages()
+  val artifact = if(upload) uploadTarballPackagesToS3(version) else None
 
   createDockerAndLinux()
   (version, artifact)
@@ -96,7 +100,7 @@ def createAndUploadPackages(upload: Boolean = true): (String, Option[awsClient.A
  * @return version of build.
  */
 @main
-def createPackages(): String = utils.stage("Package") {
+def createTarballPackages(): String = utils.stage("Package") {
   val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball", "version")
 
   // Regex is for version:
@@ -159,6 +163,17 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
 }
 
 /**
+ * Provision the build host.
+ */
+def provisionHost(): Unit = utils.stage("Provision") {
+    // Set port range for random port 0 allocation.
+    %('sudo, "ci/set_port_range.sh")
+
+    provision.killStaleTestProcesses()
+    provision.installMesos()
+  }
+
+/**
  * Run the main pipeline.
  *
  * @param publish Indicates whether a package should be published or not.
@@ -167,14 +182,7 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
  */
 @main
 def run(publish: Boolean, upload: Boolean): (String, Option[awsClient.Artifact]) = {
-  utils.stage("Provision") {
-
-    // Set port range for random port 0 allocation.
-    %('sudo, "ci/set_port_range.sh")
-
-    provision.killStaleTestProcesses()
-    provision.installMesos()
-  }
+  provisionHost()
 
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
   try {
@@ -193,6 +201,7 @@ def run(publish: Boolean, upload: Boolean): (String, Option[awsClient.Artifact])
 
   (version, maybeArtifact)
 }
+
 
 /**
  * The main pipeline target for builds on Jenkins.
