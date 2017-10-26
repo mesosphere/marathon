@@ -8,7 +8,7 @@ import shakedown
 
 from dcos import marathon
 from urllib.parse import urljoin
-
+from fixtures import user_billy
 
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_non_authenticated_user():
