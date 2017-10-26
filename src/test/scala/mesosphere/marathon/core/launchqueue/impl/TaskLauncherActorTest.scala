@@ -4,7 +4,6 @@ package core.launchqueue.impl
 import akka.actor.{ ActorContext, ActorRef, Cancellable, Props }
 import akka.pattern.ask
 import akka.testkit.TestProbe
-import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.flow.OfferReviver
