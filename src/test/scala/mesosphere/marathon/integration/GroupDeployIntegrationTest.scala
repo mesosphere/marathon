@@ -71,7 +71,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("The group is deleted")
       result should be(OK)
       // only expect the test base group itself
-      marathon.listGroupsInBaseGroup.value.exists { g => g.id == group.id } shouldBe false
+      marathon.listGroupsInBaseGroup.value.map(_.id) should not contain (group.id)
     }
 
     "delete a non existing group should give a 404 http response" in {
