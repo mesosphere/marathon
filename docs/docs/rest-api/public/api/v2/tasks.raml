@@ -49,7 +49,7 @@ get:
           If scale=true, than a deployment is triggered and the deployment is returned.
         body:
           application/json:
-            type: task.TaskList | deploymentResult.DeploymentResult
+            type: task.TaskList | deployment.DeploymentResult
             example: !include examples/tasks.json
       400:
         description: There are unknown task ids, that can not be killed.
