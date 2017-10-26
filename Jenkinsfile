@@ -13,8 +13,8 @@ ansiColor('gnome-terminal') {
           sh """sudo -E ci/pipeline jenkins"""
         }
       } finally {
-        junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
-        junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
+        //junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
+        //junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
         publishHTML([
             allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
             reportDir: 'target/scala-2.12/scapegoat-report', reportFiles: 'scapegoat.html',
