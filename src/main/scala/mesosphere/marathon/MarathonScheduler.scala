@@ -1,12 +1,11 @@
 package mesosphere.marathon
 
-import javax.inject.Inject
-
 import akka.event.EventStream
 import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
+import mesosphere.marathon.state.{ FaultDomain, Region, Zone }
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.SemanticVersion
@@ -30,7 +29,7 @@ class MarathonScheduler(
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
-  @volatile private[this] var homeRegion: Option[String] = Option.empty
+  @volatile private[this] var localFaultDomain: Option[FaultDomain] = Option.empty
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
 
@@ -42,7 +41,7 @@ class MarathonScheduler(
     master: MasterInfo): Unit = {
     log.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
     masterVersionCheck(master)
-    updateHomeRegion(master)
+    updateLocalFaultDomain(master)
     Await.result(frameworkIdRepository.store(FrameworkId.fromProto(frameworkId)), zkTimeout)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
@@ -51,7 +50,7 @@ class MarathonScheduler(
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {
     log.info("Re-registered to %s".format(master))
     masterVersionCheck(master)
-    updateHomeRegion(master)
+    updateLocalFaultDomain(master)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerReregisteredEvent(master.getHostname))
   }
@@ -148,11 +147,14 @@ class MarathonScheduler(
     }
   }
 
-  protected def updateHomeRegion(masterInfo: MasterInfo): Unit = {
+  protected def updateLocalFaultDomain(masterInfo: MasterInfo): Unit = {
     if (masterInfo.hasDomain && masterInfo.getDomain.hasFaultDomain) {
-      homeRegion = Some(masterInfo.getDomain.getFaultDomain.getRegion.getName)
+      localFaultDomain = Some(FaultDomain(
+        Region(masterInfo.getDomain.getFaultDomain.getRegion.getName),
+        Zone(masterInfo.getDomain.getFaultDomain.getZone.getName)
+      ))
     } else {
-      homeRegion = None
+      localFaultDomain = None
     }
   }
 
@@ -160,10 +162,10 @@ class MarathonScheduler(
   def mesosMasterVersion(): Option[SemanticVersion] = lastMesosMasterVersion
 
   /**
-    * Current home region of the mesos master
-    * @return name of the region if it's available, None otherwise
+    * Current local region where mesos master is running
+    * @return region if it's available, None otherwise
     */
-  def getHomeRegion: Option[String] = homeRegion
+  def getLocalRegion: Option[Region] = localFaultDomain.map(_.region)
 
   /**
     * Exits the JVM process, optionally deleting Marathon's FrameworkID

@@ -10,9 +10,6 @@ import org.scalatest.concurrent.Eventually
 @IntegrationTest
 class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
 
-  //clean up state before running the test case
-  before(cleanUp())
-
   private val ramlHealthCheck = AppHealthCheck(
     protocol = AppHealthCheckProtocol.Http,
     gracePeriodSeconds = 20,

@@ -6,6 +6,11 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.extractRequest
 import akka.http.scaladsl.server.{ Directive, Directive0, Directive1, MalformedQueryParamRejection, Route, Directives => AkkaDirectives }
 import com.wix.accord.{ Failure, Success, Result => ValidationResult }
+import akka.http.scaladsl.server.{ Directive0, Directive1, Directives => AkkaDirectives }
+import com.wix.accord.{ Failure, Success, Validator, Result => ValidationResult }
+import com.wix.accord.dsl._
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.state.PathId
 
 import scala.concurrent.duration._
 
@@ -88,11 +93,11 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
     * @param result The result of a Wix validation.
     * @return The passed inner route.
     */
-  def assumeValid(result: ValidationResult): Directive0 = Directive { f: (Unit => Route) =>
+  def assumeValid(result: ValidationResult): Directive0 = {
     import mesosphere.marathon.api.akkahttp.EntityMarshallers._
     result match {
       case failure: Failure => reject(ValidationFailed(failure))
-      case Success => f(Unit)
+      case Success => pass
     }
   }
 
@@ -119,6 +124,21 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
 
     case object Wipe extends TaskKillingMode
 
+  }
+
+  def validateInstanceId(possibleId: String): ValidationResult = {
+    val validate: Validator[String] = validator[String] { id =>
+      id should matchRegexFully(Instance.Id.InstanceIdRegex)
+    }
+    validate(possibleId)
+  }
+
+  def validatePathId(possibleId: String): ValidationResult = PathId.pathIdValidator(PathId(possibleId))
+
+  def withValidatedPathId(possibleId: String): Directive1[PathId] = {
+    assumeValid(validatePathId(possibleId)).tflatMap { Unit =>
+      provide(PathId(possibleId))
+    }
   }
 
 }

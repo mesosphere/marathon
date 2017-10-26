@@ -207,7 +207,8 @@ private class DeploymentActor(
 
     Done
   }.recover {
-    case NonFatal(error) => logger.warn(s"Error in stopping runSpec ${runSpec.id}", error);
+    case NonFatal(error) =>
+      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error);
       Done
   }
 
