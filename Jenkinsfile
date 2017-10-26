@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-ansiColor('gnome-terminal') {
+ansiColor('xterm') {
   node('JenkinsMarathonCI-Debian8-2017-10-23') {
     stage("Run Pipeline") {
       try {
