@@ -192,9 +192,7 @@
     id:
       type: strings.PathId
       description: The path of the pod
-    instance:
-      type: string
-      pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+    instance: strings.InstanceId
   delete:
     is: [ secured, objectLocator ]
     description: |
