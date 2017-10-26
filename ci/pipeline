@@ -30,12 +30,13 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
 
-  run("sbt", "clean", "test", "integration:test", "scapegoat")
+  //run("sbt", "clean", "test", "integration:test", "scapegoat")
+  run("sbt", "clean", "test")
 
   // Compile other projects.
-  run("sbt", "benchmark/compile")
-  run("sbt", "mesos-simulation/compile")
-  run("sbt", "plugin-interface/compile")
+ // run("sbt", "benchmark/compile")
+ // run("sbt", "mesos-simulation/compile")
+ // run("sbt", "plugin-interface/compile")
 
   // Check system integraion tests.
   checkSystemIntegrationTests(logFileName)
