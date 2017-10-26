@@ -13,15 +13,13 @@ ansiColor('gnome-terminal') {
           sh """sudo -E ci/pipeline jenkins"""
         }
       } finally {
-        //junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
-        //junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
+        junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
+        junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
         publishHTML([
             allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
             reportDir: 'target/scala-2.12/scapegoat-report', reportFiles: 'scapegoat.html',
             reportName: 'Scapegoat Report', reportTitles: ''
         ])
-        sh "ls *.tar.gz"
-        echo "tag: ${env.BUILD_TAG}"
         archive includes: "sandboxes.tar.gz"
         archive includes: "ci-${env.BUILD_TAG}.log.tar.gz"
         archive includes: "ci-${env.BUILD_TAG}.log"  // Only in case the build was  aborted and the logs weren't zipped
