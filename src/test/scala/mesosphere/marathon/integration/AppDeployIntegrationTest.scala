@@ -17,9 +17,6 @@ import scala.concurrent.duration._
 @IntegrationTest
 class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  //clean up state before running the test case
-  before(cleanUp())
-
   def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
   "AppDeploy" should {
@@ -79,7 +76,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       deployment2 should be(OK)
 
       And("BUT our app still has a backoff delay")
-      val queueAfterScaling: List[ITQueueItem] = marathon.launchQueue().value.queue
+      val queueAfterScaling: List[ITQueueItem] = marathon.launchQueueForAppId(app.id.toPath).value
       queueAfterScaling should have size 1
       queueAfterScaling.map(_.delay.overdue) should contain(false)
     }
@@ -118,7 +115,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       And("our app gets a backoff delay")
       WaitTestSupport.waitUntil("queue item") {
-        val queue: List[ITQueueItem] = marathon.launchQueue().value.queue
+        val queue: List[ITQueueItem] = marathon.launchQueueForAppId(app.id.toPath).value
         queue should have size 1
         queue.map(_.delay.overdue) should contain(false)
         true
@@ -197,7 +194,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "create a simple app with a Marathon HTTP health check using port instead of portIndex" in {
-      Given("a new app")
+      Given("A clean cluster (since we need a concrete port that should be free)")
+      cleanUp()
+
+      And("a new app")
       val port = mesosCluster.randomAgentPort()
       val app = appProxy(appId(Some("with-marathon-http-health-check-using-port")), "v1", instances = 1, healthCheck = None).
         copy(
@@ -275,9 +275,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(create)
 
       Then("the list of running app tasks can be fetched")
-      val apps = marathon.listAppsInBaseGroup
-      apps should be(OK)
-      apps.value should have size 1
+      val apps = marathon.listAppsInBaseGroupForAppId(app.id.toPath).value
+      apps should have size 1
 
       val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(app.id.toPath)
       tasksResult should be(OK)
@@ -314,7 +313,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val delete = marathon.deleteApp(id, force = true)
       delete should be(OK)
       waitForDeployment(delete)
-      marathon.listAppsInBaseGroup.value should have size 0
+      marathon.listAppsInBaseGroupForAppId(id).value should have size 0
     }
 
     "an unhealthy app fails to deploy because health checks takes too long to pass" in {
@@ -345,7 +344,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val delete = marathon.deleteApp(id, force = true)
       delete should be(OK)
       waitForDeployment(delete)
-      marathon.listAppsInBaseGroup.value should have size 0
+      marathon.listAppsInBaseGroupForAppId(id).value should have size 0
     }
 
     "update an app" in {
@@ -570,7 +569,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(delete)
 
       Then("All instances of the app get restarted")
-      marathon.listAppsInBaseGroup.value should have size 0
+      marathon.listAppsInBaseGroupForAppId(app.id.toPath).value should have size 0
     }
 
     "create and deploy an app with two tasks" in {
@@ -608,7 +607,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       deploymentSuccess.info("id") should be(deploymentId)
 
       Then("after that deployments should be empty")
-      val event: RestResult[List[ITDeployment]] = marathon.listDeploymentsForBaseGroup()
+      val event: RestResult[List[ITDeployment]] = marathon.listDeploymentsForPathId(appIdPath)
       event.value should be('empty)
 
       Then("Both tasks respond to http requests")
@@ -635,7 +634,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val deploymentId = extractDeploymentIds(create).head
 
       Then("the deployment gets created")
-      WaitTestSupport.validFor("deployment visible", 1.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
+      WaitTestSupport.validFor("deployment visible", 1.second)(marathon.listDeploymentsForPathId(id).value.size == 1)
 
       When("the deployment is forcefully removed")
       val delete = marathon.deleteDeployment(deploymentId, force = true)
@@ -643,7 +642,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("the deployment should be gone")
       waitForEvent("deployment_failed")
-      marathon.listDeploymentsForBaseGroup().value should have size 0
+      marathon.listDeploymentsForPathId(id).value should have size 0
 
       Then("the app should still be there")
       marathon.app(id) should be(OK)
@@ -661,7 +660,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val deploymentId = extractDeploymentIds(create).head
 
       Then("the deployment gets created")
-      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
+      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForPathId(id).value.size == 1)
 
       When("the deployment is rolled back")
       val delete = marathon.deleteDeployment(deploymentId, force = false)
@@ -677,7 +676,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("no more deployment in the queue")
       WaitTestSupport.waitUntil("Deployments get removed from the queue") {
-        marathon.listDeploymentsForBaseGroup().value.isEmpty
+        marathon.listDeploymentsForPathId(id).value.isEmpty
       }
 
       Then("the app should also be gone")

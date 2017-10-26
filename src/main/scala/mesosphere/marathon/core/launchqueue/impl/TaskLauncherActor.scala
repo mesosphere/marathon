@@ -6,7 +6,6 @@ import java.time.Clock
 import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
-import com.google.inject.Provider
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
@@ -20,7 +19,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, InstanceOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ RunSpec, Timestamp }
+import mesosphere.marathon.state.{ Region, RunSpec, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -37,7 +36,7 @@ private[launchqueue] object TaskLauncherActor {
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatisticsActor: ActorRef,
-    homeRegion: () => Option[String])(
+    localRegion: () => Option[Region])(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -46,7 +45,7 @@ private[launchqueue] object TaskLauncherActor {
       clock, taskOpFactory,
       maybeOfferReviver,
       instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
-      runSpec, initialCount, homeRegion))
+      runSpec, initialCount, localRegion))
   }
 
   sealed trait Requests
@@ -89,7 +88,7 @@ private class TaskLauncherActor(
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int,
-    homeRegion: () => Option[String]) extends Actor with StrictLogging with Stash {
+    localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]
@@ -325,7 +324,7 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
-      val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
+      val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
           offerMatchStatisticsActor ! matched
@@ -425,7 +424,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id), homeRegion)
+      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id))
     }
     private[this] var registeredAsMatcher = false
 

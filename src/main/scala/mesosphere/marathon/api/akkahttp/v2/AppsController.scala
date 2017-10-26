@@ -12,12 +12,11 @@ import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
-import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
+import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingRunSpecId
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
-import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
@@ -400,7 +399,7 @@ class AppsController(
             createApp
           }
         } ~
-        pathPrefix(ExistingAppPathId(groupManager.rootGroup)) { appId =>
+        pathPrefix(ExistingRunSpecId(groupManager.rootGroup)) { appId =>
           pathEndOrSingleSlash {
             get {
               showApp(appId)
