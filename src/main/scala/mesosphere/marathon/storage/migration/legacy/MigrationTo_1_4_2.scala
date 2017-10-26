@@ -6,6 +6,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.AppRepository
 
 import scala.concurrent.{ ExecutionContext, Future }
