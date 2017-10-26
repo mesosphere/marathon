@@ -21,10 +21,10 @@ ansiColor('gnome-terminal') {
             reportName: 'Scapegoat Report', reportTitles: ''
         ])
         sh "ls *.tar.gz"
-        echo "tag: $env.BUILD_TAG"
+        echo "tag: ${env.BUILD_TAG}"
         archive includes: "sandboxes.tar.gz"
-        archive includes: "ci-$env.BUILD_TAG.log.tar.gz"
-        archive includes: "ci-$env.BUILD_TAG.log"  // Only in case the build was  aborted and the logs weren't zipped
+        archive includes: "ci-${env.BUILD_TAG}.log.tar.gz"
+        archive includes: "ci-${env.BUILD_TAG}.log"  // Only in case the build was  aborted and the logs weren't zipped
       }
     }
   }
