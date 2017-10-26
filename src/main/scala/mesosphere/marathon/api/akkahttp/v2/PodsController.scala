@@ -1,31 +1,83 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
-import akka.http.scaladsl.model.StatusCodes
+import java.time.Clock
+
+import akka.event.EventStream
+import akka.http.scaladsl.model.{ HttpEntity, StatusCodes }
 import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.akkahttp.Controller
+import mesosphere.marathon.api.akkahttp.{ Controller, Headers }
 import mesosphere.marathon.api.akkahttp.PathMatchers.PodsPathIdLike
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.plugin.auth.Authenticator
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec }
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
+import mesosphere.marathon.api.v2.PodNormalization
+import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.event.PodEvent
+import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.raml.{ PodConversion, Raml }
+
+import async.Async._
+import scala.concurrent.ExecutionContext
 
 class PodsController(
+    val config: MarathonConf,
     val electionService: ElectionService,
-    val groupManager: GroupManager)(
+    val podManager: PodManager,
+    val groupManager: GroupManager,
+    val pluginManager: PluginManager,
+    val eventBus: EventStream,
+    val clock: Clock)(
     implicit
-    val authenticator: Authenticator) extends Controller {
+    val authorizer: Authorizer,
+    val authenticator: Authenticator,
+    val executionContext: ExecutionContext) extends Controller {
 
   import mesosphere.marathon.api.akkahttp.Directives._
+  import mesosphere.marathon.api.akkahttp.EntityMarshallers._
+
+  val podNormalizer = PodNormalization.apply(PodNormalization.Configuration(
+    config.defaultNetworkName.get))
 
   def capability(): Route =
     authenticated.apply { implicit identity =>
       complete(StatusCodes.OK)
     }
 
-  def create(): Route = ???
+  def create(): Route =
+    authenticated.apply { implicit identity =>
+      extractClientIP { clientIp =>
+        extractRequest { req =>
+          entity(as[raml.Pod]) { podDef =>
+            val pod = Raml.fromRaml(podNormalizer.normalized(podDef)).copy(version = clock.now())
+            assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
+              authorized(CreateRunSpec, pod).apply {
+                val p = async {
+                  // TODO: extract force parameter
+                  val force = false
+                  val deployment = await(podManager.create(pod, force))
+
+                  // TODO: How should we get the ip?
+                  val ip = clientIp.getAddress().get.toString
+                  eventBus.publish(PodEvent(ip, req.uri.toString(), PodEvent.Created))
+
+                  deployment
+                }
+                onSuccess(p) { plan =>
+                  // TODO: Set pod id uri
+                  val ramlPod = PodConversion.podRamlWriter.write(pod)
+                  complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
   def update(podId: PathId): Route = ???
 
