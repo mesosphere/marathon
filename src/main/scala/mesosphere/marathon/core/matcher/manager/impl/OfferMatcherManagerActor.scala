@@ -174,7 +174,7 @@ private[impl] class OfferMatcherManagerActor private (
       .map(_.getDisk.getPersistence.getId)
       .collect { case LocalVolumeId(volumeId) => volumeId.runSpecId }
       .toSet
-    val (reserved, normal) = matchers.toSeq.filter(_.isInterestedIn(offer)).partition(_.precedenceFor.exists(appReservations))
+    val (reserved, normal) = matchers.toSeq.partition(_.precedenceFor.exists(appReservations))
     //1 give the offer to the matcher waiting for a reservation
     //2 give the offer to anybody else
     //3 randomize both lists to be fair
