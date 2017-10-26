@@ -6,6 +6,7 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ AppRepository, PodRepository }
 
 import scala.concurrent.duration._
@@ -63,12 +64,12 @@ object MigrationTo_1_4_6 extends StrictLogging {
   def migrateUnreachableApps(appRepository: AppRepository, podRepository: PodRepository)(implicit env: Environment, ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     val appSink =
       Flow[AppDefinition]
-        .mapAsync(Int.MaxValue)(appRepository.store)
+        .mapAsync(Migration.maxConcurrency)(appRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     val podSink =
       Flow[PodDefinition]
-        .mapAsync(Int.MaxValue)(podRepository.store)
+        .mapAsync(Migration.maxConcurrency)(podRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     val migrateUnreachableStrategyWanted = env.vars.getOrElse(MigrationTo_1_4_6.MigrateUnreachableStrategyEnvVar, "false")

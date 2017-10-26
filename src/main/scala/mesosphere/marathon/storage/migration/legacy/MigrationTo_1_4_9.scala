@@ -6,6 +6,7 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.migration.legacy.MigrationTo_1_4_6.Environment
 import mesosphere.marathon.storage.repository.InstanceRepository
 
@@ -30,7 +31,7 @@ object MigrationTo_1_4_9 extends StrictLogging {
 
     val instanceSink =
       Flow[Instance]
-        .mapAsync(Int.MaxValue)(instanceRepository.store)
+        .mapAsync(Migration.maxConcurrency)(instanceRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     // we stick to already present migration indicating env variable to not confuse users
