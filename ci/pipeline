@@ -60,41 +60,31 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
 
 @main
 /**
- * Upload Marathon tgz tarballs and its cha1 checksum to S3.
+ * Upload Marathon tgz tarballs, its cha1 checksum and docs to S3.
  *
+ * @param version The version to upload.
  * @return Artifact description if it was uploaded.
  */
-def uploadTarballToS3(): Option[awsClient.Artifact] = utils.stage("Upload Packages") {
+def uploadTarballPackagesToS3(version: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
   import scala.collection.breakOut
 
+  // Upload docs
+  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
+  awsClient.upload(docsPath)
+
+  // Upload Marathon
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
     .headOption.flatMap(file => awsClient.archiveArtifact(Path(file)))
 }
 
-@main
 /**
- * Packages Marathon and uploads its artifacts alongside sha1 checksum to S3.
- *
- * @return Version and artifact description of Marathon build.
- */
-def createAndUploadPackages(): (String, Option[awsClient.Artifact]) = {
-  val version = createPackages()
-  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
-  val artifact = uploadTarballToS3()
-  awsClient.upload(docsPath)
-
-  createDockerAndLinux()
-  (version, artifact)
-}
-
-/**
- * Creates the zip and txz files of the Marathon runnable package with their
- * associated sha1
+ * Creates the tarball files of the Marathon runnable package with their
+ * associated sha1 and the tarball of the documentation with the RAML definitions.
  *
  * @return version of build.
  */
 @main
-def createPackages(): String = utils.stage("Package") {
+def createTarballPackages(): String = utils.stage("Package Tarballs") {
   val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball", "version")
 
   // Regex is for version:
@@ -113,14 +103,6 @@ def createPackages(): String = utils.stage("Package") {
   }
   println(s"Built tarballs for Marathon $version.")
   version
-}
-
-/**
- * Create Docker, rpm and deb packages.
- */
-@main
-def createDockerAndLinux(): Unit = utils.stage("Package Docker Image, Debian and RedHat Packages") {
-  %('sbt, "docker:publishLocal", "packageLinux")
 }
 
 /**
@@ -157,21 +139,26 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
 }
 
 /**
- * Run the main pipeline.
+ * Provision the build host.
+ */
+def provisionHost(): Unit = utils.stage("Provision") {
+  // Set port range for random port 0 allocation.
+  %('sudo, "ci/set_port_range.sh")
+
+  provision.killStaleTestProcesses()
+  provision.installMesos()
+}
+
+//////////////////// MAIN TARGETS ////////////////////
+
+/**
+ * Run the main build pipeline.
  *
- * @param publish Indicates whether a package should be published or not.
- * @return Version and artifact description of Marathon build.
+ * @return Version of Marathon build.
  */
 @main
-def run(publish: Boolean = false): (String, Option[awsClient.Artifact]) = {
-  utils.stage("Provision") {
-
-    // Set port range for random port 0 allocation.
-    %('sudo, "ci/set_port_range.sh")
-
-    provision.killStaleTestProcesses()
-    provision.installMesos()
-  }
+def build(): String = {
+  provisionHost()
 
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
   try {
@@ -180,15 +167,48 @@ def run(publish: Boolean = false): (String, Option[awsClient.Artifact]) = {
     zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
   }
 
-  val (version, maybeArtifact) = createAndUploadPackages()
-
-  if(publish) {
-    maybeArtifact.foreach { artifact =>
-      updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
-    }
+  val version = createTarballPackages()
+  utils.stage("Package Docker Image, Debian and RedHat Packages") {
+    %('sbt, "docker:publishLocal", "packageLinux")
   }
 
-  (version, maybeArtifact)
+  version
+}
+
+/**
+ * Build target for master and potential release branches.
+ */
+@main
+def master(): Unit = {
+  val version = build()
+
+  // Uploads
+  val maybeArtifact = uploadTarballPackagesToS3(version)
+  maybeArtifact.foreach { artifact =>
+    updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
+  }
+  // TODO: Publish swagger files.
+  // TODO: Publish native packages to unstable.
+}
+
+/**
+ * Build target for pull request builds.
+ */
+@main
+def pr(): Unit = asPullRequest {
+  val version = build()
+
+  // Uploads
+  val artifact = uploadTarballPackagesToS3(version)
+  (version, artifact)
+}
+
+/**
+ * Build target for our build loop.
+ */
+@main
+def loop(): Unit = {
+  build()
 }
 
 /**
@@ -198,15 +218,6 @@ def run(publish: Boolean = false): (String, Option[awsClient.Artifact]) = {
  */
 @main
 def jenkins(): Unit = {
-  if(utils.isPullRequest) {
-    asPullRequest { run() }
-  } else {
-    run(publish = utils.isMasterBuild)
-  }
+  if(utils.isPullRequest) pr()
+  else master()
 }
-
-/**
- * The target for our loop builds on Jenkins.
- */
-@main
-def loop(): Unit = run(publish = false)
