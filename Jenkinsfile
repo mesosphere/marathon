@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-ansiColor('gnome-terminal') {
+ansiColor('xterm') {
   node('JenkinsMarathonCI-Debian8-2017-10-06') {
     stage("Run Pipeline") {
       try {
@@ -16,8 +16,8 @@ ansiColor('gnome-terminal') {
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
         junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
         archive includes: 'sandboxes.tar.gz'
-        archive includes: 'ci.tar.gz'
-        archive includes: 'ci.log'  // Only in case the build was  aborted and the logs weren't zipped
+        archive includes: 'ci-*.tar.gz'
+        archive includes: 'ci-*.log'  // Only in case the build was  aborted and the logs weren't zipped
       }
     }
   }
