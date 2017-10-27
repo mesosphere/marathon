@@ -41,7 +41,7 @@ class V2Controller(
         queueController.route
       } ~
       pathPrefix("tasks") {
-        queueController.route
+        tasksController.route
       }
   }
 }
