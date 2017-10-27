@@ -14,13 +14,17 @@ class V2Controller(
     infoController: InfoController,
     leaderController: LeaderController,
     queueController: QueueController,
-    tasksController: TasksController
+    tasksController: TasksController,
+    podsController: PodsController
 ) extends Controller {
   import Directives._
   override val route: Route = {
     pathPrefix("apps") {
       appsController.route
     } ~
+      pathPrefix("pods") {
+        podsController.route
+      } ~
       pathPrefix("events") {
         eventsController.route
       } ~

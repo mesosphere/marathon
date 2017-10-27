@@ -46,7 +46,38 @@ object PathMatchers {
           Tuple1(PathId.sanitized(reversePieces.reverse)))
     }
 
-    override def apply(path: Path) = iter(Nil, path)
+    def iter(remaining: Path): Matching[Tuple1[PathId]] = iter(Nil, remaining)
+
+    override def apply(path: Path): Matching[Tuple1[PathId]] = iter(path)
+  }
+
+  /**
+    * Matches anything until ::. The remaining path will be :: plus everything that follows :: in the original path.
+    * The matched path up until :: will be extracted.
+    *
+    * Note: This makes the use of :: illegal in a pods path.
+    */
+  case object PodsPathIdLike extends PathMatcher1[String] {
+    // Simple reg ex that matches anything before and after ::
+    val keywordMatcher = "^(.*)::(.*)$".r
+
+    @tailrec def iter(accumulatedPathId: String, remaining: Path): Matching[Tuple1[String]] = remaining match {
+      case Path.Slash(rest) =>
+        if (rest.isEmpty) Unmatched
+        else iter(accumulatedPathId + "/", rest)
+      case Path.Segment(segment, rest) =>
+        segment match {
+          case keywordMatcher(before, keyword) =>
+            Matched(s"::$keyword" :: rest, Tuple1(accumulatedPathId + before))
+          case _ =>
+            iter(accumulatedPathId + segment, rest)
+        }
+      case _ => Matched(remaining, Tuple1(accumulatedPathId))
+    }
+
+    def iter(remaining: Path): Matching[Tuple1[String]] = iter("", remaining)
+
+    override def apply(path: Path) = iter(path)
   }
 
   /**
@@ -61,7 +92,7 @@ object PathMatchers {
     * Given the url above, this matcher will only consume "my-group/restart" from the path,
     * leaving the rest of the matcher to match the rest
     */
-  case class ExistingAppPathId(rootGroup: () => RootGroup) extends PathMatcher1[PathId] {
+  case class ExistingRunSpecId(rootGroup: () => RootGroup) extends PathMatcher1[PathId] {
     import akka.http.scaladsl.server.PathMatcher._
 
     @tailrec final def iter(collected: Vector[String], remaining: Path, group: Group): Matching[Tuple1[PathId]] = remaining match {

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher, ResourceUtil }
+import mesosphere.marathon.tasks.{ OfferUtil, PortsMatch, PortsMatcher, ResourceUtil }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
@@ -133,7 +133,7 @@ object ResourceMatcher extends StrictLogging {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, knownInstances: => Seq[Instance],
-    selector: ResourceSelector, conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty)(implicit clock: Clock): ResourceMatchResponse = {
+    selector: ResourceSelector, conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin] = Seq.empty, localRegion: Option[Region] = None)(implicit clock: Clock): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 
@@ -176,6 +176,14 @@ object ResourceMatcher extends StrictLogging {
 
     def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
 
+    val meetsFaultDomainRequirements: Boolean = {
+      val faultDomainFields = Set(Constraints.regionField, Constraints.zoneField)
+      val offerHasFaultDomainConstraints = runSpec.constraints.exists(c => faultDomainFields.contains(c.getField))
+      val maybeOfferRegion = OfferUtil.region(offer)
+      val offerIsFromLocalRegion = maybeOfferRegion.isEmpty || localRegion.exists(region => maybeOfferRegion.contains(region.value))
+      offerHasFaultDomainConstraints || offerIsFromLocalRegion
+    }
+
     val meetsAllConstraints: Boolean = {
       lazy val instances = knownInstances.filter { inst =>
         // we ignore instances of older configurations: this way we can place a new instance on an agent that already
@@ -212,6 +220,7 @@ object ResourceMatcher extends StrictLogging {
     }
 
     val resourceMatchOpt = if (scalarMatchResults.forall(_.matches)
+      && meetsFaultDomainRequirements
       && meetsAllConstraints
       && checkAvailability
       && schedulerPlugins.forall(_.isMatch(offer, runSpec))) {
