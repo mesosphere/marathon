@@ -22,11 +22,13 @@ val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 
 /**
  * Compile Marathon and run unit and integration tests followed by scapegoat.
+ *
+ * @param logFileName Name of file which collects logs.
  */
 @main
-def compileAndTest(): Unit = utils.stage("Compile and Test") {
+def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") {
 
-  def run(cmd: String *) = utils.runWithTimeout(1.hour)(cmd)
+  def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
 
   run("sbt", "clean", "test", "integration:test", "scapegoat")
 
@@ -36,10 +38,15 @@ def compileAndTest(): Unit = utils.stage("Compile and Test") {
   run("sbt", "plugin-interface/compile")
 }
 
+/**
+ * Compresses sandboxes and logs.
+ *
+ * @param logFileName Name of log file.
+ */
 @main
-def zipLogs(): Unit = {
+def zipLogs(logFileName: String = "ci.log"): Unit = {
   Try(%("tar", "-zcf", "sandboxes.tar.gz", "sandboxes"))
-  Try(%("tar", "-zcf", "ci.tar.gz", "--remove-files", "ci.log"))
+  Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
 @main
@@ -59,13 +66,14 @@ def uploadTarballToS3(): Option[awsClient.Artifact] = utils.stage("Upload Packag
 /**
  * Packages Marathon and uploads its artifacts alongside sha1 checksum to S3.
  *
+ * @param snapshot Indicates whether we want to upload the snapshot.
  * @return Version and artifact description of Marathon build.
  */
-def createAndUploadPackages(): (String, Option[awsClient.Artifact]) = {
+def createAndUploadPackages(snapshot: Boolean = true): (String, Option[awsClient.Artifact]) = {
   val version = createPackages()
   val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
-  val artifact = uploadTarballToS3()
-  awsClient.upload(docsPath)
+  val artifact = if(snapshot) uploadTarballToS3() else None
+  if(snapshot) awsClient.upload(docsPath)
 
   createDockerAndLinux()
   (version, artifact)
@@ -143,10 +151,12 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
 /**
  * Run the main pipeline.
  *
+ * @param publish Indicates whether a package should be published or not.
+ * @param snapshot Indicates whether the run should upload snapshots.
  * @return Version and artifact description of Marathon build.
  */
 @main
-def run(): (String, Option[awsClient.Artifact]) = {
+def run(publish: Boolean = false, snapshot: Boolean = true): (String, Option[awsClient.Artifact]) = {
   utils.stage("Provision") {
 
     // Set port range for random port 0 allocation.
@@ -156,15 +166,16 @@ def run(): (String, Option[awsClient.Artifact]) = {
     provision.installMesos()
   }
 
+  val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
   try {
-    compileAndTest()
+    compileAndTest(logFileName)
   } finally {
-    zipLogs()    // Try to archive ci and sandbox logs in any case
+    zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
   }
 
-  val (version, maybeArtifact) = createAndUploadPackages()
+  val (version, maybeArtifact) = createAndUploadPackages(snapshot)
 
-  if(utils.isMasterBuild) {
+  if(publish) {
     maybeArtifact.foreach { artifact =>
       updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
     }
@@ -181,8 +192,14 @@ def run(): (String, Option[awsClient.Artifact]) = {
 @main
 def jenkins(): Unit = {
   if(utils.isPullRequest) {
-    asPullRequest { run() }
+    asPullRequest { run(publish = false, snapshot = true) }
   } else {
-    run()
+    run(publish = utils.isMasterBuild)
   }
 }
+
+/**
+ * The target for our loop builds on Jenkins.
+ */
+@main
+def loop(): Unit = run(publish = false, snapshot = false)
