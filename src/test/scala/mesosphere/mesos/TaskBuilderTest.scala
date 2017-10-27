@@ -3,23 +3,24 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ App, Resources }
-import mesosphere.marathon.state.Container.{ Docker, PortMapping }
+import mesosphere.marathon.raml.{App, Resources}
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
+import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
-import mesosphere.marathon.{ Protos, _ }
-import mesosphere.mesos.protos.{ Resource, _ }
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.marathon.{Protos, _}
+import mesosphere.mesos.protos.{Resource, _}
 import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.{ Protos => MesosProtos }
-import org.joda.time.{ DateTime, DateTimeZone }
+import org.apache.mesos.{Protos => MesosProtos}
+import org.joda.time.{DateTime, DateTimeZone}
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskBuilderTest extends UnitTest {
@@ -990,6 +991,10 @@ class TaskBuilderTest extends UnitTest {
 
       assert(!taskInfo.hasCommand)
       assert(cmd.getValue == "chmod ug+rx '/custom/executor' && exec '/custom/executor' a b c")
+      assert(taskInfo.getExecutor.getResourcesList == Seq(
+        ScalarResource.cpus(0.1),
+        ScalarResource.memory(32.0)
+      ).map(resourceToProto).asJava)
     }
 
     "BuildIfMatchesWithRole" in {

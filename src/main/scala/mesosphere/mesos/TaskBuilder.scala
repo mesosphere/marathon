@@ -11,6 +11,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.Implicits._
+import mesosphere.mesos.protos.ScalarResource
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
 
@@ -65,7 +66,10 @@ class TaskBuilder(
 
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
-
+          .addAllResources(Seq(
+            ScalarResource.cpus(0.1),
+            ScalarResource.memory(32.0)
+          ).map(resourceToProto).asJava)
         containerProto.foreach(info.setContainer)
 
         val command =
