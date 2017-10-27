@@ -46,6 +46,7 @@ import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
+import AppsDirectives._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
