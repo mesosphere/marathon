@@ -21,7 +21,7 @@ node('shakedown') {
                 sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
                 sh """git checkout $params.Pull_Request_Id"""
             }
-            sh """python3 ./ci/github_status.py "$JOB_NAME" "$JOB_URL" \$(git rev-parse HEAD) PENDING"""
+            sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$JOB_URL" \$(git rev-parse HEAD) PENDING"""
 
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
           }
@@ -29,7 +29,7 @@ node('shakedown') {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
 
             withCredentials([usernamePassword(credentialsId:'a7ac7f84-64ea-4483-8e66-bb204484e58f',passwordVariable:'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
-                sh """python3 ./ci/github_status.py "$JOB_NAME" "$JOB_URL" \$(git rev-parse HEAD) $currentBuild.result"""
+                sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$JOB_URL" \$(git rev-parse HEAD) $currentBuild.result"""
             }
         }
     }
