@@ -2217,13 +2217,14 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "List running tasks" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
+      val taskId = "task_id"
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
       groupManager.rootGroup() returns rootGroup
       val instance = mock[Instance]
       instance.instanceId returns Instance.Id.forRunSpec(app.id)
-      instance.tasksMap returns Map(Task.Id("task_id") -> Task.Reserved(
-        Task.Id("task_id"),
+      instance.tasksMap returns Map(Task.Id(taskId) -> Task.Reserved(
+        Task.Id(taskId),
         Reservation(Seq.empty, Reservation.State.Launched),
         Task.Status(
           stagedAt = clock.now(),
@@ -2247,6 +2248,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       Get(uri, entity) ~> route ~> check {
         status shouldEqual StatusCodes.OK
+        (Json.parse(responseAs[String]) \ "tasks" \ 0 \ "id").get shouldEqual JsString(taskId)
       }
     }
 
