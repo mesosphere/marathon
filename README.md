@@ -272,6 +272,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Criteo](http://www.criteo.com/)
 * [Daemon](http://www.daemon.com.au/)
 * [DataMan](http://www.shurenyun.com/)
+* [Deutsche Telekom] (https://www.telekom.com/)
 * [DHL Parcel](https://www.dhlparcel.nl/)
 * [Disqus](https://disqus.com/)
 * [DueDil](https://www.duedil.com/)
