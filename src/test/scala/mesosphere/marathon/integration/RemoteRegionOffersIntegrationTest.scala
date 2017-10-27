@@ -25,8 +25,8 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
   val homeZone = Zone("home_zone")
 
   val remoteRegion = Region("remote_region")
-  val remoteZone1 = Zone("remote_zone")
-  val remoteZone2 = Zone("remote_zone")
+  val remoteZone1 = Zone("remote_zone1")
+  val remoteZone2 = Zone("remote_zone2")
 
   override def mastersFaultDomains = Seq(Some(FaultDomain(region = homeRegion, zone = homeZone)))
 
@@ -45,16 +45,13 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed without specifying region")
-      logger.info("creating app")
       val result = marathon.createAppV2(app)
 
       Then("The app is created in the default region")
       result should be(Created)
-      logger.info("app created")
       extractDeploymentIds(result)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
-      logger.info("tasks started")
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
       val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
 
@@ -67,17 +64,14 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints =
         Set(Constraints.regionField :: "LIKE" :: remoteRegion.value :: Nil))
 
-      When("The app is deployed without specifying region")
-      logger.info("creating app")
+      When("The app is deployed with specific region constraint")
       val result = marathon.createAppV2(app)
 
-      Then("The app is created in the default region")
+      Then("The app is created in the specified region")
       result should be(Created)
-      logger.info("app created")
       extractDeploymentIds(result)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
-      logger.info("tasks started")
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
       val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
 
@@ -92,17 +86,14 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
         Constraints.zoneField :: "LIKE" :: remoteZone2.value :: Nil
       ))
 
-      When("The app is deployed without specifying region")
-      logger.info("creating app")
+      When("The app is deployed with specific region and zone constraints")
       val result = marathon.createAppV2(app)
 
-      Then("The app is created in the default region")
+      Then("The app is created in the proper region and a proper zone")
       result should be(Created)
-      logger.info("app created")
       extractDeploymentIds(result)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
-      logger.info("tasks started")
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
       val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
       val agentZone = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_zone")
