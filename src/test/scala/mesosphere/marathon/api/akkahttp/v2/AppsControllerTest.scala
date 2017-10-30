@@ -1,12 +1,15 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
+import java.net.InetSocketAddress
+
 import akka.Done
 import akka.http.scaladsl.model.Uri.{ Path, Query }
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, StatusCodes, Uri }
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.testkit.TestProbe
 import akka.util.ByteString
 import mesosphere.UnitTest
 import mesosphere.marathon.api._
@@ -17,6 +20,7 @@ import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, Selector, TaskCounts }
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
@@ -31,6 +35,7 @@ import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.mockito.Matchers
 import org.mockito.Mockito.when
 import play.api.libs.json._
+import akka.http.scaladsl.model.headers.`X-Forwarded-For`
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -328,6 +333,33 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
 
+    "Do partial update with patch methods" in new Fixture {
+      Given("An app")
+      val id = "/app"
+      val app = App(
+        id = id,
+        cmd = Some("cmd"),
+        instances = 1
+      )
+      prepareApp(app, groupManager) // app is stored
+
+      val eventStreamProbe = TestProbe("eventStream")
+      system.eventStream.subscribe(eventStreamProbe.ref, classOf[ApiPostEvent])
+
+      When("The application is updated")
+      val updateRequest = App(id = id, instances = 2)
+      val updatedBody = Json.stringify(Json.toJson(updateRequest)).getBytes("UTF-8")
+
+      val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
+      val ipHeader = `X-Forwarded-For`(RemoteAddress(new InetSocketAddress("8.8.8.8", 31337)))
+      Patch(Uri./.withPath(Path(app.id)), entity).addHeader(ipHeader) ~> route ~> check {
+        Then("It is successful")
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+        eventStreamProbe.expectMsgClass(classOf[ApiPostEvent]).clientIp shouldEqual ("8.8.8.8:31337")
+      }
+    }
+
     "Fail creating application when network name is missing" in new Fixture {
       Given("An app and group")
       val app = App(
@@ -503,11 +535,16 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val updatedJson = Json.toJson(updatedApp).as[JsObject]
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
 
+      val eventStreamProbe = TestProbe("eventStream")
+      system.eventStream.subscribe(eventStreamProbe.ref, classOf[ApiPostEvent])
+
       val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
+      val ipHeader = `X-Forwarded-For`(RemoteAddress(new InetSocketAddress("8.8.8.8", 31337)))
+      Put(Uri./.withPath(Path(app.id)), entity).addHeader(ipHeader) ~> route ~> check {
         Then("It is successful")
         status shouldEqual StatusCodes.OK withClue s"response=${responseAs[String]}"
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+        eventStreamProbe.expectMsgClass(classOf[ApiPostEvent]).clientIp shouldEqual ("8.8.8.8:31337")
       }
     }
 

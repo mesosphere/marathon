@@ -9,18 +9,7 @@ import mesosphere.marathon.raml.{ Network, NetworkMode }
 
 @SuppressWarnings(Array("all")) // wix breaks stuff
 trait NetworkValidation {
-  import NameValidation._
   import Validation._
-
-  implicit val modelNetworkValidator: Validator[pod.Network] = new Validator[pod.Network] {
-    val containerNetworkValidator: Validator[pod.ContainerNetwork] = validator[pod.ContainerNetwork] { net =>
-      net.name is validName
-    }
-    override def apply(net: pod.Network): Result = net match {
-      case ct: pod.ContainerNetwork => validate(ct)(containerNetworkValidator)
-      case _ => Success // remaining network types don't have validation yet
-    }
-  }
 
   /** changes here should be reflected in [[modelNetworksValidator]] */
   implicit val ramlNetworksValidator: Validator[Seq[Network]] =
