@@ -98,11 +98,11 @@ See [the port definition section](#port-definition) for more information.
 
 The following use cases explore how you can configure port mapping to meet your needs. 
 
-You will configure 3 defined ports (`containerPort`, `hostPort`, and `servicePort`) and the label for `VIP_0` in your port mapping.
+You can configure 3 defined ports: `containerPort`, `hostPort`, and `servicePort`, as well as the label for `VIP_0` in your port mapping.
 
-All applications on Mesos are hosted in containers. Containers can be run in bridge or host mode.
+All applications on Mesos are hosted in containers. Containers can run with a network configuration in bridge or host mode.
 
-Let us assume an app called "ACME," and that the actual application opens port `8080`.
+Let us assume an application called "ACME," which opens port `8080`.
 
 #### Host Mode Use Case
 
@@ -112,17 +112,17 @@ When in host mode, the container will have the host network interface defined in
 
 If the container is run in bridge mode, it gets its own network interface and the `containerPort` is `8080`. In bridge mode, the container will open a pseudo random port on the host and bridge/NAT communication to the container port.
 
-For example, lets say the host port port is `31000`. Now, the `containerPort` is `8080`, but the `hostPort` is `31000`. Clients to this service will open port `31000` on the host the service is running on. The container will route traffic to the internal port in the container, `8080`.
+For example, lets say the host port is `31000`. Now, the `containerPort` is `8080`, but the `hostPort` is `31000`. Clients connecting to this service will open port `31000` on the host the service is running on. The container will route traffic to the internal port in the container, `8080`.
 
 ##### Multiple App Instances Use Case
 
-Now, let's say you have 3 instances of app ACME: `10.0.0.2:31000`, `10.0.0.2:31001`, and `10.0.0.3:31000`. There is a common need to have a port that will route with an algorithm to each of those instances. The algorithm used is configured in the load balancer. This "port" is metadata specific to this application.  All instances of the application will be hosted behind this port.
+Now, let's say you have 3 instances of app ACME: `10.0.0.2:31000`, `10.0.0.2:31001`, and `10.0.0.3:31000`. There is a common need to have a port that will route with an algorithm to each of those instances. The algorithm used is determined by the configuration of the load balancer. This "port" is metadata specific to this application.  All instances of the application will be hosted behind this port.
 
 In Marathon, this is referred to as the service port. The service port is specified in the `servicePort` parameter of the ACME app definition. Let us assume `servicePort` is specified as `8080`.
 
-The service port is metadata; Marathon does not do anything with this information except track it and provide it to a load balancer. The user is expected to configure a load balancer to host a port `8080`, or refer to the `servicePort`, and route to each of the instances of the application. All metadata is queryable from Marathon.
+The service port is metadata; Marathon does not do anything with this information except track it and provide it to a load balancer. The DevOps team setting up this service is expected to create a script or provide a means to read the `servicePort` and configure the load balancer to route calls to that port (port `8080` in this case) to each of the instances of the application. All metadata is queryable from Marathon.
 
-The [Marathon-LB service](https://docs.mesosphere.com/1.10/networking/marathon-lb/), when configured, does exactly this.  Marathon-LB will register all instances of an app and route to its configured `servicePort`. In the configuration in this example, a client will connect to a load balancer at port `8080` (`servicePort`), which will route (with an algorithm) to `10.0.0.2:31000` (`hostPort`), which will in turn route to `8080` (`containerPort`) of the internal application.
+The [Marathon-LB service](https://docs.mesosphere.com/1.10/networking/marathon-lb/), when configured, does exactly this.  Marathon-LB will register all instances of an app and route to its configured `servicePort`. Marathon-LB is an HAProxy service with scripts that will register all instances of an app and route to its configured `servicePort`. In the configuration in this example, a client will connect to a load balancer at port `8080` (`servicePort`), which will route (with an algorithm) to `10.0.0.2:31000` (`hostPort`), which will in turn route to `8080` (`containerPort`) of the internal application.
 
 #### The `VIP_0` Label Use Case
 
