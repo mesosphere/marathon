@@ -66,6 +66,10 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
     "considers it an unmatch if path starts with keyword" in {
       AppPathIdLike(Path("/restart")) shouldBe Unmatched
     }
+
+    "keeps the slash at the end of route" in {
+      AppPathIdLike(Path("test/group1/app1/")) shouldBe Matched(Path("/"), Tuple1("/test/group1/app1".toPath))
+    }
   }
 
   "PodsPathIdLike matcher" should {
