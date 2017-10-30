@@ -123,6 +123,12 @@ class TasksController(
       }
   }
 
+  /**
+    * Given a list of instances and applications, prepares a collections of tasks that should be killed by this API method
+    * @param instanceIdsToAppId pre-filtered lists of instances
+    * @param affectedApps apps that belong to the pre-filtered instances (used for filtering out pods)
+    * @return list of tasks to be killed
+    */
   private def getTasksToKill(instanceIdsToAppId: Map[Id, PathId], affectedApps: IndexedSeq[AppDefinition])(implicit identity: Identity): Future[Map[PathId, Seq[Instance]]] = async {
     /**
       * Pods can't be killed using /tasks endpoint, only apps
