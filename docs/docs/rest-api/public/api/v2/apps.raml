@@ -500,7 +500,8 @@
               If scale=true, than a deployment is triggered and the deployment is returned.
             body:
               application/json:
-                example: !include examples/app_tasks.json
+                type: instance.InstanceList | deploymentResult.DeploymentResult
+#                example: !include examples/app_tasks.json //todo fixit
           404:
             description: No task found with this `app_id`.
             body:

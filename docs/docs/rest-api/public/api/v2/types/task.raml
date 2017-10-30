@@ -1,0 +1,54 @@
+#%RAML 1.0 Library
+uses:
+  health: healthCheck.raml
+  numbers: numberTypes.raml
+  strings: stringTypes.raml
+
+types:
+
+  LocalVolumeId:
+    type: object
+    properties:
+      runSpecId: strings.PathId
+      containerPath: string
+      uuid: string
+      persistenceId: string
+
+  Timeout:
+    type: object
+    properties:
+      initiated: datetime
+      deadline: datetime
+      reason:
+        type: string
+        enum: [RelaunchEscalationTimeout, ReservationTimeout]
+
+  State:
+    type: object
+    properties:
+      name: string
+      timeout?: Timeout
+
+  Reservation:
+    type: object
+    properties:
+      volumeIds: LocalVolumeId[]
+      state: State
+
+  Status:
+    type: object
+    properties:
+      stagedAt: datetime
+      startedAt?: datetime
+      mesosStatus?: string
+      condition: strings.Condition
+
+  Task:
+    type: object
+    properties:
+      taskId: string
+      reservation?: Reservation
+      status: Status
+      runSpecVersion: datetime
+
+    

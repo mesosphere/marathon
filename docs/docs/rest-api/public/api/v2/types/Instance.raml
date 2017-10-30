@@ -1,0 +1,46 @@
+#%RAML 1.0 Library
+uses:
+  health: healthCheck.raml
+  numbers: numberTypes.raml
+  strings: stringTypes.raml
+  offer: offer.raml
+  task: task.raml
+  unreachableStrategy: unreachableStrategy.raml
+
+types:
+
+  AgentInfo:
+    type: object
+    properties:
+      host: string
+      agentId?: string
+      region?: string
+      zone?: string
+      attributes: offer.AgentAttribute[]
+
+  InstanceState:
+    type: object
+    properties:
+      condition: strings.Condition
+      since: datetime
+      activeSince?: datetime
+      healthy?: boolean
+
+  Instance:
+    type: object
+    properties:
+      instanceId: strings.InstanceId
+      agentInfo: AgentInfo
+      taskMap:
+        type: object
+        properties:
+          /.*/: task.Task
+      runSpecVersion: datetime
+      state: InstanceState
+      unreachableStrategy: unreachableStrategy.UnreachableStrategy
+
+  InstanceList:
+    type: object
+    properties:
+      tasks: Instance[]
+    

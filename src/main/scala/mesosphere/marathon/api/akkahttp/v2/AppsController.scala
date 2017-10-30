@@ -47,6 +47,7 @@ import PathMatchers._
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 import AppsDirectives._
+import mesosphere.marathon.raml.InstanceConversion._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -340,7 +341,7 @@ class AppsController(
             }
           case TaskKillingMode.Wipe =>
             onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
-              complete(Json.obj("tasks" -> instances))
+              complete(raml.InstanceList(instances.map(_.toRaml)))
             }
           case TaskKillingMode.KillWithoutWipe =>
             onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>

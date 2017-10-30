@@ -1,16 +1,44 @@
 {
   "tasks": [
     {
-      "appId": "/minecraft/survival-world",
-      "host": "srv7.hw.ca1.mesosphere.com",
-      "id": "minecraft_survival-world.564bd685-4c30-11e5-98c1-be5b2935a987",
-      "ports": [
-        31756
-      ],
-      "slaveId": null,
-      "stagedAt": "2015-08-26T20:23:39.463Z",
-      "startedAt": "2015-08-26T20:23:44.678Z",
-      "version": "2015-04-17T04:00:14.171Z"
+      "instanceId": "minecraft_survival-world.marathon-9538079c-3898-4e32-aa31-799bf9097f74",
+      "agentInfo": {
+        "host": "srv7.hw.ca1.mesosphere.com",
+        "attributes": []
+      },
+      "taskMap": {
+        "taskName": {
+          "taskId": "minecraft_survival-world.564bd685-4c30-11e5-98c1-be5b2935a987",
+          "reservation" : {
+            "volumeIds": {
+              "runSpecId": "/minecraft/survival-world",
+              "containerPath": "$anon",
+              "uuid": "ac30b13f-00c5-4bc1-b083-d21094797f86",
+              "persistenceId": "minecraft_survival-world#$anon#ac30b13f-00c5-4bc1-b083-d21094797f86"
+            },
+            "state": {
+              "name": "minecraft_survival-world",
+              "timeout": {
+                "initiated": "2015-08-26T21:23:44.678Z",
+                "deadline": "2015-08-26T22:23:44.678Z",
+                "reason": "RelaunchEscalationTimeout"
+              }
+            }
+          },
+          "status": {
+            "stagedAt": "2015-08-26T20:23:44.678Z",
+            "startedAt": "2015-08-26T20:23:44.678Z",
+            "mesosStatus": null,
+            "condition": "Running"
+          },
+          "runSpecVersion": "2015-08-26T20:23:44.678Z"
+        }
+      },
+      "runSpecVersion": "2015-08-26T20:23:44.678Z",
+      "state": {
+        "condition": "Running"
+      },
+      "unreachableStrategy": "disabled"
     }
   ]
 }

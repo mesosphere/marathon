@@ -78,6 +78,22 @@ types:
       - TASK_UNREACHABLE
       - TASK_GONE
       - TASK_DROPPED
+  Condition:
+    type: string
+    enum:
+      - Error
+      - Failed
+      - Finished
+      - Killed
+      - Killing
+      - Running
+      - Staging
+      - Starting
+      - Unreachable
+      - UnreachableInactive
+      - Gone
+      - Dropped
+      - Unknown
   Message:
     type: object
     properties:
