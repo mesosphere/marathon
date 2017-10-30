@@ -26,7 +26,7 @@ trait RouteBehaviours extends ScalatestRouteTest with Inside { this: UnitTest =>
 
   def unauthorizedRoute(forRoute: Route, withRequest: HttpRequest): Unit = {
     s"deny access to ${withRequest.method.value} of ${withRequest.uri} without authorization" in {
-      When("we try to fetch the info")
+      When(s"we try to fetch from $forRoute")
       withRequest ~> forRoute ~> check {
         Then("we receive a NotAuthenticated response")
         rejection shouldBe a[NotAuthorized]

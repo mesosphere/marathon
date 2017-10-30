@@ -45,7 +45,7 @@ class PodsController(
 
   def capability(): Route =
     authenticated.apply { implicit identity =>
-      complete(StatusCodes.OK)
+      complete((StatusCodes.OK, ""))
     }
 
   def create(): Route =
