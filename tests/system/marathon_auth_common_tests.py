@@ -27,7 +27,8 @@ def test_non_authorized_user():
             error = exec_info.value
             assert str(error) == "You are not authorized to perform this operation"
 
-
+# NOTE:  this is a common test file.   All test suites which import this common
+# set of tests will need to `from fixtures import user_billy` for this fixture to work.
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_authorized_non_super_user(user_billy):
     with shakedown.dcos_user('billy', 'billy'):
