@@ -148,4 +148,6 @@ def uninstall(service, package=PACKAGE_NAME):
             shakedown.delete_zk_node('/universe/{}'.format(service))
 
     except Exception as e:
+        print("Could not unintall {}".format(PACKAGE_NAME))
+        print(e)
         pass

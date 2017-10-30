@@ -8,7 +8,8 @@ import shakedown
 
 from dcos import marathon
 from urllib.parse import urljoin
-from fixtures import user_billy
+from fixtures import user_billy # NOQA
+
 
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_non_authenticated_user():
@@ -28,8 +29,8 @@ def test_non_authorized_user():
             assert str(error) == "You are not authorized to perform this operation"
 
 
-@pytest.mark.skipif("shakedown.ee_version() is None")
-def test_authorized_non_super_user(user_billy):
+@pytest.mark.skipif("shakedown.ee_version() is None") # NOQA
+def test_authorized_non_super_user(user_billy): # NOQA
     with shakedown.dcos_user('billy', 'billy'):
         client = marathon.create_client()
         assert len(client.get_apps()) == 0
