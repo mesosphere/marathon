@@ -43,7 +43,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 
