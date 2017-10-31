@@ -10,9 +10,9 @@ Constraints control where apps run to allow optimizing for either fault toleranc
 
 ### Hostname as field name
 
-Entering `@hostname` as the field name matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
+Entering `hostname` as the field name matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
 
-All Marathon operators are supported when the field name is `@hostname`.
+All Marathon operators are supported when the field name is `hostname`.
 
 ### Attribute as field name
 
