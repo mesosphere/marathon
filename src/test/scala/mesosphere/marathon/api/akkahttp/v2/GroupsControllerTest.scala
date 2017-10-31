@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.akkahttp.v2
+package mesosphere.marathon
+package api.akkahttp.v2
 
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.typesafe.scalalogging.StrictLogging
