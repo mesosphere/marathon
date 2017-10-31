@@ -12,6 +12,12 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state.{ Group, PathId }
 import play.api.libs.json.Json
+import akka.http.scaladsl.server.Route
+import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, GroupPathIdLike }
+import mesosphere.marathon.core.appinfo.GroupInfoService
+import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.plugin.auth.{ Authorizer, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.state.PathId
 
 import scala.concurrent.ExecutionContext
 

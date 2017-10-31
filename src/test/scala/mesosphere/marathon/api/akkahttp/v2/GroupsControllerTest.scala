@@ -4,23 +4,22 @@ package api.akkahttp.v2
 import akka.http.scaladsl.model.Uri.{ Path, Query }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.Accept
-import akka.http.scaladsl.server.MalformedQueryParamRejection
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.api.akkahttp.Rejections
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.GroupCreation
 import org.scalatest.Inside
-import mesosphere.marathon.state.PathId._
 
 import scala.concurrent.Future
 
 class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside with RouteBehaviours with StrictLogging with GroupCreation {
+
   "Group detail" should {
     {
       val controller = Fixture(authenticated = false).groupsController
