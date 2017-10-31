@@ -34,6 +34,7 @@ class GroupsController(electionService: ElectionService)(
 
   def versionDetail(groupId: PathId, version: String): Route = ???
 
+  // format: OFF
   val route: Route = {
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
@@ -73,4 +74,5 @@ class GroupsController(electionService: ElectionService)(
       }
     }
   }
+  // format: On
 }
