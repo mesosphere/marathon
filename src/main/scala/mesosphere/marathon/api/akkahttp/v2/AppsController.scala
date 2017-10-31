@@ -158,7 +158,7 @@ class AppsController(
           reject(Rejections.EntityNotFound.noApp(appId))
         case Some(info) =>
           authorized(ViewResource, info.app).apply {
-            complete(ToResponseMarshallable.apply(Json.obj("app" -> info)))
+            complete(Json.obj("app" -> info))
           }
       }
     }
