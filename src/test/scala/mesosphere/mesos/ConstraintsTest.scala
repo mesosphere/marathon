@@ -650,12 +650,12 @@ class ConstraintsTest extends UnitTest {
       makeOffer("wronghost.com") should meetConstraint(hostnameField, IS, "wronghost.com")
     }
 
-    "matches scalars of the same value but different format" in {
+    "match scalars of the same value but different format" in {
       makeOffer("host", "number:1") should meetConstraint("number", IS, "1.0")
       makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1")
     }
 
-    "matches scalars of differ in value by 0.001 or more" in {
+    "match scalars that differ in value by 0.001 or less" in {
       makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1.0001")
       makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1.0005")
       makeOffer("host", "number:1.0") shouldNot meetConstraint("number", IS, "1.00051")
@@ -668,7 +668,7 @@ class ConstraintsTest extends UnitTest {
       makeOffer("host1") should meetConstraint(hostnameField, IN, "{host1,host2}")
     }
 
-    "not match if the case differs" in {
+    "not match if the capitalization differs" in {
       makeOffer("host1") shouldNot meetConstraint(hostnameField, IN, "{HOST1}")
     }
 
