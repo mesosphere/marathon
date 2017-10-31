@@ -10,9 +10,9 @@ Constraints control where apps run to allow optimizing for either fault toleranc
 
 ### Hostname as field name
 
-Entering `hostname` as the field name matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
+Entering `@hostname` as the field name matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
 
-All Marathon operators are supported when the field name is `hostname`. 
+All Marathon operators are supported when the field name is `@hostname`.
 
 ### Attribute as field name
 
@@ -167,4 +167,82 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "instances": 3,
     "constraints": [["rack_id", "GROUP_BY", "3"]]
   }'
+```
+
+### IN operator
+
+**Value** (required): A Mesos Set, as specified by the [Mesos Attributes and Resources Type Specification](http://mesos.apache.org/documentation/latest/attributes-resources/#types):
+
+```
+set : "{" text ( "," text )* "}"
+
+text : [a-zA-Z0-9_/.-]
+```
+
+#### Comparing text values
+
+The following example tells Marathon to launch an application on nodes with a rack_id attribute value of `rack-1`, `rack-2`, or `rack-3`.
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-cluster",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "IN", "{rack-1,rack-2,rack-3}"]]
+  }'
+```
+
+#### Comparing scalar values
+
+Scalar values are compared to the nearest thousandth (using half-even rounding strategy).
+
+Given a node with attribute "level:0.8", the following constraints would match:
+
+``` json
+[["level", "IN", "{0.8,...}"]]
+
+[["level", "IN", "{0.80,...}"]]
+
+[["level", "IN", "{0.8001,...}"]]
+```
+
+### IS operator
+
+**Value** (required): A Mesos Scalar or Text value, as specified by the [Mesos Attributes and Resources Type Specification](http://mesos.apache.org/documentation/latest/attributes-resources/#types):
+
+```
+scalar : floatValue
+
+floatValue : ( intValue ( "." intValue )? ) | ...
+
+intValue : [0-9]+
+
+text : [a-zA-Z0-9_/.-]
+```
+
+#### Comparing text values
+
+When an `IS` constraint is specified, a task is only launched on nodes that have the specified attribute value. Note that `IS` behaves similar to `CLUSTER` with a value, and has been added mostly for semantic value (except its behavior differs when comparing scalars).
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-cluster",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["", "IS", "rack-1"]]
+  }'
+```
+
+#### Comparing scalar values
+
+When comparing scalars, the value is compared to the nearest thousandth (using half-even rounding strategy)
+
+Given a node with attribute "level:0.8", the following constraints would match:
+
+``` json
+[["level", "IS", "0.8"]]
+
+[["level", "IS", "0.80"]]
+
+[["level", "IS", "0.8001"]]
 ```

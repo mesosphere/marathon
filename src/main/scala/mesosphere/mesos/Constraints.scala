@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.util.Try
+import java.text.DecimalFormat
 
 object Int {
   def unapply(s: String): Option[Int] = Try(s.toInt).toOption
@@ -34,9 +35,21 @@ object Constraints {
     case _ => default
   }
 
+  /**
+    * Decimal formatter to the 1000th precision. Does not include zeros after the decimal. Rounding mode
+    * ROUND_HALF_EVEN (1.0005 becomes "1", but 1.00051 becomes "1.001" and 1.1005 becomes "1.101").
+    *
+    * ROUND_HALF_EVEN is used for legacy purposes.
+    *
+    * Previously, we used NumberFormat.getInstance, which defaults to the DecimalFormat seen below, but could have
+    * differing behavior depending on the environmental locale configured.
+    */
+  private val decimalFormatter =
+    new DecimalFormat("0.###")
+
   private def getValueString(attribute: Attribute): String = attribute.getType match {
     case Value.Type.SCALAR =>
-      java.text.NumberFormat.getInstance.format(attribute.getScalar.getValue)
+      decimalFormatter.format(attribute.getScalar.getValue)
     case Value.Type.TEXT =>
       attribute.getText.getValue
     case Value.Type.RANGES =>
@@ -76,9 +89,18 @@ object Constraints {
 
   private final class ConstraintsChecker(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint) {
     val constraintValue = constraint.getValue
-    lazy val constraintValueAsSet: Option[Array[String]] = {
+    def constraintValueAsScalar: Option[Double] = constraintValue match {
+      case MesosScalarValue(v) => Some(v.toDouble)
+      case _ => None
+    }
+    def constraintValueAsSet: Option[Iterable[String]] = {
       constraintValue match {
-        case MesosSetValue(inner) => Some(inner.split(','))
+        case MesosSetValue(inner) =>
+          Some(inner.split(',').view.map {
+            case MesosScalarValue(v) => decimalFormatter.format(v.toDouble)
+            case text => text
+          })
+
         case _ => None
       }
     }
@@ -135,8 +157,8 @@ object Constraints {
             case Operator.GROUP_BY => checkGroupBy(offerValue, placedValue)
             case Operator.MAX_PER => checkMaxPer(offerValue, constraintValue.toInt, placedValue)
             case Operator.CLUSTER => checkCluster(offerValue, placedValue)
-            case Operator.IS => offerValue == constraintValue
-            case Operator.IN => constraintValueAsSet.fold(false)(_.contains(offerValue))
+            case Operator.IS => offerValue == constraintValueAsScalar.fold(constraintValue)(decimalFormatter.format(_))
+            case Operator.IN => constraintValueAsSet.fold(false)(_.exists(_ == offerValue)) // linter:ignore UseContainsNotExistsEquals
           }
         case None =>
           // Only unlike can be matched if this offer does not have the specified value

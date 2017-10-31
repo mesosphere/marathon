@@ -649,6 +649,18 @@ class ConstraintsTest extends UnitTest {
       makeOffer("righthost.com") should meetConstraint(hostnameField, IS, "righthost.com")
       makeOffer("wronghost.com") should meetConstraint(hostnameField, IS, "wronghost.com")
     }
+
+    "matches scalars of the same value but different format" in {
+      makeOffer("host", "number:1") should meetConstraint("number", IS, "1.0")
+      makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1")
+    }
+
+    "matches scalars of differ in value by 0.001 or more" in {
+      makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1.0001")
+      makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1.0005")
+      makeOffer("host", "number:1.0") shouldNot meetConstraint("number", IS, "1.00051")
+      makeOffer("host", "number:1.0") shouldNot meetConstraint("number", IS, "1.001")
+    }
   }
 
   "IN operator" should {
@@ -664,9 +676,14 @@ class ConstraintsTest extends UnitTest {
       makeOffer("host1") shouldNot meetConstraint(regionField, IN, "{region1}")
     }
 
-    "does match if the string representation of the scalar is in the set" in {
-      makeOffer("host1", "cpus:1") should meetConstraint("cpus", IN, "{1}")
-      makeOffer("host1", "cpus:1.0") should meetConstraint("cpus", IN, "{1}")
+    "match if the scalar value is in the set (but formatted differently)" in {
+      makeOffer("host1", "number:1") should meetConstraint("number", IN, "{1}")
+      makeOffer("host1", "number:1.0") should meetConstraint("number", IN, "{1}")
+      makeOffer("host1", "number:1.0") should meetConstraint("number", IN, "{1.0}")
+    }
+
+    "not match if the scalar value is not in the set" in {
+      makeOffer("host1", "number:1.001") shouldNot meetConstraint("number", IN, "{1.0}")
     }
 
     "not match if the attribute value on the left is a set" in {
