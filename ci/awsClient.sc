@@ -39,9 +39,14 @@ case class Artifact(path: S3Path, sha1: String) {
   def downloadUrl: String = s"$base/${path.bucket}/${path.key}"
 }
 
-val S3_PREFIX = S3Path(
-  sys.env.getOrElse("S3_BUCKET", "downloads.mesosphere.io"),
-  Path(sys.env.getOrElse("S3_PATH" , "/marathon/snapshots")))
+/**
+ * builds = snapshots / builds, milestones, releases
+ */
+def s3PathFor(buildLocation: String = "snapshots") : S3Path = {
+  S3Path(
+    sys.env.getOrElse("S3_BUCKET", "downloads.mesosphere.io"),
+    Path(sys.env.getOrElse("S3_PATH" , s"/marathon/$buildLocation")))
+}
 
 /**
  *  Returns AWS S3 client.
@@ -67,32 +72,32 @@ def doesS3FileExist(path: S3Path): Boolean = {
  *
  *  @return Artifact description if it was uploaded. None otherwise.
  */
-def archiveArtifact(uploadFile: Path): Option[Artifact] = {
+def archiveArtifact(uploadFile: Path, s3path: S3Path): Option[Artifact] = {
   // is already uploaded.
-  if(doesS3FileExist(S3_PREFIX / uploadFile.last)) {
-    println(s"Skipping File: ${uploadFile.last} already exists on S3 at ${S3_PREFIX / uploadFile.last}")
+  if(doesS3FileExist(s3path / uploadFile.last)) {
+    println(s"Skipping File: ${uploadFile.last} already exists on S3 at ${s3path / uploadFile.last}")
     None
   } else
-    Some(uploadFileAndSha(uploadFile))
+    Some(uploadFileAndSha(uploadFile, s3path))
 }
 
 /**
  *  Uploads marathon artifacts to the default bucket, using the env var credentials.
  *  Upload process creates the sha1 file
  */
-def uploadFileAndSha(uploadFile: Path): Artifact = {
+def uploadFileAndSha(uploadFile: Path, s3path: S3Path): Artifact = {
   val shaFile = fileUtil.writeSha1ForFile(uploadFile)
 
-  upload(uploadFile)
-  upload(shaFile)
-  Artifact(S3_PREFIX / uploadFile.last, read(shaFile))
+  upload(uploadFile, s3path)
+  upload(shaFile, s3path)
+  Artifact(s3path / uploadFile.last, read(shaFile))
 }
 
 /**
  * Uploads file to default bucket.
  */
-def upload(file: Path): Unit = {
-  uploadFileToS3(file, S3_PREFIX / file.last)
+def upload(file: Path, s3path: S3Path): Unit = {
+  uploadFileToS3(file, s3path / file.last)
 }
 
 /**

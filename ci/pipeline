@@ -17,6 +17,7 @@ import $file.provision
 import $file.upgrade
 import $file.utils
 
+
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 
@@ -60,17 +61,17 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
 
 @main
 /**
- * Upload Marathon tgz tarballs, its cha1 checksum and docs to S3.
+ * Upload Marathon tgz tarballs, its sha1 checksum and docs to S3.
  *
  * @param version The version to upload.
  * @return Artifact description if it was uploaded.
  */
-def uploadTarballPackagesToS3(version: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
+def uploadTarballPackagesToS3(version: String, buildType: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
   import scala.collection.breakOut
 
   // Upload docs
   val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
-  awsClient.upload(docsPath)
+  awsClient.upload(docsPath, awsClient.s3PathFor(buildType))
 
   // Upload Marathon
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
@@ -168,11 +169,19 @@ def build(): String = {
   }
 
   val version = createTarballPackages()
+  buildDockerAndLinuxPackages()
+  version
+}
+
+def buildDockerAndLinuxPackages(): Unit = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
     %('sbt, "docker:publishLocal", "packageLinux")
-  }
 
-  version
+    // create test docker images and tests packages
+    val testPath = pwd/'tests/'package
+    %('make, "all")(testPath)
+    %('amm, "test.sc", "all")(testPath)
+  }
 }
 
 /**
@@ -183,7 +192,7 @@ def master(): Unit = {
   val version = build()
 
   // Uploads
-  val maybeArtifact = uploadTarballPackagesToS3(version)
+  val maybeArtifact = uploadTarballPackagesToS3(version, "snapshots")
   maybeArtifact.foreach { artifact =>
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
@@ -199,7 +208,7 @@ def pr(): Unit = asPullRequest {
   val version = build()
 
   // Uploads
-  val artifact = uploadTarballPackagesToS3(version)
+  val artifact = uploadTarballPackagesToS3(version, "snapshots")
   (version, artifact)
 }
 
@@ -220,4 +229,32 @@ def loop(): Unit = {
 def jenkins(): Unit = {
   if(utils.isPullRequest) pr()
   else master()
+}
+
+/**
+ * Executes the Community Release which includes:
+ *  1. tarball with version details
+ *  2. release of docker with that version
+ *  3. git tag of version (pushed to server)
+ *
+ * @return Version and artifact description of Marathon build.
+ */
+@main
+def release(releaseVersion: String, gitSha: String): Unit = {
+  println(s"Releasing version: $releaseVersion ")
+  %('git, "checkout", gitSha)
+  %('git, "tag", "-a", releaseVersion, "-m", releaseVersion)
+  val version = build()
+
+  // Uploads
+  uploadTarballPackagesToS3(version, s"releases/$releaseVersion")
+  // push docker
+  %('docker, "push", s"mesosphere/marathon:$releaseVersion")
+
+  // TODO: have flag for docker latest if True, push it
+  // push tags
+  // %('git, "push", "--tags")
+
+  // TODO: Publish swagger files.
+  // TODO: Publish native packages to unstable.
 }
