@@ -46,7 +46,7 @@ class ConstraintsTest extends UnitTest {
     "Select tasks to kill for a single group by works" in {
       Given("app with hostname group_by and 20 tasks even distributed on 2 hosts")
       val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint(hostnameField, GROUP_BY, "")))
-      val tasks = 0.to(19).map(num => makeInstanceWithHost(app.id, s"${num % 2}"))
+      val tasks = 0.to(19).map(num => makeInstance(app.id, host = s"${num % 2}"))
 
       When("10 tasks should be selected to kill")
       val result = Constraints.selectInstancesToKill(app, tasks, 10)
@@ -61,8 +61,8 @@ class ConstraintsTest extends UnitTest {
     "Select only tasks to kill for an unbalanced distribution" in {
       Given("app with hostname group_by and 30 tasks uneven distributed on 2 hosts")
       val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint(hostnameField, GROUP_BY, "")))
-      val tasks = 0.to(19).map(num => makeInstanceWithHost(app.id, "1")) ++
-        20.to(29).map(num => makeInstanceWithHost(app.id, "2"))
+      val tasks = 0.to(19).map(num => makeInstance(app.id, host = "1")) ++
+        20.to(29).map(num => makeInstance(app.id, host = "2"))
 
       When("10 tasks should be selected to kill")
       val result = Constraints.selectInstancesToKill(app, tasks, 10)
@@ -80,10 +80,10 @@ class ConstraintsTest extends UnitTest {
           makeConstraint("rack", GROUP_BY, ""),
           makeConstraint("color", GROUP_BY, "")))
       val tasks =
-        0.to(9).map(num => makeSampleInstance(app.id, "rack:rack-1;color:blue")) ++
-          10.to(19).map(num => makeSampleInstance(app.id, "rack:rack-1;color:green")) ++
-          20.to(29).map(num => makeSampleInstance(app.id, "rack:rack-2;color:blue")) ++
-          30.to(39).map(num => makeSampleInstance(app.id, "rack:rack-2;color:green"))
+        0.to(9).map(num => makeInstance(app.id, attributes = "rack:rack-1;color:blue")) ++
+          10.to(19).map(num => makeInstance(app.id, attributes = "rack:rack-1;color:green")) ++
+          20.to(29).map(num => makeInstance(app.id, attributes = "rack:rack-2;color:blue")) ++
+          30.to(39).map(num => makeInstance(app.id, attributes = "rack:rack-2;color:green"))
 
       When("20 tasks should be selected to kill")
       val result = Constraints.selectInstancesToKill(app, tasks, 20)
@@ -100,7 +100,7 @@ class ConstraintsTest extends UnitTest {
       Given("app with hostname group_by and 10 tasks even distributed on 5 hosts")
       val app = AppDefinition(id = PathId("/test"))
 
-      val tasks = 0.to(9).map(num => makeSampleInstance(app.id, "rack:rack-1;color:blue"))
+      val tasks = 0.to(9).map(num => makeInstance(app.id, attributes = "rack:rack-1;color:blue"))
 
       When("10 tasks should be selected to kill")
       val result = Constraints.selectInstancesToKill(app, tasks, 5)
@@ -111,9 +111,9 @@ class ConstraintsTest extends UnitTest {
 
     "UniqueHostConstraint" in {
       val appId = PathId("/test")
-      val task1_host1 = makeInstanceWithHost(appId, "host1")
-      val task2_host2 = makeInstanceWithHost(appId, "host2")
-      val task3_host3 = makeInstanceWithHost(appId, "host3")
+      val task1_host1 = makeInstance(appId, host = "host1")
+      val task2_host2 = makeInstance(appId, host = "host2")
+      val task3_host3 = makeInstance(appId, host = "host3")
 
       makeOffer("foohost") should meetConstraint(
         hostnameField, CLUSTER, "").withPlacements()
@@ -134,9 +134,9 @@ class ConstraintsTest extends UnitTest {
 
     "Generic property constraints" in {
       val appId = PathId("/test")
-      val task1_rack1 = makeSampleInstance(appId, "rackid:rack-1")
-      val task2_rack1 = makeSampleInstance(appId, "rackid:rack-1")
-      val task3_rack2 = makeSampleInstance(appId, "rackid:rack-2")
+      val task1_rack1 = makeInstance(appId, attributes = "rackid:rack-1")
+      val task2_rack1 = makeInstance(appId, attributes = "rackid:rack-1")
+      val task3_rack2 = makeInstance(appId, attributes = "rackid:rack-2")
 
       val offerRack1 = makeOffer("foohost", "foo:bar;rackid:rack-1")
       val offerRack2 = makeOffer("foohost", "foo:bar;rackid:rack-2")
@@ -190,9 +190,9 @@ class ConstraintsTest extends UnitTest {
 
     "RackGroupedByConstraints" in {
       val appId = PathId("/test")
-      val task1_rack1 = makeSampleInstance(appId, s"${rackIdField}:rack-1")
-      val task2_rack1 = makeSampleInstance(appId, s"${rackIdField}:rack-1")
-      val task3_rack2 = makeSampleInstance(appId, s"${rackIdField}:rack-2")
+      val task1_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
+      val task2_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
+      val task3_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
 
       val rack1Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-1")
       val rack2Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-2")
@@ -218,11 +218,11 @@ class ConstraintsTest extends UnitTest {
 
     "RackGroupedByConstraints2" in {
       val appId = PathId("/test")
-      val task1_rack1 = makeSampleInstance(appId, s"${rackIdField}:rack-1")
-      val task2_rack2 = makeSampleInstance(appId, s"${rackIdField}:rack-2")
-      val task3_rack3 = makeSampleInstance(appId, s"${rackIdField}:rack-3")
-      val task4_rack1 = makeSampleInstance(appId, s"${rackIdField}:rack-1")
-      val task5_rack2 = makeSampleInstance(appId, s"${rackIdField}:rack-2")
+      val task1_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
+      val task2_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
+      val task3_rack3 = makeInstance(appId, attributes = s"${rackIdField}:rack-3")
+      val task4_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
+      val task5_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
       val rack1Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-1")
       val rack2Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-2")
       val rack3Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-3")
@@ -248,9 +248,9 @@ class ConstraintsTest extends UnitTest {
 
     "RackGroupedByConstraints3" in {
       val appId = PathId("/test")
-      val instance_rack1 = makeSampleInstance(appId, s"${rackIdField}:1.0")
-      val instance_rack2 = makeSampleInstance(appId, s"${rackIdField}:2.0")
-      val instance_rack3 = makeSampleInstance(appId, s"${rackIdField}:3.0")
+      val instance_rack1 = makeInstance(appId, attributes = s"${rackIdField}:1.0")
+      val instance_rack2 = makeInstance(appId, attributes = s"${rackIdField}:2.0")
+      val instance_rack3 = makeInstance(appId, attributes = s"${rackIdField}:3.0")
 
       val offer_rack1 = makeOffer("foohost", s"foo:bar;${rackIdField}:1")
       val offer_rack2 = makeOffer("foohost", s"foo:bar;${rackIdField}:2")
@@ -279,10 +279,10 @@ class ConstraintsTest extends UnitTest {
 
     "HostnameGroupedByConstraints" in {
       val appId = PathId("/test")
-      val task1_host1 = makeInstanceWithHost(appId, "host1")
-      val task2_host1 = makeInstanceWithHost(appId, "host1")
-      val task3_host2 = makeInstanceWithHost(appId, "host2")
-      val task4_host3 = makeInstanceWithHost(appId, "host3")
+      val task1_host1 = makeInstance(appId, host = "host1")
+      val task2_host1 = makeInstance(appId, host = "host1")
+      val task3_host2 = makeInstance(appId, host = "host2")
+      val task4_host3 = makeInstance(appId, host = "host3")
 
       var groupHost = Seq.empty[Instance]
       val attributes = ""
@@ -363,9 +363,9 @@ class ConstraintsTest extends UnitTest {
 
     "HostnameMaxPerConstraints" in {
       val appId = PathId("/test")
-      val task1_host1 = makeInstanceWithHost(appId, "host1")
-      val task2_host1 = makeInstanceWithHost(appId, "host1")
-      val task3_host2 = makeInstanceWithHost(appId, "host2")
+      val task1_host1 = makeInstance(appId, host = "host1")
+      val task2_host1 = makeInstance(appId, host = "host1")
+      val task3_host2 = makeInstance(appId, host = "host2")
 
       var groupHost = Seq.empty[Instance]
 
@@ -417,8 +417,8 @@ class ConstraintsTest extends UnitTest {
 
     "RackMaxPerConstraints" in {
       val appId = PathId("/test")
-      val instance1_rack1 = makeSampleInstance(appId, s"${rackIdField}:1.0")
-      val instance2_rack2 = makeSampleInstance(appId, s"${rackIdField}:2.0")
+      val instance1_rack1 = makeInstance(appId, attributes = s"${rackIdField}:1.0")
+      val instance2_rack2 = makeInstance(appId, attributes = s"${rackIdField}:2.0")
 
       var groupRack = Seq.empty[Instance]
 
@@ -461,10 +461,10 @@ class ConstraintsTest extends UnitTest {
 
     "AttributesTypes" in {
       val appId = PathId("/test")
-      val instance1_rack1 = makeSampleInstance(appId, "foo:bar")
-      val instance2_rack1 = makeSampleInstance(appId, "jdk:7")
-      val instance3_rack1 = makeSampleInstance(appId, "jdk:[6-7]")
-      val instance4_rack1 = makeSampleInstance(appId, "gpu:{0,1}")
+      val instance1_rack1 = makeInstance(appId, attributes = "foo:bar")
+      val instance2_rack1 = makeInstance(appId, attributes = "jdk:7")
+      val instance3_rack1 = makeInstance(appId, attributes = "jdk:[6-7]")
+      val instance4_rack1 = makeInstance(appId, attributes = "gpu:{0,1}")
       val freshRack = Seq(instance1_rack1, instance2_rack1, instance3_rack1, instance4_rack1)
       val jdk7ConstraintLike = makeConstraint("jdk", LIKE, "7")
       val jdk7ConstraintUnlike = makeConstraint("jdk", UNLIKE, "7")
@@ -626,7 +626,7 @@ class ConstraintsTest extends UnitTest {
         val regionConstraintUnique = makeConstraint(regionField, UNIQUE, "")
         val offerRegion1 = makeOffer(hostnameField, "", Some(MarathonTestHelper.newDomainInfo("region1", "zone")))
         val offerRegion2 = makeOffer(hostnameField, "", Some(MarathonTestHelper.newDomainInfo("region2", "zone")))
-        val instanceOnRegion1 = makeInstanceWithHost(PathId("/test"), hostnameField, Some("region1"), Some("zone1"))
+        val instanceOnRegion1 = makeInstance(PathId("/test"), host = hostnameField, region = Some("region1"), zone = Some("zone1"))
 
         Constraints.meetsConstraint(Seq(instanceOnRegion1), offerRegion1, regionConstraintUnique) shouldBe false
         Constraints.meetsConstraint(Seq(instanceOnRegion1), offerRegion2, regionConstraintUnique) shouldBe true
@@ -636,7 +636,7 @@ class ConstraintsTest extends UnitTest {
         val zoneConstraintUnique = makeConstraint(zoneField, UNIQUE, "")
         val offerZone1 = makeOffer(hostnameField, "", Some(MarathonTestHelper.newDomainInfo("region", "zone1")))
         val offerZone2 = makeOffer(hostnameField, "", Some(MarathonTestHelper.newDomainInfo("region", "zone2")))
-        val instanceOnZone1 = makeInstanceWithHost(PathId("/test"), hostnameField, Some("region"), Some("zone1"))
+        val instanceOnZone1 = makeInstance(PathId("/test"), host = hostnameField, region = Some("region"), zone = Some("zone1"))
 
         Constraints.meetsConstraint(Seq(instanceOnZone1), offerZone1, zoneConstraintUnique) shouldBe false
         Constraints.meetsConstraint(Seq(instanceOnZone1), offerZone2, zoneConstraintUnique) shouldBe true
@@ -691,19 +691,11 @@ class ConstraintsTest extends UnitTest {
     }
   }
 
-  private def makeSampleInstance(runSpecId: PathId, attrsString: String): Instance = {
-    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withNetworkInfo(hostPorts = Seq(999))
-      .build()
-      .withAgentInfo(attributes = Some(attrs(attrsString)))
-      .getInstance()
-  }
-
   /**
     * Parse a single attribute:value pair string expression, according to the spec described in
     * http://mesos.apache.org/documentation/latest/attributes-resources/
     */
-  private def attr(expression: String): Protos.Attribute = {
+  private def parseAttr(expression: String): Protos.Attribute = {
     val Array(name, value) = expression.split(':')
     val b = Protos.Attribute.newBuilder.setName(name)
     value match {
@@ -738,8 +730,8 @@ class ConstraintsTest extends UnitTest {
     * Parse a series of semi-colon delimited mesos attribute expressions, according to the spec described in
     * http://mesos.apache.org/documentation/latest/attributes-resources/
     */
-  private def attrs(expression: String): Seq[Protos.Attribute] =
-    expression.split(';').filter(_.nonEmpty).map(attr(_)).to[Seq]
+  private def parseAttrs(expression: String): Seq[Protos.Attribute] =
+    expression.split(';').filter(_.nonEmpty).map(parseAttr(_)).to[Seq]
 
   private def makeOffer(hostname: String, attributes: String = "", domainInfo: Option[DomainInfo] = None) = {
     val builder = Offer.newBuilder
@@ -747,16 +739,16 @@ class ConstraintsTest extends UnitTest {
       .setSlaveId(SlaveID(Random.nextString(9)))
       .setFrameworkId(FrameworkID(Random.nextString(9)))
       .setHostname(hostname)
-      .addAllAttributes(attrs(attributes).asJava)
+      .addAllAttributes(parseAttrs(attributes).asJava)
     domainInfo.foreach(builder.setDomain)
     builder.build
   }
 
-  private def makeInstanceWithHost(appId: PathId, host: String, region: Option[String] = None, zone: Option[String] = None): Instance = {
+  private def makeInstance(appId: PathId, attributes: String = "", host: String = "host", region: Option[String] = None, zone: Option[String] = None): Instance = {
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskRunning()
       .withNetworkInfo(hostName = Some(host), hostPorts = Seq(999))
       .build()
-      .withAgentInfo(hostName = Some(host), region = region, zone = zone)
+      .withAgentInfo(hostName = Some(host), region = region, zone = zone, attributes = Some(parseAttrs(attributes)))
       .getInstance()
   }
 
