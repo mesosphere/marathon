@@ -66,16 +66,16 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
  * @param version The version to upload.
  * @return Artifact description if it was uploaded.
  */
-def uploadTarballPackagesToS3(version: String, buildType: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
+def uploadTarballPackagesToS3(version: String, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
   import scala.collection.breakOut
 
   // Upload docs
   val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
-  awsClient.upload(docsPath, awsClient.s3PathFor(buildType))
+  awsClient.upload(docsPath, awsClient.s3PathFor(buildLocation))
 
   // Upload Marathon
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
-    .headOption.flatMap(file => awsClient.archiveArtifact(Path(file)))
+    .headOption.flatMap(file => awsClient.archiveArtifact(Path(file), awsClient.s3PathFor(buildLocation)))
 }
 
 /**
