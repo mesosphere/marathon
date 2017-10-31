@@ -43,34 +43,34 @@ class GroupsController(electionService: ElectionService)(
             get {
               groupDetail(groupId)
             } ~
-              post {
-                createGroup(groupId)
-              } ~
-              put {
-                updateGroup(groupId)
-              } ~
-              delete {
-                deleteGroup(groupId)
-              }
+            post {
+              createGroup(groupId)
+            } ~
+            put {
+              updateGroup(groupId)
+            } ~
+            delete {
+              deleteGroup(groupId)
+            }
           }
         } ~
-          path(GroupPathIdLike ~ "apps" ~ Slash.? ~ PathEnd) { groupId =>
+        path(GroupPathIdLike ~ "apps" ~ Slash.? ~ PathEnd) { groupId =>
+          get {
+            appsList(groupId)
+          }
+        } ~
+        path(GroupPathIdLike / "versions") { groupId =>
+          pathEndOrSingleSlash {
             get {
-              appsList(groupId)
+              listVersions(groupId)
             }
           } ~
-          path(GroupPathIdLike / "versions") { groupId =>
-            pathEndOrSingleSlash {
-              get {
-                listVersions(groupId)
-              }
-            } ~
-              path(Remaining ~ Slash.? ~ PathEnd) { version =>
-                get {
-                  versionDetail(groupId, version)
-                }
-              }
+          path(Remaining ~ Slash.? ~ PathEnd) { version =>
+            get {
+              versionDetail(groupId, version)
+            }
           }
+        }
       }
     }
   }
