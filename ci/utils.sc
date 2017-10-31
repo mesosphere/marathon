@@ -88,7 +88,6 @@ def runWithTimeout(timeout: FiniteDuration, logFileName: String)(commands: Seq[S
     .redirectOutput(ProcessBuilder.Redirect.appendTo(ciLogFile(logFileName)))
     .start()
 
-  try {
     val exited = buildProcess.waitFor(timeout.length, timeout.unit)
 
     if (exited) {
@@ -103,6 +102,20 @@ def runWithTimeout(timeout: FiniteDuration, logFileName: String)(commands: Seq[S
       val cmd = commands.mkString(" ")
       throw new java.util.concurrent.TimeoutException(s"'$cmd' timed out after $timeout.")
     }
+}
+
+/**
+ * Run a process with given commands and time out it runs too long.
+ *
+ * @param timeout The maximum time to wait.
+ * @param logFileName Name of file which collects all logs.
+ * @param commands The commands that are executed in a process. E.g. "sbt",
+ *  "compile".
+ */
+def runWithTimeoutAndCleanup(timeout: FiniteDuration, logFileName: String)(commands: Seq[String]): Unit = {
+
+  try {
+    runWithTimeout(timeout, logFileName)(commands)
   } finally {
     // This also cleans forked SBT processes.
     provision.killStaleTestProcesses()
