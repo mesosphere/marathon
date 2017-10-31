@@ -69,8 +69,19 @@ object Constraints {
       case _ => attributeReader(field)
     }
 
+  // Regular expressions to determine type based on http://mesos.apache.org/documentation/latest/attributes-resources/
+  private[mesos] val MesosSetValue = "\\{(.+)\\}".r
+  private[mesos] val MesosRangeValue = "\\[(.+)\\]".r
+  private[mesos] val MesosScalarValue = "([0-9]+(?:\\.[0-9]+)?)".r
+
   private final class ConstraintsChecker(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint) {
     val constraintValue = constraint.getValue
+    lazy val constraintValueAsSet: Option[Array[String]] = {
+      constraintValue match {
+        case MesosSetValue(inner) => Some(inner.split(','))
+        case _ => None
+      }
+    }
 
     def isMatch: Boolean = {
       val (offerReader, placedReader) = readerForField(constraint.getField)
@@ -125,7 +136,7 @@ object Constraints {
             case Operator.MAX_PER => checkMaxPer(offerValue, constraintValue.toInt, placedValue)
             case Operator.CLUSTER => checkCluster(offerValue, placedValue)
             case Operator.IS => offerValue == constraintValue
-            case Operator.IN => constraintValue.split(" *, *").contains(offerValue)
+            case Operator.IN => constraintValueAsSet.fold(false)(_.contains(offerValue))
           }
         case None =>
           // Only unlike can be matched if this offer does not have the specified value
