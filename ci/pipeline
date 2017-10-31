@@ -241,7 +241,7 @@ def jenkins(): Unit = {
  * @return Version and artifact description of Marathon build.
  */
 @main
-def release(releaseVersion: String, gitSha: String): Unit = {
+def release(releaseVersion: String, gitSha: String, latest: String = "False"): Unit = {
   println(s"Releasing version: $releaseVersion ")
   %('git, "checkout", gitSha)
   %('git, "tag", "-a", releaseVersion, "-m", releaseVersion)
@@ -252,7 +252,10 @@ def release(releaseVersion: String, gitSha: String): Unit = {
   // push docker
   %('docker, "push", s"mesosphere/marathon:$releaseVersion")
 
-  // TODO: have flag for docker latest if True, push it
+  // TODO: if latest == True
+  // docker tag :latest
+  // %('docker, "push", "mesosphere/marathon:latest")
+
   // push tags
   // %('git, "push", "--tags")
 
