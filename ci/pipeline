@@ -94,14 +94,17 @@ def createTarballPackages(): String = utils.stage("Package Tarballs") {
   // ending with random characters
   // we need to regex this string because we do have colored output in the `sbt version` command
   val VersionLineRegex = "^.*(\\d+\\.\\d+\\.\\d+[-A-Za-z\\d]+).*$".r
+  // release version example v1.5.2
+  val releaseVersionLineRegex = "^v(\\d+\\.\\d+\\.\\d+).*$".r
 
   // Nothing is what it seems. This is a poor man's way to extract the version
   // from sbt's console output until we run our Ammonite scripts in sbt.
   val version = result.out.lines.last match {
     case VersionLineRegex(v) => v
+    case releaseVersionLineRegex(v) => v
     case _ =>
         val commit = %%('git, "log", "--pretty=format:%h", "-n1").out.lines.last
-        s"unkown version in commit $commit"
+        s"unknown version in commit $commit"
   }
   println(s"Built tarballs for Marathon $version.")
   version
