@@ -18,7 +18,6 @@ import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
-
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -44,6 +43,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 
@@ -158,7 +158,7 @@ class AppsController(
           reject(Rejections.EntityNotFound.noApp(appId))
         case Some(info) =>
           authorized(ViewResource, info.app).apply {
-            complete(Json.obj("app" -> info))
+            complete(ToResponseMarshallable.apply(Json.obj("app" -> info)))
           }
       }
     }
