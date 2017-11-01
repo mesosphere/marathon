@@ -53,35 +53,73 @@ number of relatively approachable issues with the label
 _TODO_: Do we need a CLA?
 -->
 
+## JIRA Issues (Suggesting Bugs and Improvements)
+
+As a general rule, before any change is made to Marathon, a JIRA ticket is filed for bugs, or for proposed
+improvements. As a guideline, an improvement ticket should include the following:
+
+- Include a background and motivation
+- An overview of the proposed change
+- Some acceptance criteria (how would you manually verify that this change worked?)
+
+As the Marathon product team, we don't make changes to the code without discussing the impact and viability of the
+proposed changes with each other, first. Creating a JIRA before submitting a code change sets the stage for this
+necessary discussion to happen, consensus on direction to be achieved, ideally before too much effort is spent coding
+it.
+
+If a change isn't discussed before the code is submitted, there is a higher chance there will be some unconsidered
+side-effect of the change, or that the change is not in alignment with the long-term vision of Marathon.
+
+Sometimes, we are overwhelmed by the never ending sea of JIRA. If you submit an issue, and don't feel it is getting the
+level of attention that it should, please find us in the
+[#marathon channel](https://mesos.slack.com/messages/C1L7D22KY/) on the Mesos community Slack.
+
+## Backporting Policy
+
+All development (new features and bug fixes) are made, first, to the master branch.
+
+If code is heavily refactored but the behavior has not been changed, these patches are generally not backported unless
+it will help reduce merge conflicts in the future.
+
+Bugs are backported to the current supported versions of Marathon. Historically, this usually tends to be the
+current stable release, plus the past 2 major releases. (IE, if `1.5.6` is the last stable release, then `1.4.x` and `1.3.x` would also
+receive the fix).
+
+New features are rarely backported; when they are, they are backported to the latest stable version of Marathon. Major
+new features are definitely not backported.
+
 ## Submitting Code Changes to Marathon
 
-- A GitHub pull request is the preferred way of submitting patch sets. Please
-  rebase your pull requests on top of the current master using
-  `git fetch origin && git rebase origin/master`, and squash your changes to a single commit as
-  described [here](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
-  Yes, we want you to rewrite history - the branch on which you are
-  implementing your changes is only meant for this pull request. You can
-  either rebase before or after you squash your commits, depending on how
-  you'd like to resolve potential merge conflicts. The idea behind is that we
-  don't want an arbitrary number of commits for one pull request, but exactly
-  one commit. This commit should be easy to merge onto master, therefore we
-  ask you to rebase to master.
-  
-- Please start your commit message with "Fixes #1234 - " where #1234 is the github issue number
-  that your pull request relates to. Github will automatically link this PR to the issue and make it more
-  visible to others.
+1. A GitHub pull request is the preferred way of submitting code changes.
 
-- Any changes in the public API or behavior must be reflected in the project
-  documentation.
+2. If a JIRA issue doesn't already exist, please open one for the proposed change in behavior (see the section above,
+   "JIRA Issues").
 
-- Any changes in the public API or behavior must be reflected in the changelog.md.
+3. Open up a discussion about the JIRA ticket (ideally, in the comments section, but, also in the
+   [#marathon channel](https://mesos.slack.com/messages/C1L7D22KY/). Seek to get buy-off and consensus on the direction
+   before making the change.
 
-- Pull requests should include appropriate additions to the unit test suite.
+4. Please rebase your pull requests on top of the current master, as needed, to integrate upstream changes and resolve
+   conflicts. You can squash your commits if it helps resolve potential merge conflicts. When your PR is merged, it will
+   be squashed to a single commit.
 
-- If the change is a bugfix, then the added tests must fail without the patch
-  as a safeguard against future regressions.
+5. If you are targeting to get something fixed for an older release of Marathon, fix it on master, first. If it is
+   already fixed in master, first, find out why. See our "Backporting Policy" above.
 
-- Run all tests via the supplied `./bin/run-tests.sh` script (requires docker).
+6. Please include in your commit message the line "JIRA Issues: MARATHON-1234", where MARATHON-1234 is the JIRA issue
+   mentioned in item 2 above. This helps reviewers better understand the context of the change.
+
+7. If you change modifies the public API or behavior, then the project documentation must be updated (in the same pull
+   request). Further, notes about the change should be specified in changelog.md.
+
+8. Pull requests should include appropriate additions to the unit test suite (see "Test Guidelines", below). If the
+   change is a bugfix, then the added tests must fail without the fix as a safeguard against future regressions.
+
+9. Compile your code prior to committing. We would like the result of our automatic code formatters to be included in
+   the commit as to not produce a dirty work tree after fresh checkout and first compile.
+
+10. Run, at the very least, all unit tests (`sbt test`). Integration tests can also be run using the supplied
+    `./bin/run-tests.sh` script (requires docker).
 
 ## Test Guidelines
 
@@ -90,6 +128,7 @@ _TODO_: Do we need a CLA?
 - Tests should extend `mesosphere.UnitTest`
 - Tests should avoid testing more behavior than necessary; IE - don't test other libs or services if a mock/stub
   suffices.
+- Tests must be deterministic. Whenever possible, the system clock should not be an input to the test.
 
 ### Fixtures
 
