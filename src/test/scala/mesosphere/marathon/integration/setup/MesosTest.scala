@@ -82,7 +82,7 @@ case class MesosCluster(
     // First-come-first-served task will bind successfully where the others will fail leading to a lot inconsistency and
     // flakiness in tests.
 
-    val (additionalAttributes: Map[String, Option[String]], faultDomainJson) = if (agentsFaultDomains.nonEmpty && agentsFaultDomains(i).nonEmpty) {
+    val (faultDomainAttributes: Map[String, Option[String]], faultDomainJson) = if (agentsFaultDomains.nonEmpty && agentsFaultDomains(i).nonEmpty) {
       val faultDomain = agentsFaultDomains(i).get
       val faultDomainJson = s"""
           |{
@@ -99,11 +99,16 @@ case class MesosCluster(
           |    }
           |}
         """.stripMargin
-      Map("fault_domain_region" -> Some(faultDomain.region.value), "fault_domain_zone" -> Some(faultDomain.zone.value)) -> Some(faultDomainJson)
+      (
+        Map(
+        "fault_domain_region" -> Some(faultDomain.region.value),
+        "fault_domain_zone" -> Some(faultDomain.zone.value)),
+        Some(faultDomainJson)
+      )
     } else Map.empty -> None
 
     // uniquely identify each agent node, useful for constraint matching
-    val attributes: Map[String, Option[String]] = Map("node" -> Some(i.toString)) ++ additionalAttributes
+    val attributes: Map[String, Option[String]] = Map("node" -> Some(i.toString)) ++ faultDomainAttributes
 
     val renderedAttributes = attributes.map { case (key, maybeVal) => s"$key${maybeVal.map(v => s":$v").getOrElse("")}" }.mkString(";")
 

@@ -12,11 +12,12 @@ import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.{ FaultDomain, PathId, Region, Zone }
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.Constraints
+import org.scalatest.Inside
 
 import scala.concurrent.duration._
 
 @IntegrationTest
-class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 3
@@ -35,13 +36,16 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
     Some(FaultDomain(region = remoteRegion, zone = remoteZone2)),
     Some(FaultDomain(region = homeRegion, zone = homeZone)))
 
-  before(cleanUp())
+  override def afterAll() = {
+    cleanUp()
+    super.afterAll()
+  }
 
-  def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
+  def appId(suffix: String): PathId = testBasePath / s"app-${suffix}"
 
   "Region Aware marathon" must {
     "Launch an instance of the app in the default region if region is not specified" in {
-      val applicationId = appId(Some("must-be-placed-in-home"))
+      val applicationId = appId("must-be-placed-in-home-region")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed without specifying region")
@@ -60,7 +64,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       }
     }
     "Launch an instance of the app in the specified region" in {
-      val applicationId = appId(Some("must-be-placed-in-remote-region"))
+      val applicationId = appId("must-be-placed-in-remote-region")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints =
         Set(Constraints.regionField :: "LIKE" :: remoteRegion.value :: Nil))
 
@@ -75,12 +79,12 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
       val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
 
-      agentRegion match {
+      inside(agentRegion) {
         case ITResourceStringValue(value) => value shouldEqual remoteRegion.value
       }
     }
     "Launch an instance of the app in the specified region and zone" in {
-      val applicationId = appId(Some("must-be-placed-in-remote-region"))
+      val applicationId = appId("must-be-placed-in-remote-region-and-zone")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(
         Constraints.regionField :: "LIKE" :: remoteRegion.value :: Nil,
         Constraints.zoneField :: "LIKE" :: remoteZone2.value :: Nil
