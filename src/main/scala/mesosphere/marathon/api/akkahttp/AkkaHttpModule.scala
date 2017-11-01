@@ -76,7 +76,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val queueController = new QueueController(clock, launchQueue, electionService)
     val tasksController = new TasksController(instanceTracker, groupManager, healthCheckManager, taskKiller, electionService)
     val podsController = new PodsController(electionService, groupManager)
-    val groupsController = new GroupsController(electionService, groupInfoService)
+    val groupsController = new GroupsController(electionService, groupInfoService, groupManager)
 
     val v2Controller = new V2Controller(
       appsController,

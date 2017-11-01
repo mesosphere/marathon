@@ -100,12 +100,20 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
       GroupPathIdLike(Path("/group-name")) shouldBe Matched(Path(""), Tuple1("group-name".toRootPath))
     }
 
+    "match path with group id and path" in {
+      GroupPathIdLike(Path("/group-name/versions")) shouldBe Matched(Path("/versions"), Tuple1("group-name".toRootPath))
+    }
+
     "match path without group name as root group" in {
       GroupPathIdLike(Path("")) shouldBe Matched(Path(""), Tuple1("/".toRootPath))
     }
 
     "match path without group name and with path" in {
       GroupPathIdLike(Path("apps")) shouldBe Matched(Path("apps"), Tuple1("/".toRootPath))
+    }
+
+    "match path without group starting with slash" in {
+      GroupPathIdLike(Path("/versions")) shouldBe Matched(Path("/versions"), Tuple1("/".toRootPath))
     }
 
     "match path with double slash in route as root group" in {

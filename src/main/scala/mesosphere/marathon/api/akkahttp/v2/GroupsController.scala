@@ -13,20 +13,28 @@ import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authen
 import mesosphere.marathon.state.{ Group, PathId }
 import play.api.libs.json.Json
 import akka.http.scaladsl.server.Route
+import akka.stream.Materializer
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, GroupPathIdLike }
+import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.appinfo.GroupInfoService
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.plugin.auth.{ Authorizer, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.plugin.auth.{ Authorizer, ViewGroup, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state.PathId
+import mesosphere.marathon.stream.Sink
 
 import scala.concurrent.ExecutionContext
 
-class GroupsController(electionService: ElectionService, infoService: GroupInfoService)(
+class GroupsController(
+    electionService: ElectionService,
+    infoService: GroupInfoService,
+    groupManager: GroupManager)(
     implicit
     val actorSystem: ActorSystem,
     val executionContext: ExecutionContext,
     val authenticator: MarathonAuthenticator,
-    val authorizer: Authorizer
+    val authorizer: Authorizer,
+    val materializer: Materializer
 ) extends Controller {
   import Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
@@ -51,7 +59,18 @@ class GroupsController(electionService: ElectionService, infoService: GroupInfoS
 
   def deleteGroup(groupId: PathId): Route = ???
 
-  def listVersions(groupId: PathId): Route = ???
+  def listVersions(groupId: PathId)(implicit identity: Identity): Route = {
+    groupManager.group(groupId) match {
+      case Some(group) =>
+        authorized(ViewGroup, group).apply {
+          val versionsFuture = groupManager.versions(groupId).runWith(Sink.seq)
+          onSuccess(versionsFuture) { versions =>
+            complete(versions)
+          }
+        }
+      case None => reject(EntityNotFound.noGroup(groupId))
+    }
+  }
 
   def versionDetail(groupId: PathId, version: String): Route = ???
 
@@ -75,12 +94,12 @@ class GroupsController(electionService: ElectionService, infoService: GroupInfoS
             }
           }
         } ~
-        path(GroupPathIdLike ~ "apps" ~ Slash.? ~ PathEnd) { groupId =>
+        path(GroupPathIdLike ~ Slash.? ~ "apps" ~ Slash.? ~ PathEnd) { groupId =>
           get {
             appsList(groupId)
           }
         } ~
-        path(GroupPathIdLike / "versions") { groupId =>
+        pathPrefix(GroupPathIdLike ~ Slash.? ~ "versions") { groupId =>
           pathEndOrSingleSlash {
             get {
               listVersions(groupId)
@@ -88,7 +107,7 @@ class GroupsController(electionService: ElectionService, infoService: GroupInfoS
           } ~
           path(Remaining ~ Slash.? ~ PathEnd) { version =>
             get {
-              versionDetail(groupId, version)
+              versionDetail(PathId.empty, version)
             }
           }
         }

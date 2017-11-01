@@ -16,7 +16,7 @@ import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.plugin.PathId
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import play.api.libs.json._
 
 import scala.collection.breakOut
@@ -163,6 +163,7 @@ object EntityMarshallers {
   implicit val enrichedTaskMarshaller = playJsonMarshaller[raml.EnrichedTask]
   implicit val enrichedTasksListMarshaller = playJsonMarshaller[raml.EnrichedTasksList]
   implicit val deleteTasksUnmarshaller = playJsonUnmarshaller[raml.DeleteTasks]
+  implicit val seqDateTimeMarshalled = playJsonMarshaller[Seq[Timestamp]]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {
     def handleValidationErrors: FromEntityUnmarshaller[T] = um.recover(_ ⇒ _ ⇒ {

@@ -5,15 +5,17 @@ import akka.http.scaladsl.model.Uri.{ Path, Query }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService }
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.scalatest.Inside
 
 import scala.concurrent.Future
@@ -59,6 +61,39 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     }
   }
 
+  "List versions" should {
+    {
+      val controller = Fixture(authenticated = false).groupsController
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./.withPath(Path("versions"))).addHeader(Accept(MediaTypes.`text/plain`)))
+    }
+
+    "list all versions of given group" in {
+      val clock = new SettableClock()
+      val groupManager = mock[GroupManager]
+      val groupVersions = Seq(clock.now(), clock.now())
+      groupManager.versions("groupname".toRootPath) returns Source(groupVersions)
+      groupManager.group("groupname".toRootPath) returns Some(createGroup(PathId.empty))
+      val f = new Fixture(groupManager = groupManager)
+
+      Get(Uri./.withPath(Path("/groupname/versions"))) ~> f.groupsController.route ~> check {
+        responseAs[String] should be ("[ \"2015-04-09T12:30:00.000Z\", \"2015-04-09T12:30:00.000Z\" ]")
+      }
+    }
+
+    "list all versions of root group" in {
+      val clock = new SettableClock()
+      val groupManager = mock[GroupManager]
+      val groupVersions = Seq(clock.now())
+      groupManager.versions(PathId.empty) returns Source(groupVersions)
+      groupManager.group(PathId.empty) returns Some(createGroup(PathId.empty))
+      val f = new Fixture(groupManager = groupManager)
+
+      Get(Uri./.withPath(Path("/versions"))) ~> f.groupsController.route ~> check {
+        responseAs[String] should be ("[ \"2015-04-09T12:30:00.000Z\" ]")
+      }
+    }
+  }
+
   "extracts embeds into group and app" in new Fixture {
     import akka.http.scaladsl.server.Directives._
 
@@ -83,7 +118,8 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       authenticated: Boolean = true,
       authorized: Boolean = true,
       authFn: Any => Boolean = _ => true,
-      infoService: GroupInfoService = mock[GroupInfoService]) {
+      infoService: GroupInfoService = mock[GroupInfoService],
+      groupManager: GroupManager = mock[GroupManager]) {
     val authFixture = new TestAuthFixture()
     authFixture.authenticated = authenticated
     authFixture.authorized = authorized
@@ -94,6 +130,6 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     implicit val authenticator = authFixture.auth
 
-    val groupsController: GroupsController = new GroupsController(electionService, infoService)
+    val groupsController: GroupsController = new GroupsController(electionService, infoService, groupManager)
   }
 }
