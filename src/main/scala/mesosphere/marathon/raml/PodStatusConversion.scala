@@ -177,7 +177,7 @@ trait PodStatusConversion {
   def endpointStatuses(
     pod: PodDefinition,
     maybeContainerSpec: Option[MesosContainer],
-    task: task.Task): Seq[ContainerEndpointStatus] =
+    task: core.task.Task): Seq[ContainerEndpointStatus] =
 
     maybeContainerSpec.flatMap { _ =>
       if (task.isActive) {
