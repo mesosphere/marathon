@@ -20,7 +20,7 @@ class AppsDirectivesTest extends UnitTest with ScalatestRouteTest {
     complete(objectName(mode))
   }
 
-  "Directives" should {
+  "AppsDirectives" should {
     "extract scale killing mode from request" in {
       Get().withUri(Uri./.withQuery(Query("scale" -> "true"))) ~> route ~> check {
         responseAs[String] shouldEqual objectName(TaskKillingMode.Scale)

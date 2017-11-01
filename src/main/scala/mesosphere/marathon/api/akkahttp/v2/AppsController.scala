@@ -16,7 +16,6 @@ import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingRunSpecId
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
-import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
 
 import mesosphere.marathon.api.v2.validation.AppValidation
@@ -27,8 +26,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, Identity, ViewResource, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
 import play.api.libs.json.Json
-import PathId._
-import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state._
 import play.api.libs.json._
 import mesosphere.marathon.core.election.ElectionService
@@ -41,16 +39,15 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
-import AppsDirectives._
+import AppsDirectives.{ extractTaskKillingMode, TaskKillingMode }
 import mesosphere.marathon.raml.InstanceConversion._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 import scala.util.control.NonFatal
 
 class AppsController(
