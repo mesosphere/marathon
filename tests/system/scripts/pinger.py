@@ -94,7 +94,7 @@ def make_handler():
                     return self.handle_relay()
                 else:
                     return self.handle_ping()
-            except:
+            except Exception:
                 logging.exception('Could not handle GET request')
                 raise
 
@@ -102,7 +102,7 @@ def make_handler():
             try:
                 logging.debug("Got POST request")
                 return self.handle_ping()
-            except:
+            except Exception:
                 logging.exception('Could not handle POST request')
                 raise
 

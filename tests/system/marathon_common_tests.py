@@ -798,7 +798,7 @@ def test_unhealthy_app_can_be_rolled_back():
 
     try:
         shakedown.deployment_wait()
-    except:
+    except Exception:
         client.rollback_deployment(deployment_id)
         shakedown.deployment_wait()
 
