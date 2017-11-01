@@ -94,6 +94,39 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     }
   }
 
+  "Version detail" should {
+
+    "show app in a given version" in {
+      val infoService = mock[GroupInfoService]
+      infoService.selectGroupVersion(any, any, any, any) returns Future.successful(Some(GroupInfo(createGroup(PathId("/test/group")), None, None, None)))
+      val f = new Fixture(infoService = infoService)
+
+      Get(Uri./.withPath(Path("/test/group/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
+        responseAs[String] should include (""""id" : "/test/group"""")
+      }
+    }
+
+    "show app in a given version for root group" in {
+      val infoService = mock[GroupInfoService]
+      infoService.selectGroupVersion(eq(PathId.empty), any, any, any) returns Future.successful(Some(GroupInfo(createGroup(PathId.empty), None, None, None)))
+      val f = new Fixture(infoService = infoService)
+
+      Get(Uri./.withPath(Path("/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
+        responseAs[String] should include (""""id" : "/"""")
+      }
+    }
+
+    "reject for app and version that does not exist" in {
+      val infoService = mock[GroupInfoService]
+      infoService.selectGroupVersion(any, any, any, any) returns Future.successful(None)
+      val f = new Fixture(infoService = infoService)
+
+      Get(Uri./.withPath(Path("/groupname/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
+        rejection should be (EntityNotFound.noGroup("groupname".toRootPath, Some(Timestamp("2017-10-30T16:08:53.852Z"))))
+      }
+    }
+  }
+
   "extracts embeds into group and app" in new Fixture {
     import akka.http.scaladsl.server.Directives._
 

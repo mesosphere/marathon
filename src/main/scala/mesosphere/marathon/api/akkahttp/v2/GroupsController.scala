@@ -10,7 +10,7 @@ import mesosphere.marathon.api.v2.{ AppHelpers, PodsResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.state.{ Group, PathId }
+import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 import play.api.libs.json.Json
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
@@ -20,7 +20,6 @@ import mesosphere.marathon.core.appinfo.GroupInfoService
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth.{ Authorizer, ViewGroup, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Sink
 
 import scala.concurrent.ExecutionContext
@@ -72,7 +71,13 @@ class GroupsController(
     }
   }
 
-  def versionDetail(groupId: PathId, version: String): Route = ???
+  def versionDetail(groupId: PathId, version: Timestamp)(implicit identity: Identity): Route = extractEmbeds {
+    case (appEmbed, groupEmbed) =>
+      onSuccess(infoService.selectGroupVersion(groupId, version, authorizationSelectors, groupEmbed)) {
+        case Some(info) => complete(Json.toJson(info))
+        case None => reject(EntityNotFound.noGroup(groupId, Some(version)))
+      }
+  }
 
   // format: OFF
   val route: Route = {
@@ -107,7 +112,7 @@ class GroupsController(
           } ~
           path(Remaining ~ Slash.? ~ PathEnd) { version =>
             get {
-              versionDetail(PathId.empty, version)
+              versionDetail(groupId, Timestamp(version))
             }
           }
         }
