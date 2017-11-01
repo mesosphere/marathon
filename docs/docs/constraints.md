@@ -12,7 +12,7 @@ Constraints control where apps run to allow optimizing for either fault toleranc
 
 Entering `hostname` as the field name matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
 
-All Marathon operators are supported when the field name is `hostname`. 
+All Marathon operators are supported when the field name is `hostname`.
 
 ### Attribute as field name
 
@@ -102,6 +102,8 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
+Note, if the attribute in question is a scalar, it is rounded to the nearest thousandth using the half-even rounding strategy; zeroes after the decimal are dropped.
+
 ### UNLIKE operator
 **Value** (required): A regular expression for the value of the attribute.
 
@@ -167,4 +169,45 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "instances": 3,
     "constraints": [["rack_id", "GROUP_BY", "3"]]
   }'
+```
+
+### IS operator
+
+**Value** (required): A Mesos Scalar or Text value, as specified by the [Mesos Attributes and Resources Type Specification](http://mesos.apache.org/documentation/latest/attributes-resources/#types):
+
+```
+scalar : floatValue
+
+floatValue : ( intValue ( "." intValue )? ) | ...
+
+intValue : [0-9]+
+
+text : [a-zA-Z0-9_/.-]
+```
+
+#### Comparing text values
+
+When an `IS` constraint is specified, a task is only launched on nodes that have the specified value.
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-cluster",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["", "IS", "rack-1"]]
+  }'
+```
+
+#### Comparing scalar values
+
+When comparing scalars, the value is compared to the nearest thousandth (using half-even rounding strategy)
+
+Given a node with attribute "level:0.8", the following constraints would match:
+
+``` json
+[["level", "IS", "0.8"]]
+
+[["level", "IS", "0.80"]]
+
+[["level", "IS", "0.8001"]]
 ```
