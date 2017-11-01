@@ -92,13 +92,6 @@ trait SchedulingValidation {
               case _ =>
                 failure(IsOnlySupportsText)
             }
-          case In =>
-            c.value.getOrElse("") match {
-              case MesosSetValue() =>
-                Success
-              case _ =>
-                failure(InOnlySupportsSets)
-            }
         }
       }
     }
@@ -146,9 +139,6 @@ object SchedulingValidationMessages {
   /* IS currently supports text and scalar values. By disallowing ranges / sets, we can add support for them later
    * without breaking the API. */
   val MesosLiteralOrFloatValue = "^[a-zA-Z0-9_/.-]*$".r
-
-  /* IN currently supports sets. By disallowing ranges, we can add support for them later without breaking the API) */
-  val MesosSetValue = "^\\{[a-zA-Z0-9_/.,-]*\\}$".r
 
   val IsOnlySupportsText = "IS only supports Mesos text and float values (see http://mesos.apache.org/documentation/latest/attributes-resources/)"
   val InOnlySupportsSets = "IN value expects a Mesos set value (see http://mesos.apache.org/documentation/latest/attributes-resources/)"

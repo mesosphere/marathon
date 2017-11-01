@@ -59,9 +59,6 @@ class SchedulingValidationTest extends UnitTest with ValidationTestLike {
       behave like validAppConstraint("A MAX_PER with a numeric value", max_per :+ "123")
       behave like failsAsExpected("A MAX_PER with a non-numeric value", max_per :+ "AbcDZ", ConstraintMaxPerRequiresInt)
 
-      behave like validAppConstraint("An IN with a set value", Seq("attribute", "IN", "{value-1,value.2,value/3,VALUE_4}"))
-      behave like failsAsExpected("An IN with a range value", Seq("attribute", "IN", "[0-9]"), InOnlySupportsSets)
-
       behave like validAppConstraint("An IS with a text value", Seq("attribute", "IS", "value-1.2/3_4"))
       behave like failsAsExpected("An IS with a range value", Seq("attribute", "IS", "[0-9]"), IsOnlySupportsText)
 

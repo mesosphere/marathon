@@ -28,8 +28,6 @@ message Constraint {
       MAX_PER = 5;
       // Field must be the specified value
       IS = 6;
-      // Field must be one of the specified values
-      IN = 7;
   }
   required Operator operator = 2;
   optional string value = 3;

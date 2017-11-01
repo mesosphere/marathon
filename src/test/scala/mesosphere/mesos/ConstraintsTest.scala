@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.Protos.Constraint.Operator.{ IN, IS, LIKE, UNLIKE, CLUSTER, GROUP_BY, MAX_PER, UNIQUE }
+import mesosphere.marathon.Protos.Constraint.Operator.{ IS, LIKE, UNLIKE, CLUSTER, GROUP_BY, MAX_PER, UNIQUE }
 import mesosphere.marathon._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -660,34 +660,6 @@ class ConstraintsTest extends UnitTest {
       makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1.0005")
       makeOffer("host", "number:1.0") shouldNot meetConstraint("number", IS, "1.00051")
       makeOffer("host", "number:1.0") shouldNot meetConstraint("number", IS, "1.001")
-    }
-  }
-
-  "IN operator" should {
-    "match if the offer value is in the specified set of values" in {
-      makeOffer("host1") should meetConstraint(hostnameField, IN, "{host1,host2}")
-    }
-
-    "not match if the capitalization differs" in {
-      makeOffer("host1") shouldNot meetConstraint(hostnameField, IN, "{HOST1}")
-    }
-
-    "not match if offer does not have the value in question" in {
-      makeOffer("host1") shouldNot meetConstraint(regionField, IN, "{region1}")
-    }
-
-    "match if the scalar value is in the set (but formatted differently)" in {
-      makeOffer("host1", "number:1") should meetConstraint("number", IN, "{1}")
-      makeOffer("host1", "number:1.0") should meetConstraint("number", IN, "{1}")
-      makeOffer("host1", "number:1.0") should meetConstraint("number", IN, "{1.0}")
-    }
-
-    "not match if the scalar value is not in the set" in {
-      makeOffer("host1", "number:1.001") shouldNot meetConstraint("number", IN, "{1.0}")
-    }
-
-    "not match if the attribute value on the left is a set" in {
-      makeOffer("host", "colors:{red}") shouldNot meetConstraint("colors", IN, "{red}")
     }
   }
 

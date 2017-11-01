@@ -158,7 +158,6 @@ object Constraints {
             case Operator.MAX_PER => checkMaxPer(offerValue, constraintValue.toInt, placedValue)
             case Operator.CLUSTER => checkCluster(offerValue, placedValue)
             case Operator.IS => offerValue == constraintValueAsScalar.fold(constraintValue)(decimalFormatter.format(_))
-            case Operator.IN => constraintValueAsSet.fold(false)(_.exists(_ == offerValue)) // linter:ignore UseContainsNotExistsEquals
           }
         case None =>
           // Only unlike can be matched if this offer does not have the specified value

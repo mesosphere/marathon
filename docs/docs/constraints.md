@@ -169,43 +169,6 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-### IN operator
-
-**Value** (required): A Mesos Set, as specified by the [Mesos Attributes and Resources Type Specification](http://mesos.apache.org/documentation/latest/attributes-resources/#types):
-
-```
-set : "{" text ( "," text )* "}"
-
-text : [a-zA-Z0-9_/.-]
-```
-
-#### Comparing text values
-
-The following example tells Marathon to launch an application on nodes with a rack_id attribute value of `rack-1`, `rack-2`, or `rack-3`.
-
-``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
-    "id": "sleep-cluster",
-    "cmd": "sleep 60",
-    "instances": 3,
-    "constraints": [["rack_id", "IN", "{rack-1,rack-2,rack-3}"]]
-  }'
-```
-
-#### Comparing scalar values
-
-Scalar values are compared to the nearest thousandth (using half-even rounding strategy).
-
-Given a node with attribute "level:0.8", the following constraints would match:
-
-``` json
-[["level", "IN", "{0.8,...}"]]
-
-[["level", "IN", "{0.80,...}"]]
-
-[["level", "IN", "{0.8001,...}"]]
-```
-
 ### IS operator
 
 **Value** (required): A Mesos Scalar or Text value, as specified by the [Mesos Attributes and Resources Type Specification](http://mesos.apache.org/documentation/latest/attributes-resources/#types):
