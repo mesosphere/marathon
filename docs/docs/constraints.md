@@ -102,6 +102,8 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
+Note, if the attribute in question is a scalar, it is rounded to the nearest thousandth using the half-even rounding strategy; zeroes after the decimal are dropped.
+
 ### UNLIKE operator
 **Value** (required): A regular expression for the value of the attribute.
 
@@ -185,7 +187,7 @@ text : [a-zA-Z0-9_/.-]
 
 #### Comparing text values
 
-When an `IS` constraint is specified, a task is only launched on nodes that have the specified attribute value. Note that `IS` behaves similar to `CLUSTER` with a value, and has been added mostly for semantic value (except its behavior differs when comparing scalars).
+When an `IS` constraint is specified, a task is only launched on nodes that have the specified value.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
