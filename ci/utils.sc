@@ -11,7 +11,7 @@ import java.io.File
 
 import $file.provision
 
-def ciLogFile(name: String = "ci.log"): File = {
+def ciLogFile(name: String): File = {
   val log = new File(name)
   if (!log.exists())
     log.createNewFile()
@@ -65,17 +65,18 @@ def stage[T](name: String)(block: => T): T = {
  * Run a process with given commands and time out it runs too long.
  *
  * @param timeout The maximum time to wait.
+ * @param logFileName Name of file which collects all logs.
  * @param commands The commands that are executed in a process. E.g. "sbt",
  *  "compile".
  */
-def runWithTimeout(timeout: FiniteDuration)(commands: Seq[String]): Unit = {
+def runWithTimeout(timeout: FiniteDuration, logFileName: String)(commands: Seq[String]): Unit = {
 
   val builder = new java.lang.ProcessBuilder()
   val buildProcess = builder
     .directory(new java.io.File(pwd.toString))
     .command(commands.asJava)
     .inheritIO()
-    .redirectOutput(ProcessBuilder.Redirect.appendTo(ciLogFile()))
+    .redirectOutput(ProcessBuilder.Redirect.appendTo(ciLogFile(logFileName)))
     .start()
 
   try {
