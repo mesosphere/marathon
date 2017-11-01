@@ -3,18 +3,18 @@ package raml
 
 import java.time.OffsetDateTime
 
-import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task
 import mesosphere.marathon.stream.Implicits._
 
 trait PodStatusConversion {
 
   import PodStatusConversion._
 
-  implicit val taskToContainerStatus: Writes[(PodDefinition, Task), ContainerStatus] = Writes { src =>
+  implicit val taskToContainerStatus: Writes[(PodDefinition, task.Task), ContainerStatus] = Writes { src =>
     val (pod, task) = src
     val since = task.status.startedAt.getOrElse(task.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
@@ -30,7 +30,7 @@ trait PodStatusConversion {
     val displayName = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
 
     val resources: Option[Resources] = {
-      import Condition._
+      import condition.Condition._
       task.status.condition match {
         case Staging | Starting | Running | Reserved | Unreachable | Killing =>
           maybeContainerSpec.map(_.resources)
@@ -42,7 +42,7 @@ trait PodStatusConversion {
     // TODO(jdef) message
     ContainerStatus(
       name = displayName,
-      status = Condition.toMesosTaskStateOrStaging(task.status.condition).toString,
+      status = condition.Condition.toMesosTaskStateOrStaging(task.status.condition).toString,
       statusSince = since,
       containerId = task.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
@@ -56,7 +56,7 @@ trait PodStatusConversion {
   /**
     * generate a pod instance status RAML for some instance.
     */
-  implicit val podInstanceStatusRamlWriter: Writes[(PodDefinition, Instance), PodInstanceStatus] = Writes { src =>
+  implicit val podInstanceStatusRamlWriter: Writes[(PodDefinition, instance.Instance), PodInstanceStatus] = Writes { src =>
 
     val (pod, instance) = src
 
@@ -92,7 +92,7 @@ trait PodStatusConversion {
   }
 
   // TODO: Consider using a view here (since we flatMap and groupBy)
-  def networkStatuses(tasks: Seq[Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
+  def networkStatuses(tasks: Seq[task.Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
     task.status.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
       mesosStatus.getContainerStatus.getNetworkInfosList.map { networkInfo =>
         NetworkStatus(
@@ -129,13 +129,15 @@ trait PodStatusConversion {
     * or else endpoint health checks.
     */
   def maybeHealthCondition(
-    status: Task.Status,
+    status: task.Task.Status,
     maybeContainerSpec: Option[MesosContainer],
     endpointStatuses: Seq[ContainerEndpointStatus],
-    since: OffsetDateTime): Option[StatusCondition] =
+    since: OffsetDateTime): Option[StatusCondition] = {
+
+    import condition.Condition._
 
     status.condition match {
-      case Condition.Created | Condition.Staging | Condition.Starting | Condition.Reserved =>
+      case Created | Staging | Starting | Reserved =>
         // not useful to report health conditions for tasks that have never reached a running state
         None
       case _ =>
@@ -145,14 +147,18 @@ trait PodStatusConversion {
             case _ => false
           }
           if (usingCommandHealthCheck) {
-            Some(status.healthy.fold(false -> HEALTH_UNREPORTED) { _ -> HEALTH_REPORTED })
+            Some(status.healthy.fold(false -> HEALTH_UNREPORTED) {
+              _ -> HEALTH_REPORTED
+            })
           } else {
             val ep = healthCheckEndpoint(containerSpec)
             ep.map { endpointName =>
               val epHealthy: Option[Boolean] = endpointStatuses.find(_.name == endpointName).flatMap(_.healthy)
               // health check endpoint was specified, but if we don't have a value for health yet then generate a
               // meaningful reason code
-              epHealthy.fold(false -> HEALTH_UNREPORTED) { _ -> HEALTH_REPORTED }
+              epHealthy.fold(false -> HEALTH_UNREPORTED) {
+                _ -> HEALTH_REPORTED
+              }
             }
           }
         }
@@ -166,11 +172,12 @@ trait PodStatusConversion {
           )
         }
     }
+  }
 
   def endpointStatuses(
     pod: PodDefinition,
     maybeContainerSpec: Option[MesosContainer],
-    task: Task): Seq[ContainerEndpointStatus] =
+    task: task.Task): Seq[ContainerEndpointStatus] =
 
     maybeContainerSpec.flatMap { _ =>
       if (task.isActive) {
@@ -223,17 +230,17 @@ trait PodStatusConversion {
     }.getOrElse(Seq.empty[ContainerEndpointStatus])
 
   def podInstanceState(
-    condition: Condition,
+    condition: core.condition.Condition,
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
-    import Condition._
+    import core.condition.Condition._
 
     condition match {
       case Created | Reserved =>
         PodInstanceState.Pending -> None
       case Staging | Starting =>
         PodInstanceState.Staging -> None
-      case Condition.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
+      case core.condition.Condition.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
         PodInstanceState.Terminal -> None
       case Unreachable | UnreachableInactive =>
         PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)

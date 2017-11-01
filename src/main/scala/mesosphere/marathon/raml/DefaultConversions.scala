@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => mesos }
@@ -47,7 +47,7 @@ trait DefaultConversions {
 
   implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
 
-  implicit val instanceIdWrites: Writes[Instance.Id, String] = Writes { _.toString }
+  implicit val instanceIdWrites: Writes[instance.Instance.Id, String] = Writes { _.toString }
 
   implicit val taskStateWrites: Writes[mesos.TaskState, MesosTaskState] = Writes { taskState =>
     val name = taskState.name()
