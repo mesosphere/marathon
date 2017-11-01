@@ -36,6 +36,10 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
     Some(FaultDomain(region = remoteRegion, zone = remoteZone2)),
     Some(FaultDomain(region = homeRegion, zone = homeZone)))
 
+  override def beforeAll() = {
+    super.beforeAll()
+    cleanUp()
+  }
   override def afterAll() = {
     cleanUp()
     super.afterAll()
@@ -59,7 +63,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
       val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
 
-      agentRegion match {
+      inside(agentRegion) {
         case ITResourceStringValue(value) => value shouldEqual homeRegion.value
       }
     }
@@ -102,10 +106,10 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
       val agentZone = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_zone")
 
-      agentRegion match {
+      inside(agentRegion) {
         case ITResourceStringValue(value) => value shouldEqual remoteRegion.value
       }
-      agentZone match {
+      inside(agentZone) {
         case ITResourceStringValue(value) => value shouldEqual remoteZone2.value
       }
     }
