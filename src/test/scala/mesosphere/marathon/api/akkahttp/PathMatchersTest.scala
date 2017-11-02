@@ -66,6 +66,10 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
     "considers it an unmatch if path starts with keyword" in {
       AppPathIdLike(Path("/restart")) shouldBe Unmatched
     }
+
+    "match path with multiple slashes" in {
+      AppPathIdLike(Path("//////app")) shouldBe Matched(Path.Empty, Tuple1("/app".toPath))
+    }
   }
 
   "PodsPathIdLike matcher" should {
