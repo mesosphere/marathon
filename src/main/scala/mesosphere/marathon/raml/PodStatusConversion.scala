@@ -30,9 +30,13 @@ trait PodStatusConversion {
     val displayName = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
 
     val resources: Option[Resources] = {
-      import condition.Condition._
       task.status.condition match {
-        case Staging | Starting | Running | Reserved | Unreachable | Killing =>
+        case condition.Condition.Staging |
+          condition.Condition.Starting |
+          condition.Condition.Running |
+          condition.Condition.Reserved |
+          condition.Condition.Unreachable |
+          condition.Condition.Killing =>
           maybeContainerSpec.map(_.resources)
         case _ =>
           None
@@ -134,10 +138,12 @@ trait PodStatusConversion {
     endpointStatuses: Seq[ContainerEndpointStatus],
     since: OffsetDateTime): Option[StatusCondition] = {
 
-    import condition.Condition._
-
     status.condition match {
-      case Created | Staging | Starting | Reserved =>
+      case condition.Condition.Created |
+        condition.Condition.Staging |
+        condition.Condition.Starting |
+        condition.Condition.Reserved =>
+
         // not useful to report health conditions for tasks that have never reached a running state
         None
       case _ =>
@@ -230,21 +236,29 @@ trait PodStatusConversion {
     }.getOrElse(Seq.empty[ContainerEndpointStatus])
 
   def podInstanceState(
-    condition: core.condition.Condition,
+    instanceCondition: core.condition.Condition,
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
-    import core.condition.Condition._
-
-    condition match {
-      case Created | Reserved =>
+    instanceCondition match {
+      case condition.Condition.Created |
+        condition.Condition.Reserved =>
         PodInstanceState.Pending -> None
-      case Staging | Starting =>
+      case condition.Condition.Staging |
+        condition.Condition.Starting =>
         PodInstanceState.Staging -> None
-      case core.condition.Condition.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
+      case condition.Condition.Error |
+        condition.Condition.Failed |
+        condition.Condition.Finished |
+        condition.Condition.Killed |
+        condition.Condition.Gone |
+        condition.Condition.Dropped |
+        condition.Condition.Unknown |
+        condition.Condition.Killing =>
         PodInstanceState.Terminal -> None
-      case Unreachable | UnreachableInactive =>
+      case condition.Condition.Unreachable |
+        condition.Condition.UnreachableInactive =>
         PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
-      case Running =>
+      case condition.Condition.Running =>
         if (containerStatus.exists(_.conditions.exists { cond =>
           cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
         }))

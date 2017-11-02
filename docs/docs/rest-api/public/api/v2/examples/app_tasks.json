@@ -4,10 +4,11 @@
       "instanceId": "minecraft_survival-world.marathon-9538079c-3898-4e32-aa31-799bf9097f74",
       "agentInfo": {
         "host": "srv7.hw.ca1.mesosphere.com",
-        "attributes": []
+        "agentId" : "72437466-8ed8-4e64-87c8-b82657e2c44f-S0",
+        "attributes": [ "CgRub2RlEAAaCQkAAAAAAAAAAA==" ]
       },
       "taskMap": {
-        "taskName": {
+        "minecraft_survival-world.564bd685-4c30-11e5-98c1-be5b2935a987": {
           "taskId": "minecraft_survival-world.564bd685-4c30-11e5-98c1-be5b2935a987",
           "reservation" : {
             "volumeIds": {
@@ -36,9 +37,14 @@
       },
       "runSpecVersion": "2015-08-26T20:23:44.678Z",
       "state": {
-        "condition": "Running"
+        "condition": "Running",
+        "since" : "2017-11-02T15:10:05.882Z",
+        "activeSince" : "2017-11-02T15:10:05.882Z"
       },
-      "unreachableStrategy": "disabled"
+      "unreachableStrategy":  {
+        "inactiveAfterSeconds" : 0,
+        "expungeAfterSeconds" : 0
+      }
     }
   ]
 }
