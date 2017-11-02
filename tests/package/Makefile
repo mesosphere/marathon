@@ -43,4 +43,7 @@ target/ubuntu-upstart.built: ubuntu-upstart/Dockerfile ubuntu-upstart/mesos-vers
 	cd ubuntu-upstart && docker build . -t marathon-package-test:ubuntu-upstart
 	touch $@
 
+test:
+	amm test.sc all
+
 all: target/mesos.built target/debian-systemv.built target/debian-systemd.built target/centos-systemd.built target/centos-systemv.built target/ubuntu-upstart.built

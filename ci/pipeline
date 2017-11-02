@@ -65,6 +65,7 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
  * Upload Marathon tgz tarballs, its sha1 checksum and docs to S3.
  *
  * @param version The version to upload.
+ * @param buildLocation subfolder location to upload tarball to.  Example: "builds"
  * @return Artifact description if it was uploaded.
  */
 def uploadTarballPackagesToS3(version: String, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
@@ -95,14 +96,14 @@ def createTarballPackages(): String = utils.stage("Package Tarballs") {
   // we need to regex this string because we do have colored output in the `sbt version` command
   val VersionLineRegex = "^.*(\\d+\\.\\d+\\.\\d+[-A-Za-z\\d]+).*$".r
   // release version example v1.5.2
-  val releaseVersionLineRegex = "^.*(\\d+\\.\\d+\\.\\d+).*$".r
+  val ReleaseVersionLineRegex = "^.*(\\d+\\.\\d+\\.\\d+).*$".r
 
   // Nothing is what it seems. This is a poor man's way to extract the version
   // from sbt's console output until we run our Ammonite scripts in sbt.
   val lastLine = result.out.lines.last
   val version = lastLine match {
     case VersionLineRegex(v) => v
-    case releaseVersionLineRegex(v) => v
+    case ReleaseVersionLineRegex(v) => v
     case _ =>
         val commit = %%('git, "log", "--pretty=format:%h", "-n1").out.lines.last
         s"unknown version in commit $commit with version: $lastLine"
@@ -254,9 +255,8 @@ def release(requestVersion: String, gitSha: String, latest: String = "False"): U
   %('git, "tag", "-a", tagVersion, "-m", tagVersion)
   val version = build()
 
-  // Uploads
   uploadTarballPackagesToS3(version, s"releases/$releaseVersion")
-  // push docker
+
   %('docker, "push", s"mesosphere/marathon:$tagVersion")
 
   if (latest.toUpperCase == "TRUE") {
@@ -266,7 +266,6 @@ def release(requestVersion: String, gitSha: String, latest: String = "False"): U
     println("Docker image mesosphere/marathon:latest NOT updated")
   }
 
-  // push tags
   %('git, "push", "--tags")
 
   // TODO: Publish swagger files.

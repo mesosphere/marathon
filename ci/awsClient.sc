@@ -70,6 +70,8 @@ def doesS3FileExist(path: S3Path): Boolean = {
  *  compare the sha1 sums because they change for each build of the same commit.
  *  However, our artifact names are unique for each commit.
  *
+ *  @param uploadFile path of the file to be uploaded to S3.
+ *  @param s3path S3 path to upload file to on S3.
  *  @return Artifact description if it was uploaded. None otherwise.
  */
 def archiveArtifact(uploadFile: Path, s3path: S3Path): Option[Artifact] = {
@@ -84,6 +86,9 @@ def archiveArtifact(uploadFile: Path, s3path: S3Path): Option[Artifact] = {
 /**
  *  Uploads marathon artifacts to the default bucket, using the env var credentials.
  *  Upload process creates the sha1 file
+ *
+ *  @param uploadFile path of the file to be uploaded to S3.
+ *  @param s3path S3 path to upload file to on S3.
  */
 def uploadFileAndSha(uploadFile: Path, s3path: S3Path): Artifact = {
   val shaFile = fileUtil.writeSha1ForFile(uploadFile)
