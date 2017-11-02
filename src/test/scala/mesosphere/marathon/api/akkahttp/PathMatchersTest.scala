@@ -68,7 +68,7 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
     }
 
     "match path with multiple slashes" in {
-      AppPathIdLike(Path("//////app")) shouldBe Matched(Path.Empty, Tuple1("//////app".toPath))
+      AppPathIdLike(Path("//////app")) shouldBe Matched(Path.Empty, Tuple1("/app".toPath))
     }
   }
 
