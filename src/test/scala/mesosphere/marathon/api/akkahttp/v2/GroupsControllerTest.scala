@@ -152,6 +152,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       authorized: Boolean = true,
       authFn: Any => Boolean = _ => true,
       infoService: GroupInfoService = mock[GroupInfoService],
+      conf: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager]) {
     val authFixture = new TestAuthFixture()
     authFixture.authenticated = authenticated
@@ -163,6 +164,6 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     implicit val authenticator = authFixture.auth
 
-    val groupsController: GroupsController = new GroupsController(electionService, infoService, groupManager)
+    val groupsController: GroupsController = new GroupsController(electionService, infoService, groupManager, conf)
   }
 }

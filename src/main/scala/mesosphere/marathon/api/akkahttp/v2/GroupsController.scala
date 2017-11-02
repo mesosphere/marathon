@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.server.{ Directive1, Route }
 import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
 import mesosphere.marathon.api.akkahttp.v2.GroupsController._
-import mesosphere.marathon.api.v2.{ AppHelpers, PodsResource }
+import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, PodsResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
@@ -16,10 +16,12 @@ import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, GroupPathIdLike }
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
+import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.core.appinfo.GroupInfoService
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth.{ Authorizer, ViewGroup, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.stream.Sink
 
 import scala.concurrent.ExecutionContext
@@ -27,7 +29,8 @@ import scala.concurrent.ExecutionContext
 class GroupsController(
     electionService: ElectionService,
     infoService: GroupInfoService,
-    groupManager: GroupManager)(
+    groupManager: GroupManager,
+    val config: MarathonConf)(
     implicit
     val actorSystem: ActorSystem,
     val executionContext: ExecutionContext,
@@ -38,6 +41,17 @@ class GroupsController(
   import Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
   import mesosphere.marathon.api.v2.json.Formats._
+  import mesosphere.marathon.raml.GroupConversion._
+
+  private val forceParameter = parameter('force.as[Boolean].?(false))
+
+  /** convert app to canonical form */
+  private implicit val appNormalization: Normalization[raml.App] = {
+    val appNormalizationConfig = AppNormalization.Configuration(
+      config.defaultNetworkName.get,
+      config.mesosBridgeName())
+    AppHelpers.appNormalization(config.availableFeatures, appNormalizationConfig)
+  }
 
   def groupDetail(groupId: PathId)(implicit identity: Identity): Route = {
     extractEmbeds {
@@ -52,7 +66,30 @@ class GroupsController(
 
   def appsList(groupId: PathId): Route = ???
 
-  def createGroup(groupId: PathId): Route = ???
+  def createGroup(groupId: PathId)(implicit identity: Identity): Route = {
+    (forceParameter & entity(as(groupUpdateUnmarshaller(groupId)))) { (force, groupUpdate) =>
+      val effectiveGroupId = groupUpdate.id.map(id => PathId(id).canonicalPath(groupId)).getOrElse(groupId)
+      val rootGroup = groupManager.rootGroup()
+
+      def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
+        conflict.map(_ => throw ConflictingChangeException(msg))
+      }
+
+      throwIfConflicting(
+        rootGroup.group(effectiveGroupId),
+        s"Group $effectiveGroupId is already created. Use PUT to change this group.")
+
+      throwIfConflicting(
+        rootGroup.transitiveAppsById.get(effectiveGroupId),
+        s"An app with the path $effectiveGroupId already exists.")
+
+      // groupManager.updateRoot(
+      // effectiveGroupId.parent, applyGroupUpdate(_, effectiveGroupId, update, version), version, force)
+      // val (deployment, path) = updateOrCreate(effectivePath, groupUpdate, force)
+      // deploymentResult(deployment, Response.created(new URI(path.toString)))
+      complete(null)
+    }
+  }
 
   def updateGroup(groupId: PathId): Route = ???
 
@@ -83,19 +120,21 @@ class GroupsController(
   val route: Route = {
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
-        path(GroupPathIdLike) { groupId =>
-          pathEndOrSingleSlash {
-            get {
-              groupDetail(groupId)
-            } ~
-            post {
-              createGroup(groupId)
-            } ~
-            put {
-              updateGroup(groupId)
-            } ~
-            delete {
-              deleteGroup(groupId)
+        path(GroupPathIdLike) { maybeGroupId =>
+          withValidatedPathId(maybeGroupId.toString) { groupId =>
+            pathEndOrSingleSlash {
+              get {
+                groupDetail(groupId)
+              } ~
+              post {
+                createGroup(groupId)
+              } ~
+              put {
+                updateGroup(groupId)
+              } ~
+              delete {
+                deleteGroup(groupId)
+              }
             }
           }
         } ~

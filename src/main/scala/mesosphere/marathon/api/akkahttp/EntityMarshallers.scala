@@ -11,12 +11,14 @@ import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, FromMessageUnm
 import akka.util.ByteString
 import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
+import mesosphere.marathon.api.v2.GroupsResource.normalizeApps
 import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.core.appinfo.AppInfo
-import mesosphere.marathon.plugin.PathId
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.raml.GroupUpdate
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import play.api.libs.json._
 
 import scala.collection.breakOut
@@ -130,6 +132,18 @@ object EntityMarshallers {
         val app = (jsObj + ("id" -> JsString(appId.toString))).as[raml.App]
         appNormalization.normalized(app).toRaml[raml.AppUpdate]
       }
+  }.handleValidationErrors
+
+  def groupUpdateUnmarshaller(groupId: PathId)(implicit normalization: Normalization[mesosphere.marathon.raml.App]): FromEntityUnmarshaller[GroupUpdate] = {
+    playJsonUnmarshaller[raml.GroupUpdate].map { groupUpdate =>
+      val effectivePath = groupUpdate.id.map(id => validateOrThrow(PathId(id)).canonicalPath(groupId)).getOrElse(groupId)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath)
+      validateOrThrow(
+        normalizeApps(
+          effectivePath,
+          groupUpdate
+        ))(groupValidator)
+    }
   }.handleValidationErrors
 
   def appUpdatesUnmarshaller(partialUpdate: Boolean)(

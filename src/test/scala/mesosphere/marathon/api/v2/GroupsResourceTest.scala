@@ -6,7 +6,7 @@ import java.util.Collections
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ TestAuthFixture, TestGroupManagerFixture }
+import mesosphere.marathon.api.{ GroupApiService, TestAuthFixture, TestGroupManagerFixture }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.raml.{ App, GroupUpdate }
@@ -27,12 +27,13 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
       groupRepository: GroupRepository = mock[GroupRepository],
       auth: TestAuthFixture = new TestAuthFixture,
       groupInfo: GroupInfoService = mock[GroupInfoService],
+      groupApiService: GroupApiService = mock[GroupApiService],
       embed: java.util.Set[String] = Collections.emptySet[String]) {
     config.zkTimeoutDuration returns (patienceConfig.timeout.toMillis * 2).millis
     config.availableFeatures returns Set.empty
     config.defaultNetworkName returns ScallopStub(None)
     config.mesosBridgeName returns ScallopStub(Some("default-mesos-bridge-name"))
-    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config)(auth.auth, auth.auth, mat)
+    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, groupApiService)(auth.auth, auth.auth, mat)
   }
 
   case class FixtureWithRealGroupManager(
@@ -43,7 +44,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
     val config: AllConf = f.config
     val groupRepository: GroupRepository = f.groupRepository
     val groupManager: GroupManager = f.groupManager
-    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config)(auth.auth, auth.auth, mat)
+    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, new GroupApiService(groupManager))(auth.auth, auth.auth, mat)
   }
 
   "GroupsResource" should {

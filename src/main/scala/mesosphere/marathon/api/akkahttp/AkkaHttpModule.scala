@@ -9,7 +9,7 @@ import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{ MarathonHttpService, TaskKiller }
+import mesosphere.marathon.api.{ GroupApiService, MarathonHttpService, TaskKiller }
 import mesosphere.marathon.api.akkahttp.v2._
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.election.ElectionService
@@ -51,7 +51,8 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     electionService: ElectionService,
     healthCheckManager: HealthCheckManager,
     instanceTracker: InstanceTracker,
-    taskKiller: TaskKiller): AkkaHttpMarathonService = {
+    taskKiller: TaskKiller,
+    groupService: GroupApiService): AkkaHttpMarathonService = {
 
     import actorSystem.dispatcher
     val appsController = new AppsController(
@@ -76,7 +77,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val queueController = new QueueController(clock, launchQueue, electionService)
     val tasksController = new TasksController(instanceTracker, groupManager, healthCheckManager, taskKiller, electionService)
     val podsController = new PodsController(electionService, groupManager)
-    val groupsController = new GroupsController(electionService, groupInfoService, groupManager)
+    val groupsController = new GroupsController(electionService, groupInfoService, groupManager, conf)
 
     val v2Controller = new V2Controller(
       appsController,
