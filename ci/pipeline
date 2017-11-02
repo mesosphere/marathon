@@ -44,7 +44,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 @main
 def checkSystemIntegrationTests(logFileName: String): Unit = {
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
-  run("flake8", "--max-line-length=120", "tests/system")
+  run("flake8", "--count", "--max-line-length=120", "tests/system")
 }
 
 /**
