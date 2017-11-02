@@ -140,7 +140,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     try:
         _ = client.get_app(app_id)
-    except:
+    except Exception:
         pass
     else:
         assert False, "The application resurrected"
@@ -156,7 +156,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     # check if app definition is still not there
     try:
         _ = client.get_app(app_id)
-    except:
+    except Exception:
         pass
     else:
         assert False, "The application resurrected"

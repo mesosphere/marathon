@@ -132,7 +132,7 @@ def teardown_module(module):
     create_scale_graph(stats, metadata)
     try:
         delete_all_apps_wait()
-    except:
+    except Exception:
         pass
 
 
