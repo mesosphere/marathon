@@ -18,14 +18,21 @@ import mesosphere.marathon.api.v2._
 import mesosphere.marathon.api.v2.validation.{ AppValidation, NetworkValidationMessages }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, Selector, TaskCounts }
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.Reservation
+import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity }
 import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer }
 import mesosphere.marathon.state.PathId._
@@ -43,6 +50,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Try
+import scala.util.control.NonFatal
 
 class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest {
 
@@ -2243,5 +2251,43 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
       }
     }
+
+    "List running tasks" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val taskId = "task_id"
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+      groupManager.rootGroup() returns rootGroup
+      val instance = mock[Instance]
+      instance.instanceId returns Instance.Id.forRunSpec(app.id)
+      instance.tasksMap returns Map(Task.Id(taskId) -> Task.Reserved(
+        Task.Id(taskId),
+        Reservation(Seq.empty, Reservation.State.Launched),
+        Task.Status(
+          stagedAt = clock.now(),
+          startedAt = Some(clock.now()),
+          mesosStatus = None,
+          condition = Condition.Running,
+          networkInfo = NetworkInfoPlaceholder()
+        ),
+        clock.now()
+      ))
+      instance.agentInfo returns AgentInfo("host", None, None, None, Nil)
+
+      instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(
+        InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance))
+      ))
+      healthCheckManager.statuses(app.id) returns Future.successful(Map(instance.instanceId -> Seq(Health(instance.instanceId))))
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks")
+
+      Get(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        (Json.parse(responseAs[String]) \ "tasks" \ 0 \ "id").get shouldEqual JsString(taskId)
+      }
+    }
+
   }
 }
