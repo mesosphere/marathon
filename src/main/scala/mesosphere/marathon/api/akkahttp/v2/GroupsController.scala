@@ -5,7 +5,6 @@ package v2
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.{ Directive1, Route }
 import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
-import mesosphere.marathon.api.akkahttp.v2.GroupsController._
 import mesosphere.marathon.api.v2.{ AppHelpers, PodsResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.election.ElectionService
@@ -97,11 +96,17 @@ class GroupsController(electionService: ElectionService, infoService: GroupInfoS
   }
   // format: On
 
+  /**
+    * Initializes rules for selecting groups to take authorization into account
+    */
   def authorizationSelectors(implicit identity: Identity): GroupInfoService.Selectors = {
     GroupInfoService.Selectors(
       AppHelpers.authzSelector,
       PodsResource.authzSelector,
       authzSelector)
+  }
+  private def authzSelector(implicit authz: Authorizer, identity: Identity) = Selector[Group] { g =>
+    authz.isAuthorized(identity, ViewGroup, g)
   }
 
   import mesosphere.marathon.api.v2.InfoEmbedResolver._
@@ -113,12 +118,5 @@ class GroupsController(electionService: ElectionService, infoService: GroupInfoS
     parameter('embed.*).tflatMap {
       case Tuple1(embeds) => provide(resolveAppGroup(if (embeds.isEmpty) defaultEmbeds else embeds.toSet))
     }
-  }
-}
-
-object GroupsController {
-
-  private def authzSelector(implicit authz: Authorizer, identity: Identity) = Selector[Group] { g =>
-    authz.isAuthorized(identity, ViewGroup, g)
   }
 }
