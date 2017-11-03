@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.{ core, raml }
 import core.instance
 import TaskConversion._
 
@@ -27,11 +26,17 @@ object InstanceConversion extends HealthConversion with DefaultConversions with 
     )
   }
 
+  implicit val instanceIdRamlWrites: Writes[instance.Instance.Id, raml.Instance_Id] = Writes { id =>
+    Instance_Id(
+      idString = id.idString
+    )
+  }
+
   implicit val instanceRamlWrites: Writes[instance.Instance, raml.Instance] = Writes { i =>
     Instance(
-      instanceId = i.instanceId.idString,
+      instanceId = i.instanceId.toRaml,
       agentInfo = i.agentInfo.toRaml,
-      taskMap = i.tasksMap.map{ case (taskId, task) => taskId.idString -> task.toRaml },
+      tasksMap = i.tasksMap.map{ case (taskId, task) => taskId.idString -> task.toRaml },
       runSpecVersion = i.runSpecVersion.toOffsetDateTime,
       state = i.state.toRaml,
       unreachableStrategy = i.unreachableStrategy.toRaml

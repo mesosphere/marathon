@@ -1,47 +1,44 @@
 {
   "tasks": [
     {
-      "instanceId": "minecraft_survival-world.marathon-9538079c-3898-4e32-aa31-799bf9097f74",
-      "agentInfo": {
-        "host": "srv7.hw.ca1.mesosphere.com",
-        "agentId" : "72437466-8ed8-4e64-87c8-b82657e2c44f-S0",
-        "attributes": [ "CgRub2RlEAAaCQkAAAAAAAAAAA==" ]
+      "instanceId" : {
+        "idString" : "app.marathon-6313dda2-c08c-11e7-bbb0-acde48001122"
       },
-      "taskMap": {
-        "minecraft_survival-world.564bd685-4c30-11e5-98c1-be5b2935a987": {
-          "taskId": "minecraft_survival-world.564bd685-4c30-11e5-98c1-be5b2935a987",
-          "reservation" : {
-            "volumeIds": {
-              "runSpecId": "/minecraft/survival-world",
-              "containerPath": "$anon",
-              "uuid": "ac30b13f-00c5-4bc1-b083-d21094797f86",
-              "persistenceId": "minecraft_survival-world#$anon#ac30b13f-00c5-4bc1-b083-d21094797f86"
-            },
-            "state": {
-              "name": "minecraft_survival-world",
-              "timeout": {
-                "initiated": "2015-08-26T21:23:44.678Z",
-                "deadline": "2015-08-26T22:23:44.678Z",
-                "reason": "RelaunchEscalationTimeout"
-              }
+      "agentInfo" : {
+        "host" : "172.18.8.239",
+        "agentId" : "53df58d3-dba0-4d82-993f-f2f6d6fe35ff-S0",
+        "attributes" : [ {
+          "name" : "node",
+          "scalar" : 0
+        } ]
+      },
+      "tasksMap" : {
+        "app-kill-a-task-of-an-app.6313dda2-c08c-11e7-bbb0-acde48001122" : {
+          "taskId" : "app.6313dda2-c08c-11e7-bbb0-acde48001122",
+          "status" : {
+            "stagedAt" : "2017-11-03T11:44:44.83Z",
+            "startedAt" : "2017-11-03T11:44:45.034Z",
+            "mesosStatus" : "CkAKPmFwcC1raWxsLWEtdGFzay1vZi1hbi1hcHAuNjMxM2RkYTItYzA4Yy0xMWU3LWJiYjAtYWNkZTQ4MDAxMTIyEAEqKQonNTNkZjU4ZDMtZGJhMC00ZDgyLTk5M2YtZjJmNmQ2ZmUzNWZmLVMwMQ6FQasVf9ZBOkAKPmFwcC1raWxsLWEtdGFzay1vZi1hbi1hcHAuNjMxM2RkYTItYzA4Yy0xMWU3LWJiYjAtYWNkZTQ4MDAxMTIySAJaEBeRfvD50EwzrRfuXBtm0UNqPQoQKg4SDDE3Mi4xOC44LjIzORiXPiImCiRlNjhiOTRiYy1hMjBjLTQ1MWUtYWNmNy0yZDA4NWIxOTRhNTA=",
+            "condition" : "Running",
+            "networkInfo" : {
+              "hostName" : "172.18.8.239",
+              "hostPorts" : [ 33839 ],
+              "ipAddresses" : [ {
+                "ipAddress" : "172.18.8.239",
+                "protocol" : "IPv4"
+              } ]
             }
           },
-          "status": {
-            "stagedAt": "2015-08-26T20:23:44.678Z",
-            "startedAt": "2015-08-26T20:23:44.678Z",
-            "mesosStatus": null,
-            "condition": "Running"
-          },
-          "runSpecVersion": "2015-08-26T20:23:44.678Z"
+          "runSpecVersion" : "2017-11-03T11:44:44.797Z"
         }
       },
-      "runSpecVersion": "2015-08-26T20:23:44.678Z",
-      "state": {
-        "condition": "Running",
-        "since" : "2017-11-02T15:10:05.882Z",
-        "activeSince" : "2017-11-02T15:10:05.882Z"
+      "runSpecVersion" : "2017-11-03T11:44:44.797Z",
+      "state" : {
+        "condition" : "Running",
+        "since" : "2017-11-03T11:44:45.034Z",
+        "activeSince" : "2017-11-03T11:44:45.034Z"
       },
-      "unreachableStrategy":  {
+      "unreachableStrategy" : {
         "inactiveAfterSeconds" : 0,
         "expungeAfterSeconds" : 0
       }

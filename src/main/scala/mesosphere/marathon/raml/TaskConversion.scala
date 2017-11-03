@@ -40,13 +40,28 @@ object TaskConversion extends DefaultConversions with OfferConversion {
     )
   }
 
+  implicit val networkInfoRamlWrites: Writes[task.state.NetworkInfo, raml.NetworkInfo] = Writes { networkInfo =>
+    NetworkInfo(
+      hostName = networkInfo.hostName,
+      hostPorts = networkInfo.hostPorts.map(_.toDouble),
+      ipAddresses = networkInfo.ipAddresses.map { ipAddr =>
+        NetworkInfoIPAddress(
+          ipAddress = ipAddr.getIpAddress,
+          protocol = IpProtocol.fromString(ipAddr.getProtocol.name())
+            .getOrElse(throw new RuntimeException(s"can't convert protocol name to RAML model: unexpected ${ipAddr.getProtocol.name()}")),
+        )
+      }
+    )
+  }
+
   implicit val statusRamlWrites: Writes[task.Task.Status, raml.Status] = Writes { status =>
     Status(
       stagedAt = status.stagedAt.toOffsetDateTime,
       startedAt = status.startedAt.map(_.toOffsetDateTime),
       mesosStatus = status.mesosStatus.map(s => Base64.getEncoder.encodeToString(s.toByteArray)),
       condition = Condition.fromString(status.condition.toString)
-        .getOrElse(throw new RuntimeException(s"can't convert mesos condition to RAML model: unexpected ${status.condition}"))
+        .getOrElse(throw new RuntimeException(s"can't convert mesos condition to RAML model: unexpected ${status.condition}")),
+      networkInfo = status.networkInfo.toRaml
     )
   }
 

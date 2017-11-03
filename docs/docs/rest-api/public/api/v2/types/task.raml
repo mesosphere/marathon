@@ -21,7 +21,9 @@ types:
       deadline: datetime
       reason:
         type: string
-        enum: [RelaunchEscalationTimeout, ReservationTimeout]
+        enum:
+          - RelaunchEscalationTimeout
+          - ReservationTimeout
 
   State:
     type: object
@@ -35,6 +37,19 @@ types:
       volumeIds: LocalVolumeId[]
       state: State
 
+  NetworkInfoIPAddress:
+    type: object
+    properties:
+      ipAddress: string
+      protocol: strings.IpProtocol
+
+  NetworkInfo:
+    type: object
+    properties:
+      hostName: string
+      hostPorts: integer[]
+      ipAddresses: NetworkInfoIPAddress[]
+
   Status:
     type: object
     properties:
@@ -42,6 +57,7 @@ types:
       startedAt?: datetime
       mesosStatus?: string
       condition: strings.Condition
+      networkInfo: NetworkInfo
 
   Task:
     type: object

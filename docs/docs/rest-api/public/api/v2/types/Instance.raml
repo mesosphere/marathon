@@ -26,12 +26,17 @@ types:
       activeSince?: datetime
       healthy?: boolean
 
+  Instance_Id:
+    type: object
+    properties:
+      idString: strings.InstanceId
+
   Instance:
     type: object
     properties:
-      instanceId: strings.InstanceId
+      instanceId: Instance_Id
       agentInfo: AgentInfo
-      taskMap:
+      tasksMap:
         type: object
         properties:
           /.*/: task.Task
