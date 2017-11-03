@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.{StatusCodes, Uri}
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import mesosphere.UnitTest
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.TestAuthFixture
