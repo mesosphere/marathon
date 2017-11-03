@@ -52,7 +52,7 @@ object CuratorElectionStream extends StrictLogging {
           case LeadershipState.ElectedAsLeader =>
             logger.info("Leader won.")
           case LeadershipState.Standby(None) =>
-            logger.info(s"Leader unknown.")
+            logger.info("Leader unknown.")
           case LeadershipState.Standby(Some(currentLeader)) =>
             logger.info(s"Leader defeated. Current leader: ${currentLeader}")
         }
