@@ -13,6 +13,13 @@ types:
   DeploymentStep:
     type: object
     properties:
+      actions:
+        type: array
+        items: DeploymentAction
+
+  DeploymentAction:
+    type: object
+    properties:
       action: string
       app?: strings.PathId
       pod?: strings.PathId
