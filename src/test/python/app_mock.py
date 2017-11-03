@@ -22,7 +22,7 @@ else:
     from urllib.request import Request, urlopen
 
 if PY2:
-    byte_type = unicode
+    byte_type = unicode # NOQA
 
     def response_status(response):
         return response.getcode()

@@ -268,7 +268,7 @@ the following Dockerfile with an `ENTRYPOINT` defined:
 
 ```bash
 FROM busybox
-MAINTAINER support@mesosphere.io
+LABEL maintainer="support@mesosphere.io"
 
 CMD ["inky"]
 ENTRYPOINT ["echo"]
