@@ -27,8 +27,10 @@ ansiColor('xterm') {
             usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
             string(credentialsId: '3f0dbb48-de33-431f-b91c-2366d2f0e1cf',variable: 'AWS_ACCESS_KEY_ID'),
             string(credentialsId: 'f585ec9a-3c38-4f67-8bdb-79e5d4761937',variable: 'AWS_SECRET_ACCESS_KEY'),
-        ]) {
-          withDockerRegistry([credentialsId: 'docker-hub-credentials', url: 'https://index.docker.io/v1/']) {
+            string(credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d',variable: 'DOCKER_HUB_USERNAME'),
+            string(credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825',variable: 'DOCKER_HUB_PASSWORD'),
+          ]) {
+            sh """docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}"""
             sh """sudo -E ci/pipeline release $params.version $params.gitsha $params.latest"""
           }
         }
