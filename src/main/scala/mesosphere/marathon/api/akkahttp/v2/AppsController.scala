@@ -50,7 +50,8 @@ import PathMatchers._
 import akka.NotUsed
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
-import AppsDirectives.{ extractTaskKillingMode, TaskKillingMode }
+import AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.raml.InstanceConversion._
 
 import scala.async.Async._

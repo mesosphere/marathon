@@ -50,7 +50,7 @@ trait PodStatusConversion {
       statusSince = since,
       containerId = task.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
-      conditions = Seq(maybeHealthCondition(task.status, maybeContainerSpec, endpointStatus, since)).flatten,
+      conditions = List(maybeHealthCondition(task.status, maybeContainerSpec, endpointStatus, since)).flatten,
       resources = resources,
       lastUpdated = since, // TODO(jdef) pods fixme
       lastChanged = since // TODO(jdef) pods.fixme
@@ -97,7 +97,7 @@ trait PodStatusConversion {
 
   // TODO: Consider using a view here (since we flatMap and groupBy)
   def networkStatuses(tasks: Seq[task.Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
-    task.status.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
+    task.status.mesosStatus.filter(_.hasContainerStatus).fold(List.empty[NetworkStatus]) { mesosStatus =>
       mesosStatus.getContainerStatus.getNetworkInfosList.map { networkInfo =>
         NetworkStatus(
           name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
@@ -223,7 +223,7 @@ trait PodStatusConversion {
                 allEndpoints.find(_.name == name).map(_.copy(healthy = taskHealthy))
               }.fold(allEndpoints) { updated =>
                 // ... and replace the old entry with the one from above
-                allEndpoints.filter(_.name != updated.name) ++ Seq(updated)
+                allEndpoints.filter(_.name != updated.name) ++ List(updated)
               }
             }
             Some(withHealth)
@@ -233,7 +233,7 @@ trait PodStatusConversion {
       } else {
         None
       }
-    }.getOrElse(Seq.empty[ContainerEndpointStatus])
+    }.getOrElse(List.empty[ContainerEndpointStatus])
 
   def podInstanceState(
     instanceCondition: core.condition.Condition,
