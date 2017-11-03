@@ -124,8 +124,8 @@ object CuratorElectionStream extends StrictLogging {
       * ID.
       */
     private def emitLeader(): Unit = {
-      val currentLeader = leaderHostPortMetric.blocking {
-        val participants = try {
+      val participants = leaderHostPortMetric.blocking {
+        try {
           if (client.getState == CuratorFrameworkState.STOPPED)
             Nil
           else
@@ -135,16 +135,22 @@ object CuratorElectionStream extends StrictLogging {
             logger.error("Error while getting current leader", ex)
             Nil
         }
-        if (participants.iterator.filter(_.getId == hostPort).size > 1)
-          throw new IllegalStateException(s"Multiple election participants have the same ID: ${hostPort}. This is not allowed.")
-        participants.find(_.isLeader).map(_.getId)
       }
 
-      currentLeader match {
-        case Some(leader) if leader == hostPort =>
-          sq.offer(LeadershipState.ElectedAsLeader)
-        case otherwise =>
-          sq.offer(LeadershipState.Standby(otherwise))
+      val selfParticipantCount = participants.iterator.filter(_.getId == hostPort).size
+      if (selfParticipantCount == 1) {
+        val element = participants.find(_.isLeader).map(_.getId) match {
+          case Some(leader) if leader == hostPort => LeadershipState.ElectedAsLeader
+          case otherwise => LeadershipState.Standby(otherwise)
+        }
+        sq.offer(element)
+      } else if (selfParticipantCount > 1)
+        throw new IllegalStateException(s"Multiple election participants have the same ID: ${hostPort}. This is not allowed.")
+      else {
+        /* If our participant record isn't in the list yet, emit nothing. Curator Latch is still initializing.
+         *
+         * This makes the election stream more deterministic.
+         */
       }
     }
 
