@@ -33,7 +33,6 @@ ansiColor('xterm') {
             sh """docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}"""
             sh """sudo -E ci/pipeline release $params.version $params.gitsha $params.latest"""
           }
-        }
       } finally {
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
         junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
