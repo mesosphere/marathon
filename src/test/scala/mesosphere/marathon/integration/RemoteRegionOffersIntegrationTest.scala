@@ -22,33 +22,29 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 3
 
-  val homeRegion = Region("home_region")
-  val homeZone = Zone("home_zone")
+  class Fixture {
+    val homeRegion = Region("home_region")
+    val homeZone = Zone("home_zone")
 
-  val remoteRegion = Region("remote_region")
-  val remoteZone1 = Zone("remote_zone1")
-  val remoteZone2 = Zone("remote_zone2")
+    val remoteRegion = Region("remote_region")
+    val remoteZone1 = Zone("remote_zone1")
+    val remoteZone2 = Zone("remote_zone2")
+  }
 
-  override def mastersFaultDomains = Seq(Some(FaultDomain(region = homeRegion, zone = homeZone)))
+  val fixture = new Fixture
+
+
+  override def mastersFaultDomains = Seq(Some(FaultDomain(region = fixture.homeRegion, zone = fixture.homeZone)))
 
   override def agentsFaultDomains = Seq(
-    Some(FaultDomain(region = remoteRegion, zone = remoteZone1)),
-    Some(FaultDomain(region = remoteRegion, zone = remoteZone2)),
-    Some(FaultDomain(region = homeRegion, zone = homeZone)))
-
-  override def beforeAll() = {
-    super.beforeAll()
-    cleanUp()
-  }
-  override def afterAll() = {
-    cleanUp()
-    super.afterAll()
-  }
+    Some(FaultDomain(region = fixture.remoteRegion, zone = fixture.remoteZone1)),
+    Some(FaultDomain(region = fixture.remoteRegion, zone = fixture.remoteZone2)),
+    Some(FaultDomain(region = fixture.homeRegion, zone = fixture.homeZone)))
 
   def appId(suffix: String): PathId = testBasePath / s"app-${suffix}"
 
   "Region Aware marathon" must {
-    "Launch an instance of the app in the default region if region is not specified" in {
+    "Launch an instance of the app in the default region if region is not specified" in new Fixture {
       val applicationId = appId("must-be-placed-in-home-region")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None)
 
@@ -57,7 +53,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
       Then("The app is created in the default region")
       result should be(Created)
-      extractDeploymentIds(result)
+
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
@@ -67,7 +63,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
         case ITResourceStringValue(value) => value shouldEqual homeRegion.value
       }
     }
-    "Launch an instance of the app in the specified region" in {
+    "Launch an instance of the app in the specified region" in new Fixture {
       val applicationId = appId("must-be-placed-in-remote-region")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints =
         Set(Constraints.regionField :: "LIKE" :: remoteRegion.value :: Nil))
@@ -77,7 +73,6 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
       Then("The app is created in the specified region")
       result should be(Created)
-      extractDeploymentIds(result)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
@@ -87,7 +82,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
         case ITResourceStringValue(value) => value shouldEqual remoteRegion.value
       }
     }
-    "Launch an instance of the app in the specified region and zone" in {
+    "Launch an instance of the app in the specified region and zone" in new Fixture{
       val applicationId = appId("must-be-placed-in-remote-region-and-zone")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(
         Constraints.regionField :: "LIKE" :: remoteRegion.value :: Nil,
@@ -99,7 +94,6 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
       Then("The app is created in the proper region and a proper zone")
       result should be(Created)
-      extractDeploymentIds(result)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
       val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
