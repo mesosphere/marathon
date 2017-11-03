@@ -104,22 +104,9 @@ def runWithTimeout(timeout: FiniteDuration, logFileName: String)(commands: Seq[S
     }
 }
 
-/**
- * Run a process with given commands and time out it runs too long.
- *
- * @param timeout The maximum time to wait.
- * @param logFileName Name of file which collects all logs.
- * @param commands The commands that are executed in a process. E.g. "sbt",
- *  "compile".
- */
-def runWithTimeoutAndCleanup(timeout: FiniteDuration, logFileName: String)(commands: Seq[String]): Unit = {
-
-  try {
-    runWithTimeout(timeout, logFileName)(commands)
-  } finally {
-    // This also cleans forked SBT processes.
-    provision.killStaleTestProcesses()
-  }
+def withCleanUp[T](block: => Unit): Unit = {
+  try { block }
+  finally { provision.killStaleTestProcesses() }
 }
 
 /**

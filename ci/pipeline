@@ -29,7 +29,7 @@ val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 @main
 def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") {
 
-  def run(cmd: String *) = utils.runWithTimeoutAndCleanup(30.minutes, logFileName)(cmd)
+  def run(cmd: String *) = utils.withCleanUp {utils.runWithTimeout(30.minutes, logFileName)(cmd)}
 
   run("sbt", "clean", "test", "integration:test", "scapegoat")
 
@@ -44,7 +44,6 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
 @main
 def checkSystemIntegrationTests(logFileName: String): Unit = {
-  // TODO: (kgs)  There is NO need to kill processes for this!
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
   run("flake8", "--count", "--max-line-length=120", "tests/system", "src/test/python")
 }
@@ -65,7 +64,7 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
  * Upload Marathon tgz tarballs, its sha1 checksum and docs to S3.
  *
  * @param version The version to upload.
- * @param buildLocation subfolder location to upload tarball to.  Example: "builds"
+ * @param buildLocation subfolder location to upload tarball to. Example: "builds"
  * @return Artifact description if it was uploaded.
  */
 def uploadTarballPackagesToS3(version: String, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
@@ -198,7 +197,7 @@ def master(): Unit = {
   val version = build()
 
   // Uploads
-  val maybeArtifact = uploadTarballPackagesToS3(version, "snapshots")
+  val maybeArtifact = uploadTarballPackagesToS3(version, "builds")
   maybeArtifact.foreach { artifact =>
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
@@ -214,7 +213,7 @@ def pr(): Unit = asPullRequest {
   val version = build()
 
   // Uploads
-  val artifact = uploadTarballPackagesToS3(version, "snapshots")
+  val artifact = uploadTarballPackagesToS3(version, "builds")
   (version, artifact)
 }
 
@@ -242,13 +241,15 @@ def jenkins(): Unit = {
  *  1. tarball with version details
  *  2. release of docker with that version
  *  3. git tag of version (pushed to server)
- *
+ * @param requestVersion The version attempting to be released v1.4.6
+ * @param gitSha The git commit sha.  This can be shorthand (ex. 0e1)
+ * @param latest Boolean to indicat if the Docker latest should be updated to this version.
  * @return Version and artifact description of Marathon build.
  */
 @main
-def release(requestVersion: String, gitSha: String, latest: String = "False"): Unit = {
+def release(requestVersion: String, gitSha: String, latest: Boolean = false): Unit = {
 
-  val releaseVersion = cleanVersion(requestVersion)
+  val releaseVersion = withoutVersionPrefix(requestVersion)
   val tagVersion = s"v$releaseVersion"
   println(s"Releasing version: $releaseVersion ")
   %('git, "checkout", gitSha)
@@ -259,7 +260,7 @@ def release(requestVersion: String, gitSha: String, latest: String = "False"): U
 
   %('docker, "push", s"mesosphere/marathon:$tagVersion")
 
-  if (latest.toUpperCase == "TRUE") {
+  if (latest) {
     %('docker, "tag", s"mesosphere/marathon:$tagVersion", "mesosphere/marathon:latest")
     %('docker, "push", "mesosphere/marathon:latest")
   } else {
@@ -272,7 +273,7 @@ def release(requestVersion: String, gitSha: String, latest: String = "False"): U
   // TODO: Publish native packages to unstable.
 }
 
-def cleanVersion(releaseVersion: String): String = {
+def withoutVersionPrefix(releaseVersion: String): String = {
     if(releaseVersion.toLowerCase.startsWith("v"))
       releaseVersion.substring(1)
     else

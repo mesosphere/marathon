@@ -40,9 +40,9 @@ case class Artifact(path: S3Path, sha1: String) {
 }
 
 /**
- * builds = snapshots / builds, milestones, releases
+ * builds =  builds, milestones, releases
  */
-def s3PathFor(buildLocation: String = "snapshots") : S3Path = {
+def s3PathFor(buildLocation: String = "builds") : S3Path = {
   S3Path(
     sys.env.getOrElse("S3_BUCKET", "downloads.mesosphere.io"),
     Path(sys.env.getOrElse("S3_PATH" , s"/marathon/$buildLocation")))
