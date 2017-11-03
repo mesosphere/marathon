@@ -33,7 +33,6 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
   val fixture = new Fixture
 
-
   override def mastersFaultDomains = Seq(Some(FaultDomain(region = fixture.homeRegion, zone = fixture.homeZone)))
 
   override def agentsFaultDomains = Seq(
@@ -82,7 +81,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
         case ITResourceStringValue(value) => value shouldEqual remoteRegion.value
       }
     }
-    "Launch an instance of the app in the specified region and zone" in new Fixture{
+    "Launch an instance of the app in the specified region and zone" in new Fixture {
       val applicationId = appId("must-be-placed-in-remote-region-and-zone")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(
         Constraints.regionField :: "LIKE" :: remoteRegion.value :: Nil,
