@@ -64,7 +64,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   }
 
   "CuratorElectionStream.newCuratorConnection" should {
-    "throw an excepgtion when given an unresolvable hostname" in {
+    "throw an exception when given an unresolvable hostname" in {
       val conf = new ZookeeperConf {
         override lazy val zooKeeperUrl = ScallopStub(Some("zk://unresolvable:8080/marathon"))
         override lazy val zooKeeperSessionTimeout = ScallopStub(Some(1000L))
