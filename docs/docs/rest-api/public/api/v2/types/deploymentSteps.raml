@@ -1,0 +1,18 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+
+types:
+  DeploymentSteps:
+    type: object
+    properties:
+      steps:
+        type: array
+        items: DeploymentStep
+
+  DeploymentStep:
+    type: object
+    properties:
+      action: string
+      app?: strings.PathId
+      pod?: strings.PathId
