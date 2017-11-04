@@ -826,7 +826,7 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
 trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
   // disable failover timeout to assist with cleanup ops; terminated marathons are immediately removed from mesos's
   // list of frameworks
-  override def marathonArgs: Map[String, String] = Map("failover_timeout" -> "0")
+  override def marathonArgs: Map[String, String] = Map("failover_timeout" -> "1")
 }
 
 /**
