@@ -41,9 +41,6 @@ object Dependencies {
     marathonUI % "compile",
     marathonApiConsole % "compile",
     wixAccord % "compile",
-    curator % "compile",
-    curatorClient % "compile",
-    curatorFramework % "compile",
     java8Compat % "compile",
     scalaLogging % "compile",
     logstash % "compile",
@@ -62,9 +59,8 @@ object Dependencies {
     Test.akkaTestKit % "test",
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
-    Test.scalacheck % "test",
-    Test.curatorTest % "test"
-  ) ++ Kamon.all).map(
+    Test.scalacheck % "test"
+  ) ++ Curator.all ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -108,7 +104,6 @@ object Dependency {
     val Logback = "1.1.3"
     val Logstash = "4.9"
     val WixAccord = "0.7.1"
-    val Curator = "2.11.1"
     val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
     val Raven = "7.8.6"
@@ -152,9 +147,6 @@ object Dependency {
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
-  val curator = "org.apache.curator" % "curator-recipes" % V.Curator
-  val curatorClient = "org.apache.curator" % "curator-client" % V.Curator
-  val curatorFramework = "org.apache.curator" % "curator-framework" % V.Curator
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
@@ -162,6 +154,35 @@ object Dependency {
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   val akkaSse = "de.heikoseeberger" %% "akka-sse" % V.AkkaSSE
+
+  object Curator {
+    /**
+      * According to Curator's Zookeeper Compatibility Docs [http://curator.apache.org/zk-compatibility.html], 4.0.0
+      * is the recommended version to use with Zookeeper 3.4.x. You do need to exclude the 3.5.x dependency and specify
+      * your 3.4.x dependency.
+      */
+    val Version = "4.0.0"
+
+    /**
+      * curator-test 4.0.0 causes scary error message for aspectj weaver:
+      *
+      *   java.lang.IllegalStateException: Expecting .,<, or ;, but found curatortest while unpacking (some shaded jar)
+      *
+      * Also, it launches Zookeeper 3.5.3
+      */
+    val TestVersion = "2.11.1" // CuratorTest 4.0.0 causes scary error message for aspectj weaver, and seems to target
+
+    val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
+
+    val curator = Seq(
+      "org.apache.curator" % "curator-recipes" % Version % "compile",
+      "org.apache.curator" % "curator-client" % Version % "compile",
+      "org.apache.curator" % "curator-framework" % Version % "compile",
+      "org.apache.curator" % "curator-test" % TestVersion % "test").map(_.excludeAll(excludeZk35))
+
+    val zk = Seq("org.apache.zookeeper" % "zookeeper" % "3.4.8")
+    val all = curator ++ zk
+  }
 
   object Kamon {
     val Version = "0.6.7"
@@ -191,6 +212,5 @@ object Dependency {
     val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
-    val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
   }
 }
