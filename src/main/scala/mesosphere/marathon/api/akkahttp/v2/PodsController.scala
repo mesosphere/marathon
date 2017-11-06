@@ -7,7 +7,7 @@ import akka.event.EventStream
 import akka.http.scaladsl.model.{ HttpEntity, StatusCodes }
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.{ Controller, Headers }
-import mesosphere.marathon.api.akkahttp.PathMatchers.PodsPathIdLike
+import mesosphere.marathon.api.akkahttp.PathMatchers.{ forceParameter, PodsPathIdLike }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec }
@@ -50,7 +50,7 @@ class PodsController(
 
   def create(): Route =
     authenticated.apply { implicit identity =>
-      extractClientIP { clientIp =>
+      (extractClientIP & forceParameter) { (clientIp, force) =>
         extractRequest { req =>
           entity(as[raml.Pod]) { podDef =>
             val normalizedPodDef = podNormalizer.normalized(podDef)
@@ -58,8 +58,6 @@ class PodsController(
             assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
               authorized(CreateRunSpec, pod).apply {
                 val p = async {
-                  // TODO: extract force parameter
-                  val force = false
                   val deployment = await(podManager.create(pod, force))
 
                   // TODO: How should we get the ip?

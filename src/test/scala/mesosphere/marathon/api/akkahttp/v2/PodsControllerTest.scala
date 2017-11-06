@@ -22,7 +22,6 @@ import play.api.libs.json._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
-import org.scalatest.OptionValues._
 
 class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours {
 
