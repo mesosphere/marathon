@@ -53,7 +53,8 @@ class PodsController(
       extractClientIP { clientIp =>
         extractRequest { req =>
           entity(as[raml.Pod]) { podDef =>
-            val pod = Raml.fromRaml(podNormalizer.normalized(podDef)).copy(version = clock.now())
+            val normalizedPodDef = podNormalizer.normalized(podDef)
+            val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
             assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
               authorized(CreateRunSpec, pod).apply {
                 val p = async {
@@ -134,7 +135,7 @@ class PodsController(
         }
       } ~
       post {
-        pathEnd {
+        pathEndOrSingleSlash {
           create()
         }
       } ~
