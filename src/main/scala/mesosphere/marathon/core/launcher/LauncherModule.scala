@@ -25,7 +25,7 @@ class LauncherModule(
 
   lazy val offerProcessor: OfferProcessor =
     new OfferProcessorImpl(
-      conf, clock,
+      conf,
       offerMatcher, taskLauncher, stateOpProcessor,
       offerStreamInput
     )
