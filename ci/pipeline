@@ -142,6 +142,8 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
  * Provision the build host.
  */
 def provisionHost(): Unit = utils.stage("Provision") {
+  utils.printCurrentTime()
+
   // Set port range for random port 0 allocation.
   %('sudo, "ci/set_port_range.sh")
 
