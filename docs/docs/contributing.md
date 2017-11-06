@@ -113,13 +113,14 @@ new features are definitely not backported.
    request). Further, notes about the change should be specified in changelog.md.
 
 8. Pull requests should include appropriate additions to the unit test suite (see "Test Guidelines", below). If the
-   change is a bugfix, then the added tests must fail without the fix as a safeguard against future regressions.
+   change is a bugfix, then one of the added tests should fail without the fix.
 
 9. Compile your code prior to committing. We would like the result of our automatic code formatters to be included in
    the commit as to not produce a dirty work tree after fresh checkout and first compile.
 
 10. Run, at the very least, all unit tests (`sbt test`). Integration tests can also be run using the supplied
     `./bin/run-tests.sh` script (requires docker).
+
 
 ## Test Guidelines
 
@@ -142,6 +143,38 @@ Our testing guidelines regarding fixtures are as follows:
 - When teardown-per-test is desired, use the
   [loan-fixtures methods](http://www.scalatest.org/user_guide/sharing_fixtures#loanFixtureMethods). Otherwise, prefer
   parameterized case classes or traits.
+
+## Running Integration Tests
+
+Running integration tests requires that several components are installed and available locally:
+
+* Mesos (master and agent)
+* Docker
+* Mesos native lib (with `MESOS_NATIVE_JAVA_LIBRARY` set)
+
+Note that the integration test suites launch and use a local, embedded, version of Zookeeper.
+
+### Installing Mesos
+
+Marathon integration tests require an installation of Mesos in order to run. The Mesos executables, including `mesos`, `mesos-master`, and `mesos-agent` must be included in the `PATH`. Further, the environment variable `MESOS_NATIVE_JAVA_LIBRARY` should be set to the path of `libmesos.dylib` / `libmesos.so`.
+
+#### Installing from source, manually
+
+You can install Mesos from source, manually, by following the instructions [here](http://mesos.apache.org/documentation/latest/building/)
+
+#### Installing from source using mvm.sh
+
+To install Mesos from source, you can use the provided `scripts/mvm.sh` script. Please read the header of the script for pre-requisite steps.
+
+```
+scripts/mvm.sh --latest
+```
+
+This will take 30 minutes or so to install on a modern processor.
+
+#### Installing from Homebrew (OS X, fastest)
+
+You can install a version of Mesos from Homebrew. The Homebrew Mesos version often lags behind the latest version of Mesos. Most of the time, however, this is not a problem.
 
 ## Source Files
 
