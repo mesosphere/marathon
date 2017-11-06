@@ -93,7 +93,7 @@ def time_deployment(test=""):
             deployment_count = len(deployments)
             if deployment_count > 0:
                 time.sleep(1)
-        except:
+        except Exception:
             wait_for_service_endpoint('marathon-user')
             pass
 
@@ -226,7 +226,7 @@ def instance_test_app(test_obj):
         launch_results = test_obj.launch_results
         try:
             launch_apps(test_obj)
-        except:
+        except Exception:
             # service unavail == wait for marathon
             launch_results.failed('Failure to launched (but we still will wait for deploys)')
             wait_for_marathon_up(test_obj)
@@ -312,7 +312,7 @@ def undeployment_wait(test_obj=None):
             if deployment_count > 0:
                 time.sleep(1)
                 failure_count = 0
-        except:
+        except Exception:
             failure_count += 1
             # consecutive failures great than x
             if failure_count > 10 and test_obj is not None:
@@ -527,7 +527,7 @@ def get_cluster_metadata():
 
     try:
         version = ee_version()
-    except:
+    except Exception:
         version = None
 
     resources = available_resources()
@@ -583,7 +583,7 @@ def uninstall_mom():
             dcos_client = mesos.DCOSClient()
             dcos_client.shutdown_framework(framework_id)
             time.sleep(2)
-    except:
+    except Exception:
         pass
 
     removed = False
@@ -620,7 +620,7 @@ def wait_for_marathon_up(test_obj=None, timeout=60 * 5):
 def quiet_wait_for_marathon_up(test_obj=None, timeout=60 * 5):
     try:
         wait_for_marathon_up(test_obj, timeout)
-    except:
+    except Exception:
         pass
 
 
