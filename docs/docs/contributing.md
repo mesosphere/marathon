@@ -146,6 +146,8 @@ Our testing guidelines regarding fixtures are as follows:
 
 ## Running Integration Tests
 
+### Prerequisites
+
 Running integration tests requires that several components are installed and available locally:
 
 * Mesos (master and agent)
@@ -154,15 +156,15 @@ Running integration tests requires that several components are installed and ava
 
 Note that the integration test suites launch and use a local, embedded, version of Zookeeper.
 
-### Installing Mesos
+#### Installing Mesos
 
 Marathon integration tests require an installation of Mesos in order to run. The Mesos executables, including `mesos`, `mesos-master`, and `mesos-agent` must be included in the `PATH`. Further, the environment variable `MESOS_NATIVE_JAVA_LIBRARY` should be set to the path of `libmesos.dylib` / `libmesos.so`.
 
-#### Installing from source, manually
+##### Installing from source, manually
 
 You can install Mesos from source, manually, by following the instructions [here](http://mesos.apache.org/documentation/latest/building/)
 
-#### Installing from source using mvm.sh
+##### Installing from source using mvm.sh
 
 To install Mesos from source, you can use the provided `scripts/mvm.sh` script. Please read the header of the script for pre-requisite steps.
 
@@ -172,9 +174,36 @@ scripts/mvm.sh --latest
 
 This will take 30 minutes or so to install on a modern processor.
 
-#### Installing from Homebrew (OS X, fastest)
+##### Installing from Homebrew (OS X, fastest)
 
 You can install a version of Mesos from Homebrew. The Homebrew Mesos version often lags behind the latest version of Mesos. Most of the time, however, this is not a problem.
+
+### Running Tests
+
+Some integration tests are disabled by default (references `WhenEnvSet`). Setting these environment variables will enable them.
+```
+export RUN_DOCKER_INTEGRATION_TESTS=false
+export RUN_MESOS_INTEGRATION_TESTS=false
+```
+
+To run all of the integration tests using sbt:
+
+```
+sbt integration:test
+```
+
+To run a single integration test:
+
+```
+$ sbt
+
+marathon(...)> set testOptions in Test := Nil
+
+...
+
+
+marathon(...)> test-only mesosphere.marathon.integration.AppDeployIntegrationTest -- -oF
+```
 
 ## Source Files
 
