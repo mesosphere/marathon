@@ -149,6 +149,28 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       noMoreInteractions(taskKiller)
     }
 
+    "not allow to kill pod instances during kill and scale" in new Fixture {
+      Given("two apps and 1 task each")
+      val pod1 = "/pod".toRootPath
+
+      val instance = TestInstanceBuilder.newBuilder(pod1).addTaskRunning(Some("container1")).getInstance()
+
+      val (container, _) = instance.tasksMap.head
+
+      val body = s"""{"ids": ["${container.idString}"]}"""
+      val bodyBytes = body.toCharArray.map(_.toByte)
+
+      config.zkTimeoutDuration returns 5.seconds
+      taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
+      taskKiller.killAndScale(any, any)(any) returns Future.successful(DeploymentPlan(createRootGroup(), createRootGroup()))
+      groupManager.app(any) returns None
+
+      When("we ask to kill the pod container")
+      val exception = intercept[BadRequestException] {
+        val response = taskResource.killTasks(scale = true, force = false, wipe = false, body = bodyBytes, auth.request)
+      }
+    }
+
     "killTasks with force" in new Fixture {
       Given("two apps and 1 task each")
       val app1 = "/my/app-1".toRootPath

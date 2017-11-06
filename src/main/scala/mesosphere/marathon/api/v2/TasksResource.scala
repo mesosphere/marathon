@@ -132,17 +132,15 @@ class TasksResource @Inject() (
     }(collection.breakOut)
 
     def scaleAppWithKill(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
+      if (toKill.isEmpty) {
+        throw new BadRequestException("No tasks to kill and scale.")
+      }
       val killAndScale = await(taskKiller.killAndScale(toKill, force))
       deploymentResult(killAndScale)
     }
 
     def doKillTasks(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
-      val affectedApps = tasksIdToAppId.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
-      // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
-      // starting to kill tasks
-      affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
       val killed = await(Future.sequence(toKill
-        .filter { case (appId, _) => affectedApps.exists(app => app.id == appId) }
         .map {
           case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
         })).flatten
@@ -159,9 +157,15 @@ class TasksResource @Inject() (
       val tasksByAppId: Map[PathId, Seq[Instance]] = maybeInstances.flatten
         .groupBy(instance => instance.instanceId.runSpecId)
         .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut)
+      val affectedApps = tasksIdToAppId.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
+      // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
+      // starting to kill tasks
+      affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
+      val toKill = tasksByAppId
+        .filter { case (appId, _) => affectedApps.exists(app => app.id == appId) }
       val response =
-        if (scale) scaleAppWithKill(tasksByAppId)
-        else doKillTasks(tasksByAppId)
+        if (scale) scaleAppWithKill(toKill)
+        else doKillTasks(toKill)
       await(response)
     }
     result(futureResponse)

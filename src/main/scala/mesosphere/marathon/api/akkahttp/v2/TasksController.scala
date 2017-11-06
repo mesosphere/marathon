@@ -25,7 +25,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, _ }
 import mesosphere.marathon.raml.{ AnyToRaml, DeploymentResult, EnrichedTasksList, Reads, Writes }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream.Implicits._
 
 import scala.async.Async._
@@ -101,18 +101,19 @@ class TasksController(
         } else {
           tryParseTaskIds(taskIds) match {
             case Left(rejection) => reject(rejection)
-            case Right(instanceIdsToAppId) =>
-              if (!isAuthorized(instanceIdsToAppId.values)) {
+            case Right(parsedInstanceIds) =>
+              val affectedApps = parsedInstanceIds.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
+              if (!isAuthorized(affectedApps)) {
                 reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
               } else {
-                val tasksByAppId: Future[Map[PathId, Seq[Instance]]] = getTasksByAppId(instanceIdsToAppId)
-
+                val tasksToKill: Future[Map[PathId, Seq[Instance]]] = getTasksToKill(parsedInstanceIds, affectedApps)
                 if (scale) {
-                  onSuccess(killAndScale(tasksByAppId, force)) { deploymentResult =>
-                    complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
+                  onSuccess(killAndScale(tasksToKill, force)) {
+                    case Left(rejection) => reject(rejection)
+                    case Right(result) => complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(result.deploymentId)), result))
                   }
                 } else {
-                  onSuccess(kill(tasksByAppId, instanceIdsToAppId, wipe)) { tasks =>
+                  onSuccess(kill(tasksToKill, wipe)) { tasks =>
                     complete(TasksList(tasks).toRaml)
                   }
                 }
@@ -121,14 +122,29 @@ class TasksController(
         }
       }
   }
-  private def getTasksByAppId(instanceIdsToAppId: Map[Id, PathId])(implicit identity: Identity): Future[Map[PathId, Seq[Instance]]] = {
+
+  /**
+    * Given a list of instances and applications, prepares a collections of tasks that should be killed by this API method
+    * @param instanceIdsToAppId pre-filtered lists of instances
+    * @param affectedApps apps that belong to the pre-filtered instances (used for filtering out pods)
+    * @return list of tasks to be killed
+    */
+  private def getTasksToKill(instanceIdsToAppId: Map[Id, PathId], affectedApps: IndexedSeq[AppDefinition])(implicit identity: Identity): Future[Map[PathId, Seq[Instance]]] = async {
+    /**
+      * Pods can't be killed using /tasks endpoint, only apps
+      */
+    def isNotPod(appId: PathId): Boolean = affectedApps.exists(app => app.id == appId)
+
     val maybeInstances = Future.sequence(instanceIdsToAppId.view
       .map { case (instanceId, _) => instanceTracker.instancesBySpec.map(_.instance(instanceId)) })
-    maybeInstances.map(i => i.flatten
+    val tasksToKill: Map[PathId, Seq[Instance]] = await(maybeInstances.map(i => i.flatten
       .groupBy(instance => instance.instanceId.runSpecId)
-      .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut))
+      .filter { case (appId, _) => isNotPod(appId) }
+      .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut)))
+
+    tasksToKill
   }
-  private def isAuthorized(appIds: Iterable[PathId])(implicit identity: Identity): Boolean = appIds.forall(id => authorizer.isAuthorized(identity, UpdateRunSpec, id))
+  private def isAuthorized(apps: Iterable[AppDefinition])(implicit identity: Identity): Boolean = apps.forall(app => authorizer.isAuthorized(identity, UpdateRunSpec, app))
   private def tryParseTaskIds(taskIds: TasksToDelete): Either[Rejection, Map[Id, PathId]] = {
     val maybeInstanceIdToAppId: Try[Map[Id, PathId]] = Try(taskIds.ids.map { id =>
       try { Task.Id(id).instanceId -> Task.Id.runSpecId(id) }
@@ -198,12 +214,10 @@ class TasksController(
     * @return list of killed tasks
     */
   @SuppressWarnings(Array("all")) // async/await
-  private def kill(toKillFuture: Future[Map[PathId, Seq[Instance]]], tasksIdToAppId: Map[Id, PathId], wipe: Boolean)(implicit identity: Identity): Future[Seq[EnrichedTask]] = async {
+  private def kill(toKillFuture: Future[Map[PathId, Seq[Instance]]], wipe: Boolean)(implicit identity: Identity): Future[Seq[EnrichedTask]] = async {
     val toKill = await(toKillFuture)
-    val affectedApps = tasksIdToAppId.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
 
     val killedTasks = await(Future.sequence(toKill
-      .filter { case (appId, _) => affectedApps.exists(app => app.id == appId) }
       .map { case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe) }))
       .flatten
 
@@ -219,10 +233,14 @@ class TasksController(
     * @return new deployment created as the result of scale operation
     */
   @SuppressWarnings(Array("all")) // async/await
-  def killAndScale(tasksByAppIdFuture: Future[Map[PathId, Seq[Instance]]], force: Boolean)(implicit identity: Identity): Future[DeploymentResult] = async {
-    val tasksByAppId = await(tasksByAppIdFuture)
-    val deploymentPlan = await(taskKiller.killAndScale(tasksByAppId, force))
-    DeploymentResult(deploymentPlan.id, deploymentPlan.version.toOffsetDateTime)
+  def killAndScale(toKillFuture: Future[Map[PathId, Seq[Instance]]], force: Boolean)(implicit identity: Identity): Future[Either[Rejection, DeploymentResult]] = async {
+    val toKill = await(toKillFuture)
+    if (toKill.isEmpty) {
+      Left(Rejections.BadRequest(Message("No tasks to kill and scale.")))
+    } else {
+      val deploymentPlan = await(taskKiller.killAndScale(toKill, force))
+      Right(DeploymentResult(deploymentPlan.id, deploymentPlan.version.toOffsetDateTime))
+    }
   }
 
   case class TasksList(tasks: Seq[EnrichedTask])

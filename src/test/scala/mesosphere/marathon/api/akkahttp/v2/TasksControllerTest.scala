@@ -188,7 +188,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val (taskId2, _) = instance2.tasksMap.head
 
       val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
-      val bodyBytes = body.toCharArray.map(_.toByte)
+      val bodyBytes = body.getBytes("UTF-8")
 
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
@@ -212,7 +212,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       }
     }
 
-    "try to kill pod instances" in new Fixture {
+    "not allow to kill pod instances" in new Fixture {
       Given("two apps and 1 task each")
       val pod1 = "/pod".toRootPath
 
@@ -221,7 +221,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val (container, _) = instance.tasksMap.head
 
       val body = s"""{"ids": ["${container.idString}"]}"""
-      val bodyBytes = body.toCharArray.map(_.toByte)
+      val bodyBytes = body.getBytes("UTF-8")
 
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
@@ -237,6 +237,29 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       }
     }
 
+    "not allow to kill & scale pod instances" in new Fixture {
+      Given("two apps and 1 task each")
+      val pod1 = "/pod".toRootPath
+      val instance = TestInstanceBuilder.newBuilder(pod1).addTaskRunning(Some("container1")).getInstance()
+      val (container, _) = instance.tasksMap.head
+      val body = s"""{"ids": ["${container.idString}"]}"""
+      val bodyBytes = body.getBytes("UTF-8")
+
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
+      taskKiller.killAndScale(any, any)(any) returns Future.successful(DeploymentPlan(createRootGroup(), createRootGroup()))
+      groupManager.app(any) returns None
+
+      When("we ask to kill the pod container")
+      Post(Uri./.withPath(Path("/delete")).withQuery(Query("scale" -> "true")), HttpEntity(bodyBytes).withContentType(ContentTypes.`application/json`)) ~> controller.route ~> check {
+        Then("An rejection should occur that points to the invalid taskId")
+        val badRequestRejection = rejection.asInstanceOf[BadRequest]
+        badRequestRejection.message.message should be ("No tasks to kill and scale.")
+
+        And("the taskKiller should not be called at all")
+        verifyNoMoreInteractions(taskKiller)
+      }
+    }
+
     "killTasks with force" in new Fixture {
       Given("two apps and 1 task each")
       val app1 = "/my/app-1".toRootPath
@@ -248,7 +271,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val (taskId1, _) = instance1.tasksMap.head
       val (taskId2, _) = instance2.tasksMap.head
       val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
-      val bodyBytes = body.toCharArray.map(_.toByte)
+      val bodyBytes = body.getBytes("UTF-8")
       val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
@@ -282,7 +305,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val app1 = "/my/app-1".toRootPath
       val taskId1 = Task.Id.forRunSpec(app1).idString
       val body = s"""{"ids": ["$taskId1"]}"""
-      val bodyBytes = body.toCharArray.map(_.toByte)
+      val bodyBytes = body.getBytes("UTF-8")
 
       When("we ask to scale AND wipe")
       Post(Uri./.withPath(Path("/delete")).withQuery(Query("wipe" -> "true", "scale" -> "true")), HttpEntity(bodyBytes).withContentType(ContentTypes.`application/json`)) ~> controller.route ~> check {
@@ -296,7 +319,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskRunning().getInstance()
       val List(taskId1) = instance1.tasksMap.keys.toList
       val body = s"""{"ids": ["${taskId1.idString}"]}"""
-      val bodyBytes = body.toCharArray.map(_.toByte)
+      val bodyBytes = body.getBytes("UTF-8")
 
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
       instanceTracker.specInstances(app1) returns Future.successful(Seq(instance1))
@@ -327,7 +350,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskStaged().getInstance()
       val (taskId1, _) = instance1.tasksMap.head
       val body = s"""{"ids": ["${taskId1.idString}"]}"""
-      val bodyBytes = body.toCharArray.map(_.toByte)
+      val bodyBytes = body.getBytes("UTF-8")
 
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
@@ -345,7 +368,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       val app1 = "/my/app-1".toRootPath
       val taskId1 = Task.Id.forRunSpec(app1).idString
       val body = s"""{"ids": ["$taskId1", "invalidTaskId"]}"""
-      val bodyBytes = body.toCharArray.map(_.toByte)
+      val bodyBytes = body.getBytes("UTF-8")
 
       When("we ask to kill those two tasks")
       Post(Uri./.withPath(Path("/delete")), HttpEntity(bodyBytes).withContentType(ContentTypes.`application/json`)) ~> controller.route ~> check {
