@@ -4,24 +4,24 @@ package v2
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.{Directive1, Route}
+import akka.http.scaladsl.server.{ Directive1, Route }
 import akka.stream.Materializer
 import mesosphere.marathon.api.GroupApiService
 import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
-import mesosphere.marathon.api.akkahttp.Rejections.{EntityNotFound, Message}
-import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, PodsResource}
-import mesosphere.marathon.core.appinfo.{AppInfo, GroupInfo, GroupInfoService, Selector}
+import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
+import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, PodsResource }
+import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.plugin.auth.{Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator}
+import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.raml.DeploymentResult
-import mesosphere.marathon.state.{Group, PathId, Timestamp}
+import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
 
 import scala.async.Async._
-import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{ Await, Awaitable, ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 class GroupsController(
     electionService: ElectionService,
@@ -93,7 +93,7 @@ class GroupsController(
 
     val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
     val deploymentPlan = await(groupManager.updateRoot(
-      id.parent, group => result(groupApiService.getUpdatedGroup(group, effectivePath, update, version)), version, force))
+      id.parent, group => result(groupApiService.updateGroup(group, effectivePath, update, version)), version, force))
     DeploymentResult(deploymentPlan.id, deploymentPlan.version.toOffsetDateTime)
   }
 

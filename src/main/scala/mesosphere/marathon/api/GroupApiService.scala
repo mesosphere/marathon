@@ -18,7 +18,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     * - if none version nor scaleBy is set then the group is updated
     */
   @SuppressWarnings(Array("all")) // async/await
-  def getUpdatedGroup(
+  def updateGroup(
     rootGroup: RootGroup,
     groupId: PathId,
     groupUpdate: raml.GroupUpdate,
@@ -34,9 +34,10 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
         checkAuthorizationOrThrow(UpdateGroup, group)
         groupManager.group(group.id, targetVersion)
           .filter(checkAuthorizationOrThrow(ViewGroup, _))
-          .map(g => g.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion")))
-          .map(rootGroup.putGroup(_, newVersion))
-          .map(Some(_))
+          .map(g => {
+            val existingGroup = g.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion"))
+            Some(rootGroup.putGroup(existingGroup, newVersion))
+          })
       case None => Future.successful(None)
     }
 

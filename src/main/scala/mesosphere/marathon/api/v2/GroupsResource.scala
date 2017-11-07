@@ -220,7 +220,7 @@ class GroupsResource @Inject() (
       if (dryRun) {
         val newVersion = Timestamp.now()
         val originalGroup = groupManager.rootGroup()
-        val updatedGroup = result(groupsService.getUpdatedGroup(originalGroup, effectivePath, groupUpdate, newVersion))
+        val updatedGroup = result(groupsService.updateGroup(originalGroup, effectivePath, groupUpdate, newVersion))
 
         ok(
           Json.obj(
@@ -286,7 +286,7 @@ class GroupsResource @Inject() (
 
     val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
     val deployment = result(groupManager.updateRoot(
-      id.parent, group => result(groupsService.getUpdatedGroup(group, effectivePath, update, version)), version, force))
+      id.parent, group => result(groupsService.updateGroup(group, effectivePath, update, version)), version, force))
     (deployment, effectivePath)
   }
 

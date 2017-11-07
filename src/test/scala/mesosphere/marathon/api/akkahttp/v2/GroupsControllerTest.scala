@@ -174,7 +174,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     "create a group" in {
       val groupApiService = mock[GroupApiService]
-      groupApiService.getUpdatedGroup(any, any, any, any)(any) returns Future.successful(createRootGroup())
+      groupApiService.updateGroup(any, any, any, any)(any) returns Future.successful(createRootGroup())
       val groupManager = mock[GroupManager]
       groupManager.rootGroup() returns createRootGroup()
       groupManager.updateRoot(eq(PathId.empty), any, any, eq(false), any) returns Future.successful(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero))
