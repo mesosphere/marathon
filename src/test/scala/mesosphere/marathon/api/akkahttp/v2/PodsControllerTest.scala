@@ -6,7 +6,7 @@ import java.net.InetAddress
 import akka.event.EventStream
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.`Remote-Address`
+import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
 import mesosphere.UnitTest
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.TestAuthFixture
@@ -77,6 +77,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       request ~> controller.route ~> check {
         response.status should be(StatusCodes.Created)
         response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        response.header[Location].value.value() should be("/mypod")
 
         (Json.parse(responseAs[String]) \ "networks" \ 0 \ "mode") shouldBe JsDefined(JsString(raml.NetworkMode.Host.value))
         (Json.parse(responseAs[String]) \ "networks" \ 0 \ "name").isDefined should be(false)

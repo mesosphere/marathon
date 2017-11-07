@@ -4,10 +4,11 @@ package api.akkahttp.v2
 import java.time.Clock
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.{ HttpEntity, StatusCodes }
+import akka.http.scaladsl.model.{ Uri, StatusCodes }
+import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.{ Controller, Headers }
-import mesosphere.marathon.api.akkahttp.PathMatchers.{ forceParameter, PodsPathIdLike }
+import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec }
@@ -69,7 +70,11 @@ class PodsController(
                 onSuccess(p) { plan =>
                   // TODO: Set pod id uri
                   val ramlPod = PodConversion.podRamlWriter.write(pod)
-                  complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
+                  val responseHeaders = Seq(
+                    Location(Uri(pod.id.toString)),
+                    Headers.`Marathon-Deployment-Id`(plan.id)
+                  )
+                  complete((StatusCodes.Created, responseHeaders, ramlPod))
                 }
               }
             }
