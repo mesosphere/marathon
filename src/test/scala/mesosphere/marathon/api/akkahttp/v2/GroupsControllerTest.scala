@@ -176,14 +176,6 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
                                         |}""".stripMargin)
       }
     }
-
-    "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in {
-
-    }
-
-    "Creation of a group with same path as an existing group should be prohibited" in {
-
-    }
   }
 
   "extracts embeds into group and app" in new Fixture {
