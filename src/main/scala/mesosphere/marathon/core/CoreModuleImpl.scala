@@ -105,7 +105,7 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
     // infrastructure
-    clock, random, marathonConf, actorSystem.scheduler,
+    clock, random, marathonConf,
     leadershipModule,
     () => marathonScheduler.getLocalRegion
   )

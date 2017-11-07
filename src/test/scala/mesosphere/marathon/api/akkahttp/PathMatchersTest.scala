@@ -91,7 +91,7 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
     }
 
     "match only path until :: even when it is not followed by keyword" in {
-      PodsPathIdLike(Path(s"test/group/pods_id::other")) shouldBe Matched(Path(s"::other"), Tuple1(s"test/group/pods_id"))
+      PodsPathIdLike(Path("test/group/pods_id::other")) shouldBe Matched(Path(s"::other"), Tuple1("test/group/pods_id"))
     }
 
     "considers empty paths as non-matches" in {

@@ -56,7 +56,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       verify()
     }
     val module: OfferMatcherManagerModule =
-      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule, () => None,
+      new OfferMatcherManagerModule(clock, random, config, leaderModule, () => None,
         actorName = UUID.randomUUID().toString)
   }
 

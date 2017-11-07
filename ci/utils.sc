@@ -7,9 +7,12 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 import java.io.File
-
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 import $file.provision
+
+val timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
 def ciLogFile(name: String): File = {
   val log = new File(name)
@@ -38,12 +41,18 @@ def printHr(color: String, character: String = "*", length: Int = 80): Unit = {
   printWithColor(s"${character * length}\n", color)
 }
 
+def printCurrentTime() = {
+  val date = LocalDateTime.now()
+  printWithColor(s"Started at: ${date.format(timeFormatter)}\n", Colors.BrightBlue)
+}
+
 def printStageTitle(name: String): Unit = {
   val indent = (80 - name.length) / 2
   print("\n")
   print(" " * indent)
   printWithColor(s"$name\n", Colors.BrightBlue)
   printHr(Colors.BrightBlue)
+  printCurrentTime()
 }
 
 case class BuildException(val cmd: String, val exitValue: Int, private val cause: Throwable = None.orNull)
