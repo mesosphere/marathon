@@ -37,6 +37,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     config: Config,
     eventBus: EventStream,
     appInfoService: AppInfoService,
+    groupInfoService: GroupInfoService,
     groupManager: GroupManager,
     podManager: PodManager,
     pluginManager: PluginManager,
@@ -70,13 +71,14 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val resourceController = new ResourceController
     val systemController = new SystemController(conf, config, electionService)
     val eventsController = new EventsController(conf.eventStreamMaxOutstandingMessages(), eventBus, electionService,
-      electionService.localLeadershipEvents)
+      electionService.leadershipTransitionEvents)
     val infoController = InfoController(mesosLeaderInfo, storageModule.frameworkIdRepository, conf)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
     val leaderController = LeaderController(electionService, storageModule.runtimeConfigurationRepository)
     val queueController = new QueueController(clock, launchQueue, electionService)
     val tasksController = new TasksController(instanceTracker, groupManager, healthCheckManager, taskKiller, electionService)
     val podsController = new PodsController(conf, electionService, podManager, groupManager, pluginManager, eventBus, clock)
+    val groupsController = new GroupsController(electionService, groupInfoService)
 
     val v2Controller = new V2Controller(
       appsController,
@@ -86,7 +88,8 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
       leaderController,
       queueController,
       tasksController,
-      podsController)
+      podsController,
+      groupsController)
 
     new AkkaHttpMarathonService(
       conf,

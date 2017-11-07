@@ -25,7 +25,7 @@ import marathon_common_tests
 import marathon_pods_tests
 
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA
-from fixtures import wait_for_marathon_and_cleanup, events_to_file # NOQA
+from fixtures import wait_for_marathon_and_cleanup, events_to_file, user_billy # NOQA
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -127,7 +127,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     try:
         client.get_app(app_id)
-    except:
+    except Exception:
         pass
     else:
         assert False, "The application resurrected"
@@ -143,7 +143,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     # check if app definition is still not there
     try:
         client.get_app(app_id)
-    except:
+    except Exception:
         pass
     else:
         assert False, "The application resurrected"

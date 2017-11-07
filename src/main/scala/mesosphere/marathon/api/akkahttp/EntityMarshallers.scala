@@ -11,7 +11,6 @@ import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, FromMessageUnm
 import akka.util.ByteString
 import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.plugin.PathId
@@ -25,7 +24,6 @@ import scala.collection.breakOut
 object EntityMarshallers {
   import Directives.complete
   import mesosphere.marathon.api.v2.json.Formats._
-  import mesosphere.marathon.raml.MetricsConversion._
 
   private val jsonStringUnmarshaller =
     Unmarshaller.byteStringUnmarshaller

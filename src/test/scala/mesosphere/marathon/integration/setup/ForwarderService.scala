@@ -134,7 +134,7 @@ object ForwarderService extends StrictLogging {
 
         override def subscribe(self: ActorRef): Unit = ???
         override def unsubscribe(self: ActorRef): Unit = ???
-        override def localLeadershipEvents = ???
+        override def leadershipTransitionEvents = ???
       }
 
       bind(classOf[ElectionService]).toInstance(electionService)

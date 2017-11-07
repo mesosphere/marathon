@@ -49,7 +49,7 @@ where the "mesosphere/inky" Dockerfile is defined as:
 
 ```Dockerfile
 FROM busybox
-MAINTAINER support@mesosphere.io
+LABEL maintainer="support@mesosphere.io"
 
 CMD ["inky"]
 ENTRYPOINT ["echo"]

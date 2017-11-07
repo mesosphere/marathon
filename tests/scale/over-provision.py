@@ -18,6 +18,6 @@ for agent in private_agents:
         run_command(agent, "sudo rm -f /var/lib/mesos/slave/meta/slaves/latest")
         try:
             start_agent(agent)
-        except:
+        except Exception:
             time.sleep(1)
             start_agent(agent)

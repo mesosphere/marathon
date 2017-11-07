@@ -45,7 +45,7 @@ class OfferProcessorImplTest extends UnitTest {
       taskLauncher: TaskLauncher = mock[TaskLauncher],
       stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]) {
     val offerProcessor = new OfferProcessorImpl(
-      conf, clock, offerMatcher, taskLauncher, stateOpProcessor,
+      conf, offerMatcher, taskLauncher, stateOpProcessor,
       NoopSourceQueue()
     )
   }

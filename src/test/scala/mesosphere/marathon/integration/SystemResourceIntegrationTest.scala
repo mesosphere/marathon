@@ -12,11 +12,6 @@ import org.slf4j.LoggerFactory
 @IntegrationTest
 class SystemResourceIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  private[this] val log = LoggerFactory.getLogger(getClass)
-
-  //clean up state before running the test case
-  before(cleanUp())
-
   "Marathon" should {
     "responses to a ping" in {
 
