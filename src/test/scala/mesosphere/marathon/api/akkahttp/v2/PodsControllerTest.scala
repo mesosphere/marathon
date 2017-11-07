@@ -17,7 +17,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.test.SettableClock
-
+import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 import play.api.libs.json._
 import play.api.libs.json.Json
 
@@ -56,6 +56,23 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
     }
 
+    def executorResources(expected: Tuple3[Double, Double, Double]) = new HavePropertyMatcher[JsValue, Tuple3[Double, Double, Double]] {
+      override def apply(actual: JsValue) = {
+        val matches =
+          (actual \ "executorResources" \ "cpus") == JsDefined(JsNumber(expected._1)) &&
+            (actual \ "executorResources" \ "mem") == JsDefined(JsNumber(expected._2)) &&
+            (actual \ "executorResources" \ "disk") == JsDefined(JsNumber(expected._3))
+        HavePropertyMatchResult(matches, "executorResources", expected, (0.0, 0.0, 0.0))
+      }
+    }
+    val noDefinedNetworkname = new HavePropertyMatcher[JsValue, Option[JsValue]] {
+      override def apply(actual: JsValue) = {
+        val actualNetworkname = (actual \ "networks" \ 0 \ "name").toOption
+        val matches = !actualNetworkname.isDefined
+        HavePropertyMatchResult(matches, "networkname", None, actualNetworkname)
+      }
+    }
+
     "be able to create a simple single-container pod from docker image w/ shell command" in {
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
       val controller = f.controller()
@@ -80,13 +97,13 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
         response.header[Location].value.value() should be("/mypod")
 
-        val jsonResponse = Json.parse(responseAs[String])
+        val jsonResponse: JsValue = Json.parse(responseAs[String])
         (jsonResponse \ "networks" \ 0 \ "mode") shouldBe JsDefined(JsString(raml.NetworkMode.Host.value))
-        (jsonResponse \ "networks" \ 0 \ "name").isDefined should be(false)
 
-        (jsonResponse \ "executorResources" \ "cpus") shouldBe JsDefined(JsNumber(0.1))
-        (jsonResponse \ "executorResources" \ "mem") shouldBe JsDefined(JsNumber(32.0))
-        (jsonResponse \ "executorResources" \ "disk") shouldBe JsDefined(JsNumber(10.0))
+        jsonResponse should have (
+          executorResources((0.1, 32.0, 10.0)),
+          noDefinedNetworkname
+        )
       }
     }
 
@@ -141,11 +158,11 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
 
         val jsonResponse = Json.parse(responseAs[String])
         (jsonResponse \ "networks" \ 0 \ "mode") shouldBe JsDefined(JsString(raml.NetworkMode.ContainerBridge.value))
-        (jsonResponse \ "networks" \ 0 \ "name").isDefined should be(false)
 
-        (jsonResponse \ "executorResources" \ "cpus") shouldBe JsDefined(JsNumber(0.1))
-        (jsonResponse \ "executorResources" \ "mem") shouldBe JsDefined(JsNumber(32.0))
-        (jsonResponse \ "executorResources" \ "disk") shouldBe JsDefined(JsNumber(10.0))
+        jsonResponse should have (
+          executorResources ((0.1, 32.0, 10.0)),
+          noDefinedNetworkname
+        )
       }
     }
 
