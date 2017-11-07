@@ -4,37 +4,24 @@ package v2
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.{ Directive1, Route }
-import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
-import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, PodsResource }
-import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
-import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.state.{ Group, PathId, Timestamp }
-import akka.http.scaladsl.server.{ Directive1, Route }
-import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
-import mesosphere.marathon.api.v2.{ AppHelpers, PodsResource }
-import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
-import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.state.{ Group, PathId }
-import play.api.libs.json.Json
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{Directive1, Route}
 import akka.stream.Materializer
 import mesosphere.marathon.api.GroupApiService
-import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, GroupPathIdLike }
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
-import mesosphere.marathon.api.v2.Validation.validateOrThrow
-import mesosphere.marathon.core.appinfo.GroupInfoService
-import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
+import mesosphere.marathon.api.akkahttp.Rejections.{EntityNotFound, Message}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, PodsResource}
+import mesosphere.marathon.core.appinfo.{AppInfo, GroupInfo, GroupInfoService, Selector}
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.plugin.auth.{ Authorizer, ViewGroup, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.raml.{ DeploymentResult, GroupUpdate }
+import mesosphere.marathon.plugin.auth.{Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator}
+import mesosphere.marathon.raml.DeploymentResult
+import mesosphere.marathon.state.{Group, PathId, Timestamp}
 import mesosphere.marathon.stream.Sink
+import play.api.libs.json.Json
 
 import scala.async.Async._
-import scala.concurrent.{ Await, Awaitable, ExecutionContext, Future }
+import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 class GroupsController(
     electionService: ElectionService,
@@ -52,7 +39,6 @@ class GroupsController(
   import Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
   import mesosphere.marathon.api.v2.json.Formats._
-  import mesosphere.marathon.raml.GroupConversion._
 
   private val forceParameter = parameter('force.as[Boolean].?(false))
 
@@ -87,8 +73,10 @@ class GroupsController(
       } else if (rootGroup.transitiveAppsById.get(effectiveGroupId).isDefined) { // app with the group id already exists
         reject(Rejections.ConflictingChange(Message(s"An app with the path $effectiveGroupId already exists.")))
       } else {
-        onSuccess(updateOrCreate(groupId, groupUpdate, force)) { deploymentResult =>
-          complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
+        onComplete(updateOrCreate(groupId, groupUpdate, force)) {
+          case Success(deploymentResult) => complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
+          case Failure(ex: IllegalArgumentException) => complete(StatusCodes.UnprocessableEntity -> ex.getMessage)
+          case Failure(ex) => throw ex
         }
       }
     }
