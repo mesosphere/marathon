@@ -154,7 +154,7 @@ if __name__ == "__main__":
             os.system("ps -a | grep $(lsof -ti :{})".format(port))
         else:
             logging.exception("Socket.error in the main thread: ")
-    except:
+    except Exception:
         logging.exception("Exception in the main thread: ")
     finally:
         logging.info("Closing the server...")

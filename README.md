@@ -329,13 +329,13 @@ Not in the list? Open a pull request and add yourself!
 Have you found an issue? Feel free to report it using our [JIRA Issues](https://jira.mesosphere.com/projects/MARATHON/summary) page.
 In order to speed up response times, we ask you to provide as much
 information on how to reproduce the problem as possible. If the issue is related
- in any way to the web ui, we kindly ask you to use the `gui` label.
+ in any way to the web UI, we kindly ask you to use the `gui` label.
 
-If you have questions, please post on the
-[Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework)
-email list. You can find Marathon support in the `#marathon` channel, and Mesos
-support in the `#mesos` channel, on [freenode][freenode] (IRC). The team at
-[Mesosphere][Mesosphere] is also happy to answer any questions.
+If you have questions, please post on the [Marathon Framework](https://groups.google.com/forum/?hl=en#!forum/marathon-framework) email list. 
+
+You can find Marathon support in the `#marathon` channel, and Mesos support in the `#mesos` channel, on [freenode][freenode] (IRC). Alternatively, check out the same channels on the [Mesos Slack](https://mesos.slack.com/) ([request an invitation here](https://mesos-slackin.herokuapp.com/)). 
+
+The team at [Mesosphere][Mesosphere] is also happy to answer any questions.
 
 If you'd like to take part in design research and test new features in Marathon before they're released, please add your name to our [UX Research](http://uxresearch.mesosphere.com) list.
 
