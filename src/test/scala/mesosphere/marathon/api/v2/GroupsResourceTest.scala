@@ -44,6 +44,9 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
     val config: AllConf = f.config
     val groupRepository: GroupRepository = f.groupRepository
     val groupManager: GroupManager = f.groupManager
+
+    implicit val authorizer = auth.auth
+
     val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, new GroupApiService(groupManager))(auth.auth, auth.auth, mat)
   }
 

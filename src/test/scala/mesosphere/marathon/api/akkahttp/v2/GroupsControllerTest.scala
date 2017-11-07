@@ -8,19 +8,26 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
-import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
+import mesosphere.marathon.api.akkahttp.Rejections
+import mesosphere.marathon.api.{ GroupApiService, TestAuthFixture }
+import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService }
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.core.pod.ContainerNetwork
+import mesosphere.marathon.plugin.auth.Identity
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.scalatest.Inside
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside with RouteBehaviours with StrictLogging with GroupCreation {
+
+  implicit val identity: Identity = new Identity {}
 
   "Group detail" should {
     {
@@ -127,6 +134,58 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     }
   }
 
+  "Create a group" should {
+    "fail with rejection for group that already exists" in {
+      val groupManager = mock[GroupManager]
+      groupManager.rootGroup() returns createRootGroup()
+      val f = new Fixture(groupManager = groupManager)
+      val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
+
+      Post(Uri./.withPath(Path("/")), entity) ~> f.groupsController.route ~> check {
+        rejection should be (Rejections.ConflictingChange(Message(s"Group / is already created. Use PUT to change this group.")))
+      }
+    }
+
+    "fail with rejection for group name that is already an app name" in {
+      val groupManager = mock[GroupManager]
+      val rootGroup = createRootGroup(apps = Map(
+        "/appname".toRootPath -> AppDefinition("/appname".toRootPath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")))
+      ))
+      groupManager.rootGroup() returns rootGroup
+      val f = new Fixture(groupManager = groupManager)
+      val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
+
+      Post(Uri./.withPath(Path("/appname")), entity) ~> f.groupsController.route ~> check {
+        rejection should be (Rejections.ConflictingChange(Message(s"An app with the path /appname already exists.")))
+      }
+    }
+
+    "create a group" in {
+      val groupApiService = mock[GroupApiService]
+      groupApiService.getUpdatedGroup(any, any, any, any)(any) returns Future.successful(createRootGroup())
+      val groupManager = mock[GroupManager]
+      groupManager.rootGroup() returns createRootGroup()
+      groupManager.updateRoot(eq(PathId.empty), any, any, eq(false), any) returns Future.successful(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero))
+      val f = new Fixture(groupManager = groupManager, groupApiService = groupApiService)
+      val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
+
+      Post(Uri./.withPath(Path("/newgroup")), entity) ~> f.groupsController.route ~> check {
+        responseAs[String] should be ("""{
+                                        |  "deploymentId" : "plan",
+                                        |  "version" : "1970-01-01T00:00:00Z"
+                                        |}""".stripMargin)
+      }
+    }
+
+    "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in {
+
+    }
+
+    "Creation of a group with same path as an existing group should be prohibited" in {
+
+    }
+  }
+
   "extracts embeds into group and app" in new Fixture {
     import akka.http.scaladsl.server.Directives._
 
@@ -152,8 +211,10 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       authorized: Boolean = true,
       authFn: Any => Boolean = _ => true,
       infoService: GroupInfoService = mock[GroupInfoService],
-      conf: MarathonConf = mock[MarathonConf],
-      groupManager: GroupManager = mock[GroupManager]) {
+      groupManager: GroupManager = mock[GroupManager],
+      groupApiService: GroupApiService = mock[GroupApiService]) {
+    val config: AllConf = AllConf.withTestConfig()
+
     val authFixture = new TestAuthFixture()
     authFixture.authenticated = authenticated
     authFixture.authorized = authorized
@@ -164,6 +225,6 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     implicit val authenticator = authFixture.auth
 
-    val groupsController: GroupsController = new GroupsController(electionService, infoService, groupManager, conf)
+    val groupsController: GroupsController = new GroupsController(electionService, infoService, groupManager, groupApiService, config)
   }
 }

@@ -9,7 +9,7 @@ import mesosphere.marathon.state._
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
 
-class GroupApiService(groupManager: GroupManager) {
+class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorizer, executionContext: ExecutionContext) {
 
   /**
     * Encapsulates the group update logic that is following:
@@ -22,7 +22,7 @@ class GroupApiService(groupManager: GroupManager) {
     rootGroup: RootGroup,
     groupId: PathId,
     groupUpdate: raml.GroupUpdate,
-    newVersion: Timestamp)(implicit identity: Identity, authorizer: Authorizer, executionContext: ExecutionContext): Future[RootGroup] = async {
+    newVersion: Timestamp)(implicit identity: Identity): Future[RootGroup] = async {
     val group = rootGroup.group(groupId).getOrElse(Group.empty(groupId))
 
     /**

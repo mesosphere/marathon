@@ -3,6 +3,7 @@ package api.akkahttp
 package v2
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{ Directive1, Route }
 import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
 import mesosphere.marathon.api.akkahttp.v2.GroupsController._
@@ -14,22 +15,26 @@ import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 import play.api.libs.json.Json
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
+import mesosphere.marathon.api.GroupApiService
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, GroupPathIdLike }
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
+import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.core.appinfo.GroupInfoService
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth.{ Authorizer, ViewGroup, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.raml.GroupUpdate
+import mesosphere.marathon.raml.{ DeploymentResult, GroupUpdate }
 import mesosphere.marathon.stream.Sink
 
-import scala.concurrent.ExecutionContext
+import scala.async.Async._
+import scala.concurrent.{ Await, Awaitable, ExecutionContext, Future }
 
 class GroupsController(
     electionService: ElectionService,
     infoService: GroupInfoService,
     groupManager: GroupManager,
+    groupApiService: GroupApiService,
     val config: MarathonConf)(
     implicit
     val actorSystem: ActorSystem,
@@ -71,24 +76,31 @@ class GroupsController(
       val effectiveGroupId = groupUpdate.id.map(id => PathId(id).canonicalPath(groupId)).getOrElse(groupId)
       val rootGroup = groupManager.rootGroup()
 
-      def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
-        conflict.map(_ => throw ConflictingChangeException(msg))
+      if (rootGroup.group(effectiveGroupId).isDefined) { // group already exists
+        reject(Rejections.ConflictingChange(Message(s"Group $effectiveGroupId is already created. Use PUT to change this group.")))
+      } else if (rootGroup.transitiveAppsById.get(effectiveGroupId).isDefined) { // app with the group id already exists
+        reject(Rejections.ConflictingChange(Message(s"An app with the path $effectiveGroupId already exists.")))
+      } else {
+        onSuccess(updateOrCreate(groupId, groupUpdate, force)) { deploymentResult =>
+          complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
+        }
       }
-
-      throwIfConflicting(
-        rootGroup.group(effectiveGroupId),
-        s"Group $effectiveGroupId is already created. Use PUT to change this group.")
-
-      throwIfConflicting(
-        rootGroup.transitiveAppsById.get(effectiveGroupId),
-        s"An app with the path $effectiveGroupId already exists.")
-
-      // groupManager.updateRoot(
-      // effectiveGroupId.parent, applyGroupUpdate(_, effectiveGroupId, update, version), version, force)
-      // val (deployment, path) = updateOrCreate(effectivePath, groupUpdate, force)
-      // deploymentResult(deployment, Response.created(new URI(path.toString)))
-      complete(null)
     }
+  }
+
+  /**
+    * Until there is async version of updateRoot we have to block here
+    */
+  protected def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
+
+  @SuppressWarnings(Array("all")) // async/await
+  private def updateOrCreate(id: PathId, update: raml.GroupUpdate, force: Boolean)(implicit identity: Identity): Future[DeploymentResult] = async {
+    val version = Timestamp.now()
+
+    val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
+    val deploymentPlan = await(groupManager.updateRoot(
+      id.parent, group => result(groupApiService.getUpdatedGroup(group, effectivePath, update, version)), version, force))
+    DeploymentResult(deploymentPlan.id, deploymentPlan.version.toOffsetDateTime)
   }
 
   def updateGroup(groupId: PathId): Route = ???
