@@ -37,7 +37,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
   run("sbt", "mesos-simulation/compile")
   run("sbt", "plugin-interface/compile")
 
-  // Check system integraion tests.
+  // Check system integration tests.
   checkSystemIntegrationTests(logFileName)
 }
 
@@ -142,8 +142,6 @@ def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = 
  * Provision the build host.
  */
 def provisionHost(): Unit = utils.stage("Provision") {
-  utils.printCurrentTime()
-
   // Set port range for random port 0 allocation.
   %('sudo, "ci/set_port_range.sh")
 
