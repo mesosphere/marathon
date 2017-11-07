@@ -63,7 +63,6 @@ class AppsController(
   import Directives._
 
   private implicit lazy val validateApp = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  //  private implicit lazy val updateValidator = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
 
   import AppHelpers._
   import EntityMarshallers._
