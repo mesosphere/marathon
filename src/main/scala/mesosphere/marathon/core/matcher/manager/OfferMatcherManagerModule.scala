@@ -3,7 +3,7 @@ package core.matcher.manager
 
 import java.time.Clock
 
-import akka.actor.{ ActorRef, Scheduler }
+import akka.actor.ActorRef
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
@@ -21,7 +21,6 @@ import scala.util.Random
 class OfferMatcherManagerModule(
     clock: Clock, random: Random,
     offerMatcherConfig: OfferMatcherManagerConfig,
-    scheduler: Scheduler,
     leadershipModule: LeadershipModule,
     localRegion: () => Option[Region],
     actorName: String = "offerMatcherManager") {

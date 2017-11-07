@@ -4,7 +4,6 @@ package core.election
 import akka.actor.{ ActorSystem, Cancellable }
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
-import java.util.concurrent.ExecutorService
 import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.util.LifeCycledCloseable
 import scala.concurrent.ExecutionContext
