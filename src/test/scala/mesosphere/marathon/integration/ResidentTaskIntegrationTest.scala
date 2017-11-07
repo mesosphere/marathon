@@ -76,11 +76,6 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       When("the app is suspended")
       suspendSuccessfully(PathId(app.id))
 
-      And("we wait for a while")
-      // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-      // probably related to our recycling of the task ID (but unconfirmed)
-      Thread.sleep(2000L)
-
       And("a new task is started that checks for the previously written file")
       // deploy a new version that checks for the data written the above step
       val update = marathon.updateApp(
@@ -171,10 +166,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val app = createSuccessfully(
         residentApp(
           id = appId("restart-resident-app-with-five-instances"),
-          instances = 5,
-          // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-          // probably related to our recycling of the task ID (but unconfirmed)
-          backoffDuration = 300.milliseconds
+          instances = 5
         )
       )
 
@@ -199,10 +191,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val app = createSuccessfully(
         residentApp(
           id = appId("config-change-resident-app-with-five-instances"),
-          instances = 5,
-          // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-          // probably related to our recycling of the task ID (but unconfirmed)
-          backoffDuration = 300.milliseconds
+          instances = 5
         )
       )
 

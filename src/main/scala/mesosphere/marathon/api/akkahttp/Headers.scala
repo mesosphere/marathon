@@ -16,14 +16,14 @@ object Headers {
     override def renderInRequests(): Boolean = false
   }
 
-  final case class `X-Marathon-Leader`(hostPort: String) extends CustomHeader {
+  case class `X-Marathon-Leader`(hostPort: String) extends CustomHeader {
     override def name(): String = "X-Marathon-Leader"
     override def value: String = hostPort
     override def renderInRequests = false
     override def renderInResponses = true
   }
 
-  final case class `X-Marathon-Via`(via: String) extends CustomHeader {
+  case class `X-Marathon-Via`(via: String) extends CustomHeader {
     override def name(): String = "X-Marathon-Via"
     override def value: String = via
     override def renderInRequests = false

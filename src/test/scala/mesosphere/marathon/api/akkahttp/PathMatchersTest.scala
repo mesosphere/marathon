@@ -66,6 +66,10 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
     "considers it an unmatch if path starts with keyword" in {
       AppPathIdLike(Path("/restart")) shouldBe Unmatched
     }
+
+    "match path with multiple slashes" in {
+      AppPathIdLike(Path("//////app")) shouldBe Matched(Path.Empty, Tuple1("/app".toPath))
+    }
   }
 
   "PodsPathIdLike matcher" should {
@@ -87,11 +91,29 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
     }
 
     "match only path until :: even when it is not followed by keyword" in {
-      PodsPathIdLike(Path(s"test/group/pods_id::other")) shouldBe Matched(Path(s"::other"), Tuple1(s"test/group/pods_id"))
+      PodsPathIdLike(Path("test/group/pods_id::other")) shouldBe Matched(Path(s"::other"), Tuple1("test/group/pods_id"))
     }
 
     "considers empty paths as non-matches" in {
       PodsPathIdLike(Path("/")) shouldBe Unmatched
+    }
+  }
+
+  "GroupPathIdLike matcher" should {
+    "match path with only group id" in {
+      GroupPathIdLike(Path("/group-name")) shouldBe Matched(Path(""), Tuple1("group-name".toRootPath))
+    }
+
+    "match path without group name as root group" in {
+      GroupPathIdLike(Path("")) shouldBe Matched(Path(""), Tuple1("/".toRootPath))
+    }
+
+    "match path without group name and with path" in {
+      GroupPathIdLike(Path("apps")) shouldBe Matched(Path("apps"), Tuple1("/".toRootPath))
+    }
+
+    "match path with double slash in route as root group" in {
+      GroupPathIdLike(Path("//")) shouldBe Matched(Path("/"), Tuple1("/".toRootPath))
     }
   }
 }

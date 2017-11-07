@@ -121,7 +121,7 @@ class TasksController(
         }
       }
   }
-  private def getTasksByAppId(instanceIdsToAppId: Map[Id, PathId])(implicit identity: Identity): Future[Map[PathId, Seq[Instance]]] = {
+  private def getTasksByAppId(instanceIdsToAppId: Map[Id, PathId]): Future[Map[PathId, Seq[Instance]]] = {
     val maybeInstances = Future.sequence(instanceIdsToAppId.view
       .map { case (instanceId, _) => instanceTracker.instancesBySpec.map(_.instance(instanceId)) })
     maybeInstances.map(i => i.flatten

@@ -161,7 +161,7 @@ def test_remove_pod():
 
     try:
         client.show_pod(pod_id)
-    except:
+    except Exception:
         pass
     else:
         assert False, "The pod has not been removed"

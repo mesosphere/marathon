@@ -7,6 +7,7 @@ import mesosphere.marathon.state.{ Group, PathId, RootGroup, Timestamp }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.PathMatcher.{ Matched, Unmatched }
 import akka.http.scaladsl.server.PathMatcher1
+import mesosphere.marathon.state.PathId._
 
 import scala.annotation.tailrec
 
@@ -26,20 +27,35 @@ object PathMatchers {
     catch { case _: IllegalArgumentException => None }
   )
 
-  private val marathonApiKeywords = Set("restart", "tasks", "versions", "delay")
+  /**
+    * All these keywords are not allowed in the application/pod/group name
+    */
+  private val marathonApiKeywords = Set("restart", "tasks", "versions", "delay", "apps")
+
+  /**
+    * Very similar to AppPathIdLike with only difference of how the result should look like when no group id is actually found.
+    * In that case, it fallbacks to use root group as a default
+    */
+  case object GroupPathIdLike extends PathMatcher1[PathId] {
+    def iter(reversePieces: List[String], remaining: Path, consumedSlash: Option[Path] = None): Matching[Tuple1[PathId]] = AppPathIdLike.iter(reversePieces, remaining, consumedSlash, (consumedSlash, remaining) => Matched(consumedSlash.getOrElse(remaining), Tuple1("/".toRootPath)))
+
+    def iter(remaining: Path): Matching[Tuple1[PathId]] = iter(Nil, remaining)
+
+    override def apply(path: Path): Matching[Tuple1[PathId]] = iter(path)
+  }
 
   /**
     * Matches everything what's coming before api keywords as PathId
     */
   case object AppPathIdLike extends PathMatcher1[PathId] {
 
-    @tailrec def iter(reversePieces: List[String], remaining: Path, consumedSlash: Option[Path] = None): Matching[Tuple1[PathId]] = remaining match {
+    @tailrec def iter(reversePieces: List[String], remaining: Path, consumedSlash: Option[Path] = None, onEmpty: (Option[Path], Path) => Matching[Tuple1[PathId]] = (_, _) => Unmatched): Matching[Tuple1[PathId]] = remaining match {
       case slash @ Path.Slash(rest) =>
-        iter(reversePieces, rest, Some(slash))
+        iter(reversePieces, rest, Some(slash), onEmpty)
       case Path.Segment(segment, rest) if !marathonApiKeywords(segment) =>
-        iter(segment :: reversePieces, rest)
+        iter(segment :: reversePieces, rest, onEmpty = onEmpty)
       case _ if reversePieces.isEmpty =>
-        Unmatched
+        onEmpty(consumedSlash, remaining)
       case remaining =>
         Matched(
           consumedSlash.getOrElse(remaining),

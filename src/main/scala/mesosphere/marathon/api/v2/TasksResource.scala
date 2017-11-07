@@ -22,7 +22,7 @@ import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpe
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.EnrichedTask._
 import mesosphere.marathon.raml.EnrichedTaskConversion._
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
