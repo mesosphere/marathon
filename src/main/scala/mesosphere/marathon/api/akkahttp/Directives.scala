@@ -101,31 +101,6 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
     }
   }
 
-  def extractTaskKillingMode: Directive1[TaskKillingMode] =
-    (parameter("scale".as[Boolean].?(false)) & parameter("wipe".as[Boolean].?(false))).tflatMap {
-      case (scale, wipe) =>
-        if (scale && wipe) {
-          reject(MalformedQueryParamRejection("scale, wipe", "You cannot use scale and wipe at the same time."))
-        } else if (scale) {
-          provide(TaskKillingMode.Scale)
-        } else if (wipe) {
-          provide(TaskKillingMode.Wipe)
-        } else {
-          provide(TaskKillingMode.KillWithoutWipe)
-        }
-    }
-
-  sealed trait TaskKillingMode
-  object TaskKillingMode {
-
-    case object Scale extends TaskKillingMode
-
-    case object KillWithoutWipe extends TaskKillingMode
-
-    case object Wipe extends TaskKillingMode
-
-  }
-
   def validateInstanceId(possibleId: String): ValidationResult = {
     val validate: Validator[String] = validator[String] { id =>
       id should matchRegexFully(Instance.Id.InstanceIdRegex)
