@@ -4,19 +4,14 @@ package v2
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.{ Directive1, Route }
-import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
 import mesosphere.marathon.api.v2.{ AppHelpers, PodsResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
-import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state.{ Group, PathId }
 import play.api.libs.json.Json
-import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, GroupPathIdLike }
+import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
 import mesosphere.marathon.core.appinfo.GroupInfoService
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.plugin.auth.{ Authorizer, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.state.PathId
 
 import scala.concurrent.ExecutionContext
 

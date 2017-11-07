@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package core.launcher.impl
 
-import java.time.Clock
-
 import akka.Done
 import akka.stream.scaladsl.SourceQueue
 import com.typesafe.scalalogging.StrictLogging
@@ -51,7 +49,7 @@ import scala.util.control.NonFatal
   * }}}
   */
 private[launcher] class OfferProcessorImpl(
-    conf: OfferProcessorConfig, clock: Clock,
+    conf: OfferProcessorConfig,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
     stateOpProcessor: InstanceStateOpProcessor,
