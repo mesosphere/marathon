@@ -20,7 +20,19 @@ import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.{ GroupCreation, SettableClock }
+import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
+import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService }
+import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.test.GroupCreation
 import org.scalatest.Inside
+import play.api.libs.json._
+import play.api.libs.json.Json
+import play.api.libs.functional.syntax._
+
+import scala.concurrent.Future
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -42,24 +54,24 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
       Get(Uri./.withPath(Path("/test/group"))) ~> f.groupsController.route ~> check {
         status should be(StatusCodes.OK)
-        responseAs[String] should include (""""id" : "/test/group"""")
+        (Json.parse(responseAs[String]) \ "id").get shouldEqual JsString("/test/group")
       }
     }
 
     "returns empty group if root and no group found" in {
       val infoService = mock[GroupInfoService]
-      infoService.selectGroup(any, any, any, any) returns Future.successful(None)
+      infoService.selectGroup(eq(PathId.empty), any, any, any) returns Future.successful(None)
       val f = new Fixture(infoService = infoService)
 
       Get(Uri./.withPath(Path("/"))) ~> f.groupsController.route ~> check {
         status should be(StatusCodes.OK)
-        responseAs[String] should include (""""id" : "/"""")
+        (Json.parse(responseAs[String]) \ "id").get shouldEqual JsString("/")
       }
     }
 
     "rejects with group not found for nonexisting group" in {
       val infoService = mock[GroupInfoService]
-      infoService.selectGroup(any, any, any, any) returns Future.successful(None)
+      infoService.selectGroup(eq(PathId("/groupname")), any, any, any) returns Future.successful(None)
       val f = new Fixture(infoService = infoService)
 
       Get(Uri./.withPath(Path("/groupname"))) ~> f.groupsController.route ~> check {

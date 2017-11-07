@@ -67,7 +67,7 @@ def mom_ee_image(version):
     image_name = 'MOM_EE_{}'.format(version)
     try:
         os.environ[image_name]
-    except:
+    except Exception:
         default_image = DEFAULT_MOM_IMAGES[image_name]
         print('No environment override found for MoM-EE  v{}. Using default image {}'.format(version, default_image))
         return default_image

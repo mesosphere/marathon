@@ -25,4 +25,30 @@ object EnrichedFlow {
   def stopOnFirst[T](source: Source[Any, Any]): Flow[T, T, NotUsed] = {
     Flow[T].merge(source.take(1).via(ignore), eagerComplete = true)
   }
+
+  /**
+    * Drops elements when two subseqent elements are the same. Behaves similar to Unix uniq and does not keep track of
+    * all values seen from the beginning of the stream.
+    *
+    *     Source(List(1,2,2,1,1,3,3)).dedup() becomes Source(List(1,2,1,3))
+    *
+    *     Source(List(None,Some(1),None)).dedup(filterInitial = None) becomes Source(List(Some(1), None))
+    *
+    * @param filterInitial If the first value is this, then drop it
+    */
+  @SuppressWarnings(Array("NullAssignment"))
+  def dedup[T](initialFilterElement: T = null): Flow[T, T, NotUsed] = {
+    Flow[T].statefulMapConcat { () =>
+      var lastElement: T = initialFilterElement
+
+      { e =>
+        if (lastElement == e)
+          Nil
+        else {
+          lastElement = e
+          Seq(e)
+        }
+      }
+    }
+  }
 }

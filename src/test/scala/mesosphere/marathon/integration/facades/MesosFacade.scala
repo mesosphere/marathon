@@ -40,7 +40,7 @@ object MesosFacade {
     def apply(vals: (String, Any)*): ITAttributes = {
       val attributes: Map[String, ITResourceValue] = vals.map {
         case (id, value: Double) => id -> ITResourceScalarValue(value)
-        case (id, portsString: String) => id -> ITResourcePortValue(portsString)
+        case (id, value: String) => id -> ITResourceStringValue(value)
       }(collection.breakOut)
       ITAttributes(attributes)
     }
@@ -61,7 +61,7 @@ object MesosFacade {
     def apply(vals: (String, Any)*): ITResources = {
       val resources: Map[String, ITResourceValue] = vals.map {
         case (id, value: Double) => id -> ITResourceScalarValue(value)
-        case (id, portsString: String) => id -> ITResourcePortValue(portsString)
+        case (id, value: String) => id -> ITResourceStringValue(value)
       }(collection.breakOut)
       ITResources(resources)
     }
@@ -74,7 +74,7 @@ object MesosFacade {
     override def isEmpty: Boolean = value == 0
     override def toString: String = value.toString
   }
-  case class ITResourcePortValue(portString: String) extends ITResourceValue {
+  case class ITResourceStringValue(portString: String) extends ITResourceValue {
     override def isEmpty: Boolean = false
     override def toString: String = '"' + portString + '"'
   }

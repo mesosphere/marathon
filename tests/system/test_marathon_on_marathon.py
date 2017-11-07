@@ -46,7 +46,7 @@ def teardown_module(module):
     with shakedown.marathon_on_marathon():
         try:
             common.clean_up_marathon()
-        except:
+        except Exception:
             pass
 
     shakedown.uninstall_package_and_wait('marathon')
@@ -243,7 +243,7 @@ def test_framework_unavailable_on_mom():
 
     try:
         shakedown.wait_for_service_endpoint('pyfw', 15)
-    except:
+    except Exception:
         pass
     else:
         assert False, 'MoM shoud NOT create a service endpoint'
