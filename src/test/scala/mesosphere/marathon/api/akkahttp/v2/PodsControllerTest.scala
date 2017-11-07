@@ -42,7 +42,18 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
 
     {
       val controller = Fixture(authorized = false).controller()
-      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Post(Uri./))
+      val podSpecJson = """
+                          | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                          |   { "name": "webapp",
+                          |     "resources": { "cpus": 0.03, "mem": 64 },
+                          |     "image": { "kind": "DOCKER", "id": "busybox" },
+                          |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                        """.stripMargin
+      val entity = HttpEntity(podSpecJson).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
