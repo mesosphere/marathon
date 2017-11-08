@@ -49,6 +49,7 @@ class PodsController(
       complete((StatusCodes.OK, ""))
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   def create(): Route =
     authenticated.apply { implicit identity =>
       (extractClientIP & forceParameter) { (clientIp, force) =>
