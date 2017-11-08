@@ -32,7 +32,9 @@ ansiColor('xterm') {
             string(credentialsId: '4551c307-10ae-40f9-a0ac-f1bb44206b5b',variable: 'DOCKER_HUB_EMAIL'),
         ]) {
           sh """docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD} -e ${DOCKER_HUB_EMAIL}"""
-          sh """sudo -E ci/pipeline release $params.version $params.gitsha $params.latest"""
+          sshagent (credentials: ['0f7ec9c9-99b2-4797-9ed5-625572d5931d']) {
+            sh """sudo -E ci/pipeline release $params.version $params.gitsha $params.latest"""
+          }
         }
       } finally {
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
