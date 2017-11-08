@@ -65,14 +65,14 @@ class PhabricatorTestReportListener(outputDir: File) extends TestsListener {
     endGroup(name, TestResult.Failed)
   }
 
-  override def endGroup(name: String, result: sbt.TestResult.Value): Unit = {
+  override def endGroup(name: String, result: sbt.TestResult): Unit = {
     currentSuite.foreach { suite =>
       mapper.writeValue(new FileWriter(outputDir / s"$name.json"), suite.testCases)
     }
     currentSuite = Option.empty
   }
 
-  override def doComplete(finalResult: TestResult.Value): Unit = {}
+  override def doComplete(finalResult: TestResult): Unit = {}
 
   override def doInit(): Unit = outputDir.mkdirs()
 }
