@@ -511,7 +511,7 @@
 
       /{task_id}:
         ###
-        # Create application
+        # Delete a single task
         #
         delete:
           description: Kill the task with ID `task_id` that belongs to the application `app_id`.
@@ -529,6 +529,7 @@
                 If scale=true, than a deployment is triggered and the deployment is returned.
               body:
                 application/json:
+                  type: instance.SingleInstance | deploymentResult.DeploymentResult
                   example: !include examples/app_task.json
             404:
               description: No task found with this task_id.

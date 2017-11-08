@@ -96,6 +96,15 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       pluginManager = PluginManager.None
     )
 
+    val fakeInstance = new Instance(
+      Instance.Id.forRunSpec(PathId("/app")),
+      Instance.AgentInfo("localhost", None, None, None, Nil),
+      Instance.InstanceState(Condition.Running, clock.now(), None, None),
+      Map.empty,
+      clock.now(),
+      UnreachableDisabled
+    )
+
     implicit val rejectionHandler: RejectionHandler = AkkaHttpMarathonService.rejectionHandler
     val route: Route = Route.seal(appsController.route)
 
@@ -2351,7 +2360,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       groupManager.rootGroup() returns rootGroup
       taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
 
       val entity = HttpEntity.Empty
 
@@ -2370,8 +2378,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
+      taskKiller.kill(equalTo(app.id), any, equalTo(true))(any) returns Future.successful(fakeInstance :: Nil)
 
       val entity = HttpEntity.Empty
 
@@ -2389,8 +2396,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
+      taskKiller.kill(equalTo(app.id), any, equalTo(false))(any) returns Future.successful(fakeInstance :: Nil)
 
       val entity = HttpEntity.Empty
 

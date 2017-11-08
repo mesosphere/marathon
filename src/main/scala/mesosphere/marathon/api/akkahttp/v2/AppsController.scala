@@ -33,9 +33,10 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
 import akka.NotUsed
-import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
+import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, SingleInstance }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 import AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
+import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.raml.InstanceConversion._
 
@@ -395,11 +396,20 @@ class AppsController(
             }
           case TaskKillingMode.Wipe =>
             onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
-              complete(Json.obj("tasks" -> instances))
+              instances.headOption.map { instance =>
+                complete(SingleInstance(instance.toRaml))
+              }.getOrElse(
+                reject(EntityNotFound.noTask(taskId))
+              )
+
             }
           case TaskKillingMode.KillWithoutWipe =>
             onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
-              complete(Json.obj("tasks" -> instances))
+              instances.headOption.map { instance =>
+                complete(SingleInstance(instance.toRaml))
+              }.getOrElse(
+                reject(EntityNotFound.noTask(taskId))
+              )
             }
         }
     }
