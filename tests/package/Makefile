@@ -1,4 +1,4 @@
-.PHONY: all default
+.PHONY: all default test clean
 .SECONDARY:
 
 default: all
@@ -42,5 +42,8 @@ target/centos-systemd.built: centos-systemd/Dockerfile centos-systemd/mesos-vers
 target/ubuntu-upstart.built: ubuntu-upstart/Dockerfile ubuntu-upstart/mesos-version
 	cd ubuntu-upstart && docker build . -t marathon-package-test:ubuntu-upstart
 	touch $@
+
+test: | all
+	amm test.sc all
 
 all: target/mesos.built target/debian-systemv.built target/debian-systemd.built target/centos-systemd.built target/centos-systemv.built target/ubuntu-upstart.built
