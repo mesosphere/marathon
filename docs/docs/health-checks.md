@@ -66,11 +66,6 @@ executed by Mesos on the agent running the corresponding task and thus test reac
 You must escape any double quotes in your commands. This is required because Mesos runs the healthcheck command inside via `/bin/sh -c ""`.
   See the example below and [MESOS-4812](https://issues.apache.org/jira/browse/MESOS-4812) for details.
 
-*Note:* Command health checks in combination with Dockerized tasks were
-  broken in Mesos v0.23.0 and v0.24.0. This issue has been fixed in
-  v0.23.1 and v0.24.1. See [MESOS-3136](https://issues.apache.org/jira/browse/MESOS-3136) for
-  more details.
-
 ## Health Lifecycle
 
 The application health lifecycle is represented by the finite state machine in
