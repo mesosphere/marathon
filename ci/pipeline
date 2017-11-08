@@ -267,7 +267,8 @@ def release(requestVersion: String, gitSha: String, latest: Boolean = false): Un
     println("Docker image mesosphere/marathon:latest NOT updated")
   }
 
-  %('git, "push", "--tags")
+  // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
+  // %('git, "push", "--tags")
 
   // TODO: Publish swagger files.
   // TODO: Publish native packages to unstable.
