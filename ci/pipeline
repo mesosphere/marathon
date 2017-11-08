@@ -184,8 +184,7 @@ def buildDockerAndLinuxPackages(): Unit = {
 
     // create test docker images and tests packages
     val testPath = pwd/'tests/'package
-    %('make, "all")(testPath)
-    %('amm, "test.sc", "all")(testPath)
+    %('make, "test")(testPath)
   }
 }
 
