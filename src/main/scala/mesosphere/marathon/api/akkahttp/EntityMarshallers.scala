@@ -176,6 +176,7 @@ object EntityMarshallers {
   implicit val deploymentResultMarshaller = playJsonMarshaller[raml.DeploymentResult]
   implicit val enrichedTaskMarshaller = playJsonMarshaller[raml.EnrichedTask]
   implicit val enrichedTasksListMarshaller = playJsonMarshaller[raml.EnrichedTasksList]
+  implicit val instanceListMarshaller = playJsonMarshaller[raml.InstanceList]
   implicit val deleteTasksUnmarshaller = playJsonUnmarshaller[raml.DeleteTasks]
   implicit val seqDateTimeMarshalled = playJsonMarshaller[Seq[Timestamp]]
 

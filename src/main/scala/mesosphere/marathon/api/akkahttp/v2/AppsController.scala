@@ -14,7 +14,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
-import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
+import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
@@ -29,12 +29,15 @@ import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
 import akka.NotUsed
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
+import AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.raml.InstanceConversion._
 
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -63,7 +66,6 @@ class AppsController(
   import Directives._
 
   private implicit lazy val validateApp = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  //  private implicit lazy val updateValidator = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
 
   import AppHelpers._
   import EntityMarshallers._
@@ -347,7 +349,30 @@ class AppsController(
       .mapConcat(identity)
   }
 
-  private def killTasks(appId: PathId)(implicit identity: Identity): Route = ???
+  private def killTasks(appId: PathId)(implicit identity: Identity): Route = {
+    // the line below doesn't look nice but it doesn't compile if we use parameters directive
+    (forceParameter & parameter("host") & extractTaskKillingMode) {
+      (force, host, mode) =>
+        def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
+          appTasks.filter(_.agentInfo.host == host || host == "*")
+        }
+        mode match {
+          case TaskKillingMode.Scale =>
+            val deploymentPlan = taskKiller.killAndScale(appId, findToKill, force)
+            onSuccess(deploymentPlan) { plan =>
+              complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+            }
+          case TaskKillingMode.Wipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
+              complete(raml.InstanceList(instances.map(_.toRaml)))
+            }
+          case TaskKillingMode.KillWithoutWipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
+              complete(raml.InstanceList(instances.map(_.toRaml)))
+            }
+        }
+    }
+  }
 
   private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = ???
 
