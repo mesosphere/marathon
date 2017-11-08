@@ -13,7 +13,7 @@ ansiColor('xterm') {
           defaultValue: '',
           description: 'Community Release Version (ex. v1.5.2)'
         ),
-        boolean(name: 'latest',
+        booleanParam(name: 'latest',
           defaultValue: false,
           description: 'True if docker mesosphere/marathon:latest should be pushed'
         )]
