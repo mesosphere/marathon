@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core
 
 import java.time.Clock
+import java.util.concurrent.Executors
 import javax.inject.Named
 
 import akka.actor.{ ActorRef, ActorSystem }
@@ -35,6 +36,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.StorageModule
 import mesosphere.util.state.MesosLeaderInfo
+import scala.concurrent.ExecutionContext
 
 import scala.util.Random
 
@@ -66,6 +68,7 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val lifecycleState = LifecycleState.WatchingJVM
   override lazy val actorsModule = new ActorsModule(actorSystem)
   private[this] lazy val crashStrategy = JvmExitsCrashStrategy
+  private[this] val electionExecutor = Executors.newSingleThreadExecutor()
 
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory)
   override lazy val electionModule = new ElectionModule(
@@ -73,8 +76,8 @@ class CoreModuleImpl @Inject() (
     actorSystem,
     eventStream,
     hostPort,
-    lifecycleState,
-    crashStrategy
+    crashStrategy,
+    ExecutionContext.fromExecutor(electionExecutor)
   )
 
   // TASKS
@@ -102,9 +105,9 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
     // infrastructure
-    clock, random, marathonConf, actorSystem.scheduler,
+    clock, random, marathonConf,
     leadershipModule,
-    () => marathonScheduler.getHomeRegion
+    () => marathonScheduler.getLocalRegion
   )
 
   private[this] lazy val offerMatcherReconcilerModule =
@@ -150,7 +153,7 @@ class CoreModuleImpl @Inject() (
     // external guice dependencies
     taskTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
-    () => marathonScheduler.getHomeRegion
+    () => marathonScheduler.getLocalRegion
   )
 
   // PLUGINS

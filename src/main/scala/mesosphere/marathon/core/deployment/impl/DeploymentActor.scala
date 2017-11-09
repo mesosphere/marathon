@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.{ Cancel, Fail, NextStep }
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
-import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
+import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -186,20 +186,30 @@ private class DeploymentActor(
   }
 
   @SuppressWarnings(Array("all")) /* async/await */
-  def stopRunnable(runnableSpec: RunSpec): Future[Done] = async {
-    logger.debug(s"Stop runnable $runnableSpec")
-    val instances = await(instanceTracker.specInstances(runnableSpec.id))
+  def stopRunnable(runSpec: RunSpec): Future[Done] = async {
+    logger.debug(s"Stop runnable $runSpec")
+    healthCheckManager.removeAllFor(runSpec.id)
+
+    // Purging launch queue
+    await(launchQueue.asyncPurge(runSpec.id))
+
+    val instances = await(instanceTracker.specInstances(runSpec.id))
     val launchedInstances = instances.filter(_.isLaunched)
-    // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
+
+    logger.info(s"Killing all instances of ${runSpec.id}: ${launchedInstances.map(_.instanceId)}")
     await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
 
-    logger.debug(s"Killed all remaining tasks: ${launchedInstances.map(_.instanceId)}")
+    launchQueue.resetDelay(runSpec)
 
-    // Note: This is an asynchronous call. We do NOT wait for the run spec to stop. If we do, the DeploymentActorTest
-    // fails.
-    scheduler.stopRunSpec(runnableSpec)
+    // The tasks will be removed from the InstanceTracker when their termination
+    // was confirmed by Mesos via a task update.
+    eventBus.publish(AppTerminatedEvent(runSpec.id))
 
     Done
+  }.recover {
+    case NonFatal(error) =>
+      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error);
+      Done
   }
 
   def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Done] = {

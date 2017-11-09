@@ -2,9 +2,15 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.http.scaladsl.model.headers._
-import akka.http.scaladsl.model.{ DateTime, HttpHeader, HttpMethods, HttpProtocols }
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Directives.extractRequest
 import akka.http.scaladsl.server.{ Directive, Directive0, Directive1, MalformedQueryParamRejection, Route, Directives => AkkaDirectives }
 import com.wix.accord.{ Failure, Success, Result => ValidationResult }
+import akka.http.scaladsl.server.{ Directive0, Directive1, Directives => AkkaDirectives }
+import com.wix.accord.{ Failure, Success, Validator, Result => ValidationResult }
+import com.wix.accord.dsl._
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.state.PathId
 
 import scala.concurrent.duration._
 
@@ -43,6 +49,24 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
     }
   }
 
+  def accepts(mediaType: MediaType): Directive0 = {
+    extractRequest.flatMap { request =>
+      request.header[Accept] match {
+        case Some(accept) if accept.mediaRanges.exists(range => range.matches(mediaType)) => pass
+        case _ => reject
+      }
+    }
+  }
+
+  def acceptsAnything: Directive0 = {
+    extractRequest.flatMap { request =>
+      request.header[Accept] match {
+        case None => pass
+        case _ => reject
+      }
+    }
+  }
+
   /**
     * The noCache directive will set proper no-cache headers based on the HTTP protocol
     */
@@ -69,37 +93,27 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
     * @param result The result of a Wix validation.
     * @return The passed inner route.
     */
-  def assumeValid(result: ValidationResult): Directive0 = Directive { f: (Unit => Route) =>
+  def assumeValid(result: ValidationResult): Directive0 = {
     import mesosphere.marathon.api.akkahttp.EntityMarshallers._
     result match {
       case failure: Failure => reject(ValidationFailed(failure))
-      case Success => f(Unit)
+      case Success => pass
     }
   }
 
-  def extractTaskKillingMode: Directive1[TaskKillingMode] =
-    (parameter("scale".as[Boolean].?(false)) & parameter("wipe".as[Boolean].?(false))).tflatMap {
-      case (scale, wipe) =>
-        if (scale && wipe) {
-          reject(MalformedQueryParamRejection("scale, wipe", "You cannot use scale and wipe at the same time."))
-        } else if (scale) {
-          provide(TaskKillingMode.Scale)
-        } else if (wipe) {
-          provide(TaskKillingMode.Wipe)
-        } else {
-          provide(TaskKillingMode.KillWithoutWipe)
-        }
+  def validateInstanceId(possibleId: String): ValidationResult = {
+    val validate: Validator[String] = validator[String] { id =>
+      id should matchRegexFully(Instance.Id.InstanceIdRegex)
     }
+    validate(possibleId)
+  }
 
-  sealed trait TaskKillingMode
-  object TaskKillingMode {
+  def validatePathId(possibleId: String): ValidationResult = PathId.pathIdValidator(PathId(possibleId))
 
-    case object Scale extends TaskKillingMode
-
-    case object KillWithoutWipe extends TaskKillingMode
-
-    case object Wipe extends TaskKillingMode
-
+  def withValidatedPathId(possibleId: String): Directive1[PathId] = {
+    assumeValid(validatePathId(possibleId)).tflatMap { Unit =>
+      provide(PathId(possibleId))
+    }
   }
 
 }

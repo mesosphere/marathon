@@ -22,9 +22,9 @@ private[api] object InfoEmbedResolver {
   private[this] val EmbedCounts = "counts"
   private[this] val EmbedTaskStats = "taskStats"
 
-  private[v2] val EmbedGroups = "group.groups"
-  private[v2] val EmbedApps = "group.apps"
-  private[v2] val EmbedPods = "group.pods"
+  private[api] val EmbedGroups = "group.groups"
+  private[api] val EmbedApps = "group.apps"
+  private[api] val EmbedPods = "group.pods"
 
   /**
     * Converts embed arguments to our internal representation.

@@ -1,12 +1,15 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
+import java.net.InetSocketAddress
+
 import akka.Done
 import akka.http.scaladsl.model.Uri.{ Path, Query }
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, StatusCodes, Uri }
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.testkit.TestProbe
 import akka.util.ByteString
 import mesosphere.UnitTest
 import mesosphere.marathon.api._
@@ -18,6 +21,7 @@ import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, Selector, Tas
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
@@ -38,6 +42,7 @@ import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.mockito.Matchers
 import org.mockito.Mockito.when
 import play.api.libs.json._
+import akka.http.scaladsl.model.headers.`X-Forwarded-For`
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -352,15 +357,20 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       )
       prepareApp(app, groupManager) // app is stored
 
+      val eventStreamProbe = TestProbe("eventStream")
+      system.eventStream.subscribe(eventStreamProbe.ref, classOf[ApiPostEvent])
+
       When("The application is updated")
       val updateRequest = App(id = id, instances = 2)
       val updatedBody = Json.stringify(Json.toJson(updateRequest)).getBytes("UTF-8")
 
       val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
-      Patch(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
+      val ipHeader = `X-Forwarded-For`(RemoteAddress(new InetSocketAddress("8.8.8.8", 31337)))
+      Patch(Uri./.withPath(Path(app.id)), entity).addHeader(ipHeader) ~> route ~> check {
         Then("It is successful")
         status shouldEqual StatusCodes.OK
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+        eventStreamProbe.expectMsgClass(classOf[ApiPostEvent]).clientIp shouldEqual ("8.8.8.8:31337")
       }
     }
 
@@ -551,11 +561,16 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val updatedJson = Json.toJson(updatedApp).as[JsObject]
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
 
+      val eventStreamProbe = TestProbe("eventStream")
+      system.eventStream.subscribe(eventStreamProbe.ref, classOf[ApiPostEvent])
+
       val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
+      val ipHeader = `X-Forwarded-For`(RemoteAddress(new InetSocketAddress("8.8.8.8", 31337)))
+      Put(Uri./.withPath(Path(app.id)), entity).addHeader(ipHeader) ~> route ~> check {
         Then("It is successful")
         status shouldEqual StatusCodes.OK withClue s"response=${responseAs[String]}"
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+        eventStreamProbe.expectMsgClass(classOf[ApiPostEvent]).clientIp shouldEqual ("8.8.8.8:31337")
       }
     }
 
@@ -2378,16 +2393,71 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
       }
     }
+    "Kill tasks and scale" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.killAndScale(equalTo(app.id), any, any)(any) returns Future.successful(plan)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("scale" -> "true", "host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Kill tasks and wipe" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.kill(equalTo(app.id), any, equalTo(true))(any) returns Future.successful(Seq.empty)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("wipe" -> "true", "host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "Just Kill tasks" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.kill(equalTo(app.id), any, equalTo(false))(any) returns Future.successful(Seq.empty)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
 
     "List running tasks" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
+      val taskId = "task_id"
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
       groupManager.rootGroup() returns rootGroup
       val instance = mock[Instance]
       instance.instanceId returns Instance.Id.forRunSpec(app.id)
-      instance.tasksMap returns Map(Task.Id("task_id") -> Task.Reserved(
-        Task.Id("task_id"),
+      instance.tasksMap returns Map(Task.Id(taskId) -> Task.Reserved(
+        Task.Id(taskId),
         Reservation(Seq.empty, Reservation.State.Launched),
         Task.Status(
           stagedAt = clock.now(),
@@ -2411,122 +2481,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       Get(uri, entity) ~> route ~> check {
         status shouldEqual StatusCodes.OK
-      }
-    }
-
-    "Kill tasks and scale" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
-      val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.app(PathId("/app")) returns Some(app)
-
-      groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
-
-      val entity = HttpEntity.Empty
-
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("scale" -> "true", "host" -> "*"))
-
-      Delete(uri, entity) ~> route ~> check {
-        status shouldEqual StatusCodes.OK
-        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
-      }
-    }
-
-    "Kill tasks and wipe" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
-      val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.app(PathId("/app")) returns Some(app)
-
-      groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
-
-      val entity = HttpEntity.Empty
-
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("wipe" -> "true", "host" -> "*"))
-
-      Delete(uri, entity) ~> route ~> check {
-        status shouldEqual StatusCodes.OK
-      }
-    }
-
-    "Just Kill tasks" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
-      val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.app(PathId("/app")) returns Some(app)
-
-      groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
-
-      val entity = HttpEntity.Empty
-
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("host" -> "*"))
-
-      Delete(uri, entity) ~> route ~> check {
-        status shouldEqual StatusCodes.OK
-      }
-    }
-
-    "Kill task and scale" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
-      val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.app(PathId("/app")) returns Some(app)
-
-      groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
-
-      val entity = HttpEntity.Empty
-
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("scale" -> "true", "host" -> "*"))
-
-      Delete(uri, entity) ~> route ~> check {
-        status shouldEqual StatusCodes.OK
-        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
-      }
-    }
-
-    "Kill task and wipe" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
-      val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.app(PathId("/app")) returns Some(app)
-
-      groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
-
-      val entity = HttpEntity.Empty
-
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("wipe" -> "true", "host" -> "*"))
-
-      Delete(uri, entity) ~> route ~> check {
-        status shouldEqual StatusCodes.OK
-      }
-    }
-
-    "Just kill task" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
-      val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.app(PathId("/app")) returns Some(app)
-
-      groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
-      taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty)
-
-      val entity = HttpEntity.Empty
-
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("host" -> "*"))
-
-      Delete(uri, entity) ~> route ~> check {
-        status shouldEqual StatusCodes.OK
+        (Json.parse(responseAs[String]) \ "tasks" \ 0 \ "id").get shouldEqual JsString(taskId)
       }
     }
 

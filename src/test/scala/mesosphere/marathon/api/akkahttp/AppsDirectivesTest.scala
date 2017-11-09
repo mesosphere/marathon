@@ -5,13 +5,14 @@ import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.model.Uri.{ Path, Query }
 import akka.http.scaladsl.server.MalformedQueryParamRejection
 import akka.http.scaladsl.server.PathMatcher.{ Matched, Unmatched }
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.GroupCreation
 
-class DirectivesTest extends UnitTest with ScalatestRouteTest {
-  import Directives._
+class AppsDirectivesTest extends UnitTest with ScalatestRouteTest {
+  import AppsDirectives._
 
   def objectName(obj: AnyRef) = obj.getClass.getName
 
@@ -19,7 +20,7 @@ class DirectivesTest extends UnitTest with ScalatestRouteTest {
     complete(objectName(mode))
   }
 
-  "Directives" should {
+  "AppsDirectives" should {
     "extract scale killing mode from request" in {
       Get().withUri(Uri./.withQuery(Query("scale" -> "true"))) ~> route ~> check {
         responseAs[String] shouldEqual objectName(TaskKillingMode.Scale)

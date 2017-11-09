@@ -13,7 +13,7 @@ import time
 
 from datetime import timedelta
 from dcos import http, marathon
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents
+from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
 def test_launch_mesos_container():
@@ -808,7 +808,7 @@ def test_unhealthy_app_can_be_rolled_back():
 
     try:
         shakedown.deployment_wait()
-    except:
+    except Exception:
         client.rollback_deployment(deployment_id)
         shakedown.deployment_wait()
 

@@ -22,7 +22,7 @@ else:
     from urllib.request import Request, urlopen
 
 if PY2:
-    byte_type = unicode
+    byte_type = unicode # NOQA
 
     def response_status(response):
         return response.getcode()
@@ -154,7 +154,7 @@ if __name__ == "__main__":
             os.system("ps -a | grep $(lsof -ti :{})".format(port))
         else:
             logging.exception("Socket.error in the main thread: ")
-    except:
+    except Exception:
         logging.exception("Exception in the main thread: ")
     finally:
         logging.info("Closing the server...")

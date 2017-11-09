@@ -62,7 +62,7 @@ def test_custom_service_name():
     """  Install MoM with a custom service name.
     """
     cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
-    pkg = cosmos_pm.get_package_version('marathon', None)
+    cosmos_pm.get_package_version('marathon', None)
     options = {
         'service': {'name': "test-marathon"}
     }

@@ -119,7 +119,7 @@ def cluster_info(mom_name='marathon-user'):
                 client = marathon.create_client()
                 about = client.get_about()
                 print("Marathon MoM version: {}".format(about.get("version")))
-            except:
+            except Exception:
                 print("Marathon MoM not present")
     else:
         print("Marathon MoM not present")
@@ -196,7 +196,7 @@ def ensure_mom():
         try:
             shakedown.install_package_and_wait('marathon')
             shakedown.deployment_wait()
-        except:
+        except Exception:
             pass
 
         if not shakedown.wait_for_service_endpoint('marathon-user'):
@@ -248,7 +248,7 @@ def wait_for_task(service, task, timeout_sec=120):
         response = None
         try:
             response = shakedown.get_service_task(service, task)
-        except:
+        except Exception:
             pass
 
         if response is not None and response['state'] == 'TASK_RUNNING':
@@ -267,7 +267,7 @@ def clear_pods():
         for pod in pods:
             client.remove_pod(pod["id"], True)
         shakedown.deployment_wait()
-    except:
+    except Exception:
         pass
 
 
@@ -595,14 +595,15 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
         print('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
         url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
         req = http.put(url)
-        assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+        msg = 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+        assert req.status_code == 204, msg
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
             print('Service account {} already has {} permissions set'.format(service_account, resource))
         else:
             print("Unexpected HTTP error: {}".format(e.response))
             raise
-    except:
+    except Exception:
         print("Unexpected error:", sys.exc_info()[0])
         raise
 
@@ -624,7 +625,7 @@ def add_acs_resource(resource):
         else:
             print("Unexpected HTTP error: {}, {}".format(e.response, e.response.text))
             raise
-    except:
+    except Exception:
         print("Unexpected error:", sys.exc_info()[0])
         raise
 

@@ -11,6 +11,9 @@ import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
+import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingRunSpecId
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
 import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
 import akka.stream.Materializer
@@ -20,43 +23,37 @@ import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
 import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingAppPathId
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
-import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
-import mesosphere.marathon.api.v2.Validation.validateOrThrow
-import mesosphere.marathon.api.v2.AppHelpers.{ appNormalization, appUpdateNormalization, authzSelector }
-
-import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, Identity, ViewResource, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
 import play.api.libs.json.Json
-import PathId._
-import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json._
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.task.Task.{ Id => TaskId }
-import PathMatchers._
 import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.core.event.ApiPostEvent
-import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
+import akka.NotUsed
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
+import AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.raml.InstanceConversion._
 
+import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 import scala.util.control.NonFatal
 
 class AppsController(
@@ -81,7 +78,6 @@ class AppsController(
   import Directives._
 
   private implicit lazy val validateApp = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
-  private implicit lazy val updateValidator = AppValidation.validateCanonicalAppUpdateAPI(config.availableFeatures, () => normalizationConfig.defaultNetworkName)
 
   import AppHelpers._
   import EntityMarshallers._
@@ -332,35 +328,62 @@ class AppsController(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def listRunningTasks(appId: PathId)(implicit identity: Identity): Route = {
-    val maybeApp = groupManager.app(appId)
-    maybeApp.map { app =>
-      authorized(ViewRunSpec, app).apply {
-        val tasksF = instanceTracker.instancesBySpec flatMap { instancesBySpec =>
-          runningTasks(Set(appId), instancesBySpec)
+    groupManager.app(appId) match {
+      case Some(app) =>
+        authorized(ViewRunSpec, app).apply {
+          val tasksF = async {
+            val instancesBySpec = await(instanceTracker.instancesBySpec)
+            await(runningTasks(Set(appId), instancesBySpec).runWith(Sink.seq)).map(_.toRaml)
+          }
+          onSuccess(tasksF) { tasks =>
+            complete(raml.EnrichedTasksList(tasks))
+          }
         }
-        onSuccess(tasksF) { tasks =>
-          complete(Json.obj("tasks" -> tasks.toRaml))
-        }
-      }
-    } getOrElse {
-      reject(Rejections.EntityNotFound.noApp(appId))
+      case None =>
+        reject(Rejections.EntityNotFound.noApp(appId))
     }
   }
 
-  private def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Future[Set[EnrichedTask]] = {
-    Source(appIds)
-      .filter(instancesBySpec.hasSpecInstances)
-      .mapAsync(1)(id => healthCheckManager.statuses(id).map(_ -> id))
-      .mapConcat {
-        case (health, id) =>
-          instancesBySpec.specInstances(id).flatMap { instance =>
-            instance.tasksMap.values.map { task =>
-              EnrichedTask(id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil))
-            }
-          }
+  @SuppressWarnings(Array("all")) // async/await
+  private def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Source[EnrichedTask, NotUsed] = {
+    Source(appIds).mapAsync(1) { appId =>
+      async {
+        val instances = instancesBySpec.specInstances(appId)
+        val healthStatuses = await(healthCheckManager.statuses(appId))
+        instances.flatMap { instance =>
+          val health = healthStatuses.getOrElse(instance.instanceId, Nil)
+          instance.tasksMap.values.map { task => EnrichedTask(appId, task, instance.agentInfo, health) }
+        }
       }
-      .runWith(Sink.set)
+    }
+      .mapConcat(identity)
+  }
+
+  private def killTasks(appId: PathId)(implicit identity: Identity): Route = {
+    // the line below doesn't look nice but it doesn't compile if we use parameters directive
+    (forceParameter & parameter("host") & extractTaskKillingMode) {
+      (force, host, mode) =>
+        def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
+          appTasks.filter(_.agentInfo.host == host || host == "*")
+        }
+        mode match {
+          case TaskKillingMode.Scale =>
+            val deploymentPlan = taskKiller.killAndScale(appId, findToKill, force)
+            onSuccess(deploymentPlan) { plan =>
+              complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+            }
+          case TaskKillingMode.Wipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
+              complete(raml.InstanceList(instances.map(_.toRaml)))
+            }
+          case TaskKillingMode.KillWithoutWipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
+              complete(raml.InstanceList(instances.map(_.toRaml)))
+            }
+        }
+    }
   }
 
   private def killTasks(appId: PathId)(implicit identity: Identity): Route = {
@@ -466,7 +489,7 @@ class AppsController(
             createApp
           }
         } ~
-        pathPrefix(ExistingAppPathId(groupManager.rootGroup)) { appId =>
+        pathPrefix(ExistingRunSpecId(groupManager.rootGroup)) { appId =>
           pathEndOrSingleSlash {
             get {
               showApp(appId)

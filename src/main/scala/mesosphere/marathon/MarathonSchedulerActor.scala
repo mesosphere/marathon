@@ -8,8 +8,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, ScalingProposition }
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
-import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentSuccess }
+import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
+import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
@@ -74,7 +74,7 @@ class MarathonSchedulerActor private (
   def receive: Receive = suspended
 
   def suspended: Receive = LoggingReceive.withLabel("suspended"){
-    case LocalLeadershipEvent.ElectedAsLeader =>
+    case LeadershipTransition.ElectedAsLeaderAndReady =>
       logger.info("Starting scheduler actor")
 
       deploymentRepository.all().runWith(Sink.seq).onComplete {
@@ -95,7 +95,7 @@ class MarathonSchedulerActor private (
       context.become(started)
       self ! ReconcileHealthChecks
 
-    case LocalLeadershipEvent.Standby =>
+    case LeadershipTransition.Standby =>
     // ignored
     // FIXME: When we get this while recovering deployments, we become active anyway
     // and drop this message.
@@ -104,13 +104,13 @@ class MarathonSchedulerActor private (
   }
 
   def started: Receive = LoggingReceive.withLabel("started") {
-    case LocalLeadershipEvent.Standby =>
+    case LeadershipTransition.Standby =>
       logger.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
       lockedRunSpecs.clear()
       context.become(suspended)
 
-    case LocalLeadershipEvent.ElectedAsLeader => // ignore
+    case LeadershipTransition.ElectedAsLeaderAndReady => // ignore
 
     case ReconcileTasks =>
       import akka.pattern.pipe
@@ -377,35 +377,6 @@ class SchedulerActions(
   def startRunSpec(runSpec: RunSpec): Future[Done] = {
     logger.info(s"Starting runSpec ${runSpec.id}")
     scale(runSpec)
-  }
-
-  @SuppressWarnings(Array("all")) // async/await
-  def stopRunSpec(runSpec: RunSpec): Future[Done] = {
-    logger.info(s"Stopping runSpec ${runSpec.id}")
-
-    healthCheckManager.removeAllFor(runSpec.id)
-
-    async {
-      val tasks = await(instanceTracker.specInstances(runSpec.id))
-
-      tasks.foreach { instance =>
-        if (instance.isLaunched) {
-          logger.info("Killing {}", instance.instanceId)
-          killService.killInstance(instance, KillReason.DeletingApp)
-        }
-      }
-      await(launchQueue.asyncPurge(runSpec.id))
-      Done
-    }.recover {
-      case NonFatal(error) => logger.warn(s"Error in stopping runSpec ${runSpec.id}", error); Done
-    }.map { _ =>
-      launchQueue.resetDelay(runSpec)
-
-      // The tasks will be removed from the InstanceTracker when their termination
-      // was confirmed by Mesos via a task update.
-      eventBus.publish(AppTerminatedEvent(runSpec.id))
-      Done
-    }
   }
 
   /**

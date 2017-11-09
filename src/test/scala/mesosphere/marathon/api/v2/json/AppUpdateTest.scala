@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2.json
 
 import com.wix.accord._
-import mesosphere.marathon.api.akkahttp.EntityMarshallers
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.validation.{ AppValidation, NetworkValidationMessages }
@@ -12,7 +11,7 @@ import mesosphere.marathon.raml.{ AppCContainer, AppUpdate, Artifact, Container,
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
-import play.api.libs.json.{ Json, JsError }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 
@@ -21,15 +20,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
   implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateCanonicalAppUpdateAPI(
     Set("secrets"), () => AppNormalization.Configuration(None, "mesos-bridge-name").defaultNetworkName)
 
-  val roundTripValidator = new Validator[AppUpdate] {
-    override def apply(update: AppUpdate) = {
-      Json.fromJson[AppUpdate](Json.toJson(update)) match {
-        case err: JsError =>
-          EntityMarshallers.jsErrorToFailure(err)
-        case obj => appUpdateValidator(obj.get)
-      }
-    }
-  }
+  val appUpdateRoundTripValidator = roundTripValidator[AppUpdate](Some(appUpdateValidator))
 
   val runSpecId = PathId("/test")
 
@@ -61,10 +52,10 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
           PortDefinition(9001, name = Some("bar"))))
         )) should be(aSuccess)
 
-      roundTripValidator(update.copy(mem = Some(-3.0))) should haveViolations("/mem" -> "error.min")
-      roundTripValidator(update.copy(cpus = Some(-3.0))) should haveViolations("/cpus" -> "error.min")
-      roundTripValidator(update.copy(disk = Some(-3.0))) should haveViolations("/disk" -> "error.min")
-      roundTripValidator(update.copy(instances = Some(-3))) should haveViolations("/instances" -> "error.min")
+      appUpdateRoundTripValidator(update.copy(mem = Some(-3.0))) should haveViolations("/mem" -> "error.min")
+      appUpdateRoundTripValidator(update.copy(cpus = Some(-3.0))) should haveViolations("/cpus" -> "error.min")
+      appUpdateRoundTripValidator(update.copy(disk = Some(-3.0))) should haveViolations("/disk" -> "error.min")
+      appUpdateRoundTripValidator(update.copy(instances = Some(-3))) should haveViolations("/instances" -> "error.min")
       appUpdateValidator(update.copy(networks = Some(Seq(Network(mode = NetworkMode.Container))))) should haveViolations(
         "/networks" -> NetworkValidationMessages.NetworkNameMustBeSpecified)
     }
@@ -72,10 +63,10 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
     "Validate secrets" in {
       val update = AppUpdate()
 
-      roundTripValidator(update.copy(secrets = Some(Map("a" -> SecretDef(""))))) should haveViolations(
+      appUpdateRoundTripValidator(update.copy(secrets = Some(Map("a" -> SecretDef(""))))) should haveViolations(
         "/secrets/a/source" -> "error.minLength")
 
-      roundTripValidator(update.copy(secrets = Some(Map("" -> SecretDef("a/b/c"))))) should haveViolations(
+      appUpdateRoundTripValidator(update.copy(secrets = Some(Map("" -> SecretDef("a/b/c"))))) should haveViolations(
         "/secrets/keys(0)" -> "must not be empty")
     }
 

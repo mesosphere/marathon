@@ -1,3 +1,33 @@
+## Changes from 1.5.1 to 1.5.2 (unreleased)
+Bugfix release
+
+### Fixed issues
+- [MARATHON-7790](https://jira.mesosphere.com/browse/MARATHON-7790) Migrate UnreachableStrategy Saved in Instances
+- Change `Int.MaxValue` to 8 for maximum concurrency during migration (#5676) (#5701)
+- [MARATHON-7848](https://jira.mesosphere.com/browse/MARATHON-7848) Allow underscore for network names (#5687)
+- [MARATHON-7788](https://jira.mesosphere.com/browse/MARATHON-7788) Store a flag node in ZK to indicate that Marathon performs data migration (#5662)
+- [MARATHON-7852](https://jira.mesosphere.com/browse/MARATHON-7852) Switch to use Debian Slim base image (#5668)
+- Extend the set of command-line flags returned by /v2/info (#5612)
+- [MARATHON-7784](https://jira.mesosphere.com/browse/MARATHON-7784) Do not ignore exceptions when resolving apps and pods in GroupRepository (#5607)
+- Update Mesos version to 1.4.0 which is used for building packages and Docker images (#5606)
+- [MARATHON-7763](https://jira.mesosphere.com/browse/MARATHON-7763) Do sync before reading from or writing to ZooKeeper (#5566)
+- Fixes bug in which some Condition values were improperly read (#5555) (#5557)
+- Added an option to disable a plugin (#5524)
+
+### 1.5.1 New Behavior
+#### Migrating unreachableStrategy - running instances
+
+If you already migrated your apps and pods to the new default behavior for `UnreachableStrategy`, you also should consider to migrate the running instances as well.
+
+To change the `unreachableStrategy` of all running instances, set the environment variable `MIGRATION_1_4_6_UNREACHABLE_STRATEGY` to `true`, which leads to the following behavior during migration:
+
+When opting in to the unreachable migration step
+1) all instances that had a config of `UnreachableStrategy(300 seconds, 600 seconds)` (previous default) are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+2) all instances that had a config of `UnreachableStrategy(1 second, x seconds)` are migrated to have `UnreachableStrategy(0 seconds, x seconds)`
+3) all instances that had a config of `UnreachableStrategy(1 second, 2 seconds)` are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+
+**Note**: If you set this variable after upgrading to 1.4.9, it will have no effect.
+
 ## Changes from 1.5.0 to 1.5.1
 Bugfix release
 

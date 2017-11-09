@@ -11,7 +11,7 @@ import de.heikoseeberger.akkasse.ServerSentEvent
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.election.{ ElectionServiceLeaderInfo, LocalLeadershipEvent }
+import mesosphere.marathon.core.election.{ ElectionServiceLeaderInfo, LeadershipTransition }
 import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent }
 import mesosphere.marathon.plugin.auth.{ Authenticator, AuthorizedResource, Authorizer, ViewResource }
 import mesosphere.marathon.stream.{ EnrichedFlow, EnrichedSource }
@@ -27,7 +27,7 @@ class EventsController(
     eventStreamMaxOutstandingMessages: Int,
     eventBus: EventStream,
     leaderInfo: ElectionServiceLeaderInfo,
-    leaderStateEvents: Source[LocalLeadershipEvent, Any])(
+    leaderStateEvents: Source[LeadershipTransition, Any])(
     implicit
     val executionContext: ExecutionContext,
     val authenticator: Authenticator,
@@ -82,11 +82,11 @@ object EventsController extends StrictLogging {
     * @param bufferSize the size of events to buffer, if there is no demand.
     * @param remoteAddress the remote address
     */
-  def eventStreamLogic(eventStream: EventStream, leaderEvents: Source[LocalLeadershipEvent, Any], bufferSize: Int, remoteAddress: RemoteAddress) = {
+  def eventStreamLogic(eventStream: EventStream, leaderEvents: Source[LeadershipTransition, Any], bufferSize: Int, remoteAddress: RemoteAddress) = {
 
     // Used to propagate a "stream close" signal when we see a LeadershipState.Standy event
     val leaderLossKillSwitch =
-      leaderEvents.collect { case evt @ LocalLeadershipEvent.Standby => evt }
+      leaderEvents.collect { case evt @ LeadershipTransition.Standby => evt }
 
     EnrichedSource.eventBusSource(classOf[MarathonEvent], eventStream, bufferSize, OverflowStrategy.fail)
       .via(EnrichedFlow.stopOnFirst(leaderLossKillSwitch))
