@@ -2359,7 +2359,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
-      taskKiller.killAndScale(any, any, any)(any) returns Future.successful(plan)
+      taskKiller.killAndScale(equalTo(app.id), any, any)(any) returns Future.successful(plan)
 
       val entity = HttpEntity.Empty
 
