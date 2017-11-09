@@ -33,9 +33,10 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import PathMatchers._
 import akka.NotUsed
-import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult }
+import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, SingleInstance }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 import AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
+import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.raml.InstanceConversion._
 
@@ -374,7 +375,45 @@ class AppsController(
     }
   }
 
-  private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = ???
+  private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = {
+    // the line below doesn't look nice but it doesn't compile if we use parameters directive
+    (forceParameter & parameter("host") & extractTaskKillingMode) {
+      (force, host, mode) =>
+        def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
+          try {
+            val instanceId = taskId.instanceId
+            appTasks.filter(_.instanceId == instanceId)
+          } catch {
+            // the id can not be translated to an instanceId
+            case _: MatchError => Seq.empty
+          }
+        }
+        mode match {
+          case TaskKillingMode.Scale =>
+            val deploymentPlanF = taskKiller.killAndScale(appId, findToKill, force)
+            onSuccess(deploymentPlanF) { plan =>
+              complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+            }
+          case TaskKillingMode.Wipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
+              instances.headOption.map { instance =>
+                complete(SingleInstance(instance.toRaml))
+              }.getOrElse(
+                reject(EntityNotFound.noTask(taskId))
+              )
+
+            }
+          case TaskKillingMode.KillWithoutWipe =>
+            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
+              instances.headOption.map { instance =>
+                complete(SingleInstance(instance.toRaml))
+              }.getOrElse(
+                reject(EntityNotFound.noTask(taskId))
+              )
+            }
+        }
+    }
+  }
 
   private def listVersions(appId: PathId)(implicit identity: Identity): Route = ???
 
