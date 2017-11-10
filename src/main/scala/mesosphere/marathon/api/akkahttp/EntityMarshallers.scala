@@ -110,7 +110,7 @@ object EntityMarshallers {
     validEntityRaml(playJsonUnmarshaller[raml.App]).handleValidationErrors
   }
 
-  implicit val appDefinitionMarshaller: ToEntityMarshaller[AppDefinition] = playJsonMarshaller[AppDefinition]
+  implicit val appDefinitionMarshaller: ToEntityMarshaller[raml.App] = playJsonMarshaller[raml.App]
 
   def appUpdateUnmarshaller(
     appId: PathId, partialUpdate: Boolean)(

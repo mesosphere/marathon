@@ -424,7 +424,7 @@ class AppsController(
     onSuccess(groupManager.appVersion(appId, version.toOffsetDateTime)) {
       case Some(app) =>
         authorized(ViewRunSpec, app, Rejections.EntityNotFound.noApp(appId)).apply {
-          complete(app)
+          complete(app.toRaml)
         }
       case None =>
         reject(Rejections.EntityNotFound.noApp(appId))
