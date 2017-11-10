@@ -73,6 +73,13 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         HavePropertyMatchResult(matches, "networkname", None, actualNetworkname)
       }
     }
+    def definedNetworkname(name: String) = new HavePropertyMatcher[JsValue, Option[String]] {
+      override def apply(actual: JsValue) = {
+        val maybeNetworkname = (actual \ "networks" \ 0 \ "name").asOpt[String]
+        val matches = maybeNetworkname.contains(name)
+        HavePropertyMatchResult(matches, "networkname", Some(name), maybeNetworkname)
+      }
+    }
     def networkMode(mode: raml.NetworkMode) = new HavePropertyMatcher[JsValue, Option[String]] {
       override def apply(actual: JsValue) = {
         val maybeMode = (actual \ "networks" \ 0 \ "mode").asOpt[String]
@@ -356,34 +363,41 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         val jsonResponse = Json.parse(responseAs[String])
         jsonResponse should have (podWithFileBasedSecret ("secret1"))
       }
-
-      //        pod.volumes(0) shouldBe PodSecretVolume("vol", "secret1")
     }
 
-    //    "create a pod w/ container networking" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // required since network name is missing from JSON
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(HttpServletResponse.SC_CREATED)
-    //
-    //        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-    //        parsedResponse should be (defined)
-    //        val maybePod = parsedResponse.map(_.as[Pod])
-    //        maybePod should be (defined) // validate that we DID get back a pod definition
-    //        val pod = maybePod.get
-    //        pod.networks(0).mode should be (NetworkMode.Container)
-    //        pod.networks(0).name should be (Some("blah"))
-    //        pod.executorResources should be (defined) // validate that executor resources are defined
-    //        pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values
-    //
-    //        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
-    //      }
-    //    }
+    "create a pod w/ container networking" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // required since network name is missing from JSON
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithContainerNetworking = """
+                                                 | { "id": "/mypod", "networks": [ { "mode": "container" } ], "containers": [
+                                                 |   { "name": "webapp",
+                                                 |     "resources": { "cpus": 0.03, "mem": 64 },
+                                                 |     "image": { "kind": "DOCKER", "id": "busybox" },
+                                                 |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                                               """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithContainerNetworking).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        response.header[Location].value.value() should be("/mypod")
+
+        val jsonResponse = Json.parse(responseAs[String])
+
+        jsonResponse should have(
+          executorResources(cpus = 0.1, mem = 32.0, disk = 10.0),
+          definedNetworkname("blah"),
+          networkMode(raml.NetworkMode.Container)
+        )
+      }
+    }
 
     //    "create a pod w/ container networking w/o default network name" in {
     //      implicit val podSystem = mock[PodManager]
