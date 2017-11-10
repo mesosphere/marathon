@@ -56,13 +56,17 @@ class InstanceOpFactoryImpl(
           inferNormalTaskOp(app, request)
         }
       case pod: PodDefinition =>
-        inferPodInstanceOp(request, pod)
+        if (request.isForResidentRunSpec) {
+          throw new NotImplementedError("no support for pod residency")
+        } else {
+          inferPodInstanceOp(pod, request)
+        }
       case _ =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${request.runSpec}")
     }
   }
 
-  protected def inferPodInstanceOp(request: InstanceOpFactory.Request, pod: PodDefinition): OfferMatchResult = {
+  protected def inferPodInstanceOp(pod: PodDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
       config.envVarsPrefix.get,
@@ -74,8 +78,12 @@ class InstanceOpFactoryImpl(
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
-        val (executorInfo, groupInfo, hostPorts, instanceId) = TaskGroupBuilder.build(pod, request.offer,
-          Instance.Id.forRunSpec, builderConfig, runSpecTaskProc, matches.resourceMatch)
+        val instanceId = Instance.Id.forRunSpec(pod.id)
+        val taskIds = pod.containers.map { container =>
+          Task.Id.forInstanceId(instanceId, Some(container))
+        }
+        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, request.offer,
+          instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
 
         // TODO(jdef) no support for resident tasks inside pods for the MVP
         val agentInfo = Instance.AgentInfo(request.offer)
@@ -117,7 +125,7 @@ class InstanceOpFactoryImpl(
     }
   }
 
-  private[this] def inferForResidents(app: AppDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
+  private[this] def inferForResidents(spec: RunSpec, request: InstanceOpFactory.Request): OfferMatchResult = {
     val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches, localRegion) = request
 
     // TODO(jdef) pods should be supported some day
@@ -136,7 +144,7 @@ class InstanceOpFactoryImpl(
      *  - if we don't: skip for now
      *
      * Scenario 2:
-     *  We ned to reserve resources and receive an offer that has matching resources
+     *  We need to reserve resources and receive an offer that has matching resources
      *  - schedule a ReserveAndCreate TaskOp
      */
 
@@ -165,10 +173,10 @@ class InstanceOpFactoryImpl(
 
         resourceMatchResponse match {
           case matches: ResourceMatchResponse.Match =>
-            val instanceOp = launchOnReservation(app, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
-            OfferMatchResult.Match(app, request.offer, instanceOp, clock.now())
+            val instanceOp = launchOnReservation(spec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
+            OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now())
           case matchesNot: ResourceMatchResponse.NoMatch =>
-            OfferMatchResult.NoMatch(app, request.offer, matchesNot.reasons, clock.now())
+            OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now())
         }
       }
     } else None
@@ -191,9 +199,9 @@ class InstanceOpFactoryImpl(
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)
-          Some(OfferMatchResult.Match(app, request.offer, instanceOp, clock.now()))
+          Some(OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
-          Some(OfferMatchResult.NoMatch(app, request.offer, matchesNot.reasons, clock.now()))
+          Some(OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now()))
       }
     } else None
 
@@ -201,13 +209,13 @@ class InstanceOpFactoryImpl(
       .orElse(maybeReserveAndCreateVolumes)
       .getOrElse {
         logger.warn("No need to reserve or launch and offer request isForResidentRunSpec")
-        OfferMatchResult.NoMatch(app, request.offer,
+        OfferMatchResult.NoMatch(spec, request.offer,
           Seq(NoOfferMatchReason.NoCorrespondingReservationFound), clock.now())
       }
   }
 
   private[this] def launchOnReservation(
-    spec: AppDefinition,
+    spec: RunSpec,
     offer: Mesos.Offer,
     reservedInstance: Instance,
     resourceMatch: ResourceMatcher.ResourceMatch,
@@ -227,26 +235,32 @@ class InstanceOpFactoryImpl(
     // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
     // in version 1.5.
     val newTaskId = Task.Id.forResidentTask(currentTaskId)
-    val (taskInfo, networkInfo) = new TaskBuilder(spec, newTaskId, config, runSpecTaskProc)
-      .build(offer, resourceMatch, Some(volumeMatch))
 
     // The agentInfo could have possibly changed after a reboot. See the docs for
     // InstanceUpdateOperation.LaunchOnReservation for more details
     val agentInfo = Instance.AgentInfo(offer)
-    val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-      reservedInstance.instanceId,
-      newTaskId,
-      runSpecVersion = spec.version,
-      timestamp = clock.now(),
-      status = Task.Status(
-        stagedAt = clock.now(),
-        condition = Condition.Created,
-        networkInfo = networkInfo
-      ),
-      networkInfo.hostPorts,
-      agentInfo)
 
-    taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
+    spec match {
+      case app: AppDefinition =>
+        val (taskInfo, networkInfo) =
+          new TaskBuilder(app, newTaskId, config, runSpecTaskProc)
+            .build(offer, resourceMatch, Some(volumeMatch))
+
+        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
+          reservedInstance.instanceId,
+          newTaskId,
+          runSpecVersion = spec.version,
+          timestamp = clock.now(),
+          status = Task.Status(
+            stagedAt = clock.now(),
+            condition = Condition.Created,
+            networkInfo = networkInfo
+          ),
+          networkInfo.hostPorts,
+          agentInfo)
+
+        taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
+    }
   }
 
   private[this] def reserveAndCreateVolumes(
@@ -257,8 +271,8 @@ class InstanceOpFactoryImpl(
 
     val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
-        case (source, volume) =>
-          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume), volume))
+        case (source, volume, mount) =>
+          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume, mount), volume, mount))
       }
     val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()

@@ -439,14 +439,9 @@ object MarathonTestHelper {
   }
 
   def mesosContainerWithPersistentVolume = Container.Mesos(
-    volumes = Seq[mesosphere.marathon.state.Volume](
-      PersistentVolume(
-        containerPath = "persistent-volume",
-        persistent = PersistentVolumeInfo(10), // must match persistentVolumeResources
-        mode = Mesos.Volume.Mode.RW
-      )
-    )
-  )
+    volumes = Seq(VolumeWithMount(
+      volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(10)), // must match persistentVolumeResources
+      mount = VolumeMount(volumeName = None, mountPath = "persistent-volume"))))
 
   def mesosIpAddress(ipAddress: String) = {
     Mesos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ipAddress).build

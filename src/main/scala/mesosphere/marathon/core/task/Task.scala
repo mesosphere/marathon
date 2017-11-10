@@ -243,7 +243,7 @@ object Task {
     def calculateLegacyExecutorId(taskId: String): String = s"marathon-$taskId"
   }
 
-  case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)
+  case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume, mount: VolumeMount)
 
   case class LocalVolumeId(runSpecId: PathId, containerPath: String, uuid: String) {
     import LocalVolumeId._
@@ -257,8 +257,8 @@ object Task {
     private val delimiter = "#"
     private val LocalVolumeEncoderRE = s"^([^$delimiter]+)[$delimiter]([^$delimiter]+)[$delimiter]([^$delimiter]+)$$".r
 
-    def apply(runSpecId: PathId, volume: PersistentVolume): LocalVolumeId =
-      LocalVolumeId(runSpecId, volume.containerPath, uuidGenerator.generate().toString)
+    def apply(runSpecId: PathId, volume: PersistentVolume, mount: VolumeMount): LocalVolumeId =
+      LocalVolumeId(runSpecId, mount.mountPath, uuidGenerator.generate().toString)
 
     def unapply(id: String): Option[(LocalVolumeId)] = id match {
       case LocalVolumeEncoderRE(runSpec, path, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), path, uuid))

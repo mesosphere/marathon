@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.externalvolume.impl
 
 import com.wix.accord.Validator
-import mesosphere.marathon.state.{ AppDefinition, ExternalVolume, RootGroup }
+import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo
 
 /**
@@ -25,5 +25,5 @@ private[externalvolume] trait ExternalVolumeProvider {
   def validations: ExternalVolumeValidations
 
   /** build adds v to the given builder **/
-  def build(builder: ContainerInfo.Builder, v: ExternalVolume): Unit
+  def build(builder: ContainerInfo.Builder, v: ExternalVolume, mount: VolumeMount): Unit
 }

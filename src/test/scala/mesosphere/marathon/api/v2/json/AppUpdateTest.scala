@@ -401,7 +401,9 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       val createdViaUpdate = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/put-path-id".toPath))
       assert(update.container.isDefined)
       assert(createdViaUpdate.container.contains(state.Container.Docker(
-        volumes = Seq(PersistentVolume("data", PersistentVolumeInfo(size = 100), mode = Mesos.Volume.Mode.RW)),
+        volumes = Seq(VolumeWithMount(
+          volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size = 100)),
+          mount = VolumeMount(volumeName = None, mountPath = "data", readOnly = false))),
         image = "anImage"
       )), createdViaUpdate.container)
     }

@@ -12,6 +12,7 @@ uses:
   volumes: volumes.raml
   unreachableStrategy: unreachableStrategy.raml
   killSelection: killSelection.raml
+  residency: residency.raml
 types:
   PodScalingPolicyType:
     type: string
@@ -113,6 +114,7 @@ types:
         (pragma.omitEmpty):
       killSelection?: killSelection.KillSelection
       unreachableStrategy?: unreachableStrategy.UnreachableStrategy
+      residency?: residency.Residency
   Pod:
     description: |
       A pod allows one to launch a collection co-located (on the same agent) containers

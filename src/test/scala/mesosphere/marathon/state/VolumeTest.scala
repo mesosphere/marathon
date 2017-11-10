@@ -11,27 +11,25 @@ import org.apache.mesos.Protos.Volume.Mode
 class VolumeTest extends UnitTest {
   import mesosphere.marathon.test.MarathonTestHelper.constraint
 
-  def survivesProtobufSerializationRoundtrip(title: => String, volume: => Volume): Unit = {
+  def survivesProtobufSerializationRoundtrip(title: => String, volume: => VolumeWithMount): Unit = {
     s"$title survives protobuf serialization round-trip" in {
       val protobuf = VolumeSerializer.toProto(volume)
-      val resurrected = Volume(protobuf)
+      val resurrected = VolumeWithMount(None, protobuf)
       resurrected should be(volume)
     }
   }
 
-  def persistent(info: PersistentVolumeInfo, containerPath: String = "cpath", mode: Mode = Mode.RW): PersistentVolume =
-    PersistentVolume(
-      containerPath = containerPath,
-      persistent = info,
-      mode = mode
-    )
+  def persistent(info: PersistentVolumeInfo, mountPath: String = "cpath", readOnly: Boolean = false): VolumeWithMount = {
+    val volume = PersistentVolume(None, info)
+    val mount = VolumeMount(None, mountPath, readOnly)
+    VolumeWithMount(volume, mount)
+  }
 
-  def external(info: ExternalVolumeInfo, containerPath: String = "cpath", mode: Mode = Mode.RW): ExternalVolume =
-    ExternalVolume(
-      containerPath = containerPath,
-      external = info,
-      mode = mode
-    )
+  def external(info: ExternalVolumeInfo, mountPath: String = "cpath", readOnly: Boolean = false): VolumeWithMount = {
+    val volume = ExternalVolume(None, info)
+    val mount = VolumeMount(None, mountPath, readOnly)
+    VolumeWithMount(volume, mount)
+  }
 
   trait Fixture {
     val rootVolNoConstraints = PersistentVolumeInfo(
@@ -56,10 +54,9 @@ class VolumeTest extends UnitTest {
       provider = "provider",
       options = Map("foo" -> "bar", "baz" -> "qaw")
     )
-    val hostVol = DockerVolume(
-      containerPath = "cpath",
-      hostPath = "/host/path",
-      mode = Mode.RW
+    val hostVol = VolumeWithMount(
+      volume = HostVolume(None, hostPath = "/host/path"),
+      mount = VolumeMount(None, "cpath", false)
     )
 
     val secretVol = SecretVolume(

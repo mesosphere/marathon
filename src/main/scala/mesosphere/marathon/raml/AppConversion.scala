@@ -9,7 +9,8 @@ import mesosphere.mesos.protos.Implicits._
 import scala.concurrent.duration._
 
 trait AppConversion extends DefaultConversions with ConstraintConversion with EnvVarConversion with HealthCheckConversion
-  with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion with UnreachableStrategyConversion with KillSelectionConversion {
+  with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion
+  with UnreachableStrategyConversion with KillSelectionConversion with ResidencyConversion {
 
   import AppConversion._
 
@@ -19,10 +20,6 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
 
   implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, UpgradeStrategy] = Writes { strategy =>
     UpgradeStrategy(strategy.maximumOverCapacity, strategy.minimumHealthCapacity)
-  }
-
-  implicit val appResidencyWrites: Writes[Residency, AppResidency] = Writes { residency =>
-    AppResidency(residency.relaunchEscalationTimeoutSeconds, residency.taskLostBehavior.toRaml)
   }
 
   implicit val versionInfoWrites: Writes[state.VersionInfo, Option[VersionInfo]] = Writes {
@@ -92,13 +89,6 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       case TaskLostBehavior.RelaunchAfterTimeout => RELAUNCH_AFTER_TIMEOUT
       case TaskLostBehavior.WaitForever => WAIT_FOREVER
     }
-  }
-
-  implicit val residencyRamlReader: Reads[AppResidency, Residency] = Reads { residency =>
-    Residency(
-      relaunchEscalationTimeoutSeconds = residency.relaunchEscalationTimeoutSeconds,
-      taskLostBehavior = residency.taskLostBehavior.fromRaml
-    )
   }
 
   implicit val fetchUriReader: Reads[Artifact, FetchUri] = Reads { artifact =>
@@ -257,11 +247,11 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
     }
   }
 
-  implicit val residencyProtoRamlWriter: Writes[Protos.ResidencyDefinition, AppResidency] = Writes { res =>
-    AppResidency(
+  implicit val residencyProtoRamlWriter: Writes[Protos.ResidencyDefinition, Residency] = Writes { res =>
+    Residency(
       relaunchEscalationTimeoutSeconds = res.whenOrElse(
-        _.hasRelaunchEscalationTimeoutSeconds, _.getRelaunchEscalationTimeoutSeconds, AppResidency.DefaultRelaunchEscalationTimeoutSeconds),
-      taskLostBehavior = res.whenOrElse(_.hasTaskLostBehavior, _.getTaskLostBehavior.toRaml, AppResidency.DefaultTaskLostBehavior)
+        _.hasRelaunchEscalationTimeoutSeconds, _.getRelaunchEscalationTimeoutSeconds, Residency.DefaultRelaunchEscalationTimeoutSeconds),
+      taskLostBehavior = res.whenOrElse(_.hasTaskLostBehavior, _.getTaskLostBehavior.toRaml, Residency.DefaultTaskLostBehavior)
     )
   }
 
@@ -412,19 +402,19 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
 
 object AppConversion extends AppConversion {
 
-  case class ResidencyAndUpgradeStrategy(residency: Option[Residency], upgradeStrategy: state.UpgradeStrategy)
+  case class ResidencyAndUpgradeStrategy(residency: Option[state.Residency], upgradeStrategy: state.UpgradeStrategy)
 
   object ResidencyAndUpgradeStrategy {
     def apply(
-      residency: Option[Residency],
+      residency: Option[state.Residency],
       upgradeStrategy: Option[state.UpgradeStrategy],
       hasPersistentVolumes: Boolean,
       hasExternalVolumes: Boolean): ResidencyAndUpgradeStrategy = {
 
       import state.UpgradeStrategy.{ empty, forResidentTasks }
 
-      val residencyOrDefault: Option[Residency] =
-        residency.orElse(if (hasPersistentVolumes) Some(Residency.default) else None)
+      val residencyOrDefault: Option[state.Residency] =
+        residency.orElse(if (hasPersistentVolumes) Option(state.Residency.default) else None)
 
       val selectedUpgradeStrategy = upgradeStrategy.getOrElse {
         if (residencyOrDefault.isDefined || hasExternalVolumes) forResidentTasks else empty

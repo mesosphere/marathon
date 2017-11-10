@@ -9,51 +9,83 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.plugin.AppSecretVolumeSpec
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Volume.Mode
-import org.apache.mesos.{ Protos => Mesos }
 
 import scala.util.Try
+import scala.util.matching.Regex
 
-sealed trait Volume extends plugin.AppVolumeSpec {
-  val containerPath: String
-  val mode: Mesos.Volume.Mode
-}
+trait Volume extends plugin.VolumeSpec
 
 object Volume {
-  def apply(proto: Protos.Volume): Volume = {
+  def apply(name: Option[String], proto: Protos.Volume): Volume = {
     if (proto.hasPersistent)
       PersistentVolume(
-        containerPath = proto.getContainerPath,
-        persistent = PersistentVolumeInfo.fromProto(proto.getPersistent),
-        mode = proto.getMode
-      )
+        name = name,
+        persistent = PersistentVolumeInfo.fromProto(proto.getPersistent))
     else if (proto.hasExternal)
       ExternalVolume(
-        containerPath = proto.getContainerPath,
-        external = ExternalVolumeInfo.fromProto(proto.getExternal),
-        mode = proto.getMode
-      )
+        name = name,
+        external = ExternalVolumeInfo.fromProto(proto.getExternal))
     else if (proto.hasSecret)
       SecretVolume(
-        proto.getContainerPath,
-        proto.getSecret.getSecret)
+        name = name,
+        secret = proto.getSecret.getSecret)
     else
-      DockerVolume(
-        containerPath = proto.getContainerPath,
-        hostPath = proto.getHostPath,
-        mode = proto.getMode
-      )
+      HostVolume(
+        name = name,
+        hostPath = proto.getHostPath)
   }
 
   def validVolume(enabledFeatures: Set[String]): Validator[Volume] = new Validator[Volume] {
     override def apply(volume: Volume): Result = volume match {
       case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
-      case dv: DockerVolume => validate(dv)(DockerVolume.validDockerVolume)
+      case dv: HostVolume => validate(dv)(HostVolume.validHostVolume)
       case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
       case _: SecretVolume => Success // validation is done in raml
+    }
+  }
+}
+
+case class VolumeMount(volumeName: Option[String], mountPath: String, readOnly: Boolean = false)
+  extends plugin.VolumeMountSpec
+
+object VolumeMount {
+  def apply(volumeName: Option[String], proto: Protos.Volume): VolumeMount = {
+    new VolumeMount(
+      volumeName = volumeName,
+      mountPath = proto.getContainerPath,
+      readOnly = proto.getMode == Mode.RO
+    )
+  }
+
+  def apply(volumeName: Option[String], mountPath: String, readOnly: Boolean = false): VolumeMount = {
+    new VolumeMount(volumeName, mountPath, readOnly)
+  }
+
+  implicit val validVolumeMount: Validator[VolumeMount] = validator[VolumeMount] { mount =>
+    mount.volumeName is optional(notEmpty)
+    mount.mountPath is notEmpty
+  }
+}
+
+case class VolumeWithMount(volume: Volume, mount: VolumeMount)
+
+object VolumeWithMount {
+  def apply(volumeName: Option[String], proto: Protos.Volume): VolumeWithMount =
+    new VolumeWithMount(volume = Volume(volumeName, proto), mount = VolumeMount(volumeName, proto))
+
+  def apply(volume: Volume, mount: VolumeMount): VolumeWithMount =
+    new VolumeWithMount(volume = volume, mount = mount)
+
+  def validVolumeWithMount(enabledFeatures: Set[String]): Validator[VolumeWithMount] = validator[VolumeWithMount] { vm =>
+    vm.volume is Volume.validVolume(enabledFeatures)
+    vm.mount is VolumeMount.validVolumeMount
+    vm.volume match {
+      case _: PersistentVolume =>
+        vm.mount is PersistentVolume.validPersistentVolumeMount
+      case _ =>
     }
   }
 }
@@ -63,17 +95,13 @@ object Volume {
   * Both paths can either refer to a directory or a file. Paths must be
   * absolute.
   */
-case class DockerVolume(
-    containerPath: String,
-    hostPath: String,
-    mode: Mesos.Volume.Mode)
+case class HostVolume(name: Option[String], hostPath: String)
   extends Volume
 
-object DockerVolume {
-  implicit val validDockerVolume = validator[DockerVolume] { vol =>
-    vol.containerPath is notEmpty
+object HostVolume {
+  implicit val validHostVolume: Validator[HostVolume] = validator[HostVolume] { vol =>
+    vol.name is optional(notEmpty)
     vol.hostPath is notEmpty
-    vol.mode is oneOf(Mode.RW, Mode.RO)
   }
 }
 
@@ -141,7 +169,7 @@ object DiskType {
     def toMesos: Option[Source.Type] = Some(Source.Type.MOUNT)
   }
 
-  val all = Root :: Path :: Mount :: Nil
+  val all: List[DiskType] = Root :: Path :: Mount :: Nil
 
   def fromMesosType(o: Option[Source.Type]): DiskType =
     o match {
@@ -227,28 +255,28 @@ object PersistentVolumeInfo {
   }
 }
 
-case class PersistentVolume(
-    val containerPath: String,
-    val persistent: PersistentVolumeInfo,
-    val mode: Mesos.Volume.Mode) extends Volume
+case class PersistentVolume(name: Option[String], persistent: PersistentVolumeInfo)
+  extends Volume
 
 object PersistentVolume {
   import PathPatterns._
-  import org.apache.mesos.Protos.Volume.Mode
 
-  implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
-    vol.containerPath is notEmpty
-    vol.containerPath is notOneOf(DotPaths: _*)
-    vol.containerPath should matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\"")
+  implicit val validPersistentVolume: Validator[PersistentVolume] = validator[PersistentVolume] { vol =>
+    vol.name is optional(notEmpty)
     vol.persistent is valid
-    vol.mode is equalTo(Mode.RW)
+  }
+
+  implicit val validPersistentVolumeMount: Validator[VolumeMount] = validator[VolumeMount] { mount =>
+    mount.mountPath is notOneOf(DotPaths: _*)
+    mount.mountPath should matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\"")
+    mount.readOnly is false
   }
 }
 
 object PathPatterns {
-  lazy val NoSlashesPattern = """^[^/]*$""".r
-  lazy val AbsolutePathPattern = """^/[^/].*$""".r
-  lazy val DotPaths = Seq[String](".", "..")
+  lazy val NoSlashesPattern: Regex = """^[^/]*$""".r
+  lazy val AbsolutePathPattern: Regex = """^/[^/].*$""".r
+  lazy val DotPaths: Seq[String] = Seq(".", "..")
 }
 
 /**
@@ -318,21 +346,27 @@ object ExternalVolumeInfo {
     )
 }
 
-case class ExternalVolume(
-    containerPath: String,
-    external: ExternalVolumeInfo,
-    mode: Mesos.Volume.Mode) extends Volume
+case class ExternalVolume(name: Option[String], external: ExternalVolumeInfo)
+  extends Volume
 
 object ExternalVolume {
-  def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] = validator[ExternalVolume] { ev =>
-    ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
-    ev.containerPath is notEmpty
-    ev.external is ExternalVolumeInfo.validExternalVolumeInfo
-  } and ExternalVolumes.validExternalVolume
+  def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] =
+    validator[ExternalVolume] { ev =>
+      ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
+      ev.name is optional(notEmpty)
+      ev.external is ExternalVolumeInfo.validExternalVolumeInfo
+    } and ExternalVolumes.validExternalVolume
 }
 
-case class SecretVolume(
-    containerPath: String,
-    secret: String) extends Volume with AppSecretVolumeSpec {
-  override val mode: Mesos.Volume.Mode = Mesos.Volume.Mode.RO
-}
+/**
+  * A volume referring to an existing secret.
+  */
+case class SecretVolume(name: Option[String], secret: String)
+  extends Volume with plugin.SecretVolumeSpec
+
+/**
+  * Ephemeral volumes share the lifetime of the pod instance they're used within and serve to
+  * provide temporary "scratch" space that sub-containers may use to share files, sockets, etc.
+  */
+case class EphemeralVolume(name: Option[String])
+  extends Volume

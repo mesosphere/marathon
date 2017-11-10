@@ -226,9 +226,10 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def volumeNames(volumes: Seq[PodVolume]) = volumes.map(volumeName)
   def volumeName(volume: PodVolume): String = volume match {
-    case EphemeralVolume(name) => name
-    case HostVolume(name, _) => name
+    case PodEphemeralVolume(name) => name
+    case PodHostVolume(name, _) => name
     case PodSecretVolume(name, _) => name
+    case PodPersistentVolume(name, _) => name
   }
 
   def pluginValidators(implicit pluginManager: PluginManager): Validator[PodDefinition] =

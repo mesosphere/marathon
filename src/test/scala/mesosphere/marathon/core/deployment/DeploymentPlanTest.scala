@@ -426,10 +426,12 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
     }
   }
   class Fixture {
-    def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
+    def persistentVolume(path: String) = VolumeWithMount(
+      volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
+      mount = VolumeMount(volumeName = None, mountPath = path, readOnly = false))
     val zero = UpgradeStrategy(0, 0)
 
-    def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
+    def residentApp(id: String, volumes: Seq[VolumeWithMount]): AppDefinition = {
       AppDefinition(
         id = PathId(id),
         container = Some(Container.Mesos(volumes)),

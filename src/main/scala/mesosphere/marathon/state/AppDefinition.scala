@@ -120,11 +120,23 @@ case class AppDefinition(
   override val version: Timestamp = versionInfo.version
 
   override val isSingleInstance: Boolean = labels.get(Apps.LabelSingleInstanceApp).contains("true")
-  override val volumes: Seq[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
-  override val persistentVolumes: Seq[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
-  override val externalVolumes: Seq[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+
+  override val volumes: Seq[Volume] = container.map(_.volumes.map(_.volume)).getOrElse(Seq.empty)
+  override val volumeMounts: Seq[VolumeMount] = container.map(_.volumes.map(_.mount)).getOrElse(Seq.empty)
+
+  override val persistentVolumes: Seq[PersistentVolume] =
+    container.map(_.volumes.map(_.volume).collect { case pv: PersistentVolume => pv }).getOrElse(Seq.empty)
+
+  override val persistentVolumeMounts: Seq[VolumeMount] =
+    container.map(_.volumes.collect { case VolumeWithMount(_: PersistentVolume, m) => m }).getOrElse(Seq.empty)
+
+  override val externalVolumes: Seq[ExternalVolume] =
+    container.map(_.volumes.map(_.volume).collect { case pv: ExternalVolume => pv }).getOrElse(Seq.empty)
 
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+
+  private[state] val persistentVolumesAndMounts: Seq[VolumeWithMount] =
+    container.map(_.volumes.collect { case vm @ VolumeWithMount(_: PersistentVolume, _) => vm }).getOrElse(Seq.empty)
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(
@@ -591,11 +603,11 @@ object AppDefinition extends GeneralPurposeCombinators {
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
     val changeNoVolumes =
       isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>
-        val fromVolumes = from.persistentVolumes
-        val toVolumes = to.persistentVolumes
+        val fromVolumes = from.persistentVolumesAndMounts
+        val toVolumes = to.persistentVolumesAndMounts
         def sameSize = fromVolumes.size == toVolumes.size
-        def noChange = from.persistentVolumes.forall { fromVolume =>
-          toVolumes.find(_.containerPath == fromVolume.containerPath).contains(fromVolume)
+        def noChange = fromVolumes.forall { fromVolume =>
+          toVolumes.find(_.mount.mountPath == fromVolume.mount.mountPath).contains(fromVolume)
         }
         sameSize && noChange
       }

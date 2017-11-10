@@ -7,7 +7,7 @@ package plugin
 trait RunSpec {
 
   /**
-    * The uniqie id of this run specification
+    * The unique id of this run specification
     */
   val id: PathId
 
@@ -25,6 +25,11 @@ trait RunSpec {
     * The networks that this run specification will join.
     */
   val networks: Seq[NetworkSpec]
+
+  /**
+    * Volume definitions
+    */
+  val volumes: Seq[VolumeSpec]
 }
 
 /**
@@ -46,11 +51,6 @@ trait ApplicationSpec extends RunSpec {
     * The labels in that app.
     */
   val labels: Map[String, String]
-
-  /**
-    * Container volumes
-    */
-  val volumes: Seq[AppVolumeSpec]
 }
 
 /**
@@ -79,7 +79,7 @@ trait ContainerSpec {
   val labels: Map[String, String]
 
   /**
-    * Pod volume mounts.
+    * Volume mounts.
     */
   val volumeMounts: Seq[VolumeMountSpec]
 }
@@ -114,53 +114,18 @@ trait PodSpec extends RunSpec {
     * The labels in that pod.
     */
   val labels: Map[String, String]
-
-  /**
-    * Pod volumes
-    */
-  val podVolumes: Seq[PodVolumeSpec]
 }
 
-/**
-  * Application volume definition
-  */
-trait AppVolumeSpec {
-
-  val containerPath: String
+trait VolumeSpec {
+  val name: Option[String]
 }
 
-/**
-  * Application volume with a secret
-  */
-trait AppSecretVolumeSpec extends AppVolumeSpec {
-
+trait SecretVolumeSpec extends VolumeSpec {
   val secret: String
 }
 
-/**
-  * Pod volume definition
-  */
-trait PodVolumeSpec {
-
-  val name: String
-}
-
-/**
-  * Pod volume witch a secret
-  */
-trait PodSecretVolumeSpec extends PodVolumeSpec {
-
-  val secret: String
-}
-
-/**
-  * Pod volume mount
-  */
 trait VolumeMountSpec {
-
-  val name: String
-
+  val volumeName: Option[String]
   val mountPath: String
-
-  val readOnly: Option[Boolean]
+  val readOnly: Boolean
 }

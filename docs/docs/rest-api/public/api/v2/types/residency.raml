@@ -1,0 +1,22 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+types:
+  Residency:
+    type: object
+    description: |
+      When using local persistent volumes that pin tasks onto agents,
+      these values define how Marathon handles terminal states of these tasks.
+    properties:
+      relaunchEscalationTimeoutSeconds:
+        type: integer
+        format: int64
+        minimum: 0
+        default: 3600
+        description: |
+          When a task using persistent local volumes cannot be restarted on the
+          agent it's been pinned to, Marathon will try to launch this task on
+          another node after this timeout. Defaults to 3600 (one hour).",
+      taskLostBehavior:
+        type: strings.TaskLostBehavior
+        default: WAIT_FOREVER

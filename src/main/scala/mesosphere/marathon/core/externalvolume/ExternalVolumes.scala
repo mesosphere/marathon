@@ -14,14 +14,15 @@ import org.apache.mesos.Protos.ContainerInfo
 object ExternalVolumes {
   private[this] lazy val providers: ExternalVolumeProviderRegistry = StaticExternalVolumeProviderRegistry
 
-  def build(builder: ContainerInfo.Builder, v: ExternalVolume): Unit = {
-    providers.get(v.external.provider).foreach { _.build(builder, v) }
+  def build(builder: ContainerInfo.Builder, v: ExternalVolume, mount: VolumeMount): Unit = {
+    providers.get(v.external.provider).foreach { _.build(builder, v, mount) }
   }
 
   def validExternalVolume: Validator[ExternalVolume] = new Validator[ExternalVolume] {
     def apply(ev: ExternalVolume) = providers.get(ev.external.provider) match {
       case Some(p) => p.validations.volume(ev)
-      case None => Failure(Set(RuleViolation(None, "is unknown provider", Path(Explicit("external"), Explicit("provider")))))
+      case None => Failure(Set(
+        RuleViolation(None, "is unknown provider", Path(Explicit("external"), Explicit("provider")))))
     }
   }
 

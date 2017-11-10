@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume }
+import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume, VolumeMount }
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos
@@ -109,10 +109,10 @@ case class DiskResourceMatch(
 
   def consumedResources: Seq[Protos.Resource] = {
     consumed.map {
-      case DiskResourceMatch.Consumption(value, role, reservation, source, _) =>
+      case DiskResourceMatch.Consumption(value, role, reservation, source, _, _) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
-        reservation.foreach(builder.setReservation(_))
+        reservation.foreach(builder.setReservation)
         source.asMesos.foreach { s =>
           builder.setDisk(DiskInfo.newBuilder.setSource(s))
         }
@@ -126,9 +126,9 @@ case class DiskResourceMatch(
     * return all volumes for this disk resource match
     * Distinct because a persistentVolume may be associated with multiple resources.
     */
-  def volumes: Seq[(DiskSource, PersistentVolume)] =
+  def volumes: Seq[(DiskSource, PersistentVolume, VolumeMount)] =
     consumed.collect {
-      case d @ DiskResourceMatch.Consumption(_, _, _, _, Some(volume)) => (d.source, volume)
+      case d @ DiskResourceMatch.Consumption(_, _, _, _, Some(volume), Some(mount)) => (d.source, volume, mount)
     }.toList.distinct
 
   override def toString: String = {
@@ -140,18 +140,20 @@ object DiskResourceMatch {
   /** A (potentially partial) consumption of a scalar resource. */
   case class Consumption(consumedValue: Double, role: String,
       reservation: Option[ReservationInfo], source: DiskSource,
-      persistentVolume: Option[PersistentVolume]) extends ScalarMatchResult.Consumption {
+      persistentVolume: Option[PersistentVolume],
+      volumeMount: Option[VolumeMount]) extends ScalarMatchResult.Consumption {
 
     def requested: Either[Double, PersistentVolume] =
       persistentVolume.map(Right(_)).getOrElse(Left(consumedValue))
   }
-  type ApplyFn = ((Double, String, Option[ReservationInfo], DiskSource, Option[PersistentVolume]) => Consumption)
+  type ApplyFn = ((Double, String, Option[ReservationInfo], DiskSource, Option[PersistentVolume], Option[VolumeMount]) => Consumption)
   object Consumption extends ApplyFn {
     def apply(
       c: GeneralScalarMatch.Consumption,
       source: Option[DiskInfo.Source],
-      persistentVolume: Option[PersistentVolume]): Consumption = {
-      Consumption(c.consumedValue, c.role, c.reservation, DiskSource.fromMesos(source), persistentVolume)
+      persistentVolume: Option[PersistentVolume],
+      volumeMount: Option[VolumeMount]): Consumption = {
+      Consumption(c.consumedValue, c.role, c.reservation, DiskSource.fromMesos(source), persistentVolume, volumeMount)
     }
   }
 

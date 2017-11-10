@@ -8,7 +8,6 @@ import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import org.apache.mesos.{ Protos => MesosProtos }
 import play.api.libs.json.{ JsString, Json }
 
 import scala.collection.immutable.Seq
@@ -80,21 +79,18 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
           container = Some(
             Container.Mesos(
               volumes = Seq(
-                ExternalVolume(
-                  containerPath = "ignoreme",
-                  external = ExternalVolumeInfo(
-                    name = volumeName,
-                    provider = provider,
-                    options = Map(
-                      DVDIProvider.driverOption -> "rexray"
-                    )
-                  ),
-                  mode = MesosProtos.Volume.Mode.RW
-                )
-              )
-            )
-          )
-        )
+                VolumeWithMount(
+                  volume = ExternalVolume(
+                    name = None,
+                    external = ExternalVolumeInfo(
+                      name = volumeName,
+                      provider = provider,
+                      options = Map(
+                        DVDIProvider.driverOption -> "rexray"))),
+                  mount = VolumeMount(
+                    volumeName = None,
+                    mountPath = "ignoreme",
+                    readOnly = false))))))
       }
 
       def jsonResult(result: Result): String = {

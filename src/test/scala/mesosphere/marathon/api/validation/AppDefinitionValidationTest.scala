@@ -112,7 +112,10 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
       cmd = Some("sleep 1000"),
       portDefinitions = Seq(PortDefinition(0, name = Some("default")))
     )
-    def persistentVolume(path: String, size: Long = 1) = PersistentVolume(path, PersistentVolumeInfo(size), Mesos.Volume.Mode.RW)
+    def persistentVolume(path: String, size: Long = 1) =
+      VolumeWithMount(
+        volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size)),
+        mount = VolumeMount(volumeName = None, mountPath = path, readOnly = false))
     def validResidentApp = validApp.copy(
       container = Some(Container.Mesos(Seq(persistentVolume("foo")))),
       upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)
