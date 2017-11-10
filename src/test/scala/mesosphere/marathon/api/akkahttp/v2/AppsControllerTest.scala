@@ -43,6 +43,7 @@ import org.mockito.Matchers
 import org.mockito.Mockito.when
 import play.api.libs.json._
 import akka.http.scaladsl.model.headers.`X-Forwarded-For`
+import akka.stream.scaladsl.Source
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -2545,6 +2546,24 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("host" -> "*"))
 
       Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "List application versions" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      groupManager.appVersions(equalTo(app.id)) returns Source.single(app.version.toOffsetDateTime)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "versions")
+
+      Get(uri, entity) ~> route ~> check {
         status shouldEqual StatusCodes.OK
       }
     }

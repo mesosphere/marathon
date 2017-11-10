@@ -165,6 +165,7 @@ object EntityMarshallers {
   implicit val instanceListMarshaller = playJsonMarshaller[raml.InstanceList]
   implicit val singleInstanceMarshaller = playJsonMarshaller[raml.SingleInstance]
   implicit val deleteTasksUnmarshaller = playJsonUnmarshaller[raml.DeleteTasks]
+  implicit val verisonListMarshaller = playJsonMarshaller[raml.VersionList]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {
     def handleValidationErrors: FromEntityUnmarshaller[T] = um.recover(_ ⇒ _ ⇒ {
