@@ -121,7 +121,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       val f = new Fixture(infoService = infoService)
 
       Get(Uri./.withPath(Path("/test/group/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
-        responseAs[String] should include (""""id" : "/test/group"""")
+        (Json.parse(responseAs[String]) \ "id").get shouldEqual JsString("/test/group")
       }
     }
 
