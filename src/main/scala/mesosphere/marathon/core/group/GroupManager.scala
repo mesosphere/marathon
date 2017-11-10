@@ -130,14 +130,21 @@ trait GroupManager {
     fn: RootGroup => RootGroup,
     version: Timestamp = Group.defaultVersion,
     force: Boolean = false,
+    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = updateRootAsync(id, (g: RootGroup) => Future.successful(fn(g)), version, force, toKill)
+
+  final def updateRootAsync(
+    id: PathId,
+    fn: RootGroup => Future[RootGroup],
+    version: Timestamp = Group.defaultVersion,
+    force: Boolean = false,
     toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = {
-    updateRootEither[Nothing](id, fn.andThen(Right(_)), version, force, toKill)
+    updateRootEither[Nothing](id, fn(_).map(Right(_))(ExecutionContexts.callerThread), version, force, toKill)
       .map(_.right.getOrElse(throw new RuntimeException("Either must be Right here")))(ExecutionContexts.callerThread)
   }
 
   def updateRootEither[T](
     id: PathId,
-    fn: RootGroup => Either[T, RootGroup],
+    fn: RootGroup => Future[Either[T, RootGroup]],
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
     toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[Either[T, DeploymentPlan]]

@@ -26,7 +26,11 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     groupManager.group(groupId, version).returns(Future.successful(Some(groupWithOlderVersion)))
     val f = Fixture(groupManager = groupManager)
     When("Calling update with version provided")
-    val updatedGroup = f.groupApiService.updateGroup(createRootGroup(), PathId.empty, GroupUpdate(version = Some(version.toOffsetDateTime)), version).futureValue
+    val updatedGroup = f.groupApiService.updateGroup(
+      createRootGroup(),
+      PathId.empty,
+      GroupUpdate(version = Some(version.toOffsetDateTime)),
+      version).futureValue
 
     Then("Group of the provided version will be returned")
     updatedGroup.group(groupId) should be (Some(groupWithOlderVersion))
@@ -42,8 +46,12 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
 
     When("Calling update with version provided")
     Then("Exception will be thrown")
-    val ex = f.groupApiService.updateGroup(createRootGroup(), PathId.empty, GroupUpdate(version = Some(version.toOffsetDateTime)), version).failed.futureValue
-    ex shouldBe a[IllegalArgumentException]
+    val ex = f.groupApiService.updateGroup(
+      createRootGroup(),
+      PathId.empty,
+      GroupUpdate(version = Some(version.toOffsetDateTime)),
+      version).failed.futureValue
+    ex shouldBe an[IllegalArgumentException]
   }
 
   "scale when scaleBy provided" in {
@@ -55,7 +63,11 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
       "/app".toRootPath -> app
     ))
     When("Calling update with scaleBy")
-    val updatedGroup = f.groupApiService.updateGroup(rootGroup, PathId.empty, GroupUpdate(scaleBy = Some(2)), Timestamp.now()).futureValue
+    val updatedGroup = f.groupApiService.updateGroup(
+      rootGroup,
+      PathId.empty,
+      GroupUpdate(scaleBy = Some(2)),
+      Timestamp.now()).futureValue
 
     Then("Group apps will be scaled by the given amount")
     updatedGroup.apps(app.id).instances should be (originalInstancesCount * 2)
@@ -70,7 +82,11 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     groupManager.group(groupId).returns(Some(existingGroup))
     val f = Fixture(groupManager = groupManager)
     When("Calling update with new apps being added to a group")
-    val updatedGroup = f.groupApiService.updateGroup(createRootGroup(), PathId.empty, GroupUpdate(apps = Some(Set(App("/app", networks = Seq(Network(mode = NetworkMode.ContainerBridge)))))), newVersion).futureValue
+    val updatedGroup = f.groupApiService.updateGroup(
+      createRootGroup(),
+      PathId.empty,
+      GroupUpdate(apps = Some(Set(App("/app", networks = Seq(Network(mode = NetworkMode.ContainerBridge)))))),
+      newVersion).futureValue
 
     Then("Group will contain those apps after an update")
     updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toRootPath, networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion)))

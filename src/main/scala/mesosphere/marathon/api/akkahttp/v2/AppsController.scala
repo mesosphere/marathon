@@ -281,15 +281,15 @@ class AppsController(
     * @param identity
     * @return updated RootGroup in case of success, Rejection otherwise
     */
-  private[v2] def deleteAppRootGroupModifier(appId: PathId)(implicit identity: Identity): RootGroup => Either[Rejection, RootGroup] = { rootGroup: RootGroup =>
+  private[v2] def deleteAppRootGroupModifier(appId: PathId)(implicit identity: Identity): RootGroup => Future[Either[Rejection, RootGroup]] = { rootGroup: RootGroup =>
     rootGroup.app(appId) match {
       case None =>
-        Left(Rejections.EntityNotFound.noApp(appId))
+        Future.successful(Left(Rejections.EntityNotFound.noApp(appId)))
       case Some(app) =>
         if (authorizer.isAuthorized(identity, DeleteRunSpec, app))
-          Right(rootGroup.removeApp(appId))
+          Future.successful(Right(rootGroup.removeApp(appId)))
         else
-          Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+          Future.successful(Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _)))))
     }
   }
 

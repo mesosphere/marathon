@@ -95,7 +95,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       val f = new Fixture(groupManager = groupManager)
 
       Get(Uri./.withPath(Path("/groupname/versions"))) ~> f.groupsController.route ~> check {
-        responseAs[String] should be ("[ \"2015-04-09T12:30:00.000Z\", \"2015-04-09T12:30:00.000Z\" ]")
+        responseAs[String] should be ("""[ "2015-04-09T12:30:00.000Z", "2015-04-09T12:30:00.000Z" ]""")
       }
     }
 
@@ -108,7 +108,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       val f = new Fixture(groupManager = groupManager)
 
       Get(Uri./.withPath(Path("/versions"))) ~> f.groupsController.route ~> check {
-        responseAs[String] should be ("[ \"2015-04-09T12:30:00.000Z\" ]")
+        responseAs[String] should be ("""[ "2015-04-09T12:30:00.000Z" ]""")
       }
     }
   }
@@ -131,7 +131,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       val f = new Fixture(infoService = infoService)
 
       Get(Uri./.withPath(Path("/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
-        responseAs[String] should include (""""id" : "/"""")
+        (Json.parse(responseAs[String]) \ "id").get shouldEqual JsString("/")
       }
     }
 
@@ -154,7 +154,11 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
 
       Post(Uri./.withPath(Path("/")), entity) ~> f.groupsController.route ~> check {
-        rejection should be (Rejections.ConflictingChange(Message(s"Group / is already created. Use PUT to change this group.")))
+        rejection shouldBe a[Rejections.ConflictingChange]
+        inside(rejection) {
+          case Rejections.ConflictingChange(error) =>
+            error.message should be("Group / is already created. Use PUT to change this group.")
+        }
       }
     }
 
@@ -168,7 +172,11 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
 
       Post(Uri./.withPath(Path("/appname")), entity) ~> f.groupsController.route ~> check {
-        rejection should be (Rejections.ConflictingChange(Message(s"An app with the path /appname already exists.")))
+        rejection shouldBe a[Rejections.ConflictingChange]
+        inside(rejection) {
+          case Rejections.ConflictingChange(error) =>
+            error.message should be("An app with the path /appname already exists.")
+        }
       }
     }
 
@@ -177,7 +185,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       groupApiService.updateGroup(any, any, any, any)(any) returns Future.successful(createRootGroup())
       val groupManager = mock[GroupManager]
       groupManager.rootGroup() returns createRootGroup()
-      groupManager.updateRoot(eq(PathId.empty), any, any, eq(false), any) returns Future.successful(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero))
+      groupManager.updateRootAsync(eq(PathId.empty), any, any, eq(false), any) returns Future.successful(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero))
       val f = new Fixture(groupManager = groupManager, groupApiService = groupApiService)
       val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
 

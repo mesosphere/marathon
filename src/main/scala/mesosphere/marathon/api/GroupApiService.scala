@@ -15,7 +15,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     * Encapsulates the group update logic that is following:
     * - if version is set, group is reverted to that version
     * - if scaleBy is set, group is scaled up
-    * - if none version nor scaleBy is set then the group is updated
+    * - if neither a version nor scaleBy is set then the group is updated
     */
   @SuppressWarnings(Array("all")) // async/await
   def updateGroup(
@@ -24,6 +24,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     groupUpdate: raml.GroupUpdate,
     newVersion: Timestamp)(implicit identity: Identity): Future[RootGroup] = async {
     val group = rootGroup.group(groupId).getOrElse(Group.empty(groupId))
+    checkAuthorizationOrThrow(UpdateGroup, group)
 
     /**
       * roll back to a previous group version
@@ -31,7 +32,6 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     def revertToOlderVersion: Future[Option[RootGroup]] = groupUpdate.version match {
       case Some(version) =>
         val targetVersion = Timestamp(version)
-        checkAuthorizationOrThrow(UpdateGroup, group)
         groupManager.group(group.id, targetVersion)
           .filter(checkAuthorizationOrThrow(ViewGroup, _))
           .map(g => {
@@ -42,7 +42,6 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     }
 
     def scaleChange: Option[RootGroup] = groupUpdate.scaleBy.map { scale =>
-      checkAuthorizationOrThrow(UpdateGroup, group)
       rootGroup.updateTransitiveApps(group.id, app => app.copy(instances = (app.instances * scale).ceil.toInt), newVersion)
     }
 
@@ -53,7 +52,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       val updatedGroup: Group = Raml.fromRaml(
         GroupConversion(groupUpdate, group, newVersion) -> appConversionFunc)
 
-      maybeExistingGroup.fold(checkAuthorizationOrThrow(CreateRunSpec, updatedGroup))(checkAuthorizationOrThrow(UpdateGroup, _))
+      if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateRunSpec, updatedGroup)
 
       rootGroup.putGroup(updatedGroup, newVersion)
     }

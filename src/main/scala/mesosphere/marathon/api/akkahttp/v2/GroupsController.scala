@@ -9,6 +9,7 @@ import akka.stream.Materializer
 import mesosphere.marathon.api.GroupApiService
 import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
 import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
+import mesosphere.marathon.api.v2.GroupsResource.normalizeApps
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, PodsResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.election.ElectionService
@@ -43,7 +44,7 @@ class GroupsController(
   private val forceParameter = parameter('force.as[Boolean].?(false))
 
   /** convert app to canonical form */
-  private implicit val appNormalization: Normalization[raml.App] = {
+  private val appNormalization: Normalization[raml.App] = {
     val appNormalizationConfig = AppNormalization.Configuration(
       config.defaultNetworkName.get,
       config.mesosBridgeName())
@@ -64,19 +65,21 @@ class GroupsController(
   def appsList(groupId: PathId): Route = ???
 
   def createGroup(groupId: PathId)(implicit identity: Identity): Route = {
-    (forceParameter & entity(as(groupUpdateUnmarshaller(groupId)))) { (force, groupUpdate) =>
+    (forceParameter & entity(as[raml.GroupUpdate])) { (force, groupUpdate) =>
       val effectiveGroupId = groupUpdate.id.map(id => PathId(id).canonicalPath(groupId)).getOrElse(groupId)
       val rootGroup = groupManager.rootGroup()
-
-      if (rootGroup.group(effectiveGroupId).isDefined) { // group already exists
-        reject(Rejections.ConflictingChange(Message(s"Group $effectiveGroupId is already created. Use PUT to change this group.")))
-      } else if (rootGroup.transitiveAppsById.get(effectiveGroupId).isDefined) { // app with the group id already exists
-        reject(Rejections.ConflictingChange(Message(s"An app with the path $effectiveGroupId already exists.")))
-      } else {
-        onComplete(updateOrCreate(groupId, groupUpdate, force)) {
-          case Success(deploymentResult) => complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
-          case Failure(ex: IllegalArgumentException) => complete(StatusCodes.UnprocessableEntity -> ex.getMessage)
-          case Failure(ex) => throw ex
+      val groupValidator = Group.validNestedGroupUpdateWithBase(effectiveGroupId)
+      assumeValid(groupValidator.apply(normalizeApps(effectiveGroupId, groupUpdate)(appNormalization))) {
+        if (rootGroup.group(effectiveGroupId).isDefined) { // group already exists
+          reject(Rejections.ConflictingChange(Message(s"Group $effectiveGroupId is already created. Use PUT to change this group.")))
+        } else if (rootGroup.transitiveAppsById.get(effectiveGroupId).isDefined) { // app with the group id already exists
+          reject(Rejections.ConflictingChange(Message(s"An app with the path $effectiveGroupId already exists.")))
+        } else {
+          onComplete(updateOrCreate(groupId, groupUpdate, force)) {
+            case Success(deploymentResult) => complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
+            case Failure(ex: IllegalArgumentException) => complete(StatusCodes.UnprocessableEntity -> ex.getMessage)
+            case Failure(ex) => throw ex
+          }
         }
       }
     }
@@ -92,8 +95,8 @@ class GroupsController(
     val version = Timestamp.now()
 
     val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
-    val deploymentPlan = await(groupManager.updateRoot(
-      id.parent, group => result(groupApiService.updateGroup(group, effectivePath, update, version)), version, force))
+    val deploymentPlan = await(groupManager.updateRootAsync(
+      id.parent, group => groupApiService.updateGroup(group, effectivePath, update, version), version, force))
     DeploymentResult(deploymentPlan.id, deploymentPlan.version.toOffsetDateTime)
   }
 

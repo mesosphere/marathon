@@ -134,18 +134,6 @@ object EntityMarshallers {
       }
   }.handleValidationErrors
 
-  def groupUpdateUnmarshaller(groupId: PathId)(implicit normalization: Normalization[mesosphere.marathon.raml.App]): FromEntityUnmarshaller[GroupUpdate] = {
-    playJsonUnmarshaller[raml.GroupUpdate].map { groupUpdate =>
-      val effectivePath = groupUpdate.id.map(id => validateOrThrow(PathId(id)).canonicalPath(groupId)).getOrElse(groupId)
-      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath)
-      validateOrThrow(
-        normalizeApps(
-          effectivePath,
-          groupUpdate
-        ))(groupValidator)
-    }
-  }.handleValidationErrors
-
   def appUpdatesUnmarshaller(partialUpdate: Boolean)(
     implicit
     appUpdateNormalization: Normalization[raml.AppUpdate],
@@ -178,7 +166,8 @@ object EntityMarshallers {
   implicit val enrichedTasksListMarshaller = playJsonMarshaller[raml.EnrichedTasksList]
   implicit val instanceListMarshaller = playJsonMarshaller[raml.InstanceList]
   implicit val deleteTasksUnmarshaller = playJsonUnmarshaller[raml.DeleteTasks]
-  implicit val seqDateTimeMarshalled = playJsonMarshaller[Seq[Timestamp]]
+  implicit val seqDateTimeMarshaller = playJsonMarshaller[Seq[Timestamp]]
+  implicit val groupUpdateUnmarshaller = playJsonUnmarshaller[raml.GroupUpdate]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {
     def handleValidationErrors: FromEntityUnmarshaller[T] = um.recover(_ ⇒ _ ⇒ {
