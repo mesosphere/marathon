@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.http.scaladsl.server._
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import play.api.libs.json.Json
 
@@ -27,6 +28,10 @@ object Rejections {
 
     def queueApp(appId: PathId): EntityNotFound = {
       EntityNotFound(Message(s"Application $appId not found in tasks queue."))
+    }
+
+    def noTask(id: Task.Id): EntityNotFound = {
+      EntityNotFound(Message(s"Task '$id' does not exist"))
     }
   }
 
