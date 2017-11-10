@@ -56,13 +56,12 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
     }
 
-    def executorResources(expected: Tuple3[Double, Double, Double]) = new HavePropertyMatcher[JsValue, Tuple3[Double, Double, Double]] {
+    def executorResources(cpus: Double, mem: Double, disk: Double) = new HavePropertyMatcher[JsValue, Option[JsValue]] {
       override def apply(actual: JsValue) = {
-        val matches =
-          (actual \ "executorResources" \ "cpus") == JsDefined(JsNumber(expected._1)) &&
-            (actual \ "executorResources" \ "mem") == JsDefined(JsNumber(expected._2)) &&
-            (actual \ "executorResources" \ "disk") == JsDefined(JsNumber(expected._3))
-        HavePropertyMatchResult(matches, "executorResources", expected, (0.0, 0.0, 0.0))
+        val maybeActual = (actual \ "executorResources").toOption
+        val expected = JsObject(Seq("cpus" -> JsNumber(cpus), "mem" -> JsNumber(mem), "disk" -> JsNumber(disk)))
+        val matches = maybeActual.contains(expected)
+        HavePropertyMatchResult(matches, "executorResources", Some(expected), maybeActual)
       }
     }
     val noDefinedNetworkname = new HavePropertyMatcher[JsValue, Option[JsValue]] {
@@ -70,6 +69,13 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         val actualNetworkname = (actual \ "networks" \ 0 \ "name").toOption
         val matches = !actualNetworkname.isDefined
         HavePropertyMatchResult(matches, "networkname", None, actualNetworkname)
+      }
+    }
+    def networkMode(mode: raml.NetworkMode) = new HavePropertyMatcher[JsValue, Option[String]] {
+      override def apply(actual: JsValue) = {
+        val maybeMode = (actual \ "networks" \ 0 \ "mode").asOpt[String]
+        val matches = maybeMode.contains(mode.value)
+        HavePropertyMatchResult(matches, "networkmode", Some(mode.value), maybeMode)
       }
     }
 
@@ -98,11 +104,11 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.header[Location].value.value() should be("/mypod")
 
         val jsonResponse: JsValue = Json.parse(responseAs[String])
-        (jsonResponse \ "networks" \ 0 \ "mode") shouldBe JsDefined(JsString(raml.NetworkMode.Host.value))
 
         jsonResponse should have (
-          executorResources((0.1, 32.0, 10.0)),
-          noDefinedNetworkname
+          executorResources(cpus = 0.1, mem = 32.0, disk = 10.0),
+          noDefinedNetworkname,
+          networkMode(raml.NetworkMode.Host)
         )
       }
     }
@@ -157,11 +163,11 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.header[Location].value.value() should be("/mypod")
 
         val jsonResponse = Json.parse(responseAs[String])
-        (jsonResponse \ "networks" \ 0 \ "mode") shouldBe JsDefined(JsString(raml.NetworkMode.ContainerBridge.value))
 
         jsonResponse should have (
-          executorResources ((0.1, 32.0, 10.0)),
-          noDefinedNetworkname
+          executorResources (cpus = 0.1, mem = 32.0, disk = 10.0),
+          noDefinedNetworkname,
+          networkMode(raml.NetworkMode.ContainerBridge)
         )
       }
     }
