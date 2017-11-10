@@ -11,12 +11,14 @@ import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, FromMessageUnm
 import akka.util.ByteString
 import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
+import mesosphere.marathon.api.v2.GroupsResource.normalizeApps
 import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.core.appinfo.AppInfo
-import mesosphere.marathon.plugin.PathId
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.raml.GroupUpdate
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import play.api.libs.json._
 
 import scala.collection.breakOut
@@ -165,6 +167,8 @@ object EntityMarshallers {
   implicit val instanceListMarshaller = playJsonMarshaller[raml.InstanceList]
   implicit val singleInstanceMarshaller = playJsonMarshaller[raml.SingleInstance]
   implicit val deleteTasksUnmarshaller = playJsonUnmarshaller[raml.DeleteTasks]
+  implicit val seqDateTimeMarshaller = playJsonMarshaller[Seq[Timestamp]]
+  implicit val groupUpdateUnmarshaller = playJsonUnmarshaller[raml.GroupUpdate]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {
     def handleValidationErrors: FromEntityUnmarshaller[T] = um.recover(_ ⇒ _ ⇒ {

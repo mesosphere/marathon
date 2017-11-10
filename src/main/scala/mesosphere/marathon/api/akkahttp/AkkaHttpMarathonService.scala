@@ -98,6 +98,7 @@ object AkkaHttpMarathonService {
       .handle {
         case Rejections.BadRequest(message) => complete(BadRequest -> message)
         case Rejections.EntityNotFound(message) => complete(NotFound -> message)
+        case Rejections.ConflictingChange(message) => complete(Conflict -> message)
       }
       .result()
       .withFallback(RejectionHandler.default)

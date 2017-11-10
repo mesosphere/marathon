@@ -105,7 +105,7 @@ class GroupManagerImpl(
   @SuppressWarnings(Array("all")) /* async/await */
   override def updateRootEither[T](
     id: PathId,
-    change: (RootGroup) => Either[T, RootGroup],
+    change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
     // All updates to the root go through the work queue.
@@ -113,11 +113,12 @@ class GroupManagerImpl(
       logger.info(s"Upgrade root group version:$version with force:$force")
 
       val from = rootGroup()
-      change(from) match {
-        case Left(left) =>
-          Future.successful(Left(left))
-        case Right(changed) =>
-          async {
+      async {
+        val changedGroup = await(change(from))
+        changedGroup match {
+          case Left(left) =>
+            Left(left)
+          case Right(changed) =>
             val unversioned = assignDynamicServicePorts(from, changed)
             val to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
@@ -131,7 +132,7 @@ class GroupManagerImpl(
             // finally update the root under the write lock.
             root := Option(plan.target)
             Right(plan)
-          }
+        }
       }
     }
 

@@ -36,4 +36,5 @@ object Rejections {
   }
 
   case class BadRequest(message: Message) extends Rejection
+  case class ConflictingChange(message: Message) extends Rejection
 }
