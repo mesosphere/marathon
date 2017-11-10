@@ -147,9 +147,11 @@ class GroupsController(
             }
           }
         } ~
-        path(GroupPathIdLike ~ Slash.? ~ "apps" ~ Slash.? ~ PathEnd) { groupId =>
-          get {
-            appsList(groupId)
+        pathPrefix(GroupPathIdLike ~ Slash.? ~ "apps") { groupId =>
+          pathEndOrSingleSlash {
+            get {
+              appsList(groupId)
+            }
           }
         } ~
         pathPrefix(GroupPathIdLike ~ Slash.? ~ "versions") { groupId =>
