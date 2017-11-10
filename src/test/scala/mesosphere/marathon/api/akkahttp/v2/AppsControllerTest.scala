@@ -2556,5 +2556,25 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
 
+    "Get application by version" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      groupManager.appVersion(equalTo(app.id), equalTo(app.version.toOffsetDateTime)) returns Future.successful(Some(app))
+
+      val entity = HttpEntity.Empty
+
+      val version = app.version
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "versions" / version.toString)
+
+      Get(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
   }
 }
