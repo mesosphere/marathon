@@ -12,6 +12,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.Headers
+import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -399,16 +400,34 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    //    "create a pod w/ container networking w/o default network name" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture()
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
-    //      response.getStatus shouldBe 422
-    //      response.getEntity.toString should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
-    //    }
+    "create a pod w/ container networking w/o default network name" in {
+      val f = Fixture()
+
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithContainerNetworking = """
+                                                 | { "id": "/mypod", "networks": [ { "mode": "container" } ], "containers": [
+                                                 |   { "name": "webapp",
+                                                 |     "resources": { "cpus": 0.03, "mem": 64 },
+                                                 |     "image": { "kind": "DOCKER", "id": "busybox" },
+                                                 |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                                               """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithContainerNetworking).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        rejection shouldBe a[ValidationFailed]
+        inside(rejection) {
+          case ValidationFailed(failure) =>
+            failure should haveViolations("/networks" -> NetworkValidationMessages.NetworkNameMustBeSpecified)
+        }
+      }
+    }
 
     //    "create a pod with custom executor resource declaration" in {
     //      implicit val podSystem = mock[PodManager]
