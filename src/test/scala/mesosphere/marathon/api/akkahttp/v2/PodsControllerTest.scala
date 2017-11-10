@@ -20,13 +20,12 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
-import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 import play.api.libs.json._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
 
-class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with ValidationTestLike {
+class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with ValidationTestLike with ResponseMatchers {
 
   "PodsController" should {
     "support pods" in {
@@ -57,50 +56,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         .withEntity(entity)
         .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
-    }
-
-    def executorResources(cpus: Double, mem: Double, disk: Double) = new HavePropertyMatcher[JsValue, Option[JsValue]] {
-      override def apply(actual: JsValue) = {
-        val maybeActual = (actual \ "executorResources").toOption
-        val expected = JsObject(Seq("cpus" -> JsNumber(cpus), "mem" -> JsNumber(mem), "disk" -> JsNumber(disk)))
-        val matches = maybeActual.contains(expected)
-        HavePropertyMatchResult(matches, "executorResources", Some(expected), maybeActual)
-      }
-    }
-    val noDefinedNetworkname = new HavePropertyMatcher[JsValue, Option[JsValue]] {
-      override def apply(actual: JsValue) = {
-        val actualNetworkname = (actual \ "networks" \ 0 \ "name").toOption
-        val matches = !actualNetworkname.isDefined
-        HavePropertyMatchResult(matches, "networkname", None, actualNetworkname)
-      }
-    }
-    def definedNetworkname(name: String) = new HavePropertyMatcher[JsValue, Option[String]] {
-      override def apply(actual: JsValue) = {
-        val maybeNetworkname = (actual \ "networks" \ 0 \ "name").asOpt[String]
-        val matches = maybeNetworkname.contains(name)
-        HavePropertyMatchResult(matches, "networkname", Some(name), maybeNetworkname)
-      }
-    }
-    def networkMode(mode: raml.NetworkMode) = new HavePropertyMatcher[JsValue, Option[String]] {
-      override def apply(actual: JsValue) = {
-        val maybeMode = (actual \ "networks" \ 0 \ "mode").asOpt[String]
-        val matches = maybeMode.contains(mode.value)
-        HavePropertyMatchResult(matches, "networkmode", Some(mode.value), maybeMode)
-      }
-    }
-    def podContainerWithEnvSecret(secret: String) = new HavePropertyMatcher[JsValue, Option[String]] {
-      override def apply(actual: JsValue) = {
-        val maybeSecret = (actual \ "containers" \ 0 \ "environment" \ "vol" \ "secret").asOpt[String]
-        val matches = maybeSecret.contains(secret)
-        HavePropertyMatchResult(matches, "podContainerSecret", Some(secret), maybeSecret)
-      }
-    }
-    def podWithFileBasedSecret(secret: String) = new HavePropertyMatcher[JsValue, Option[String]] {
-      override def apply(actual: JsValue) = {
-        val maybeSecret = (actual \ "volumes" \ 0 \ "secret").asOpt[String]
-        val matches = maybeSecret.contains(secret)
-        HavePropertyMatchResult(matches, "podContainerSecret", Some(secret), maybeSecret)
-      }
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -402,7 +357,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
 
     "create a pod w/ container networking w/o default network name" in {
       val f = Fixture()
-
       val controller = f.controller()
 
       val deploymentPlan = DeploymentPlan.empty
@@ -429,31 +383,36 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    //    "create a pod with custom executor resource declaration" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture()
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithExecutorResources.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(HttpServletResponse.SC_CREATED)
-    //
-    //        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-    //        parsedResponse should be (defined)
-    //        val maybePod = parsedResponse.map(_.as[Pod])
-    //        maybePod should be (defined) // validate that we DID get back a pod definition
-    //        val pod = maybePod.get
-    //        pod.executorResources should be (defined) // validate that executor resources are defined
-    //        pod.executorResources.get.cpus should be (100)
-    //        pod.executorResources.get.mem should be (100)
-    //        // disk is not assigned in the posted pod definition, therefore this should be the default value 10
-    //        pod.executorResources.get.disk should be (10)
-    //
-    //        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
-    //      }
-    //    }
+    "create a pod with custom executor resource declaration" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithExecutorResources = """
+                                               | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                                               |   { "name": "webapp",
+                                               |     "resources": { "cpus": 0.03, "mem": 64 },
+                                               |     "image": { "kind": "DOCKER", "id": "busybox" },
+                                               |     "exec": { "command": { "shell": "sleep 1" } } } ],
+                                               |     "executorResources": { "cpus": 100, "mem": 100 } }
+                                             """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithExecutorResources).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        response.header[Location].value.value() should be("/mypod")
+
+        val jsonResponse = Json.parse(responseAs[String])
+
+        jsonResponse should have(executorResources(cpus = 100.0, mem = 100.0, disk = 10.0))
+      }
+    }
   }
 
   case class Fixture(
