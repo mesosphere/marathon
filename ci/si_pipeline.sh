@@ -31,7 +31,7 @@ function create-junit-xml {
 function exit-as-unstable {
     echo "Cluster launch failed."
     create-junit-xml "dcos-launch" "cluster.create" "$1"
-    ./dcos-launch delete
+    #./dcos-launch delete
     exit 0
 }
 
