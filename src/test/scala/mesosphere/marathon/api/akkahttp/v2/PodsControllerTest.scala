@@ -87,6 +87,13 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         HavePropertyMatchResult(matches, "podContainerSecret", Some(secret), maybeSecret)
       }
     }
+    def podWithFileBasedSecret(secret: String) = new HavePropertyMatcher[JsValue, Option[String]] {
+      override def apply(actual: JsValue) = {
+        val maybeSecret = (actual \ "volumes" \ 0 \ "secret").asOpt[String]
+        val matches = maybeSecret.contains(secret)
+        HavePropertyMatchResult(matches, "podContainerSecret", Some(secret), maybeSecret)
+      }
+    }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
@@ -313,30 +320,45 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.status should be(StatusCodes.Created)
 
         val jsonResponse = Json.parse(responseAs[String])
-        jsonResponse should have (
-          podContainerWithEnvSecret("secret1")
-        )
+        jsonResponse should have (podContainerWithEnvSecret("secret1"))
       }
     }
 
-    //    "The secrets feature is enabled and create pod (that uses file based secrets) succeeds" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(201)
-    //        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-    //        parsedResponse should be (defined)
-    //        val maybePod = parsedResponse.map(_.as[Pod])
-    //        maybePod should be (defined) // validate that we DID get back a pod definition
-    //        val pod = maybePod.get
-    //        pod.volumes(0) shouldBe PodSecretVolume("vol", "secret1")
-    //      }
-    //    }
+    "The secrets feature is enabled and create pod (that uses file based secrets) succeeds" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithFileBasedSecret = """
+                                             | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                                             |   [
+                                             |     { "name": "webapp",
+                                             |       "resources": { "cpus": 0.03, "mem": 64 },
+                                             |       "image": { "kind": "DOCKER", "id": "busybox" },
+                                             |       "exec": { "command": { "shell": "sleep 1" } },
+                                             |       "volumeMounts": [ { "name": "vol", "mountPath": "mnt2" } ]
+                                             |     }
+                                             |   ],
+                                             |   "volumes": [ { "name": "vol", "secret": "secret1" } ],
+                                             |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                                             |  }
+                                           """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithFileBasedSecret).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have (podWithFileBasedSecret ("secret1"))
+      }
+
+      //        pod.volumes(0) shouldBe PodSecretVolume("vol", "secret1")
+    }
 
     //    "create a pod w/ container networking" in {
     //      implicit val podSystem = mock[PodManager]
