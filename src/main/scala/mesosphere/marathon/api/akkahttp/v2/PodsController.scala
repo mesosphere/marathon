@@ -63,13 +63,12 @@ class PodsController(
                   val deployment = await(podManager.create(pod, force))
 
                   // TODO: How should we get the ip?
-                  val ip = clientIp.getAddress().get.toString
+                  val ip = clientIp.getAddress().toString
                   eventBus.publish(PodEvent(ip, req.uri.toString(), PodEvent.Created))
 
                   deployment
                 }
                 onSuccess(p) { plan =>
-                  // TODO: Set pod id uri
                   val ramlPod = PodConversion.podRamlWriter.write(pod)
                   val responseHeaders = Seq(
                     Location(Uri(pod.id.toString)),

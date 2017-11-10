@@ -56,8 +56,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
     }
 
-    def 
-
     "be able to create a simple single-container pod from docker image w/ shell command" in {
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
       val controller = f.controller()
