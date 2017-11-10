@@ -42,7 +42,7 @@ case $CLUSTER_LAUNCH_CODE in
   0)
       ./ci/system_integration.sh "$DCOS_URL"
       SI_CODE=$?
-      ./dcos-launch delete
+      #./dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
