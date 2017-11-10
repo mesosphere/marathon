@@ -7,9 +7,10 @@ import akka.event.EventStream
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
-import mesosphere.UnitTest
+import mesosphere.{ UnitTest, ValidationTestLike }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.Headers
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
@@ -17,13 +18,14 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.test.SettableClock
+import mesosphere.marathon.util.SemanticVersion
 import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 import play.api.libs.json._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
 
-class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours {
+class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with ValidationTestLike {
 
   "PodsController" should {
     "support pods" in {
@@ -172,19 +174,40 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    //    "The secrets feature is NOT enabled and create pod (that uses file base secrets) fails" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(422)
-    //        response.getEntity.toString should include("Feature secrets is not enabled")
-    //      }
-    //    }
+    "The secrets feature is NOT enabled and create pod (that uses file base secrets) fails" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithFileBasedSecret = """
+                                             | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                                             |   [
+                                             |     { "name": "webapp",
+                                             |       "resources": { "cpus": 0.03, "mem": 64 },
+                                             |       "image": { "kind": "DOCKER", "id": "busybox" },
+                                             |       "exec": { "command": { "shell": "sleep 1" } },
+                                             |       "volumeMounts": [ { "name": "vol", "mountPath": "mnt2" } ]
+                                             |     }
+                                             |   ],
+                                             |   "volumes": [ { "name": "vol", "secret": "secret1" } ],
+                                             |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                                             |  }
+                                           """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithFileBasedSecret).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        rejection shouldBe a[ValidationFailed]
+        inside(rejection) {
+          case ValidationFailed(failure) =>
+            failure should haveViolations("/podSecretVolumes(pod)" -> "Feature secrets is not enabled. Enable with --enable_features secrets)")
+        }
+      }
+    }
 
     //    "The secrets feature is NOT enabled and create pod (that uses env secret refs) fails" in {
     //      implicit val podSystem = mock[PodManager]
@@ -332,10 +355,12 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     val podManager = mock[PodManager]
     val pluginManager = PluginManager.None
     val eventBus = mock[EventStream]
+    val scheduler = mock[MarathonScheduler]
 
     electionService.isLeader returns (isLeader)
+    scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
 
     implicit val authenticator = auth.auth
-    def controller() = new PodsController(config, electionService, podManager, groupManager, pluginManager, eventBus, clock)
+    def controller() = new PodsController(config, electionService, podManager, groupManager, pluginManager, eventBus, scheduler, clock)
   }
 }
