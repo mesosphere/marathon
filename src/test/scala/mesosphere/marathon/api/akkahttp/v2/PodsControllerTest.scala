@@ -243,19 +243,39 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    //    "The secrets feature is NOT enabled and create pod (that uses env secret refs on container level) fails" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(422)
-    //        response.getEntity.toString should include("Feature secrets is not enabled")
-    //      }
-    //    }
+    "The secrets feature is NOT enabled and create pod (that uses env secret refs on container level) fails" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithEnvRefSecretOnContainerLevel = """
+                                                          | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                                                          |   [
+                                                          |     { "name": "webapp",
+                                                          |       "resources": { "cpus": 0.03, "mem": 64 },
+                                                          |       "image": { "kind": "DOCKER", "id": "busybox" },
+                                                          |       "exec": { "command": { "shell": "sleep 1" } },
+                                                          |       "environment": { "vol": { "secret": "secret1" } }
+                                                          |     }
+                                                          |   ],
+                                                          |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                                                          |  }
+                                                        """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithEnvRefSecretOnContainerLevel).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        rejection shouldBe a[ValidationFailed]
+        inside(rejection) {
+          case ValidationFailed(failure) =>
+            failure should haveViolations("/secrets" -> "Feature secrets is not enabled. Enable with --enable_features secrets)")
+        }
+      }
+    }
 
     //    "The secrets feature is enabled and create pod (that uses env secret refs on container level) succeeds" in {
     //      implicit val podSystem = mock[PodManager]
