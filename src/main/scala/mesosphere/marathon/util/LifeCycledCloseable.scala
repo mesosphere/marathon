@@ -35,6 +35,8 @@ class LifeCycledCloseable[T <: Closeable](val closeable: T) extends LifeCycledCl
   private case class State(closed: Boolean, hooks: List[() => Unit])
   private val state = new AtomicReference(State(false, Nil))
 
+  def beforeCloseHooksLength: Int = state.get.hooks.length
+
   override def close(): Unit = {
     val State(_, hooks) = state.getAndSet(State(true, Nil))
     hooks.foreach { hook =>
