@@ -202,7 +202,7 @@ class CoreModuleImpl @Inject() (
   override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
     marathonConf,
     scheduler,
-    storageModule.groupRepository)(ExecutionContexts.global, eventStream)
+    storageModule.groupRepository)(ExecutionContexts.global, eventStream, authModule.authorizer)
 
   // PODS
 

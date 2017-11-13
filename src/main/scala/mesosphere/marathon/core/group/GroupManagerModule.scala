@@ -6,7 +6,9 @@ import javax.inject.Provider
 import akka.event.EventStream
 import kamon.Kamon
 import kamon.metric.instrument.Time
+import mesosphere.marathon.api.GroupApiService
 import mesosphere.marathon.core.group.impl.GroupManagerImpl
+import mesosphere.marathon.plugin.auth.Authorizer
 import mesosphere.marathon.storage.repository.GroupRepository
 
 import scala.concurrent.ExecutionContext
@@ -17,7 +19,7 @@ import scala.concurrent.ExecutionContext
 class GroupManagerModule(
     config: GroupManagerConfig,
     scheduler: Provider[DeploymentService],
-    groupRepo: GroupRepository)(implicit ctx: ExecutionContext, eventStream: EventStream) {
+    groupRepo: GroupRepository)(implicit ctx: ExecutionContext, eventStream: EventStream, authorizer: Authorizer) {
 
   val groupManager: GroupManager = {
     val groupManager = new GroupManagerImpl(config, None, groupRepo, scheduler)
@@ -28,5 +30,9 @@ class GroupManagerModule(
     )
 
     groupManager
+  }
+
+  val groupService: GroupApiService = {
+    new GroupApiService(groupManager)
   }
 }

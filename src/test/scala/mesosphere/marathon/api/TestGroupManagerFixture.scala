@@ -15,10 +15,21 @@ import scala.concurrent.Future
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.AkkaUnitTestLike
 
-class TestGroupManagerFixture(initialRoot: RootGroup = RootGroup.empty) extends Mockito with AkkaUnitTestLike {
+class TestGroupManagerFixture(
+    initialRoot: RootGroup = RootGroup.empty,
+    authenticated: Boolean = true,
+    authorized: Boolean = true,
+    authFn: Any => Boolean = _ => true) extends Mockito with AkkaUnitTestLike {
   val service = mock[MarathonSchedulerService]
   val groupRepository = mock[GroupRepository]
   val eventBus = mock[EventStream]
+
+  val authFixture = new TestAuthFixture()
+  authFixture.authenticated = authenticated
+  authFixture.authorized = authorized
+  authFixture.authFn = authFn
+
+  implicit val authenticator = authFixture.auth
 
   val config = AllConf.withTestConfig("--zk_timeout", "3000")
 
@@ -33,7 +44,7 @@ class TestGroupManagerFixture(initialRoot: RootGroup = RootGroup.empty) extends 
   private[this] val groupManagerModule = new GroupManagerModule(
     config = config,
     scheduler = schedulerProvider,
-    groupRepo = groupRepository)(ExecutionContexts.global, eventBus)
+    groupRepo = groupRepository)(ExecutionContexts.global, eventBus, authenticator)
 
   val groupManager = groupManagerModule.groupManager
 }
