@@ -1813,8 +1813,11 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Replacing an existing application with a Mesos docker container passes validation" in new Fixture {
       Given("An app update to a Mesos container with a docker image")
-      val app = App(id = "/app", cmd = Some("foo"))
-      prepareApp(app, groupManager)
+      val appDef = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.rootGroup() returns rootGroup
 
       val body =
         """{
@@ -1829,7 +1832,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       When("The application is updated")
       val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
+      Put(Uri./.withPath(Path(appDef.id.toString)), entity) ~> route ~> check {
         Then("The return code indicates success")
         status shouldEqual StatusCodes.OK
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
