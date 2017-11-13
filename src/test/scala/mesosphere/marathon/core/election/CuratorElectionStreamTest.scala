@@ -6,10 +6,11 @@ import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ Executors }
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.storage.store.impl.zk.NoRetryPolicy
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.stream.EnrichedFlow
-import mesosphere.marathon.util.{ LifeCycledCloseableLike, ScallopStub }
-import org.apache.curator.framework.CuratorFramework
+import mesosphere.marathon.util.{ LifeCycledCloseable, ScallopStub }
+import org.apache.curator.framework.CuratorFrameworkFactory
 import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
 
@@ -19,15 +20,19 @@ import scala.util.{ Failure, Try }
 
 @IntegrationTest
 class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperServerTest with Eventually {
-  val underlyingZkClient = zkClient().client
   val prefixId = new AtomicInteger(0)
 
   case class Fixture(prefix: String = "curator") {
     val leaderPath = s"/curator-${prefixId.getAndIncrement}"
-    private def newStubClient =
-      new StubLifeCycledCloseable(underlyingZkClient)
-    val client = newStubClient
-    val client2 = newStubClient
+    def newClient() = {
+      val c = CuratorFrameworkFactory.newClient(zkServer.connectUri, NoRetryPolicy)
+      c.start()
+      c.blockUntilConnected()
+      c
+    }
+
+    val client = new LifeCycledCloseable(newClient())
+    val client2 = new LifeCycledCloseable(newClient())
     val electionExecutor = Executors.newSingleThreadExecutor()
     val electionEC = ExecutionContext.fromExecutor(electionExecutor)
   }
@@ -39,27 +44,6 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
       f.client.close()
       f.client2.close()
       f.electionExecutor.shutdown()
-    }
-  }
-
-  /**
-    * Doesn't actually close the underlying object
-    */
-  class StubLifeCycledCloseable(val closeable: CuratorFramework) extends LifeCycledCloseableLike[CuratorFramework] {
-    var beforeCloseHooks = List.empty[() => Unit]
-    override def close(): Unit = synchronized {
-      beforeCloseHooks.foreach { hook =>
-        Try(hook())
-      }
-      beforeCloseHooks = Nil
-    }
-
-    override def beforeClose(fn: () => Unit): Unit = synchronized {
-      beforeCloseHooks = fn :: beforeCloseHooks
-    }
-
-    override def removeBeforeClose(fn: () => Unit): Unit = synchronized {
-      beforeCloseHooks = beforeCloseHooks.filterNot(_ == fn)
     }
   }
 
@@ -142,15 +126,15 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
 
   "It cleans up after itself when the stream completes due to an exception" in withFixture { f =>
     val killSwitch = Promise[Unit]
-    val (cancellable, events) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "changehost:1", f.electionEC)
+    val (cancellable, events) = CuratorElectionStream(f.client, f.leaderPath, 15000.millis, "exceptionhost:1", f.electionEC)
       .via(EnrichedFlow.stopOnFirst(Source.fromFuture(killSwitch.future)))
       .toMat(Sink.queue())(Keep.both)
       .run
-    eventually { f.client.beforeCloseHooks.length shouldBe 1 }
+    eventually { f.client.beforeCloseHooksLength shouldBe 1 }
     events.pull().futureValue shouldBe Some(LeadershipState.ElectedAsLeader)
     killSwitch.success(())
     events.pull().futureValue shouldBe None
-    eventually { f.client.beforeCloseHooks.length shouldBe 0 }
+    eventually { f.client.beforeCloseHooksLength shouldBe 0 }
   }
 
   "It fails at least one of the streams if multiple participants register with the same ID" in withFixture { f =>
