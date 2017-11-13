@@ -21,17 +21,26 @@ To execute a particular function just invoke the script with function appended a
 The `ci/pipeline` script defines two primary targets
 
 1. `jenkins`
-2. `phabricator`
+2. `pr`
 
-The `jenkins` target is excuted on every branch build by jenkins. It runs
+The `jenkins` target is executed on every release branch, on master, and on each Github pull request. The `jenkins`
+target will check if a build is for a pull-request, and if so, run forward to the `pr` target.
 
-  * `provision.killStaleTestProcesses()`
-  * `provision.installMesos()`
-  * `compileAndTest()`
-  * `build()`
+The `pr` target runs the test pipeline followed by Github PR review reporting. It is triggered with each diff
+update.
 
-The `phabricator` target runs the `jenkins` pipeline followed by Phabricator
-review reporting. It is triggered with each diff update.
+The test pipeline involves the following steps:
+
+* Compile
+* Run unit tests
+* Run integration tests
+* Run scapegoat
+* Build and upload snapshot artifacts
+
+Additionally, for master builds, we:
+
+* Update the DCOS packages for Marathon by pushing an update to the snapshot Marathon DCOS branch (for OSS and
+  Enterprise).
 
 ## Sub Targets
 
