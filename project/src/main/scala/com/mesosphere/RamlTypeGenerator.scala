@@ -485,59 +485,59 @@ object RamlTypeGenerator {
       } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty) ||
         actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
         actualFields.map(_.constraints).requiredImports ++ Seq(
-          OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
-            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
-              if (serializeOnly) BLOCK(
-                THROW( NEW( REF(s"NotImplementedError") APPLY LIT("This type can only be de-serialized") ) )
-              )
-              else BLOCK(
-                actualFields.map { field =>
-                  VAL(field.name) := field.playValidator
-                } ++ Seq(
-                  VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
-                    CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY (REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
-                  IF(REF("_errors") DOT "nonEmpty") THEN (
-                    REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
-                    ) ELSE (
-                    REF(PlayJsSuccess) APPLY (REF(name) APPLY
-                      actualFields.map { field =>
-                        REF(field.name) := (REF(field.name) DOT "get")
-                      }))
+          OBJECTDEF("playJsonFormat") withParents (if (serializeOnly) PLAY_JSON_WRITES(name) else PLAY_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
+            if (serializeOnly) {
+              Seq()
+            } else  Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
+                BLOCK(
+                  actualFields.map { field =>
+                    VAL(field.name) := field.playValidator
+                  } ++ Seq(
+                    VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
+                      CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY (REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
+                    IF(REF("_errors") DOT "nonEmpty") THEN (
+                      REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
+                      ) ELSE (
+                      REF(PlayJsSuccess) APPLY (REF(name) APPLY
+                        actualFields.map { field =>
+                          REF(field.name) := (REF(field.name) DOT "get")
+                        }))
+                  )
                 )
-              )
-            },
-            DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
-              actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-                val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
-                if (field.omitEmpty && field.repeated && !field.forceOptional) {
-                  VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
-                    serialized
-                    ) ELSE (
-                    PlayJsNull
+            }) ++ Seq(
+              DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+                actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+                  val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
+                  if (field.omitEmpty && field.repeated && !field.forceOptional) {
+                    VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
+                      serialized
+                      ) ELSE (
+                      PlayJsNull
+                      )
+                  } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
+                    // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
+                    // see buildTypes
+                    VAL(field.name) := serialized MATCH(
+                      // avoid serializing JS objects w/o any fields
+                      CASE(ID("obj") withType (PlayJsObject),
+                        IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
+                      CASE(ID("rs")) ==> REF("rs")
                     )
-                } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
-                  // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
-                  // see buildTypes
-                  VAL(field.name) := serialized MATCH(
-                    // avoid serializing JS objects w/o any fields
-                    CASE(ID("obj") withType (PlayJsObject),
-                      IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
-                    CASE(ID("rs")) ==> REF("rs")
+                  } else {
+                    VAL(field.name) := serialized
+                  }
+                } ++
+                  Seq(
+                    REF(PlayJsObject) APPLY (SEQ(
+                      actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+                        TUPLE(LIT(field.rawName), REF(field.name))
+                      }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull) DOT("++") APPLY(
+                        actualFields.find(_.name == AdditionalProperties).fold(REF("Seq") DOT "empty") { extraPropertiesField =>
+                        REF("o.additionalProperties") DOT "fields"
+                      })
+                    )
                   )
-                } else {
-                  VAL(field.name) := serialized
-                }
-              } ++
-                Seq(
-                  REF(PlayJsObject) APPLY (SEQ(
-                    actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-                      TUPLE(LIT(field.rawName), REF(field.name))
-                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull) DOT("++") APPLY(
-                      actualFields.find(_.name == AdditionalProperties).fold(REF("Seq") DOT "empty") { extraPropertiesField =>
-                      REF("o.additionalProperties") DOT "fields"
-                    })
-                  )
-                )
+              )
             )
           )
         )
