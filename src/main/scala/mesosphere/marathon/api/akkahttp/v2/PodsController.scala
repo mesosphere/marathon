@@ -55,26 +55,28 @@ class PodsController(
       (extractClientIP & forceParameter) { (clientIp, force) =>
         extractRequest { req =>
           entity(as[raml.Pod]) { podDef =>
-            val normalizedPodDef = podNormalizer.normalized(podDef)
-            val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
-            assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
-              authorized(CreateRunSpec, pod).apply {
-                val p = async {
-                  val deployment = await(podManager.create(pod, force))
+            normalized(podDef, podNormalizer) { normalizedPodDef =>
+              val normalizedPodDef = podNormalizer.normalized(podDef)
+              val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
+              assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
+                authorized(CreateRunSpec, pod).apply {
+                  val p = async {
+                    val deployment = await(podManager.create(pod, force))
 
-                  // TODO: How should we get the ip?
-                  val ip = clientIp.getAddress().toString
-                  eventBus.publish(PodEvent(ip, req.uri.toString(), PodEvent.Created))
+                    // TODO: How should we get the ip?
+                    val ip = clientIp.getAddress().toString
+                    eventBus.publish(PodEvent(ip, req.uri.toString(), PodEvent.Created))
 
-                  deployment
-                }
-                onSuccess(p) { plan =>
-                  val ramlPod = PodConversion.podRamlWriter.write(pod)
-                  val responseHeaders = Seq(
-                    Location(Uri(pod.id.toString)),
-                    Headers.`Marathon-Deployment-Id`(plan.id)
-                  )
-                  complete((StatusCodes.Created, responseHeaders, ramlPod))
+                    deployment
+                  }
+                  onSuccess(p) { plan =>
+                    val ramlPod = PodConversion.podRamlWriter.write(pod)
+                    val responseHeaders = Seq(
+                      Location(Uri(pod.id.toString)),
+                      Headers.`Marathon-Deployment-Id`(plan.id)
+                    )
+                    complete((StatusCodes.Created, responseHeaders, ramlPod))
+                  }
                 }
               }
             }
