@@ -73,7 +73,7 @@ object Constraints {
 
   val hostnameField = "@hostname"
   val regionField = "@region"
-  val zoneField = "@field"
+  val zoneField = "@zone"
   def readerForField(field: String): FieldReader =
     field match {
       case "hostname" | `hostnameField` => hostnameReader
