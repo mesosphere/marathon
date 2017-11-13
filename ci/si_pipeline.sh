@@ -1,4 +1,4 @@
-#!/bin/bash
+]#!/bin/bash
 
 set -x +e -o pipefail
 
@@ -31,7 +31,7 @@ function create-junit-xml {
 function exit-as-unstable {
     echo "Cluster launch failed."
     create-junit-xml "dcos-launch" "cluster.create" "$1"
-    #./dcos-launch delete
+    ./dcos-launch delete
     exit 0
 }
 
@@ -42,7 +42,7 @@ case $CLUSTER_LAUNCH_CODE in
   0)
       ./ci/system_integration.sh "$DCOS_URL"
       SI_CODE=$?
-      #./dcos-launch delete
+      ./dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
