@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package state
 
-import java.time.{ Instant, OffsetDateTime }
+import java.time.format.DateTimeFormatter
+import java.time._
 import java.util.concurrent.TimeUnit
 
 import org.apache.mesos
-import org.joda.time.{ DateTime, DateTimeZone }
 
 import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
@@ -14,30 +14,30 @@ import scala.math.Ordered
 /**
   * An ordered wrapper for UTC timestamps.
   */
-abstract case class Timestamp private (private val utcDateTime: DateTime) extends Ordered[Timestamp] {
+abstract case class Timestamp private (private val instant: Instant) extends Ordered[Timestamp] {
   def toOffsetDateTime: OffsetDateTime =
     OffsetDateTime.ofInstant(
-      Instant.ofEpochMilli(utcDateTime.toInstant.getMillis),
-      utcDateTime.getZone.toTimeZone.toZoneId)
+      instant,
+      ZoneOffset.UTC)
 
-  def compare(that: Timestamp): Int = this.utcDateTime compareTo that.utcDateTime
+  def compare(that: Timestamp): Int = this.instant compareTo that.instant
 
-  def before(that: Timestamp): Boolean = (this.utcDateTime compareTo that.utcDateTime) < 0
-  def after(that: Timestamp): Boolean = (this.utcDateTime compareTo that.utcDateTime) > 0
+  def before(that: Timestamp): Boolean = (this.instant compareTo that.instant) < 0
+  def after(that: Timestamp): Boolean = (this.instant compareTo that.instant) > 0
   def youngerThan(that: Timestamp): Boolean = this.after(that)
   def olderThan(that: Timestamp): Boolean = this.before(that)
 
-  override def toString: String = utcDateTime.toString
+  override def toString: String = Timestamp.formatter.format(instant)
 
-  def toDateTime: DateTime = utcDateTime
+  def toInstant: Instant = instant
 
-  def millis: Long = toDateTime.getMillis
+  def millis: Long = toInstant.toEpochMilli
   def micros: Long = TimeUnit.MILLISECONDS.toMicros(millis)
   def nanos: Long = TimeUnit.MILLISECONDS.toNanos(millis)
 
   def until(other: Timestamp): FiniteDuration = {
-    val millis = other.utcDateTime.getMillis - utcDateTime.getMillis
-    FiniteDuration(millis, TimeUnit.MILLISECONDS)
+    val duration = Duration.between(this.instant, other.instant)
+    FiniteDuration(duration.toMillis, TimeUnit.MILLISECONDS)
   }
 
   /**
@@ -45,41 +45,40 @@ abstract case class Timestamp private (private val utcDateTime: DateTime) extend
     */
   def expired(other: Timestamp, by: FiniteDuration): Boolean = this.until(other) > by
 
-  def +(duration: FiniteDuration): Timestamp = Timestamp(utcDateTime.getMillis + duration.toMillis)
-  def -(duration: FiniteDuration): Timestamp = Timestamp(utcDateTime.getMillis - duration.toMillis)
+  def +(duration: FiniteDuration): Timestamp = Timestamp(instant.plusMillis(duration.toMillis))
+  def -(duration: FiniteDuration): Timestamp = Timestamp(instant.minusMillis(duration.toMillis))
 }
 
 object Timestamp {
   def apply(offsetDateTime: OffsetDateTime): Timestamp =
-    apply(offsetDateTime.toInstant.toEpochMilli)
+    apply(offsetDateTime.toInstant)
 
   /**
     * Returns a new Timestamp representing the instant that is the supplied
     * dateTime converted to UTC.
     */
-  def apply(dateTime: DateTime): Timestamp = new Timestamp(dateTime.toDateTime(DateTimeZone.UTC)) {} // linter:ignore TypeToType
+  def apply(instant: Instant): Timestamp = new Timestamp(instant) {} // linter:ignore TypeToType
 
   /**
     * Returns a new Timestamp representing the instant that is the supplied
     * number of milliseconds after the epoch.
     */
-  def apply(ms: Long): Timestamp = Timestamp(new DateTime(ms))
+  def apply(ms: Long): Timestamp = Timestamp(Instant.ofEpochMilli(ms))
 
   /**
     * Returns a new Timestamp representing the supplied time.
     *
     * See the Joda time documentation for a description of acceptable formats:
-    * http://joda-time.sourceforge.net/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTimeParser()
     */
-  def apply(time: String): Timestamp = Timestamp(DateTime.parse(time))
+  def apply(time: String): Timestamp = Timestamp(OffsetDateTime.parse(time))
 
   /**
     * Returns a new Timestamp representing the current instant.
     */
-  def now(): Timestamp = Timestamp(System.currentTimeMillis)
+  def now(): Timestamp = Timestamp(Instant.now())
 
   def now(clock: java.time.Clock): Timestamp =
-    Timestamp(clock.millis())
+    Timestamp(Instant.now(clock))
 
   def zero: Timestamp = Timestamp(0)
 
@@ -98,4 +97,9 @@ object Timestamp {
   def fromTaskStatus(taskStatus: mesos.Protos.TaskStatus): Timestamp = {
     apply(TimeUnit.SECONDS.toMillis(taskStatus.getTimestamp.toLong))
   }
+
+  /*
+   * .toString in java.time is truncating zeros in millis part, so we use custom formatter to keep them
+   */
+  private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 }
