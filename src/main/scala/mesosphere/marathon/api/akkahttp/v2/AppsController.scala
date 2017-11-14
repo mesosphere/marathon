@@ -36,7 +36,7 @@ import akka.NotUsed
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, SingleInstance }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
 import AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
+import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.raml.InstanceConversion._
 
@@ -132,9 +132,10 @@ class AppsController(
             plan -> appWithDeployments
           }
         }
-        onSuccess(create) { (plan, createdApp) =>
-          eventBus.publish(ApiPostEvent(remoteAddr.toString, reqUri.toString, createdApp.app))
-          complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), createdApp))
+        onSuccessLegacy(Some(rawApp.id))(create).apply {
+          case (plan, createdApp) =>
+            eventBus.publish(ApiPostEvent(remoteAddr.toString, reqUri.toString, createdApp.app))
+            complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), createdApp))
         }
       }
     }
@@ -220,6 +221,8 @@ class AppsController(
       )
     case Failure(RejectionError(rejection)) =>
       reject(rejection)
+    case Failure(ConflictingChangeException(msg)) =>
+      reject(Rejections.ConflictingChange(Message(msg)))
     case Failure(ex) =>
       throw ex
   }
