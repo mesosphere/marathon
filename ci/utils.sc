@@ -88,7 +88,6 @@ def runWithTimeout(timeout: FiniteDuration, logFileName: String)(commands: Seq[S
     .redirectOutput(ProcessBuilder.Redirect.appendTo(ciLogFile(logFileName)))
     .start()
 
-  try {
     val exited = buildProcess.waitFor(timeout.length, timeout.unit)
 
     if (exited) {
@@ -103,10 +102,11 @@ def runWithTimeout(timeout: FiniteDuration, logFileName: String)(commands: Seq[S
       val cmd = commands.mkString(" ")
       throw new java.util.concurrent.TimeoutException(s"'$cmd' timed out after $timeout.")
     }
-  } finally {
-    // This also cleans forked SBT processes.
-    provision.killStaleTestProcesses()
-  }
+}
+
+def withCleanUp[T](block: => T): T = {
+  try { block }
+  finally { provision.killStaleTestProcesses() }
 }
 
 /**

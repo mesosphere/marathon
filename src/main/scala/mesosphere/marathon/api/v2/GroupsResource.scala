@@ -11,12 +11,11 @@ import akka.stream.Materializer
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
+import mesosphere.marathon.api.{ AuthResource, GroupApiService, MarathonMediaType }
 import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{ GroupConversion, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -31,13 +30,13 @@ import scala.util.matching.Regex
 class GroupsResource @Inject() (
     groupManager: GroupManager,
     infoService: GroupInfoService,
-    val config: MarathonConf)(implicit
+    val config: MarathonConf,
+    groupsService: GroupApiService)(implicit
   val authenticator: Authenticator,
     val authorizer: Authorizer,
     mat: Materializer) extends AuthResource {
 
   import GroupsResource._
-  import Normalization._
 
   /** convert app to canonical form */
   private implicit val appNormalization: Normalization[raml.App] = {
@@ -134,32 +133,6 @@ class GroupsResource @Inject() (
     @Context req: HttpServletRequest): Response = createWithPath("", force, body, req)
 
   /**
-    * performs basic app validation and normalization for all apps (transitively) for the given group-update.
-    */
-  def normalizeApps(basePath: PathId, update: raml.GroupUpdate): raml.GroupUpdate = {
-    // note: we take special care to:
-    // (a) canonize and rewrite the app ID before normalization, and;
-    // (b) canonize BUT NOT REWRITE the group ID while iterating (validation has special rules re: number of set fields)
-
-    // convert apps to canonical form here
-    val apps = update.apps.map(_.map { a =>
-      a.copy(id = a.id.toPath.canonicalPath(basePath).toString).normalize
-    })
-
-    val groups = update.groups.map(_.map { g =>
-      // TODO: this "getOrElse" logic seems funny, but it's what nested group validation does;
-      // funny because all child groups that contain apps should probably specify an ID -- default to the parent's
-      // base seems wrong.
-      val groupBase = g.id.map(_.toPath.canonicalPath(basePath)).getOrElse(basePath)
-
-      // TODO: recursion without tailrec
-      normalizeApps(groupBase, g)
-    })
-
-    update.copy(apps = apps, groups = groups)
-  }
-
-  /**
     * Create a group.
     * If the path to the group does not exist, it gets created.
     * @param id is the identifier of the the group to update.
@@ -230,6 +203,8 @@ class GroupsResource @Inject() (
     body: Array[Byte],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
+    import mesosphere.marathon.core.async.ExecutionContexts.global
+
     assumeValid {
       val validatedId = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
@@ -245,7 +220,7 @@ class GroupsResource @Inject() (
       if (dryRun) {
         val newVersion = Timestamp.now()
         val originalGroup = groupManager.rootGroup()
-        val updatedGroup = applyGroupUpdate(originalGroup, effectivePath, groupUpdate, newVersion)
+        val updatedGroup = result(groupsService.updateGroup(originalGroup, effectivePath, groupUpdate, newVersion))
 
         ok(
           Json.obj(
@@ -301,55 +276,17 @@ class GroupsResource @Inject() (
     deploymentResult(deployment)
   }
 
-  private def applyGroupUpdate(
-    rootGroup: RootGroup,
-    groupId: PathId,
-    groupUpdate: raml.GroupUpdate,
-    newVersion: Timestamp)(implicit identity: Identity): RootGroup = {
-    val group = rootGroup.group(groupId).getOrElse(Group.empty(groupId))
-
-    /**
-      * roll back to a previous group version
-      */
-    def versionChange: Option[RootGroup] = groupUpdate.version.map { version =>
-      val targetVersion = Timestamp(version)
-      checkAuthorization(UpdateGroup, group)
-      val versionedGroup = result(groupManager.group(group.id, targetVersion))
-        .map(checkAuthorization(ViewGroup, _))
-      rootGroup.putGroup(versionedGroup.getOrElse(
-        throw new IllegalArgumentException(s"Group $group.id not available in version $targetVersion")
-      ), newVersion)
-    }
-
-    def scaleChange: Option[RootGroup] = groupUpdate.scaleBy.map { scale =>
-      checkAuthorization(UpdateGroup, group)
-      rootGroup.updateTransitiveApps(group.id, app => app.copy(instances = (app.instances * scale).ceil.toInt), newVersion)
-    }
-
-    def createOrUpdateChange: RootGroup = {
-      // groupManager.update always passes a group, even if it doesn't exist
-      val maybeExistingGroup = groupManager.group(group.id)
-      val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-      val updatedGroup: Group = Raml.fromRaml(
-        GroupConversion(groupUpdate, group, newVersion) -> appConversionFunc)
-
-      maybeExistingGroup.fold(checkAuthorization(CreateRunSpec, updatedGroup))(checkAuthorization(UpdateGroup, _))
-
-      rootGroup.putGroup(updatedGroup, newVersion)
-    }
-
-    versionChange.orElse(scaleChange).getOrElse(createOrUpdateChange)
-  }
-
   private def updateOrCreate(
     id: PathId,
     update: raml.GroupUpdate,
     force: Boolean)(implicit identity: Identity): (DeploymentPlan, PathId) = {
     val version = Timestamp.now()
 
+    import mesosphere.marathon.core.async.ExecutionContexts.global
+
     val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
     val deployment = result(groupManager.updateRoot(
-      id.parent, applyGroupUpdate(_, effectivePath, update, version), version, force))
+      id.parent, group => result(groupsService.updateGroup(group, effectivePath, update, version)), version, force))
     (deployment, effectivePath)
   }
 
@@ -365,5 +302,33 @@ object GroupsResource {
 
   private def authzSelector(implicit authz: Authorizer, identity: Identity) = Selector[Group] { g =>
     authz.isAuthorized(identity, ViewGroup, g)
+  }
+
+  import Normalization._
+
+  /**
+    * performs basic app validation and normalization for all apps (transitively) for the given group-update.
+    */
+  def normalizeApps(basePath: PathId, update: raml.GroupUpdate)(implicit normalization: Normalization[mesosphere.marathon.raml.App]): raml.GroupUpdate = {
+    // note: we take special care to:
+    // (a) canonize and rewrite the app ID before normalization, and;
+    // (b) canonize BUT NOT REWRITE the group ID while iterating (validation has special rules re: number of set fields)
+
+    // convert apps to canonical form here
+    val apps = update.apps.map(_.map { a =>
+      a.copy(id = a.id.toPath.canonicalPath(basePath).toString).normalize
+    })
+
+    val groups = update.groups.map(_.map { g =>
+      // TODO: this "getOrElse" logic seems funny, but it's what nested group validation does;
+      // funny because all child groups that contain apps should probably specify an ID -- default to the parent's
+      // base seems wrong.
+      val groupBase = g.id.map(_.toPath.canonicalPath(basePath)).getOrElse(basePath)
+
+      // TODO: recursion without tailrec
+      normalizeApps(groupBase, g)
+    })
+
+    update.copy(apps = apps, groups = groups)
   }
 }

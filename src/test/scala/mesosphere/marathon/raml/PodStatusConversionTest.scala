@@ -3,11 +3,9 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
@@ -30,7 +28,7 @@ class PodStatusConversionTest extends UnitTest {
           .build()
       }(collection.breakOut)
 
-      val tasksWithNetworks: Seq[Task] = Seq(
+      val tasksWithNetworks: Seq[core.task.Task] = Seq(
         fakeTask(fakeContainerNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8"))),
         fakeTask(fakeContainerNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8")))
       )
@@ -51,7 +49,7 @@ class PodStatusConversionTest extends UnitTest {
           .build()
       }(collection.breakOut)
 
-      val tasksWithNetworks: Seq[Task] = Seq(
+      val tasksWithNetworks: Seq[core.task.Task] = Seq(
         fakeTask(fakeHostNetworks(Seq("1.2.3.4", "5.6.7.8"))),
         fakeTask(fakeHostNetworks(Seq("1.2.3.4", "5.6.7.8")))
       )
@@ -415,40 +413,40 @@ object PodStatusConversionTest {
 
   case class InstanceFixture(
     since: Timestamp,
-    agentInfo: Instance.AgentInfo,
-    taskIds: Seq[Task.Id],
-    instance: Instance)
+    agentInfo: core.instance.Instance.AgentInfo,
+    taskIds: Seq[core.task.Task.Id],
+    instance: core.instance.Instance)
 
   def createdInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
-    fakeInstance(pod, Condition.Created, Condition.Created)
+    fakeInstance(pod, core.condition.Condition.Created, core.condition.Condition.Created)
 
   def stagingInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
-    fakeInstance(pod, Condition.Staging, Condition.Staging, Some(Protos.TaskState.TASK_STAGING))
+    fakeInstance(pod, core.condition.Condition.Staging, core.condition.Condition.Staging, Some(Protos.TaskState.TASK_STAGING))
 
   def startingInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
-    fakeInstance(pod, Condition.Starting, Condition.Starting, Some(Protos.TaskState.TASK_STARTING),
+    fakeInstance(pod, core.condition.Condition.Starting, core.condition.Condition.Starting, Some(Protos.TaskState.TASK_STARTING),
       Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")))
 
   def runningInstance(
     pod: PodDefinition,
     maybeHealthy: Option[Boolean] = None)(implicit clock: SettableClock): InstanceFixture =
 
-    fakeInstance(pod, Condition.Running, Condition.Running, Some(Protos.TaskState.TASK_RUNNING),
+    fakeInstance(pod, core.condition.Condition.Running, core.condition.Condition.Running, Some(Protos.TaskState.TASK_RUNNING),
       Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")), maybeHealthy)
 
   def fakeInstance(
     pod: PodDefinition,
-    condition: Condition,
-    taskStatus: Condition,
+    condition: core.condition.Condition,
+    taskStatus: core.condition.Condition,
     maybeTaskState: Option[Protos.TaskState] = None,
     maybeNetworks: Option[Map[String, String]] = None,
     maybeHealthy: Option[Boolean] = None)(implicit clock: SettableClock): InstanceFixture = {
 
     val since = clock.now()
-    val agentInfo = Instance.AgentInfo("agent1", Some("agentId1"), None, None, Seq.empty)
-    val instanceId = Instance.Id.forRunSpec(pod.id)
+    val agentInfo = core.instance.Instance.AgentInfo("agent1", Some("agentId1"), None, None, Seq.empty)
+    val instanceId = core.instance.Instance.Id.forRunSpec(pod.id)
     val taskIds = pod.containers.map { container =>
-      Task.Id.forInstanceId(instanceId, Some(container))
+      core.task.Task.Id.forInstanceId(instanceId, Some(container))
     }
 
     val mesosStatus = maybeTaskState.map { taskState =>
@@ -471,21 +469,21 @@ object PodStatusConversionTest {
       statusProto.build()
     }
 
-    val instance: Instance = Instance(
+    val instance: core.instance.Instance = core.instance.Instance(
       instanceId = instanceId,
       agentInfo = agentInfo,
-      state = Instance.InstanceState(
+      state = core.instance.Instance.InstanceState(
         condition = condition,
         since = since,
-        activeSince = if (condition == Condition.Created) None else Some(since),
+        activeSince = if (condition == core.condition.Condition.Created) None else Some(since),
         healthy = None),
-      tasksMap = Seq[Task](
-        Task.LaunchedEphemeral(
+      tasksMap = Seq[core.task.Task](
+        core.task.Task.LaunchedEphemeral(
           taskIds.head,
           since,
-          Task.Status(
+          core.task.Task.Status(
             stagedAt = since,
-            startedAt = if (taskStatus == Condition.Created) None else Some(since),
+            startedAt = if (taskStatus == core.condition.Condition.Created) None else Some(since),
             mesosStatus = mesosStatus,
             condition = taskStatus,
             networkInfo = NetworkInfoPlaceholder(hostPorts = Seq(1001))
@@ -500,10 +498,10 @@ object PodStatusConversionTest {
   } // fakeInstance
 
   def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
-    val taskId = Task.Id.forRunSpec(PathId.empty)
-    Task.LaunchedEphemeral(
+    val taskId = core.task.Task.Id.forRunSpec(PathId.empty)
+    core.task.Task.LaunchedEphemeral(
       taskId = taskId,
-      status = Task.Status(
+      status = core.task.Task.Status(
         stagedAt = Timestamp.zero,
         mesosStatus = Some(Protos.TaskStatus.newBuilder()
           .setTaskId(taskId.mesosTaskId)
@@ -511,7 +509,7 @@ object PodStatusConversionTest {
           .setContainerStatus(Protos.ContainerStatus.newBuilder()
             .addAllNetworkInfos(networks.asJava).build())
           .build()),
-        condition = Condition.Finished,
+        condition = core.condition.Condition.Finished,
         networkInfo = NetworkInfoPlaceholder()
       ),
       runSpecVersion = Timestamp.zero)
