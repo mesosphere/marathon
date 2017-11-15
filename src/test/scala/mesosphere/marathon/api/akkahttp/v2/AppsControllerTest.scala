@@ -53,14 +53,11 @@ import scala.language.postfixOps
 import scala.util.Try
 import scala.util.control.NonFatal
 
-class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest {
+class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest with RouteBehaviours {
 
   case class Fixture(
       clock: SettableClock = new SettableClock(),
-      auth: TestAuthFixture = new TestAuthFixture {
-        override val UnauthorizedStatus = 403
-        override val NotAuthenticatedStatus = 401
-      },
+      auth: TestAuthFixture = new TestAuthFixture(),
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       appInfoService: AppInfoService = mock[AppInfoService],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
@@ -165,10 +162,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
   case class FixtureWithRealGroupManager(
       initialRoot: RootGroup = RootGroup.empty,
       clock: SettableClock = new SettableClock(),
-      auth: TestAuthFixture = new TestAuthFixture {
-        override val UnauthorizedStatus = 403
-        override val NotAuthenticatedStatus = 401
-      },
+      auth: TestAuthFixture = new TestAuthFixture(),
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       appInfoService: AppInfoService = mock[AppInfoService],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
@@ -1816,7 +1810,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val appDef = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
       val rootGroup = createRootGroup(Map(appDef.id -> appDef))
       val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.updateApp(equalTo(appDef.id), any, any, any, any) returns Future.successful(plan)
       groupManager.rootGroup() returns rootGroup
 
       val body =
@@ -1835,7 +1829,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Put(Uri./.withPath(Path(appDef.id.toString)), entity) ~> route ~> check {
         Then("The return code indicates success")
         status shouldEqual StatusCodes.OK
-        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+        header[Headers.`Marathon-Deployment-Id`].map(_.planId) shouldEqual Some(plan.id)
       }
     }
 
@@ -1986,7 +1980,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       search(cmd = Some(""), id = Some(""), label = Some("")) should be(Set(app1, app2))
     }
 
-    "access without authentication is denied" in new Fixture() {
+    new Fixture() {
       Given("An unauthenticated request")
       auth.authenticated = false
       val app = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
@@ -1994,49 +1988,28 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       groupManager.rootGroup() returns createRootGroup()
 
       When("we try to fetch the list of apps")
-      Get(Uri./, HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthenticated response")
-        status shouldEqual StatusCodes.Unauthorized
-      }
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Get(Uri./, HttpEntity.Empty))
 
       When("we try to add an app")
-      Post(Uri./, entity) ~> route ~> check {
-        Then("we receive a NotAuthenticated response")
-        status shouldEqual StatusCodes.Unauthorized
-      }
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Post(Uri./, entity))
 
       When("we try to fetch an app")
-      Get(Uri./.withPath(Path("someAppId")), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthenticated response")
-        status shouldEqual StatusCodes.Unauthorized
-      }
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Get(Uri./.withPath(Path("someAppId")), HttpEntity.Empty))
 
       When("we try to update an app")
-      Put(Uri./.withPath(Path("someAppId")), entity) ~> route ~> check {
-        Then("we receive a NotAuthenticated response")
-        status shouldEqual StatusCodes.Unauthorized
-      }
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Put(Uri./.withPath(Path("someAppId")), entity))
 
       When("we try to update multiple apps")
-      Put(Uri./, entity) ~> route ~> check {
-        Then("we receive a NotAuthenticated response")
-        status shouldEqual StatusCodes.Unauthorized
-      }
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Put(Uri./, entity))
 
       When("we try to delete an app")
-      Delete(Uri./.withPath(Path("someAppId")), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthenticated response")
-        status shouldEqual StatusCodes.Unauthorized
-      }
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Delete(Uri./.withPath(Path("someAppId")), HttpEntity.Empty))
 
       When("we try to restart an app")
-      Post(Uri./.withPath(Path("someAppId") / "restart"), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthenticated response")
-        status shouldEqual StatusCodes.Unauthorized
-      }
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Post(Uri./.withPath(Path("someAppId") / "restart"), HttpEntity.Empty))
     }
 
-    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath)))) {
+    new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath)))) {
       Given("A real Group Manager with one app")
       val appD = AppDefinition("/a".toRootPath)
       val rootGroup = initialRoot
@@ -2049,40 +2022,22 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val entity = HttpEntity(app.getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)
 
       When("we try to create an app")
-      Post(Uri./, entity) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Post(Uri./, entity))
 
       When("we try to fetch an app")
-      Get(Uri./.withPath(Path("/a")), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Get(Uri./.withPath(Path("/a")), HttpEntity.Empty))
 
       When("we try to update an app")
-      Put(Uri./.withPath(Path("/a")), entity) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Put(Uri./.withPath(Path("/a")), entity))
 
       When("we try to update multiple apps")
-      Put(Uri./, HttpEntity(s"[$app]".getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Put(Uri./, HttpEntity(s"[$app]".getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)))
 
       When("we try to remove an app")
-      Delete(Uri./.withPath(Path("/a")), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Delete(Uri./.withPath(Path("/a")), HttpEntity.Empty))
 
       When("we try to restart an app")
-      Post(Uri./.withPath(Path("/a") / "restart"), HttpEntity.Empty) ~> route ~> check {
-        Then("we receive a NotAuthorized response")
-        status shouldEqual StatusCodes.Forbidden
-      }
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Post(Uri./.withPath(Path("/a") / "restart"), HttpEntity.Empty))
     }
 
     "access with limited authorization gives a filtered apps listing" in new Fixture {
