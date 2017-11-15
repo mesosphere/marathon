@@ -116,4 +116,12 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
     }
   }
 
+  def normalized[T](value: T, normalizer: Normalization[T]): Directive1[T] = {
+    try {
+      provide(normalizer.normalized(value))
+    } catch {
+      case e: NormalizationException => complete((StatusCodes.UnprocessableEntity, e.msg))
+    }
+  }
+
 }

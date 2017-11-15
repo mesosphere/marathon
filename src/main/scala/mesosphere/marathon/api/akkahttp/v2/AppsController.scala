@@ -69,8 +69,6 @@ class AppsController(
   import EntityMarshallers._
   import mesosphere.marathon.api.v2.json.Formats._
 
-  private val forceParameter = parameter('force.as[Boolean].?(false))
-
   private def listApps(implicit identity: Identity): Route = {
     parameters('cmd.?, 'id.?, 'label.?, 'embed.*) { (cmd, id, label, embed) =>
       def index: Future[Seq[AppInfo]] = {
@@ -128,9 +126,10 @@ class AppsController(
             plan -> appWithDeployments
           }
         }
-        onSuccess(create) { (plan, createdApp) =>
-          eventBus.publish(ApiPostEvent(remoteAddr.toString, reqUri.toString, createdApp.app))
-          complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), createdApp))
+        onSuccessLegacy(Some(rawApp.id))(create).apply {
+          case (plan, createdApp) =>
+            eventBus.publish(ApiPostEvent(remoteAddr.toString, reqUri.toString, createdApp.app))
+            complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), createdApp))
         }
       }
     }
@@ -216,6 +215,8 @@ class AppsController(
       )
     case Failure(RejectionError(rejection)) =>
       reject(rejection)
+    case Failure(ConflictingChangeException(msg)) =>
+      reject(Rejections.ConflictingChange(Message(msg)))
     case Failure(ex) =>
       throw ex
   }

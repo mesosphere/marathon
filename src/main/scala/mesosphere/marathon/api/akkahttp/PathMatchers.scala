@@ -45,6 +45,10 @@ object PathMatchers {
   }
 
   /**
+    * Matches and extracts the force parameter.
+    */
+  val forceParameter = parameter('force.as[Boolean].?(false))
+  /**
     * Matches everything what's coming before api keywords as PathId
     */
   case object AppPathIdLike extends PathMatcher1[PathId] {
