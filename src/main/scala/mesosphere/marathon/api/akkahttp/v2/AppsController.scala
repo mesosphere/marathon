@@ -73,8 +73,6 @@ class AppsController(
 
   import mesosphere.marathon.api.v2.json.Formats._
 
-  private val forceParameter = parameter('force.as[Boolean].?(false))
-
   private def listApps(implicit identity: Identity): Route = {
     parameters('cmd.?, 'id.?, 'label.?, 'embed.*) { (cmd, id, label, embed) =>
       def index: Future[Seq[AppInfo]] = {

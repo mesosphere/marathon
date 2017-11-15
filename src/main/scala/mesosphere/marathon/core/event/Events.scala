@@ -266,8 +266,3 @@ case class MesosFrameworkMessageEvent(
   message: Array[Byte],
   eventType: String = "framework_message_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
-
-object Events {
-  def maybePost(event: MarathonEvent)(implicit eventBus: EventStream): Unit =
-    eventBus.publish(event)
-}
