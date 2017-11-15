@@ -69,7 +69,7 @@ class PodsController(
                 val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
                 assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
                   authorized(CreateRunSpec, pod).apply {
-                    val p = async {
+                    val planF = async {
                       val deployment = await(podManager.create(pod, force))
 
                       // TODO: How should we get the ip?
@@ -78,7 +78,7 @@ class PodsController(
 
                       deployment
                     }
-                    onSuccess(p) { plan =>
+                    onSuccess(planF) { plan =>
                       val ramlPod = PodConversion.podRamlWriter.write(pod)
                       val responseHeaders = Seq(
                         Location(Uri(pod.id.toString)),
