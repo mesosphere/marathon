@@ -15,8 +15,8 @@ import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.api.akkahttp.AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
-import mesosphere.marathon.api.akkahttp.PathMatchers.{ ExistingRunSpecId, Version, RemainingTaskId, AppPathIdLike }
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
+import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, ExistingRunSpecId, RemainingTaskId, Version }
+import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -36,6 +36,7 @@ import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, Single
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
+import PathMatchers.forceParameter
 
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
