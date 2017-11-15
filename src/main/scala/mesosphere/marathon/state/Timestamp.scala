@@ -2,7 +2,7 @@ package mesosphere.marathon
 package state
 
 import java.time.format.DateTimeFormatter
-import java.time._
+import java.time.{ OffsetDateTime, Instant, ZoneOffset, Duration }
 import java.util.concurrent.TimeUnit
 
 import org.apache.mesos
