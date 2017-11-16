@@ -92,32 +92,29 @@ class TasksController(
   }
 
   private def deleteTasks()(implicit identity: Identity): Route = {
+    import AppsDirectives._
+
     (entity(as[TasksToDelete])
       & parameter('force.as[Boolean].?(false))
-      & parameter('scale.as[Boolean].?(false))
-      & parameter('wipe.as[Boolean].?(false))) { (taskIds, force, scale, wipe) =>
-        if (scale && wipe) {
-          reject(MalformedQueryParamRejection("scale, wipe", "You cannot use scale and wipe at the same time."))
-        } else {
-          tryParseTaskIds(taskIds) match {
-            case Left(rejection) => reject(rejection)
-            case Right(instanceIdsToAppId) =>
-              if (!isAuthorized(instanceIdsToAppId.values)) {
-                reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-              } else {
-                val tasksByAppId: Future[Map[PathId, Seq[Instance]]] = getTasksByAppId(instanceIdsToAppId)
+      & extractTaskKillingMode) { (taskIds, force, taskKillingMode) =>
+        tryParseTaskIds(taskIds) match {
+          case Left(rejection) => reject(rejection)
+          case Right(instanceIdsToAppId) =>
+            if (!isAuthorized(instanceIdsToAppId.values)) {
+              reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+            } else {
+              val tasksByAppId: Future[Map[PathId, Seq[Instance]]] = getTasksByAppId(instanceIdsToAppId)
 
-                if (scale) {
-                  onSuccess(killAndScale(tasksByAppId, force)) { deploymentResult =>
-                    complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
-                  }
-                } else {
-                  onSuccess(kill(tasksByAppId, instanceIdsToAppId, wipe)) { tasks =>
-                    complete(TasksList(tasks).toRaml)
-                  }
+              if (taskKillingMode == TaskKillingMode.Scale) {
+                onSuccess(killAndScale(tasksByAppId, force)) { deploymentResult =>
+                  complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
+                }
+              } else {
+                onSuccess(kill(tasksByAppId, instanceIdsToAppId, taskKillingMode == TaskKillingMode.Wipe)) { tasks =>
+                  complete(TasksList(tasks).toRaml)
                 }
               }
-          }
+            }
         }
       }
   }
