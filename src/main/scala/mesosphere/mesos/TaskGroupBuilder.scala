@@ -24,7 +24,7 @@ object TaskGroupBuilder extends StrictLogging {
   // let's (for now) set these values to reflect that.
   protected[mesos] val LinuxAmd64 = Map("os" -> "linux", "arch" -> "amd64")
 
-  private val ephemeralVolPathPrefix = "volumes/"
+  private val volumePathPrefix = "volumes/"
 
   case class BuilderConfig(
       acceptedResourceRoles: Set[String],
@@ -50,6 +50,7 @@ object TaskGroupBuilder extends StrictLogging {
       podDefinition,
       resourceMatch.portsMatch,
       mesosNetworks,
+      volumeMatchOption,
       instanceId,
       offer.getFrameworkId)
 
@@ -70,7 +71,6 @@ object TaskGroupBuilder extends StrictLogging {
           val task = computeTaskInfo(container, podDefinition, offer, instanceId, taskId,
             resourceMatch.hostPorts, config, portAssignments)
             .setDiscovery(taskDiscovery(podDefinition, endpoints))
-          volumeMatchOption.foreach(_.persistentVolumeResources.foreach(task.addResources))
           task.build
       }.asJava
     }
@@ -193,6 +193,7 @@ object TaskGroupBuilder extends StrictLogging {
     podDefinition: PodDefinition,
     portsMatch: PortsMatch,
     mesosNetworks: Seq[mesos.NetworkInfo],
+    volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
     instanceId: Instance.Id,
     frameworkId: mesos.FrameworkID): mesos.ExecutorInfo.Builder = {
     val executorID = mesos.ExecutorID.newBuilder.setValue(instanceId.executorIdString)
@@ -218,18 +219,19 @@ object TaskGroupBuilder extends StrictLogging {
         // see the related code in computeContainerInfo
         case e: EphemeralVolume =>
           mesos.Volume.newBuilder()
-            .setContainerPath(ephemeralVolPathPrefix + e.name.getOrElse(""))
+            .setContainerPath(volumePathPrefix + e.name.getOrElse(""))
             .setMode(mesos.Volume.Mode.RW) // if not RW, then how do containers plan to share anything?
             .setSource(mesos.Volume.Source.newBuilder()
               .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
               .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
                 .setType(mesos.Volume.Source.SandboxPath.Type.SELF)
-                .setPath(ephemeralVolPathPrefix + e.name.getOrElse("")) // matches the path in computeContainerInfo
+                .setPath(volumePathPrefix + e.name.getOrElse("")) // matches the path in computeContainerInfo
               ))
       }.foreach {
         volume => containerInfo.addVolumes(volume)
       }
 
+      volumeMatchOption.foreach(_.persistentVolumeResources.foreach(executorInfo.addResources))
       executorInfo.setContainer(containerInfo)
     }
 
@@ -344,12 +346,22 @@ object TaskGroupBuilder extends StrictLogging {
               .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
               .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
                 .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
-                .setPath(ephemeralVolPathPrefix + volumeMount.volumeName.getOrElse(""))
+                .setPath(volumePathPrefix + volumeName)
               ))
 
           containerInfo.addVolumes(volume)
 
-        case _: PersistentVolume => // Handled when adding persistent volume resources
+        case _: PersistentVolume =>
+          val volume = mesos.Volume.newBuilder()
+            .setMode(mode)
+            .setContainerPath(volumeMount.mountPath)
+            .setSource(mesos.Volume.Source.newBuilder()
+              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
+              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
+                .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
+                .setPath(volumeName)))
+
+          containerInfo.addVolumes(volume)
 
         case _: SecretVolume => // Is handled in the plugins
       }

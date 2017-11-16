@@ -41,13 +41,15 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     "LaunchOnReservation for an unknown task" in new Fixture {
       instanceTracker.instance(notExistingInstanceId) returns Future.successful(None)
+      val taskId = Task.Id.forResidentTask(Task.Id.forRunSpec(notExistingInstanceId.runSpecId))
       val stateChange = updateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
         instanceId = notExistingInstanceId,
-        newTaskId = Task.Id.forResidentTask(Task.Id.forRunSpec(notExistingInstanceId.runSpecId)),
+        newTaskIds = Seq(taskId),
         runSpecVersion = Timestamp(0),
         timestamp = Timestamp(0),
-        status = Task.Status(Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder()),
-        hostPorts = Seq.empty,
+        statuses = Map(taskId -> Task.Status(
+          Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder())),
+        hostPorts = Map.empty,
         agentInfo = AgentInfoPlaceholder())).futureValue
 
       When("call taskTracker.task")

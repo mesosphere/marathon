@@ -6,6 +6,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Features
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -157,12 +158,13 @@ object ResourceMatcher extends StrictLogging {
           (volumes, mounts)
         }
       diskResourceMatch(
+        runSpec,
         runSpec.resources.disk,
         namedVolumes,
         namedMounts,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     } else {
-      diskResourceMatch(runSpec.resources.disk, Nil, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      diskResourceMatch(runSpec, runSpec.resources.disk, Nil, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
     }
 
     val scalarMatchResults = (
@@ -322,6 +324,7 @@ object ResourceMatcher extends StrictLogging {
     */
   private[this] def matchDiskResource(
     groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
+    runSpec: RunSpec,
     scratchDisk: Double,
     volumes: Seq[PersistentVolume],
     volumeMounts: Seq[VolumeMount],
@@ -358,7 +361,13 @@ object ResourceMatcher extends StrictLogging {
 
                   volumeMounts.find(_.volumeName == volume.name)
                 }
-                DiskResourceMatch.Consumption(c, source, volume, mount)
+                val (volumeToPass, mountToPass) = runSpec match {
+                  case _: AppDefinition =>
+                    (volume.map(_.copy(name = None)), mount.map(_.copy(volumeName = None)))
+                  case _: PodDefinition =>
+                    (volume, mount)
+                }
+                DiskResourceMatch.Consumption(c, source, volumeToPass, mountToPass)
               }
 
               findMatches(

@@ -84,28 +84,36 @@ object InstanceUpdater extends StrictLogging {
 
   private[marathon] def launchOnReservation(instance: Instance, op: LaunchOnReservation): InstanceUpdateEffect = {
     if (instance.isReserved) {
-      require(instance.tasksMap.size == 1, "Residency is not yet implemented for task groups")
+      val currentTasks = instance.tasksMap
+      val taskEffects = currentTasks.values.zip(op.newTaskIds).map {
+        case (task, newTaskId) =>
+          task.update(TaskUpdateOperation.LaunchOnReservation(
+            newTaskId, op.runSpecVersion, op.statuses.getOrElse(newTaskId, throw new Exception("reached"))))
+      }
 
-      // TODO(PODS): make this work for taskGroups
-      val currentTask: Task = instance.appTask
-      val taskEffect = currentTask.update(TaskUpdateOperation.LaunchOnReservation(op.newTaskId, op.runSpecVersion, op.status))
-      taskEffect match {
-        case TaskUpdateEffect.Update(updatedTask) =>
-          val updated = instance.copy(
-            state = instance.state.copy(
-              condition = Condition.Staging,
-              since = op.timestamp
-            ),
-            tasksMap = Map(updatedTask.taskId -> updatedTask),
-            runSpecVersion = op.runSpecVersion,
-            // The AgentInfo might have changed if the agent re-registered with a new ID after a reboot
-            agentInfo = op.agentInfo
-          )
-          val events = eventsGenerator.events(updated, task = None, op.timestamp, previousCondition = Some(instance.state.condition))
-          InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
+      val nonUpdates = taskEffects.filter {
+        case _: TaskUpdateEffect.Update => false
+        case _ => true
+      }
 
-        case _ =>
-          InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffect $taskEffect")
+      val allUpdates = nonUpdates.isEmpty
+      if (allUpdates) {
+        val updatedTasks = taskEffects.collect { case TaskUpdateEffect.Update(updatedTask) => updatedTask }
+        val updated = instance.copy(
+          state = instance.state.copy(
+            condition = Condition.Staging,
+            since = op.timestamp
+          ),
+          tasksMap = updatedTasks.map(task => task.taskId -> task)(collection.breakOut),
+          runSpecVersion = op.runSpecVersion,
+          // The AgentInfo might have changed if the agent re-registered with a new ID after a reboot
+          agentInfo = op.agentInfo
+        )
+        val events = eventsGenerator.events(updated, task = None, op.timestamp,
+          previousCondition = Some(instance.state.condition))
+        InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
+      } else {
+        InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffects $nonUpdates")
       }
     } else {
       InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")

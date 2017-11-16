@@ -81,9 +81,10 @@ class OfferOperationFactory(
           val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)
           principalOpt.foreach(persistence.setPrincipal)
 
+          val name = vol.persistentVolume.name.getOrElse(vol.mount.mountPath)
           val mode = if (vol.mount.readOnly) Mesos.Volume.Mode.RO else Mesos.Volume.Mode.RW
           val volume = Mesos.Volume.newBuilder()
-            .setContainerPath(vol.mount.mountPath)
+            .setContainerPath(name)
             .setMode(mode)
 
           val builder = Mesos.Resource.DiskInfo.newBuilder()

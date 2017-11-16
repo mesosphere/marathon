@@ -39,10 +39,10 @@ object InstanceUpdateOperation {
 
   /**
     * @param instanceId Designating the instance that shall be launched.
-    * @param newTaskId The id of the task that will be launched via Mesos
+    * @param newTaskIds The IDs of the tasks that will be launched via Mesos
     * @param runSpecVersion The runSpec version
     * @param timestamp time
-    * @param status
+    * @param statuses the tasks' statuses
     * @param hostPorts the assigned hostPorts
     * @param agentInfo The (possibly updated) AgentInfo based on the offer that was used to launch this task, needed to
     *                  keep an Instance's agentInfo updated when re-launching resident tasks. Until Mesos 1.4.0, an
@@ -51,13 +51,13 @@ object InstanceUpdateOperation {
     *                  context of unique hostname constraints).
     */
   case class LaunchOnReservation(
-      instanceId: Instance.Id,
-      newTaskId: Task.Id,
-      runSpecVersion: Timestamp,
-      timestamp: Timestamp,
-      status: Task.Status, // TODO(PODS): the taskStatus must be created for each task and not passed in here
-      hostPorts: Seq[Int],
-      agentInfo: AgentInfo) extends InstanceUpdateOperation
+    instanceId: Instance.Id,
+    newTaskIds: Seq[Task.Id],
+    runSpecVersion: Timestamp,
+    timestamp: Timestamp,
+    statuses: Map[Task.Id, Task.Status],
+    hostPorts: Map[Task.Id, Seq[Int]],
+    agentInfo: AgentInfo) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.

@@ -57,7 +57,7 @@ class InstanceOpFactoryImpl(
         }
       case pod: PodDefinition =>
         if (request.isForResidentRunSpec) {
-          throw new NotImplementedError("no support for pod residency")
+          inferForResidents(pod, request)
         } else {
           inferPodInstanceOp(pod, request)
         }
@@ -221,45 +221,81 @@ class InstanceOpFactoryImpl(
     resourceMatch: ResourceMatcher.ResourceMatch,
     volumeMatch: PersistentVolumeMatcher.VolumeMatch): InstanceOp = {
 
-    val currentTaskId = reservedInstance.appTask.taskId
-
-    // The new taskId is based on the previous one. The previous taskId can denote either
-    // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
-    //    perfectly normal taskIds.
-    // 2. a task that was created to hold a reservation in 1.5 or later, this still is a completely normal taskId.
-    // 3. an existing reservation from a previous version of Marathon, or a new reservation created in 1.5 or later. In
-    //    this case, this is also a normal taskId
-    // 4. a resident task that was created with 1.5 or later. In this case, the taskId has an appended launch attempt,
-    //    a number prefixed with a separator.
-    // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
-    // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
-    // in version 1.5.
-    val newTaskId = Task.Id.forResidentTask(currentTaskId)
-
     // The agentInfo could have possibly changed after a reboot. See the docs for
     // InstanceUpdateOperation.LaunchOnReservation for more details
     val agentInfo = Instance.AgentInfo(offer)
 
     spec match {
       case app: AppDefinition =>
+        val currentTaskId = reservedInstance.appTask.taskId
+
+        // The new taskId is based on the previous one. The previous taskId can denote either
+        // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
+        //    perfectly normal taskIds.
+        // 2. a task that was created to hold a reservation in 1.5 or later, this still is a completely normal taskId.
+        // 3. an existing reservation from a previous version of Marathon, or a new reservation created in 1.5 or later. In
+        //    this case, this is also a normal taskId
+        // 4. a resident task that was created with 1.5 or later. In this case, the taskId has an appended launch attempt,
+        //    a number prefixed with a separator.
+        // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
+        // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
+        // in version 1.5.
+        val newTaskId = Task.Id.forResidentTask(currentTaskId)
+
         val (taskInfo, networkInfo) =
           new TaskBuilder(app, newTaskId, config, runSpecTaskProc)
             .build(offer, resourceMatch, Some(volumeMatch))
 
+        val now = clock.now()
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
           reservedInstance.instanceId,
-          newTaskId,
+          Seq(newTaskId),
           runSpecVersion = spec.version,
-          timestamp = clock.now(),
-          status = Task.Status(
-            stagedAt = clock.now(),
+          timestamp = now,
+          statuses = Map(newTaskId -> Task.Status(
+            stagedAt = now,
             condition = Condition.Created,
-            networkInfo = networkInfo
-          ),
-          networkInfo.hostPorts,
+            networkInfo = networkInfo)),
+          Map(newTaskId -> networkInfo.hostPorts),
           agentInfo)
 
         taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
+
+      case pod: PodDefinition =>
+        val builderConfig = TaskGroupBuilder.BuilderConfig(
+          config.defaultAcceptedResourceRolesSet,
+          config.envVarsPrefix.get,
+          config.mesosBridgeName())
+
+        val instanceId = Instance.Id.forRunSpec(pod.id)
+        val currentTaskIds = Seq(reservedInstance.tasksMap.keys.toSeq: _*)
+        val newTaskIds = currentTaskIds.map(Task.Id.forResidentTask)
+
+        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
+          instanceId, newTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
+
+        val networkInfos = podTaskNetworkInfos(pod, agentInfo, newTaskIds, hostPorts)
+        val now = clock.now()
+        val statuses = networkInfos.map {
+          case (taskId, networkInfo) =>
+            taskId -> Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
+        }
+        val taskHostPorts = networkInfos.map {
+          case (taskId, networkInfo) =>
+            taskId -> networkInfo.hostPorts
+        }
+
+        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
+          instanceId = reservedInstance.instanceId,
+          newTaskIds = newTaskIds,
+          runSpecVersion = pod.version,
+          timestamp = now,
+          statuses = statuses,
+          hostPorts = taskHostPorts,
+          agentInfo = agentInfo
+        )
+
+        taskOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
     }
   }
 
@@ -331,12 +367,12 @@ class InstanceOpFactoryImpl(
 
 object InstanceOpFactoryImpl {
 
-  protected[impl] def ephemeralPodInstance(
+  protected[impl] def podTaskNetworkInfos(
     pod: PodDefinition,
     agentInfo: Instance.AgentInfo,
     taskIDs: Seq[Task.Id],
-    hostPorts: Seq[Option[Int]],
-    instanceId: Instance.Id)(implicit clock: Clock): Instance = {
+    hostPorts: Seq[Option[Int]]
+  ): Map[Task.Id, NetworkInfo] = {
 
     val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
       ct.endpoints.map { ep =>
@@ -350,11 +386,30 @@ object InstanceOpFactoryImpl {
 
     assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
 
-    val since = clock.now()
-
     val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
       case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
     }(collection.breakOut)
+
+    taskIDs.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
+
+      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+      taskId -> networkInfo
+    }(collection.breakOut)
+  }
+
+  protected[impl] def ephemeralPodInstance(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]],
+    instanceId: Instance.Id)(implicit clock: Clock): Instance = {
+
+    val since = clock.now()
+    val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIDs, hostPorts)
 
     Instance(
       instanceId,
@@ -362,11 +417,7 @@ object InstanceOpFactoryImpl {
       state = InstanceState(Condition.Created, since, activeSince = None, healthy = None),
       tasksMap = taskIDs.map { taskId =>
         // the task level host ports are needed for fine-grained status/reporting later on
-        val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
-          allocPortsByCTName.withFilter{ case (name, port) => name == ctName }.map(_._2)
-        }.getOrElse(Seq.empty[Int])
-
-        val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+        val networkInfo = taskNetworkInfos.getOrElse(taskId, throw new Exception("should not have happened"))
         val task = Task.LaunchedEphemeral(
           taskId = taskId,
           runSpecVersion = pod.version,

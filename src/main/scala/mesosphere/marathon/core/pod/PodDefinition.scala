@@ -44,6 +44,16 @@ case class PodDefinition(
   val endpoints: Seq[Endpoint] = containers.flatMap(_.endpoints)
   val resources = aggregateResources()
 
+  override val volumeMounts: Seq[VolumeMount] = containers.flatMap(_.volumeMounts)
+
+  override val persistentVolumes: Seq[PersistentVolume] = volumes.collect { case pv: PersistentVolume => pv }
+
+  override val persistentVolumeMounts: Seq[VolumeMount] = volumeMounts.filter { mount =>
+    persistentVolumes.exists(_.name == mount.volumeName)
+  }
+
+  override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
     cpus = executorResources.cpus + containers.withFilter(filter).map(_.resources.cpus).sum,
     mem = executorResources.mem + containers.withFilter(filter).map(_.resources.mem).sum,

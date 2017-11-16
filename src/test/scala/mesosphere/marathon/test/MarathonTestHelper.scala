@@ -401,7 +401,7 @@ object MarathonTestHelper {
       .setDisk(Mesos.Resource.DiskInfo.newBuilder()
         .setPersistence(Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(id.idString))
         .setVolume(Mesos.Volume.newBuilder()
-          .setContainerPath(id.containerPath)
+          .setContainerPath(id.name)
           .setMode(Mesos.Volume.Mode.RW)))
       .build()
   }
