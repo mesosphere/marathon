@@ -670,11 +670,11 @@ class ResourceMatcherTest extends UnitTest with Inside {
           build()
 
       val persistentVolume = PersistentVolume(
-        name = Some("0"),
+        name = None,
         persistent = PersistentVolumeInfo(
           size = 1500,
           `type` = DiskType.Path))
-      val mount = VolumeMount(Some("0"), "/var/lib/data")
+      val mount = VolumeMount(None, "/var/lib/data")
       val volume = VolumeWithMount(persistentVolume, mount)
 
       val app = AppDefinition(
