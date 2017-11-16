@@ -4,14 +4,14 @@ package api.akkahttp.v2
 import java.time.Clock
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.{ Uri, StatusCodes }
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.{ Controller, Headers }
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, UpdateRunSpec }
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
 import mesosphere.marathon.api.v2.PodNormalization
@@ -85,7 +85,29 @@ class PodsController(
       }
     }
 
-  def update(podId: PathId): Route = ???
+  def update(podId: PathId): Route = {
+    authenticated.apply { implicit identity =>
+      (entity(as[raml.Pod]) & forceParameter & extractClientIP & extractUri) {
+        case (ramlPod, force, host, uri) =>
+          normalized(ramlPod, podNormalizer) { normalizedPodDef =>
+            val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
+            assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
+              authorized(UpdateRunSpec, pod).apply {
+                val deploymentPlan = async {
+                  val plan = await(podManager.update(pod, force))
+                  eventBus.publish(PodEvent(host.toString(), uri.toString(), PodEvent.Updated))
+                  plan
+                }
+                onSuccess(deploymentPlan) { plan =>
+                  val ramlPod = PodConversion.podRamlWriter.write(pod)
+                  complete((StatusCodes.OK, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
+                }
+              }
+            }
+          }
+      }
+    }
+  }
 
   def findAll(): Route = ???
 
