@@ -1987,25 +1987,12 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val entity = HttpEntity(app.getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)
       groupManager.rootGroup() returns createRootGroup()
 
-      When("we try to fetch the list of apps")
       behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Get(Uri./, HttpEntity.Empty))
-
-      When("we try to add an app")
       behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Post(Uri./, entity))
-
-      When("we try to fetch an app")
       behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Get(Uri./.withPath(Path("someAppId")), HttpEntity.Empty))
-
-      When("we try to update an app")
       behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Put(Uri./.withPath(Path("someAppId")), entity))
-
-      When("we try to update multiple apps")
       behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Put(Uri./, entity))
-
-      When("we try to delete an app")
       behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Delete(Uri./.withPath(Path("someAppId")), HttpEntity.Empty))
-
-      When("we try to restart an app")
       behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Post(Uri./.withPath(Path("someAppId") / "restart"), HttpEntity.Empty))
     }
 
@@ -2021,22 +2008,11 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val app = """{"id":"/a","cmd":"foo","ports":[]}"""
       val entity = HttpEntity(app.getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)
 
-      When("we try to create an app")
       behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Post(Uri./, entity))
-
-      When("we try to fetch an app")
       behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Get(Uri./.withPath(Path("/a")), HttpEntity.Empty))
-
-      When("we try to update an app")
       behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Put(Uri./.withPath(Path("/a")), entity))
-
-      When("we try to update multiple apps")
       behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Put(Uri./, HttpEntity(s"[$app]".getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)))
-
-      When("we try to remove an app")
       behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Delete(Uri./.withPath(Path("/a")), HttpEntity.Empty))
-
-      When("we try to restart an app")
       behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Post(Uri./.withPath(Path("/a") / "restart"), HttpEntity.Empty))
     }
 
