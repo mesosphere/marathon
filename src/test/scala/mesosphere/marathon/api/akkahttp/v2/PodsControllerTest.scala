@@ -92,31 +92,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    "handle normalization errors" in {
-      val f = Fixture()
-      val controller = f.controller()
-
-      val deploymentPlan = DeploymentPlan.empty
-      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
-
-      val podSpecJsonWithUnresolvableNetworkName =
-        """
-          | { "id": "/mypod", "networks": [ { "mode": "container" } ], "containers": [
-          |   { "name": "webapp",
-          |     "resources": { "cpus": 0.03, "mem": 64 },
-          |     "image": { "kind": "DOCKER", "id": "busybox" },
-          |     "exec": { "command": { "shell": "sleep 1" } } } ] }
-        """.stripMargin
-      val entity = HttpEntity(podSpecJsonWithUnresolvableNetworkName).withContentType(ContentTypes.`application/json`)
-      val request = Post(Uri./.withQuery(Query("force" -> "false")))
-        .withEntity(entity)
-        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
-
-      request ~> controller.route ~> check {
-        response.status should be(StatusCodes.UnprocessableEntity)
-      }
-    }
-
     "be able to create a simple single-container pod with bridge network" in {
       val f = Fixture(configArgs = Seq("--default_network_name", "blah"))
       val controller = f.controller()
