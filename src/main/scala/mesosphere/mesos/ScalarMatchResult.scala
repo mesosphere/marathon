@@ -132,7 +132,7 @@ case class DiskResourceMatch(
     }.toList.distinct
 
   override def toString: String = {
-    s"disk${scope.note} for type $diskType SATISFIED"
+    s"disk${scope.note} for type $diskType SATISFIED ($requiredValue)"
   }
 }
 

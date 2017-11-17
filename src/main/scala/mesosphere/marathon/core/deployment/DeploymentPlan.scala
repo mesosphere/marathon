@@ -173,8 +173,8 @@ case class DeploymentPlan(
       case ScaleApplication(spec, scale, toKill) =>
         val killTasksString =
           toKill.withFilter(_.nonEmpty).map(", killTasks=" + _.map(_.instanceId.idString).mkString(",")).getOrElse("")
-        s"Scale(${appString(spec)}, instances=$scale$killTasksString)"
-      case RestartApplication(app) => s"Restart(${appString(app)})"
+        s"Scale(${specString(spec)}, instances=$scale$killTasksString)"
+      case RestartApplication(app) => s"Restart(${specString(app)})"
     }
     val stepString =
       if (steps.nonEmpty) {

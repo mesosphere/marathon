@@ -137,12 +137,15 @@ object Task {
 
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
+    private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(taskId: String): PathId = {
       taskId match {
-        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceId, maybeContainer) => PathId.fromSafePath(runSpecId)
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          PathId.fromSafePath(runSpecId)
+        case TaskIdWithInstanceIdRegex(runSpecId, _, _, _) => PathId.fromSafePath(runSpecId)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) => PathId.fromSafePath(runSpecId)
         case LegacyTaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
@@ -151,6 +154,8 @@ object Task {
 
     def containerName(taskId: String): Option[String] = {
       taskId match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          if (container == Names.anonymousContainer) None else Some(container)
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, maybeContainer) =>
           if (maybeContainer == Names.anonymousContainer) None else Some(maybeContainer)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) => None
@@ -161,6 +166,7 @@ object Task {
 
     def attempt(taskId: String): Option[Long] = {
       taskId match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) => Some(attempt.toLong)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) => Some(attempt.toLong)
         case _ => None
       }
@@ -168,6 +174,8 @@ object Task {
 
     def reservationId(taskId: String): String = {
       taskId match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          runSpecId + "." + prefix + uuid
         case ResidentTaskIdRegex(runSpecId, separator, uuid, _, attempt) => runSpecId + separator + uuid
         case _ => taskId
       }
@@ -175,6 +183,8 @@ object Task {
 
     def instanceId(taskId: String): Instance.Id = {
       taskId match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          Instance.Id(runSpecId + "." + prefix + uuid)
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
           Instance.Id(runSpecId + "." + prefix + instanceUuid)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) =>
@@ -217,6 +227,10 @@ object Task {
       */
     def forResidentTask(taskId: Task.Id): Task.Id = {
       taskId.idString match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          val newAttempt = attempt.toLong + 1
+          val newIdString = s"$runSpecId.$prefix$uuid.$container.$newAttempt"
+          Task.Id(newIdString)
         case ResidentTaskIdRegex(runSpecId, separator1, uuid, separator2, attempt) =>
           val newAttempt = attempt.toLong + 1
           val newIdString = s"$runSpecId$separator1$uuid$separator2$newAttempt"
@@ -269,14 +283,14 @@ object Task {
 
     implicit val localVolumeIdReader = (
       (__ \ "runSpecId").read[PathId] and
-      (__ \ "name").read[String] and
+      (__ \ "containerPath").read[String] and
       (__ \ "uuid").read[String]
     )((id, path, uuid) => LocalVolumeId(id, path, uuid))
 
     implicit val localVolumeIdWriter = Writes[LocalVolumeId] { localVolumeId =>
       JsObject(Seq(
         "runSpecId" -> Json.toJson(localVolumeId.runSpecId),
-        "name" -> Json.toJson(localVolumeId.name),
+        "containerPath" -> Json.toJson(localVolumeId.name),
         "uuid" -> Json.toJson(localVolumeId.uuid),
         "persistenceId" -> Json.toJson(localVolumeId.idString)
       ))

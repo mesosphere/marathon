@@ -128,8 +128,6 @@ class InstanceOpFactoryImpl(
   private[this] def inferForResidents(spec: RunSpec, request: InstanceOpFactory.Request): OfferMatchResult = {
     val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches, localRegion) = request
 
-    // TODO(jdef) pods should be supported some day
-
     val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
     val needToReserve = request.numberOfWaitingReservations < additionalLaunches
 
@@ -267,7 +265,7 @@ class InstanceOpFactoryImpl(
           config.envVarsPrefix.get,
           config.mesosBridgeName())
 
-        val instanceId = Instance.Id.forRunSpec(pod.id)
+        val instanceId = reservedInstance.instanceId
         val currentTaskIds = Seq(reservedInstance.tasksMap.keys.toSeq: _*)
         val newTaskIds = currentTaskIds.map(Task.Id.forResidentTask)
 
@@ -310,6 +308,7 @@ class InstanceOpFactoryImpl(
         case (source, volume, mount) =>
           (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume, mount), volume, mount))
       }
+
     val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
@@ -318,40 +317,83 @@ class InstanceOpFactoryImpl(
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
     val agentInfo = Instance.AgentInfo(offer)
-    val hostPorts = resourceMatch.hostPorts.flatten
-    val networkInfo = NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
 
-    // The first taskId does not have an attempt count - this is only the task created to hold the reservation and it
-    // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
-    // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
-    // there was always a 1:1 correlation from reservation to taskId)
-    val taskId = Task.Id.forRunSpec(runSpec.id)
-    val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
-    val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
-    val task = Task.Reserved(
-      taskId = taskId,
-      reservation = reservation,
-      status = Task.Status(
-        stagedAt = now,
-        condition = Condition.Reserved,
-        networkInfo = networkInfo
-      ),
-      runSpecVersion = runSpec.version
-    )
-    val instance = Instance(
-      instanceId = task.taskId.instanceId,
-      agentInfo = agentInfo,
-      state = InstanceState(
-        condition = Condition.Reserved,
-        since = now,
-        activeSince = None,
-        healthy = None
-      ),
-      tasksMap = Map(task.taskId -> task),
-      runSpecVersion = runSpec.version,
-      unreachableStrategy = runSpec.unreachableStrategy
-    )
-    val stateOp = InstanceUpdateOperation.Reserve(instance)
+    val (reservationLabels, stateOp) = runSpec match {
+      case _: AppDefinition =>
+        val hostPorts = resourceMatch.hostPorts.flatten
+        val networkInfo = NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
+
+        // The first taskId does not have an attempt count - this is only the task created to hold the reservation and it
+        // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
+        // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
+        // there was always a 1:1 correlation from reservation to taskId)
+        val taskId = Task.Id.forRunSpec(runSpec.id)
+        val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
+        val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
+        val task = Task.Reserved(
+          taskId = taskId,
+          reservation = reservation,
+          status = Task.Status(
+            stagedAt = now,
+            condition = Condition.Reserved,
+            networkInfo = networkInfo
+          ),
+          runSpecVersion = runSpec.version
+        )
+        val instance = Instance(
+          instanceId = task.taskId.instanceId,
+          agentInfo = agentInfo,
+          state = InstanceState(
+            condition = Condition.Reserved,
+            since = now,
+            activeSince = None,
+            healthy = None
+          ),
+          tasksMap = Map(task.taskId -> task),
+          runSpecVersion = runSpec.version,
+          unreachableStrategy = runSpec.unreachableStrategy
+        )
+        val stateOp = InstanceUpdateOperation.Reserve(instance)
+        (reservationLabels, stateOp)
+
+      case pod: PodDefinition =>
+        val instanceId = Instance.Id.forRunSpec(runSpec.id)
+        val taskIds = pod.containers.map { container =>
+          Task.Id.forInstanceId(instanceId, Some(container))
+        }
+
+        val networkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, resourceMatch.hostPorts)
+        val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskIds.head)
+        val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
+
+        val tasks = taskIds.map { taskId =>
+          Task.Reserved(
+            taskId = taskId,
+            reservation = reservation,
+            status = Task.Status(
+              stagedAt = now,
+              condition = Condition.Reserved,
+              networkInfo = networkInfos.getOrElse(taskId, throw new Exception("reached"))
+            ),
+            runSpecVersion = runSpec.version
+          )
+        }
+        val instance = Instance(
+          instanceId = instanceId,
+          agentInfo = agentInfo,
+          state = InstanceState(
+            condition = Condition.Reserved,
+            since = now,
+            activeSince = None,
+            healthy = None
+          ),
+          tasksMap = tasks.map(t => t.taskId -> t)(collection.breakOut),
+          runSpecVersion = runSpec.version,
+          unreachableStrategy = runSpec.unreachableStrategy
+        )
+        val stateOp = InstanceUpdateOperation.Reserve(instance)
+        (reservationLabels, stateOp)
+    }
     taskOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }
 

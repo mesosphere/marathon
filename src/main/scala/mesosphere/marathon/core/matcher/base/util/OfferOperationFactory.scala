@@ -47,8 +47,7 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(reservationLabels: ReservationLabels, resources: Seq[Mesos.Resource]): //
-  Mesos.Offer.Operation = {
+  def reserve(reservationLabels: ReservationLabels, resources: Seq[Mesos.Resource]): Mesos.Offer.Operation = {
     val reservedResources = resources.map { resource =>
 
       val reservation = ReservationInfo.newBuilder()

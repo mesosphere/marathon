@@ -148,7 +148,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "localVolumes": [
         |    {
         |      "runSpecId" : "/appid",
-        |      "name": "container",
+        |      "containerPath": "container",
         |      "uuid": "random",
         |      "persistenceId": "appid#container#random"
         |    }
