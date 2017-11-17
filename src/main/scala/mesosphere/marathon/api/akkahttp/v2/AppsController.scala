@@ -4,46 +4,44 @@ package v2
 
 import java.time.Clock
 
-import akka.event.EventStream
+import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.{ StatusCodes, Uri }
+import akka.event.EventStream
 import akka.http.scaladsl.model.headers.Location
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
-import mesosphere.marathon.api.akkahttp.PathMatchers.ExistingRunSpecId
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import mesosphere.marathon.api.TaskKiller
+import mesosphere.marathon.api.akkahttp.AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
+import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, ExistingRunSpecId, RemainingTaskId, Version }
+import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
-import mesosphere.marathon.api.akkahttp.{ Controller, EntityMarshallers }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
-import play.api.libs.json.Json
-import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.core.event.ApiPostEvent
-import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
-import PathMatchers._
-import akka.NotUsed
-import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, SingleInstance }
-import mesosphere.marathon.raml.EnrichedTaskConversion._
-import AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.raml.EnrichedTaskConversion._
 import mesosphere.marathon.raml.InstanceConversion._
+import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, SingleInstance, VersionList }
+import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Sink
+import play.api.libs.json.Json
+import PathMatchers.forceParameter
 
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
 import scala.util.control.NonFatal
+import scala.util.{ Failure, Success }
 
 class AppsController(
     val clock: Clock,
@@ -70,7 +68,6 @@ class AppsController(
 
   import AppHelpers._
   import EntityMarshallers._
-
   import mesosphere.marathon.api.v2.json.Formats._
 
   private def listApps(implicit identity: Identity): Route = {
@@ -416,9 +413,25 @@ class AppsController(
     }
   }
 
-  private def listVersions(appId: PathId)(implicit identity: Identity): Route = ???
+  private def listVersions(appId: PathId)(implicit identity: Identity): Route = {
+    val versions = groupManager.appVersions(appId).runWith(Sink.seq)
+    authorized(ViewRunSpec, groupManager.app(appId), Rejections.EntityNotFound.noApp(appId)).apply {
+      onSuccess(versions) { versions =>
+        complete(VersionList(versions))
+      }
+    }
+  }
 
-  private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = ???
+  private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = {
+    onSuccess(groupManager.appVersion(appId, version.toOffsetDateTime)) {
+      case Some(app) =>
+        authorized(ViewRunSpec, app, Rejections.EntityNotFound.noApp(appId)).apply {
+          complete(app.toRaml)
+        }
+      case None =>
+        reject(Rejections.EntityNotFound.noApp(appId))
+    }
+  }
 
   //TODO: we probably should refactor this into entity marshaller
   private def completeWithDeploymentForApp(appId: PathId, plan: DeploymentPlan) =
