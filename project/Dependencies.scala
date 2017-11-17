@@ -27,8 +27,6 @@ object Dependencies {
     aws % "compile",
     chaos % "compile",
     mesos % "compile",
-    jodaTime % "compile",
-    jodaConvert % "compile",
     jerseyServlet % "compile",
     jerseyMultiPart % "compile",
     jettyEventSource % "compile",
@@ -95,8 +93,6 @@ object Dependency {
     val AsyncAwait = "0.9.6"
     val Jersey = "1.18.6"
     val JettyServlets = "9.3.6.v20151106"
-    val JodaTime = "2.9.9"
-    val JodaConvert = "1.8.1"
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
     val Diffson = "2.0.2"
@@ -140,8 +136,6 @@ object Dependency {
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
-  val jodaTime = "joda-time" % "joda-time" % V.JodaTime
-  val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"
