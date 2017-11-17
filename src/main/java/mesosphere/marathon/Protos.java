@@ -173,9 +173,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -1112,7 +1109,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Constraint(input, extensionRegistry);
+          return new Constraint(input, extensionRegistry);
       }
     };
 
@@ -1327,9 +1324,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -3264,7 +3258,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new HealthCheckDefinition(input, extensionRegistry);
+          return new HealthCheckDefinition(input, extensionRegistry);
       }
     };
 
@@ -3411,9 +3405,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -4764,7 +4755,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ReadinessCheckDefinition(input, extensionRegistry);
+          return new ReadinessCheckDefinition(input, extensionRegistry);
       }
     };
 
@@ -4889,9 +4880,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -6106,7 +6094,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ObsoleteIpAddress(input, extensionRegistry);
+          return new ObsoleteIpAddress(input, extensionRegistry);
       }
     };
 
@@ -6183,9 +6171,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -6882,7 +6867,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ObsoleteDiscoveryInfo(input, extensionRegistry);
+          return new ObsoleteDiscoveryInfo(input, extensionRegistry);
       }
     };
 
@@ -7012,9 +6997,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -8191,7 +8173,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new NetworkDefinition(input, extensionRegistry);
+          return new NetworkDefinition(input, extensionRegistry);
       }
     };
 
@@ -8865,9 +8847,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       int mutable_bitField1_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
@@ -16234,7 +16213,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ServiceDefinition(input, extensionRegistry);
+          return new ServiceDefinition(input, extensionRegistry);
       }
     };
 
@@ -16318,9 +16297,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -16867,7 +16843,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new UnreachableStrategy(input, extensionRegistry);
+          return new UnreachableStrategy(input, extensionRegistry);
       }
     };
 
@@ -16934,9 +16910,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -17440,7 +17413,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Json(input, extensionRegistry);
+          return new Json(input, extensionRegistry);
       }
     };
 
@@ -17508,9 +17481,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -18018,7 +17988,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ResourceRoles(input, extensionRegistry);
+          return new ResourceRoles(input, extensionRegistry);
       }
     };
 
@@ -18090,9 +18060,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -18662,7 +18629,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ContainerInfo(input, extensionRegistry);
+          return new ContainerInfo(input, extensionRegistry);
       }
     };
 
@@ -18834,9 +18801,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -19156,9 +19120,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -19328,9 +19289,6 @@ public final class Protos {
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           this();
-          if (extensionRegistry == null) {
-            throw new java.lang.NullPointerException();
-          }
           int mutable_bitField0_ = 0;
           com.google.protobuf.UnknownFieldSet.Builder unknownFields =
               com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -20141,7 +20099,7 @@ public final class Protos {
               com.google.protobuf.CodedInputStream input,
               com.google.protobuf.ExtensionRegistryLite extensionRegistry)
               throws com.google.protobuf.InvalidProtocolBufferException {
-            return new ImagePullConfig(input, extensionRegistry);
+              return new ImagePullConfig(input, extensionRegistry);
           }
         };
 
@@ -20278,9 +20236,6 @@ public final class Protos {
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           this();
-          if (extensionRegistry == null) {
-            throw new java.lang.NullPointerException();
-          }
           int mutable_bitField0_ = 0;
           com.google.protobuf.UnknownFieldSet.Builder unknownFields =
               com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -21518,7 +21473,7 @@ public final class Protos {
               com.google.protobuf.CodedInputStream input,
               com.google.protobuf.ExtensionRegistryLite extensionRegistry)
               throws com.google.protobuf.InvalidProtocolBufferException {
-            return new ObsoleteDockerPortMapping(input, extensionRegistry);
+              return new ObsoleteDockerPortMapping(input, extensionRegistry);
           }
         };
 
@@ -23209,7 +23164,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new DockerInfo(input, extensionRegistry);
+            return new DockerInfo(input, extensionRegistry);
         }
       };
 
@@ -23372,9 +23327,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -24560,7 +24512,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new MesosDockerInfo(input, extensionRegistry);
+            return new MesosDockerInfo(input, extensionRegistry);
         }
       };
 
@@ -24742,9 +24694,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -26056,7 +26005,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new MesosAppCInfo(input, extensionRegistry);
+            return new MesosAppCInfo(input, extensionRegistry);
         }
       };
 
@@ -26209,9 +26158,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -27613,7 +27559,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new PortMapping(input, extensionRegistry);
+            return new PortMapping(input, extensionRegistry);
         }
       };
 
@@ -29346,7 +29292,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ExtendedContainerInfo(input, extensionRegistry);
+          return new ExtendedContainerInfo(input, extensionRegistry);
       }
     };
 
@@ -29579,9 +29525,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -29753,6 +29696,20 @@ public final class Protos {
        * <code>optional uint64 maxSize = 4;</code>
        */
       long getMaxSize();
+
+      /**
+       * <code>optional string profileName = 5;</code>
+       */
+      boolean hasProfileName();
+      /**
+       * <code>optional string profileName = 5;</code>
+       */
+      java.lang.String getProfileName();
+      /**
+       * <code>optional string profileName = 5;</code>
+       */
+      com.google.protobuf.ByteString
+          getProfileNameBytes();
     }
     /**
      * <pre>
@@ -29775,6 +29732,7 @@ public final class Protos {
         type_ = 0;
         constraints_ = java.util.Collections.emptyList();
         maxSize_ = 0L;
+        profileName_ = "";
       }
 
       @java.lang.Override
@@ -29787,9 +29745,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -29836,6 +29791,12 @@ public final class Protos {
               case 32: {
                 bitField0_ |= 0x00000004;
                 maxSize_ = input.readUInt64();
+                break;
+              }
+              case 42: {
+                com.google.protobuf.ByteString bs = input.readBytes();
+                bitField0_ |= 0x00000008;
+                profileName_ = bs;
                 break;
               }
             }
@@ -29947,6 +29908,48 @@ public final class Protos {
         return maxSize_;
       }
 
+      public static final int PROFILENAME_FIELD_NUMBER = 5;
+      private volatile java.lang.Object profileName_;
+      /**
+       * <code>optional string profileName = 5;</code>
+       */
+      public boolean hasProfileName() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string profileName = 5;</code>
+       */
+      public java.lang.String getProfileName() {
+        java.lang.Object ref = profileName_;
+        if (ref instanceof java.lang.String) {
+          return (java.lang.String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            profileName_ = s;
+          }
+          return s;
+        }
+      }
+      /**
+       * <code>optional string profileName = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getProfileNameBytes() {
+        java.lang.Object ref = profileName_;
+        if (ref instanceof java.lang.String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          profileName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
         byte isInitialized = memoizedIsInitialized;
@@ -29981,6 +29984,9 @@ public final class Protos {
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           output.writeUInt64(4, maxSize_);
         }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          com.google.protobuf.GeneratedMessageV3.writeString(output, 5, profileName_);
+        }
         unknownFields.writeTo(output);
       }
 
@@ -30004,6 +30010,9 @@ public final class Protos {
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
             .computeUInt64Size(4, maxSize_);
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, profileName_);
         }
         size += unknownFields.getSerializedSize();
         memoizedSize = size;
@@ -30037,6 +30046,11 @@ public final class Protos {
           result = result && (getMaxSize()
               == other.getMaxSize());
         }
+        result = result && (hasProfileName() == other.hasProfileName());
+        if (hasProfileName()) {
+          result = result && getProfileName()
+              .equals(other.getProfileName());
+        }
         result = result && unknownFields.equals(other.unknownFields);
         return result;
       }
@@ -30065,6 +30079,10 @@ public final class Protos {
           hash = (37 * hash) + MAXSIZE_FIELD_NUMBER;
           hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
               getMaxSize());
+        }
+        if (hasProfileName()) {
+          hash = (37 * hash) + PROFILENAME_FIELD_NUMBER;
+          hash = (53 * hash) + getProfileName().hashCode();
         }
         hash = (29 * hash) + unknownFields.hashCode();
         memoizedHashCode = hash;
@@ -30212,6 +30230,8 @@ public final class Protos {
           }
           maxSize_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000008);
+          profileName_ = "";
+          bitField0_ = (bitField0_ & ~0x00000010);
           return this;
         }
 
@@ -30257,6 +30277,10 @@ public final class Protos {
             to_bitField0_ |= 0x00000004;
           }
           result.maxSize_ = maxSize_;
+          if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+            to_bitField0_ |= 0x00000008;
+          }
+          result.profileName_ = profileName_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -30333,6 +30357,11 @@ public final class Protos {
           }
           if (other.hasMaxSize()) {
             setMaxSize(other.getMaxSize());
+          }
+          if (other.hasProfileName()) {
+            bitField0_ |= 0x00000010;
+            profileName_ = other.profileName_;
+            onChanged();
           }
           this.mergeUnknownFields(other.unknownFields);
           onChanged();
@@ -30709,6 +30738,82 @@ public final class Protos {
           onChanged();
           return this;
         }
+
+        private java.lang.Object profileName_ = "";
+        /**
+         * <code>optional string profileName = 5;</code>
+         */
+        public boolean hasProfileName() {
+          return ((bitField0_ & 0x00000010) == 0x00000010);
+        }
+        /**
+         * <code>optional string profileName = 5;</code>
+         */
+        public java.lang.String getProfileName() {
+          java.lang.Object ref = profileName_;
+          if (!(ref instanceof java.lang.String)) {
+            com.google.protobuf.ByteString bs =
+                (com.google.protobuf.ByteString) ref;
+            java.lang.String s = bs.toStringUtf8();
+            if (bs.isValidUtf8()) {
+              profileName_ = s;
+            }
+            return s;
+          } else {
+            return (java.lang.String) ref;
+          }
+        }
+        /**
+         * <code>optional string profileName = 5;</code>
+         */
+        public com.google.protobuf.ByteString
+            getProfileNameBytes() {
+          java.lang.Object ref = profileName_;
+          if (ref instanceof String) {
+            com.google.protobuf.ByteString b = 
+                com.google.protobuf.ByteString.copyFromUtf8(
+                    (java.lang.String) ref);
+            profileName_ = b;
+            return b;
+          } else {
+            return (com.google.protobuf.ByteString) ref;
+          }
+        }
+        /**
+         * <code>optional string profileName = 5;</code>
+         */
+        public Builder setProfileName(
+            java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+          profileName_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional string profileName = 5;</code>
+         */
+        public Builder clearProfileName() {
+          bitField0_ = (bitField0_ & ~0x00000010);
+          profileName_ = getDefaultInstance().getProfileName();
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional string profileName = 5;</code>
+         */
+        public Builder setProfileNameBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+          profileName_ = value;
+          onChanged();
+          return this;
+        }
         public final Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
           return super.setUnknownFields(unknownFields);
@@ -30739,7 +30844,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new PersistentVolumeInfo(input, extensionRegistry);
+            return new PersistentVolumeInfo(input, extensionRegistry);
         }
       };
 
@@ -30856,9 +30961,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -31950,7 +32052,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new ExternalVolumeInfo(input, extensionRegistry);
+            return new ExternalVolumeInfo(input, extensionRegistry);
         }
       };
 
@@ -32017,9 +32119,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -32523,7 +32622,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new SecretVolumeInfo(input, extensionRegistry);
+            return new SecretVolumeInfo(input, extensionRegistry);
         }
       };
 
@@ -34274,7 +34373,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Volume(input, extensionRegistry);
+          return new Volume(input, extensionRegistry);
       }
     };
 
@@ -34370,9 +34469,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -35168,7 +35264,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new StorageVersion(input, extensionRegistry);
+          return new StorageVersion(input, extensionRegistry);
       }
     };
 
@@ -35236,9 +35332,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -35748,7 +35841,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new UpgradeStrategyDefinition(input, extensionRegistry);
+          return new UpgradeStrategyDefinition(input, extensionRegistry);
       }
     };
 
@@ -35991,9 +36084,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -36179,9 +36269,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -36838,7 +36925,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new AppReference(input, extensionRegistry);
+            return new AppReference(input, extensionRegistry);
         }
       };
 
@@ -39412,7 +39499,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new GroupDefinition(input, extensionRegistry);
+          return new GroupDefinition(input, extensionRegistry);
       }
     };
 
@@ -39573,9 +39660,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -41015,7 +41099,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new DeploymentPlanDefinition(input, extensionRegistry);
+          return new DeploymentPlanDefinition(input, extensionRegistry);
       }
     };
 
@@ -41174,9 +41258,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -42781,7 +42862,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new TaskFailure(input, extensionRegistry);
+          return new TaskFailure(input, extensionRegistry);
       }
     };
 
@@ -42893,9 +42974,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -43690,7 +43768,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ZKStoreEntry(input, extensionRegistry);
+          return new ZKStoreEntry(input, extensionRegistry);
       }
     };
 
@@ -43758,9 +43836,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -44358,7 +44433,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ResidencyDefinition(input, extensionRegistry);
+          return new ResidencyDefinition(input, extensionRegistry);
       }
     };
 
@@ -44436,9 +44511,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -45095,7 +45167,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Secret(input, extensionRegistry);
+          return new Secret(input, extensionRegistry);
       }
     };
 
@@ -45181,9 +45253,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -46064,7 +46133,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new EnvVarReference(input, extensionRegistry);
+          return new EnvVarReference(input, extensionRegistry);
       }
     };
 
@@ -46127,9 +46196,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -46629,7 +46695,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new EnvVarSecretRef(input, extensionRegistry);
+          return new EnvVarSecretRef(input, extensionRegistry);
       }
     };
 
@@ -46831,7 +46897,7 @@ public final class Protos {
       "X_PER\020\005\022\006\n\002IS\020\006\"\325\004\n\025HealthCheckDefinitio" +
       "n\022E\n\010protocol\030\001 \002(\01623.mesosphere.maratho" +
       "n.HealthCheckDefinition.Protocol\022\021\n\tport" +
-      "Index\030\002 \001(\r\022\036\n\022gracePeriodSeconds\030\003 \001(\r:" +
+      "Index\030\002 \001(\r\022\036\n\022gracePeriodSeconds\030\003 \001(\r:",
       "\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00210\022\032\n\016time" +
       "outSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:\001/\022!\n" +
       "\026maxConsecutiveFailures\030\007 \001(\r:\0013\022#\n\007comm" +
@@ -46841,7 +46907,7 @@ public final class Protos {
       "\nipProtocol\030\r \001(\01625.mesosphere.marathon." +
       "HealthCheckDefinition.IpProtocol:\004IPv4\"e" +
       "\n\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND" +
-      "\020\002\022\t\n\005HTTPS\020\003\022\016\n\nMESOS_HTTP\020\004\022\017\n\013MESOS_H" +
+      "\020\002\022\t\n\005HTTPS\020\003\022\016\n\nMESOS_HTTP\020\004\022\017\n\013MESOS_H",
       "TTPS\020\005\022\r\n\tMESOS_TCP\020\006\" \n\nIpProtocol\022\010\n\004I" +
       "Pv4\020\001\022\010\n\004IPv6\020\002\"\240\002\n\030ReadinessCheckDefini" +
       "tion\022\014\n\004name\030\001 \001(\t\022H\n\010protocol\030\002 \001(\01626.m" +
@@ -46851,7 +46917,7 @@ public final class Protos {
       "illis\030\006 \001(\004\022\036\n\026httpStatusCodeForReady\030\007 " +
       "\003(\r\022\034\n\024preserveLastResponse\030\010 \001(\010\"\037\n\010Pro" +
       "tocol\022\010\n\004HTTP\020\000\022\t\n\005HTTPS\020\001\"\231\001\n\021ObsoleteI" +
-      "pAddress\022\016\n\006groups\030\001 \003(\t\022\034\n\006labels\030\002 \003(\013" +
+      "pAddress\022\016\n\006groups\030\001 \003(\t\022\034\n\006labels\030\002 \003(\013",
       "2\014.mesos.Label\022A\n\rdiscoveryInfo\030\003 \001(\0132*." +
       "mesosphere.marathon.ObsoleteDiscoveryInf" +
       "o\022\023\n\013networkName\030\004 \001(\t\"3\n\025ObsoleteDiscov" +
@@ -46861,7 +46927,7 @@ public final class Protos {
       "name\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.Label" +
       "\"8\n\004Mode\022\013\n\007UNKNOWN\020\000\022\010\n\004HOST\020\001\022\r\n\tCONTA" +
       "INER\020\002\022\n\n\006BRIDGE\020\003\"\276\013\n\021ServiceDefinition" +
-      "\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.Comman" +
+      "\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.Comman",
       "dInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 " +
       "\003(\0132\017.mesos.Resource\022\023\n\013description\030\005 \001(" +
       "\t\022\r\n\005ports\030\006 \003(\r\0224\n\013constraints\030\007 \003(\0132\037." +
@@ -46871,7 +46937,7 @@ public final class Protos {
       "rsion\030\013 \001(\t:\0301970-01-01T00:00:00.000Z\022@\n" +
       "\014healthChecks\030\014 \003(\0132*.mesosphere.maratho" +
       "n.HealthCheckDefinition\022\025\n\007backoff\030\r \001(\003" +
-      ":\0041000\022\033\n\rbackoffFactor\030\016 \001(\001:\0041.15\022G\n\017u" +
+      ":\0041000\022\033\n\rbackoffFactor\030\016 \001(\001:\0041.15\022G\n\017u",
       "pgradeStrategy\030\017 \001(\0132..mesosphere.marath" +
       "on.UpgradeStrategyDefinition\022\024\n\014dependen" +
       "cies\030\020 \003(\t\022\021\n\tstoreUrls\030\021 \003(\t\022\034\n\rrequire" +
@@ -46881,7 +46947,7 @@ public final class Protos {
       "maxLaunchDelay\030\025 \001(\003:\0073600000\022A\n\025accepte" +
       "dResourceRoles\030\026 \001(\0132\".mesosphere.marath" +
       "on.ResourceRoles\022\027\n\017last_scaling_at\030\027 \001(" +
-      "\003\022\035\n\025last_config_change_at\030\030 \001(\003\022B\n\022OBSO" +
+      "\003\022\035\n\025last_config_change_at\030\030 \001(\003\022B\n\022OBSO",
       "LETE_ipAddress\030\031 \001(\0132&.mesosphere.marath" +
       "on.ObsoleteIpAddress\022;\n\tresidency\030\032 \001(\0132" +
       "(.mesosphere.marathon.ResidencyDefinitio" +
@@ -46891,7 +46957,7 @@ public final class Protos {
       "\022,\n\007secrets\030\035 \003(\0132\033.mesosphere.marathon." +
       "Secret\022>\n\020envVarReferences\030\036 \003(\0132$.mesos" +
       "phere.marathon.EnvVarReference\022\033\n\023taskKi" +
-      "llGracePeriod\030\037 \001(\003\022E\n\023unreachableStrate" +
+      "llGracePeriod\030\037 \001(\003\022E\n\023unreachableStrate",
       "gy\030  \001(\0132(.mesosphere.marathon.Unreachab" +
       "leStrategy\022H\n\rkillSelection\030! \001(\0162\".meso" +
       "sphere.marathon.KillSelection:\rYoungestF" +
@@ -46901,7 +46967,7 @@ public final class Protos {
       "activeAfterSeconds\030\001 \001(\004:\003900\022#\n\023expunge" +
       "AfterSeconds\030\002 \001(\004:\006604800\"\024\n\004Json\022\014\n\004js" +
       "on\030\001 \002(\t\"\035\n\rResourceRoles\022\014\n\004role\030\001 \003(\t\"" +
-      "1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opt" +
+      "1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opt",
       "ions\030\002 \003(\014\"\356\013\n\025ExtendedContainerInfo\022\'\n\004" +
       "type\030\001 \002(\0162\031.mesos.ContainerInfo.Type\022,\n" +
       "\007volumes\030\002 \003(\0132\033.mesosphere.marathon.Vol" +
@@ -46911,7 +46977,7 @@ public final class Protos {
       ".ExtendedContainerInfo.DockerInfo\022O\n\013mes" +
       "osDocker\030\004 \001(\0132:.mesosphere.marathon.Ext" +
       "endedContainerInfo.MesosDockerInfo\022K\n\tme" +
-      "sosAppC\030\005 \001(\01328.mesosphere.marathon.Exte" +
+      "sosAppC\030\005 \001(\01328.mesosphere.marathon.Exte",
       "ndedContainerInfo.MesosAppCInfo\032\361\004\n\nDock" +
       "erInfo\022\r\n\005image\030\001 \002(\t\022G\n\020OBSOLETE_networ" +
       "k\030\002 \001(\0162\'.mesos.ContainerInfo.DockerInfo" +
@@ -46921,7 +46987,7 @@ public final class Protos {
       "Mapping\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\npa" +
       "rameters\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020forc" +
       "e_pull_image\030\006 \001(\010\032\236\001\n\017ImagePullConfig\022X" +
-      "\n\004type\030\001 \002(\0162J.mesosphere.marathon.Exten" +
+      "\n\004type\030\001 \002(\0162J.mesosphere.marathon.Exten",
       "dedContainerInfo.DockerInfo.ImagePullCon" +
       "fig.Type\022\035\n\006secret\030\002 \001(\0132\r.mesos.Secret\"" +
       "\022\n\004Type\022\n\n\006SECRET\020\001\032\235\001\n\031ObsoleteDockerPo" +
@@ -46931,7 +46997,7 @@ public final class Protos {
       "rvice_port\030d \001(\r:\0010\032\310\001\n\017MesosDockerInfo\022" +
       "\r\n\005image\030\001 \002(\t\0220\n\025deprecated_credential\030" +
       "\002 \001(\0132\021.mesos.Credential\022\030\n\020force_pull_i" +
-      "mage\030\003 \001(\010\022Z\n\013pull_config\030\004 \001(\0132E.mesosp" +
+      "mage\030\003 \001(\010\022Z\n\013pull_config\030\004 \001(\0132E.mesosp",
       "here.marathon.ExtendedContainerInfo.Dock" +
       "erInfo.ImagePullConfig\032b\n\rMesosAppCInfo\022" +
       "\r\n\005image\030\001 \002(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003" +
@@ -46940,67 +47006,67 @@ public final class Protos {
       "\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022" +
       "\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.La" +
       "bel\022\027\n\014service_port\030\006 \001(\r:\0010\022\025\n\rnetwork_" +
-      "names\030\007 \003(\t\"\341\004\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.m" +
-      "esos.Volume.Mode\022\026\n\016container_path\030\001 \002(\t" +
+      "names\030\007 \003(\t\"\366\004\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.m" +
+      "esos.Volume.Mode\022\026\n\016container_path\030\001 \002(\t",
       "\022\021\n\thost_path\030\002 \001(\t\022\033\n\005image\030\004 \001(\0132\014.mes" +
       "os.Image\022D\n\npersistent\030\005 \001(\01320.mesospher" +
       "e.marathon.Volume.PersistentVolumeInfo\022@" +
       "\n\010external\030\006 \001(\0132..mesosphere.marathon.V" +
       "olume.ExternalVolumeInfo\022<\n\006secret\030\007 \001(\013" +
       "2,.mesosphere.marathon.Volume.SecretVolu" +
-      "meInfo\032\237\001\n\024PersistentVolumeInfo\022\014\n\004size\030" +
+      "meInfo\032\264\001\n\024PersistentVolumeInfo\022\014\n\004size\030" +
       "\001 \002(\004\0222\n\004type\030\002 \001(\0162$.mesos.Resource.Dis" +
       "kInfo.Source.Type\0224\n\013constraints\030\003 \003(\0132\037" +
-      ".mesosphere.marathon.Constraint\022\017\n\007maxSi" +
-      "ze\030\004 \001(\004\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001" +
-      " \001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007" +
-      "options\030\004 \003(\0132\014.mesos.Label\032\"\n\020SecretVol" +
-      "umeInfo\022\016\n\006secret\030\001 \002(\t\"\274\001\n\016StorageVersi" +
-      "on\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patc" +
-      "h\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.mesosphere.mar" +
-      "athon.StorageVersion.StorageFormat:\006LEGA" +
-      "CY\"2\n\rStorageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSI" +
-      "STENCE_STORE\020\001\"Z\n\031UpgradeStrategyDefinit" +
-      "ion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023ma" +
-      "ximumOverCapacity\030\002 \001(\001:\0011\"\236\003\n\017GroupDefi" +
-      "nition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017d" +
-      "eprecated_apps\030\003 \003(\0132&.mesosphere.marath" +
-      "on.ServiceDefinition\0222\n\017deprecated_pods\030" +
-      "\010 \003(\0132\031.mesosphere.marathon.Json\0224\n\006grou" +
-      "ps\030\004 \003(\0132$.mesosphere.marathon.GroupDefi" +
-      "nition\022\024\n\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003" +
-      "(\01321.mesosphere.marathon.GroupDefinition" +
-      ".AppReference\022?\n\004pods\030\007 \003(\01321.mesosphere" +
-      ".marathon.GroupDefinition.AppReference\032+" +
-      "\n\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 " +
-      "\002(\t\"\371\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001" +
-      " \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023deprecated_or" +
-      "iginal\030\004 \001(\0132$.mesosphere.marathon.Group" +
-      "Definition\022?\n\021deprecated_target\030\005 \001(\0132$." +
-      "mesosphere.marathon.GroupDefinition\022\035\n\025o" +
-      "riginal_root_version\030\006 \001(\t\022\033\n\023target_roo" +
-      "t_version\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006app_i" +
-      "d\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022" +
-      "\037\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007mess" +
-      "age\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006" +
-      " \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\013" +
-      "2\016.mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name" +
-      "\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\nc" +
-      "ompressed\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefi" +
-      "nition\022(\n relaunchEscalationTimeoutSecon" +
-      "ds\030\001 \001(\003\022S\n\020taskLostBehavior\030\002 \001(\01629.mes" +
-      "osphere.marathon.ResidencyDefinition.Tas" +
-      "kLostBehavior\"@\n\020TaskLostBehavior\022\032\n\026REL" +
-      "AUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"" +
-      "$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001" +
-      "\n\017EnvVarReference\0227\n\004type\030\001 \002(\0162).mesosp" +
-      "here.marathon.EnvVarReference.Type\022\014\n\004na" +
-      "me\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.mesosphere" +
-      ".marathon.EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNK" +
-      "NOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n" +
-      "\010secretId\030\001 \002(\t*3\n\rKillSelection\022\021\n\rYoun" +
-      "gestFirst\020\001\022\017\n\013OldestFirst\020\002B\035\n\023mesosphe" +
-      "re.marathonB\006Protos"
+      ".mesosphere.marathon.Constraint\022\017\n\007maxSi",
+      "ze\030\004 \001(\004\022\023\n\013profileName\030\005 \001(\t\032a\n\022Externa" +
+      "lVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014\n\004name\030\002 \002(\t\022" +
+      "\020\n\010provider\030\003 \002(\t\022\035\n\007options\030\004 \003(\0132\014.mes" +
+      "os.Label\032\"\n\020SecretVolumeInfo\022\016\n\006secret\030\001" +
+      " \002(\t\"\274\001\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r" +
+      "\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006format\030\004" +
+      " \001(\01621.mesosphere.marathon.StorageVersio" +
+      "n.StorageFormat:\006LEGACY\"2\n\rStorageFormat" +
+      "\022\n\n\006LEGACY\020\000\022\025\n\021PERSISTENCE_STORE\020\001\"Z\n\031U" +
+      "pgradeStrategyDefinition\022\035\n\025minimumHealt",
+      "hCapacity\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002" +
+      " \001(\001:\0011\"\236\003\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022" +
+      "\017\n\007version\030\002 \002(\t\022?\n\017deprecated_apps\030\003 \003(" +
+      "\0132&.mesosphere.marathon.ServiceDefinitio" +
+      "n\0222\n\017deprecated_pods\030\010 \003(\0132\031.mesosphere." +
+      "marathon.Json\0224\n\006groups\030\004 \003(\0132$.mesosphe" +
+      "re.marathon.GroupDefinition\022\024\n\014dependenc" +
+      "ies\030\005 \003(\t\022?\n\004apps\030\006 \003(\01321.mesosphere.mar" +
+      "athon.GroupDefinition.AppReference\022?\n\004po" +
+      "ds\030\007 \003(\01321.mesosphere.marathon.GroupDefi",
+      "nition.AppReference\032+\n\014AppReference\022\n\n\002i" +
+      "d\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\"\371\001\n\030DeploymentP" +
+      "lanDefinition\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030\002" +
+      " \001(\t\022A\n\023deprecated_original\030\004 \001(\0132$.meso" +
+      "sphere.marathon.GroupDefinition\022?\n\021depre" +
+      "cated_target\030\005 \001(\0132$.mesosphere.marathon" +
+      ".GroupDefinition\022\035\n\025original_root_versio" +
+      "n\030\006 \001(\t\022\033\n\023target_root_version\030\007 \001(\t\"\306\001\n" +
+      "\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030" +
+      "\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.me",
+      "sos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host" +
+      "\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007" +
+      " \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n" +
+      "\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(" +
+      "\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005fa" +
+      "lse\"\326\001\n\023ResidencyDefinition\022(\n relaunchE" +
+      "scalationTimeoutSeconds\030\001 \001(\003\022S\n\020taskLos" +
+      "tBehavior\030\002 \001(\01629.mesosphere.marathon.Re" +
+      "sidencyDefinition.TaskLostBehavior\"@\n\020Ta" +
+      "skLostBehavior\022\032\n\026RELAUNCH_AFTER_TIMEOUT",
+      "\020\000\022\020\n\014WAIT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002" +
+      "(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227" +
+      "\n\004type\030\001 \002(\0162).mesosphere.marathon.EnvVa" +
+      "rReference.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretR" +
+      "ef\030\003 \001(\0132$.mesosphere.marathon.EnvVarSec" +
+      "retRef\"\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"" +
+      "#\n\017EnvVarSecretRef\022\020\n\010secretId\030\001 \002(\t*3\n\r" +
+      "KillSelection\022\021\n\rYoungestFirst\020\001\022\017\n\013Olde" +
+      "stFirst\020\002B\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -47134,7 +47200,7 @@ public final class Protos {
     internal_static_mesosphere_marathon_Volume_PersistentVolumeInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_Volume_PersistentVolumeInfo_descriptor,
-        new java.lang.String[] { "Size", "Type", "Constraints", "MaxSize", });
+        new java.lang.String[] { "Size", "Type", "Constraints", "MaxSize", "ProfileName", });
     internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_descriptor =
       internal_static_mesosphere_marathon_Volume_descriptor.getNestedTypes().get(1);
     internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_fieldAccessorTable = new

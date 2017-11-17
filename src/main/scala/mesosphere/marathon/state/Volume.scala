@@ -181,10 +181,11 @@ object DiskType {
 }
 
 case class PersistentVolumeInfo(
-    size: Long,
-    maxSize: Option[Long] = None,
-    `type`: DiskType = DiskType.Root,
-    constraints: Set[Constraint] = Set.empty)
+  size: Long,
+  maxSize: Option[Long] = None,
+  `type`: DiskType = DiskType.Root,
+  profileName: Option[String] = None,
+  constraints: Set[Constraint] = Set.empty)
 
 object PersistentVolumeInfo {
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
@@ -192,6 +193,7 @@ object PersistentVolumeInfo {
       size = pvi.getSize,
       maxSize = if (pvi.hasMaxSize) Some(pvi.getMaxSize) else None,
       `type` = DiskType.fromMesosType(if (pvi.hasType) Some(pvi.getType) else None),
+      profileName = if (pvi.hasProfileName) Some(pvi.getProfileName) else None,
       constraints = pvi.getConstraintsList.toSet
     )
 
@@ -245,12 +247,17 @@ object PersistentVolumeInfo {
       info.maxSize.forall(_ > info.size)
     }
 
+    val haveProperProfileName = validator[String] { profileName =>
+      profileName is notEmpty
+    }
+
     validator[PersistentVolumeInfo] { info =>
       info.size should be > 0L
       info.constraints.each must complyWithVolumeConstraintRules
       info should meetMaxSizeConstraint
       info should notHaveConstraintsOnRoot
       info should haveProperlyOrderedMaxSize
+      info.profileName should optional(haveProperProfileName)
     }
   }
 }

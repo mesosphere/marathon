@@ -18,6 +18,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         `type` = pv.persistent.`type`.fromRaml,
         size = pv.persistent.size,
         maxSize = pv.persistent.maxSize,
+        profileName = pv.persistent.profileName,
         constraints = pv.persistent.constraints.fromRaml
       )
       state.PersistentVolume(name = Some(pv.name), persistent = persistentInfo)
@@ -60,7 +61,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       case DiskType.Path => PersistentVolumeType.Path
       case DiskType.Root => PersistentVolumeType.Root
     })
-    PersistentVolumeInfo(`type` = pvType, size = pv.size, maxSize = pv.maxSize,
+    PersistentVolumeInfo(`type` = pvType, size = pv.size, maxSize = pv.maxSize, profileName = pv.profileName,
       constraints = pv.constraints.toRaml[Set[Seq[String]]])
   }
 
@@ -144,6 +145,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       `type` = volumeRaml.persistent.`type`.fromRaml,
       size = volumeRaml.persistent.size,
       maxSize = volumeRaml.persistent.maxSize,
+      profileName = volumeRaml.persistent.profileName,
       constraints = volumeRaml.persistent.constraints.fromRaml
     )
     val volume = state.PersistentVolume(name = None, persistent = info)
@@ -194,6 +196,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         size = volume.getSize,
         // TODO(jdef) protobuf serialization is broken for this
         maxSize = volume.when(_.hasMaxSize, _.getMaxSize).orElse(PersistentVolumeInfo.DefaultMaxSize),
+        profileName = volume.when(_.hasProfileName, _.getProfileName).orElse(PersistentVolumeInfo.DefaultProfileName),
         constraints = volume.whenOrElse(
           _.getConstraintsCount > 0,
           _.getConstraintsList.map(_.toRaml[Seq[String]])(collection.breakOut),

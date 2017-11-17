@@ -45,6 +45,11 @@ types:
         minimum: 0
         description: |
           For `mount` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
+      profileName?:
+        type: string
+        description: |
+          The storage volume profile. Only volumes with the specified profile are used to launch an application.
+          It this option is not given, any volume (with or without a profile) will be used for launching.
       constraints?:
         type: constraints.VolumeConstraint[]
         description: |

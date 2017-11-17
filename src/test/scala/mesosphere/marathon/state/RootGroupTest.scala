@@ -149,7 +149,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
-      ValidationHelper.getAllRuleConstrains(result).head
+      ValidationHelper.getAllRuleConstraints(result).head
         .constraint should be("Groups and Applications may not have the same identifier.")
     }
 
@@ -182,7 +182,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
-      ValidationHelper.getAllRuleConstrains(result).head
+      ValidationHelper.getAllRuleConstraints(result).head
         .constraint should be("Groups and Applications may not have the same identifier.")
     }
 
@@ -217,7 +217,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
       result.isFailure should be(true)
-      ValidationHelper.getAllRuleConstrains(result).head
+      ValidationHelper.getAllRuleConstraints(result).head
         .constraint should be("Groups and Pods may not have the same identifier.")
     }
 

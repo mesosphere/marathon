@@ -33,16 +33,20 @@ class VolumeTest extends UnitTest {
 
   trait Fixture {
     val rootVolNoConstraints = PersistentVolumeInfo(
-      1024,
+      size = 1024,
       constraints = Set.empty)
     val pathVolWithConstraint = PersistentVolumeInfo(
-      1024,
+      size = 1024,
       `type` = DiskType.Path,
       constraints = Set(constraint("path", "LIKE", Some("valid regex"))))
     val mountVolWithMaxSize = PersistentVolumeInfo(
-      1024,
+      size = 1024,
       `type` = DiskType.Mount,
       maxSize = Some(2048))
+    val mountVolWithProfile = PersistentVolumeInfo(
+      size = 1024,
+      `type` = DiskType.Mount,
+      profileName = Some("ssd-fast"))
     val extVolNoSize = ExternalVolumeInfo(
       name = "volname",
       provider = "provider",
@@ -70,6 +74,7 @@ class VolumeTest extends UnitTest {
     behave like survivesProtobufSerializationRoundtrip("root vol, no constraints", persistent(Fixture.rootVolNoConstraints))
     behave like survivesProtobufSerializationRoundtrip("path vol w/ constraint", persistent(Fixture.pathVolWithConstraint))
     behave like survivesProtobufSerializationRoundtrip("mount vol w/ maxSize", persistent(Fixture.mountVolWithMaxSize))
+    behave like survivesProtobufSerializationRoundtrip("mount vol w/ profile", persistent(Fixture.mountVolWithProfile))
     behave like survivesProtobufSerializationRoundtrip("ext vol w/o size", external(Fixture.extVolNoSize))
     behave like survivesProtobufSerializationRoundtrip("ext vol w/ size", external(Fixture.extVolWithSize))
     behave like survivesProtobufSerializationRoundtrip("host vol", Fixture.hostVol)
@@ -87,7 +92,7 @@ class VolumeTest extends UnitTest {
 
       val result = validate(pvi)
       result.isSuccess shouldBe false
-      ValidationHelper.getAllRuleConstrains(result).map(_.constraint) shouldBe Set("Unsupported field")
+      ValidationHelper.getAllRuleConstraints(result).map(_.constraint) shouldBe Set("Unsupported field")
     }
 
     "validating PersistentVolumeInfo constraints rejected for root resources" in {
@@ -97,7 +102,7 @@ class VolumeTest extends UnitTest {
           `type` = DiskType.Root,
           constraints = Set(constraint("path", "LIKE", Some("regex")))))
       result.isSuccess shouldBe false
-      ValidationHelper.getAllRuleConstrains(result).map(_.constraint) shouldBe Set("Constraints on root volumes are not supported")
+      ValidationHelper.getAllRuleConstraints(result).map(_.constraint) shouldBe Set("Constraints on root volumes are not supported")
     }
 
     "validating PersistentVolumeInfo constraints rejects bad regex" in {
@@ -107,7 +112,7 @@ class VolumeTest extends UnitTest {
         constraints = Set(constraint("path", "LIKE", Some("(bad regex"))))
       val result = validate(pvi)
       result.isSuccess shouldBe false
-      ValidationHelper.getAllRuleConstrains(result).map(_.constraint) shouldBe Set("Invalid regular expression")
+      ValidationHelper.getAllRuleConstraints(result).map(_.constraint) shouldBe Set("Invalid regular expression")
     }
 
     "validating PersistentVolumeInfo accepts a valid constraint" in new Fixture {
@@ -115,16 +120,30 @@ class VolumeTest extends UnitTest {
       result.isSuccess shouldBe true
     }
 
+    "validating PersistentVolumeInfo accepts a valid profileName" in new Fixture {
+      val result = validate(mountVolWithProfile)
+      result.isSuccess shouldBe true
+    }
+
+    "validating PersistentVolumeInfo rejects an empty profileName" in new Fixture {
+      val result = validate(PersistentVolumeInfo(
+        size = 1024,
+        `type` = DiskType.Mount,
+        profileName = Some("")))
+      result.isSuccess shouldBe false
+      ValidationHelper.getAllRuleConstraints(result).map(_.constraint) shouldBe Set("must not be empty")
+    }
+
     "validating PersistentVolumeInfo maxSize parameter wrt type" in new Fixture {
       val resultRoot = validate(
         PersistentVolumeInfo(1024, `type` = DiskType.Root, maxSize = Some(2048)))
       resultRoot.isSuccess shouldBe false
-      ValidationHelper.getAllRuleConstrains(resultRoot).map(_.constraint) shouldBe Set("Only mount volumes can have maxSize")
+      ValidationHelper.getAllRuleConstraints(resultRoot).map(_.constraint) shouldBe Set("Only mount volumes can have maxSize")
 
       val resultPath = validate(
         PersistentVolumeInfo(1024, `type` = DiskType.Path, maxSize = Some(2048)))
       resultPath.isSuccess shouldBe false
-      ValidationHelper.getAllRuleConstrains(resultPath).map(_.constraint) shouldBe Set("Only mount volumes can have maxSize")
+      ValidationHelper.getAllRuleConstraints(resultPath).map(_.constraint) shouldBe Set("Only mount volumes can have maxSize")
 
       validate(mountVolWithMaxSize).isSuccess shouldBe true
     }

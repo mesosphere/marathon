@@ -189,6 +189,7 @@ object PersistentVolumeInfoSerializer {
     }
     builder.addAllConstraints(info.constraints.asJava)
     info.maxSize.foreach(builder.setMaxSize)
+    info.profileName.foreach(builder.setProfileName)
 
     builder.build()
   }
