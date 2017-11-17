@@ -35,16 +35,20 @@ class VolumeTest extends UnitTest {
 
   trait Fixture {
     val rootVolNoConstraints = PersistentVolumeInfo(
-      1024,
+      size = 1024,
       constraints = Set.empty)
     val pathVolWithConstraint = PersistentVolumeInfo(
-      1024,
+      size = 1024,
       `type` = DiskType.Path,
       constraints = Set(constraint("path", "LIKE", Some("valid regex"))))
     val mountVolWithMaxSize = PersistentVolumeInfo(
-      1024,
+      size = 1024,
       `type` = DiskType.Mount,
       maxSize = Some(2048))
+    val mountVolWithProfile = PersistentVolumeInfo(
+      size = 1024,
+      `type` = DiskType.Mount,
+      profileName = Some("ssd-fast"))
     val extVolNoSize = ExternalVolumeInfo(
       name = "volname",
       provider = "provider",
@@ -69,6 +73,7 @@ class VolumeTest extends UnitTest {
     behave like survivesProtobufSerializationRoundtrip("root vol, no constraints", persistent(Fixture.rootVolNoConstraints))
     behave like survivesProtobufSerializationRoundtrip("path vol w/ constraint", persistent(Fixture.pathVolWithConstraint))
     behave like survivesProtobufSerializationRoundtrip("mount vol w/ maxSize", persistent(Fixture.mountVolWithMaxSize))
+    behave like survivesProtobufSerializationRoundtrip("mount vol w/ profile", persistent(Fixture.mountVolWithProfile))
     behave like survivesProtobufSerializationRoundtrip("ext vol w/o size", external(Fixture.extVolNoSize))
     behave like survivesProtobufSerializationRoundtrip("ext vol w/ size", external(Fixture.extVolWithSize))
     behave like survivesProtobufSerializationRoundtrip("host vol", Fixture.hostVol)

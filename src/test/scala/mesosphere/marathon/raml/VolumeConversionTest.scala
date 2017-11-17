@@ -83,7 +83,7 @@ class VolumeConversionTest extends UnitTest {
   }
 
   "core PersistentVolume conversion" when {
-    val persistent = PersistentVolumeInfo(123L, Some(1234L), state.DiskType.Path)
+    val persistent = PersistentVolumeInfo(123L, Some(1234L), state.DiskType.Path, Some("ssd-fast"))
     val volume = state.PersistentVolume("/container", persistent, Mesos.Volume.Mode.RW)
     "converting to RAML" should {
       val raml = volume.toRaml[AppVolume]
@@ -96,6 +96,7 @@ class VolumeConversionTest extends UnitTest {
         persistentRaml.persistent.`type` should be(Some(PersistentVolumeType.Path))
         persistentRaml.persistent.size should be(persistent.size)
         persistentRaml.persistent.maxSize should be(persistent.maxSize)
+        persistentRaml.persistent.profileName should be(persistent.profileName)
         persistentRaml.persistent.constraints should be(empty)
       }
     }
@@ -104,7 +105,9 @@ class VolumeConversionTest extends UnitTest {
   "RAML persistent volume conversion" when {
     val volume = AppPersistentVolume(
       "/container",
-      PersistentVolume(None, size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
+      PersistentVolume(None, size = 123L, maxSize = Some(1234L), profileName = Some("ssd-fast"),
+        constraints = Set.empty),
+      ReadMode.Rw)
     "converting from RAML" should {
       val persistent = Some(volume.fromRaml).collect {
         case v: state.PersistentVolume => v
@@ -115,6 +118,7 @@ class VolumeConversionTest extends UnitTest {
         persistent.persistent.`type` should be(DiskType.Root)
         persistent.persistent.size should be(volume.persistent.size)
         persistent.persistent.maxSize should be(volume.persistent.maxSize)
+        persistent.persistent.profileName should be(volume.persistent.profileName)
         persistent.persistent.constraints should be(Set.empty)
       }
     }

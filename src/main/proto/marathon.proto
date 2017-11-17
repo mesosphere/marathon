@@ -289,6 +289,7 @@ message Volume {
     optional mesos.Resource.DiskInfo.Source.Type type = 2;
     repeated Constraint constraints = 3;
     optional uint64 maxSize = 4;
+    optional string profileName = 5;
   }
 
   // Defining properties of external volumes
