@@ -85,6 +85,7 @@ class PodsController(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   def update(podId: PathId): Route = {
     authenticated.apply { implicit identity =>
       (entity(as[raml.Pod]) & forceParameter & extractClientIP & extractUri) {
