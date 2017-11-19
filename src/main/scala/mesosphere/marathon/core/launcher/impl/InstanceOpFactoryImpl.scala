@@ -363,7 +363,8 @@ class InstanceOpFactoryImpl(
         }
 
         val networkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, resourceMatch.hostPorts)
-        val reservationLabels = TaskLabels.labelsForTask(frameworkId,
+        val reservationLabels = TaskLabels.labelsForTask(
+          frameworkId,
           taskIds.headOption.getOrElse(throw new Exception("reached")))
         val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
 

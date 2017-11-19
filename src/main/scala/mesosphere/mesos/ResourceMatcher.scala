@@ -344,10 +344,30 @@ object ResourceMatcher extends StrictLogging {
         case nextAllocation :: restAllocations =>
           val (matcher, nextAllocationSize) = nextAllocation match {
             case Left(size) => ({ _: Protos.Resource => true }, size)
-            case Right(v) => (
-              VolumeConstraints.meetsAllConstraints(_: Protos.Resource, v.persistent.constraints),
-              v.persistent.size.toDouble
-            )
+            case Right(v) =>
+              def matcher(resource: Protos.Resource): Boolean = {
+                val matchesProfileName = v.persistent.profileName match {
+                  case Some(specifiedProfileName) =>
+                    if (resource.hasDisk) {
+                      if (resource.getDisk.hasSource) {
+                        if (resource.getDisk.getSource.hasProfile) {
+                          specifiedProfileName == resource.getDisk.getSource.getProfile
+                        } else {
+                          false
+                        }
+                      } else {
+                        false
+                      }
+                    } else {
+                      false
+                    }
+                  case None => true
+                }
+                VolumeConstraints.meetsAllConstraints(resource, v.persistent.constraints) &&
+                  matchesProfileName
+              }
+
+              (matcher _, v.persistent.size.toDouble)
           }
 
           findDiskGroupMatches(nextAllocationSize, orderedResources, orderedResources, matcher) match {
@@ -397,10 +417,28 @@ object ResourceMatcher extends StrictLogging {
           Right(DiskResourceMatch(DiskType.Mount, resourcesConsumed, scope))
         case nextAllocation :: restAllocations =>
           resources.find { resource =>
+            val matchesProfileName = nextAllocation.persistent.profileName match {
+              case Some(specifiedProfileName) =>
+                if (resource.hasDisk) {
+                  if (resource.getDisk.hasSource) {
+                    if (resource.getDisk.getSource.hasProfile) {
+                      specifiedProfileName == resource.getDisk.getSource.getProfile
+                    } else {
+                      false
+                    }
+                  } else {
+                    false
+                  }
+                } else {
+                  false
+                }
+              case None => true
+            }
             val resourceSize = resource.getScalar.getValue
             VolumeConstraints.meetsAllConstraints(resource, nextAllocation.persistent.constraints) &&
               (resourceSize >= nextAllocation.persistent.size) &&
-              (resourceSize <= nextAllocation.persistent.maxSize.getOrElse(Long.MaxValue))
+              (resourceSize <= nextAllocation.persistent.maxSize.getOrElse(Long.MaxValue)) &&
+              matchesProfileName
           } match {
             case Some(matchedResource) =>
               val consumedAmount = matchedResource.getScalar.getValue
