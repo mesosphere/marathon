@@ -17,6 +17,9 @@ def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePat
 credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
 
+lazy val myRepo = "My Repo" at "https://s3.us-east-2.amazonaws.com/ichernetsky/maven/"
+
+resolvers += myRepo
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
@@ -265,6 +268,7 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     .settings(formatSettings : _*)
     .settings(
       name := "plugin-interface",
+      resolvers += myRepo,
       libraryDependencies ++= Dependencies.pluginInterface
     )
 
@@ -277,6 +281,7 @@ lazy val marathon = (project in file("."))
   .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
+    resolvers += myRepo,
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
@@ -296,7 +301,8 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
-    name := "mesos-simulation"
+    name := "mesos-simulation",
+    resolvers += myRepo
   )
 
 // see also, benchmark/README.md
@@ -307,6 +313,7 @@ lazy val benchmark = (project in file("benchmark"))
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
+    resolvers += myRepo,
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
     libraryDependencies ++= Dependencies.benchmark
   )
