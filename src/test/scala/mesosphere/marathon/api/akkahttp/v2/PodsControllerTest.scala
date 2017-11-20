@@ -17,7 +17,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -40,6 +40,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       val controller = Fixture(authenticated = false).controller()
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Head(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Post(Uri./))
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
     }
 
     {
@@ -56,6 +57,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         .withEntity(entity)
         .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -386,6 +388,18 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         val jsonResponse = Json.parse(responseAs[String])
 
         jsonResponse should have(executorResources(cpus = 100.0, mem = 100.0, disk = 10.0))
+      }
+    }
+
+    "lookup a specific pod that pod does not exist" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      f.podManager.find(any).returns(Option.empty[PodDefinition])
+
+      Get("/mypod") ~> controller.route ~> check {
+        response.status should be(StatusCodes.NotFound)
+        responseAs[String] should include("mypod does not exists")
       }
     }
   }

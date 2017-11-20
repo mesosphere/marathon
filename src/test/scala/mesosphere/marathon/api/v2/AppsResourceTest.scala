@@ -194,7 +194,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       When("The create request is made")
       clock += 5.seconds
       val response = appsResource.create(body, force = false, auth.request)
-      val result = Try(prepareApp(app, groupManager))
+      Try(prepareApp(app, groupManager))
 
       Then("It is successful")
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
@@ -215,7 +215,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       When("The create request is made")
       clock += 5.seconds
       val response = appsResource.create(body, force = false, auth.request)
-      val result = Try(prepareApp(app, groupManager))
+      Try(prepareApp(app, groupManager))
 
       Then("It fails")
       assert(response.getStatus == 422, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
@@ -236,7 +236,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       When("The create request is made")
       clock += 5.seconds
       val response = appsResource.create(body, force = false, auth.request)
-      val result = Try(prepareApp(app, groupManager))
+      Try(prepareApp(app, groupManager))
 
       Then("It fails")
       assert(response.getStatus == 422, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
@@ -256,7 +256,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       When("The create request is made")
       clock += 5.seconds
       val response = appsResource.create(body, force = false, auth.request)
-      val result = Try(prepareApp(app, groupManager))
+      Try(prepareApp(app, groupManager))
 
       Then("It is successful")
       response.getStatus should be (422) withClue s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}"

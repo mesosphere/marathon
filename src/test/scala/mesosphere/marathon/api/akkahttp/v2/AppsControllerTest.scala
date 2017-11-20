@@ -45,13 +45,10 @@ import play.api.libs.json._
 import akka.http.scaladsl.model.headers.`X-Forwarded-For`
 import akka.stream.scaladsl.Source
 
-import scala.collection.immutable
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.Try
-import scala.util.control.NonFatal
 
 class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest with RouteBehaviours {
 
