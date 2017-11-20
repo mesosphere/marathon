@@ -1,5 +1,7 @@
 package mesosphere.mesos
 
+import java.time.{ OffsetDateTime, ZoneOffset }
+
 import com.google.protobuf.TextFormat
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
@@ -18,8 +20,8 @@ import mesosphere.marathon.{ Protos, _ }
 import mesosphere.mesos.protos.{ Resource, _ }
 import org.apache.mesos.Protos.TaskInfo
 import org.apache.mesos.{ Protos => MesosProtos }
-import org.joda.time.{ DateTime, DateTimeZone }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskBuilderTest extends UnitTest {
@@ -1249,7 +1251,7 @@ class TaskBuilderTest extends UnitTest {
 
       val config = MarathonTestHelper.defaultConfig()
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet,
-        config)
+        config, Seq.empty)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       // TODO test for resources etc.
     }
@@ -1273,7 +1275,7 @@ class TaskBuilderTest extends UnitTest {
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config)
+          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
         withClue(message) {
           assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
         }
@@ -1295,7 +1297,7 @@ class TaskBuilderTest extends UnitTest {
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config)
+          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 
@@ -1341,7 +1343,7 @@ class TaskBuilderTest extends UnitTest {
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config)
+          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
         val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
         val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None)
@@ -1362,7 +1364,7 @@ class TaskBuilderTest extends UnitTest {
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config)
+          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 
@@ -1380,7 +1382,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "TaskContextEnv empty when no taskId given" in {
-      val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpec = AppDefinition(
         id = PathId("/app"),
         versionInfo = version
@@ -1391,7 +1393,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "TaskContextEnv minimal" in {
-      val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpec = AppDefinition(
         id = PathId("/app"),
         versionInfo = version
@@ -1413,7 +1415,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "TaskContextEnv all fields" in {
-      val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpecId = PathId("/app")
       val runSpec = AppDefinition(
         id = runSpecId,
@@ -1815,7 +1817,7 @@ class TaskBuilderTest extends UnitTest {
       val runningInstances = Set.empty[Instance]
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet, config)
+        config.defaultAcceptedResourceRolesSet, config, Seq.empty)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
       val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None)
@@ -1864,7 +1866,7 @@ class TaskBuilderTest extends UnitTest {
 
     val config = MarathonTestHelper.defaultConfig()
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty,
-      acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet), config)
+      acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet), config, Seq.empty)
 
     resourceMatch match {
       case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None))
