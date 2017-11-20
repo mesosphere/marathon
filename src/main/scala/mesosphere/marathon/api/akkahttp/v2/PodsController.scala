@@ -6,14 +6,14 @@ import java.time.Clock
 import akka.event.EventStream
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
-import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.akkahttp.{ Controller, Headers }
+import akka.http.scaladsl.server.{ Directive1, PathMatchers, RejectionError, Route }
+import mesosphere.marathon.api.akkahttp._
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
+import mesosphere.marathon.api.akkahttp.Rejections.Message
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, UpdateRunSpec }
+import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
-import akka.http.scaladsl.server.PathMatchers
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.core.election.ElectionService
@@ -23,7 +23,9 @@ import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.raml.{ PodConversion, Raml }
 
 import async.Async._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.control.NonFatal
+import scala.util.{ Failure, Success }
 
 class PodsController(
     val config: MarathonConf,
@@ -99,7 +101,7 @@ class PodsController(
                   eventBus.publish(PodEvent(host.toString(), uri.toString(), PodEvent.Updated))
                   plan
                 }
-                onSuccess(deploymentPlan) { plan =>
+                onSuccessLegacy(Some(podId))(deploymentPlan).apply { plan =>
                   val ramlPod = PodConversion.podRamlWriter.write(pod)
                   complete((StatusCodes.OK, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
                 }
@@ -193,5 +195,32 @@ class PodsController(
       }
     }
   // format: ON
+
+  private def onSuccessLegacy[T](maybePodId: Option[PathId])(f: => Future[T])(implicit identity: Identity): Directive1[T] = onComplete({
+    try { f }
+    catch {
+      case NonFatal(ex) =>
+        Future.failed(ex)
+    }
+  }).flatMap {
+    case Success(t) =>
+      provide(t)
+    case Failure(ValidationFailedException(_, failure)) =>
+      reject(EntityMarshallers.ValidationFailed(failure))
+    case Failure(AccessDeniedException(msg)) =>
+      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+    case Failure(_: PodNotFoundException) =>
+      reject(
+        maybePodId.map { appId =>
+          Rejections.EntityNotFound.noPod(appId)
+        } getOrElse Rejections.EntityNotFound()
+      )
+    case Failure(RejectionError(rejection)) =>
+      reject(rejection)
+    case Failure(ConflictingChangeException(msg)) =>
+      reject(Rejections.ConflictingChange(Message(msg)))
+    case Failure(ex) =>
+      throw ex
+  }
 
 }

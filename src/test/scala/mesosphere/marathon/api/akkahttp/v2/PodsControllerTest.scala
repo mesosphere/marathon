@@ -11,12 +11,14 @@ import mesosphere.UnitTest
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.Headers
+import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.raml.FixedPodScalingPolicy
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import play.api.libs.json._
 import play.api.libs.json.Json
@@ -314,6 +316,33 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       request ~> controller.route ~> check {
         response.status should be(StatusCodes.OK)
         response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+      }
+    }
+
+    "do not update the pod if pod name is wrong" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+      val controller = f.controller()
+
+      val podId = PathId("/unknownpod")
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.update(any, eq(false)).returns(Future.failed(new PodNotFoundException(podId)))
+
+      val postJson = """
+                       | { "id": "/unknownpod", "networks": [ { "mode": "host" } ], "containers": [
+                       |   { "name": "webapp",
+                       |     "resources": { "cpus": 0.03, "mem": 64 },
+                       |     "image": { "kind": "DOCKER", "id": "busybox" },
+                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                     """.stripMargin
+      val entity = HttpEntity(postJson).withContentType(ContentTypes.`application/json`)
+      val request = Put(podId.toString)
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        rejection shouldBe a[EntityNotFound]
       }
     }
 
