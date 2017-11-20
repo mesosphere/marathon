@@ -20,8 +20,8 @@ Marathon runs atop Apache Mesos. You can install Mesos via your system's package
 Current builds and instructions on how to set up repositories for major Linux distributions are available on the Mesosphere [downloads page](http://mesosphere.com/downloads/).
 
 If you want to build Mesos from source, see the
-Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
-[Mesosphere tutorial](http://mesosphere.com/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
+Mesos [Getting Started](http://mesos.apache.org/getting-started/) page or the
+[Mesosphere tutorial](https://mesosphere.com/blog/distributed-fault-tolerant-framework-apache-mesos-html/)
 for details. Running `make install` will install Mesos in `/usr/local`.
 
 #### Install Marathon
