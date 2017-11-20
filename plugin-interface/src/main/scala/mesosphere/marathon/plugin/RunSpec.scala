@@ -30,6 +30,11 @@ trait RunSpec {
     * Volume definitions
     */
   val volumes: Seq[VolumeSpec]
+
+  /**
+    * Volume mounts.
+    */
+  val volumeMounts: Seq[VolumeMountSpec]
 }
 
 /**
@@ -51,11 +56,6 @@ trait ApplicationSpec extends RunSpec {
     * The labels in that app.
     */
   val labels: Map[String, String]
-
-  /**
-    * Volume mounts.
-    */
-  val volumeMounts: Seq[VolumeMountSpec]
 }
 
 /**
