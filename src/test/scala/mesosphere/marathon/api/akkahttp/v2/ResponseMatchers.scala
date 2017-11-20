@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.raml.{ FixedPodScalingPolicy, PodScalingPolicy }
 import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 import play.api.libs.json.{ JsNumber, JsObject, JsValue }
 
