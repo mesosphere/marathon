@@ -17,6 +17,7 @@ import akka.http.scaladsl.server.PathMatchers
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.PodEvent
 import mesosphere.marathon.core.plugin.PluginManager
@@ -25,7 +26,7 @@ import mesosphere.marathon.raml.{ PodConversion, Raml }
 import mesosphere.marathon.util.SemanticVersion
 
 import async.Async._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
 
 class PodsController(
     val config: MarathonConf,
@@ -64,21 +65,19 @@ class PodsController(
         extractRequest { req =>
           entity(as[raml.Pod]) { podDef =>
             assumeValid(podDefValidator().apply(podDef)) {
-              val normalizedPodDef = podNormalizer.normalized(podDef)
               normalized(podDef, podNormalizer) { normalizedPodDef =>
                 val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
                 assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
                   authorized(CreateRunSpec, pod).apply {
-                    val planF = async {
+                    val planCreation: Future[DeploymentPlan] = async {
                       val deployment = await(podManager.create(pod, force))
 
-                      // TODO: How should we get the ip?
                       val ip = clientIp.getAddress().toString
                       eventBus.publish(PodEvent(ip, req.uri.toString(), PodEvent.Created))
 
                       deployment
                     }
-                    onSuccess(planF) { plan =>
+                    onSuccess(planCreation) { plan =>
                       val ramlPod = PodConversion.podRamlWriter.write(pod)
                       val responseHeaders = Seq(
                         Location(Uri(pod.id.toString)),

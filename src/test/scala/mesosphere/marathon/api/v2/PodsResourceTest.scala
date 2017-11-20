@@ -288,7 +288,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
       response.getStatus shouldBe 422
       response.getEntity.toString should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
-      println(response.getEntity.toString)
     }
 
     "create a pod with custom executor resource declaration" in {
