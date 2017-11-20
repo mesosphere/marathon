@@ -470,11 +470,11 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.status should be(StatusCodes.OK)
         response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
 
-        val pod = Json.parse(responseAs[String]).as[raml.Pod]
+        val jsonResponse = Json.parse(responseAs[String])
 
-        pod.scaling should not be None
-        pod.scaling.get shouldBe a[FixedPodScalingPolicy]
-        pod.scaling.get.asInstanceOf[FixedPodScalingPolicy].instances should be (2)
+        jsonResponse should have(
+          scalingPolicyInstances(2)
+        )
       }
     }
   }

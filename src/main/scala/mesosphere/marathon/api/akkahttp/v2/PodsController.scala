@@ -103,18 +103,20 @@ class PodsController(
     authenticated.apply { implicit identity =>
       (entity(as[raml.Pod]) & forceParameter & extractClientIP & extractUri) {
         case (ramlPod, force, host, uri) =>
-          normalized(ramlPod, podNormalizer) { normalizedPodDef =>
-            val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
-            assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
-              authorized(UpdateRunSpec, pod).apply {
-                val deploymentPlan = async {
-                  val plan = await(podManager.update(pod, force))
-                  eventBus.publish(PodEvent(host.toString(), uri.toString(), PodEvent.Updated))
-                  plan
-                }
-                onSuccessLegacy(Some(podId))(deploymentPlan).apply { plan =>
-                  val ramlPod = PodConversion.podRamlWriter.write(pod)
-                  complete((StatusCodes.OK, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
+          assumeValid(podDefValidator().apply(ramlPod)) {
+            normalized(ramlPod, podNormalizer) { normalizedPodDef =>
+              val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
+              assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
+                authorized(UpdateRunSpec, pod).apply {
+                  val deploymentPlan = async {
+                    val plan = await(podManager.update(pod, force))
+                    eventBus.publish(PodEvent(host.toString(), uri.toString(), PodEvent.Updated))
+                    plan
+                  }
+                  onSuccessLegacy(Some(podId))(deploymentPlan).apply { plan =>
+                    val ramlPod = PodConversion.podRamlWriter.write(pod)
+                    complete((StatusCodes.OK, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
+                  }
                 }
               }
             }

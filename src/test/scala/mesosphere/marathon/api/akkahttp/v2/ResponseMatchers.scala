@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import mesosphere.UnitTest
+import mesosphere.marathon.raml.{ FixedPodScalingPolicy, PodScalingPolicy }
 import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 import play.api.libs.json.{ JsNumber, JsObject, JsValue }
 
@@ -84,6 +85,19 @@ trait ResponseMatchers { this: UnitTest =>
       val maybeSecret = (actual \ "volumes" \ 0 \ "secret").asOpt[String]
       val matches = maybeSecret.contains(secret)
       HavePropertyMatchResult(matches, "podContainerSecret", Some(secret), maybeSecret)
+    }
+  }
+
+  /**
+    * Have property matcher for scaling policy instances.
+    * @param instances expected number of instances
+    * @return Match result
+    */
+  def scalingPolicyInstances(instances: Int) = new HavePropertyMatcher[JsValue, Option[String]] {
+    override def apply(actual: JsValue) = {
+      val maybeScalingPolicy = (actual \ "scaling" \ "instances").asOpt[Int]
+      val matches = maybeScalingPolicy.contains(instances)
+      HavePropertyMatchResult(matches, "podScalingPolicy", Some(instances.toString), maybeScalingPolicy.map(_.toString))
     }
   }
 }
