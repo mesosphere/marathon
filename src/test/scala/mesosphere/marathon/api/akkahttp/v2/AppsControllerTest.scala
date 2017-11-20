@@ -1408,7 +1408,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       When("The application is updated")
       val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id.toString)), entity) ~> route ~> check {
+      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
         Then("The application is updated")
         status shouldEqual StatusCodes.OK
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
@@ -1431,7 +1431,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       Then("A validation exception is thrown")
       val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id.toString)), entity) ~> route ~> check {
+      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
         status shouldEqual StatusCodes.UnprocessableEntity
         responseAs[String] should include("/container/docker")
         responseAs[String] should include("not defined")
@@ -2045,7 +2045,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Given("An authenticated identity with full access")
       auth.authenticated = true
       auth.authorized = false
-      val req = auth.request
 
       When("We try to remove a non-existing application")
 
@@ -2224,7 +2223,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         appDef.id -> appDef
       }.toMap
       )
-      val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.updateRoot(any, any, any, any, any) returns Future.failed(AppNotFoundException(PathId("/unknown")))
       groupManager.rootGroup() returns rootGroup
       groupManager.app(appDefs(0).id) returns Some(appDefs(0))
@@ -2344,7 +2342,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Kill tasks and wipe" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
@@ -2362,7 +2359,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Just Kill tasks" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
@@ -2436,7 +2432,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Kill task and wipe" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
@@ -2454,7 +2449,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Just kill task" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
@@ -2472,7 +2466,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "List application versions" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
@@ -2490,7 +2483,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Get application by version" in new Fixture {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
-      val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
