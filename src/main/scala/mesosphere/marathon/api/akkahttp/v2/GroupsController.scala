@@ -15,7 +15,7 @@ import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, PodsResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.plugin.auth.{ Authorizer, DeleteGroup, DeleteRunSpec, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.plugin.auth.{ Authorizer, DeleteGroup, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.raml.DeploymentResult
 import mesosphere.marathon.state.{ Group, PathId, RootGroup, Timestamp }
 import mesosphere.marathon.stream.Sink
@@ -39,8 +39,8 @@ class GroupsController(
     val materializer: Materializer
 ) extends Controller {
   import Directives._
-  import mesosphere.marathon.api.akkahttp.EntityMarshallers._
   import mesosphere.marathon.api.v2.json.Formats._
+  import mesosphere.marathon.api.akkahttp.EntityMarshallers._
 
   private val forceParameter = parameter('force.as[Boolean].?(false))
 
@@ -107,7 +107,7 @@ class GroupsController(
     forceParameter { force =>
       val version = Timestamp.now()
 
-      def deleteGroupEither(rootGroup: RootGroup) = {
+      def deleteGroupEither(rootGroup: RootGroup): Future[Either[Rejection, RootGroup]] = {
         rootGroup.group(groupId) match {
           case Some(group) if !authorizer.isAuthorized(identity, DeleteGroup, group) =>
             Future.successful(Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _)))))

@@ -28,7 +28,7 @@ import play.api.libs.json.{ Json, _ }
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
-class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside with RouteBehaviours with StrictLogging with GroupCreation {
+class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside with RouteBehaviours with StrictLogging with GroupCreation with ResponseMatchers {
 
   implicit val identity: Identity = new Identity {}
 
@@ -116,30 +116,37 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       }
     }
 
-    "show app in a given version for root group" in new Fixture {
-      infoService.selectGroupVersion(org.mockito.Matchers.eq(PathId.empty), any, any, any) returns Future.successful(Some(GroupInfo(createGroup(PathId.empty), None, None, None)))
+    "show app in a given version for root group" in {
+      val infoService = mock[GroupInfoService]
+      infoService.selectGroupVersion(eq(PathId.empty), any, any, any) returns Future.successful(Some(GroupInfo(createGroup(PathId.empty), None, None, None)))
       val f = new Fixture(infoService = infoService)
 
-      Get(Uri./.withPath(Path("/versions/2017-10-30T16:08:53.852Z"))) ~> groupsController.route ~> check {
-        (Json.parse(responseAs[String]) \ "id").get shouldEqual JsString("/")
+      Get(Uri./.withPath(Path("/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
+        Json.parse(responseAs[String]) should have (
+          id(PathId("/"))
+        )
       }
     }
 
-    "reject for app and version that does not exist" in new Fixture {
+    "reject for app and version that does not exist" in {
+      val infoService = mock[GroupInfoService]
       infoService.selectGroupVersion(any, any, any, any) returns Future.successful(None)
+      val f = new Fixture(infoService = infoService)
 
-      Get(Uri./.withPath(Path("/groupname/versions/2017-10-30T16:08:53.852Z"))) ~> groupsController.route ~> check {
+      Get(Uri./.withPath(Path("/groupname/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
         rejection should be (EntityNotFound.noGroup("groupname".toRootPath, Some(Timestamp("2017-10-30T16:08:53.852Z"))))
       }
     }
   }
 
   "Create a group" should {
-    "fail with rejection for group that already exists" in new Fixture {
+    "fail with rejection for group that already exists" in {
+      val groupManager = mock[GroupManager]
       groupManager.rootGroup() returns createRootGroup()
+      val f = new Fixture(groupManager = groupManager)
       val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
 
-      Post(Uri./.withPath(Path("/")), entity) ~> groupsController.route ~> check {
+      Post(Uri./.withPath(Path("/")), entity) ~> f.groupsController.route ~> check {
         rejection shouldBe a[Rejections.ConflictingChange]
         inside(rejection) {
           case Rejections.ConflictingChange(error) =>
@@ -148,14 +155,16 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       }
     }
 
-    "fail with rejection for group name that is already an app name" in new Fixture {
+    "fail with rejection for group name that is already an app name" in {
+      val groupManager = mock[GroupManager]
       val rootGroup = createRootGroup(apps = Map(
         "/appname".toRootPath -> AppDefinition("/appname".toRootPath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")))
       ))
       groupManager.rootGroup() returns rootGroup
+      val f = new Fixture(groupManager = groupManager)
       val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
 
-      Post(Uri./.withPath(Path("/appname")), entity) ~> groupsController.route ~> check {
+      Post(Uri./.withPath(Path("/appname")), entity) ~> f.groupsController.route ~> check {
         rejection shouldBe a[Rejections.ConflictingChange]
         inside(rejection) {
           case Rejections.ConflictingChange(error) =>
@@ -164,13 +173,17 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       }
     }
 
-    "create a group" in new Fixture {
+    "create a group" in {
+      val groupApiService = mock[GroupApiService]
       groupApiService.updateGroup(any, any, any, any)(any) returns Future.successful(createRootGroup())
+      val groupManager = mock[GroupManager]
       groupManager.rootGroup() returns createRootGroup()
-      groupManager.updateRootAsync(org.mockito.Matchers.eq(PathId.empty), any, any, org.mockito.Matchers.eq(false), any).returns(Future.successful(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero)))
+      groupManager.updateRootAsync(eq(PathId.empty), any, any, eq(false), any).returns(Future.successful(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero)))
+
+      val f = new Fixture(groupManager = groupManager, groupApiService = groupApiService)
       val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
 
-      Post(Uri./.withPath(Path("/newgroup")), entity) ~> groupsController.route ~> check {
+      Post(Uri./.withPath(Path("/newgroup")), entity) ~> f.groupsController.route ~> check {
         responseAs[String] should be ("""{
                                         |  "deploymentId" : "plan",
                                         |  "version" : "1970-01-01T00:00:00Z"
