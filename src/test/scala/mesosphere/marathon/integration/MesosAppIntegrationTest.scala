@@ -1,6 +1,9 @@
 package mesosphere.marathon
 package integration
 
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.Protos.Constraint.Operator.UNLIKE
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod._
@@ -8,6 +11,7 @@ import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
 import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
 import mesosphere.marathon.state.PathId._
+import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 
 import scala.collection.immutable.Seq
@@ -26,7 +30,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
 
-  private[this] def simplePod(podId: String): PodDefinition = PodDefinition(
+  private[this] def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
     id = testBasePath / s"$podId",
     containers = Seq(
       MesosContainer(
@@ -36,7 +40,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       )
     ),
     networks = Seq(HostNetwork),
-    instances = 1
+    instances = instances,
+    constraints = constraints
   )
 
   "MesosApp" should {
@@ -371,6 +376,54 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val status2 = marathon.status(pod.id)
       status2 should be(OK)
       status2.value.instances.filter(_.status == raml.PodInstanceState.Stable) should have size 2
+    }
+
+    "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVar, default = "true") in {
+
+      val constraints = Set(
+        Constraint.newBuilder
+        .setField(hostnameField)
+        .setOperator(UNLIKE)
+        .setValue("")
+        .build
+      )
+
+      Given("a pod with a single task")
+      val pod = simplePod("simple-pod-with-single-task", constraints = constraints, instances = 6)
+
+      When("The pod is deployed")
+      val createResult = marathon.createPodV2(pod)
+
+      Then("The pod is created")
+      createResult should be(Created)
+      waitForDeployment(createResult)
+      waitForPod(pod.id)
+
+      And("Size of the pod should still be 1")
+      val status1 = marathon.status(pod.id)
+      status1 should be(OK)
+      status1.value.instances should have size 1
+
+      When("The pod should be scaled")
+      val scaledPod = pod.copy(instances = 7)
+      val updateResult = marathon.updatePod(pod.id, scaledPod, force = true)
+
+      Then("The pod is scaled")
+      updateResult should be(OK)
+      waitForDeployment(updateResult)
+      waitForPod(pod.id)
+
+      And("Size of the pod should still be 1")
+      val status2 = marathon.status(pod.id)
+      status2 should be(OK)
+      status2.value.instances should have size 1
+
+      When("The pod should be deleted")
+      val deleteResult = marathon.deletePod(pod.id)
+
+      Then("The pod is deleted")
+      deleteResult should be(Deleted)
+      waitForDeployment(deleteResult)
     }
   }
 }
