@@ -51,6 +51,11 @@ trait ApplicationSpec extends RunSpec {
     * The labels in that app.
     */
   val labels: Map[String, String]
+
+  /**
+    * Volume mounts.
+    */
+  val volumeMounts: Seq[VolumeMountSpec]
 }
 
 /**
