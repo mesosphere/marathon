@@ -4,9 +4,10 @@ package v2
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.{ Directive1, Route }
+import akka.http.scaladsl.server.{ Directive1, Rejection, Route }
 import akka.stream.Materializer
 import mesosphere.marathon.api.GroupApiService
+import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
 import mesosphere.marathon.api.akkahttp.PathMatchers.GroupPathIdLike
 import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.GroupsResource.normalizeApps
@@ -14,9 +15,9 @@ import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, PodsResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.plugin.auth.{ Authorizer, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.plugin.auth.{ Authorizer, DeleteGroup, DeleteRunSpec, Identity, ViewGroup, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.raml.DeploymentResult
-import mesosphere.marathon.state.{ Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ Group, PathId, RootGroup, Timestamp }
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
 
@@ -102,7 +103,26 @@ class GroupsController(
 
   def updateGroup(groupId: PathId): Route = ???
 
-  def deleteGroup(groupId: PathId): Route = ???
+  def deleteGroup(groupId: PathId)(implicit identity: Identity): Route = {
+    forceParameter { force =>
+      val version = Timestamp.now()
+
+      def deleteGroupEither(rootGroup: RootGroup) = {
+        rootGroup.group(groupId) match {
+          case Some(group) if !authorizer.isAuthorized(identity, DeleteGroup, group) =>
+            Future.successful(Left(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _)))))
+          case Some(_) => Future.successful(Right(rootGroup.removeGroup(groupId, version)))
+          case None => Future.successful(Left(Rejections.EntityNotFound.noGroup(groupId)))
+        }
+      }
+
+      onSuccess(groupManager.updateRootEither(groupId.parent, deleteGroupEither, version, force)) {
+        case Left(rejection) => reject(rejection)
+        case Right(plan) =>
+          complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
+      }
+    }
+  }
 
   def listVersions(groupId: PathId)(implicit identity: Identity): Route = {
     groupManager.group(groupId) match {
