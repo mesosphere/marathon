@@ -12,7 +12,7 @@ import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forcePara
 import mesosphere.marathon.api.akkahttp.Rejections.Message
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec }
+import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
 import com.wix.accord.Validator
