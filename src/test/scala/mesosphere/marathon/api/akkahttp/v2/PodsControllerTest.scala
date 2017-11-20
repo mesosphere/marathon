@@ -7,23 +7,25 @@ import akka.event.EventStream
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
-import mesosphere.UnitTest
+import mesosphere.{ UnitTest, ValidationTestLike }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.Headers
+import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.test.SettableClock
-
+import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
 
-class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours {
+class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with ValidationTestLike with ResponseMatchers {
 
   "PodsController" should {
     "support pods" in {
@@ -80,38 +82,13 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
         response.header[Location].value.value() should be("/mypod")
 
-        val jsonResponse = Json.parse(responseAs[String])
-        (jsonResponse \ "networks" \ 0 \ "mode") shouldBe JsDefined(JsString(raml.NetworkMode.Host.value))
-        (jsonResponse \ "networks" \ 0 \ "name").isDefined should be(false)
+        val jsonResponse: JsValue = Json.parse(responseAs[String])
 
-        (jsonResponse \ "executorResources" \ "cpus") shouldBe JsDefined(JsNumber(0.1))
-        (jsonResponse \ "executorResources" \ "mem") shouldBe JsDefined(JsNumber(32.0))
-        (jsonResponse \ "executorResources" \ "disk") shouldBe JsDefined(JsNumber(10.0))
-      }
-    }
-
-    "handle normalization errors" in {
-      val f = Fixture()
-      val controller = f.controller()
-
-      val deploymentPlan = DeploymentPlan.empty
-      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
-
-      val podSpecJsonWithUnresolvableNetworkName =
-        """
-          | { "id": "/mypod", "networks": [ { "mode": "container" } ], "containers": [
-          |   { "name": "webapp",
-          |     "resources": { "cpus": 0.03, "mem": 64 },
-          |     "image": { "kind": "DOCKER", "id": "busybox" },
-          |     "exec": { "command": { "shell": "sleep 1" } } } ] }
-        """.stripMargin
-      val entity = HttpEntity(podSpecJsonWithUnresolvableNetworkName).withContentType(ContentTypes.`application/json`)
-      val request = Post(Uri./.withQuery(Query("force" -> "false")))
-        .withEntity(entity)
-        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
-
-      request ~> controller.route ~> check {
-        response.status should be(StatusCodes.UnprocessableEntity)
+        jsonResponse should have (
+          executorResources(cpus = 0.1, mem = 32.0, disk = 10.0),
+          noDefinedNetworkname,
+          networkMode(raml.NetworkMode.Host)
+        )
       }
     }
 
@@ -140,156 +117,277 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.header[Location].value.value() should be("/mypod")
 
         val jsonResponse = Json.parse(responseAs[String])
-        (jsonResponse \ "networks" \ 0 \ "mode") shouldBe JsDefined(JsString(raml.NetworkMode.ContainerBridge.value))
-        (jsonResponse \ "networks" \ 0 \ "name").isDefined should be(false)
 
-        (jsonResponse \ "executorResources" \ "cpus") shouldBe JsDefined(JsNumber(0.1))
-        (jsonResponse \ "executorResources" \ "mem") shouldBe JsDefined(JsNumber(32.0))
-        (jsonResponse \ "executorResources" \ "disk") shouldBe JsDefined(JsNumber(10.0))
+        jsonResponse should have (
+          executorResources (cpus = 0.1, mem = 32.0, disk = 10.0),
+          noDefinedNetworkname,
+          networkMode(raml.NetworkMode.ContainerBridge)
+        )
       }
     }
 
-    //    "The secrets feature is NOT enabled and create pod (that uses file base secrets) fails" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(422)
-    //        response.getEntity.toString should include("Feature secrets is not enabled")
-    //      }
-    //    }
+    "The secrets feature is NOT enabled and create pod (that uses file base secrets) fails" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val controller = f.controller()
 
-    //    "The secrets feature is NOT enabled and create pod (that uses env secret refs) fails" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithEnvRefSecret.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(422)
-    //        response.getEntity.toString should include("Feature secrets is not enabled")
-    //      }
-    //    }
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
 
-    //    "The secrets feature is NOT enabled and create pod (that uses env secret refs on container level) fails" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(422)
-    //        response.getEntity.toString should include("Feature secrets is not enabled")
-    //      }
-    //    }
+      val podSpecJsonWithFileBasedSecret = """
+                                             | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                                             |   [
+                                             |     { "name": "webapp",
+                                             |       "resources": { "cpus": 0.03, "mem": 64 },
+                                             |       "image": { "kind": "DOCKER", "id": "busybox" },
+                                             |       "exec": { "command": { "shell": "sleep 1" } },
+                                             |       "volumeMounts": [ { "name": "vol", "mountPath": "mnt2" } ]
+                                             |     }
+                                             |   ],
+                                             |   "volumes": [ { "name": "vol", "secret": "secret1" } ],
+                                             |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                                             |  }
+                                           """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithFileBasedSecret).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
 
-    //    "The secrets feature is enabled and create pod (that uses env secret refs on container level) succeeds" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(201)
-    //        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-    //        parsedResponse should be (defined)
-    //        val maybePod = parsedResponse.map(_.as[Pod])
-    //        maybePod should be (defined) // validate that we DID get back a pod definition
-    //        val pod = maybePod.get
-    //        pod.containers(0).environment("vol") shouldBe EnvVarSecret("secret1")
-    //      }
-    //    }
+      request ~> controller.route ~> check {
+        rejection shouldBe a[ValidationFailed]
+        inside(rejection) {
+          case ValidationFailed(failure) =>
+            failure should haveViolations("/podSecretVolumes(pod)" -> "Feature secrets is not enabled. Enable with --enable_features secrets)")
+        }
+      }
+    }
 
-    //    "The secrets feature is enabled and create pod (that uses file based secrets) succeeds" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithFileBasedSecret.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(201)
-    //        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-    //        parsedResponse should be (defined)
-    //        val maybePod = parsedResponse.map(_.as[Pod])
-    //        maybePod should be (defined) // validate that we DID get back a pod definition
-    //        val pod = maybePod.get
-    //        pod.volumes(0) shouldBe PodSecretVolume("vol", "secret1")
-    //      }
-    //    }
+    "The secrets feature is NOT enabled and create pod (that uses env secret refs) fails" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val controller = f.controller()
 
-    //    "create a pod w/ container networking" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // required since network name is missing from JSON
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(HttpServletResponse.SC_CREATED)
-    //
-    //        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-    //        parsedResponse should be (defined)
-    //        val maybePod = parsedResponse.map(_.as[Pod])
-    //        maybePod should be (defined) // validate that we DID get back a pod definition
-    //        val pod = maybePod.get
-    //        pod.networks(0).mode should be (NetworkMode.Container)
-    //        pod.networks(0).name should be (Some("blah"))
-    //        pod.executorResources should be (defined) // validate that executor resources are defined
-    //        pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values
-    //
-    //        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
-    //      }
-    //    }
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
 
-    //    "create a pod w/ container networking w/o default network name" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture()
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
-    //      response.getStatus shouldBe 422
-    //      response.getEntity.toString should include(NetworkValidationMessages.NetworkNameMustBeSpecified)
-    //    }
+      val podSpecJsonWithEnvRefSecret = """
+                                          | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                                          |   [
+                                          |     { "name": "webapp",
+                                          |       "resources": { "cpus": 0.03, "mem": 64 },
+                                          |       "image": { "kind": "DOCKER", "id": "busybox" },
+                                          |       "exec": { "command": { "shell": "sleep 1" } }
+                                          |     }
+                                          |   ],
+                                          |   "environment": { "vol": { "secret": "secret1" } },
+                                          |   "secrets": { "secret1": { "source": "/foo" } }
+                                          |  }
+                                        """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithEnvRefSecret).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
 
-    //    "create a pod with custom executor resource declaration" in {
-    //      implicit val podSystem = mock[PodManager]
-    //      val f = Fixture()
-    //
-    //      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    //
-    //      val response = f.podsResource.create(podSpecJsonWithExecutorResources.getBytes(), force = false, f.auth.request)
-    //
-    //      withClue(s"response body: ${response.getEntity}") {
-    //        response.getStatus should be(HttpServletResponse.SC_CREATED)
-    //
-    //        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-    //        parsedResponse should be (defined)
-    //        val maybePod = parsedResponse.map(_.as[Pod])
-    //        maybePod should be (defined) // validate that we DID get back a pod definition
-    //        val pod = maybePod.get
-    //        pod.executorResources should be (defined) // validate that executor resources are defined
-    //        pod.executorResources.get.cpus should be (100)
-    //        pod.executorResources.get.mem should be (100)
-    //        // disk is not assigned in the posted pod definition, therefore this should be the default value 10
-    //        pod.executorResources.get.disk should be (10)
-    //
-    //        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
-    //      }
-    //    }
+      request ~> controller.route ~> check {
+        rejection shouldBe a[ValidationFailed]
+        inside(rejection) {
+          case ValidationFailed(failure) =>
+            failure should haveViolations("/secrets" -> "Feature secrets is not enabled. Enable with --enable_features secrets)")
+        }
+      }
+    }
+
+    "The secrets feature is NOT enabled and create pod (that uses env secret refs on container level) fails" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithEnvRefSecretOnContainerLevel = """
+                                                          | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                                                          |   [
+                                                          |     { "name": "webapp",
+                                                          |       "resources": { "cpus": 0.03, "mem": 64 },
+                                                          |       "image": { "kind": "DOCKER", "id": "busybox" },
+                                                          |       "exec": { "command": { "shell": "sleep 1" } },
+                                                          |       "environment": { "vol": { "secret": "secret1" } }
+                                                          |     }
+                                                          |   ],
+                                                          |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                                                          |  }
+                                                        """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithEnvRefSecretOnContainerLevel).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        rejection shouldBe a[ValidationFailed]
+        inside(rejection) {
+          case ValidationFailed(failure) =>
+            failure should haveViolations("/secrets" -> "Feature secrets is not enabled. Enable with --enable_features secrets)")
+        }
+      }
+    }
+
+    "The secrets feature is enabled and create pod (that uses env secret refs on container level) succeeds" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithEnvRefSecretOnContainerLevel = """
+                                                          | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                                                          |   [
+                                                          |     { "name": "webapp",
+                                                          |       "resources": { "cpus": 0.03, "mem": 64 },
+                                                          |       "image": { "kind": "DOCKER", "id": "busybox" },
+                                                          |       "exec": { "command": { "shell": "sleep 1" } },
+                                                          |       "environment": { "vol": { "secret": "secret1" } }
+                                                          |     }
+                                                          |   ],
+                                                          |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                                                          |  }
+                                                        """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithEnvRefSecretOnContainerLevel).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have (podContainerWithEnvSecret("secret1"))
+      }
+    }
+
+    "The secrets feature is enabled and create pod (that uses file based secrets) succeeds" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithFileBasedSecret = """
+                                             | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
+                                             |   [
+                                             |     { "name": "webapp",
+                                             |       "resources": { "cpus": 0.03, "mem": 64 },
+                                             |       "image": { "kind": "DOCKER", "id": "busybox" },
+                                             |       "exec": { "command": { "shell": "sleep 1" } },
+                                             |       "volumeMounts": [ { "name": "vol", "mountPath": "mnt2" } ]
+                                             |     }
+                                             |   ],
+                                             |   "volumes": [ { "name": "vol", "secret": "secret1" } ],
+                                             |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
+                                             |  }
+                                           """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithFileBasedSecret).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have (podWithFileBasedSecret ("secret1"))
+      }
+    }
+
+    "create a pod w/ container networking" in {
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // required since network name is missing from JSON
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithContainerNetworking = """
+                                                 | { "id": "/mypod", "networks": [ { "mode": "container" } ], "containers": [
+                                                 |   { "name": "webapp",
+                                                 |     "resources": { "cpus": 0.03, "mem": 64 },
+                                                 |     "image": { "kind": "DOCKER", "id": "busybox" },
+                                                 |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                                               """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithContainerNetworking).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        response.header[Location].value.value() should be("/mypod")
+
+        val jsonResponse = Json.parse(responseAs[String])
+
+        jsonResponse should have(
+          executorResources(cpus = 0.1, mem = 32.0, disk = 10.0),
+          definedNetworkname("blah"),
+          networkMode(raml.NetworkMode.Container)
+        )
+      }
+    }
+
+    "create a pod w/ container networking w/o default network name" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithContainerNetworking = """
+                                                 | { "id": "/mypod", "networks": [ { "mode": "container" } ], "containers": [
+                                                 |   { "name": "webapp",
+                                                 |     "resources": { "cpus": 0.03, "mem": 64 },
+                                                 |     "image": { "kind": "DOCKER", "id": "busybox" },
+                                                 |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                                               """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithContainerNetworking).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        rejection shouldBe a[ValidationFailed]
+        inside(rejection) {
+          case ValidationFailed(failure) =>
+            failure should haveViolations("/networks" -> NetworkValidationMessages.NetworkNameMustBeSpecified)
+        }
+      }
+    }
+
+    "create a pod with custom executor resource declaration" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithExecutorResources = """
+                                               | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                                               |   { "name": "webapp",
+                                               |     "resources": { "cpus": 0.03, "mem": 64 },
+                                               |     "image": { "kind": "DOCKER", "id": "busybox" },
+                                               |     "exec": { "command": { "shell": "sleep 1" } } } ],
+                                               |     "executorResources": { "cpus": 100, "mem": 100 } }
+                                             """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithExecutorResources).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        response.header[Location].value.value() should be("/mypod")
+
+        val jsonResponse = Json.parse(responseAs[String])
+
+        jsonResponse should have(executorResources(cpus = 100.0, mem = 100.0, disk = 10.0))
+      }
+    }
   }
 
   case class Fixture(
@@ -309,10 +407,12 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     val podManager = mock[PodManager]
     val pluginManager = PluginManager.None
     val eventBus = mock[EventStream]
+    val scheduler = mock[MarathonScheduler]
 
     electionService.isLeader returns (isLeader)
+    scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
 
     implicit val authenticator = auth.auth
-    def controller() = new PodsController(config, electionService, podManager, groupManager, pluginManager, eventBus, clock)
+    def controller() = new PodsController(config, electionService, podManager, groupManager, pluginManager, eventBus, scheduler, clock)
   }
 }

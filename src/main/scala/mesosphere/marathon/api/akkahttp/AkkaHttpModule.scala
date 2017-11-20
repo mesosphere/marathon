@@ -43,6 +43,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     podManager: PodManager,
     pluginManager: PluginManager,
     marathonSchedulerService: MarathonSchedulerService,
+    marathonScheduler: MarathonScheduler,
     storageModule: StorageModule,
     mesosLeaderInfo: MesosLeaderInfo,
     appTasksRes: mesosphere.marathon.api.v2.AppTasksResource,
@@ -79,8 +80,8 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val leaderController = LeaderController(electionService, storageModule.runtimeConfigurationRepository)
     val queueController = new QueueController(clock, launchQueue, electionService)
     val tasksController = new TasksController(instanceTracker, groupManager, healthCheckManager, taskKiller, electionService)
-    val podsController = new PodsController(conf, electionService, podManager, groupManager, pluginManager, eventBus, clock)
     val groupsController = new GroupsController(electionService, groupInfoService, groupManager, groupApiService, conf)
+    val podsController = new PodsController(conf, electionService, podManager, groupManager, pluginManager, eventBus, marathonScheduler, clock)
 
     val v2Controller = new V2Controller(
       appsController,
