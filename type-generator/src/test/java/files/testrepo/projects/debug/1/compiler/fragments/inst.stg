@@ -1,0 +1,69 @@
+
+//
+// ENTRY POINT: `inst`
+//
+// Calculates the expression that instantiates the given structural type with the
+// current arguments.
+//
+// @param <TypeArgument> type - The type that needs to be instantiated
+// @param <Object> val - The value(s) for the new instance (depends on the type)
+//
+inst(type,val) ::= "<(INSTANCE_MAP.(type.kind))(type,val)>"
+
+// Lookup table for each structure
+INSTANCE_MAP ::= [
+    "array": "inst_array",
+    "object": "inst_object",
+    "variadic_object": "inst_variadic_object",
+    "union": "inst_union",
+    "enum": "inst_enum",
+    "scalar": "inst_scalar"
+]
+
+//
+// Array : Instantiate an array of values
+//
+// @param <ArrayTypeArguments> type - The array type that needs to be instantiated
+// @param <Array<ValueArguments>> val - An array of value expressions
+//
+inst_array(type,val) ::= <%[<val:{v|<v.expr>}; separator=", ">]%>
+
+//
+// Object : Instantiate an object of a given type
+//
+// @param <ObjectTypeArguments> type - The object type that needs to be instantiated
+// @param <Map<String, ValueArguments>> val - An map of values for each property
+//
+inst_object(type,val) ::= <%O[<type.id>]{<val.keys:{k|<k>:<val.(k).expr>}; separator=", ">}%>
+
+//
+// Object : Instantiate an variadic object (map)
+//
+// @param <VariadicObjectTypeArguments> type - The variadic object type that needs to be instantiated
+// @param <Map<String, ValueArguments>> val - An map of values for each property
+//
+inst_variadic_object(type,val) ::= <%{{<val.keys:{k|<k>:<val.(k).expr>}; separator=", ">}}%>
+
+//
+// Union : Instantiate a union
+//
+// @param <UnionTypeArguments> type - The variadic object type that needs to be instantiated
+// @param <ValueArguments> val - The union value as the evaluated object instantiation expression
+//
+inst_union(type,val) ::= <%U[<type.id>](<val.expr>)%>
+
+//
+// Union : Instantiate an enum
+//
+// @param <EnumTypeArguments> type - The enum type that needs to be instantiated
+// @param <ValueArguments> val - The value for the enum
+//
+inst_enum(type,val) ::= <%E[<type.id>](<val.expr>)%>
+
+//
+// Union : Instantiate a scalar
+//
+// @param <ScalarTypeArguments> type - The scalar type that needs to be instantiated
+// @param <ValueArguments> val - The value for the scalar
+//
+inst_scalar(type,val) ::= "<val.expr>"

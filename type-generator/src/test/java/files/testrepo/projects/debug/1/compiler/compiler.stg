@@ -1,0 +1,18 @@
+
+//
+// `valueof` template : Compose scalar-type value expression
+//
+import "fragments/valueof.stg"
+
+//
+// `inst` template : Compose structural-type instantiation expressions
+//
+import "fragments/inst.stg"
+
+// ===========================================
+//  Entrypoint to the StringTemplate Compiler
+// ===========================================
+
+contents(type) ::= "Definition of <type.id>"
+
+
