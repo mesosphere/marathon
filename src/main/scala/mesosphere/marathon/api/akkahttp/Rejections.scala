@@ -19,16 +19,15 @@ object Rejections {
     def noApp(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
       EntityNotFound(Message(s"App '$id' does not exist" + version.fold("")(v => s" in version $v")))
     }
-    def noPod(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
-      EntityNotFound(Message(s"Pod '$id' does not exist" + version.fold("")(v => s" in version $v")))
-    }
     def noGroup(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
       EntityNotFound(Message(s"Group '$id' does not exist" + version.fold("")(v => s" in version $v")))
     }
     def noLeader(): EntityNotFound = {
       EntityNotFound(Message("There is no leader"))
     }
-
+    def noPod(id: PathId): EntityNotFound = {
+      EntityNotFound(Message(s"Pod '${id.toString}' does not exist"))
+    }
     def queueApp(appId: PathId): EntityNotFound = {
       EntityNotFound(Message(s"Application $appId not found in tasks queue."))
     }

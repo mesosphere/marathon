@@ -442,11 +442,13 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
 
       request ~> controller.route ~> check {
         rejection shouldBe a[EntityNotFound]
+        inside(rejection) {
+          case r: EntityNotFound => r.message.message shouldEqual s"Pod 'unknownpod' does not exist"
+        }
       }
     }
 
     "save pod with more than one instance" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
       val controller = f.controller()
 
