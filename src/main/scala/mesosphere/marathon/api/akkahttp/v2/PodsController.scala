@@ -21,7 +21,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.PodEvent
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.raml.{ PodConversion, Raml }
 import mesosphere.marathon.util.SemanticVersion
 
@@ -96,7 +96,15 @@ class PodsController(
 
   def update(podId: PathId): Route = ???
 
-  def findAll(): Route = ???
+  def findAll(): Route =
+    authenticated.apply { implicit identity =>
+
+      def isAuthorized(pod: PodDefinition): Boolean = authorizer.isAuthorized(identity, ViewRunSpec, pod)
+      val pods = podManager.findAll(isAuthorized)
+
+      val ramlPods: Seq[raml.Pod] = pods.map(PodConversion.podRamlWriter.write)
+      complete(ramlPods)
+    }
 
   def find(podId: PathId): Route =
     authenticated.apply { implicit identity =>
@@ -132,7 +140,7 @@ class PodsController(
         capability()
       } ~
       get {
-        pathEnd {
+        pathEndOrSingleSlash {
           findAll()
         } ~
         path("::status" ~ PathEnd) {

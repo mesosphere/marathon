@@ -422,6 +422,22 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         rejection should be(EntityNotFound(Message("Pod 'mypod' does not exist")))
       }
     }
+
+    "respond with all pods" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val podDefinitions = Seq(PodDefinition(id = PathId("mypod")), PodDefinition(id = PathId("another_pod")))
+      f.podManager.findAll(any).returns(podDefinitions)
+
+      Get(Uri./) ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse shouldBe a[JsArray]
+        (jsonResponse \ 0).get should have(podId("mypod"))
+        (jsonResponse \ 1).get should have(podId("another_pod"))
+      }
+    }
   }
 
   case class Fixture(
