@@ -25,6 +25,9 @@ object Rejections {
     def noLeader(): EntityNotFound = {
       EntityNotFound(Message("There is no leader"))
     }
+    def noPod(id: PathId): EntityNotFound = {
+      EntityNotFound(Message(s"Pod '$id' does not exist"))
+    }
 
     def queueApp(appId: PathId): EntityNotFound = {
       EntityNotFound(Message(s"Application $appId not found in tasks queue."))

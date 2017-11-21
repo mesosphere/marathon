@@ -7,11 +7,11 @@ import akka.event.EventStream
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.akkahttp.{ Controller, Headers }
+import mesosphere.marathon.api.akkahttp.{ Controller, Headers, Rejections }
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, DeleteRunSpec }
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
 import com.wix.accord.Validator
@@ -100,7 +100,36 @@ class PodsController(
 
   def find(podId: PathId): Route = ???
 
-  def remove(podId: PathId): Route = ???
+  def remove(podId: PathId): Route =
+    authenticated.apply { implicit identity =>
+      (extractClientIP & forceParameter) { (clientIp, force) =>
+        extractRequest { req =>
+          podManager.find(podId) match {
+            case None =>
+              reject(Rejections.EntityNotFound.noPod(podId))
+            case Some(pod) =>
+              authorized(DeleteRunSpec, pod).apply {
+                val deletion: Future[DeploymentPlan] = async {
+                  val plan = await(podManager.delete(podId, force))
+
+                  val ip = clientIp.getAddress().toString
+                  eventBus.publish(PodEvent(ip, req.uri.toString, PodEvent.Deleted))
+
+                  plan
+                }
+
+                onSuccess(deletion) { plan =>
+                  val responseHeaders = Seq(
+                    Location(Uri(pod.id.toString)),
+                    Headers.`Marathon-Deployment-Id`(plan.id)
+                  )
+                  complete((StatusCodes.Accepted, responseHeaders))
+                }
+              }
+          }
+        }
+      }
+    }
 
   def status(podId: PathId): Route = ???
 
