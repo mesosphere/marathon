@@ -3,7 +3,7 @@ package integration
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.Protos.Constraint.Operator.UNLIKE
+import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod._
@@ -383,7 +383,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val constraints = Set(
         Constraint.newBuilder
         .setField(hostnameField)
-        .setOperator(UNLIKE)
+        .setOperator(UNIQUE)
         .setValue("")
         .build
       )
