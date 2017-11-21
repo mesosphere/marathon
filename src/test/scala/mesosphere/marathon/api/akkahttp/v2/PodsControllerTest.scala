@@ -403,7 +403,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       val controller = f.controller()
 
       val podDefinition = PodDefinition(id = PathId("mypod"))
-      f.podManager.find(any).returns(Some(podDefinition))
+      f.podManager.find(eq(PathId("mypod"))).returns(Some(podDefinition))
 
       Get("/mypod") ~> controller.route ~> check {
         response.status should be(StatusCodes.OK)
@@ -416,7 +416,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       val f = Fixture()
       val controller = f.controller()
 
-      f.podManager.find(any).returns(Option.empty[PodDefinition])
+      f.podManager.find(eq(PathId("mypod"))).returns(Option.empty[PodDefinition])
 
       Get("/mypod") ~> controller.route ~> check {
         rejection should be(EntityNotFound(Message("Pod 'mypod' does not exist")))

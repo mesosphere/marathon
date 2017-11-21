@@ -16,13 +16,14 @@ object Rejections {
 
   case class EntityNotFound(message: Message = defaultEntityNotFoundMessage) extends Rejection
   object EntityNotFound {
+
+    private def readableVersion(version: Option[Timestamp]) = version.fold("")(v => s" in version $v")
+
     def noApp(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
-      val readableVersion = version.fold("")(v => s" in version $v")
-      EntityNotFound(Message(s"App '$id' does not exist $readableVersion"))
+      EntityNotFound(Message(s"App '$id' does not exist ${readableVersion(version)}"))
     }
     def noGroup(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
-      val readableVersion = version.fold("")(v => s" in version $v")
-      EntityNotFound(Message(s"Group '$id' does not exist $readableVersion"))
+      EntityNotFound(Message(s"Group '$id' does not exist ${readableVersion(version)}"))
     }
     def noLeader(): EntityNotFound = {
       EntityNotFound(Message("There is no leader"))
