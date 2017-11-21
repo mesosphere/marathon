@@ -809,6 +809,20 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(result)
       waitForStatusUpdates("TASK_FAILED")
     }
+
+    "create a simple app with network name with underscore should succees" in {
+      Given("a new app")
+      val app = appProxy(appId(Some("network-name-with-underscore")), "v1", instances = 1, healthCheck = None).copy(networks = Seq(Network(mode = NetworkMode.Container, name = Some("network_name_with_underscore"))))
+
+      When("The app is deployed")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created")
+      result should be(Created)
+      extractDeploymentIds(result) should have size 1
+      waitForDeployment(result)
+      waitForStatusUpdates("TASK_RUNNING")
+    }
   }
 
   private val ramlHealthCheck = AppHealthCheck(
