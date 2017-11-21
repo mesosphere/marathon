@@ -62,7 +62,7 @@ class PodsController(
   def create(): Route =
     authenticated.apply { implicit identity =>
       (extractClientIP & forceParameter) { (clientIp, force) =>
-        extractRequest { req =>
+        extractUri { uri =>
           entity(as[raml.Pod]) { podDef =>
             assumeValid(podDefValidator().apply(podDef)) {
               normalized(podDef, podNormalizer) { normalizedPodDef =>
@@ -73,7 +73,7 @@ class PodsController(
                       val deployment = await(podManager.create(pod, force))
 
                       val ip = clientIp.getAddress().toString
-                      eventBus.publish(PodEvent(ip, req.uri.toString(), PodEvent.Created))
+                      eventBus.publish(PodEvent(ip, uri.toString(), PodEvent.Created))
 
                       deployment
                     }
@@ -100,10 +100,11 @@ class PodsController(
 
   def find(podId: PathId): Route = ???
 
+  @SuppressWarnings(Array("all")) // async/await
   def remove(podId: PathId): Route =
     authenticated.apply { implicit identity =>
       (extractClientIP & forceParameter) { (clientIp, force) =>
-        extractRequest { req =>
+        extractUri { uri =>
           podManager.find(podId) match {
             case None =>
               reject(Rejections.EntityNotFound.noPod(podId))
@@ -113,7 +114,7 @@ class PodsController(
                   val plan = await(podManager.delete(podId, force))
 
                   val ip = clientIp.getAddress().toString
-                  eventBus.publish(PodEvent(ip, req.uri.toString, PodEvent.Deleted))
+                  eventBus.publish(PodEvent(ip, uri.toString, PodEvent.Deleted))
 
                   plan
                 }
