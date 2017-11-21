@@ -384,6 +384,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         Constraint.newBuilder
         .setField(hostnameField)
         .setOperator(UNIQUE)
+        .setValue("")
         .build
       )
 
