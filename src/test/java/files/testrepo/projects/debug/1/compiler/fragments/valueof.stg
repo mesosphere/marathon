@@ -1,0 +1,67 @@
+
+//
+// ENTRY POINT: `valueof`
+//
+// Calculates the expression that describes the value for the given scalar
+// storage type.
+//
+// @param <ValueArguments> val - The value as a raw java object and stringified expression
+// @param <String> kind - The name of the storage type
+//
+valueof(val,kind) ::= "<if(val.null)><(NULL_MAP.(kind))(val)><else><(VALUE_MAP.(kind))(val)><endif>"
+
+// Value of each type
+valueof_binary(val) ::= "binary=<val.raw; separator=\",\">"
+valueof_string(val) ::= "string=<val>"
+valueof_integer(val) ::= "integer=<val>"
+valueof_number(val) ::= "number=<val>"
+valueof_boolean(val) ::= "boolean=<if(val.raw)>true<else>false<endif>"
+valueof_datetime_only(val) ::= "datetime_only=<val>"
+valueof_time_only(val) ::= "time_only=<val>"
+valueof_date_only(val) ::= "date_only=<val>"
+valueof_datetime(val) ::= "datetime=<val>"
+valueof_void(val) ::= "void=null"
+valueof_any(val) ::= "any=<val>"
+
+// Lookup table for templates based on storage type
+VALUE_MAP ::= [
+    "binary": "valueof_binary",
+    "string": "valueof_string",
+    "integer": "valueof_integer",
+    "number": "valueof_number",
+    "boolean": "valueof_boolean",
+    "datetime_only": "valueof_datetime_only",
+    "date_only": "valueof_date_only",
+    "time_only": "valueof_time_only",
+    "datetime": "valueof_datetime",
+    "void": "valueof_void",
+    "any": "valueof_any"
+]
+
+// Missing value of each type
+null_binary(val) ::= "null_binary=null"
+null_string(val) ::= "null_string=null"
+null_integer(val) ::= "null_integer=null"
+null_number(val) ::= "null_number=null"
+null_boolean(val) ::= "null_boolean=null"
+null_void(val) ::= "null_void=null"
+null_datetime_only(val) ::= "null_datetime_only=null"
+null_time_only(val) ::= "null_time_only=null"
+null_date_only(val) ::= "null_date_only=null"
+null_datetime(val) ::= "null_datetime=null"
+null_any(val) ::= "null_any=null"
+
+// Lookup table for templates based on storage type
+NULL_MAP ::= [
+    "binary": "null_binary",
+    "string": "null_string",
+    "integer": "null_integer",
+    "number": "null_number",
+    "boolean": "null_boolean",
+    "datetime_only": "null_datetime_only",
+    "date_only": "null_date_only",
+    "time_only": "null_time_only",
+    "datetime": "null_datetime",
+    "void": "null_void",
+    "any": "null_any"
+]
