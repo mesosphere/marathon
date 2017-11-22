@@ -123,3 +123,16 @@ def isPullRequest(): Boolean = {
   val pr = """marathon-pipelines/PR-(\d+)""".r
   sys.env.get("JOB_NAME").collect { case pr(_) => true }.getOrElse(false)
 }
+
+def priorPatchVersion(tag: String): Option[String] = {
+  val Array(major, minor, patch) = tag.replace("v", "").split('.').take(3).map(_.toInt)
+  if (patch == 0)
+    None
+  else
+    Some(s"v${major}.${minor}.${patch - 1}")
+}
+
+def escapeCmdArg(cmd: String): String = {
+  val subbed = cmd.replace("'", "\\'").replace("\n", "\\n")
+  s"""$$'${subbed}'"""
+}

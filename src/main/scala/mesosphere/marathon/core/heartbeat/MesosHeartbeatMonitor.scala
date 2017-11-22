@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.heartbeat
 
 import java.util.{ Collections, UUID }
-import javax.inject.{ Inject, Named }
+import javax.inject.Named
 
 import akka.actor.ActorRef
 import org.apache.mesos.Protos._
