@@ -152,7 +152,6 @@ class PodsController(
       }
     }
 
-  @SuppressWarnings(Array("OptionGet"))
   def status(podId: PathId): Route =
     authenticated.apply { implicit identity =>
       podManager.find(podId) match {
