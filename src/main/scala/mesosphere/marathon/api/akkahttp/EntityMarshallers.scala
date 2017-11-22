@@ -149,6 +149,7 @@ object EntityMarshallers {
   implicit val rejectionMessageMarshaller = playJsonMarshaller[Rejections.Message]
   implicit val appInfoMarshaller = playJsonMarshaller[AppInfo]
   implicit val podDefMarshaller = playJsonMarshaller[raml.Pod]
+  implicit val podDefSeqMarshaller = playJsonMarshaller[Seq[raml.Pod]]
   implicit val podDefUnmarshaller = playJsonUnmarshaller[raml.Pod]
   implicit val podStatus = playJsonMarshaller[raml.PodStatus]
   implicit val leaderInfoMarshaller = playJsonMarshaller[raml.LeaderInfo]

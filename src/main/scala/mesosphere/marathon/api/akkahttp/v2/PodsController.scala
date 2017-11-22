@@ -96,7 +96,15 @@ class PodsController(
 
   def update(podId: PathId): Route = ???
 
-  def findAll(): Route = ???
+  def findAll(): Route =
+    authenticated.apply { implicit identity =>
+
+      def isAuthorized(pod: PodDefinition): Boolean = authorizer.isAuthorized(identity, ViewRunSpec, pod)
+      val pods = podManager.findAll(isAuthorized)
+
+      val ramlPods: Seq[raml.Pod] = pods.map(PodConversion.podRamlWriter.write)
+      complete(ramlPods)
+    }
 
   def find(podId: PathId): Route =
     authenticated.apply { implicit identity =>
@@ -176,7 +184,7 @@ class PodsController(
         capability()
       } ~
       get {
-        pathEnd {
+        pathEndOrSingleSlash {
           findAll()
         } ~
         path("::status" ~ PathEnd) {

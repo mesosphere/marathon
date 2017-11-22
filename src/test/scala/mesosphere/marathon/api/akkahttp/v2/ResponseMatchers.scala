@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import mesosphere.UnitTest
+import mesosphere.marathon.state.PathId
 import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 import play.api.libs.json.{ JsNumber, JsObject, JsValue }
 
@@ -84,6 +85,18 @@ trait ResponseMatchers { this: UnitTest =>
       val maybeSecret = (actual \ "volumes" \ 0 \ "secret").asOpt[String]
       val matches = maybeSecret.contains(secret)
       HavePropertyMatchResult(matches, "podContainerSecret", Some(secret), maybeSecret)
+    }
+  }
+
+  /**
+    * Have property matcher for id (e.g. of an app)
+    * @param pathId id of an app
+    * @return Match result
+    */
+  def id(pathId: PathId) = new HavePropertyMatcher[JsValue, Option[PathId]] {
+    override def apply(actual: JsValue) = {
+      val maybeId = (actual \ "id").asOpt[String].map(PathId(_))
+      HavePropertyMatchResult(maybeId.contains(pathId), "id", Some(pathId), maybeId)
     }
   }
 
