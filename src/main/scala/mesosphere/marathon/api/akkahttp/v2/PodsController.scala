@@ -7,11 +7,11 @@ import akka.event.EventStream
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.akkahttp.{ Controller, Headers }
+import mesosphere.marathon.api.akkahttp.{ Controller, Headers, Rejections }
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
 import com.wix.accord.Validator
@@ -98,7 +98,18 @@ class PodsController(
 
   def findAll(): Route = ???
 
-  def find(podId: PathId): Route = ???
+  def find(podId: PathId): Route =
+    authenticated.apply { implicit identity =>
+      podManager.find(podId) match {
+        case None =>
+          reject(Rejections.EntityNotFound.noPod(podId))
+        case Some(pod) =>
+          authorized(ViewRunSpec, pod).apply {
+            val ramlPod = PodConversion.podRamlWriter.write(pod)
+            complete(ramlPod)
+          }
+      }
+    }
 
   def remove(podId: PathId): Route = ???
 
