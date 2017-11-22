@@ -6,12 +6,15 @@ import java.time.Clock
 import akka.event.EventStream
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
+import akka.http.scaladsl.server.Route
+import mesosphere.marathon.api.akkahttp.{ Controller, Headers, Rejections }
 import akka.http.scaladsl.server.{ Directive1, PathMatchers, RejectionError, Route }
 import mesosphere.marathon.api.akkahttp._
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
 import mesosphere.marathon.api.akkahttp.Rejections.Message
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, DeleteRunSpec, ViewRunSpec }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
@@ -22,7 +25,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.PodEvent
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.raml.{ PodConversion, Raml }
 import mesosphere.marathon.util.SemanticVersion
 
@@ -65,30 +68,28 @@ class PodsController(
   @SuppressWarnings(Array("all")) // async/await
   def create(): Route =
     authenticated.apply { implicit identity =>
-      (extractClientIP & forceParameter) { (clientIp, force) =>
-        extractRequest { req =>
-          entity(as[raml.Pod]) { podDef =>
-            assumeValid(podDefValidator().apply(podDef)) {
-              normalized(podDef, podNormalizer) { normalizedPodDef =>
-                val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
-                assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
-                  authorized(CreateRunSpec, pod).apply {
-                    val planCreation: Future[DeploymentPlan] = async {
-                      val deployment = await(podManager.create(pod, force))
+      (extractClientIP & forceParameter & extractUri) { (clientIp, force, uri) =>
+        entity(as[raml.Pod]) { podDef =>
+          assumeValid(podDefValidator().apply(podDef)) {
+            normalized(podDef, podNormalizer) { normalizedPodDef =>
+              val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
+              assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
+                authorized(CreateRunSpec, pod).apply {
+                  val planCreation: Future[DeploymentPlan] = async {
+                    val deployment = await(podManager.create(pod, force))
 
-                      val ip = clientIp.getAddress().toString
-                      eventBus.publish(PodEvent(ip, req.uri.toString(), PodEvent.Created))
+                    val ip = clientIp.getAddress().toString
+                    eventBus.publish(PodEvent(ip, uri.toString(), PodEvent.Created))
 
-                      deployment
-                    }
-                    onSuccess(planCreation) { plan =>
-                      val ramlPod = PodConversion.podRamlWriter.write(pod)
-                      val responseHeaders = Seq(
-                        Location(Uri(pod.id.toString)),
-                        Headers.`Marathon-Deployment-Id`(plan.id)
-                      )
-                      complete((StatusCodes.Created, responseHeaders, ramlPod))
-                    }
+                    deployment
+                  }
+                  onSuccess(planCreation) { plan =>
+                    val ramlPod = PodConversion.podRamlWriter.write(pod)
+                    val responseHeaders = Seq(
+                      Location(Uri(pod.id.toString)),
+                      Headers.`Marathon-Deployment-Id`(plan.id)
+                    )
+                    complete((StatusCodes.Created, responseHeaders, ramlPod))
                   }
                 }
               }
@@ -125,11 +126,58 @@ class PodsController(
     }
   }
 
-  def findAll(): Route = ???
+  def findAll(): Route =
+    authenticated.apply { implicit identity =>
 
-  def find(podId: PathId): Route = ???
+      def isAuthorized(pod: PodDefinition): Boolean = authorizer.isAuthorized(identity, ViewRunSpec, pod)
+      val pods = podManager.findAll(isAuthorized)
 
-  def remove(podId: PathId): Route = ???
+      val ramlPods: Seq[raml.Pod] = pods.map(PodConversion.podRamlWriter.write)
+      complete(ramlPods)
+    }
+
+  def find(podId: PathId): Route =
+    authenticated.apply { implicit identity =>
+      podManager.find(podId) match {
+        case None =>
+          reject(Rejections.EntityNotFound.noPod(podId))
+        case Some(pod) =>
+          authorized(ViewRunSpec, pod).apply {
+            val ramlPod = PodConversion.podRamlWriter.write(pod)
+            complete(ramlPod)
+          }
+      }
+    }
+
+  @SuppressWarnings(Array("all")) // async/await
+  def remove(podId: PathId): Route =
+    authenticated.apply { implicit identity =>
+      (extractClientIP & forceParameter & extractUri) { (clientIp, force, uri) =>
+        podManager.find(podId) match {
+          case None =>
+            reject(Rejections.EntityNotFound.noPod(podId))
+          case Some(pod) =>
+            authorized(DeleteRunSpec, pod).apply {
+              val deletion: Future[DeploymentPlan] = async {
+                val plan = await(podManager.delete(podId, force))
+
+                val ip = clientIp.getAddress().toString
+                eventBus.publish(PodEvent(ip, uri.toString, PodEvent.Deleted))
+
+                plan
+              }
+
+              onSuccess(deletion) { plan =>
+                val responseHeaders = Seq(
+                  Location(Uri(pod.id.toString)),
+                  Headers.`Marathon-Deployment-Id`(plan.id)
+                )
+                complete((StatusCodes.Accepted, responseHeaders))
+              }
+            }
+        }
+      }
+    }
 
   def status(podId: PathId): Route = ???
 
@@ -150,7 +198,7 @@ class PodsController(
         capability()
       } ~
       get {
-        pathEnd {
+        pathEndOrSingleSlash {
           findAll()
         } ~
         path("::status" ~ PathEnd) {

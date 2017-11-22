@@ -11,13 +11,10 @@ import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, FromMessageUnm
 import akka.util.ByteString
 import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
-import mesosphere.marathon.api.v2.GroupsResource.normalizeApps
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import play.api.libs.json._
 
@@ -152,6 +149,7 @@ object EntityMarshallers {
   implicit val rejectionMessageMarshaller = playJsonMarshaller[Rejections.Message]
   implicit val appInfoMarshaller = playJsonMarshaller[AppInfo]
   implicit val podDefMarshaller = playJsonMarshaller[raml.Pod]
+  implicit val podDefSeqMarshaller = playJsonMarshaller[Seq[raml.Pod]]
   implicit val podDefUnmarshaller = playJsonUnmarshaller[raml.Pod]
   implicit val leaderInfoMarshaller = playJsonMarshaller[raml.LeaderInfo]
   implicit val messageMarshaller = playJsonMarshaller[raml.Message]

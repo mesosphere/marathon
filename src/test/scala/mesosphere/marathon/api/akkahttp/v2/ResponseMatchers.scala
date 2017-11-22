@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import mesosphere.UnitTest
+import mesosphere.marathon.state.PathId
 import org.scalatest.matchers.{ HavePropertyMatchResult, HavePropertyMatcher }
 import play.api.libs.json.{ JsNumber, JsObject, JsValue }
 
@@ -40,11 +41,11 @@ trait ResponseMatchers { this: UnitTest =>
     * @param name Expected name of network
     * @return Match result
     */
-  def definedNetworkname(name: String) = new HavePropertyMatcher[JsValue, Option[String]] {
+  def definedNetworkName(name: String) = new HavePropertyMatcher[JsValue, Option[String]] {
     override def apply(actual: JsValue) = {
-      val maybeNetworkname = (actual \ "networks" \ 0 \ "name").asOpt[String]
-      val matches = maybeNetworkname.contains(name)
-      HavePropertyMatchResult(matches, "networkname", Some(name), maybeNetworkname)
+      val maybeNetworkName = (actual \ "networks" \ 0 \ "name").asOpt[String]
+      val matches = maybeNetworkName.contains(name)
+      HavePropertyMatchResult(matches, "networkName", Some(name), maybeNetworkName)
     }
   }
 
@@ -57,7 +58,7 @@ trait ResponseMatchers { this: UnitTest =>
     override def apply(actual: JsValue) = {
       val maybeMode = (actual \ "networks" \ 0 \ "mode").asOpt[String]
       val matches = maybeMode.contains(mode.value)
-      HavePropertyMatchResult(matches, "networkmode", Some(mode.value), maybeMode)
+      HavePropertyMatchResult(matches, "networkMode", Some(mode.value), maybeMode)
     }
   }
 
@@ -86,6 +87,27 @@ trait ResponseMatchers { this: UnitTest =>
       HavePropertyMatchResult(matches, "podContainerSecret", Some(secret), maybeSecret)
     }
   }
+
+  /**
+    * Have property matcher for id (e.g. of an app)
+    * @param pathId id of an app
+    * @return Match result
+    */
+  def id(pathId: PathId) = new HavePropertyMatcher[JsValue, Option[PathId]] {
+    override def apply(actual: JsValue) = {
+      val maybeId = (actual \ "id").asOpt[String].map(PathId(_))
+      HavePropertyMatchResult(maybeId.contains(pathId), "id", Some(pathId), maybeId)
+    }
+  }
+
+  def podId(id: String) = new HavePropertyMatcher[JsValue, Option[String]] {
+    override def apply(actual: JsValue) = {
+      val maybeId = (actual \ "id").asOpt[String]
+      val matches = maybeId.contains(id)
+      HavePropertyMatchResult(matches, "podId", Some(id), maybeId)
+    }
+  }
+
 
   /**
     * Have property matcher for scaling policy instances.
