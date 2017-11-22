@@ -45,7 +45,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
   )
 
   "MesosApp" should {
-    "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVar, default = "true") in {
+    /*"deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new Docker app")
       val app = App(
         id = (testBasePath / s"mesos-simple-docker-app").toString,
@@ -376,7 +376,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val status2 = marathon.status(pod.id)
       status2 should be(OK)
       status2.value.instances.filter(_.status == raml.PodInstanceState.Stable) should have size 2
-    }
+    }*/
 
     "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVar, default = "true") in {
 
