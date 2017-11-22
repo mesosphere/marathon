@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
 import mesosphere.marathon.api.akkahttp.AuthDirectives.{ NotAuthenticated, NotAuthorized }
+import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import org.scalatest.Inside
 
 trait RouteBehaviours extends ScalatestRouteTest with Inside { this: UnitTest =>
@@ -34,6 +35,16 @@ trait RouteBehaviours extends ScalatestRouteTest with Inside { this: UnitTest =>
           case NotAuthorized(response) =>
             response.status should be(StatusCodes.Unauthorized)
         }
+      }
+    }
+  }
+
+  def unknownPod(forRoute: Route, withRequest: HttpRequest): Unit = {
+    s"reject ${withRequest.method.value} of ${withRequest.uri} for unknown pod" in {
+      When(s"we try to fetch from $forRoute")
+      withRequest ~> forRoute ~> check {
+        Then("we receive a entity not found rejection")
+        rejection should be(EntityNotFound(Message("Pod 'unknown-pod' does not exist")))
       }
     }
   }

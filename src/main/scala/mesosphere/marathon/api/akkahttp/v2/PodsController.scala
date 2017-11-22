@@ -186,7 +186,18 @@ class PodsController(
       }
     }
 
-  def versions(podId: PathId): Route = ???
+  def versions(podId: PathId): Route =
+    authenticated.apply { implicit identity =>
+      podManager.find(podId) match {
+        case None =>
+          reject(Rejections.EntityNotFound.noPod(podId))
+        case Some(pod) =>
+          authorized(ViewRunSpec, pod).apply {
+            val versions = podManager.versions(podId).runWith(Sink.seq)
+            complete(versions)
+          }
+      }
+    }
 
   def version(podId: PathId, v: String): Route = ???
 

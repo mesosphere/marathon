@@ -21,13 +21,14 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with ValidationTestLike with ResponseMatchers {
 
@@ -72,6 +73,16 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
+    }
+
+    {
+      val f = Fixture()
+      val controller = f.controller()
+      f.podManager.find(any).returns(None)
+
+      behave like unknownPod(forRoute = controller.route, withRequest = Delete("/unknown-pod"))
+      behave like unknownPod(forRoute = controller.route, withRequest = Get("/unknown-pod"))
+      behave like unknownPod(forRoute = controller.route, withRequest = Get("/unknown-pod::versions"))
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -421,16 +432,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    "reject deletion of unknown pod" in {
-      val f = Fixture()
-      val controller = f.controller()
-
-      f.podManager.find(eq(PathId("unknown-pod"))).returns(None)
-
-      Delete("/unknown-pod") ~> controller.route ~> check {
-        rejection should be(EntityNotFound(Message("Pod 'unknown-pod' does not exist")))
-      }
-    }
     "respond with a pod for a lookup" in {
       val f = Fixture()
       val controller = f.controller()
@@ -442,17 +443,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.status should be(StatusCodes.OK)
         val jsonResponse = Json.parse(responseAs[String])
         jsonResponse should have(podId("mypod"))
-      }
-    }
-
-    "reject a lookup a specific pod that pod does not exist" in {
-      val f = Fixture()
-      val controller = f.controller()
-
-      f.podManager.find(eq(PathId("mypod"))).returns(Option.empty[PodDefinition])
-
-      Get("/mypod") ~> controller.route ~> check {
-        rejection should be(EntityNotFound(Message("Pod 'mypod' does not exist")))
       }
     }
 
@@ -539,6 +529,63 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         )
       }
     }
+
+    //    "there are no versions" when {
+    //      "list no versions" in {
+    //        val groupManager = mock[GroupManager]
+    //        groupManager.pod(any).returns(None)
+    //        implicit val podManager = PodManagerImpl(groupManager)
+    //        val f = Fixture()
+    //
+    //        val response = f.podsResource.versions("/id", f.auth.request)
+    //        withClue(s"response body: ${response.getEntity}") {
+    //          response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
+    //        }
+    //      }
+    //      "return 404 when asking for a version" in {
+    //        val groupManager = mock[GroupManager]
+    //        groupManager.pod(any).returns(None)
+    //        groupManager.podVersions(any).returns(Source.empty)
+    //        groupManager.podVersion(any, any).returns(Future.successful(None))
+    //        implicit val podManager = PodManagerImpl(groupManager)
+    //        val f = Fixture()
+    //
+    //        val response = f.podsResource.version("/id", "2008-01-01T12:00:00Z", f.auth.request)
+    //        withClue(s"response body: ${response.getEntity}") {
+    //          response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
+    //          response.getEntity.toString should be ("{\"message\":\"Pod '/id' does not exist\"}")
+    //        }
+    //      }
+    //    }
+    "repsonse with all available versions" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val versions = Seq(f.clock.now(), f.clock.now() + 1.minute)
+      f.podManager.versions(eq(PathId("mypod"))).returns(Sources(versions))
+
+      Get("/mypod::versions") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        val jsonResponse = Json.parse(responseAs[String])
+      }
+    }
+    //    "get a specific version" in {
+    //      val groupManager = mock[GroupManager]
+    //      groupManager.pod(any).returns(Some(pod2))
+    //      groupManager.podVersions(pod1.id).returns(Source(Seq(pod1.version.toOffsetDateTime, pod2.version.toOffsetDateTime)))
+    //      groupManager.podVersion(pod1.id, pod1.version.toOffsetDateTime).returns(Future.successful(Some(pod1)))
+    //      groupManager.podVersion(pod1.id, pod2.version.toOffsetDateTime).returns(Future.successful(Some(pod2)))
+    //      implicit val podManager = PodManagerImpl(groupManager)
+    //      val f = Fixture()
+    //
+    //      val response = f.podsResource.version("/id", pod1.version.toString, f.auth.request)
+    //      withClue(s"reponse body: ${response.getEntity}") {
+    //        response.getStatus should be(HttpServletResponse.SC_OK)
+    //        val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+    //        pod should equal(pod1)
+    //      }
+    //    }
+    //    }
   }
 
   case class Fixture(
