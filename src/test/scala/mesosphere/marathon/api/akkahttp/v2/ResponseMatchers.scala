@@ -88,6 +88,11 @@ trait ResponseMatchers { this: UnitTest =>
     }
   }
 
+  /**
+    * Have property matcher for id (e.g. of an app)
+    * @param pathId id of an app
+    * @return Match result
+    */
   def id(pathId: PathId) = new HavePropertyMatcher[JsValue, Option[PathId]] {
     override def apply(actual: JsValue) = {
       val maybeId = (actual \ "id").asOpt[String].map(PathId(_))
