@@ -1,0 +1,54 @@
+//
+// Signature of a variadic object type
+//
+// @param <VariadicObjectTypeArguments> type - The variadic object type that needs to be instantiated
+//
+sig_variadic_object(type) ::= "Map[String,<trait(type.itemType)>]"
+
+//
+// Compose the declaration expression for the given variadic_object
+//
+// @param <VariadicObjectTypeArguments> type - The variadic object type that needs to be instantiated
+//
+declare_variadic_object(type) ::= <% %>
+
+
+//
+// Given the provided instance, compose an expression that evaluates to the serialized
+// data of the variadic_object
+//
+// @param <VariadicObjectTypeArguments> type - The variadic object type that needs to be instantiated
+// @param <String> in - The expression that resolves to the instance of the variadic_object
+//
+serialize_variadic_object(type,in) ::= <%
+  Json.toJson(<in>)
+%>
+
+
+//
+// Given the provided input, compose an expression that evaluates to an instance of
+// an variadic_object of the given type.
+//
+// @param <VariadicObjectTypeArguments> type - The variadic object type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+deserialize_variadic_object(type,in) ::= <% %>
+
+
+//
+// Given the provided input, compose an expression that evaluates to a list
+// of validation errors for the given type.
+//
+// @param <VariadicObjectTypeArguments> type - The variadic object type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+validate_variadic_object(type,in) ::= <% %>
+
+
+//
+// Object : Instantiate an variadic object (map)
+//
+// @param <VariadicObjectTypeArguments> type - The variadic object type that needs to be instantiated
+// @param <Map<String, ValueArguments>> val - An map of values for each property
+//
+inst_variadic_object(type,val) ::= <% Map(<val.keys:{k|"<escape(k)>" -> <val.keys.(k)>}; separator=", ">) %>

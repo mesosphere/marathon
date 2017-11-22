@@ -1,0 +1,14 @@
+
+//
+// ENTRYPOINT `expr`
+//
+// If this template is defined, the engine will call this out every
+// time is evaluating an expression in order to allow language-specific
+// alterations to reserved keywords
+//
+expr(val) ::= "<if(RESERVED_KEYWORDS.(val))><RESERVED_KEYWORDS.(val)><else><val><endif>"
+RESERVED_KEYWORDS ::= [
+    "type": "`type`",
+    "val": "`val`",
+    "var": "`var`"
+]

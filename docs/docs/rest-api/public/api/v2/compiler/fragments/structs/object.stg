@@ -1,0 +1,142 @@
+//
+// Signature of an object type
+//
+// @param <ObjectTypeArguments> type - The object type that needs to be instantiated
+//
+sig_object(type) ::= "<type.id>"
+
+
+//
+// Compose the declaration expression for the given object
+//
+// @param <ObjectTypeArguments> type - The object type that needs to be instantiated
+//
+declare_object(type) ::= <<
+/**
+ * The trait for <type.id>
+ */
+trait <trait(type)> {
+<decl_object__fields(type)>
+}
+
+/**
+ * The <type.id> case class
+ * <type.description>
+ *
+ <decl_object__fielddesc(type)>
+ */
+<decl_object__factory(type)>
+
+/**
+ * Companion object for <type.id>
+ */
+object <trait(type)> {
+
+  /**
+   * Serialization
+   */
+  implicit object playJsonFormat extends Format[<trait(type)>] {
+    def writes(o: <trait(type)>): JsValue = {
+      Json.obj(
+        <type.properties:decl_object__serialize_prop("o"); separator=",\n">
+      )
+    }
+    def reads(v: JsValue): JsResult[<trait(type)>] = {
+       <deserialize_object(type,"v")>
+    }
+  }
+}
+>>
+
+// Return the object field declaration
+decl_object__fields(type) ::= <%
+  <type.properties:{p|  val <expr(p.name)>: <option_trait(p.type, p.required)>}; separator="\n">
+%>
+
+// Return the object field descriptions
+decl_object__fielddesc(type) ::= <%
+  <type.properties:{p|* @param <p.name> <p.type.description>}; separator="\n">
+%>
+
+// Return the object factory, depending on the inheritance we are using
+decl_object__factory(type) ::= <%
+case class <sig(type)>(<decl_object__args(type)>) extends <trait(type)>
+    <if(type.baseType)> with <sig(type.baseType)>Trait<endif>
+    <if(type.parentUnion)> with <sig(type.parentUnion)>Trait<endif>
+%>
+
+// return the object constructor arguments
+decl_object__args(type) ::= <%
+  <type.properties:{p|<expr(p.name)>: <option_trait(p.type, p.required)> = <option_value(p.type, p.required, p.type.defaultValue)>}; separator=",\n  ">
+%>
+
+// Return the serialization code for properties or the matc/case expression for optionals
+decl_object__serialize_prop(prop,in) ::= <<
+"<escape(prop.name)>" -> <\\>
+<if(prop.required)><\\>
+  <serialize(prop.type, concat([in,".",expr(prop.name)]))><\\>
+<else>(<concat([in,".",expr(prop.name)])> match {
+  case Some(v: <trait(prop.type)>) => <serialize(prop.type, "v")>
+  case None => JsNull
+})<endif>
+>>
+
+//
+// Given the provided instance, compose an expression that evaluates to the serialized
+// data of the object
+//
+// @param <ObjectTypeArguments> type - The object type that needs to be instantiated
+// @param <String> in - The expression that resolves to the instance of the object
+//
+serialize_object(type,in) ::= <%
+  Json.toJson(<in>)
+%>
+
+
+//
+// Given the provided input, compose an expression that evaluates to an instance of
+// an object of the given type.
+//
+// @param <ObjectTypeArguments> type - The object type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+deserialize_object(type,in) ::= <%
+<!
+   val id = json.\("id").validate[String](play.api.libs.json.JsPath.read[String](minLength[String](1) keepAnd pattern("^(\\/?((\\.\\.)|(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9]))?($|\\/))+$".r)))
+   <type.properties:{prop|val <expr(prop.name)> = (v \\ "<escape(prop.name)>").get}; separator=";\n">
+!>
+  <sig(type)>(
+    <type.properties:{prop|<expr(prop.name)> = <deserialize_object__option(prop, concat(["(v \\ \"", escape(prop.name), "\")"]))>}; separator=",\n  ">
+  )
+%>
+
+// Wrap expression with `Some` if property is optional
+deserialize_object__option(prop,in) ::= <%
+<if(prop.required)>
+<deserialize(prop.type,in)>
+<else>
+Some(<deserialize(prop.type,in)>)
+<endif>
+%>
+
+//
+// Given the provided input, compose an expression that evaluates to a list
+// of validation errors for the given type.
+//
+// @param <ObjectTypeArguments> type - The object type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+validate_object(type,in) ::= <% %>
+
+
+//
+// Object : Instantiate an object of a given type
+//
+// @param <ObjectTypeArguments> type - The object type that needs to be instantiated
+// @param <Map<String, ValueArguments>> val - An map of values for each property
+//
+inst_object(type,val) ::= <%
+<sig(type)>(
+    <val.keys:{k|<expr(k)> = <val.(k).expr>}; separator=",\n    ">
+)
+%>

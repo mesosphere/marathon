@@ -1,0 +1,20 @@
+//
+// ENTRY POINT: `serialize`
+//
+// Serialize type according to it's kind
+//
+// @param <TypeArgument> type - The type that needs to be serialized
+// @param <String> in - The expression that resolves to the instance to serialize
+//
+serialize(type,in) ::= "<(SERIALIZE_MAP.(type.kind))(type,in)>"
+
+// Lookup table for each structure
+// (The templates are implemented in the `fragments/structs/<type>.stg`)
+SERIALIZE_MAP ::= [
+    "object": "serialize_object",
+    "variadic_object": "serialize_variadic_object",
+    "array": "serialize_array",
+    "scalar": "serialize_scalar",
+    "enum": "serialize_enum",
+    "union": "serialize_union"
+]

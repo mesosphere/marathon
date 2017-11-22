@@ -1,0 +1,56 @@
+//
+// Scalar signature
+//
+// @param <ScalarTypeArguments> type - The scalar type that needs to be instantiated
+//
+sig_scalar(type) ::= "<type.storage>"
+
+
+//
+// Instantiate a scalar
+//
+// @param <ScalarTypeArguments> type - The scalar type that needs to be instantiated
+// @param <ValueArguments> val - The value for the scalar
+//
+inst_scalar(type,val) ::= "<val.expr>"
+
+
+//
+// Serialize a scalar value
+//
+// @param <ScalarTypeArguments> type - The scalar type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+serialize_scalar(type,in) ::= "<(SERIALIZE_SCALAR_MAP.(type.storage.kind))(type,in)>"
+
+// Lookup table to the serialization function of scalar per storage type
+SERIALIZE_SCALAR_MAP ::= [
+    "string": "serialize_scalar_string",
+    "binary": "serialize_scalar_binary",
+    "integer": "serialize_scalar_number",
+    "number": "serialize_scalar_number",
+    "boolean": "serialize_scalar_boolean",
+    "datetime": "serialize_scalar_date",
+    "datetime_only": "serialize_scalar_date",
+    "date_ony": "serialize_scalar_date",
+    "time_only": "serialize_scalar_date",
+    "void": "serialize_scalar_void",
+    "any": "serialize_scalar_any"
+]
+
+// Per storage-type scalar serialization functions
+serialize_scalar_binary(type,in) ::= "JsNull" // TODO: Implement binaries
+serialize_scalar_string(type,in) ::= "JsString(<in>)"
+serialize_scalar_number(type,in) ::= "JsNumber(<in>)"
+serialize_scalar_boolean(type,in) ::= "JsBoolean(<in>)"
+serialize_scalar_null(type,in) ::= "JsNull"
+serialize_scalar_void(type,in) ::= "Json.toJson(<in>)"
+serialize_scalar_date(type,in) ::= "<in>"
+
+//
+// De-serialize a scalar value
+//
+// @param <ScalarTypeArguments> type - The scalar type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+deserialize_scalar(type,in) ::= "<in>.read[<sig(type)>]"

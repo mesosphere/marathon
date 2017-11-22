@@ -1,0 +1,94 @@
+//
+// Signature of an enum type
+//
+// @param <EnumTypeArguments> type - The enum type that needs to be instantiated
+//
+sig_enum(type) ::= "<type.id>"
+
+
+//
+// Compose the declaration expression for the given enum
+//
+// @param <EnumTypeArguments> type - The enum type that needs to be instantiated
+//
+declare_enum(type) ::= <<
+/**
+ * Enumeration for <type.id>
+ * <type.description>
+ */
+sealed trait <sig(type)> { val value: <sig(type.itemType)>; }
+object <sig(type)> {
+  <! Declare the values for the enum as case classes (see below) !>
+  <type.values:decl_enum__value_decl(type); separator="\n">
+
+  /**
+   * Construct an enum object from the value given or raise
+   * an exception if the value was not found.
+   */
+  def byValue(v: String): <type.id> = v match {
+    <type.values:decl_enum__value_case(type); separator="\n">
+    case _ => throw new IllegalArgumentException("Unknown value for enum `<type.id>`")
+  }
+}
+>>
+
+// Return the value definition for the enum
+decl_enum__value_decl(v,type) ::= <%
+case object <v.codesafe> extends <type.id> {
+  val value: <sig(type.itemType)> = <v.expr>
+}
+%>
+
+// Return a resolution-by-value case statement for the enum
+decl_enum__value_case(v,type) ::= <%
+case <v.expr> => <v.codesafe>
+%>
+
+
+//
+// Given the provided instance, compose an expression that evaluates to the serialized
+// data of the enum
+//
+// @param <EnumTypeArguments> type - The enum type that needs to be instantiated
+// @param <String> in - The expression that resolves to the instance of the enum
+//
+serialize_enum(type,in) ::= <%
+  Json.toJson(<in>.value)
+%>
+
+
+//
+// Given the provided input, compose an expression that evaluates to an instance of
+// an enum of the given type.
+//
+// @param <EnumTypeArguments> type - The enum type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+deserialize_enum(type,in) ::= <% %>
+
+
+//
+// Given the provided input, compose an expression that evaluates to a list
+// of validation errors for the given type.
+//
+// @param <EnumTypeArguments> type - The enum type that needs to be instantiated
+// @param <String> in - The expression that resolves to the data to be de-serialized
+//
+validate_enum(type,in) ::= <% %>
+
+
+//
+// Union : Instantiate an enum
+//
+// @param <EnumTypeArguments> type - The enum type that needs to be instantiated
+// @param <ValueArguments> val - The value for the enum
+//
+inst_enum(type,val) ::= <%
+<type.id>.
+    <! Enums *MUST* contain a value, so if they are missing, we will pick the first enum value !>
+    <if(val.null)>
+        <first(type.values).codesafe>
+    <else>
+        <val.codesafe>
+    <endif>
+%>

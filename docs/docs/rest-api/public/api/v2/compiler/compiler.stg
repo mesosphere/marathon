@@ -1,0 +1,73 @@
+//
+// `sig` template : Compose signature expressions
+//
+import "fragments/sig.stg"
+
+//
+// `valueof` template : Compose scalar-type value expression
+//
+import "fragments/valueof.stg"
+
+//
+// `inst` template : Compose structural-type instantiation expressions
+//
+import "fragments/inst.stg"
+
+//
+// `declare` template : Compose the declaration statement for the type
+//
+import "fragments/declare.stg"
+
+//
+// `serialize` template : Compose serialization expression for the type
+//
+import "fragments/serialize.stg"
+
+//
+// `deserialize` template : Compose deserialization expression for the type
+//
+import "fragments/deserialize.stg"
+
+//
+// `trait`, `option_trait`, `option_value` templates : Scala-specific utilities
+//
+import "fragments/util/scala.stg"
+
+//
+// `expr` : Calculate literal expression, sanitizing reserved keywords
+//
+import "fragments/util/sanitize.stg"
+
+//
+// Structure-specific implementation of the following templates:
+//
+// - `*_declare` : Type-specific declaration
+// - `*_inst` : Type-specific by-value instantiation expression
+// - `*_serialize` : Type-specific serialize expression
+// - `*_deserialize` : Type-specific de-serialize expression
+// - `*_validate` : Type-specific validate expression
+//
+import "fragments/structs/scalar.stg"
+import "fragments/structs/array.stg"
+import "fragments/structs/enum.stg"
+import "fragments/structs/object.stg"
+import "fragments/structs/union.stg"
+import "fragments/structs/variadic_object.stg"
+
+// ===========================================
+//  Entrypoint to the StringTemplate Compiler
+// ===========================================
+
+//
+// The contents of the type file
+//
+contents(type) ::= <<
+package types
+
+import java.time.OffsetDateTime
+import play.api.libs.json._
+
+<declare(type)>
+>>
+
+

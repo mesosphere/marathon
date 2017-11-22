@@ -1,0 +1,21 @@
+//
+// ENTRY POINT: `inst`
+//
+// Composes the expression that instantiates the given structural type with the
+// given arguments.
+//
+// @param <TypeArgument> type - The type that needs to be instantiated
+// @param <Object> val - The value(s) for the new instance (depends on the type)
+//
+inst(type,val) ::= "<(INSTANCE_MAP.(type.kind))(type,val)>"
+
+// Lookup table for each structure
+// (The templates are implemented in the `fragments/structs/<type>.stg`)
+INSTANCE_MAP ::= [
+    "array": "inst_array",
+    "object": "inst_object",
+    "variadic_object": "inst_variadic_object",
+    "union": "inst_union",
+    "enum": "inst_enum",
+    "scalar": "inst_scalar"
+]
