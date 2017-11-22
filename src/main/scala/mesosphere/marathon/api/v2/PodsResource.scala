@@ -193,9 +193,9 @@ class PodsResource @Inject() (
     import PathId._
 
     withValid(id.toRootPath) { id =>
-        val maybeStatus = podStatusService.selectPodStatus(id, authzSelector)
-        result(maybeStatus).fold(notFound(id)) { status =>
-          ok(Json.stringify(Json.toJson(status)))
+      val maybeStatus = podStatusService.selectPodStatus(id, authzSelector)
+      result(maybeStatus).fold(notFound(id)) { status =>
+        ok(Json.stringify(Json.toJson(status)))
       }
     }
   }

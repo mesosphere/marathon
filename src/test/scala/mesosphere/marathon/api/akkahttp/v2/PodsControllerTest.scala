@@ -6,20 +6,20 @@ import java.net.InetAddress
 import akka.event.EventStream
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Location, `Remote-Address`}
-import mesosphere.{UnitTest, ValidationTestLike}
+import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
+import mesosphere.{ UnitTest, ValidationTestLike }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.Headers
-import mesosphere.marathon.api.akkahttp.Rejections.{EntityNotFound, Message}
+import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
@@ -43,6 +43,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       val controller = Fixture(authenticated = false).controller()
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Head(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Post(Uri./))
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
     }
 
@@ -65,6 +66,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       f.podManager.find(any).returns(Some(podDefinition))
 
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
     }
 
@@ -399,6 +401,32 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
+    "delete a pod" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val pod = PodDefinition(id = PathId("mypod"))
+      f.podManager.find(eq(PathId("mypod"))).returns(Some(pod))
+
+      val plan = DeploymentPlan.empty
+      f.podManager.delete(any, eq(false)).returns(Future.successful(plan))
+
+      Delete("/mypod") ~> controller.route ~> check {
+        response.status should be(StatusCodes.Accepted)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(plan.id)
+      }
+    }
+
+    "reject deletion of unknown pod" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      f.podManager.find(eq(PathId("unknown-pod"))).returns(None)
+
+      Delete("/unknown-pod") ~> controller.route ~> check {
+        rejection should be(EntityNotFound(Message("Pod 'unknown-pod' does not exist")))
+      }
+    }
     "respond with a pod for a lookup" in {
       val f = Fixture()
       val controller = f.controller()
