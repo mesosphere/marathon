@@ -6,7 +6,7 @@ DC/OS Type generator is a language-agnostic utility, designed to unify the API a
 
 The code idea behind the project is described in the architectural diagram below:
 
-![Architecture](doc/architecture.png)
+![Architecture](doc/images/architecture.png)
 
 
 ## Usage
