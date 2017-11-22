@@ -494,6 +494,13 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       request ~> controller.route ~> check {
         response.status should be(StatusCodes.OK)
         response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(
+          podId("/mypod"),
+          executorResources(cpus = 0.1, mem = 32.0, disk = 10.0),
+          noDefinedNetworkname,
+          networkMode(raml.NetworkMode.Host)
+        )
       }
     }
 
@@ -522,7 +529,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       request ~> controller.route ~> check {
         rejection shouldBe a[EntityNotFound]
         inside(rejection) {
-          case r: EntityNotFound => r.message.message shouldEqual s"Pod 'unknownpod' does not exist"
+          case r: EntityNotFound => r.message.message shouldEqual s"Pod '/unknownpod' does not exist"
         }
       }
     }

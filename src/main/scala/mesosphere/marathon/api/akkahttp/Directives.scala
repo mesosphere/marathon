@@ -3,13 +3,19 @@ package api.akkahttp
 
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.{ Directive0, Directive1, Directives => AkkaDirectives }
-import com.wix.accord.{ Failure, Success, Validator, Result => ValidationResult }
+import akka.http.scaladsl.server.{ Directive0, Directive1, RejectionError, Directives => AkkaDirectives }
+import com.wix.accord.{ Validator, Result => ValidationResult }
+import com.wix.accord
 import com.wix.accord.dsl._
+import mesosphere.marathon.api.akkahttp.Rejections.Message
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.plugin.auth.{ Authorizer, Identity }
 import mesosphere.marathon.state.PathId
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
+import scala.util.{ Failure, Success }
 
 /**
   * All Marathon Directives and Akka Directives
@@ -93,8 +99,8 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
   def assumeValid(result: ValidationResult): Directive0 = {
     import mesosphere.marathon.api.akkahttp.EntityMarshallers._
     result match {
-      case failure: Failure => reject(ValidationFailed(failure))
-      case Success => pass
+      case failure: accord.Failure => reject(ValidationFailed(failure))
+      case accord.Success => pass
     }
   }
 
@@ -119,6 +125,48 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
     } catch {
       case e: NormalizationException => complete((StatusCodes.UnprocessableEntity, e.msg))
     }
+  }
+
+  /**
+    * Directive for handling "legacy" method calls (ones which don't return an exception)
+    *
+    * "Unwraps" a `Future[T]` and runs the inner route after future
+    * completion with the future's value as an extraction of type `T`.
+    * If the future fails or called method throws an exception it will be matched against known legacy
+    * exceptions and approproate rejection will be generated. In case exception can't be handled it is bubbled up
+    * to the nearest ExceptionHandler.
+    *
+    * @param f
+    * @param identity
+    * @param authorizer
+    * @tparam T
+    * @return
+    */
+  def onSuccessLegacy[T](f: => Future[T])(implicit identity: Identity, authorizer: Authorizer): Directive1[T] = onComplete({
+    try { f }
+    catch {
+      case NonFatal(ex) =>
+        Future.failed(ex)
+    }
+  }).flatMap {
+    case Success(t) =>
+      provide(t)
+    case Failure(ValidationFailedException(_, failure)) =>
+      reject(EntityMarshallers.ValidationFailed(failure))
+    case Failure(AccessDeniedException(msg)) =>
+      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+    case Failure(e: PodNotFoundException) => reject(
+      Rejections.EntityNotFound.noPod(e.id)
+    )
+    case Failure(e: AppNotFoundException) => reject(
+      Rejections.EntityNotFound.noApp(e.id)
+    )
+    case Failure(RejectionError(rejection)) =>
+      reject(rejection)
+    case Failure(ConflictingChangeException(msg)) =>
+      reject(Rejections.ConflictingChange(Message(msg)))
+    case Failure(ex) =>
+      throw ex
   }
 
 }

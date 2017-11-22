@@ -114,7 +114,7 @@ class PodsController(
                     eventBus.publish(PodEvent(host.toString(), uri.toString(), PodEvent.Updated))
                     plan
                   }
-                  onSuccessLegacy(Some(podId))(deploymentPlan).apply { plan =>
+                  onSuccessLegacy(deploymentPlan).apply { plan =>
                     val ramlPod = PodConversion.podRamlWriter.write(pod)
                     complete((StatusCodes.OK, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
                   }
@@ -256,32 +256,4 @@ class PodsController(
       }
     }
   // format: ON
-
-  private def onSuccessLegacy[T](maybePodId: Option[PathId])(f: => Future[T])(implicit identity: Identity): Directive1[T] = onComplete({
-    try { f }
-    catch {
-      case NonFatal(ex) =>
-        Future.failed(ex)
-    }
-  }).flatMap {
-    case Success(t) =>
-      provide(t)
-    case Failure(ValidationFailedException(_, failure)) =>
-      reject(EntityMarshallers.ValidationFailed(failure))
-    case Failure(AccessDeniedException(msg)) =>
-      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-    case Failure(_: PodNotFoundException) =>
-      reject(
-        maybePodId.map { appId =>
-          Rejections.EntityNotFound.noPod(appId)
-        } getOrElse Rejections.EntityNotFound()
-      )
-    case Failure(RejectionError(rejection)) =>
-      reject(rejection)
-    case Failure(ConflictingChangeException(msg)) =>
-      reject(Rejections.ConflictingChange(Message(msg)))
-    case Failure(ex) =>
-      throw ex
-  }
-
 }
