@@ -506,3 +506,49 @@ def test_pod_health_failed_check():
     for task in tasks:
         assert task['id'] != initial_id1, "One of the tasks has not been restarted"
         assert task['id'] != initial_id2, "One of the tasks has not been restarted"
+
+@common.marathon_1_6
+def test_pod_with_persistent_volume():
+    pod_def = pods.persistent_volume_pod()
+    pod_id = pod_def['id']
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    common.deployment_wait(service_id=pod_id)
+
+    tasks = common.get_pod_tasks(pod_id)
+
+    host = tasks[0]['statuses'][0]['container_status']['network_infos'][0]['ip_addresses'][0]['ip_address']
+    port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
+    port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
+    dir1 = tasks[0]['container']['volumes'][0]['container_path']
+    dir2 = tasks[1]['container']['volumes'][0]['container_path']
+    print(host, port1, port2, dir1, dir2)
+
+    time.sleep(1)
+
+    cmd = "curl {}:{}/{}/foo".format(host, port1, dir1)
+    run, data = shakedown.run_command_on_master(cmd)
+    assert run, "{} did not succeed".format(cmd)
+    assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
+
+    cmd = "curl {}:{}/{}/foo".format(host, port2, dir2)
+    run, data = shakedown.run_command_on_master(cmd)
+    assert run, "{} did not succeed".format(cmd)
+    assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
+
+@common.marathon_1_6
+def test_health_check_works_with_pod_resident_task():
+    pod_def = pods.resident_docker_pod()
+    pod_id = pod_def['id']
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    common.deployment_wait(service_id=pod_id)
+
+    tasks = common.get_pod_tasks(pod_id)
+    assert len(tasks) == 1, "The number of tasks is {}, but 1 was expected".format(len(tasks))
+
+    pod = client.show_pod(pod_id)
+    assert pod['instances'][0]['containers'][0]['endpoints'][0]['healthy'] == True, \
+        "The only pod instance is not healthy, but it should be"

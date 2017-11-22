@@ -1,0 +1,79 @@
+{
+  "id": "/resident-docker-pod",
+  "volumes": [
+    {
+      "name": "pst",
+      "persistent": {
+        "type": "root",
+        "size": 10,
+        "constraints": []
+      }
+    }
+  ],
+  "scaling": {
+    "kind": "fixed",
+    "instances": 1
+  },
+  "scheduling": {
+    "residency": {
+      "taskLostBehavior": "WAIT_FOREVER",
+      "relaunchEscalationTimeoutSeconds": 3600
+    },
+    "unreachableStrategy": "disabled",
+    "upgrade": {
+      "minimumHealthCapacity": 0,
+      "maximumOverCapacity": 0
+    }
+  },
+  "containers": [
+    {
+      "name": "container1",
+      "image": {
+        "id": "nginx",
+        "kind": "DOCKER",
+        "forcePull": false
+      },
+      "resources": {
+        "cpus": 0.1,
+        "mem": 128
+      },
+      "endpoints": [
+        {
+          "name": "httpct1",
+          "containerPort": 80,
+          "hostPort": 0,
+          "protocol": [
+            "tcp"
+          ]
+        }
+      ],
+      "healthCheck": {
+        "http": {
+          "endpoint": "httpct1",
+          "path": "/",
+          "scheme": "HTTP"
+        },
+        "gracePeriodSeconds": 240,
+        "intervalSeconds": 10,
+        "maxConsecutiveFailures": 10,
+        "timeoutSeconds": 5,
+        "delaySeconds": 3
+      },
+      "volumeMounts": [
+        {
+          "name": "pst",
+          "mountPath": "pst1",
+          "readOnly": false
+        }
+      ],
+      "lifecycle": {
+        "killGracePeriodSeconds": 60
+      }
+    }
+  ],
+  "networks": [
+    {
+      "mode": "container"
+    }
+  ]
+}

@@ -19,6 +19,7 @@ from urllib.parse import urljoin
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
+marathon_1_6 = pytest.mark.skipif('marthon_version_less_than("1.6")')
 
 
 def ignore_exception(exc):

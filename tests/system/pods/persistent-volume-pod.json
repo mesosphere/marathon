@@ -1,0 +1,97 @@
+{
+  "id": "/persistent-volume-pod",
+  "volumes": [
+    {
+      "name": "pst",
+      "persistent": {
+        "type": "root",
+        "size": 10,
+        "constraints": []
+      }
+    }
+  ],
+  "scaling": {
+    "kind": "fixed",
+    "instances": 1
+  },
+  "scheduling": {
+    "residency": {
+      "taskLostBehavior": "WAIT_FOREVER",
+      "relaunchEscalationTimeoutSeconds": 3600
+    },
+    "unreachableStrategy": "disabled",
+    "upgrade": {
+      "minimumHealthCapacity": 0,
+      "maximumOverCapacity": 0
+    }
+  },
+  "containers": [
+    {
+      "name": "container1",
+      "exec": {
+        "command": {
+          "shell": "cd $MESOS_SANDBOX && echo 'hello' >> pst1/foo && /opt/mesosphere/bin/python -m http.server $EP_HOST_HTTPCT1"
+        }
+      },
+      "resources": {
+        "cpus": 0.1,
+        "mem": 128
+      },
+      "endpoints": [
+        {
+          "name": "httpct1",
+          "hostPort": 0,
+          "protocol": [
+            "tcp"
+          ]
+        }
+      ],
+      "volumeMounts": [
+        {
+          "name": "pst",
+          "mountPath": "pst1",
+          "readOnly": false
+        }
+      ],
+      "lifecycle": {
+        "killGracePeriodSeconds": 60
+      }
+    },
+    {
+      "name": "container2",
+      "exec": {
+        "command": {
+          "shell": "cd $MESOS_SANDBOX && /opt/mesosphere/bin/python -m http.server $EP_HOST_HTTPCT2"
+        }
+      },
+      "resources": {
+        "cpus": 0.1,
+        "mem": 128
+      },
+      "endpoints": [
+        {
+          "name": "httpct2",
+          "hostPort": 0,
+          "protocol": [
+            "tcp"
+          ]
+        }
+      ],
+      "volumeMounts": [
+        {
+          "name": "pst",
+          "mountPath": "pst2",
+          "readOnly": false
+        }
+      ],
+      "lifecycle": {
+        "killGracePeriodSeconds": 60
+      }
+    }
+  ],
+  "networks": [
+    {
+      "mode": "host"
+    }
+  ]
+}
