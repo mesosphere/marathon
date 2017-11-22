@@ -25,7 +25,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.PodEvent
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.raml.{ PodConversion, Raml }
+import mesosphere.marathon.raml.{ PodConversion, PodStatusConversion, Raml }
 import mesosphere.marathon.util.SemanticVersion
 
 import async.Async._
@@ -165,6 +165,23 @@ class PodsController(
               // We don't filter the pods with an authorization since we check for authorization before.
               val status: raml.PodStatus = maybeStatus.getOrElse(throw new IllegalStateException(s"Status for pod '$podId' was none even though pod existed at start of request."))
               complete((StatusCodes.OK, status))
+            }
+          }
+      }
+    }
+
+  @SuppressWarnings(Array("all")) // async/await
+  def status(podId: PathId): Route =
+    authenticated.apply { implicit identity =>
+      podManager.find(podId) match {
+        case None =>
+          reject(Rejections.EntityNotFound.noPod(podId))
+        case Some(pod) =>
+          authorized(ViewRunSpec, pod).apply {
+            onSuccess(podStatusService.selectPodStatus(podId)) { maybeStatus =>
+              val status = maybeStatus.get // If selectPodStatus returns None this is a bug.
+              val ramlStatus = PodStatusConversion.podInstanceStatusRamlWriter.write(status)
+              complete("")
             }
           }
       }
