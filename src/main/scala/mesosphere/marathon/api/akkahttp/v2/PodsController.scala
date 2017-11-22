@@ -12,7 +12,7 @@ import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forcePara
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, DeleteRunSpec, ViewRunSpec }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import akka.http.scaladsl.server.PathMatchers
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
@@ -199,7 +199,19 @@ class PodsController(
       }
     }
 
-  def version(podId: PathId, v: String): Route = ???
+  def version(podId: PathId, v: String): Route =
+    authenticated.apply { implicit identity =>
+      val version = Timestamp(v) // Original Resource is not validating.
+      onSuccess(podManager.version(podId, version)) {
+        case None =>
+          reject(Rejections.EntityNotFound.noPod(podId, Some(version)))
+        case Some(pod) =>
+          authorized(ViewRunSpec, pod).apply {
+            val ramlPod = PodConversion.podRamlWriter.write(pod)
+            complete(ramlPod)
+          }
+      }
+    }
 
   def allStatus(): Route =
     authenticated.apply { implicit identity =>

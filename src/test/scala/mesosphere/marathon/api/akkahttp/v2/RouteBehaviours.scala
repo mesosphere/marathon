@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
-import akka.http.scaladsl.model.{ HttpRequest, StatusCodes, Uri }
+import akka.http.scaladsl.model.{ HttpRequest, StatusCodes }
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
@@ -39,12 +39,12 @@ trait RouteBehaviours extends ScalatestRouteTest with Inside { this: UnitTest =>
     }
   }
 
-  def unknownPod(forRoute: Route, withRequest: HttpRequest): Unit = {
-    s"reject ${withRequest.method.value} of ${withRequest.uri} for unknown pod" in {
+  def unknownEntity(forRoute: Route, withRequest: HttpRequest, withMessage: String): Unit = {
+    s"reject ${withRequest.method.value} of ${withRequest.uri} for entity not found: $withMessage" in {
       When(s"we try to fetch from $forRoute")
       withRequest ~> forRoute ~> check {
-        Then("we receive a entity not found rejection")
-        rejection should be(EntityNotFound(Message("Pod 'unknown-pod' does not exist")))
+        Then(s"we receive a entity not found: $withMessage")
+        rejection should be(EntityNotFound(Message(withMessage)))
       }
     }
   }

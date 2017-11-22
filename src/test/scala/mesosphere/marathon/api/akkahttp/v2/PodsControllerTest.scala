@@ -10,10 +10,10 @@ import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
 import mesosphere.{ UnitTest, ValidationTestLike }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.Headers
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -21,7 +21,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -79,10 +79,13 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       val f = Fixture()
       val controller = f.controller()
       f.podManager.find(any).returns(None)
+      f.podManager.version(any, any).returns(Future.successful(None))
+      def unknownPod(withRequest: HttpRequest, withMessage: String) = unknownEntity(controller.route, withRequest, withMessage)
 
-      behave like unknownPod(forRoute = controller.route, withRequest = Delete("/unknown-pod"))
-      behave like unknownPod(forRoute = controller.route, withRequest = Get("/unknown-pod"))
-      behave like unknownPod(forRoute = controller.route, withRequest = Get("/unknown-pod::versions"))
+      behave like unknownPod(withRequest = Delete("/unknown-pod"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/unknown-pod"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/unknown-pod::versions"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/unknown-pod::versions/2015-04-09T12:30:00.000Z"), withMessage = "Pod 'unknown-pod' does not exist in version 2015-04-09T12:30:00.000Z")
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -530,62 +533,38 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    //    "there are no versions" when {
-    //      "list no versions" in {
-    //        val groupManager = mock[GroupManager]
-    //        groupManager.pod(any).returns(None)
-    //        implicit val podManager = PodManagerImpl(groupManager)
-    //        val f = Fixture()
-    //
-    //        val response = f.podsResource.versions("/id", f.auth.request)
-    //        withClue(s"response body: ${response.getEntity}") {
-    //          response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
-    //        }
-    //      }
-    //      "return 404 when asking for a version" in {
-    //        val groupManager = mock[GroupManager]
-    //        groupManager.pod(any).returns(None)
-    //        groupManager.podVersions(any).returns(Source.empty)
-    //        groupManager.podVersion(any, any).returns(Future.successful(None))
-    //        implicit val podManager = PodManagerImpl(groupManager)
-    //        val f = Fixture()
-    //
-    //        val response = f.podsResource.version("/id", "2008-01-01T12:00:00Z", f.auth.request)
-    //        withClue(s"response body: ${response.getEntity}") {
-    //          response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
-    //          response.getEntity.toString should be ("{\"message\":\"Pod '/id' does not exist\"}")
-    //        }
-    //      }
-    //    }
-    "repsonse with all available versions" in {
+    "respond with all available versions" in {
       val f = Fixture()
       val controller = f.controller()
 
+      val pod = PodDefinition(id = PathId("mypod"))
+      f.podManager.find(eq(PathId("mypod"))).returns(Some(pod))
+
       val versions = Seq(f.clock.now(), f.clock.now() + 1.minute)
-      f.podManager.versions(eq(PathId("mypod"))).returns(Sources(versions))
+      f.podManager.versions(eq(PathId("mypod"))).returns(Source(versions))
 
       Get("/mypod::versions") ~> controller.route ~> check {
         response.status should be(StatusCodes.OK)
         val jsonResponse = Json.parse(responseAs[String])
+        (jsonResponse \ 0).get.asOpt[String] should be(Some("2015-04-09T12:30:00.000Z"))
+        (jsonResponse \ 1).get.asOpt[String] should be(Some("2015-04-09T12:31:00.000Z"))
       }
     }
-    //    "get a specific version" in {
-    //      val groupManager = mock[GroupManager]
-    //      groupManager.pod(any).returns(Some(pod2))
-    //      groupManager.podVersions(pod1.id).returns(Source(Seq(pod1.version.toOffsetDateTime, pod2.version.toOffsetDateTime)))
-    //      groupManager.podVersion(pod1.id, pod1.version.toOffsetDateTime).returns(Future.successful(Some(pod1)))
-    //      groupManager.podVersion(pod1.id, pod2.version.toOffsetDateTime).returns(Future.successful(Some(pod2)))
-    //      implicit val podManager = PodManagerImpl(groupManager)
-    //      val f = Fixture()
-    //
-    //      val response = f.podsResource.version("/id", pod1.version.toString, f.auth.request)
-    //      withClue(s"reponse body: ${response.getEntity}") {
-    //        response.getStatus should be(HttpServletResponse.SC_OK)
-    //        val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
-    //        pod should equal(pod1)
-    //      }
-    //    }
-    //    }
+
+    "respond with a specific version" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val pod = PodDefinition(id = PathId("mypod"))
+      val version = f.clock.now()
+      f.podManager.version(eq(PathId("mypod")), eq(version)).returns(Future.successful(Some(pod)))
+
+      Get("/mypod::versions/2015-04-09T12:30:00.000Z") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(podId("mypod"))
+      }
+    }
   }
 
   case class Fixture(
