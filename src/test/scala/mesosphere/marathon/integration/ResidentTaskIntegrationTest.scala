@@ -8,7 +8,6 @@ import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITRes
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
 import mesosphere.marathon.raml.{ App, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolume, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
 import mesosphere.marathon.state.PathId
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._

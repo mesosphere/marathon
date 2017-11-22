@@ -40,11 +40,11 @@ trait ResponseMatchers { this: UnitTest =>
     * @param name Expected name of network
     * @return Match result
     */
-  def definedNetworkname(name: String) = new HavePropertyMatcher[JsValue, Option[String]] {
+  def definedNetworkName(name: String) = new HavePropertyMatcher[JsValue, Option[String]] {
     override def apply(actual: JsValue) = {
-      val maybeNetworkname = (actual \ "networks" \ 0 \ "name").asOpt[String]
-      val matches = maybeNetworkname.contains(name)
-      HavePropertyMatchResult(matches, "networkname", Some(name), maybeNetworkname)
+      val maybeNetworkName = (actual \ "networks" \ 0 \ "name").asOpt[String]
+      val matches = maybeNetworkName.contains(name)
+      HavePropertyMatchResult(matches, "networkName", Some(name), maybeNetworkName)
     }
   }
 
@@ -57,7 +57,7 @@ trait ResponseMatchers { this: UnitTest =>
     override def apply(actual: JsValue) = {
       val maybeMode = (actual \ "networks" \ 0 \ "mode").asOpt[String]
       val matches = maybeMode.contains(mode.value)
-      HavePropertyMatchResult(matches, "networkmode", Some(mode.value), maybeMode)
+      HavePropertyMatchResult(matches, "networkMode", Some(mode.value), maybeMode)
     }
   }
 
@@ -84,6 +84,14 @@ trait ResponseMatchers { this: UnitTest =>
       val maybeSecret = (actual \ "volumes" \ 0 \ "secret").asOpt[String]
       val matches = maybeSecret.contains(secret)
       HavePropertyMatchResult(matches, "podContainerSecret", Some(secret), maybeSecret)
+    }
+  }
+
+  def podId(id: String) = new HavePropertyMatcher[JsValue, Option[String]] {
+    override def apply(actual: JsValue) = {
+      val maybeId = (actual \ "id").asOpt[String]
+      val matches = maybeId.contains(id)
+      HavePropertyMatchResult(matches, "podId", Some(id), maybeId)
     }
   }
 }

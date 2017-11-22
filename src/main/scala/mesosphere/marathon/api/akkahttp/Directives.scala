@@ -3,9 +3,6 @@ package api.akkahttp
 
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.extractRequest
-import akka.http.scaladsl.server.{ Directive, Directive0, Directive1, MalformedQueryParamRejection, Route, Directives => AkkaDirectives }
-import com.wix.accord.{ Failure, Success, Result => ValidationResult }
 import akka.http.scaladsl.server.{ Directive0, Directive1, Directives => AkkaDirectives }
 import com.wix.accord.{ Failure, Success, Validator, Result => ValidationResult }
 import com.wix.accord.dsl._

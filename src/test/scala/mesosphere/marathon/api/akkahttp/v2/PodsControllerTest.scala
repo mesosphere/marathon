@@ -43,6 +43,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Head(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Post(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
     }
 
     {
@@ -65,6 +66,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
 
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -333,7 +335,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
 
         jsonResponse should have(
           executorResources(cpus = 0.1, mem = 32.0, disk = 10.0),
-          definedNetworkname("blah"),
+          definedNetworkName("blah"),
           networkMode(raml.NetworkMode.Container)
         )
       }
@@ -422,6 +424,30 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
 
       Delete("/unknown-pod") ~> controller.route ~> check {
         rejection should be(EntityNotFound(Message("Pod 'unknown-pod' does not exist")))
+      }
+    }
+    "respond with a pod for a lookup" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val podDefinition = PodDefinition(id = PathId("mypod"))
+      f.podManager.find(eq(PathId("mypod"))).returns(Some(podDefinition))
+
+      Get("/mypod") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(podId("mypod"))
+      }
+    }
+
+    "reject a lookup a specific pod that pod does not exist" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      f.podManager.find(eq(PathId("mypod"))).returns(Option.empty[PodDefinition])
+
+      Get("/mypod") ~> controller.route ~> check {
+        rejection should be(EntityNotFound(Message("Pod 'mypod' does not exist")))
       }
     }
   }
