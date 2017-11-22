@@ -14,6 +14,8 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, DeleteRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
+import akka.stream.Materializer
+import akka.stream.scaladsl.{ Sink, Source }
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.api.v2.validation.PodsValidation
@@ -42,6 +44,7 @@ class PodsController(
     implicit
     val authorizer: Authorizer,
     val authenticator: Authenticator,
+    val mat: Materializer,
     val executionContext: ExecutionContext) extends Controller {
 
   import mesosphere.marathon.api.akkahttp.Directives._
@@ -170,7 +173,19 @@ class PodsController(
 
   def version(podId: PathId, v: String): Route = ???
 
-  def allStatus(): Route = ???
+  def allStatus(): Route =
+    authenticated.apply { implicit identity =>
+      def isAuthorized(pod: PodDefinition): Boolean = authorizer.isAuthorized(identity, ViewRunSpec, pod)
+
+      val filteredPods = Source(podManager.ids())
+        .mapAsync(Int.MaxValue) { id =>
+          podStatusService.selectPodStatus(id, isAuthorized)
+        }
+        .mapConcat((maybeStatus: Option[raml.PodStatus]) => maybeStatus.toList) // flatten
+        .runWith(Sink.seq)
+
+      complete(filteredPods)
+    }
 
   def killInstance(instanceId: Instance.Id): Route = ???
 
