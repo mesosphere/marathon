@@ -45,6 +45,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Post(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
     }
 
     {
@@ -68,6 +69,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -449,6 +451,34 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
 
       Get("/mypod") ~> controller.route ~> check {
         rejection should be(EntityNotFound(Message("Pod 'mypod' does not exist")))
+      }
+    }
+
+    "response with status for a pod" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val pod = PodDefinition(id = PathId("an-awesome-group/mypod"))
+      f.podManager.find(eq(PathId("an-awesome-group/mypod"))).returns(Some(pod))
+
+      val podStatus = raml.PodStatus(
+        id = "an-awesome-group/mypod",
+        spec = raml.Pod(id = "an-awesome-group/mypod", containers = Seq.empty),
+        status = raml.PodState.Stable,
+        statusSince = f.clock.now().toOffsetDateTime,
+        lastUpdated = f.clock.now().toOffsetDateTime,
+        lastChanged = f.clock.now().toOffsetDateTime
+      )
+      f.podStatusService.selectPodStatus(eq(PathId("an-awesome-group/mypod")), any).returns(Future.successful(Some(podStatus)))
+
+      Get("/an-awesome-group/mypod::status") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(
+          podId("an-awesome-group/mypod"),
+          podState(raml.PodState.Stable)
+        )
       }
     }
   }
