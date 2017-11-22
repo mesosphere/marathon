@@ -4,34 +4,36 @@ package api.akkahttp.v2
 import java.time.Clock
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.{ StatusCodes, Uri }
+import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Route
-import mesosphere.marathon.api.akkahttp.{ Controller, Headers, Rejections }
-import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
+import mesosphere.marathon.api.akkahttp.{Controller, Headers, Rejections}
+import mesosphere.marathon.api.akkahttp.PathMatchers.{PodsPathIdLike, forceParameter}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, ViewRunSpec }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, CreateRunSpec, ViewRunSpec}
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.PodEvent
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.pod.PodManager
-import mesosphere.marathon.raml.{ PodConversion, Raml }
+import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
+import mesosphere.marathon.raml.{PodConversion, PodStatusConversion, Raml}
 import mesosphere.marathon.util.SemanticVersion
 
 import async.Async._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 class PodsController(
     val config: MarathonConf,
     val electionService: ElectionService,
     val podManager: PodManager,
+    val podStatusService: PodStatusService,
     val groupManager: GroupManager,
     val pluginManager: PluginManager,
     val eventBus: EventStream,
@@ -113,7 +115,22 @@ class PodsController(
 
   def remove(podId: PathId): Route = ???
 
-  def status(podId: PathId): Route = ???
+  @SuppressWarnings(Array("all")) // async/await
+  def status(podId: PathId): Route =
+  authenticated.apply { implicit identity =>
+    podManager.find(podId) match {
+      case None =>
+        reject(Rejections.EntityNotFound.noPod(podId))
+      case Some(pod) =>
+        authorized(ViewRunSpec, pod).apply {
+          onSuccess(podStatusService.selectPodStatus(podId)) { maybeStatus =>
+            val status = maybeStatus.get // If selectPodStatus returns None this is a bug.
+            val ramlStatus = PodStatusConversion.podInstanceStatusRamlWriter.write(status)
+            complete("")
+          }
+        }
+    }
+  }
 
   def versions(podId: PathId): Route = ???
 

@@ -6,19 +6,20 @@ import java.net.InetAddress
 import akka.event.EventStream
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
-import mesosphere.{ UnitTest, ValidationTestLike }
+import akka.http.scaladsl.model.headers.{Location, `Remote-Address`}
+import mesosphere.{UnitTest, ValidationTestLike}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.Headers
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
+import mesosphere.marathon.api.akkahttp.Rejections.{EntityNotFound, Message}
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
+import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
+import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
@@ -439,6 +440,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     val electionService = mock[ElectionService]
     val groupManager = mock[GroupManager]
     val podManager = mock[PodManager]
+    val podStatusService = mock[PodStatusService]
     val pluginManager = PluginManager.None
     val eventBus = mock[EventStream]
     val scheduler = mock[MarathonScheduler]
@@ -447,6 +449,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
 
     implicit val authenticator = auth.auth
-    def controller() = new PodsController(config, electionService, podManager, groupManager, pluginManager, eventBus, scheduler, clock)
+    def controller() = new PodsController(config, electionService, podManager, podStatusService, groupManager, pluginManager, eventBus, scheduler, clock)
   }
 }

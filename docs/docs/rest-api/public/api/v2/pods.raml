@@ -77,6 +77,13 @@
               This operation will create a deployment. The operation finishes, if the deployment succeeds.
               You can query the deployments endoint with this id to see the status of the deployment.
             type: string
+      404:
+        description: No pod found with this `id`.
+        body:
+          application/json:
+            type: error.Error
+            example: |
+              { "message": "Pod '/not_existent' does not exist" }
 
   put:
     is: [ secured, jsonValidator, objectValidator, objectLocator ]
@@ -124,6 +131,13 @@
         body:
           application/json:
             type: pod.Pod
+      404:
+        description: No pod found with this `id`.
+        body:
+          application/json:
+            type: error.Error
+            example: |
+              { "message": "Pod '/not_existent' does not exist" }
 
 /{id}::status:
   description: |
@@ -145,6 +159,13 @@
         body:
           application/json:
             type: podStatus.PodStatus
+      404:
+        description: No pod found with this `id`.
+        body:
+          application/json:
+            type: error.Error
+            example: |
+              { "message": "Pod '/not_existent' does not exist" }
 
 /{id}::versions:
   description: |
