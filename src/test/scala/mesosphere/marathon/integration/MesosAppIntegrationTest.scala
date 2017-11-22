@@ -396,17 +396,10 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)
 
-      Then("The pod is created")
+      Then("The pod is not created")
       createResult should be(Created)
-      waitForDeployment(createResult)
-      waitForPod(pod.id)
 
-      And("Size of the pod should still be 1")
-      val status1 = marathon.status(pod.id)
-      status1 should be(OK)
-      status1.value.instances should have size 1
-
-      When("The pod should be scaled")
+      When("The pod config is updated")
       val scaledPod = pod.copy(instances = 7)
       val updateResult = marathon.updatePod(pod.id, scaledPod, force = true)
 
