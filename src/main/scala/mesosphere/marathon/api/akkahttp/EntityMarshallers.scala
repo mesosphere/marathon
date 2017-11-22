@@ -15,7 +15,7 @@ import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import play.api.libs.json._
 
 import scala.collection.breakOut
