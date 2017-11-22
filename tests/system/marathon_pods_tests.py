@@ -507,6 +507,7 @@ def test_pod_health_failed_check():
         assert task['id'] != initial_id1, "One of the tasks has not been restarted"
         assert task['id'] != initial_id2, "One of the tasks has not been restarted"
 
+
 @common.marathon_1_6
 def test_pod_with_persistent_volume():
     pod_def = pods.persistent_volume_pod()
@@ -537,6 +538,7 @@ def test_pod_with_persistent_volume():
     assert run, "{} did not succeed".format(cmd)
     assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
 
+
 @common.marathon_1_6
 def test_health_check_works_with_pod_resident_task():
     pod_def = pods.resident_docker_pod()
@@ -550,5 +552,5 @@ def test_health_check_works_with_pod_resident_task():
     assert len(tasks) == 1, "The number of tasks is {}, but 1 was expected".format(len(tasks))
 
     pod = client.show_pod(pod_id)
-    assert pod['instances'][0]['containers'][0]['endpoints'][0]['healthy'] == True, \
+    assert pod['instances'][0]['containers'][0]['endpoints'][0]['healthy'], \
         "The only pod instance is not healthy, but it should be"
