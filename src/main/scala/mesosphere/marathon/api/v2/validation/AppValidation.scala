@@ -407,6 +407,7 @@ trait AppValidation {
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
     app.healthChecks is every(portIndexIsValid(portIndices(app)))
+    app.healthChecks is every(complyWithIpProtocolRules(app.container))
     app must haveAtMostOneMesosHealthCheck
     app.fetch is every(valid)
     app.secrets is { secrets: Map[String, SecretDef] =>
@@ -494,6 +495,20 @@ trait AppValidation {
     }
   }
 
+  private def complyWithIpProtocolRules(container: Option[Container]): Validator[AppHealthCheck] =
+    isTrue(AppValidationMessages.HealthCheckIpProtocolLimitation) { healthCheck =>
+      val allowedProtocols = Set(
+        AppHealthCheckProtocol.MesosHttp,
+        AppHealthCheckProtocol.MesosHttps,
+        AppHealthCheckProtocol.MesosTcp)
+
+      def isMesosHttpTcpHealthCheck: Boolean = allowedProtocols.contains(healthCheck.protocol)
+      def isDockerContainer = container.exists(c => c.`type` == EngineType.Docker)
+      val hasIpProtocol = healthCheck.ipProtocol.isDefined
+
+      !hasIpProtocol || (isMesosHttpTcpHealthCheck && isDockerContainer)
+    }
+
   private val haveAtMostOneMesosHealthCheck: Validator[App] = {
     val mesosProtocols = Set(
       AppHealthCheckProtocol.Command,
@@ -537,4 +552,7 @@ object AppValidationMessages {
 
   val DockerEngineLimitedToSingleContainerNetwork =
     "may only specify a single container network when using the Docker container engine"
+
+  val HealthCheckIpProtocolLimitation =
+    "Health check ipProtocol can be used only for docker container and mesos http/https/tcp healthcheck"
 }

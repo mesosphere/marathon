@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.Validator
-import mesosphere.marathon.api.v2.{ AppNormalization }
+import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.raml._
 import mesosphere.{ UnitTest, ValidationTestLike }
 
@@ -276,5 +276,66 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
         networks = Seq(Network(mode = NetworkMode.ContainerBridge, name = None)))) should be(aSuccess)
     }
 
+  }
+
+  "health check validation" when {
+    val allowedProtocols = Set(
+      AppHealthCheckProtocol.MesosHttp,
+      AppHealthCheckProtocol.MesosHttps,
+      AppHealthCheckProtocol.MesosTcp)
+
+    "is docker app" should {
+      val dockerApp = App(
+        id = "/foo",
+        container = Some(Container(
+          `type` = EngineType.Docker,
+          docker = Some(DockerContainer(
+            image = "xyz")))))
+
+      "pass validation when Mesos HTTP/HTTPS/TCP health Check for ip protocol" in {
+        allowedProtocols.foreach { protocol =>
+          val dockerAppWithMesosHttpHealthCheck = dockerApp.copy(healthChecks =
+            Set(AppHealthCheck(
+              protocol = protocol,
+              port = Some(80),
+              ipProtocol = Some(IpProtocol.Ipv6))))
+
+          basicValidator(dockerAppWithMesosHttpHealthCheck) should be(aSuccess)
+        }
+      }
+
+      "fail for Marathon HTTP health check with ip protocol" in {
+        val dockerAppWithMesosHttpHealthCheck = dockerApp.copy(healthChecks =
+          Set(AppHealthCheck(
+            protocol = AppHealthCheckProtocol.Http,
+            port = Some(80),
+            ipProtocol = Some(IpProtocol.Ipv6))))
+
+        basicValidator(dockerAppWithMesosHttpHealthCheck) should haveViolations(
+          "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
+      }
+    }
+
+    "is UCR app" should {
+      val ucrApp = App(
+        id = "/foo",
+        container = Some(Container(
+          `type` = EngineType.Mesos,
+          docker = Some(DockerContainer(
+            image = "xyz")))))
+
+      "should fail even for otherwise supported types" in {
+        allowedProtocols.foreach { protocol =>
+          val dockerAppWithMesosHttpHealthCheck = ucrApp.copy(healthChecks =
+            Set(AppHealthCheck(
+              protocol = protocol,
+              port = Some(80),
+              ipProtocol = Some(IpProtocol.Ipv6))))
+
+          basicValidator(dockerAppWithMesosHttpHealthCheck) should haveViolations(
+            "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
+        }
+      }
+    }
   }
 }
