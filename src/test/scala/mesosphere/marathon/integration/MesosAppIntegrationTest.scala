@@ -24,7 +24,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
   // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
   val envVar = "RUN_MESOS_INTEGRATION_TESTS"
 
-  override lazy val mesosNumSlaves = 3
 
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
