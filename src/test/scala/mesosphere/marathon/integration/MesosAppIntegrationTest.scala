@@ -391,13 +391,15 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       )
 
       Given("a pod with a single task")
-      val pod = simplePod("simple-pod-with-unique-constraint", constraints = constraints, instances = 6)
+      val pod = simplePod("simple-pod-with-unique-constraint", constraints = constraints, instances = 1)
 
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)
 
-      Then("The pod is not created")
+      Then("The pod is created")
       createResult should be(Created)
+      waitForDeployment(createResult)
+      waitForPod(pod.id)
 
       When("The pod config is updated")
       val scaledPod = pod.copy(instances = 7)
