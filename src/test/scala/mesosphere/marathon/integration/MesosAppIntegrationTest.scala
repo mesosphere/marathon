@@ -402,7 +402,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForPod(pod.id)
 
       When("The pod config is updated")
-      val scaledPod = pod.copy(instances = 7)
+      val scaledPod = pod.copy(instances = 2)
       val updateResult = marathon.updatePod(pod.id, scaledPod, force = true)
 
       Then("The pod is scaled")
