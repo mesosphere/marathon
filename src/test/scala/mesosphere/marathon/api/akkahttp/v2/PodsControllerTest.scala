@@ -14,6 +14,7 @@ import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.Headers
 import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
+import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -44,6 +45,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Post(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
     }
 
     {
@@ -67,6 +69,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -451,6 +454,34 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
+    "response with status for a pod" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val pod = PodDefinition(id = PathId("an-awesome-group/mypod"))
+      f.podManager.find(eq(PathId("an-awesome-group/mypod"))).returns(Some(pod))
+
+      val podStatus = raml.PodStatus(
+        id = "an-awesome-group/mypod",
+        spec = raml.Pod(id = "an-awesome-group/mypod", containers = Seq.empty),
+        status = raml.PodState.Stable,
+        statusSince = f.clock.now().toOffsetDateTime,
+        lastUpdated = f.clock.now().toOffsetDateTime,
+        lastChanged = f.clock.now().toOffsetDateTime
+      )
+      f.podStatusService.selectPodStatus(eq(PathId("an-awesome-group/mypod")), any).returns(Future.successful(Some(podStatus)))
+
+      Get("/an-awesome-group/mypod::status") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(
+          podId("an-awesome-group/mypod"),
+          podState(raml.PodState.Stable)
+        )
+      }
+    }
+
     "respond with all pods" in {
       val f = Fixture()
       val controller = f.controller()
@@ -483,6 +514,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     val electionService = mock[ElectionService]
     val groupManager = mock[GroupManager]
     val podManager = mock[PodManager]
+    val podStatusService = mock[PodStatusService]
     val pluginManager = PluginManager.None
     val eventBus = mock[EventStream]
     val scheduler = mock[MarathonScheduler]
@@ -491,6 +523,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
 
     implicit val authenticator = auth.auth
-    def controller() = new PodsController(config, electionService, podManager, groupManager, pluginManager, eventBus, scheduler, clock)
+    def controller() = new PodsController(config, electionService, podManager, podStatusService, groupManager, pluginManager, eventBus, scheduler, clock)
   }
 }
