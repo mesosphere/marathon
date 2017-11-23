@@ -127,7 +127,7 @@ class HealthCheckConversionTest extends UnitTest {
 
   "A MesosHttpHealthCheck is converted correctly" when {
     "A core MesosHttpHealthCheck" should {
-      val check = MesosHttpHealthCheck(ipProtocol = IPv6)
+      val check = MesosHttpHealthCheck(ipProtocol = Some(IPv6))
       val raml = check.toRaml[AppHealthCheck]
 
       behave like convertToProtobufThenToRAML(check, raml)
@@ -153,7 +153,7 @@ class HealthCheckConversionTest extends UnitTest {
           case c: MesosHttpHealthCheck => c
         }.getOrElse(fail("expected MesosHttpHealthCheck"))
         core.protocol should be(Protos.HealthCheckDefinition.Protocol.MESOS_HTTP)
-        core.ipProtocol should be(IPv6)
+        core.ipProtocol should be(Some(IPv6))
         core.gracePeriod should be(check.gracePeriodSeconds.seconds)
         core.delay should be(CoreHealthCheck.DefaultDelay)
         core.interval should be(check.intervalSeconds.seconds)
@@ -185,7 +185,7 @@ class HealthCheckConversionTest extends UnitTest {
 
   "A MesosTcpHealthCheck is converted correctly" when {
     "A MesosTcpHealthCheck" should {
-      val check = MesosTcpHealthCheck(ipProtocol = IPv6)
+      val check = MesosTcpHealthCheck(ipProtocol = Some(IPv6))
       val raml = check.toRaml[AppHealthCheck]
 
       behave like convertToProtobufThenToRAML(check, raml)
@@ -210,7 +210,7 @@ class HealthCheckConversionTest extends UnitTest {
         val core = Some(check.fromRaml).collect {
           case c: MesosTcpHealthCheck => c
         }.getOrElse(fail("expected MesosTcpHealthCheck"))
-        core.ipProtocol should be(IPv6)
+        core.ipProtocol should be(Some(IPv6))
         core.gracePeriod should be(check.gracePeriodSeconds.seconds)
         core.delay should be(CoreHealthCheck.DefaultDelay)
         core.interval should be(check.intervalSeconds.seconds)

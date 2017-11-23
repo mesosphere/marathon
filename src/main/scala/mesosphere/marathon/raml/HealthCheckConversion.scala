@@ -152,8 +152,8 @@ trait HealthCheckConversion {
       case hc: MarathonHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], None, ignoreHttp1xx = Some(hc.ignoreHttp1xx), path = hc.path, port = hc.port, portReference = hc.portIndex)
       case hc: MarathonTcpHealthCheck => create(AHCP.Tcp, None, port = hc.port, portReference = hc.portIndex)
       case hc: MesosCommandHealthCheck => create(AHCP.Command, None, command = Some(hc.command.toRaml), delay = hc.delay)
-      case hc: MesosHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], Some(hc.ipProtocol), path = hc.path, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
-      case hc: MesosTcpHealthCheck => create(AHCP.MesosTcp, Some(hc.ipProtocol), port = hc.port, portReference = hc.portIndex, delay = hc.delay)
+      case hc: MesosHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], hc.ipProtocol, path = hc.path, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
+      case hc: MesosTcpHealthCheck => create(AHCP.MesosTcp, hc.ipProtocol, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
     }
   }
 
@@ -198,7 +198,7 @@ trait HealthCheckConversion {
       case AppHealthCheck(None, grace, ignore1xx, interval, failures, path, port, index, proto, ipProtocol, timeout, delay) =>
         proto match {
           case AppHealthCheckProtocol.MesosHttp | AppHealthCheckProtocol.MesosHttps =>
-            val healthCheck = MesosHttpHealthCheck(
+            MesosHttpHealthCheck(
               gracePeriod = grace.seconds,
               interval = interval.seconds,
               timeout = timeout.seconds,
@@ -209,22 +209,20 @@ trait HealthCheckConversion {
               protocol =
                 if (proto == AppHealthCheckProtocol.MesosHttp) Protos.HealthCheckDefinition.Protocol.MESOS_HTTP
                 else Protos.HealthCheckDefinition.Protocol.MESOS_HTTPS,
-              delay = delay.seconds
+              delay = delay.seconds,
+              ipProtocol = ipProtocolFromRaml(ipProtocol)
             )
-            ipProtocolFromRaml(ipProtocol)
-              .fold(healthCheck)(coreProtocol => healthCheck.copy(ipProtocol = coreProtocol))
           case AppHealthCheckProtocol.MesosTcp =>
-            val healthCheck = MesosTcpHealthCheck(
+            MesosTcpHealthCheck(
               gracePeriod = grace.seconds,
               interval = interval.seconds,
               timeout = timeout.seconds,
               maxConsecutiveFailures = failures,
               portIndex = index.map(PortReference(_)),
               port = port,
-              delay = delay.seconds
+              delay = delay.seconds,
+              ipProtocol = ipProtocolFromRaml(ipProtocol)
             )
-            ipProtocolFromRaml(ipProtocol)
-              .fold(healthCheck)(coreProtocol => healthCheck.copy(ipProtocol = coreProtocol))
           case AppHealthCheckProtocol.Http | AppHealthCheckProtocol.Https =>
             MarathonHttpHealthCheck(
               gracePeriod = grace.seconds,

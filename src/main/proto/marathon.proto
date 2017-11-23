@@ -60,7 +60,7 @@ message HealthCheckDefinition {
   optional uint32 delaySeconds = 11 [default = 15];
   // portName and portIndex are exclusive; both must not be set
   optional string portName = 12;
-  optional IpProtocol ipProtocol = 13 [default = IPv4];
+  optional IpProtocol ipProtocol = 13;
 }
 
 message ReadinessCheckDefinition {
