@@ -192,100 +192,6 @@ def buildAndTestDockerAndLinuxPackages(): Unit = {
 }
 
 /**
- * Build target for master and potential release branches.
- */
-@main
-def master(): Unit = {
-  val version = build()
-  buildAndTestDockerAndLinuxPackages()
-
-  // Uploads
-  val maybeArtifact = uploadTarballPackagesToS3(version, "builds")
-  maybeArtifact.foreach { artifact =>
-    updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
-  }
-  // TODO: Publish swagger files.
-  // TODO: Publish native packages to unstable.
-}
-
-/**
- * Build target for pull request builds.
- */
-@main
-def pr(): Unit = asPullRequest {
-  val version = build()
-
-  // Uploads
-  val artifact = uploadTarballPackagesToS3(version, "builds")
-  (version, artifact)
-}
-
-/**
- * Build target for our build loop.
- */
-@main
-def loop(): Unit = {
-  build()
-}
-
-/**
- * The main pipeline target for builds on Jenkins.
- *
- * @return Version and artifact description of Marathon build.
- */
-@main
-def jenkins(): Unit = {
-  if(utils.isPullRequest) pr()
-  else master()
-}
-
-/**
- * Executes the Community Release which includes:
- *  1. tarball with version details
- *  2. release of docker with that version
- *  3. git tag of version (pushed to server)
- * @param requestVersion The version attempting to be released v1.4.6
- * @param gitSha The git commit sha.  This can be shorthand (ex. 0e1)
- * @param latest Boolean to indicat if the Docker latest should be updated to this version.
- * @return Version and artifact description of Marathon build.
- */
-@main
-def release(requestVersion: String, gitSha: String, latest: Boolean = false): Unit = {
-  val releaseVersion = withoutVersionPrefix(requestVersion)
-  val tagVersion = s"v$releaseVersion"
-
-  require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
-    s"tagName should match regex ${ValidVersionRegex}")
-
-  (tagVersion, requestVersion)
-
-  println(s"Releasing version: $releaseVersion")
-  %('git, "checkout", gitSha)
-
-  %('git, "tag", "-a", tagVersion, "-m", tagVersion)
-  val version = build()
-
-  buildAndTestDockerAndLinuxPackages()
-  uploadLinuxPackagesToRepos(tagVersion)
-  uploadTarballPackagesToS3(version, s"releases/$releaseVersion")
-
-  %('docker, "push", s"mesosphere/marathon:$tagVersion")
-
-  if (latest) {
-    %('docker, "tag", s"mesosphere/marathon:$tagVersion", "mesosphere/marathon:latest")
-    %('docker, "push", "mesosphere/marathon:latest")
-  } else {
-    println("Docker image mesosphere/marathon:latest NOT updated")
-  }
-
-  // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
-  // %('git, "push", "--tags")
-
-  // TODO: Publish swagger files.
-  // TODO: Publish native packages to unstable.
-}
-
-/**
   * Given tagName v1.5.1, and rev DEADBEEF, we would assert that v1.5.0 is a direct ancestor of rev DEADBEEF
   * this ensures that a v1.5.1 release can NOT happen on a branch that had a v1.6.0 release.
   *
@@ -361,4 +267,102 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
       s"rm -rf $$HOME/repo/incoming/marathon-${tagName}").mkString("\n")))
 
   utils.printStageTitle("All done")
+}
+
+/*******************************************************************************
+ *******************************  BUILD TARGETS  *******************************
+ ******************************************************************************/
+
+/**
+ * Build target for master and potential release branches.
+ */
+@main
+def master(): Unit = {
+  val version = build()
+  buildAndTestDockerAndLinuxPackages()
+
+  // Uploads
+  val maybeArtifact = uploadTarballPackagesToS3(version, "builds")
+  maybeArtifact.foreach { artifact =>
+    updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
+  }
+  // TODO: Publish swagger files.
+  // TODO: Publish native packages to unstable.
+}
+
+/**
+ * Build target for pull request builds.
+ */
+@main
+def pr(): Unit = asPullRequest {
+  val version = build()
+
+  // Uploads
+  val artifact = uploadTarballPackagesToS3(version, "builds")
+  (version, artifact)
+}
+
+/**
+ * Build target for our build loop.
+ */
+@main
+def loop(): Unit = {
+  build()
+}
+
+/**
+ * The main pipeline target for builds on Jenkins.
+ */
+@main
+def jenkins(): Unit = {
+  if(utils.isPullRequest) pr()
+  else master()
+}
+
+/**
+ * Executes the Community Release which includes:
+ *
+ *  1. tarball with version details
+ *  2. release of docker with that version
+ *  3. git tag of version (pushed to server)
+ *
+ * @param requestVersion The version attempting to be released v1.4.6
+ * @param gitSha The git commit sha.  This can be shorthand (ex. 0e1)
+ * @param latest Boolean to indicat if the Docker latest should be updated to this version.
+ * @return Version and artifact description of Marathon build.
+ */
+@main
+def release(requestVersion: String, gitSha: String, latest: Boolean = false): Unit = {
+  val releaseVersion = withoutVersionPrefix(requestVersion)
+  val tagVersion = s"v$releaseVersion"
+
+  require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
+    s"tagName should match regex ${ValidVersionRegex}")
+
+  (tagVersion, requestVersion)
+
+  println(s"Releasing version: $releaseVersion")
+  %('git, "checkout", gitSha)
+
+  %('git, "tag", "-a", tagVersion, "-m", tagVersion)
+  val version = build()
+
+  buildAndTestDockerAndLinuxPackages()
+  uploadLinuxPackagesToRepos(tagVersion)
+  uploadTarballPackagesToS3(version, s"releases/$releaseVersion")
+
+  %('docker, "push", s"mesosphere/marathon:$tagVersion")
+
+  if (latest) {
+    %('docker, "tag", s"mesosphere/marathon:$tagVersion", "mesosphere/marathon:latest")
+    %('docker, "push", "mesosphere/marathon:latest")
+  } else {
+    println("Docker image mesosphere/marathon:latest NOT updated")
+  }
+
+  // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
+  // %('git, "push", "--tags")
+
+  // TODO: Publish swagger files.
+  // TODO: Publish native packages to stable.
 }
