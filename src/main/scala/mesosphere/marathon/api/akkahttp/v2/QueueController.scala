@@ -31,6 +31,7 @@ class QueueController(
     val authorizer: Authorizer
 ) extends Controller with StrictLogging {
 
+  // format: OFF
   override val route = {
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
@@ -39,14 +40,17 @@ class QueueController(
             list
           }
         } ~
+        delete {
           pathPrefix(AppPathIdLike) { appId =>
-            (path("delay") & delete) {
+            path("delay") {
               reset(appId)
             }
           }
+        }
       }
     }
   }
+  // format: ON
 
   @SuppressWarnings(Array("all")) // async/await
   private def list(implicit identity: Identity): Route = {

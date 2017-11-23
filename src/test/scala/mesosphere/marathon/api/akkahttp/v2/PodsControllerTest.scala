@@ -41,6 +41,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
+    // Unauthenticated access test cases
     {
       val controller = Fixture(authenticated = false).controller()
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Head(Uri./))
@@ -51,6 +52,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
     }
 
+    // Unauthorized access test cases
     {
       val f = Fixture(authorized = false)
       val controller = f.controller()
@@ -75,6 +77,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
     }
 
+    // Entity not found test cases
     {
       val f = Fixture()
       val controller = f.controller()
