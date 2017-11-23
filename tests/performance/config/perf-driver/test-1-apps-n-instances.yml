@@ -21,7 +21,8 @@ include:
 
   # Use marathon's SSE endpoint to measure our metrics
   - observers/observer-marathon-http-timing.yml
-  - observers/observer-marathon-sse.yml
+  # - observers/observer-marathon-sse.yml
+  - observers/observer-marathon-poller.yml
   - observers/observer-jmx.yml
 
   # Measure the given metrics
