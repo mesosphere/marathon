@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.marshalling.{ Marshaller, ToEntityMarshaller }
 import akka.http.scaladsl.model.MediaTypes.`text/plain`
 import akka.http.scaladsl.model.{ MediaTypes, StatusCodes }
-import akka.http.scaladsl.server.{ MalformedQueryParamRejection, Rejection, Route }
+import akka.http.scaladsl.server.{ Rejection, Route }
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
