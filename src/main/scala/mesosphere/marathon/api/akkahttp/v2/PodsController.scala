@@ -170,7 +170,6 @@ class PodsController(
       }
     }
 
-  @SuppressWarnings(Array("all")) // async/await
   def status(podId: PathId): Route =
     authenticated.apply { implicit identity =>
       podManager.find(podId) match {
@@ -180,8 +179,8 @@ class PodsController(
           authorized(ViewRunSpec, pod).apply {
             onSuccess(podStatusService.selectPodStatus(podId)) { maybeStatus =>
               // If selectPodStatus returns None this is a bug since find(podId) already verifies that the pod exists.
-              // We don't filter the pods with an authentication since we check for authorization before.
-              val status: raml.PodStatus = maybeStatus.get
+              // We don't filter the pods with an authorization since we check for authorization before.
+              val status: raml.PodStatus = maybeStatus.getOrElse(throw new IllegalStateException(s"Status for pod '$podId' was none even though pod existed at start of request."))
               complete((StatusCodes.OK, status))
             }
           }
