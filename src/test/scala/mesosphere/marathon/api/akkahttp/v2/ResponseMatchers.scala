@@ -109,6 +109,19 @@ trait ResponseMatchers { this: UnitTest =>
   }
 
   /**
+    * Have property matcher for a pod status.
+    * @param state The expected RAML pod state
+    * @return Match result
+    */
+  def podState(state: raml.PodState) = new HavePropertyMatcher[JsValue, Option[raml.PodState]] {
+    override def apply(actual: JsValue) = {
+      val maybeState = (actual \ "status").asOpt[String].flatMap(raml.PodState.fromString)
+      val matches = maybeState.contains(state)
+      HavePropertyMatchResult(matches, "podState", Some(state), maybeState)
+    }
+  }
+
+  /**
     * Have property matcher for scaling policy instances.
     * @param instances expected number of instances
     * @return Match result

@@ -597,7 +597,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
     }
 
     "support versions" when {
-      implicit val ctx = ExecutionContexts.global
 
       "there are no versions" when {
         "list no versions" in {
@@ -761,11 +760,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
-        "status of a pod" in {
-          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
-          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
-        }
-
         "versions of a pod" in {
           val response = f.podsResource.versions("mypod", f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
@@ -801,7 +795,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         }
 
         "status of a pod" in {
-          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
+          val response = f.podsResource.status("mypod", f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 

@@ -288,6 +288,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Human API](https://humanapi.co/)
 * [Indix](http://www.indix.com/)
 * [ING](http://www.ing.com/)
+* [Intent HQ](https://www.intenthq.com/)
 * [iQIYI](http://www.iqiyi.com/)
 * [LaunchKey](https://launchkey.com/)
 * [Mapillary](https://www.mapillary.com/)

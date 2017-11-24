@@ -18,9 +18,12 @@ import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpe
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
 import akka.http.scaladsl.server.PathMatchers
+import akka.stream.Materializer
+import akka.stream.scaladsl.{ Sink, Source }
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.PodEvent
@@ -39,6 +42,7 @@ class PodsController(
     val config: MarathonConf,
     val electionService: ElectionService,
     val podManager: PodManager,
+    val podStatusService: PodStatusService,
     val groupManager: GroupManager,
     val pluginManager: PluginManager,
     val eventBus: EventStream,
@@ -47,6 +51,7 @@ class PodsController(
     implicit
     val authorizer: Authorizer,
     val authenticator: Authenticator,
+    val mat: Materializer,
     val executionContext: ExecutionContext) extends Controller {
 
   import mesosphere.marathon.api.akkahttp.Directives._
@@ -179,13 +184,41 @@ class PodsController(
       }
     }
 
-  def status(podId: PathId): Route = ???
+  @SuppressWarnings(Array("OptionGet"))
+  def status(podId: PathId): Route =
+    authenticated.apply { implicit identity =>
+      podManager.find(podId) match {
+        case None =>
+          reject(Rejections.EntityNotFound.noPod(podId))
+        case Some(pod) =>
+          authorized(ViewRunSpec, pod).apply {
+            onSuccess(podStatusService.selectPodStatus(podId)) { maybeStatus =>
+              // If selectPodStatus returns None this is a bug since find(podId) already verifies that the pod exists.
+              // We don't filter the pods with an authorization since we check for authorization before.
+              val status: raml.PodStatus = maybeStatus.getOrElse(throw new IllegalStateException(s"Status for pod '$podId' was none even though pod existed at start of request."))
+              complete((StatusCodes.OK, status))
+            }
+          }
+      }
+    }
 
   def versions(podId: PathId): Route = ???
 
   def version(podId: PathId, v: String): Route = ???
 
-  def allStatus(): Route = ???
+  def allStatus(): Route =
+    authenticated.apply { implicit identity =>
+      def isAuthorized(pod: PodDefinition): Boolean = authorizer.isAuthorized(identity, ViewRunSpec, pod)
+
+      val filteredPods = Source(podManager.ids())
+        .mapAsync(Int.MaxValue) { id =>
+          podStatusService.selectPodStatus(id, isAuthorized)
+        }
+        .mapConcat((maybeStatus: Option[raml.PodStatus]) => maybeStatus.toList) // flatten
+        .runWith(Sink.seq)
+
+      complete(filteredPods)
+    }
 
   def killInstance(instanceId: Instance.Id): Route = ???
 
