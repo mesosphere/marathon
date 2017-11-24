@@ -4,7 +4,6 @@ package api.akkahttp.v2
 import akka.http.scaladsl.model.Uri.{ Path, Query }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.Accept
-import akka.http.scaladsl.server.{ MalformedQueryParamRejection, Rejection }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging

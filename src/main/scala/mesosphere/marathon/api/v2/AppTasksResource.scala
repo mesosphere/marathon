@@ -146,9 +146,22 @@ class AppTasksResource @Inject() (
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
     } else {
-      reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
-        tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
+      val response: Future[Response] = async {
+        val instances = await(taskKiller.kill(pathId, findToKill, wipe))
+        val healthStatuses = await(healthCheckManager.statuses(pathId))
+        instances.headOption match {
+          case None =>
+            unknownTask(id)
+          case Some(instance) =>
+            val killedTask = instance.appTask // Should this rather be instance.taskMap[taskId]?
+            val enrichedTask = EnrichedTask(pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+            ok(jsonObjString("task" -> enrichedTask.toRaml))
+        }
+      }.recover {
+        case PathNotFoundException(appId, version) => unknownApp(appId, version)
       }
+
+      result(response)
     }
   }
 

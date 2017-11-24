@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
-import akka.http.scaladsl.model.{ HttpRequest, StatusCodes, Uri }
+import akka.http.scaladsl.model.{ HttpRequest, StatusCodes }
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest

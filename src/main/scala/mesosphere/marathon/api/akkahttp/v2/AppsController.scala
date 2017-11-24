@@ -31,8 +31,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.raml.EnrichedTaskConversion._
-import mesosphere.marathon.raml.InstanceConversion._
-import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, SingleInstance, VersionList }
+import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, VersionList }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
@@ -363,11 +362,13 @@ class AppsController(
             }
           case TaskKillingMode.Wipe =>
             onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
-              complete(raml.InstanceList(instances.map(_.toRaml)))
+              complete(StatusCodes.UnprocessableEntity)
+              //complete(raml.InstanceList(instances.map(_.toRaml)))
             }
           case TaskKillingMode.KillWithoutWipe =>
             onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
-              complete(raml.InstanceList(instances.map(_.toRaml)))
+              complete(StatusCodes.UnprocessableEntity)
+              //complete(raml.InstanceList(instances.map(_.toRaml)))
             }
         }
     }
@@ -395,7 +396,8 @@ class AppsController(
           case TaskKillingMode.Wipe =>
             onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
               instances.headOption.map { instance =>
-                complete(SingleInstance(instance.toRaml))
+                //complete(SingleInstance(instance.toRaml))
+                complete(StatusCodes.UnprocessableEntity)
               }.getOrElse(
                 reject(EntityNotFound.noTask(taskId))
               )
@@ -404,7 +406,8 @@ class AppsController(
           case TaskKillingMode.KillWithoutWipe =>
             onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
               instances.headOption.map { instance =>
-                complete(SingleInstance(instance.toRaml))
+                //complete(SingleInstance(instance.toRaml))
+                complete(StatusCodes.UnprocessableEntity)
               }.getOrElse(
                 reject(EntityNotFound.noTask(taskId))
               )

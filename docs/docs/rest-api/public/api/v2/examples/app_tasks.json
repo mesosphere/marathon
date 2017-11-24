@@ -1,47 +1,17 @@
 {
   "tasks": [
     {
-      "instanceId" : {
-        "idString" : "app.marathon-6313dda2-c08c-11e7-bbb0-acde48001122"
-      },
-      "agentInfo" : {
-        "host" : "172.18.8.239",
-        "agentId" : "53df58d3-dba0-4d82-993f-f2f6d6fe35ff-S0",
-        "attributes" : [ {
-          "name" : "node",
-          "scalar" : 0
-        } ]
-      },
-      "tasksMap" : {
-        "app-kill-a-task-of-an-app.6313dda2-c08c-11e7-bbb0-acde48001122" : {
-          "taskId" : "app.6313dda2-c08c-11e7-bbb0-acde48001122",
-          "status" : {
-            "stagedAt" : "2017-11-03T11:44:44.83Z",
-            "startedAt" : "2017-11-03T11:44:45.034Z",
-            "mesosStatus" : "CkAKPmFwcC1raWxsLWEtdGFzay1vZi1hbi1hcHAuNjMxM2RkYTItYzA4Yy0xMWU3LWJiYjAtYWNkZTQ4MDAxMTIyEAEqKQonNTNkZjU4ZDMtZGJhMC00ZDgyLTk5M2YtZjJmNmQ2ZmUzNWZmLVMwMQ6FQasVf9ZBOkAKPmFwcC1raWxsLWEtdGFzay1vZi1hbi1hcHAuNjMxM2RkYTItYzA4Yy0xMWU3LWJiYjAtYWNkZTQ4MDAxMTIySAJaEBeRfvD50EwzrRfuXBtm0UNqPQoQKg4SDDE3Mi4xOC44LjIzORiXPiImCiRlNjhiOTRiYy1hMjBjLTQ1MWUtYWNmNy0yZDA4NWIxOTRhNTA=",
-            "condition" : "Running",
-            "networkInfo" : {
-              "hostName" : "172.18.8.239",
-              "hostPorts" : [ 33839 ],
-              "ipAddresses" : [ {
-                "ipAddress" : "172.18.8.239",
-                "protocol" : "IPv4"
-              } ]
-            }
-          },
-          "runSpecVersion" : "2017-11-03T11:44:44.797Z"
-        }
-      },
-      "runSpecVersion" : "2017-11-03T11:44:44.797Z",
-      "state" : {
-        "condition" : "Running",
-        "since" : "2017-11-03T11:44:45.034Z",
-        "activeSince" : "2017-11-03T11:44:45.034Z"
-      },
-      "unreachableStrategy" : {
-        "inactiveAfterSeconds" : 0,
-        "expungeAfterSeconds" : 0
-      }
+      "appId": "/minecraft/survival-world",
+      "host": "srv7.hw.ca1.mesosphere.com",
+      "id": "minecraft_survival-world.instance-564bd685-4c30-11e5-98c1-be5b2935a987",
+      "ports": [
+      31756
+      ],
+      "slaveId": "agent0",
+      "stagedAt": "2015-08-26T20:23:39.463Z",
+      "startedAt": "2015-08-26T20:23:44.678Z",
+      "version": "2015-04-17T04:00:14.171Z",
+      "state" : "TASK_STAGING"
     }
   ]
 }
