@@ -11,7 +11,7 @@ import mesosphere.marathon.api.akkahttp.{ Controller, Headers, Rejections }
 import akka.http.scaladsl.server.{ Directive1, PathMatchers, RejectionError, Route }
 import mesosphere.marathon.api.akkahttp._
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
-import mesosphere.marathon.api.akkahttp.Rejections.Message
+import mesosphere.marathon.api.akkahttp.Rejections.{ ConflictingChange, Message }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, DeleteRunSpec, ViewRunSpec }
@@ -107,26 +107,28 @@ class PodsController(
   @SuppressWarnings(Array("all")) // async/await
   def update(podId: PathId): Route = {
     authenticated.apply { implicit identity =>
-      (entity(as[raml.Pod]) & forceParameter & extractClientIP & extractUri) {
-        case (ramlPod, force, host, uri) =>
-          assumeValid(podDefValidator().apply(ramlPod)) {
-            normalized(ramlPod, podNormalizer) { normalizedPodDef =>
-              val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
-              assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
-                authorized(UpdateRunSpec, pod).apply {
-                  val deploymentPlan = async {
-                    val plan = await(podManager.update(pod, force))
-                    eventBus.publish(PodEvent(host.toString(), uri.toString(), PodEvent.Updated))
-                    plan
-                  }
-                  onSuccessLegacy(deploymentPlan).apply { plan =>
+      (entity(as[raml.Pod]) & forceParameter & extractClientIP & extractUri) { (ramlPod, force, host, uri) =>
+        assumeValid(podDefValidator().apply(ramlPod)) {
+          normalized(ramlPod, podNormalizer) { normalizedPodDef =>
+            val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
+            assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
+              authorized(UpdateRunSpec, pod).apply {
+                val deploymentPlan = async {
+                  val plan = await(podManager.update(pod, force))
+                  eventBus.publish(PodEvent(host.toString(), uri.toString(), PodEvent.Updated))
+                  plan
+                }
+                onComplete(deploymentPlan) {
+                  case Success(plan) =>
                     val ramlPod = PodConversion.podRamlWriter.write(pod)
                     complete((StatusCodes.OK, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
-                  }
+                  case Failure(e: ConflictingChangeException) =>
+                    reject(ConflictingChange(Message(e.msg)))
                 }
               }
             }
           }
+        }
       }
     }
   }

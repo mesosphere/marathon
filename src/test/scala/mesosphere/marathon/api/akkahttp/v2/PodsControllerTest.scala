@@ -12,7 +12,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.Materializer
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
-import mesosphere.marathon.api.akkahttp.Headers
+import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
 import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
@@ -577,15 +577,14 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    "do not update the pod if pod name is wrong" in {
+    "do not update if we have concurrent change error" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
       val controller = f.controller()
 
       val podId = PathId("/unknownpod")
 
-      val deploymentPlan = DeploymentPlan.empty
-      f.podManager.update(any, eq(false)).returns(Future.failed(new PodNotFoundException(podId)))
+      f.podManager.update(any, eq(false)).returns(Future.failed(ConflictingChangeException("pod is already there")))
 
       val postJson = """
                        | { "id": "/unknownpod", "networks": [ { "mode": "host" } ], "containers": [
@@ -600,9 +599,9 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
 
       request ~> controller.route ~> check {
-        rejection shouldBe a[EntityNotFound]
+        rejection shouldBe a[Rejections.ConflictingChange]
         inside(rejection) {
-          case r: EntityNotFound => r.message.message shouldEqual s"Pod '/unknownpod' does not exist"
+          case r: Rejections.ConflictingChange => r.message.message shouldEqual "pod is already there"
         }
       }
     }

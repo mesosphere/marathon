@@ -128,7 +128,7 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
   }
 
   /**
-    * Directive for handling "legacy" method calls (ones which don't return an exception)
+    * Directive for handling "legacy" method calls (ones which might throw an exception)
     *
     * "Unwraps" a `Future[T]` and runs the inner route after future
     * completion with the future's value as an extraction of type `T`.
