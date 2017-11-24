@@ -78,5 +78,6 @@ def pinger_container_app():
 def fake_framework():
     return load_app('fake-framework')
 
+
 def network_name_underscore_app():
     return load_app('network-name-underscore-app')
