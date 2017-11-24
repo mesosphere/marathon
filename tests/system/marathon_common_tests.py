@@ -1077,6 +1077,7 @@ def test_vip_docker_bridge_mode(marathon_service_name):
 
     http_output_check()
 
+@shakedown.dcos_1_10
 def test_network_name_with_underscore_is_deployed():
     """Tests that application containing network name with underscore is accepted
         by Marathon service.  We do not assert that the app is deployed because that
