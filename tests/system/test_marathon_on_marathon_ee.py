@@ -220,6 +220,7 @@ def cleanup():
     if common.has_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME):
         common.delete_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME)
 
+
 def setup_function(function):
     if is_mom_ee_deployed():
         remove_mom_ee()
