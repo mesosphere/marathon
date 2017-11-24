@@ -5,6 +5,7 @@
   "mem": 2048,
   "disk": 0,
   "instances": 1,
+  "user": "root",
   "constraints": [
     [
       "hostname",
@@ -12,20 +13,22 @@
     ]
   ],
   "container": {
-    "type": "DOCKER",
+    "type": "MESOS",
     "docker": {
       "image": "mesosphere/marathon-dcos-ee:__FILL_IN_VERSION_HERE__",
-      "network": "HOST",
+      "pullConfig": {
+        "secret": "config-json"
+      },
       "privileged": false,
-      "parameters": [],
       "forcePullImage": false
-    }
+    },
+    "volumes": []
   },
   "env": {
     "JVM_OPTS": "-Xms256m -Xmx2g",
     "DCOS_STRICT_SECURITY_ENABLED": "true",
-    "DCOS_SERVICE_ACCOUNT_CREDENTIAL_TOFILE": {
-      "secret": "service-credential"
+    "DCOS_SERVICE_ACCOUNT_CREDENTIAL": {
+      "secret": "service-account"
     },
     "MESOS_AUTHENTICATEE": "com_mesosphere_dcos_ClassicRPCAuthenticatee",
     "MESOS_MODULES": "{\"libraries\":[{\"file\":\"/opt/libmesos-bundle/lib/libdcos_security.so\",\"modules\":[{\"name\":\"com_mesosphere_dcos_ClassicRPCAuthenticatee\"}]}]}",
@@ -36,6 +39,11 @@
     "PLUGIN_ACS_URL": "https://master.mesos",
     "PLUGIN_AUTHN_MODE": "dcos/jwt",
     "PLUGIN_FRAMEWORK_TYPE": "marathon"
+  },
+  "labels": {
+    "DCOS_SERVICE_SCHEME": "http",
+    "DCOS_SERVICE_NAME": "marathon-user-ee-strict-1-5",
+    "DCOS_SERVICE_PORT_INDEX": "0"
   },
   "healthChecks": [
     {
@@ -50,8 +58,11 @@
     }
   ],
   "secrets": {
-    "service-credential": {
-      "source": "my-secret"
+    "service-account": {
+      "source": "service-credentials"
+    },
+    "config-json": {
+      "source": "docker-credentials"
     }
   },
   "portDefinitions": [
@@ -62,11 +73,6 @@
     {
       "port": 0,
       "name": "libprocess"
-    }
-  ],
-  "fetch": [
-    {
-      "uri": "file:///home/core/docker.tar.gz"
     }
   ]
 }
