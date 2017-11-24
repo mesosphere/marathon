@@ -114,9 +114,20 @@ class AppTasksResource @Inject() (
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
     } else {
-      reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
-        tasks => ok(jsonObjString("tasks" -> tasks))
+      val response: Future[Response] = async {
+        val instances = await(taskKiller.kill(pathId, findToKill, wipe))
+        val healthStatuses = await(healthCheckManager.statuses(pathId))
+        val enrichedTasks: Seq[EnrichedTask] = instances.map { instance =>
+          val killedTask = instance.appTask // Should this rather be instance.taskMap[taskId]?
+          val enrichedTask = EnrichedTask(pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+          enrichedTask
+        }
+        ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
+      }.recover {
+        case PathNotFoundException(appId, version) => unknownApp(appId, version)
       }
+
+      result(response)
     }
   }
 
@@ -164,15 +175,4 @@ class AppTasksResource @Inject() (
       result(response)
     }
   }
-
-  private def reqToResponse(
-    future: Future[Seq[Instance]])(toResponse: Seq[Instance] => Response): Response = {
-    val response = future.map { tasks =>
-      toResponse(tasks)
-    } recover {
-      case PathNotFoundException(appId, version) => unknownApp(appId, version)
-    }
-    result(response)
-  }
-
 }

@@ -72,19 +72,56 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
 
   "SpecInstancesResource" should {
     "deleteMany" in new Fixture {
-      val appId = "/my/app"
+      val appId = "/my/app".toRootPath
       val host = "host"
-      val toKill = Seq(TestInstanceBuilder.newBuilder(PathId(appId)).addTaskStaged().getInstance())
+      val clock = new SettableClock()
+      val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
+      val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
+      val toKill = Seq(instance1, instance2)
 
       config.zkTimeoutDuration returns 5.seconds
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.runSpec(appId.toRootPath) returns Some(AppDefinition(appId.toRootPath))
+      groupManager.runSpec(appId) returns Some(AppDefinition(appId))
+      healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
-      val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = false, auth.request)
+      val response = appsTaskResource.deleteMany(appId.toString, host, scale = false, force = false, wipe = false, auth.request)
       response.getStatus shouldEqual 200
+
+      val expected =
+        s"""
+           |{ "tasks": [
+           |  {
+           |    "appId" : "/my/app",
+           |    "healthCheckResults" : [ ],
+           |    "host" : "host.some",
+           |    "id" : "${instance1.appTask.taskId.idString}",
+           |    "ipAddresses" : [ ],
+           |    "ports" : [ ],
+           |    "servicePorts" : [ ],
+           |    "slaveId" : "agent-1",
+           |    "state" : "TASK_STAGING",
+           |    "stagedAt" : "2015-04-09T12:30:00.000Z",
+           |    "version" : "2015-04-09T12:30:00.000Z",
+           |    "localVolumes" : [ ]
+           |  }, {
+           |    "appId" : "/my/app",
+           |    "healthCheckResults" : [ ],
+           |    "host" : "host.some",
+           |    "id" : "${instance2.appTask.taskId.idString}",
+           |    "ipAddresses" : [ ],
+           |    "ports" : [ ],
+           |    "servicePorts" : [ ],
+           |    "slaveId" : "agent-1",
+           |    "state" : "TASK_STAGING",
+           |    "stagedAt" : "2015-04-09T12:30:00.000Z",
+           |    "version" : "2015-04-09T12:30:00.000Z",
+           |    "localVolumes" : [ ]
+           |  } ]
+           |}
+        """.stripMargin
       JsonTestHelper
         .assertThatJsonString(response.getEntity.asInstanceOf[String])
-        .correspondsToJsonOf(Json.obj("tasks" -> toKill))
+        .correspondsToJsonString(expected)
     }
 
     "deleteMany with scale and wipe fails" in new Fixture {
@@ -100,6 +137,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
     "deleteMany with wipe delegates to taskKiller with wipe value" in new Fixture {
       val appId = "/my/app"
       val host = "host"
+      healthCheckManager.statuses(appId.toRootPath) returns Future.successful(collection.immutable.Map.empty)
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
 
       val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = true, auth.request)
