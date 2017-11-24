@@ -120,4 +120,17 @@ trait ResponseMatchers { this: UnitTest =>
       HavePropertyMatchResult(matches, "podState", Some(state), maybeState)
     }
   }
+
+  /**
+    * Have property matcher for scaling policy instances.
+    * @param instances expected number of instances
+    * @return Match result
+    */
+  def scalingPolicyInstances(instances: Int) = new HavePropertyMatcher[JsValue, Option[Int]] {
+    override def apply(actual: JsValue) = {
+      val maybeScalingPolicy = (actual \ "scaling" \ "instances").asOpt[Int]
+      val matches = maybeScalingPolicy.contains(instances)
+      HavePropertyMatchResult(matches, "podScalingPolicy", Some(instances), maybeScalingPolicy)
+    }
+  }
 }

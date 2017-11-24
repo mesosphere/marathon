@@ -127,7 +127,7 @@ class AppsController(
             plan -> appWithDeployments
           }
         }
-        onSuccessLegacy(Some(rawApp.id))(create).apply {
+        onSuccessLegacy(create).apply {
           case (plan, createdApp) =>
             eventBus.publish(ApiPostEvent(remoteAddr.toString, reqUri.toString, createdApp.app))
             complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), createdApp))
@@ -161,7 +161,7 @@ class AppsController(
     val version = clock.now()
     (forceParameter & entity(as(appUpdatesUnmarshaller(partialUpdate)))) { (force, appUpdates) =>
       val updateGroupFn = updateAppsRootGroupModifier(appUpdates, partialUpdate, allowCreation, version)
-      onSuccessLegacy(None)(groupManager.updateRoot(PathId.empty, updateGroupFn, version, force)).apply { plan =>
+      onSuccessLegacy(groupManager.updateRoot(PathId.empty, updateGroupFn, version, force)).apply { plan =>
         complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
       }
     }
@@ -191,37 +191,6 @@ class AppsController(
     }
   }
 
-  /**
-    * It'd be neat if we didn't need this. Would take some heavy-ish refactoring to get all of the update functions to
-    * take an either.
-    */
-  private def onSuccessLegacy[T](maybeAppId: Option[PathId])(f: => Future[T])(implicit identity: Identity): Directive1[T] = onComplete({
-    try { f }
-    catch {
-      case NonFatal(ex) =>
-        Future.failed(ex)
-    }
-  }).flatMap {
-    case Success(t) =>
-      provide(t)
-    case Failure(ValidationFailedException(_, failure)) =>
-      reject(EntityMarshallers.ValidationFailed(failure))
-    case Failure(AccessDeniedException(msg)) =>
-      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-    case Failure(_: AppNotFoundException) =>
-      reject(
-        maybeAppId.map { appId =>
-          Rejections.EntityNotFound.noApp(appId)
-        } getOrElse Rejections.EntityNotFound()
-      )
-    case Failure(RejectionError(rejection)) =>
-      reject(rejection)
-    case Failure(ConflictingChangeException(msg)) =>
-      reject(Rejections.ConflictingChange(Message(msg)))
-    case Failure(ex) =>
-      throw ex
-  }
-
   private def putSingle(appId: PathId)(implicit identity: Identity): Route =
     parameter('partialUpdate.as[Boolean].?(true)) { partialUpdate =>
       update(appId, partialUpdate = partialUpdate, allowCreation = true)
@@ -248,7 +217,7 @@ class AppsController(
         def fn(appDefinition: Option[AppDefinition]) = updateOrCreate(
           appId, appDefinition, appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
 
-        onSuccessLegacy(Some(appId))(groupManager.updateApp(appId, fn, version, force)).apply { plan =>
+        onSuccessLegacy(groupManager.updateApp(appId, fn, version, force)).apply { plan =>
           plan.target.app(appId).foreach { appDef =>
             eventBus.publish(ApiPostEvent(remoteAddr.toString, requestUri.toString, appDef))
           }
@@ -295,7 +264,7 @@ class AppsController(
   private def restartApp(appId: PathId)(implicit identity: Identity): Route = {
     forceParameter { force =>
       val newVersion = clock.now()
-      onSuccessLegacy(Some(appId))(
+      onSuccessLegacy(
         groupManager.updateApp(
           appId,
           markAppForRestarting(appId),
