@@ -361,14 +361,29 @@ class AppsController(
               complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
             }
           case TaskKillingMode.Wipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
-              complete(StatusCodes.UnprocessableEntity)
-              //complete(raml.InstanceList(instances.map(_.toRaml)))
+            val killInstances = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
+              // TODO: Does it make sense to set health for a killed task?
+              val healthStatuses = await(healthCheckManager.statuses(appId))
+              instances.map { instance =>
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+              }
+            }
+
+            onSuccess(killInstances) { enrichedTasks: Seq[EnrichedTask] =>
+              complete((StatusCodes.OK, raml.EnrichedTasksList(enrichedTasks.toRaml)))
             }
           case TaskKillingMode.KillWithoutWipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
-              complete(StatusCodes.UnprocessableEntity)
-              //complete(raml.InstanceList(instances.map(_.toRaml)))
+            val killInstances = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
+              val healthStatuses = await(healthCheckManager.statuses(appId))
+              instances.map { instance =>
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+              }
+            }
+
+            onSuccess(killInstances) { enrichedTasks: Seq[EnrichedTask] =>
+              complete((StatusCodes.OK, raml.EnrichedTasksList(enrichedTasks.toRaml)))
             }
         }
     }
@@ -394,23 +409,34 @@ class AppsController(
               complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
             }
           case TaskKillingMode.Wipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
+            val killedInstance = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
+              val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.headOption.map { instance =>
-                //complete(SingleInstance(instance.toRaml))
-                complete(StatusCodes.UnprocessableEntity)
-              }.getOrElse(
-                reject(EntityNotFound.noTask(taskId))
-              )
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+              }
+            }
 
+            onSuccess(killedInstance) {
+              case None =>
+                reject(EntityNotFound.noTask(taskId))
+              case Some(enrichedTask) =>
+                complete(raml.EnrichedTaskSingle(enrichedTask.toRaml))
             }
           case TaskKillingMode.KillWithoutWipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
+            val killedInstance = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
+              val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.headOption.map { instance =>
-                //complete(SingleInstance(instance.toRaml))
-                complete(StatusCodes.UnprocessableEntity)
-              }.getOrElse(
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+              }
+            }
+
+            onSuccess(killedInstance) {
+              case None =>
                 reject(EntityNotFound.noTask(taskId))
-              )
+              case Some(enrichedTask) =>
+                complete(raml.EnrichedTaskSingle(enrichedTask.toRaml))
             }
         }
     }
