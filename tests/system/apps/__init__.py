@@ -79,5 +79,5 @@ def fake_framework():
     return load_app('fake-framework')
 
 
-def external_volume_mesos_app():
-    return load_app('external-volume-mesos-app')
+def network_name_underscore_app():
+    return load_app('network-name-underscore-app')

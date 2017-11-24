@@ -1078,6 +1078,22 @@ def test_vip_docker_bridge_mode(marathon_service_name):
     http_output_check()
 
 
+@shakedown.dcos_1_10
+def test_network_name_with_underscore_is_deployed():
+    """Tests that application containing network name with underscore is accepted
+        by Marathon service.  We do not assert that the app is deployed because that
+        would require to create that network prior to running tests."""
+
+    app_def = apps.network_name_underscore_app()
+    client = marathon.create_client()
+    # add_app call already asserts that marathon returned response with new deployment
+    client.add_app(app_def)
+
+    # the deployment will never be finished so we have to cleanup after ourselves
+    client.remove_app(app_def['id'], True)
+    shakedown.deployment_wait(timedelta(minutes=5).total_seconds())
+
+
 def requires_marathon_version(version):
     """This python module is for testing root and MoM marathons.   The @marathon_1_5
        annotation works only for the root marathon.   The context switching necessary

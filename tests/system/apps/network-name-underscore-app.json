@@ -1,0 +1,16 @@
+{
+  "id": "/network-name-underscore-app",
+  "instances": 1,
+  "cpus": 0.1,
+  "mem": 128,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "nginx"
+    }
+  },
+  "networks": [{
+    "mode": "container",
+    "name": "network_name_with_underscore"
+  }]
+}
