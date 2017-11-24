@@ -4,7 +4,7 @@ package api.akkahttp.v2
 import java.net.InetAddress
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.Uri.Query
+import akka.http.scaladsl.model.Uri.{ Path, Query }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
 import mesosphere.{ UnitTest, ValidationTestLike }
@@ -12,8 +12,9 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.Materializer
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
-import mesosphere.marathon.api.akkahttp.Headers
+import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
 import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
+import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -21,6 +22,9 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.raml.FixedPodScalingPolicy
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
@@ -536,6 +540,100 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         (jsonResponse \ 1).get should have(
           podId("another-pod"),
           podState(raml.PodState.Degraded)
+        )
+      }
+    }
+
+    "update a simple single-container pod from docker image w/ shell command" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.update(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val postJson = """
+                       | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                       |   { "name": "webapp",
+                       |     "resources": { "cpus": 0.03, "mem": 64 },
+                       |     "image": { "kind": "DOCKER", "id": "busybox" },
+                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                     """.stripMargin
+      val entity = HttpEntity(postJson).withContentType(ContentTypes.`application/json`)
+      val request = Put("/mypod")
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(
+          podId("/mypod"),
+          executorResources(cpus = 0.1, mem = 32.0, disk = 10.0),
+          noDefinedNetworkname,
+          networkMode(raml.NetworkMode.Host)
+        )
+      }
+    }
+
+    "do not update if we have concurrent change error" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+      val controller = f.controller()
+
+      val podId = PathId("/unknownpod")
+
+      f.podManager.update(any, eq(false)).returns(Future.failed(ConflictingChangeException("pod is already there")))
+
+      val postJson = """
+                       | { "id": "/unknownpod", "networks": [ { "mode": "host" } ], "containers": [
+                       |   { "name": "webapp",
+                       |     "resources": { "cpus": 0.03, "mem": 64 },
+                       |     "image": { "kind": "DOCKER", "id": "busybox" },
+                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                     """.stripMargin
+      val entity = HttpEntity(postJson).withContentType(ContentTypes.`application/json`)
+      val request = Put(podId.toString)
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        rejection shouldBe a[Rejections.ConflictingChange]
+        inside(rejection) {
+          case r: Rejections.ConflictingChange => r.message.message shouldEqual "pod is already there"
+        }
+      }
+    }
+
+    "save pod with more than one instance" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.update(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val postJson = """
+                       | { "id": "/mypod", "networks": [ { "mode": "host" } ],
+                       | "scaling": { "kind": "fixed", "instances": 2 }, "containers": [
+                       |   { "name": "webapp",
+                       |     "resources": { "cpus": 0.03, "mem": 64 },
+                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                     """.stripMargin
+
+      val entity = HttpEntity(postJson).withContentType(ContentTypes.`application/json`)
+      val request = Put("/mypod")
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+
+        val jsonResponse = Json.parse(responseAs[String])
+
+        jsonResponse should have(
+          scalingPolicyInstances(2)
         )
       }
     }
