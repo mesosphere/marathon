@@ -1,5 +1,5 @@
 {
-  "id": "/resident-docker-app",
+  "id": "/network-name-underscore-app",
   "instances": 1,
   "cpus": 0.1,
   "mem": 128,
