@@ -298,7 +298,7 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
             Set(AppHealthCheck(
               protocol = protocol,
               port = Some(80),
-              ipProtocol = Some(IpProtocol.Ipv6))))
+              ipProtocol = IpProtocol.Ipv6)))
 
           basicValidator(dockerAppWithMesosHttpHealthCheck) should be(aSuccess)
         }
@@ -309,7 +309,7 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
           Set(AppHealthCheck(
             protocol = AppHealthCheckProtocol.Http,
             port = Some(80),
-            ipProtocol = Some(IpProtocol.Ipv6))))
+            ipProtocol = IpProtocol.Ipv6)))
 
         basicValidator(dockerAppWithMarathonHttpHealthCheck) should haveViolations(
           "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
@@ -335,16 +335,28 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
           docker = Some(DockerContainer(
             image = "xyz")))))
 
-      "should fail even for otherwise supported types" in {
+      "fail even for otherwise supported types" in {
         allowedProtocols.foreach { protocol =>
           val ucrAppWithHealthCheck = ucrApp.copy(healthChecks =
             Set(AppHealthCheck(
               protocol = protocol,
               port = Some(80),
-              ipProtocol = Some(IpProtocol.Ipv6))))
+              ipProtocol = IpProtocol.Ipv6)))
 
           basicValidator(ucrAppWithHealthCheck) should haveViolations(
             "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
+        }
+      }
+
+      "should pass always for IPv4" in {
+        allowedProtocols.foreach { protocol =>
+          val ucrAppWithHealthCheck = ucrApp.copy(healthChecks =
+            Set(AppHealthCheck(
+              protocol = protocol,
+              port = Some(80),
+              ipProtocol = IpProtocol.Ipv4)))
+
+          basicValidator(ucrAppWithHealthCheck) should be(aSuccess)
         }
       }
     }

@@ -141,7 +141,7 @@ trait HealthCheckConversion {
         port = port,
         portIndex = portIndex,
         protocol = protocol,
-        ipProtocol = ipProtocol.map(ipProtocolToRaml),
+        ipProtocol = ipProtocolToRaml(ipProtocol.getOrElse(MesosHttpHealthCheck.DefaultIpProtocol)),
         timeoutSeconds = health.timeout.toSeconds.toInt,
         delaySeconds = delay.toSeconds.toInt
       )
@@ -152,8 +152,8 @@ trait HealthCheckConversion {
       case hc: MarathonHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], ipProtocol = None, ignoreHttp1xx = Some(hc.ignoreHttp1xx), path = hc.path, port = hc.port, portReference = hc.portIndex)
       case hc: MarathonTcpHealthCheck => create(AHCP.Tcp, ipProtocol = None, port = hc.port, portReference = hc.portIndex)
       case hc: MesosCommandHealthCheck => create(AHCP.Command, ipProtocol = None, command = Some(hc.command.toRaml), delay = hc.delay)
-      case hc: MesosHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], hc.ipProtocol, path = hc.path, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
-      case hc: MesosTcpHealthCheck => create(AHCP.MesosTcp, hc.ipProtocol, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
+      case hc: MesosHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], Some(hc.ipProtocol), path = hc.path, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
+      case hc: MesosTcpHealthCheck => create(AHCP.MesosTcp, Some(hc.ipProtocol), port = hc.port, portReference = hc.portIndex, delay = hc.delay)
     }
   }
 
@@ -210,7 +210,7 @@ trait HealthCheckConversion {
                 if (proto == AppHealthCheckProtocol.MesosHttp) Protos.HealthCheckDefinition.Protocol.MESOS_HTTP
                 else Protos.HealthCheckDefinition.Protocol.MESOS_HTTPS,
               delay = delay.seconds,
-              ipProtocol = ipProtocol.map(ipProtocolFromRaml)
+              ipProtocol = ipProtocolFromRaml(ipProtocol)
             )
           case AppHealthCheckProtocol.MesosTcp =>
             MesosTcpHealthCheck(
@@ -221,7 +221,7 @@ trait HealthCheckConversion {
               portIndex = index.map(PortReference(_)),
               port = port,
               delay = delay.seconds,
-              ipProtocol = ipProtocol.map(ipProtocolFromRaml)
+              ipProtocol = ipProtocolFromRaml(ipProtocol)
             )
           case AppHealthCheckProtocol.Http | AppHealthCheckProtocol.Https =>
             MarathonHttpHealthCheck(
@@ -272,7 +272,7 @@ trait HealthCheckConversion {
       port = if (check.hasPort) Option(check.getPort) else AppHealthCheck.DefaultPort,
       portIndex = if (check.hasPortIndex) Option(check.getPortIndex) else AppHealthCheck.DefaultPortIndex,
       ignoreHttp1xx = if (check.hasIgnoreHttp1Xx) Option(check.getIgnoreHttp1Xx) else AppHealthCheck.DefaultIgnoreHttp1xx,
-      ipProtocol = if (check.hasIpProtocol) Some(ipProtocolFromProtoToRaml(check.getIpProtocol)) else None
+      ipProtocol = ipProtocolFromProtoToRaml(check.getIpProtocol)
     )
     check.getProtocol match {
       case Protocol.COMMAND => prototype.copy(

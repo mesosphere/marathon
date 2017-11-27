@@ -17,6 +17,7 @@ import play.api.libs.json.Json
 import scala.concurrent.duration._
 
 class HealthCheckTest extends UnitTest {
+
   "HealthCheck" should {
     "ToProto Marathon HTTP HealthCheck with portIndex" in {
       val healthCheck = MarathonHttpHealthCheck(

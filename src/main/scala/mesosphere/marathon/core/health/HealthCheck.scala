@@ -244,7 +244,7 @@ case class MesosHttpHealthCheck(
   port: Option[Int] = HealthCheckWithPort.DefaultPort,
   path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
   protocol: Protocol = MesosHttpHealthCheck.DefaultProtocol,
-  ipProtocol: Option[IpProtocol] = None,
+  ipProtocol: IpProtocol = MesosHttpHealthCheck.DefaultIpProtocol,
   delay: FiniteDuration = HealthCheck.DefaultDelay)
     extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
   require(protocol == Protocol.MESOS_HTTP || protocol == Protocol.MESOS_HTTPS)
@@ -254,7 +254,7 @@ case class MesosHttpHealthCheck(
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder
       .setProtocol(protocol)
-    ipProtocol.map(ipProtocolConversion).foreach(builder.setIpProtocol)
+      .setIpProtocol(ipProtocolConversion(ipProtocol))
 
     path.foreach(builder.setPath)
 
@@ -270,7 +270,8 @@ case class MesosHttpHealthCheck(
       val httpInfoBuilder = MesosProtos.HealthCheck.HTTPCheckInfo.newBuilder()
         .setScheme(if (protocol == Protocol.MESOS_HTTP) "http" else "https")
         .setPort(healthCheckPort)
-      ipProtocol.map(MesosHttpHealthCheck.ipProtocolToMesosProto).foreach(httpInfoBuilder.setProtocol)
+        .setProtocol(MesosHttpHealthCheck.ipProtocolToMesosProto(ipProtocol))
+
       path.foreach(httpInfoBuilder.setPath)
 
       MesosProtos.HealthCheck.newBuilder
@@ -289,6 +290,7 @@ case class MesosHttpHealthCheck(
 object MesosHttpHealthCheck {
   val DefaultPath = None
   val DefaultProtocol = Protocol.MESOS_HTTP
+  val DefaultIpProtocol = IPv4
 
   def ipProtocolConversion(ipProtocol: IpProtocol): Protos.HealthCheckDefinition.IpProtocol = ipProtocol match {
     case IPv4 => Protos.HealthCheckDefinition.IpProtocol.IPv4
@@ -313,7 +315,7 @@ object MesosHttpHealthCheck {
       portIndex = PortReference.fromProto(proto),
       port = if (proto.hasPort) Some(proto.getPort) else None,
       protocol = proto.getProtocol,
-      ipProtocol = if (proto.hasIpProtocol) Some(ipProtocolFromProto(proto.getIpProtocol)) else None
+      ipProtocol = ipProtocolFromProto(proto.getIpProtocol)
     )
 }
 
@@ -324,7 +326,7 @@ case class MesosTcpHealthCheck(
   maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
   portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
   port: Option[Int] = HealthCheckWithPort.DefaultPort,
-  ipProtocol: Option[IpProtocol] = None,
+  ipProtocol: IpProtocol = MesosHttpHealthCheck.DefaultIpProtocol,
   delay: FiniteDuration = HealthCheck.DefaultDelay)
     extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
 
@@ -333,7 +335,7 @@ case class MesosTcpHealthCheck(
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder
       .setProtocol(Protos.HealthCheckDefinition.Protocol.MESOS_TCP)
-    ipProtocol.map(ipProtocolConversion).foreach(builder.setIpProtocol)
+      .setIpProtocol(ipProtocolConversion(ipProtocol))
 
     portIndex.foreach(_.buildProto(builder))
     port.foreach(builder.setPort)
@@ -345,7 +347,7 @@ case class MesosTcpHealthCheck(
     val port = effectivePort(portAssignments)
     port.map { healthCheckPort =>
       val tcpInfoBuilder = MesosProtos.HealthCheck.TCPCheckInfo.newBuilder().setPort(healthCheckPort)
-      ipProtocol.map(MesosHttpHealthCheck.ipProtocolToMesosProto).foreach(tcpInfoBuilder.setProtocol)
+        .setProtocol(MesosHttpHealthCheck.ipProtocolToMesosProto(ipProtocol))
 
       MesosProtos.HealthCheck.newBuilder
         .setType(MesosProtos.HealthCheck.Type.TCP)
@@ -361,8 +363,6 @@ case class MesosTcpHealthCheck(
 }
 
 object MesosTcpHealthCheck {
-  val DefaultIpProtocol = IPv4
-
   def ipProtocolFromProto(ipProtocol: Protos.HealthCheckDefinition.IpProtocol): IpProtocol = ipProtocol match {
     case Protos.HealthCheckDefinition.IpProtocol.IPv4 => IPv4
     case Protos.HealthCheckDefinition.IpProtocol.IPv6 => IPv6
@@ -378,7 +378,7 @@ object MesosTcpHealthCheck {
       delay = proto.getDelaySeconds.seconds,
       portIndex = PortReference.fromProto(proto),
       port = if (proto.hasPort) Some(proto.getPort) else None,
-      ipProtocol = if (proto.hasIpProtocol) Some(ipProtocolFromProto(proto.getIpProtocol)) else None
+      ipProtocol = ipProtocolFromProto(proto.getIpProtocol)
     )
 }
 

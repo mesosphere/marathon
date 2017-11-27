@@ -8,6 +8,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.{ featureEnabled, _ }
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.health.IPv4
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ AppDefinition, PathId, ResourceRole }
 import mesosphere.marathon.stream.Implicits._
@@ -502,11 +503,11 @@ trait AppValidation {
         AppHealthCheckProtocol.MesosHttps,
         AppHealthCheckProtocol.MesosTcp)
 
-      def isMesosHttpTcpHealthCheck: Boolean = allowedProtocols.contains(healthCheck.protocol)
+      def isMesosHttpHealthCheck: Boolean = allowedProtocols.contains(healthCheck.protocol)
       def isDockerContainer = container.exists(c => c.`type` == EngineType.Docker)
-      val hasIpProtocol = healthCheck.ipProtocol.isDefined
+      val hasDefaultIpProtocol = healthCheck.ipProtocol == IpProtocol.Ipv4
 
-      !hasIpProtocol || (isMesosHttpTcpHealthCheck && isDockerContainer)
+      hasDefaultIpProtocol || (isMesosHttpHealthCheck && isDockerContainer)
     }
 
   private val haveAtMostOneMesosHealthCheck: Validator[App] = {

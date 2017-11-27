@@ -481,6 +481,11 @@
             "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP, COMMAND, MESOS_HTTP, MESOS_HTTPS or MESOS_TCP.",
             "enum": ["HTTP", "HTTPS", "TCP", "COMMAND", "MESOS_HTTP", "MESOS_HTTPS", "MESOS_TCP"]
           },
+          "ipProtocol": {
+            "type": "string",
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP, COMMAND, MESOS_HTTP, MESOS_HTTPS or MESOS_TCP.",
+            "enum": ["IPv4", "IPv6"]
+          },
           "timeoutSeconds": {
             "type": "integer",
             "description": "Number of seconds after which a health check is considered a failure regardless of the response.",
