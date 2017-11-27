@@ -349,11 +349,11 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Allow creating app with network name with underscore" in new Fixture {
-      Given("An app with a Docker config.json")
+      Given("An app with a network name with underscore")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Option(DockerContainer(
-          image = "private/image")))
+          image = "image")))
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
