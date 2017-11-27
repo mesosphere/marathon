@@ -554,5 +554,5 @@ object AppValidationMessages {
     "may only specify a single container network when using the Docker container engine"
 
   val HealthCheckIpProtocolLimitation =
-    "Health check ipProtocol can be used only for docker container and mesos http/https/tcp healthcheck"
+    "Health check ipProtocol can only be used for docker container and mesos http/https/tcp healthcheck"
 }

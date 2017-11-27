@@ -305,14 +305,25 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
       }
 
       "fail for Marathon HTTP health check with ip protocol" in {
-        val dockerAppWithMesosHttpHealthCheck = dockerApp.copy(healthChecks =
+        val dockerAppWithMarathonHttpHealthCheck = dockerApp.copy(healthChecks =
           Set(AppHealthCheck(
             protocol = AppHealthCheckProtocol.Http,
             port = Some(80),
             ipProtocol = Some(IpProtocol.Ipv6))))
 
-        basicValidator(dockerAppWithMesosHttpHealthCheck) should haveViolations(
+        basicValidator(dockerAppWithMarathonHttpHealthCheck) should haveViolations(
           "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
+      }
+
+      "pass validation even when no ipProtocol specified when Mesos HTTP/HTTPS/TCP" in {
+        allowedProtocols.foreach { protocol =>
+          val dockerAppWithMesosHttpHealthCheck = dockerApp.copy(healthChecks =
+            Set(AppHealthCheck(
+              protocol = protocol,
+              port = Some(80))))
+
+          basicValidator(dockerAppWithMesosHttpHealthCheck) should be(aSuccess)
+        }
       }
     }
 
@@ -326,13 +337,13 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
 
       "should fail even for otherwise supported types" in {
         allowedProtocols.foreach { protocol =>
-          val dockerAppWithMesosHttpHealthCheck = ucrApp.copy(healthChecks =
+          val ucrAppWithHealthCheck = ucrApp.copy(healthChecks =
             Set(AppHealthCheck(
               protocol = protocol,
               port = Some(80),
               ipProtocol = Some(IpProtocol.Ipv6))))
 
-          basicValidator(dockerAppWithMesosHttpHealthCheck) should haveViolations(
+          basicValidator(ucrAppWithHealthCheck) should haveViolations(
             "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
         }
       }

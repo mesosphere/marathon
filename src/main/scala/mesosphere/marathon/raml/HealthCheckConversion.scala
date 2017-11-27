@@ -141,7 +141,7 @@ trait HealthCheckConversion {
         port = port,
         portIndex = portIndex,
         protocol = protocol,
-        ipProtocol = ipProtocolToRaml(ipProtocol),
+        ipProtocol = ipProtocol.map(ipProtocolToRaml),
         timeoutSeconds = health.timeout.toSeconds.toInt,
         delaySeconds = delay.toSeconds.toInt
       )
@@ -149,9 +149,9 @@ trait HealthCheckConversion {
 
     import raml.{ AppHealthCheckProtocol => AHCP }
     health match {
-      case hc: MarathonHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], None, ignoreHttp1xx = Some(hc.ignoreHttp1xx), path = hc.path, port = hc.port, portReference = hc.portIndex)
-      case hc: MarathonTcpHealthCheck => create(AHCP.Tcp, None, port = hc.port, portReference = hc.portIndex)
-      case hc: MesosCommandHealthCheck => create(AHCP.Command, None, command = Some(hc.command.toRaml), delay = hc.delay)
+      case hc: MarathonHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], ipProtocol = None, ignoreHttp1xx = Some(hc.ignoreHttp1xx), path = hc.path, port = hc.port, portReference = hc.portIndex)
+      case hc: MarathonTcpHealthCheck => create(AHCP.Tcp, ipProtocol = None, port = hc.port, portReference = hc.portIndex)
+      case hc: MesosCommandHealthCheck => create(AHCP.Command, ipProtocol = None, command = Some(hc.command.toRaml), delay = hc.delay)
       case hc: MesosHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], hc.ipProtocol, path = hc.path, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
       case hc: MesosTcpHealthCheck => create(AHCP.MesosTcp, hc.ipProtocol, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
     }
@@ -163,13 +163,13 @@ trait HealthCheckConversion {
     case TaskLostProto.RELAUNCH_AFTER_TIMEOUT => TaskLostBehavior.RelaunchAfterTimeout
   }
 
-  private def ipProtocolFromRaml(ipProtocol: Option[raml.IpProtocol]): Option[mesosphere.marathon.core.health.IpProtocol] = ipProtocol.map {
+  private def ipProtocolFromRaml(ipProtocol: raml.IpProtocol): mesosphere.marathon.core.health.IpProtocol = ipProtocol match {
     case raml.IpProtocol.Ipv4 => IPv4
     case raml.IpProtocol.Ipv6 => IPv6
     case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
   }
 
-  private def ipProtocolToRaml(ipProtocol: Option[mesosphere.marathon.core.health.IpProtocol]): Option[raml.IpProtocol] = ipProtocol.map {
+  private def ipProtocolToRaml(ipProtocol: mesosphere.marathon.core.health.IpProtocol): raml.IpProtocol = ipProtocol match {
     case IPv4 => raml.IpProtocol.Ipv4
     case IPv6 => raml.IpProtocol.Ipv6
     case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
@@ -210,7 +210,7 @@ trait HealthCheckConversion {
                 if (proto == AppHealthCheckProtocol.MesosHttp) Protos.HealthCheckDefinition.Protocol.MESOS_HTTP
                 else Protos.HealthCheckDefinition.Protocol.MESOS_HTTPS,
               delay = delay.seconds,
-              ipProtocol = ipProtocolFromRaml(ipProtocol)
+              ipProtocol = ipProtocol.map(ipProtocolFromRaml)
             )
           case AppHealthCheckProtocol.MesosTcp =>
             MesosTcpHealthCheck(
@@ -221,7 +221,7 @@ trait HealthCheckConversion {
               portIndex = index.map(PortReference(_)),
               port = port,
               delay = delay.seconds,
-              ipProtocol = ipProtocolFromRaml(ipProtocol)
+              ipProtocol = ipProtocol.map(ipProtocolFromRaml)
             )
           case AppHealthCheckProtocol.Http | AppHealthCheckProtocol.Https =>
             MarathonHttpHealthCheck(

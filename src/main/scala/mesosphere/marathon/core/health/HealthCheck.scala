@@ -254,7 +254,7 @@ case class MesosHttpHealthCheck(
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder
       .setProtocol(protocol)
-    ipProtocolConversion(ipProtocol).foreach(builder.setIpProtocol)
+    ipProtocol.map(ipProtocolConversion).foreach(builder.setIpProtocol)
 
     path.foreach(builder.setPath)
 
@@ -270,7 +270,7 @@ case class MesosHttpHealthCheck(
       val httpInfoBuilder = MesosProtos.HealthCheck.HTTPCheckInfo.newBuilder()
         .setScheme(if (protocol == Protocol.MESOS_HTTP) "http" else "https")
         .setPort(healthCheckPort)
-      MesosHttpHealthCheck.ipProtocolToMesosProto(ipProtocol).foreach(httpInfoBuilder.setProtocol)
+      ipProtocol.map(MesosHttpHealthCheck.ipProtocolToMesosProto).foreach(httpInfoBuilder.setProtocol)
       path.foreach(httpInfoBuilder.setPath)
 
       MesosProtos.HealthCheck.newBuilder
@@ -290,13 +290,13 @@ object MesosHttpHealthCheck {
   val DefaultPath = None
   val DefaultProtocol = Protocol.MESOS_HTTP
 
-  def ipProtocolConversion(ipProtocol: Option[IpProtocol]): Option[Protos.HealthCheckDefinition.IpProtocol] = ipProtocol.map {
+  def ipProtocolConversion(ipProtocol: IpProtocol): Protos.HealthCheckDefinition.IpProtocol = ipProtocol match {
     case IPv4 => Protos.HealthCheckDefinition.IpProtocol.IPv4
     case IPv6 => Protos.HealthCheckDefinition.IpProtocol.IPv6
     case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
   }
 
-  def ipProtocolToMesosProto(ipProtocol: Option[IpProtocol]): Option[NetworkInfo.Protocol] = ipProtocol.map {
+  def ipProtocolToMesosProto(ipProtocol: IpProtocol): NetworkInfo.Protocol = ipProtocol match {
     case IPv4 => NetworkInfo.Protocol.IPv4
     case IPv6 => NetworkInfo.Protocol.IPv6
     case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
@@ -333,7 +333,7 @@ case class MesosTcpHealthCheck(
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder
       .setProtocol(Protos.HealthCheckDefinition.Protocol.MESOS_TCP)
-    ipProtocolConversion(ipProtocol).foreach(builder.setIpProtocol)
+    ipProtocol.map(ipProtocolConversion).foreach(builder.setIpProtocol)
 
     portIndex.foreach(_.buildProto(builder))
     port.foreach(builder.setPort)
@@ -345,7 +345,7 @@ case class MesosTcpHealthCheck(
     val port = effectivePort(portAssignments)
     port.map { healthCheckPort =>
       val tcpInfoBuilder = MesosProtos.HealthCheck.TCPCheckInfo.newBuilder().setPort(healthCheckPort)
-      MesosHttpHealthCheck.ipProtocolToMesosProto(ipProtocol).foreach(tcpInfoBuilder.setProtocol)
+      ipProtocol.map(MesosHttpHealthCheck.ipProtocolToMesosProto).foreach(tcpInfoBuilder.setProtocol)
 
       MesosProtos.HealthCheck.newBuilder
         .setType(MesosProtos.HealthCheck.Type.TCP)
