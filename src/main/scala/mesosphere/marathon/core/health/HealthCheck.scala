@@ -294,6 +294,7 @@ object MesosHttpHealthCheck {
 
   def ipProtocolConversion(ipProtocol: IpProtocol): Protos.HealthCheckDefinition.IpProtocol = ipProtocol match {
     case IPv4 => Protos.HealthCheckDefinition.IpProtocol.IPv4
+    case IPv6 => Protos.HealthCheckDefinition.IpProtocol.IPv6
   }
 
   def ipProtocolToMesosProto(ipProtocol: IpProtocol): NetworkInfo.Protocol = ipProtocol match {
