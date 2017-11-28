@@ -25,7 +25,7 @@
   },
   "env": {
     "JVM_OPTS": "-Xms256m -Xmx2g",
-    "PLUGIN_ACS_URL": "https://master.mesos",
+    "PLUGIN_ACS_URL": "http://master.mesos",
     "PLUGIN_AUTHN_MODE": "disabled",
     "PLUGIN_FRAMEWORK_TYPE": "marathon"
   },
