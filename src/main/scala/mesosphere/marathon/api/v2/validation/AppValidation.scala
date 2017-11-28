@@ -498,12 +498,10 @@ trait AppValidation {
 
   private def complyWithIpProtocolRules(container: Option[Container]): Validator[AppHealthCheck] =
     isTrue(AppValidationMessages.HealthCheckIpProtocolLimitation) { healthCheck =>
-      val allowedProtocols = Set(
-        AppHealthCheckProtocol.MesosHttp,
-        AppHealthCheckProtocol.MesosHttps,
-        AppHealthCheckProtocol.MesosTcp)
-
-      def isMesosHttpHealthCheck: Boolean = allowedProtocols.contains(healthCheck.protocol)
+      def isMesosHttpHealthCheck: Boolean = healthCheck.protocol match {
+        case AppHealthCheckProtocol.MesosHttp | AppHealthCheckProtocol.MesosHttps | AppHealthCheckProtocol.MesosTcp => true
+        case _ => false
+      }
       def isDockerContainer = container.exists(c => c.`type` == EngineType.Docker)
       val hasDefaultIpProtocol = healthCheck.ipProtocol == IpProtocol.Ipv4
 

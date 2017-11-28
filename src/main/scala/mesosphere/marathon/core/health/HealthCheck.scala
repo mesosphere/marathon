@@ -294,14 +294,11 @@ object MesosHttpHealthCheck {
 
   def ipProtocolConversion(ipProtocol: IpProtocol): Protos.HealthCheckDefinition.IpProtocol = ipProtocol match {
     case IPv4 => Protos.HealthCheckDefinition.IpProtocol.IPv4
-    case IPv6 => Protos.HealthCheckDefinition.IpProtocol.IPv6
-    case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
   }
 
   def ipProtocolToMesosProto(ipProtocol: IpProtocol): NetworkInfo.Protocol = ipProtocol match {
     case IPv4 => NetworkInfo.Protocol.IPv4
     case IPv6 => NetworkInfo.Protocol.IPv6
-    case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
   }
 
   def mergeFromProto(proto: Protos.HealthCheckDefinition): MesosHttpHealthCheck =
@@ -366,7 +363,6 @@ object MesosTcpHealthCheck {
   def ipProtocolFromProto(ipProtocol: Protos.HealthCheckDefinition.IpProtocol): IpProtocol = ipProtocol match {
     case Protos.HealthCheckDefinition.IpProtocol.IPv4 => IPv4
     case Protos.HealthCheckDefinition.IpProtocol.IPv6 => IPv6
-    case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
   }
 
   def mergeFromProto(proto: Protos.HealthCheckDefinition): MesosTcpHealthCheck =

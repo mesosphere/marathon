@@ -166,19 +166,16 @@ trait HealthCheckConversion {
   private def ipProtocolFromRaml(ipProtocol: raml.IpProtocol): mesosphere.marathon.core.health.IpProtocol = ipProtocol match {
     case raml.IpProtocol.Ipv4 => IPv4
     case raml.IpProtocol.Ipv6 => IPv6
-    case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
   }
 
   private def ipProtocolToRaml(ipProtocol: mesosphere.marathon.core.health.IpProtocol): raml.IpProtocol = ipProtocol match {
     case IPv4 => raml.IpProtocol.Ipv4
     case IPv6 => raml.IpProtocol.Ipv6
-    case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
   }
 
   def ipProtocolFromProtoToRaml(ipProtocol: HealthCheckDefinition.IpProtocol): raml.IpProtocol = ipProtocol match {
     case HealthCheckDefinition.IpProtocol.IPv4 => raml.IpProtocol.Ipv4
     case HealthCheckDefinition.IpProtocol.IPv6 => raml.IpProtocol.Ipv6
-    case _ => throw new IllegalStateException(s"Unsupported protocol in health check: $ipProtocol")
   }
 
   implicit val appHealthCheckRamlReader: Reads[AppHealthCheck, CoreHealthCheck] = Reads { check =>
