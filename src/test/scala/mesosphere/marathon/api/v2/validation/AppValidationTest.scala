@@ -4,9 +4,10 @@ package api.v2.validation
 import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.raml._
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
+import org.scalatest.prop.TableDrivenPropertyChecks
 
-class AppValidationTest extends UnitTest with ValidationTestLike {
+class AppValidationTest extends UnitTest with ValidationTestLike with TableDrivenPropertyChecks {
 
   val config = AppNormalization.Configuration(None, "mesos-bridge-name")
   val configWithDefaultNetworkName = AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name")
@@ -284,6 +285,17 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
       AppHealthCheckProtocol.MesosHttps,
       AppHealthCheckProtocol.MesosTcp)
 
+    val conditions = Table (
+      ("protocol", "isAllowed"),
+      (AppHealthCheckProtocol.MesosHttp, true),
+      (AppHealthCheckProtocol.MesosHttps, true),
+      (AppHealthCheckProtocol.MesosTcp, true),
+      (AppHealthCheckProtocol.Command, false),
+      (AppHealthCheckProtocol.Http, false),
+      (AppHealthCheckProtocol.Https, false),
+      (AppHealthCheckProtocol.Tcp, false),
+    )
+
     "is docker app" should {
       val dockerApp = App(
         id = "/foo",
@@ -292,27 +304,22 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
           docker = Some(DockerContainer(
             image = "xyz")))))
 
-      "pass validation when Mesos HTTP/HTTPS/TCP health Check for ip protocol" in {
-        allowedProtocols.foreach { protocol =>
-          val dockerAppWithMesosHttpHealthCheck = dockerApp.copy(healthChecks =
+      forAll (conditions) { (protocol: AppHealthCheckProtocol, isAllowed) =>
+        s"${if(isAllowed) "pass" else "fail"} validation when protocol is $protocol and IPv6 ip protocol is defined" in {
+
+          val dockerAppWithHealthCheck = dockerApp.copy(healthChecks =
             Set(AppHealthCheck(
               protocol = protocol,
               port = Some(80),
               ipProtocol = IpProtocol.Ipv6)))
 
-          basicValidator(dockerAppWithMesosHttpHealthCheck) should be(aSuccess)
+          if (isAllowed) {
+            basicValidator(dockerAppWithHealthCheck) should be(aSuccess)
+          } else {
+            basicValidator(dockerAppWithHealthCheck) should haveViolations(
+              "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
+          }
         }
-      }
-
-      "fail for Marathon HTTP health check with ip protocol" in {
-        val dockerAppWithMarathonHttpHealthCheck = dockerApp.copy(healthChecks =
-          Set(AppHealthCheck(
-            protocol = AppHealthCheckProtocol.Http,
-            port = Some(80),
-            ipProtocol = IpProtocol.Ipv6)))
-
-        basicValidator(dockerAppWithMarathonHttpHealthCheck) should haveViolations(
-          "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
       }
 
       "pass validation even when no ipProtocol specified when Mesos HTTP/HTTPS/TCP" in {
