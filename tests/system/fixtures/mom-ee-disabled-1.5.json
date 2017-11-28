@@ -12,20 +12,27 @@
     ]
   ],
   "container": {
-    "type": "DOCKER",
+    "type": "MESOS",
     "docker": {
       "image": "mesosphere/marathon-dcos-ee:__FILL_IN_VERSION_HERE__",
-      "network": "HOST",
+      "pullConfig": {
+        "secret": "config-json"
+      },
       "privileged": false,
-      "parameters": [],
       "forcePullImage": false
-    }
+    },
+    "volumes": []
   },
   "env": {
     "JVM_OPTS": "-Xms256m -Xmx2g",
-    "PLUGIN_ACS_URL": "https://master.mesos",
+    "PLUGIN_ACS_URL": "http://master.mesos",
     "PLUGIN_AUTHN_MODE": "disabled",
     "PLUGIN_FRAMEWORK_TYPE": "marathon"
+  },
+  "labels": {
+    "DCOS_SERVICE_SCHEME": "http",
+    "DCOS_SERVICE_NAME": "marathon-user-ee-disabled-1-5",
+    "DCOS_SERVICE_PORT_INDEX": "0"
   },
   "healthChecks": [
     {
@@ -39,6 +46,11 @@
       "ignoreHttp1xx": false
     }
   ],
+  "secrets": {
+    "config-json": {
+      "source": "docker-credentials"
+    }
+  },
   "portDefinitions": [
     {
       "port": 0,
@@ -47,11 +59,6 @@
     {
       "port": 0,
       "name": "libprocess"
-    }
-  ],
-  "fetch": [
-    {
-      "uri": "file:///home/core/docker.tar.gz"
     }
   ]
 }

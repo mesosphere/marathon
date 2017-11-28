@@ -9,6 +9,7 @@ import fixtures
 import os
 import pytest
 import shakedown
+import json
 
 from dcos import http
 from shakedown import marathon
@@ -18,7 +19,8 @@ from utils import get_resource
 
 MOM_EE_NAME = 'marathon-user-ee'
 MOM_EE_SERVICE_ACCOUNT = 'marathon_user_ee'
-MOM_EE_SECRET_NAME = 'my-secret'
+MOM_EE_SERVICE_ACCOUNT_SECRET_NAME = 'service-credentials'
+MOM_EE_DOCKER_CONFIG_SECRET_NAME = 'docker-credentials'
 
 PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
@@ -82,8 +84,14 @@ def assert_mom_ee(version, security_mode='permissive'):
     ensure_prerequisites_installed()
     ensure_service_account()
     ensure_permissions()
-    ensure_secret(strict=True if security_mode == 'strict' else False)
-    ensure_docker_credentials()
+    ensure_sa_secret(strict=True if security_mode == 'strict' else False)
+    ensure_docker_config_secret()
+
+    # In strict mode all tasks are started as user `nobody` by default. However we start
+    # MoM-EE as 'root' and for that we need to give root marathon ACLs to start
+    # tasks as 'root'.
+    if security_mode == 'strict':
+        common.add_dcos_marathon_user_acls()
 
     # Deploy MoM-EE in permissive mode
     app_def_file = '{}/mom-ee-{}-{}.json'.format(fixtures.fixtures_dir(), security_mode, version)
@@ -179,24 +187,27 @@ def ensure_permissions():
     assert req.json()['array'][0]['url'] == expected, "Service account permissions couldn't be set"
 
 
-def ensure_secret(strict=False):
-    if common.has_secret(MOM_EE_SECRET_NAME):
-        common.delete_secret(MOM_EE_SECRET_NAME)
-    common.create_sa_secret(MOM_EE_SECRET_NAME, MOM_EE_SERVICE_ACCOUNT, strict)
-    assert common.has_secret(MOM_EE_SECRET_NAME)
+def ensure_sa_secret(strict=False):
+    if common.has_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME):
+        common.delete_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME)
+    common.create_sa_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME, MOM_EE_SERVICE_ACCOUNT, strict)
+    assert common.has_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME)
 
 
-def ensure_docker_credentials():
+def ensure_docker_config_secret():
     # Docker username and password should be passed  as environment variables `DOCKER_HUB_USERNAME`
     # and `DOCKER_HUB_PASSWORD` (usually by jenkins)
     assert 'DOCKER_HUB_USERNAME' in os.environ, "Couldn't find docker hub username. $DOCKER_HUB_USERNAME is not set"
     assert 'DOCKER_HUB_PASSWORD' in os.environ, "Couldn't find docker hub password. $DOCKER_HUB_PASSWORD is not set"
 
+    if common.has_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME):
+        common.delete_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME)
+
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
-
-    common.create_docker_credentials_file(username, password)
-    common.copy_docker_credentials_file(shakedown.get_private_agents())
+    config_json = common.create_docker_pull_config_json(username, password)
+    common.create_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME, value=json.dumps(config_json))
+    assert common.has_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME)
 
 
 def cleanup():
@@ -204,8 +215,10 @@ def cleanup():
         remove_mom_ee()
     if common.has_service_account(MOM_EE_SERVICE_ACCOUNT):
         common.delete_service_account(MOM_EE_SERVICE_ACCOUNT)
-    if common.has_secret(MOM_EE_SECRET_NAME):
-        common.delete_secret(MOM_EE_SECRET_NAME)
+    if common.has_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME):
+        common.delete_secret(MOM_EE_SERVICE_ACCOUNT_SECRET_NAME)
+    if common.has_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME):
+        common.delete_secret(MOM_EE_DOCKER_CONFIG_SECRET_NAME)
 
 
 def setup_function(function):
