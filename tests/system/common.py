@@ -631,9 +631,13 @@ def add_acs_resource(resource):
 
 
 def add_dcos_marathon_user_acls(user='root'):
+    add_service_account_user_acls(service_account='dcos_marathon', user=user)
+
+
+def add_service_account_user_acls(service_account, user='root'):
     resource = 'dcos:mesos:master:task:user:{}'.format(user)
     add_acs_resource(resource)
-    set_service_account_permissions('dcos_marathon', resource, action='create')
+    set_service_account_permissions(service_account, resource, action='create')
 
 
 def get_marathon_endpoint(path, marathon_name='marathon'):
