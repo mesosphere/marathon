@@ -120,7 +120,8 @@ class GroupManagerImpl(
             Left(left)
           case Right(changed) =>
             val unversioned = assignDynamicServicePorts(from, changed)
-            val to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
+            val toApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
+            val to  = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, toApps)
             Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
             val plan = DeploymentPlan(from, to, version, toKill)
             Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
