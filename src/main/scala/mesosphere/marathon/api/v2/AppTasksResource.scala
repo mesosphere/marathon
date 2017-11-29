@@ -93,6 +93,7 @@ class AppTasksResource @Inject() (
   }
 
   @DELETE
+  @SuppressWarnings(Array("all")) // async/await
   def deleteMany(
     @PathParam("appId") appId: String,
     @QueryParam("host") host: String,
@@ -133,6 +134,7 @@ class AppTasksResource @Inject() (
 
   @DELETE
   @Path("{taskId}")
+  @SuppressWarnings(Array("all")) // async/await
   def deleteOne(
     @PathParam("appId") appId: String,
     @PathParam("taskId") id: String,

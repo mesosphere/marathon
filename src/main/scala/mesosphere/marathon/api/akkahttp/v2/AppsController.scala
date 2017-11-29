@@ -314,6 +314,7 @@ class AppsController(
       .mapConcat(identity)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def killTasks(appId: PathId)(implicit identity: Identity): Route = {
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & extractTaskKillingMode) {
@@ -356,6 +357,7 @@ class AppsController(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = {
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & extractTaskKillingMode) {
