@@ -84,7 +84,7 @@ object MesosFacade {
   case class ITFrameworks(frameworks: Seq[ITFramework])
 }
 
-class MesosFacade(url: String, implicit val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
+class MesosFacade(val url: String, implicit val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
   extends PlayJsonSupport with StrictLogging {
 
   import MesosFacade._
