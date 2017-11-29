@@ -530,7 +530,7 @@
                 If scale=true, than a deployment is triggered and the deployment is returned.
               body:
                 application/json:
-                  type: enrichedTask.EnrichedTaskSingle # | deploymentResult.DeploymentResult
+                  type: enrichedTask.EnrichedTaskSingle | deploymentResult.DeploymentResult
                   example: !include examples/app_task.json
             404:
               description: No task found with this task_id.
