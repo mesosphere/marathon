@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package upgrade
 
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, RootGroup, Timestamp, VersionInfo }
 import org.slf4j.LoggerFactory
 
@@ -48,15 +49,49 @@ object GroupVersioningUtil {
       newApp.copy(versionInfo = newVersionInfo)
     }
 
+    def updatePodVersionInfo(maybeOldPod: Option[PodDefinition], newPod: PodDefinition): PodDefinition = {
+      val newVersionInfo = maybeOldPod match {
+        case None =>
+          log.info(s"${newPod.id}: new pod detected")
+          VersionInfo.forNewConfig(newVersion = version)
+        case Some(oldPod) =>
+          if (oldPod.isUpgrade(newPod)) {
+            log.info(s"${newPod.id}: upgrade detected for pod (oldVersion ${oldPod.versionInfo})")
+            oldPod.versionInfo.withConfigChange(newVersion = version)
+          } else if (oldPod.isOnlyScaleChange(newPod)) {
+            log.info(s"${newPod.id}: scaling op detected for pod (oldVersion ${oldPod.versionInfo})")
+            oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
+          } else if (oldPod.versionInfo != newPod.versionInfo && newPod.versionInfo == VersionInfo.NoVersion) {
+            log.info(s"${newPod.id}: restart detected for pod (oldVersion ${oldPod.versionInfo})")
+            oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
+          } else {
+            oldPod.versionInfo
+          }
+      }
+
+      newPod.copy(version = newVersionInfo.version)
+    }
+
     val originalApps = from.transitiveAppsById
     val updatedTargetApps = to.transitiveApps.flatMap { newApp =>
       val updated = updateAppVersionInfo(originalApps.get(newApp.id), newApp)
       if (updated.versionInfo != newApp.versionInfo) Some(updated) else None
     }
     val updatedTo = to.updateVersion(version)
-    updatedTargetApps.foldLeft(updatedTo) { (resultGroup, updatedApp) =>
+    val updatedAppsRootGroup = updatedTargetApps.foldLeft(updatedTo) { (resultGroup, updatedApp) =>
       resultGroup.updateApp(updatedApp.id, _ => updatedApp, version)
     }
+
+    val originalPods = from.transitivePodsById
+    val updatedTargetPods = to.transitivePods.flatMap { newPod =>
+      val updated = updatePodVersionInfo(originalPods.get(newPod.id), newPod)
+      if (updated.versionInfo != newPod.versionInfo) Some(updated) else None
+    }
+    val updatedAppsAndPodsRootGroup = updatedTargetPods.foldLeft(updatedAppsRootGroup) { (resultGroup, updatedPod) =>
+      resultGroup.updatePod(updatedPod.id, _ => updatedPod, version)
+    }
+
+    updatedAppsAndPodsRootGroup
   }
 
 }
