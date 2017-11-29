@@ -81,16 +81,12 @@ object GroupVersioningUtil {
           log.info(s"${newPod.id}: new pod detected")
           VersionInfo.forNewConfig(newVersion = version)
         case Some(oldPod) =>
-          log.info(s"oldPod: $oldPod")
           if (oldPod.isUpgrade(newPod)) {
             log.info(s"${newPod.id}: upgrade detected for Pod (oldVersion ${oldPod.versionInfo})")
             oldPod.versionInfo.withConfigChange(newVersion = version)
           } else if (oldPod.isOnlyScaleChange(newPod)) {
             log.info(s"${newPod.id}: scaling op detected for Pod (oldVersion ${oldPod.versionInfo})")
-            val vi = oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
-            log.info(s"œ new version: $version")
-            log.info(s"currentPodVersion = ${vi.version}")
-            vi
+            oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
           } else if (oldPod.versionInfo != newPod.versionInfo && newPod.versionInfo == VersionInfo.NoVersion) {
             log.info(s"${newPod.id}: restart detected for Pod (oldVersion ${oldPod.versionInfo})")
             oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
