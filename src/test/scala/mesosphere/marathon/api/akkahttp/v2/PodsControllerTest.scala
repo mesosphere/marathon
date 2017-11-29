@@ -85,14 +85,20 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     {
       val f = Fixture()
       val controller = f.controller()
-      f.podManager.find(any).returns(None)
+      val mypodId = PathId("mypod")
+      val podDefinition = PodDefinition(id = mypodId)
+
+      f.podManager.find(eq(PathId("unknown-pod"))).returns(None)
+      f.podManager.find(eq(mypodId)).returns(Some(podDefinition))
+
       f.podManager.version(any, any).returns(Future.successful(None))
       def unknownPod(withRequest: HttpRequest, withMessage: String) = unknownEntity(controller.route, withRequest, withMessage)
 
       behave like unknownPod(withRequest = Delete("/unknown-pod"), withMessage = "Pod 'unknown-pod' does not exist")
       behave like unknownPod(withRequest = Get("/unknown-pod"), withMessage = "Pod 'unknown-pod' does not exist")
       behave like unknownPod(withRequest = Get("/unknown-pod::versions"), withMessage = "Pod 'unknown-pod' does not exist")
-      behave like unknownPod(withRequest = Get("/unknown-pod::versions/2015-04-09T12:30:00.000Z"), withMessage = "Pod 'unknown-pod' does not exist in version 2015-04-09T12:30:00.000Z")
+      behave like unknownPod(withRequest = Get("/mypod::versions/2015-04-09T12:30:00.000Z"), withMessage = "Pod 'mypod' does not exist in version 2015-04-09T12:30:00.000Z")
+      behave like unknownPod(withRequest = Get("/mypod::versions/unparsable-datetime"), withMessage = "Pod 'mypod' does not exist in version unparsable-datetime")
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {

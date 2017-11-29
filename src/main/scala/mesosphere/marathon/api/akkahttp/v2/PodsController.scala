@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import java.time.Clock
+import java.time.format.DateTimeParseException
 
 import akka.event.EventStream
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
@@ -217,15 +218,21 @@ class PodsController(
 
   def version(podId: PathId, v: String): Route =
     authenticated.apply { implicit identity =>
-      val version = Timestamp(v) // Original Resource is not validating.
-      onSuccess(podManager.version(podId, version)) {
-        case None =>
-          reject(Rejections.EntityNotFound.noPod(podId, Some(version)))
-        case Some(pod) =>
-          authorized(ViewRunSpec, pod).apply {
-            val ramlPod = PodConversion.podRamlWriter.write(pod)
-            complete(ramlPod)
-          }
+      try {
+        val version = Timestamp(v)
+        onSuccess(podManager.version(podId, version)) {
+          case None =>
+            reject(Rejections.EntityNotFound.noPod(podId, Some(version)))
+          case Some(pod) =>
+            authorized(ViewRunSpec, pod).apply {
+              val ramlPod = PodConversion.podRamlWriter.write(pod)
+              complete(ramlPod)
+            }
+        }
+      } catch {
+        case e: DateTimeParseException =>
+          // We reject unparsable versions as not found.
+          reject(Rejections.EntityNotFound.noPod(podId, v))
       }
     }
 

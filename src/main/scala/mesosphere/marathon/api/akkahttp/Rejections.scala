@@ -31,6 +31,9 @@ object Rejections {
     def noPod(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
       EntityNotFound(Message(s"Pod '$id' does not exist${readableVersion(version)}"))
     }
+    def noPod(id: PathId, version: String): EntityNotFound = {
+      EntityNotFound(Message(s"Pod '$id' does not exist in version $version"))
+    }
 
     def queueApp(appId: PathId): EntityNotFound = {
       EntityNotFound(Message(s"Application $appId not found in tasks queue."))
