@@ -379,7 +379,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
         Then("The status should be 200")
         status should be(StatusCodes.OK)
 
-        responseAs[String] should include (s"foo\t0")
+        responseAs[String] should include ("foo\t0")
       }
     }
 
@@ -405,8 +405,8 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
         Then("The status should be 200")
         status should be(StatusCodes.OK)
 
-        responseAs[String] should include (s"foo")
-        responseAs[String] should not include (s"foo2")
+        responseAs[String] should include ("foo")
+        responseAs[String] should not include ("foo2")
       }
     }
 

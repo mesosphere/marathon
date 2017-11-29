@@ -1,11 +1,10 @@
 package mesosphere.marathon
 package state
 
-import java.time.Instant
+import java.time.{ Instant, OffsetDateTime, ZoneOffset }
 import java.time.temporal.ChronoUnit
 
 import mesosphere.UnitTest
-import org.joda.time.{ DateTime, DateTimeZone }
 
 import scala.concurrent.duration._
 
@@ -46,7 +45,7 @@ class TimestampTest extends UnitTest {
       }
       "independent of timezone" in {
         val t1 = Timestamp(1024)
-        val t2 = Timestamp(new DateTime(1024).toDateTime(DateTimeZone.forOffsetHours(2))) // linter:ignore TypeToType
+        val t2 = Timestamp(OffsetDateTime.ofInstant(Instant.ofEpochMilli(1024), ZoneOffset.ofHours(2))) // linter:ignore TypeToType
 
         (t1 == t2) shouldBe true
         (t1.hashCode == t2.hashCode) shouldBe true

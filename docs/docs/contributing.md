@@ -62,13 +62,13 @@ improvements. As a guideline, an improvement ticket should include the following
 - An overview of the proposed change
 - Some acceptance criteria (how would you manually verify that this change worked?)
 
-As the Marathon product team, we don't make changes to the code without discussing the impact and viability of the
-proposed changes with each other, first. Creating a JIRA before submitting a code change sets the stage for this
-necessary discussion to happen, consensus on direction to be achieved, ideally before too much effort is spent coding
-it.
+As the Marathon product team, major changes and new features go through a process of proposal and discussion in order to
+help us understand the impact and how it aligns with our longer term goals. Creating a JIRA before submitting a code
+change sets the stage for this necessary discussion to happen, consensus on direction to be achieved, ideally before too
+much effort is spent coding it.
 
-If a change isn't discussed before the code is submitted, there is a higher chance there will be some unconsidered
-side-effect of the change, or that the change is not in alignment with the long-term vision of Marathon.
+If a behavioral change isn't discussed before code is submitted, there is a higher chance there will be some
+unconsidered side-effect of the change, or that the change is not in alignment with the long-term vision of Marathon.
 
 Sometimes, we are overwhelmed by the never ending sea of JIRA. If you submit an issue, and don't feel it is getting the
 level of attention that it should, please find us in the
@@ -92,12 +92,12 @@ new features are definitely not backported.
 
 1. A GitHub pull request is the preferred way of submitting code changes.
 
-2. If a JIRA issue doesn't already exist, please open one for the proposed change in behavior (see the section above,
+2. If a JIRA issue doesn't already exist, please open one for the proposed change or bug-fix (see the section above,
    "JIRA Issues").
 
-3. Open up a discussion about the JIRA ticket (ideally, in the comments section, but, also in the
-   [#marathon channel](https://mesos.slack.com/messages/C1L7D22KY/). Seek to get buy-off and consensus on the direction
-   before making the change.
+3. Except for simple bug fixes, start a discussion in the JIRA ticket created in step 2 (ideally, in the comments
+   section, but, also in the [#marathon channel](https://mesos.slack.com/messages/C1L7D22KY/)). Seek to get validation
+   and consensus before making the change.
 
 4. Please rebase your pull requests on top of the current master, as needed, to integrate upstream changes and resolve
    conflicts. You can squash your commits if it helps resolve potential merge conflicts. When your PR is merged, it will

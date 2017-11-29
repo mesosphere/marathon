@@ -56,7 +56,7 @@ This plugin allows to reject offers. Possible use-cases are:
   * Binding to agents. For example, agents can be marked as included into primary or secondary group. Task can be marked with group name.  Plugin can schedule task deployment to primary agents. If all primary agents are busy, task can be scheduled to secondary agents
 
 
-## Changes from 1.4.x to 1.5.0 (unreleased)
+## Changes from 1.4.x to 1.5.0
 
 ### Recommended Mesos version is 1.3.0
 
