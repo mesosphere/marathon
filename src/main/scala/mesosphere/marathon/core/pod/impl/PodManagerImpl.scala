@@ -30,7 +30,7 @@ case class PodManagerImpl(groupManager: GroupManager) extends PodManager {
   def find(id: PathId): Option[PodDefinition] = groupManager.pod(id)
 
   def update(p: PodDefinition, force: Boolean): Future[DeploymentPlan] =
-    groupManager.updatePod(p.id, _ => p, p.version, force)
+    groupManager.updatePod(p.id, maybePod => maybePod.map(oldPod => p.copy(version = oldPod.version)).getOrElse(p), p.version, force)
 
   def delete(id: PathId, force: Boolean): Future[DeploymentPlan] = {
     val version = Timestamp.now()
