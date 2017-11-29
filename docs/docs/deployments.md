@@ -39,11 +39,11 @@ Marathon allows you to perform rolling restarts to deploy new versions of applic
 In Marathon, you can perform a rolling restart by defining an upgrade strategy with a `minimumHealthCapacity` at the application level.
 
 The minimumHealthCapacity is a percentage which, when applied to the instance count, defines the number of healthy instances
-that a certain version of the application must have at all times during update.  
+that a certain version of the application must have at all times during update. Number of healthy instances is rounded up (ceil). 
 
 - __`minimumHealthCapacity` == 0__ : All old instances can be killed before the new version is deployed.
 - __`minimumHealthCapacity` == 1__ : All instances of the new version are deployed side by side before the old version is stopped.
-- __`minimumHealthCapacity` between 0 and 1__ : Scale the old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully, the new version is scaled to 100% and the old version is stopped. 
+- __`minimumHealthCapacity` between 0 and 1__ : Scale the old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully, the new version is scaled to 100% and the old version is stopped. Number of healthy instances is rounded up (ceil). E.g., 3 instances and minimumHealthCapacity equal 0.7 gives us `⌈3 × 0.7⌉ = ⌈2.1⌉ = 3` so all instances will remain.
 
 This gets a bit more complex if there are dependencies.
 In the example above, when the applications are updated, Marathon performs the following actions:
