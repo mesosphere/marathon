@@ -90,7 +90,7 @@ object GroupVersioningUtil {
             val vi = oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
             log.info(s"œ new version: $version")
             log.info(s"currentPodVersion = ${vi.version}")
-            vi
+            oldPod.versionInfo
           } else if (oldPod.versionInfo != newPod.versionInfo && newPod.versionInfo == VersionInfo.NoVersion) {
             log.info(s"${newPod.id}: restart detected for Pod (oldVersion ${oldPod.versionInfo})")
             oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
