@@ -23,7 +23,7 @@ import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager 
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, PodSecretVolume, Raml, Resources }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
+import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy, VersionInfo }
 import mesosphere.marathon.test.{ Mockito, SettableClock }
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -629,7 +629,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       "there are versions" when {
         import mesosphere.marathon.state.PathId._
         val pod1 = PodDefinition("/id".toRootPath, containers = Seq(MesosContainer(name = "foo", resources = Resources())))
-        val pod2 = pod1.copy(version = pod1.version + 1.minute)
+        val pod2 = pod1.copy(versionInfo = VersionInfo.OnlyVersion(pod1.version + 1.minute))
         "list the available versions" in {
           val groupManager = mock[GroupManager]
           groupManager.pod(any).returns(Some(pod2))

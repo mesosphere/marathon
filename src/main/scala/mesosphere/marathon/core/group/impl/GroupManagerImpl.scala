@@ -121,7 +121,7 @@ class GroupManagerImpl(
           case Right(changed) =>
             val unversioned = assignDynamicServicePorts(from, changed)
             val toApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
-            val to  = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, toApps)
+            val to = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, toApps)
             logger.info(s"old RootGroup: $from")
             logger.info(s"new RootGroup: $to")
             Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))

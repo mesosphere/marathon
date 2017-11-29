@@ -4,7 +4,7 @@ package api.akkahttp.v2
 import java.time.Clock
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.{ Uri, StatusCodes }
+import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.{ Controller, Headers }
@@ -12,7 +12,7 @@ import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forcePara
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, VersionInfo }
 import akka.http.scaladsl.server.PathMatchers
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.api.v2.validation.PodsValidation
@@ -57,7 +57,7 @@ class PodsController(
           entity(as[raml.Pod]) { podDef =>
             normalized(podDef, podNormalizer) { normalizedPodDef =>
               val normalizedPodDef = podNormalizer.normalized(podDef)
-              val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
+              val pod = Raml.fromRaml(normalizedPodDef).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()))
               assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
                 authorized(CreateRunSpec, pod).apply {
                   val p = async {

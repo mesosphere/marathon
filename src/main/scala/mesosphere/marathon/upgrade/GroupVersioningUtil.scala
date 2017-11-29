@@ -2,7 +2,7 @@ package mesosphere.marathon
 package upgrade
 
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{AppDefinition, RootGroup, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{ AppDefinition, RootGroup, Timestamp, VersionInfo }
 import org.slf4j.LoggerFactory
 
 /**
@@ -90,7 +90,7 @@ object GroupVersioningUtil {
             val vi = oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
             log.info(s"œ new version: $version")
             log.info(s"currentPodVersion = ${vi.version}")
-            oldPod.versionInfo
+            vi
           } else if (oldPod.versionInfo != newPod.versionInfo && newPod.versionInfo == VersionInfo.NoVersion) {
             log.info(s"${newPod.id}: restart detected for Pod (oldVersion ${oldPod.versionInfo})")
             oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
@@ -99,7 +99,7 @@ object GroupVersioningUtil {
           }
       }
 
-      newPod.copy(version = newVersionInfo.version)
+      newPod.copy(versionInfo = newVersionInfo)
     }
 
     val originalPods = from.transitivePodsById
