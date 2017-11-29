@@ -24,7 +24,7 @@ object GroupVersioningUtil {
     * @param to the updated group
     * @return the updated group with updated app versions
     */
-  def updateVersionInfoForChangedApps(version: Timestamp, from: RootGroup, to: RootGroup): RootGroup = {
+  def updateVersionInfoForChangedRunspecs(version: Timestamp, from: RootGroup, to: RootGroup): RootGroup = {
 
     def updateAppVersionInfo(maybeOldApp: Option[AppDefinition], newApp: AppDefinition): AppDefinition = {
       val newVersionInfo = maybeOldApp match {
