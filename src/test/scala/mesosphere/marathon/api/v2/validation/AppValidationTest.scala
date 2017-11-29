@@ -2,11 +2,12 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.Validator
-import mesosphere.marathon.api.v2.{ AppNormalization }
+import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.raml._
-import mesosphere.{ UnitTest, ValidationTestLike }
+import mesosphere.{UnitTest, ValidationTestLike}
+import org.scalatest.prop.TableDrivenPropertyChecks
 
-class AppValidationTest extends UnitTest with ValidationTestLike {
+class AppValidationTest extends UnitTest with ValidationTestLike with TableDrivenPropertyChecks {
 
   val config = AppNormalization.Configuration(None, "mesos-bridge-name")
   val configWithDefaultNetworkName = AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name")
@@ -276,5 +277,95 @@ class AppValidationTest extends UnitTest with ValidationTestLike {
         networks = Seq(Network(mode = NetworkMode.ContainerBridge, name = None)))) should be(aSuccess)
     }
 
+  }
+
+  "health check validation" when {
+    val allowedProtocols = Set(
+      AppHealthCheckProtocol.MesosHttp,
+      AppHealthCheckProtocol.MesosHttps,
+      AppHealthCheckProtocol.MesosTcp)
+
+    val conditions = Table (
+      ("protocol", "isAllowed"),
+      (AppHealthCheckProtocol.MesosHttp, true),
+      (AppHealthCheckProtocol.MesosHttps, true),
+      (AppHealthCheckProtocol.MesosTcp, true),
+      (AppHealthCheckProtocol.Command, false),
+      (AppHealthCheckProtocol.Http, false),
+      (AppHealthCheckProtocol.Https, false),
+      (AppHealthCheckProtocol.Tcp, false),
+    )
+
+    "is docker app" should {
+      val dockerApp = App(
+        id = "/foo",
+        container = Some(Container(
+          `type` = EngineType.Docker,
+          docker = Some(DockerContainer(
+            image = "xyz")))))
+
+      forAll (conditions) { (protocol: AppHealthCheckProtocol, isAllowed) =>
+        s"${if(isAllowed) "pass" else "fail"} validation when protocol is $protocol and IPv6 ip protocol is defined" in {
+
+          val dockerAppWithHealthCheck = dockerApp.copy(healthChecks =
+            Set(AppHealthCheck(
+              protocol = protocol,
+              port = Some(80),
+              ipProtocol = IpProtocol.Ipv6)))
+
+          if (isAllowed) {
+            basicValidator(dockerAppWithHealthCheck) should be(aSuccess)
+          } else {
+            basicValidator(dockerAppWithHealthCheck) should haveViolations(
+              "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
+          }
+        }
+      }
+
+      "pass validation even when no ipProtocol specified when Mesos HTTP/HTTPS/TCP" in {
+        allowedProtocols.foreach { protocol =>
+          val dockerAppWithMesosHttpHealthCheck = dockerApp.copy(healthChecks =
+            Set(AppHealthCheck(
+              protocol = protocol,
+              port = Some(80))))
+
+          basicValidator(dockerAppWithMesosHttpHealthCheck) should be(aSuccess)
+        }
+      }
+    }
+
+    "is UCR app" should {
+      val ucrApp = App(
+        id = "/foo",
+        container = Some(Container(
+          `type` = EngineType.Mesos,
+          docker = Some(DockerContainer(
+            image = "xyz")))))
+
+      "fail even for otherwise supported types" in {
+        allowedProtocols.foreach { protocol =>
+          val ucrAppWithHealthCheck = ucrApp.copy(healthChecks =
+            Set(AppHealthCheck(
+              protocol = protocol,
+              port = Some(80),
+              ipProtocol = IpProtocol.Ipv6)))
+
+          basicValidator(ucrAppWithHealthCheck) should haveViolations(
+            "/healthChecks(0)" -> AppValidationMessages.HealthCheckIpProtocolLimitation)
+        }
+      }
+
+      "should pass always for IPv4" in {
+        allowedProtocols.foreach { protocol =>
+          val ucrAppWithHealthCheck = ucrApp.copy(healthChecks =
+            Set(AppHealthCheck(
+              protocol = protocol,
+              port = Some(80),
+              ipProtocol = IpProtocol.Ipv4)))
+
+          basicValidator(ucrAppWithHealthCheck) should be(aSuccess)
+        }
+      }
+    }
   }
 }

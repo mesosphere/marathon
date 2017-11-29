@@ -60,7 +60,8 @@ class MesosHealthCheckTest extends UnitTest {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 3,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       JsonTestHelper.assertThatJsonOf(MesosCommandHealthCheck(command = Command("echo healthy")))
@@ -78,7 +79,8 @@ class MesosHealthCheckTest extends UnitTest {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 3,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       val expected = MesosCommandHealthCheck(command = Command("echo healthy"))
@@ -130,7 +132,8 @@ class MesosHealthCheckTest extends UnitTest {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       JsonTestHelper.assertThatJsonOf(mesosHttpHealthCheckWithPortIndex)
@@ -146,7 +149,8 @@ class MesosHealthCheckTest extends UnitTest {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       JsonTestHelper.assertThatJsonOf(mesosHttpHealthCheckWithPort)
@@ -164,7 +168,8 @@ class MesosHealthCheckTest extends UnitTest {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       assert(fromJson(portIndexJson) == mesosHttpHealthCheckWithPortIndex.copy(protocol = Protocol.MESOS_HTTPS))
@@ -179,7 +184,8 @@ class MesosHealthCheckTest extends UnitTest {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       assert(fromJson(portJson) == mesosHttpHealthCheckWithPort.copy(protocol = Protocol.MESOS_HTTPS))
@@ -196,7 +202,8 @@ class MesosHealthCheckTest extends UnitTest {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       JsonTestHelper.assertThatJsonOf(mesosHttpHealthCheckWithPortIndex.copy(protocol = Protocol.MESOS_HTTPS))
@@ -212,7 +219,8 @@ class MesosHealthCheckTest extends UnitTest {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       JsonTestHelper.assertThatJsonOf(mesosHttpHealthCheckWithPort.copy(protocol = Protocol.MESOS_HTTPS))
@@ -262,7 +270,8 @@ class MesosHealthCheckTest extends UnitTest {
         gracePeriod = 10.seconds,
         interval = 60.seconds,
         maxConsecutiveFailures = 0,
-        port = Some(12345)
+        port = Some(12345),
+        ipProtocol = IPv6
       )
 
       val proto = healthCheck.toProto
@@ -274,6 +283,7 @@ class MesosHealthCheckTest extends UnitTest {
       assert(60 == proto.getIntervalSeconds)
       assert(0 == proto.getMaxConsecutiveFailures)
       assert(12345 == proto.getPort)
+      assert(Protos.HealthCheckDefinition.IpProtocol.IPv6 == proto.getIpProtocol)
     }
 
     "ToProto Mesos TCP HealthCheck with port" in {
@@ -281,7 +291,8 @@ class MesosHealthCheckTest extends UnitTest {
         port = Some(80),
         gracePeriod = 7.seconds,
         interval = 35.seconds,
-        maxConsecutiveFailures = 10
+        maxConsecutiveFailures = 10,
+        ipProtocol = IPv6
       )
 
       val proto = healthCheck.toProto
@@ -291,6 +302,7 @@ class MesosHealthCheckTest extends UnitTest {
       assert(7 == proto.getGracePeriodSeconds)
       assert(35 == proto.getIntervalSeconds)
       assert(10 == proto.getMaxConsecutiveFailures)
+      assert(Protos.HealthCheckDefinition.IpProtocol.IPv6 == proto.getIpProtocol)
     }
 
     "FromProto Mesos HTTP HealthCheck with portIndex" in {
@@ -302,6 +314,7 @@ class MesosHealthCheckTest extends UnitTest {
         .setIntervalSeconds(60)
         .setTimeoutSeconds(10)
         .setMaxConsecutiveFailures(10)
+        .setIpProtocol(Protos.HealthCheckDefinition.IpProtocol.IPv6)
         .build
 
       val mergeResult = HealthCheck.fromProto(proto)
@@ -314,7 +327,8 @@ class MesosHealthCheckTest extends UnitTest {
         interval = 60.seconds,
         timeout = 10.seconds,
         maxConsecutiveFailures = 10,
-        port = None
+        port = None,
+        ipProtocol = IPv6
       )
 
       assert(mergeResult == expectedResult)
@@ -382,6 +396,7 @@ class MesosHealthCheckTest extends UnitTest {
         .setIntervalSeconds(60)
         .setTimeoutSeconds(10)
         .setMaxConsecutiveFailures(10)
+        .setIpProtocol(Protos.HealthCheckDefinition.IpProtocol.IPv6)
         .build
 
       val mergeResult = HealthCheck.fromProto(proto)
@@ -393,7 +408,8 @@ class MesosHealthCheckTest extends UnitTest {
         gracePeriod = 10.seconds,
         interval = 60.seconds,
         timeout = 10.seconds,
-        maxConsecutiveFailures = 10
+        maxConsecutiveFailures = 10,
+        ipProtocol = IPv6
       )
 
       assert(mergeResult == expectedResult)
@@ -542,6 +558,18 @@ class MesosHealthCheckTest extends UnitTest {
 
       val (taskInfo, _) = task.get
       assertHttpHealthCheckProto(taskInfo, 80, "http")
+    }
+
+    "Mesos HTTP HealthCheck toMesos correctly serializes ip protocol" in {
+      import org.apache.mesos.Protos.NetworkInfo
+
+      val protoHealthCheck = MesosHttpHealthCheck(
+        path = Some("/health"),
+        protocol = Protocol.MESOS_HTTP,
+        port = Some(80),
+        ipProtocol = IPv6).toMesos()
+
+      protoHealthCheck.get.getHttp.getProtocol should be(NetworkInfo.Protocol.IPv6)
     }
 
     // Mesos TCP health check
@@ -735,7 +763,8 @@ class MesosHealthCheckTest extends UnitTest {
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
           "portIndex": 0,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       assert(fromJson(portIndexJson) == mesosTcpHealthCheckWithPortIndex)
@@ -749,7 +778,8 @@ class MesosHealthCheckTest extends UnitTest {
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
           "port": 80,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       assert(fromJson(portJson) == mesosTcpHealthCheckWithPort)
@@ -765,7 +795,8 @@ class MesosHealthCheckTest extends UnitTest {
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
           "portIndex": 0,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       JsonTestHelper.assertThatJsonOf(mesosTcpHealthCheckWithPortIndex)
@@ -780,7 +811,8 @@ class MesosHealthCheckTest extends UnitTest {
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
           "port": 80,
-          "delaySeconds": 15
+          "delaySeconds": 15,
+          "ipProtocol" : "IPv4"
         }
       """
       JsonTestHelper.assertThatJsonOf(mesosTcpHealthCheckWithPort)
