@@ -572,7 +572,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         jsonResponse should have(podId("mypod"))
       }
     }
-    
+
     "update a simple single-container pod from docker image w/ shell command" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
