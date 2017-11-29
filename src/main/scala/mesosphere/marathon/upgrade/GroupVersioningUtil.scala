@@ -86,6 +86,7 @@ object GroupVersioningUtil {
             oldPod.versionInfo.withConfigChange(newVersion = version)
           } else if (oldPod.isOnlyScaleChange(newPod)) {
             log.info(s"${newPod.id}: scaling op detected for Pod (oldVersion ${oldPod.versionInfo})")
+            println(s"œ new version: $version")
             oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
           } else if (oldPod.versionInfo != newPod.versionInfo && newPod.versionInfo == VersionInfo.NoVersion) {
             log.info(s"${newPod.id}: restart detected for Pod (oldVersion ${oldPod.versionInfo})")
