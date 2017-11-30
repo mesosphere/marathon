@@ -421,6 +421,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       And("Size of the pod should still be 1")
       val status2 = marathon.status(pod.id)
       status2 should be(OK)
+      //we have only one agent by default, so we expect one instance to be running.
       status2.value.instances should have size 1
 
     }
