@@ -5,14 +5,15 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
-import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
+import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, WaitTestSupport}
+import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.Constraints.hostnameField
-import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
+import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
+import play.api.libs.json.{JsObject, Json}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -378,7 +379,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       status2.value.instances.filter(_.status == raml.PodInstanceState.Stable) should have size 2
     }
 
-    "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVar, default = "true") ignore {
+    "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVar, default = "true") in {
 
       val constraints = Set(
         Constraint.newBuilder
@@ -389,7 +390,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       )
 
       Given("a pod with a single task")
-      val pod = simplePod("simple-pod-with-unique-constraint", constraints = constraints, instances = 1)
+      val podName = "simple-pod-with-unique-constraint"
+      val pod = simplePod(podName, constraints = constraints, instances = 1)
 
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)
@@ -403,9 +405,20 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val scaledPod = pod.copy(instances = 2)
       val updateResult = marathon.updatePod(pod.id, scaledPod, force = true)
 
-      Then("The pod is scaled")
+      Then("The pod is not scaled")
       updateResult should be(OK)
-      waitForDeployment(updateResult)
+      val queueResult = marathon.launchQueue()
+      val jsQueueResult = queueResult.entityJson
+
+      logger.info(s"json entity: ${Json.prettyPrint(jsQueueResult)}")
+
+      val queuedRunspecs = (jsQueueResult \ "queue").as[Seq[JsObject]]
+      val jsonPod = queuedRunspecs.find { spec => (spec \ "pod" \ "id").as[String] == s"/$podName" }.get
+
+      val unfulfilledConstraintRejectSummary = (jsonPod \ "processedOffersSummary" \ "rejectSummaryLastOffers").as[Seq[JsObject]]
+        .find { e => (e \ "reason").as[String] == "UnfulfilledConstraint" }.get
+
+      (unfulfilledConstraintRejectSummary \ "declined").as[Int] should be >= 1
 
       And("Size of the pod should still be 1")
       val status2 = marathon.status(pod.id)
