@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, Instance
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.state._
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._
@@ -157,7 +157,7 @@ class TaskKillerTest extends UnitTest {
 
   class Fixture {
     val tracker: InstanceTracker = mock[InstanceTracker]
-    val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
+    val stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor]
     val service: MarathonSchedulerService = mock[MarathonSchedulerService]
     val killService: KillService = mock[KillService]
     val groupManager: GroupManager = mock[GroupManager]

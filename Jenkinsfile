@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
-ansiColor('gnome-terminal') {
-  node('JenkinsMarathonCI-Debian8-2017-10-06') {
+ansiColor('xterm') {
+  node('JenkinsMarathonCI-Debian8-2017-10-23') {
     stage("Run Pipeline") {
       try {
         checkout scm
@@ -15,7 +15,14 @@ ansiColor('gnome-terminal') {
       } finally {
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
         junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
-        archive includes: 'sandboxes.tar.gz'
+        publishHTML([
+            allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
+            reportDir: 'target/scala-2.12/scapegoat-report', reportFiles: 'scapegoat.html',
+            reportName: 'Scapegoat Report', reportTitles: ''
+        ])
+        archive includes: "sandboxes.tar.gz"
+        archive includes: "ci-${env.BUILD_TAG}.log.tar.gz"
+        archive includes: "ci-${env.BUILD_TAG}.log"  // Only in case the build was  aborted and the logs weren't zipped
       }
     }
   }

@@ -11,13 +11,11 @@ import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, FromMessageUnm
 import akka.util.ByteString
 import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo.AppInfo
-import mesosphere.marathon.plugin.PathId
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import play.api.libs.json._
 
 import scala.collection.breakOut
@@ -25,7 +23,6 @@ import scala.collection.breakOut
 object EntityMarshallers {
   import Directives.complete
   import mesosphere.marathon.api.v2.json.Formats._
-  import mesosphere.marathon.raml.MetricsConversion._
 
   private val jsonStringUnmarshaller =
     Unmarshaller.byteStringUnmarshaller
@@ -151,11 +148,16 @@ object EntityMarshallers {
   implicit val wixResultMarshaller = playJsonMarshaller[com.wix.accord.Failure](Validation.failureWrites)
   implicit val rejectionMessageMarshaller = playJsonMarshaller[Rejections.Message]
   implicit val appInfoMarshaller = playJsonMarshaller[AppInfo]
+  implicit val podDefMarshaller = playJsonMarshaller[raml.Pod]
+  implicit val podDefSeqMarshaller = playJsonMarshaller[Seq[raml.Pod]]
+  implicit val podDefUnmarshaller = playJsonUnmarshaller[raml.Pod]
+  implicit val podStatus = playJsonMarshaller[raml.PodStatus]
+  implicit val podStatuses = playJsonMarshaller[Seq[raml.PodStatus]]
   implicit val leaderInfoMarshaller = playJsonMarshaller[raml.LeaderInfo]
   implicit val messageMarshaller = playJsonMarshaller[raml.Message]
   implicit val infoMarshaller = playJsonMarshaller[raml.MarathonInfo]
   implicit val infoUnmarshaller = playJsonUnmarshaller[raml.MarathonInfo]
-  implicit val metricsMarshaller = internalToRamlJsonMarshaller[TickMetricSnapshot, raml.Metrics]
+  implicit val metricsMarshaller = playJsonMarshaller[raml.Metrics]
   implicit val loggerChangeMarshaller = playJsonMarshaller[raml.LoggerChange]
   implicit val loggerChangeUnmarshaller = playJsonUnmarshaller[raml.LoggerChange]
   implicit val stringMapMarshaller = playJsonMarshaller[Map[String, String]]
@@ -163,6 +165,13 @@ object EntityMarshallers {
   implicit val queueMarashaller = internalToRamlJsonMarshaller[(Seq[QueuedInstanceInfoWithStatistics], Boolean, Clock), raml.Queue]
   implicit val deploymentResultMarshaller = playJsonMarshaller[raml.DeploymentResult]
   implicit val enrichedTaskMarshaller = playJsonMarshaller[raml.EnrichedTask]
+  implicit val enrichedTasksListMarshaller = playJsonMarshaller[raml.EnrichedTasksList]
+  implicit val instanceListMarshaller = playJsonMarshaller[raml.InstanceList]
+  implicit val singleInstanceMarshaller = playJsonMarshaller[raml.SingleInstance]
+  implicit val deleteTasksUnmarshaller = playJsonUnmarshaller[raml.DeleteTasks]
+  implicit val seqDateTimeMarshaller = playJsonMarshaller[Seq[Timestamp]]
+  implicit val groupUpdateUnmarshaller = playJsonUnmarshaller[raml.GroupUpdate]
+  implicit val verisonListMarshaller = playJsonMarshaller[raml.VersionList]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {
     def handleValidationErrors: FromEntityUnmarshaller[T] = um.recover(_ ⇒ _ ⇒ {

@@ -17,12 +17,13 @@ object EndpointsHelper {
     * `{host-address-list}` is a delimited list of `{agent}:{hostPort}` tuples.
     * The contents of `{address-list}` are sorted for deterministic output.
     */
-  def appsToEndpointString(
-    instancesMap: InstancesBySpec,
-    apps: Seq[AppDefinition],
-    delimiter: String = "\t"): String = {
+  def appsToEndpointString(data: ListTasks): String = {
 
+    val delimiter = "\t"
     val sb = new StringBuilder
+    val apps = data.apps
+    val instancesMap = data.instancesMap
+
     apps.foreach { app =>
       val instances = instancesMap.specInstances(app.id)
       val cleanId = app.id.safePath
@@ -55,4 +56,5 @@ object EndpointsHelper {
     sb.toString()
   }
 
+  case class ListTasks(instancesMap: InstancesBySpec, apps: Seq[AppDefinition])
 }

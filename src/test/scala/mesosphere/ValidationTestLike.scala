@@ -1,12 +1,14 @@
 package mesosphere
 
-import com.wix.accord.{ Failure, Result, Success }
+import com.wix.accord.{ Failure, Result, Success, Validator }
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import org.scalatest._
 import org.scalatest.matchers.{ BePropertyMatchResult, BePropertyMatcher, MatchResult, Matcher }
+import play.api.libs.json.{ Json, JsError, Format }
+import mesosphere.marathon.api.akkahttp.EntityMarshallers
 
 /**
   * Provides a set of scalatest matchers for use when testing validation.
@@ -16,6 +18,20 @@ import org.scalatest.matchers.{ BePropertyMatchResult, BePropertyMatcher, MatchR
   */
 trait ValidationTestLike extends Validation {
   this: Assertions =>
+
+  /**
+    * Validator which takes an object, serializes it to JSON, and then parses it back, allowing it to test validations
+    * specified in our RAML layer
+    */
+  def roundTripValidator[T](underlyingValidator: Option[Validator[T]])(implicit format: Format[T]) = new Validator[T] {
+    override def apply(obj: T) = {
+      Json.fromJson[T](Json.toJson(obj)) match {
+        case err: JsError =>
+          EntityMarshallers.jsErrorToFailure(err)
+        case obj => underlyingValidator.map { _(obj.get) } getOrElse Success
+      }
+    }
+  }
 
   protected implicit val normalizeResult: Normalization[Result] = Normalization {
     // normalize failures => human readable error messages

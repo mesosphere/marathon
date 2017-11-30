@@ -1,15 +1,16 @@
 package mesosphere.marathon
 package core.appinfo
 
+import java.time.{ OffsetDateTime, ZoneOffset }
+
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
-import org.joda.time.DateTime
 
 class TaskLifeTimeTest extends UnitTest {
-  private[this] val now: Timestamp = Timestamp(new DateTime(2015, 4, 9, 12, 30))
+  private[this] val now: Timestamp = Timestamp(OffsetDateTime.of(2015, 4, 9, 12, 30, 0, 0, ZoneOffset.UTC))
   private[this] val runSpecId = PathId("/test")
   private[this] val agentInfo = AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil)
   private[this] def newTaskId(): Task.Id = {

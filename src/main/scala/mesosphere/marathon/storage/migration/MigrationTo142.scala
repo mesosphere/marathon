@@ -18,7 +18,7 @@ class MigrationTo142(appRepository: AppRepository)(implicit
   import MigrationTo142.migrationFlow
   val sink =
     Flow[AppDefinition]
-      .mapAsync(Int.MaxValue)(appRepository.store)
+      .mapAsync(Migration.maxConcurrency)(appRepository.store)
       .toMat(Sink.ignore)(Keep.right)
 
   def migrate(): Future[Done] = {

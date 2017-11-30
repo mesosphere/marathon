@@ -9,6 +9,7 @@ import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
 import com.typesafe.config.Config
+import mesosphere.marathon.api.GroupApiService
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.deployment.DeploymentManager
@@ -25,7 +26,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
@@ -61,11 +62,7 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
   def taskKillService(coreModule: CoreModule): KillService = coreModule.taskTerminationModule.taskKillService
 
   @Provides @Singleton
-  def taskCreationHandler(coreModule: CoreModule): InstanceCreationHandler =
-    coreModule.taskTrackerModule.instanceCreationHandler
-
-  @Provides @Singleton
-  def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
+  def stateOpProcessor(coreModule: CoreModule): InstanceStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
 
   @Provides @Singleton
   @SuppressWarnings(Array("UnusedMethodParameter"))
@@ -151,6 +148,9 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
 
   @Provides @Singleton
   def groupManager(coreModule: CoreModule): GroupManager = coreModule.groupManagerModule.groupManager
+
+  @Provides @Singleton
+  def groupService(coreModule: CoreModule): GroupApiService = coreModule.groupManagerModule.groupService
 
   @Provides @Singleton
   def podSystem(coreModule: CoreModule): PodManager = coreModule.podModule.podManager

@@ -16,9 +16,9 @@ JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
 DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$(date +%s)"
 
 if [ "$VARIANT" == "open" ]; then
-  TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/single-master.cloudformation.json"
+  TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/multi-master.cloudformation.json"
 else
-  TEMPLATE="https://s3.amazonaws.com/downloads.mesosphere.io/dcos-enterprise-aws-advanced/${CHANNEL}/${VARIANT}/cloudformation/ee.single-master.cloudformation.json"
+  TEMPLATE="https://s3.amazonaws.com/downloads.mesosphere.io/dcos-enterprise-aws-advanced/${CHANNEL}/${VARIANT}/cloudformation/ee.multi-master.cloudformation.json"
 fi
 
 echo "Workspace: ${WORKSPACE}"
@@ -44,29 +44,11 @@ template_parameters:
     SlaveInstanceCount: 5
 EOF
 
-function create-junit-xml {
-    local testsuite_name=$1
-    local testcase_name=$2
-    local error_message=$3
-
-	cat > shakedown.xml <<-EOF
-	<testsuites>
-	  <testsuite name="$testsuite_name" errors="0" skipped="0" tests="1" failures="1">
-	      <testcase classname="$testsuite_name" name="$testcase_name">
-	        <failure message="test setup failed">$error_message</failure>
-	      </testcase>
-	  </testsuite>
-	</testsuites>
-	EOF
-}
-
 if ! ./dcos-launch create; then
-  create-junit-xml "dcos-launch" "cluster.create" "Cluster launch failed."
-  exit 1
+  exit 2
 fi
 if ! ./dcos-launch wait; then
-  create-junit-xml "dcos-launch" "cluster.create" "Cluster did not start in time."
-  exit 1
+  exit 3
 fi
 
 # Return dcos_url

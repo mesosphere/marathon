@@ -263,6 +263,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Argus Cyber Security](http://argus-sec.com/)
 * [Artirix](http://www.artirix.com/)
 * [Arukas](https://arukas.io/)
+* [Avast](https://www.avast.com/)
 * [bol.com](https://www.bol.com/)
 * [Brand24](https://brand24.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
@@ -272,6 +273,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Criteo](http://www.criteo.com/)
 * [Daemon](http://www.daemon.com.au/)
 * [DataMan](http://www.shurenyun.com/)
+* [Deutsche Telekom](https://www.telekom.com/)
 * [DHL Parcel](https://www.dhlparcel.nl/)
 * [Disqus](https://disqus.com/)
 * [DueDil](https://www.duedil.com/)
@@ -286,6 +288,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Human API](https://humanapi.co/)
 * [Indix](http://www.indix.com/)
 * [ING](http://www.ing.com/)
+* [Intent HQ](https://www.intenthq.com/)
 * [iQIYI](http://www.iqiyi.com/)
 * [LaunchKey](https://launchkey.com/)
 * [Mapillary](https://www.mapillary.com/)
@@ -327,13 +330,13 @@ Not in the list? Open a pull request and add yourself!
 Have you found an issue? Feel free to report it using our [JIRA Issues](https://jira.mesosphere.com/projects/MARATHON/summary) page.
 In order to speed up response times, we ask you to provide as much
 information on how to reproduce the problem as possible. If the issue is related
- in any way to the web ui, we kindly ask you to use the `gui` label.
+ in any way to the web UI, we kindly ask you to use the `gui` label.
 
-If you have questions, please post on the
-[Marathon Framework Group](https://groups.google.com/forum/?hl=en#!forum/marathon-framework)
-email list. You can find Marathon support in the `#marathon` channel, and Mesos
-support in the `#mesos` channel, on [freenode][freenode] (IRC). The team at
-[Mesosphere][Mesosphere] is also happy to answer any questions.
+If you have questions, please post on the [Marathon Framework](https://groups.google.com/forum/?hl=en#!forum/marathon-framework) email list. 
+
+You can find Marathon support in the `#marathon` channel, and Mesos support in the `#mesos` channel, on [freenode][freenode] (IRC). Alternatively, check out the same channels on the [Mesos Slack](https://mesos.slack.com/) ([request an invitation here](https://mesos-slackin.herokuapp.com/)). 
+
+The team at [Mesosphere][Mesosphere] is also happy to answer any questions.
 
 If you'd like to take part in design research and test new features in Marathon before they're released, please add your name to our [UX Research](http://uxresearch.mesosphere.com) list.
 

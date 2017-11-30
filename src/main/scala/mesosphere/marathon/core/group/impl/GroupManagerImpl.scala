@@ -103,35 +103,45 @@ class GroupManagerImpl(
   override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
 
   @SuppressWarnings(Array("all")) /* async/await */
-  override def updateRoot(
+  override def updateRootEither[T](
     id: PathId,
-    change: (RootGroup) => RootGroup, version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] = {
+    change: (RootGroup) => Future[Either[T, RootGroup]],
+    version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
     // All updates to the root go through the work queue.
-    val deployment = serializeUpdates {
-      async {
-        logger.info(s"Upgrade root group version:$version with force:$force")
+    val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
+      logger.info(s"Upgrade root group version:$version with force:$force")
 
-        val from = rootGroup()
-        val unversioned = assignDynamicServicePorts(from, change(from))
-        val to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
-        Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
-        val plan = DeploymentPlan(from, to, version, toKill)
-        Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
-        logger.info(s"Computed new deployment plan:\n$plan")
-        await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
-        await(deploymentService.get().deploy(plan, force))
-        await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
-        logger.info(s"Updated groups/apps/pods according to plan ${plan.id}")
-        // finally update the root under the write lock.
-        root := Option(plan.target)
-        plan
+      val from = rootGroup()
+      async {
+        val changedGroup = await(change(from))
+        changedGroup match {
+          case Left(left) =>
+            Left(left)
+          case Right(changed) =>
+            val unversioned = assignDynamicServicePorts(from, changed)
+            val to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
+            Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
+            val plan = DeploymentPlan(from, to, version, toKill)
+            Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
+            logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")
+            await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
+            await(deploymentService.get().deploy(plan, force))
+            await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
+            logger.info(s"Updated groups/apps/pods according to plan ${plan.id} for ${plan.targetIdsString}")
+            // finally update the root under the write lock.
+            root := Option(plan.target)
+            Right(plan)
+        }
       }
     }
-    deployment.onComplete {
-      case Success(plan) =>
-        logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.target.id} acknowledged. Waiting to get processed")
+
+    maybeDeploymentPlan.onComplete {
+      case Success(Right(plan)) =>
+        logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.targetIdsString} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
+      case Success(Left(_)) =>
+        ()
       case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event
         logger.warn(s"Deployment failed for change: $version", ex)
@@ -139,7 +149,9 @@ class GroupManagerImpl(
         logger.warn(s"Deployment failed for change: $version", ex)
         eventStream.publish(GroupChangeFailed(id, version.toString, ex.getMessage))
     }
-    deployment
+    maybeDeploymentPlan
+  } catch {
+    case NonFatal(ex) => Future.failed(ex)
   }
 
   private[group] def assignDynamicServicePorts(from: RootGroup, to: RootGroup): RootGroup = {

@@ -62,36 +62,6 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       right.count(_.precedenceFor.isDefined) should be(0)
     }
 
-    "The list of offer matchers does not contain offer matcher not interested in offer" in new Fixture {
-      Given("OfferMatcher not interested in offer")
-      val offer1 = offer()
-      val offerMatch1 = Promise[OfferMatcher.MatchedInstanceOps]
-      offerMatcherManager.underlyingActor.launchTokens = 100
-      val matcherMock = matcher(isInterestedIn = false)
-      offerMatcherManager.underlyingActor.matchers += matcherMock
-
-      When("The list of offer matchers is fetched")
-      val availableMatchers = offerMatcherManager.underlyingActor.offerMatchers(offer())
-
-      Then("OfferMatcher not interested in offer should not be in the list")
-      availableMatchers.isEmpty should be (true)
-    }
-
-    "The list of offer matchers contains offer matcher interested in offer" in new Fixture {
-      Given("OfferMatcher not interested in offer")
-      val offer1 = offer()
-      val offerMatch1 = Promise[OfferMatcher.MatchedInstanceOps]
-      offerMatcherManager.underlyingActor.launchTokens = 100
-      val matcherMock = matcher(isInterestedIn = true)
-      offerMatcherManager.underlyingActor.matchers += matcherMock
-
-      When("The list of offer matchers is fetched")
-      val availableMatchers = offerMatcherManager.underlyingActor.offerMatchers(offer())
-
-      Then("OfferMatcher not interested in offer should not receive any offer")
-      availableMatchers should contain only (matcherMock)
-    }
-
     "queue offers, if the maximum number of offer matchers is busy" in new Fixture {
       Given("OfferMatcher with one matcher")
       val offerMatch1 = Promise[OfferMatcher.MatchedInstanceOps]
@@ -242,14 +212,12 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[OfferMatcher.MatchedInstanceOps]
       matcher.precedenceFor returns precedence
       matcher.matchOffer(any) returns promise.future
-      matcher.isInterestedIn(any) returns isInterestedIn
       matcher
     }
 
     def matcherWith(fn: Offer => Future[OfferMatcher.MatchedInstanceOps]): OfferMatcher = {
       val matcher = mock[OfferMatcher]
       matcher.precedenceFor returns None
-      matcher.isInterestedIn(any) returns true
       matcher.matchOffer(any) answers {
         case Array(offer: Offer) => fn(offer)
       }

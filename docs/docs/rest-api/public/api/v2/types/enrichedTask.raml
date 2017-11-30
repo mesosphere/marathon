@@ -36,3 +36,13 @@ types:
       startedAt?: string
       version?: string
       localVolumes?: LocalVolumeId[]
+
+  EnrichedTasksList:
+    type: object
+    properties:
+      tasks: EnrichedTask[]
+
+  TaskStatusCondition:
+    type: string
+    enum: [ running, staging ]
+    

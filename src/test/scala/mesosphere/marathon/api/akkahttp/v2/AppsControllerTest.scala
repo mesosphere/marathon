@@ -1,12 +1,15 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
+import java.net.InetSocketAddress
+
 import akka.Done
 import akka.http.scaladsl.model.Uri.{ Path, Query }
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, StatusCodes, Uri }
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.testkit.TestProbe
 import akka.util.ByteString
 import mesosphere.UnitTest
 import mesosphere.marathon.api._
@@ -15,14 +18,22 @@ import mesosphere.marathon.api.v2._
 import mesosphere.marathon.api.v2.validation.{ AppValidation, NetworkValidationMessages }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, Selector, TaskCounts }
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.Reservation
+import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity }
 import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -31,14 +42,15 @@ import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.mockito.Matchers
 import org.mockito.Mockito.when
 import play.api.libs.json._
+import akka.http.scaladsl.model.headers.`X-Forwarded-For`
+import akka.stream.scaladsl.Source
 
-import scala.collection.immutable
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest {
+class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest with RouteBehaviours {
 
   case class Fixture(
       clock: SettableClock = new SettableClock(),
@@ -80,6 +92,15 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       config = config,
       groupManager = groupManager,
       pluginManager = PluginManager.None
+    )
+
+    val fakeInstance = new Instance(
+      Instance.Id.forRunSpec(PathId("/app")),
+      Instance.AgentInfo("localhost", None, None, None, Nil),
+      Instance.InstanceState(Condition.Running, clock.now(), None, None),
+      Map.empty,
+      clock.now(),
+      UnreachableDisabled
     )
 
     implicit val rejectionHandler: RejectionHandler = AkkaHttpMarathonService.rejectionHandler
@@ -327,6 +348,52 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
 
+    "Allow creating app with network name with underscore" in new Fixture {
+      Given("An app with a network name with underscore")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(
+          image = "image")))
+      val app = App(
+        id = "/app", cmd = Some("cmd"), container = Option(container),
+        networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Post(Uri./, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.Created withClue s"body: ${ByteString(body).utf8String}, response: ${responseAs[String]}"
+      }
+    }
+
+    "Do partial update with patch methods" in new Fixture {
+      Given("An app")
+      val id = "/app"
+      val app = App(
+        id = id,
+        cmd = Some("cmd"),
+        instances = 1
+      )
+      prepareApp(app, groupManager) // app is stored
+
+      val eventStreamProbe = TestProbe("eventStream")
+      system.eventStream.subscribe(eventStreamProbe.ref, classOf[ApiPostEvent])
+
+      When("The application is updated")
+      val updateRequest = App(id = id, instances = 2)
+      val updatedBody = Json.stringify(Json.toJson(updateRequest)).getBytes("UTF-8")
+
+      val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
+      val ipHeader = `X-Forwarded-For`(RemoteAddress(new InetSocketAddress("8.8.8.8", 31337)))
+      Patch(Uri./.withPath(Path(app.id)), entity).addHeader(ipHeader) ~> route ~> check {
+        Then("It is successful")
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+        eventStreamProbe.expectMsgClass(classOf[ApiPostEvent]).clientIp shouldEqual ("8.8.8.8:31337")
+      }
+    }
+
     "Fail creating application when network name is missing" in new Fixture {
       Given("An app and group")
       val app = App(
@@ -502,11 +569,16 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val updatedJson = Json.toJson(updatedApp).as[JsObject]
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
 
+      val eventStreamProbe = TestProbe("eventStream")
+      system.eventStream.subscribe(eventStreamProbe.ref, classOf[ApiPostEvent])
+
       val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
+      val ipHeader = `X-Forwarded-For`(RemoteAddress(new InetSocketAddress("8.8.8.8", 31337)))
+      Put(Uri./.withPath(Path(app.id)), entity).addHeader(ipHeader) ~> route ~> check {
         Then("It is successful")
         status shouldEqual StatusCodes.OK withClue s"response=${responseAs[String]}"
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+        eventStreamProbe.expectMsgClass(classOf[ApiPostEvent]).clientIp shouldEqual ("8.8.8.8:31337")
       }
     }
 
@@ -1355,7 +1427,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       When("The application is updated")
       val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id.toString)), entity) ~> route ~> check {
+      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
         Then("The application is updated")
         status shouldEqual StatusCodes.OK
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
@@ -1378,7 +1450,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       Then("A validation exception is thrown")
       val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
-      Put(Uri./.withPath(Path(app.id.toString)), entity) ~> route ~> check {
+      Put(Uri./.withPath(Path(app.id)), entity) ~> route ~> check {
         status shouldEqual StatusCodes.UnprocessableEntity
         responseAs[String] should include("/container/docker")
         responseAs[String] should include("not defined")
@@ -1749,6 +1821,34 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
 
+    "Replacing an existing application with a Mesos docker container passes validation" in new Fixture {
+      Given("An app update to a Mesos container with a docker image")
+      val appDef = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.updateApp(equalTo(appDef.id), any, any, any, any) returns Future.successful(plan)
+      groupManager.rootGroup() returns rootGroup
+
+      val body =
+        """{
+          |  "cmd": "sleep 1",
+          |  "container": {
+          |    "type": "MESOS",
+          |    "docker": {
+          |      "image": "/test:latest"
+          |    }
+          |  }
+          |}""".stripMargin.getBytes("UTF-8")
+
+      When("The application is updated")
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Put(Uri./.withPath(Path(appDef.id.toString)), entity) ~> route ~> check {
+        Then("The return code indicates success")
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`].map(_.planId) shouldEqual Some(plan.id)
+      }
+    }
+
     "Replacing an existing docker application, upgrading from host to user networking" in new Fixture {
       Given("a docker app using host networking and non-empty port definitions")
       val app = AppDefinition(
@@ -1789,6 +1889,45 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 
       app1 should be(app2)
+    }
+
+    "Restart an existing app" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      service.deploy(any, any) returns Future.successful(Done)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.rootGroup() returns rootGroup
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./
+        .withPath(Path(app.id.toString) / "restart")
+        .withQuery(Query("force" -> "true"))
+
+      Post(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Restart a non existing app will fail" in new Fixture {
+      val missing = PathId("/app")
+      groupManager.app(PathId("/app")) returns None
+      groupManager.updateApp(any, any, any, any, any) returns Future.failed(AppNotFoundException(missing))
+      groupManager.rootGroup() returns RootGroup()
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./
+        .withPath(Path(missing.toString) / "restart")
+        .withQuery(Query("force" -> "true"))
+
+      Post(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
     }
 
     "Index has counts and deployments by default (regression for #2171)" in new Fixture {
@@ -1857,6 +1996,42 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       search(cmd = Some(""), id = Some(""), label = Some("")) should be(Set(app1, app2))
     }
 
+    new Fixture() {
+      Given("An unauthenticated request")
+      auth.authenticated = false
+      val app = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
+      val entity = HttpEntity(app.getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)
+      groupManager.rootGroup() returns createRootGroup()
+
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Get(Uri./, HttpEntity.Empty))
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Post(Uri./, entity))
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Get(Uri./.withPath(Path("someAppId")), HttpEntity.Empty))
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Put(Uri./.withPath(Path("someAppId")), entity))
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Put(Uri./, entity))
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Delete(Uri./.withPath(Path("someAppId")), HttpEntity.Empty))
+      behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Post(Uri./.withPath(Path("someAppId") / "restart"), HttpEntity.Empty))
+    }
+
+    new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath)))) {
+      Given("A real Group Manager with one app")
+      val appD = AppDefinition("/a".toRootPath)
+      val rootGroup = initialRoot
+
+      Given("An unauthorized request")
+      auth.authenticated = true
+      auth.authorized = false
+      appInfoService.selectApp(any, any, any) returns Future.successful(Some(AppInfo(appD)))
+      val app = """{"id":"/a","cmd":"foo","ports":[]}"""
+      val entity = HttpEntity(app.getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)
+
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Post(Uri./, entity))
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Get(Uri./.withPath(Path("/a")), HttpEntity.Empty))
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Put(Uri./.withPath(Path("/a")), entity))
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Put(Uri./, HttpEntity(s"[$app]".getBytes("UTF-8")).withContentType(ContentTypes.`application/json`)))
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Delete(Uri./.withPath(Path("/a")), HttpEntity.Empty))
+      behave like unauthorizedRoute(forRoute = appsController.route, withRequest = Post(Uri./.withPath(Path("/a") / "restart"), HttpEntity.Empty))
+    }
+
     "access with limited authorization gives a filtered apps listing" in new Fixture {
       Given("An authorized identity with limited ACL's")
       auth.authFn = (resource: Any) => {
@@ -1889,7 +2064,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Given("An authenticated identity with full access")
       auth.authenticated = true
       auth.authorized = false
-      val req = auth.request
 
       When("We try to remove a non-existing application")
 
@@ -1960,37 +2134,27 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
 
-    "Replace multiple existing applications" in new Fixture {
+    "Replace multiple existing applications using Put" in new Fixture {
       Given("An app and group")
-      val app1Id = "/app1"
-      val app2Id = "/app2"
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
 
       val newApp1Cmd = "bla1"
       val newApp2Cmd = "bla2"
-      val apps = Seq(App(
-        id = app1Id,
-        cmd = Some("cmd1")
-      ), App(
-        id = app2Id,
-        cmd = Some("cmd1")
-      )
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
       )
 
-      val normed = apps.map(normalize)
-      val appDefs = normed.map(Raml.fromRaml(_))
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
         appDef.id -> appDef
       }.toMap
       )
+
       val plan = DeploymentPlan(rootGroup, rootGroup)
-      groupManager.updateRoot(any, any, any, any, any) answers { args =>
-        val fn = args(1).asInstanceOf[RootGroup => RootGroup]
-        val updated = fn(rootGroup)
-        updated.app(PathId(app1Id)).get.cmd.get shouldEqual newApp1Cmd
-        updated.app(PathId(app2Id)).get.cmd.get shouldEqual newApp2Cmd
-        Future.successful(plan)
-      }
+
+      groupManager.updateRoot(any, any, any, any, any) returns Future.successful(plan)
       groupManager.rootGroup() returns rootGroup
       groupManager.app(appDefs(0).id) returns Some(appDefs(0))
       groupManager.app(appDefs(1).id) returns Some(appDefs(1))
@@ -2015,5 +2179,344 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         header[Headers.`Marathon-Deployment-Id`] should not be 'empty
       }
     }
+
+    "Replace multiple existing applications using Patch" in new Fixture {
+      Given("An app and group")
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
+
+      val newApp1Cmd = "bla1"
+      val newApp2Cmd = "bla2"
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
+      )
+
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+
+      groupManager.updateRoot(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.rootGroup() returns rootGroup
+      groupManager.app(appDefs(0).id) returns Some(appDefs(0))
+      groupManager.app(appDefs(1).id) returns Some(appDefs(1))
+
+      When("The application is updated")
+      val body =
+        s"""[
+           | {
+           |   "id": "$app1Id",
+           |   "cmd": "$newApp1Cmd"
+           | },
+           | {
+           |   "id": "$app2Id",
+           |   "cmd": "$newApp2Cmd"
+           | }
+          ]""".stripMargin.getBytes("UTF-8")
+
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Patch(Uri./, entity) ~> route ~> check {
+        Then("The application is updated")
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Reject replacing multiple existing applications using Patch if appId is not found" in new Fixture {
+      Given("An app and group")
+      val app1Id = PathId("/app1")
+      val app2Id = PathId("/app2")
+
+      val newApp1Cmd = "bla1"
+      val newApp2Cmd = "bla2"
+      val appDefs = Seq(
+        AppDefinition(id = app1Id, cmd = Some("cmd1")),
+        AppDefinition(id = app2Id, cmd = Some("cmd1"))
+      )
+
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      groupManager.updateRoot(any, any, any, any, any) returns Future.failed(AppNotFoundException(PathId("/unknown")))
+      groupManager.rootGroup() returns rootGroup
+      groupManager.app(appDefs(0).id) returns Some(appDefs(0))
+      groupManager.app(appDefs(1).id) returns Some(appDefs(1))
+
+      When("The application is updated")
+      val body =
+        s"""[
+           | {
+           |   "id": "$app1Id",
+           |   "cmd": "$newApp1Cmd"
+           | },
+           | {
+           |   "id": "/unknown",
+           |   "cmd": "$newApp2Cmd"
+           | }
+          ]""".stripMargin.getBytes("UTF-8")
+
+      val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
+      Patch(Uri./, entity) ~> route ~> check {
+        Then("404: Entity not found")
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+
+    "Correctly update the RootGroup when updating multiple apps and app creation is allowed" in new Fixture {
+      Given("A root group")
+      val appDefs = Seq(
+        AppDefinition(id = PathId("/app1"), cmd = Some("cmd1")),
+        AppDefinition(id = PathId("/app2"), cmd = Some("cmd2"))
+      )
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      When("update of multiple apps is done and creation is allowed")
+      val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
+        List(
+          AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
+          AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
+        ),
+        partialUpdate = true,
+        allowCreation = true,
+        Timestamp.now()
+      )(new Identity {})
+      val updatedRootGroup = rootGroupUpdatefn(rootGroup)
+      Then("rootgroup is updated")
+      updatedRootGroup.app(PathId("/app1")).get.cmd shouldEqual Some("newCmd")
+      updatedRootGroup.app(PathId("/newapp")).get.cmd shouldEqual Some("newCmd2")
+
+    }
+
+    "Do not update a RootGroup when updating multiple apps and creation in not allowed" in new Fixture {
+      Given("A root group")
+      val appDefs = Seq(
+        AppDefinition(id = PathId("/app1"), cmd = Some("cmd1")),
+        AppDefinition(id = PathId("/app2"), cmd = Some("cmd2"))
+      )
+      val rootGroup = createRootGroup(
+        appDefs.map { appDef =>
+        appDef.id -> appDef
+      }.toMap
+      )
+      When("update of multiple apps is done and creation is allowed")
+      val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
+        List(
+          AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
+          AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
+        ),
+        partialUpdate = true,
+        allowCreation = false,
+        Timestamp.now()
+      )(new Identity {})
+      Then("rootgroup is not updated")
+      an[AppNotFoundException] should be thrownBy rootGroupUpdatefn(rootGroup)
+    }
+
+    "Delete a single app if it exists" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.updateRootEither(any, any, any, any, any) returns Future.successful(Right(plan))
+      groupManager.rootGroup() returns rootGroup
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./
+        .withPath(Path(app.id.toString))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+    "Kill tasks and scale" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.killAndScale(equalTo(app.id), any, any)(any) returns Future.successful(plan)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("scale" -> "true", "host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Kill tasks and wipe" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.kill(equalTo(app.id), any, equalTo(true))(any) returns Future.successful(Seq.empty)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("wipe" -> "true", "host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "Just Kill tasks" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.kill(equalTo(app.id), any, equalTo(false))(any) returns Future.successful(Seq.empty)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks").withQuery(Query("host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "List running tasks" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val taskId = "task_id"
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+      groupManager.rootGroup() returns rootGroup
+      val instance = mock[Instance]
+      instance.instanceId returns Instance.Id.forRunSpec(app.id)
+      instance.tasksMap returns Map(Task.Id(taskId) -> Task.Reserved(
+        Task.Id(taskId),
+        Reservation(Seq.empty, Reservation.State.Launched),
+        Task.Status(
+          stagedAt = clock.now(),
+          startedAt = Some(clock.now()),
+          mesosStatus = None,
+          condition = Condition.Running,
+          networkInfo = NetworkInfoPlaceholder()
+        ),
+        clock.now()
+      ))
+      instance.agentInfo returns AgentInfo("host", None, None, None, Nil)
+
+      instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(
+        InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance))
+      ))
+      healthCheckManager.statuses(app.id) returns Future.successful(Map(instance.instanceId -> Seq(Health(instance.instanceId))))
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks")
+
+      Get(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        (Json.parse(responseAs[String]) \ "tasks" \ 0 \ "id").get shouldEqual JsString(taskId)
+      }
+    }
+
+    "Kill task and scale" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.killAndScale(equalTo(app.id), any, any)(any) returns Future.successful(plan)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("scale" -> "true", "host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+        header[Headers.`Marathon-Deployment-Id`] should not be 'empty
+      }
+    }
+
+    "Kill task and wipe" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.kill(equalTo(app.id), any, equalTo(true))(any) returns Future.successful(fakeInstance :: Nil)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("wipe" -> "true", "host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "Just kill task" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      taskKiller.kill(equalTo(app.id), any, equalTo(false))(any) returns Future.successful(fakeInstance :: Nil)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("host" -> "*"))
+
+      Delete(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "List application versions" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      groupManager.appVersions(equalTo(app.id)) returns Source.single(app.version.toOffsetDateTime)
+
+      val entity = HttpEntity.Empty
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "versions")
+
+      Get(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "Get application by version" in new Fixture {
+      val app = AppDefinition(id = PathId("/app"))
+      val rootGroup = createRootGroup(Map(app.id -> app))
+      groupManager.app(PathId("/app")) returns Some(app)
+
+      groupManager.rootGroup() returns rootGroup
+      groupManager.appVersion(equalTo(app.id), equalTo(app.version.toOffsetDateTime)) returns Future.successful(Some(app))
+
+      val entity = HttpEntity.Empty
+
+      val version = app.version
+
+      val uri = Uri./.withPath(Path(app.id.toString) / "versions" / version.toString)
+
+      Get(uri, entity) ~> route ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
   }
 }

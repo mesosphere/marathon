@@ -570,10 +570,9 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithUpgradeStrategyRules
     appDef should requireUnreachableDisabledForResidentTasks
-    // constraints are only validated in RAML layer
+    // constraints are validated in AppValidation
     appDef.unreachableStrategy is valid
     appDef.networks is valid(NetworkValidation.modelNetworksValidator)
-    appDef.networks is every(NetworkValidation.modelNetworkValidator)
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   @SuppressWarnings(Array("TraversableHead"))

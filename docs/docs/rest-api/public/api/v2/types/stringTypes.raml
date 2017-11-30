@@ -8,6 +8,11 @@ types:
     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
     maxLength: 63
     minLength: 1
+  NetworkName:
+    type: string
+    pattern: ^[a-z0-9]([-a-z0-9_]*[a-z0-9])?$
+    maxLength: 63
+    minLength: 1
   LegacyName:
     type: string
     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -38,7 +43,7 @@ types:
     description: The http scheme to use
   IpProtocol:
     type: string
-    enum: [ IPv4 ]
+    enum: [ IPv4, IPv6 ]
   PersistenceId:
     type: string
     pattern: ^([^#]+)[#]([^#]+)[#]([^#]+)$
@@ -73,6 +78,22 @@ types:
       - TASK_UNREACHABLE
       - TASK_GONE
       - TASK_DROPPED
+  Condition:
+    type: string
+    enum:
+      - Error
+      - Failed
+      - Finished
+      - Killed
+      - Killing
+      - Running
+      - Staging
+      - Starting
+      - Unreachable
+      - UnreachableInactive
+      - Gone
+      - Dropped
+      - Unknown
   Message:
     type: object
     properties:

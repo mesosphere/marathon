@@ -80,10 +80,11 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
         title in new Fixture {
           val sd: Protos.ServiceDefinition = f(this)
 
-          recoverToExceptionIf[SerializationFailedException] {
+          recoverToExceptionIf[MigrationCancelledException] {
             migrateSingleAppF(sd)
           }.map { ex =>
-            ex.getMessage should be(MigrationFailedMissingNetworkEnvVar)
+            ex.getCause shouldBe a[SerializationFailedException]
+            ex.getCause.getMessage should be(MigrationFailedMissingNetworkEnvVar)
           }.futureValue
         }
       }

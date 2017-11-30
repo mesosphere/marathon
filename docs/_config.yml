@@ -15,6 +15,9 @@ sass:
   sass_dir: _sass
   style: :compressed
 
+plugins:
+  - jekyll-redirect-from
+
 baseurl: "/marathon"
 highlighter: rouge
 lsi: false

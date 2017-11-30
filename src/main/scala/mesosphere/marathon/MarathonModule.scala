@@ -19,7 +19,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.util.state._
-import org.apache.mesos.Scheduler
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration

@@ -10,8 +10,8 @@ import org.scalatest.Inside
 
 trait RouteBehaviours extends ScalatestRouteTest with Inside { this: UnitTest =>
 
-  def unauthenticatedRoute(forRoute: Route, withRequest: HttpRequest): Unit = {
-    s"deny access to ${withRequest.method.value} of ${withRequest.uri} without authentication" in {
+  def unauthenticatedRoute(forRoute: Route, withRequest: HttpRequest, customText: String = ""): Unit = {
+    s"deny access to ${withRequest.method.value} of ${withRequest.uri} without authentication $customText" in {
       When("we try to fetch the info")
       withRequest ~> forRoute ~> check {
         Then("we receive a NotAuthenticated response")
@@ -26,11 +26,11 @@ trait RouteBehaviours extends ScalatestRouteTest with Inside { this: UnitTest =>
 
   def unauthorizedRoute(forRoute: Route, withRequest: HttpRequest): Unit = {
     s"deny access to ${withRequest.method.value} of ${withRequest.uri} without authorization" in {
-      When("we try to fetch the info")
+      When(s"we try to fetch from $forRoute")
       withRequest ~> forRoute ~> check {
         Then("we receive a NotAuthenticated response")
-        rejection shouldBe a[NotAuthorized]
-        inside(rejection) {
+        rejections.find{ case _: NotAuthorized => true } should not be 'empty
+        rejections.collect {
           case NotAuthorized(response) =>
             response.status should be(StatusCodes.Unauthorized)
         }

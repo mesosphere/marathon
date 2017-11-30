@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.event
 
-import akka.event.EventStream
 import com.fasterxml.jackson.annotation.JsonIgnore
 import mesosphere.marathon.api.v2.json.Formats.eventToJson
 import mesosphere.marathon.core.condition.Condition
@@ -266,8 +265,3 @@ case class MesosFrameworkMessageEvent(
   message: Array[Byte],
   eventType: String = "framework_message_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
-
-object Events {
-  def maybePost(event: MarathonEvent)(implicit eventBus: EventStream): Unit =
-    eventBus.publish(event)
-}

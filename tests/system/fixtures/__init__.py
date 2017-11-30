@@ -39,8 +39,8 @@ def events_to_file():
     # In strict mode marathon runs in SSL mode on port 8443 and requires authentication
     if shakedown.ee_version() == 'strict':
         shakedown.run_command_on_master(
-            '(curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" ' + \
-            '-H "Authorization: token={}" '.format(shakedown.dcos_acs_token()) + \
+            '(curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" ' +
+            '-H "Authorization: token={}" '.format(shakedown.dcos_acs_token()) +
             '-o events.txt -k https://leader.mesos:8443/v2/events; echo $? > events.exitcode) &')
 
     # Otherwise marathon runs on HTTP mode on port 8080

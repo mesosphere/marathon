@@ -10,6 +10,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
 import mesosphere.marathon.integration.facades.MesosFacade
+import mesosphere.marathon.state.FaultDomain
 import mesosphere.marathon.util.Retry
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
@@ -37,18 +38,41 @@ case class MesosCluster(
     quorumSize: Int = 1,
     autoStart: Boolean = false,
     config: MesosConfig = MesosConfig(),
-    waitForMesosTimeout: FiniteDuration = 5.minutes)(implicit
+    waitForMesosTimeout: FiniteDuration = 5.minutes,
+    mastersFaultDomains: Seq[Option[FaultDomain]],
+    agentsFaultDomains: Seq[Option[FaultDomain]])(implicit
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable {
   require(quorumSize > 0 && quorumSize <= numMasters)
+  require(agentsFaultDomains.isEmpty || agentsFaultDomains.size == numSlaves)
 
   lazy val masters = 0.until(numMasters).map { i =>
+    val faultDomainJson = if (mastersFaultDomains.nonEmpty && mastersFaultDomains(i).nonEmpty) {
+      val faultDomain = mastersFaultDomains(i).get
+      val faultDomainJson = s"""
+                               |{
+                               |  "fault_domain":
+                               |    {
+                               |      "region":
+                               |        {
+                               |          "name": "${faultDomain.region}"
+                               |        },
+                               |      "zone":
+                               |        {
+                               |          "name": "${faultDomain.zone}"
+                               |        }
+                               |    }
+                               |}
+        """.stripMargin
+      Some(faultDomainJson)
+    } else None
+
     Master(extraArgs = Seq(
       "--slave_ping_timeout=1secs",
       "--max_slave_ping_timeouts=4",
-      s"--quorum=$quorumSize"))
+      s"--quorum=$quorumSize") ++ faultDomainJson.map(fd => s"--domain=$fd"))
   }
 
   lazy val agents = 0.until(numSlaves).map { i =>
@@ -57,9 +81,39 @@ case class MesosCluster(
     // to it's marathon, leading to multiple tasks (from different IT suits) trying to use the same port!
     // First-come-first-served task will bind successfully where the others will fail leading to a lot inconsistency and
     // flakiness in tests.
+
+    val (faultDomainAgentAttributes: Map[String, Option[String]], mesosFaultDomainAgentCmdOption) = if (agentsFaultDomains.nonEmpty && agentsFaultDomains(i).nonEmpty) {
+      val faultDomain = agentsFaultDomains(i).get
+      val mesosFaultDomainCmdOption = s"""
+          |{
+          |  "fault_domain":
+          |    {
+          |      "region":
+          |        {
+          |          "name": "${faultDomain.region}"
+          |        },
+          |      "zone":
+          |        {
+          |          "name": "${faultDomain.zone}"
+          |        }
+          |    }
+          |}
+        """.stripMargin
+
+      val nodeAttributes = Map(
+        "fault_domain_region" -> Some(faultDomain.region.value),
+        "fault_domain_zone" -> Some(faultDomain.zone.value))
+      (nodeAttributes, Some(mesosFaultDomainCmdOption))
+    } else Map.empty -> None
+
+    // uniquely identify each agent node, useful for constraint matching
+    val attributes: Map[String, Option[String]] = Map("node" -> Some(i.toString)) ++ faultDomainAgentAttributes
+
+    val renderedAttributes: String = attributes.map { case (key, maybeVal) => s"$key${maybeVal.map(v => s":$v").getOrElse("")}" }.mkString(";")
+
     Agent(resources = new Resources(ports = PortAllocator.portsRange()), extraArgs = Seq(
-      s"--attributes=node:$i" // uniquely identify each agent node, useful for constraint matching
-    ))
+      s"--attributes=$renderedAttributes"
+    ) ++ mesosFaultDomainAgentCmdOption.map(fd => s"--domain=$fd"))
   }
 
   if (autoStart) {
@@ -325,6 +379,10 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
 
+  def mastersFaultDomains: Seq[Option[FaultDomain]] = Seq.empty
+
+  def agentsFaultDomains: Seq[Option[FaultDomain]] = Seq.empty
+
   private val localMesosUrl = sys.env.get("USE_LOCAL_MESOS")
   lazy val mesosMasterUrl = s"zk://${zkServer.connectUri}/mesos"
   lazy val mesosNumMasters = 1
@@ -333,7 +391,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosConfig = MesosConfig()
   lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
   lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
-    autoStart = false, config = mesosConfig, mesosLeaderTimeout)
+    autoStart = false, config = mesosConfig, mesosLeaderTimeout, mastersFaultDomains, agentsFaultDomains)
   lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
 
   override def cleanMesos(): Unit = mesosCluster.clean()

@@ -59,7 +59,7 @@ The UCR containerizer provides a `pullConfig` parameter with a `secret` field fo
 **Important:** If you leave the `args` field empty, the default entry point will be the launch command for the container. If your container does not have a default entry point, you must specify a command in the `args` field. If you do not, your app will fail to deploy.
 
 ## UCR Limitations
-- The UCR does not support the following: runtime privileges, Docker options, force pull, named ports, numbered ports, bridge networking, port mapping.
+- The UCR does not support the following: runtime privileges, Docker options.
 
 <a name="docker-containerizer"></a>
 
@@ -268,7 +268,7 @@ the following Dockerfile with an `ENTRYPOINT` defined:
 
 ```bash
 FROM busybox
-MAINTAINER support@mesosphere.io
+LABEL maintainer="support@mesosphere.io"
 
 CMD ["inky"]
 ENTRYPOINT ["echo"]

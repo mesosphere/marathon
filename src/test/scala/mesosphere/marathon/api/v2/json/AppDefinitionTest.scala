@@ -533,12 +533,32 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     }
 
+    "Validate URIs with query strings correctly" in {
+      val json =
+        """
+      {
+        "id": "app-with-fetch",
+        "cmd": "brew update",
+        "uris": ["http://example.com/file1.tar.gz?foo=10&bar=meh", "http://example.com/file?foo=10&bar=meh"]
+      }
+      """
+
+      val app = fromJson(json)
+
+      app.fetch(0).uri shouldBe "http://example.com/file1.tar.gz?foo=10&bar=meh"
+      app.fetch(0).extract shouldBe true
+
+      app.fetch(1).uri shouldBe "http://example.com/file?foo=10&bar=meh"
+      app.fetch(1).extract shouldBe false
+
+    }
+
     "Serialize deserialize path with fetch" in {
       val app = AppDefinition(
         id = "app-with-fetch".toPath,
         cmd = Some("brew update"),
         fetch = Seq(
-          new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true,
+          new FetchUri(uri = "http://example.com/file1?foo=10&bar=meh", executable = false, extract = true, cache = true,
             outputFile = None),
           new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false,
             outputFile = None)
@@ -549,7 +569,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val deserializedApp = AppDefinition.fromProto(proto)
 
-      assert(deserializedApp.fetch(0).uri == "http://example.com/file1")
+      assert(deserializedApp.fetch(0).uri == "http://example.com/file1?foo=10&bar=meh")
       assert(deserializedApp.fetch(0).extract)
       assert(!deserializedApp.fetch(0).executable)
       assert(deserializedApp.fetch(0).cache)

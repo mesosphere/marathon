@@ -15,9 +15,9 @@ class InstanceFormatTest extends UnitTest {
       |{
       |  "instanceId": { "idString": "app.instance-1337" },
       |  "tasksMap": {},
-      |  "runSpecVersion": "2015-01-01",
+      |  "runSpecVersion": "2015-01-01T12:00:00Z",
       |  "agentInfo": { "host": "localhost", "attributes": [] },
-      |  "state": { "since": "2015-01-01", "condition": { "str": "Running" } }
+      |  "state": { "since": "2015-01-01T12:00:00Z", "condition": { "str": "Running" } }
       |}""".stripMargin).as[JsObject]
 
   "Instance.instanceFormat" should {

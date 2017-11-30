@@ -19,11 +19,11 @@ following the instructions.
 
 1. Build the docker image:
 
-        docker build . -t marathon-jekyll
+        docker build . -t jekyll
 
 2. Run it (from this folder)
 
-        docker run --rm -it -v $(pwd):/marathon-docs -p 4000:4000 marathon-jekyll
+        docker run --rm -it -v $(pwd):/site-docs -p 4000:4000 jekyll
 
 3. Visit the site at
    [http://localhost:4000/marathon/](http://localhost:4000/marathon/)
@@ -45,7 +45,7 @@ following the instructions.
 3. Change into the "docs" directory where docs live
 
         $ cd docs/
-        
+
 4. Install Bundler
 
         $ gem install bundler
@@ -75,9 +75,12 @@ following the instructions.
 
 3. Check out the appropriate release branch, then copy the contents of the "docs" directory in master to the root of your
    marathon-gh-pages directory.
-        
+
         $ cd /path/to/marathon
         $ git checkout releases/1.x
+        $ # to make sure we also remove deleted documentation, we need to delete all files first.
+        $ # please note, rm -r ../marathon-gh-pages/* will not delete dot-files
+        $ rm -r ../marathon-gh-pages/*
         $ cp -r docs/** ../marathon-gh-pages
 
 4. Change to the marathon-gh-pages directory, commit, and push the changes
@@ -85,4 +88,3 @@ following the instructions.
         $ cd /path/to/marathon-gh-pages
         $ git commit . -m "Syncing docs with release branch"
         $ git push
-

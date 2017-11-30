@@ -9,10 +9,11 @@ import sys
 
 from datetime import timedelta
 from dcos import http, mesos
+from dcos.errors import DCOSException, DCOSHTTPException
 from distutils.version import LooseVersion
+from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
-from dcos.errors import DCOSHTTPException
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -24,14 +25,6 @@ def ignore_exception(exc):
     """Used with @retrying.retry to ignore exceptions in a retry loop.
        ex.  @retrying.retry( retry_on_exception=ignore_exception)
        It does verify that the object passed is an exception
-    """
-    return isinstance(exc, Exception)
-
-
-def ignore_exception(exc):
-    """ Used with @retrying.retry to igmore exceptions in a retry loop.
-    ex.  @retrying.retry( retry_on_exception=ignore_exception)
-    It does verify that the object passed is an exception
     """
     return isinstance(exc, Exception)
 
@@ -126,7 +119,7 @@ def cluster_info(mom_name='marathon-user'):
                 client = marathon.create_client()
                 about = client.get_about()
                 print("Marathon MoM version: {}".format(about.get("version")))
-            except:
+            except Exception:
                 print("Marathon MoM not present")
     else:
         print("Marathon MoM not present")
@@ -203,7 +196,7 @@ def ensure_mom():
         try:
             shakedown.install_package_and_wait('marathon')
             shakedown.deployment_wait()
-        except:
+        except Exception:
             pass
 
         if not shakedown.wait_for_service_endpoint('marathon-user'):
@@ -255,7 +248,7 @@ def wait_for_task(service, task, timeout_sec=120):
         response = None
         try:
             response = shakedown.get_service_task(service, task)
-        except:
+        except Exception:
             pass
 
         if response is not None and response['state'] == 'TASK_RUNNING':
@@ -274,7 +267,7 @@ def clear_pods():
         for pod in pods:
             client.remove_pod(pod["id"], True)
         shakedown.deployment_wait()
-    except:
+    except Exception:
         pass
 
 
@@ -369,7 +362,11 @@ def install_enterprise_cli_package():
 def is_enterprise_cli_package_installed():
     """Returns `True` if `dcos-enterprise-cli` package is installed."""
     stdout, stderr, return_code = shakedown.run_dcos_command('package list --json')
-    result_json = json.loads(stdout)
+    print('package list command returned code:{}, stderr:{}, stdout: {}'.format(return_code, stderr, stdout))
+    try:
+        result_json = json.loads(stdout)
+    except JSONDecodeError as error:
+        raise DCOSException('Could not parse: "{}"'.format(stdout)) from error
     return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
@@ -598,14 +595,15 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
         print('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
         url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
         req = http.put(url)
-        assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+        msg = 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+        assert req.status_code == 204, msg
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
             print('Service account {} already has {} permissions set'.format(service_account, resource))
         else:
             print("Unexpected HTTP error: {}".format(e.response))
             raise
-    except:
+    except Exception:
         print("Unexpected error:", sys.exc_info()[0])
         raise
 
@@ -619,7 +617,7 @@ def add_acs_resource(resource):
         print('Adding ACS resource: {}'.format(resource))
         url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}'.format(resource))
         extra_args = {'headers': {'Content-Type': 'application/json'}}
-        req = http.put(url, data=json.dumps({'description' : resource}), **extra_args)
+        req = http.put(url, data=json.dumps({'description': resource}), **extra_args)
         assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
@@ -627,15 +625,19 @@ def add_acs_resource(resource):
         else:
             print("Unexpected HTTP error: {}, {}".format(e.response, e.response.text))
             raise
-    except:
+    except Exception:
         print("Unexpected error:", sys.exc_info()[0])
         raise
 
 
 def add_dcos_marathon_user_acls(user='root'):
+    add_service_account_user_acls(service_account='dcos_marathon', user=user)
+
+
+def add_service_account_user_acls(service_account, user='root'):
     resource = 'dcos:mesos:master:task:user:{}'.format(user)
     add_acs_resource(resource)
-    set_service_account_permissions('dcos_marathon', resource, action='create')
+    set_service_account_permissions(service_account, resource, action='create')
 
 
 def get_marathon_endpoint(path, marathon_name='marathon'):

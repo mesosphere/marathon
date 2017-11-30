@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import ch.qos.logback.classic.{ Level, Logger, LoggerContext }
 import com.typesafe.config.{ Config, ConfigRenderOptions }
@@ -10,33 +11,30 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.AuthorizedResource.{ SystemConfig, SystemMetrics }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateResource, ViewResource }
-import mesosphere.marathon.raml.LoggerChange
+import mesosphere.marathon.raml.{ AnyToRaml, MetricsConversion }
+import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
-import stream.Implicits._
+import play.api.libs.json.JsString
 
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 /**
   * The SystemController handles system level functionality like configuration, metrics and logging.
   */
-class SystemController(cfg: Config)(
+class SystemController(val marathonConfig: MarathonConf, val cfg: Config, val electionService: ElectionService)(
     implicit
     val actorSystem: ActorSystem,
     val executionContext: ExecutionContext,
     val authenticator: Authenticator,
-    val authorizer: Authorizer,
-    val electionService: ElectionService
-) extends Controller with StrictLogging {
+    val authorizer: Authorizer
+) extends Controller with MetricsConversion with StrictLogging {
 
   import Directives._
   import EntityMarshallers._
 
-  /**
-    * GET /ping
-    * @return a simple pong as text/plain
-    */
-  def ping: Route = complete("pong")
+  def pingPlainText: Route = complete("pong")
+  def pingJson: Route = complete(JsString("ping"))
 
   /**
     * GET /metrics
@@ -45,7 +43,7 @@ class SystemController(cfg: Config)(
   def metrics: Route = {
     authenticated.apply { implicit identity =>
       authorized(ViewResource, SystemMetrics).apply {
-        complete(Metrics.snapshot())
+        complete(Metrics.snapshot().toRaml)
       }
     }
   }
@@ -86,7 +84,7 @@ class SystemController(cfg: Config)(
   def changeLoggers: Route = {
     authenticated.apply { implicit identity =>
       authorized(UpdateResource, SystemConfig).apply {
-        entity(as[LoggerChange]) { change =>
+        entity(as[raml.LoggerChange]) { change: raml.LoggerChange =>
           LoggerFactory.getILoggerFactory.getLogger(change.logger) match {
             case log: Logger =>
               val level = Level.valueOf(change.level.value.toUpperCase)
@@ -111,13 +109,16 @@ class SystemController(cfg: Config)(
       }
     }
   }
-
+  // format: OFF
   override val route: Route = {
     // To maintain the functionality of the original API, this endpoint is leader aware.
     // It would make sense to allow the functionality of this controller on every instance.
     asLeader(electionService) {
       path("ping") {
-        get { ping }
+        (get & acceptsAnything) { pingPlainText } ~
+        (get & accepts(MediaTypes.`text/plain`)) { pingPlainText } ~
+        (get & accepts(MediaTypes.`application/json`)) { pingJson } ~
+         get { complete(HttpResponse(StatusCodes.NoContent)) }
       } ~
         path("metrics") {
           get { metrics }
@@ -130,4 +131,5 @@ class SystemController(cfg: Config)(
         }
     }
   }
+  // format: On
 }
