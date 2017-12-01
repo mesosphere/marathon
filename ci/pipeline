@@ -286,8 +286,6 @@ def master(): Unit = {
   maybeArtifact.foreach { artifact =>
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
-  // TODO: Publish swagger files.
-  // TODO: Publish native packages to unstable.
 }
 
 /**
@@ -360,9 +358,11 @@ def release(requestVersion: String, gitSha: String, latest: Boolean = false): Un
     println("Docker image mesosphere/marathon:latest NOT updated")
   }
 
+  // publishing to the nexus repository.  This artifact is used by metronome.
+  %('sbt, "publish")
+
   // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
   // %('git, "push", "--tags")
 
   // TODO: Publish swagger files.
-  // TODO: Publish native packages to stable.
 }

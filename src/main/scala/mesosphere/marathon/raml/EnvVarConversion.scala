@@ -8,17 +8,17 @@ import scala.collection.immutable.Map
 trait EnvVarConversion {
   implicit val envVarRamlWrites: Writes[Map[String, state.EnvVarValue], Map[String, EnvVarValueOrSecret]] =
     Writes {
-      _.map {
-        case (name, state.EnvVarString(v)) => name -> EnvVarValue(v)
-        case (name, state.EnvVarSecretRef(secret: String)) => name -> EnvVarSecret(secret)
+      _.mapValues {
+        case (state.EnvVarString(v)) => EnvVarValue(v)
+        case (state.EnvVarSecretRef(secret: String)) => EnvVarSecret(secret)
       }
     }
 
   implicit val envVarReads: Reads[Map[String, EnvVarValueOrSecret], Map[String, state.EnvVarValue]] =
     Reads {
-      _.map {
-        case (name, EnvVarValue(v)) => name -> state.EnvVarString(v)
-        case (name, EnvVarSecret(secret: String)) => name -> state.EnvVarSecretRef(secret)
+      _.mapValues {
+        case EnvVarValue(v) => state.EnvVarString(v)
+        case EnvVarSecret(secret: String) => state.EnvVarSecretRef(secret)
       }
     }
 
