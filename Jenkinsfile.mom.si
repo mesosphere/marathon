@@ -47,6 +47,7 @@ node('shakedown') {
                """
           } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
+            archive includes: "diagnostics.zip"
           }
         }
     }

@@ -35,6 +35,18 @@ function exit-as-unstable {
     exit 0
 }
 
+function download-diagnostics-bundle {
+	BUNDLE_NAME="$(dcos node diagnostics create all | grep -oE 'bundle-.*')"
+	echo "Waiting for bundle ${BUNDLE_NAME} to be downloaded"
+	STATUS_OUTPUT="$(dcos node diagnostics --status)"
+	while [[ $STATUS_OUTPUT =~ "is_running: True" ]]; do
+		echo "Diagnostics job still running, retrying in 5 seconds."
+		sleep 5
+		STATUS_OUTPUT="$(dcos node diagnostics --status)"
+	done
+	dcos node diagnostics download ${BUNDLE_NAME} --location=./diagnostics.zip
+}
+
 # Launch cluster and run tests if launch was successful.
 DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
@@ -42,6 +54,9 @@ case $CLUSTER_LAUNCH_CODE in
   0)
       ./ci/system_integration.sh "$DCOS_URL"
       SI_CODE=$?
+      if [ ${SI_CODE} -eq 0 ]; then
+        download-diagnostics-bundle
+      fi
       ./dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;
