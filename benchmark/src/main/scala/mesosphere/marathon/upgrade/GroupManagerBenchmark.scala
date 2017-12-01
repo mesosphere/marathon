@@ -2,10 +2,11 @@ package mesosphere.marathon
 package upgrade
 
 import java.util.concurrent.TimeUnit
-import mesosphere.marathon.core.pod.{ MesosContainer, BridgeNetwork }
+
+import mesosphere.marathon.core.group.impl.AssignDynamicServiceLogic
+import mesosphere.marathon.core.pod.{ BridgeNetwork, MesosContainer }
 import mesosphere.marathon.raml.{ Endpoint, Image, ImageType, Resources }
 import mesosphere.marathon.state.Container
-
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.core.pod.PodDefinition
@@ -15,7 +16,7 @@ import org.openjdk.jmh.infra.Blackhole
 import scala.collection.breakOut
 
 @State(Scope.Benchmark)
-class GroupVersioningUtilBenchmark {
+class GroupBenchmark {
 
   val version = VersionInfo.forNewConfig(Timestamp(1))
 
@@ -48,7 +49,7 @@ class GroupVersioningUtilBenchmark {
               Some(0),
               Seq("tcp"))))))
 
-  @Param(value = Array("100", "5000"))
+  @Param(value = Array("100", "500", "1000", "2500", "5000"))
   var numberOfSavedApps: Int = _
   lazy val ids = 0 until numberOfSavedApps
 
@@ -74,32 +75,34 @@ class GroupVersioningUtilBenchmark {
     tmpGroup
   }
 
-  //  lazy val podPaths: Vector[PathId] = ids.map { podId =>
-  //    val groupPath = childGroupPaths(podId % numberOfGroups)
-  //    groupPath / s"pod-${podId}"
-  //  }(breakOut)
-
-  //  lazy val podDefs: Map[PathId, PodDefinition] = podPaths.map { path =>
-  //    path -> makePod(path)
-  //  }(breakOut)
-
   def upgraded = {
     val appId = childGroupPaths(0) / s"app-$numberOfSavedApps"
     rootGroup.updateApp(appId, (maybeApp) => makeApp(appId))
   }
+
+  object AssignServicePorts extends AssignDynamicServiceLogic {
+    val servicePortsRange: Range = 10000 until 20000
+    val config = AllConf.withTestConfig("--local_port_min", servicePortsRange.start.toString, "--local_port_max", (servicePortsRange.end + 1).toString)
+  }
 }
 
-@OutputTimeUnit(TimeUnit.MICROSECONDS)
-@BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
+@BenchmarkMode(Array(Mode.AverageTime))
 @Fork(1)
-class GroupVersioningUtilBenchmark1 extends GroupVersioningUtilBenchmark {
+class GroupManagerBenchmark extends GroupBenchmark {
+
+  //  @Benchmark
+  //  def updateVersionInfoForChangedApps(hole: Blackhole): Unit = {
+  //    println(rootGroup.groupsById.keys)
+  //    val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(
+  //      Timestamp (2),
+  //      rootGroup, upgraded)
+  //    hole.consume(newRootGroup)
+  //  }
 
   @Benchmark
-  def updateVersionInfoForChangedApps(hole: Blackhole): Unit = {
-    println(rootGroup.groupsById.keys)
-    val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(
-      Timestamp (2),
-      rootGroup, upgraded)
+  def assignDynamicServicePorts(hole: Blackhole): Unit = {
+    val newRootGroup = AssignServicePorts.assignDynamicServicePorts(rootGroup, upgraded)
     hole.consume(newRootGroup)
   }
 }
