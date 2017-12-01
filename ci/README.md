@@ -22,12 +22,16 @@ The `ci/pipeline` script defines two primary targets
 
 1. `jenkins`
 2. `pr`
+3. `release`
 
 The `jenkins` target is executed on every release branch, on master, and on each Github pull request. The `jenkins`
 target will check if a build is for a pull-request, and if so, run forward to the `pr` target.
 
 The `pr` target runs the test pipeline followed by Github PR review reporting. It is triggered with each diff
 update.
+
+The `release` target runs the build and packages Marathon in a Docker image,
+natvie packages for various Linux distributions and a big jar.
 
 The test pipeline involves the following steps:
 
