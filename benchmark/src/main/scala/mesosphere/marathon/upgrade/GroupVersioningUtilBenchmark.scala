@@ -8,7 +8,6 @@ import mesosphere.marathon.state.Container
 
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.pod.PodDefinition
 import org.openjdk.jmh.annotations.{ Group => _, _ }
 import org.openjdk.jmh.infra.Blackhole
@@ -16,7 +15,7 @@ import org.openjdk.jmh.infra.Blackhole
 import scala.collection.breakOut
 
 @State(Scope.Benchmark)
-object GroupVersioningUtilBenchmark {
+class GroupVersioningUtilBenchmark {
 
   val version = VersionInfo.forNewConfig(Timestamp(1))
 
@@ -49,44 +48,57 @@ object GroupVersioningUtilBenchmark {
               Some(0),
               Seq("tcp"))))))
 
-  val ids = 0 to 5000
+  @Param(value = Array("100", "5000"))
+  var numberOfSavedApps: Int = _
+  lazy val ids = 0 until numberOfSavedApps
 
-  val podPaths: Vector[PathId] = ids.map { podId =>
-    s"/pod-${podId}".toPath
+  @Param(value = Array("5", "15"))
+  var numberOfGroups: Int = _
+  lazy val groupIds = 0 until numberOfGroups
+
+  lazy val childGroupPaths: Vector[PathId] = groupIds.map { groupId =>
+    s"group-$groupId".toRootPath
   }(breakOut)
 
-  val appPaths: Vector[PathId] = ids.map { appId =>
-    s"/app-${appId}".toPath
-  }(breakOut)
+  lazy val rootGroup: RootGroup = fillRootGroup()
 
-  val appDefs: Map[PathId, AppDefinition] = appPaths.map { path =>
-    path -> makeApp(path)
-  }(breakOut)
+  // Create apps and add them to their groups
+  def fillRootGroup(): RootGroup = {
+    var tmpGroup = RootGroup()
+    ids.foreach { appId =>
+      val groupPath = childGroupPaths(appId % numberOfGroups)
+      val path = groupPath / s"app-${appId}"
+      val app = makeApp(path)
+      tmpGroup = tmpGroup.updateApp(path, (maybeApp) => app) // because we create an app, you know.
+    }
+    tmpGroup
+  }
 
-  val podDefs: Map[PathId, PodDefinition] = podPaths.map { path =>
-    path -> makePod(path)
-  }(breakOut)
+  //  lazy val podPaths: Vector[PathId] = ids.map { podId =>
+  //    val groupPath = childGroupPaths(podId % numberOfGroups)
+  //    groupPath / s"pod-${podId}"
+  //  }(breakOut)
 
-  val rootGroup = RootGroup(apps = appDefs, pods = podDefs)
+  //  lazy val podDefs: Map[PathId, PodDefinition] = podPaths.map { path =>
+  //    path -> makePod(path)
+  //  }(breakOut)
+
   def upgraded = {
-    val pathId = "/app-5001".toPath
-    RootGroup(
-      apps = rootGroup.apps + (pathId -> makeApp(pathId)),
-      pods = rootGroup.pods + (pathId -> makePod(pathId))
-    )
+    val appId = childGroupPaths(0) / s"app-$numberOfSavedApps"
+    rootGroup.updateApp(appId, (maybeApp) => makeApp(appId))
   }
 }
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
 @Fork(1)
-class GroupVersioningUtilBenchmark {
-  import GroupVersioningUtilBenchmark._
+class GroupVersioningUtilBenchmark1 extends GroupVersioningUtilBenchmark {
 
   @Benchmark
   def updateVersionInfoForChangedApps(hole: Blackhole): Unit = {
+    println(rootGroup.groupsById.keys)
     val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(
-      Timestamp(2),
+      Timestamp (2),
       rootGroup, upgraded)
     hole.consume(newRootGroup)
   }
