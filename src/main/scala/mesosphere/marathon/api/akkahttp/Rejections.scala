@@ -20,16 +20,19 @@ object Rejections {
     private def readableVersion(version: Option[Timestamp]) = version.fold("")(v => s" in version $v")
 
     def noApp(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
-      EntityNotFound(Message(s"App '$id' does not exist ${readableVersion(version)}"))
+      EntityNotFound(Message(s"App '$id' does not exist${readableVersion(version)}"))
     }
     def noGroup(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
-      EntityNotFound(Message(s"Group '$id' does not exist ${readableVersion(version)}"))
+      EntityNotFound(Message(s"Group '$id' does not exist${readableVersion(version)}"))
     }
     def noLeader(): EntityNotFound = {
       EntityNotFound(Message("There is no leader"))
     }
-    def noPod(id: PathId): EntityNotFound = {
-      EntityNotFound(Message(s"Pod '$id' does not exist"))
+    def noPod(id: PathId, version: Option[Timestamp] = None): EntityNotFound = {
+      EntityNotFound(Message(s"Pod '$id' does not exist${readableVersion(version)}"))
+    }
+    def noPod(id: PathId, version: String): EntityNotFound = {
+      EntityNotFound(Message(s"Pod '$id' does not exist in version $version"))
     }
 
     def queueApp(appId: PathId): EntityNotFound = {
