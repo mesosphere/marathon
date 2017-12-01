@@ -10,11 +10,11 @@ import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
 import mesosphere.{ UnitTest, ValidationTestLike }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
 import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -32,6 +32,7 @@ import play.api.libs.json._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with ValidationTestLike with ResponseMatchers {
 
@@ -44,6 +45,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
+    // Unauthenticated access test cases
     {
       val controller = Fixture(authenticated = false).controller()
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Head(Uri./))
@@ -54,6 +56,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
     }
 
+    // Unauthorized access test cases
     {
       val f = Fixture(authorized = false)
       val controller = f.controller()
@@ -76,6 +79,26 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
+    }
+
+    // Entity not found test cases
+    {
+      val f = Fixture()
+      val controller = f.controller()
+      val mypodId = PathId("mypod")
+      val podDefinition = PodDefinition(id = mypodId)
+
+      f.podManager.find(eq(PathId("unknown-pod"))).returns(None)
+      f.podManager.find(eq(mypodId)).returns(Some(podDefinition))
+
+      f.podManager.version(any, any).returns(Future.successful(None))
+      def unknownPod(withRequest: HttpRequest, withMessage: String) = unknownEntity(controller.route, withRequest, withMessage)
+
+      behave like unknownPod(withRequest = Delete("/unknown-pod"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/unknown-pod"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/unknown-pod::versions"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/mypod::versions/2015-04-09T12:30:00.000Z"), withMessage = "Pod 'mypod' does not exist in version 2015-04-09T12:30:00.000Z")
+      behave like unknownPod(withRequest = Get("/mypod::versions/unparsable-datetime"), withMessage = "Pod 'mypod' does not exist in version unparsable-datetime")
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -425,16 +448,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    "reject deletion of unknown pod" in {
-      val f = Fixture()
-      val controller = f.controller()
-
-      f.podManager.find(eq(PathId("unknown-pod"))).returns(None)
-
-      Delete("/unknown-pod") ~> controller.route ~> check {
-        rejection should be(EntityNotFound(Message("Pod 'unknown-pod' does not exist")))
-      }
-    }
     "respond with a pod for a lookup" in {
       val f = Fixture()
       val controller = f.controller()
@@ -446,17 +459,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         response.status should be(StatusCodes.OK)
         val jsonResponse = Json.parse(responseAs[String])
         jsonResponse should have(podId("mypod"))
-      }
-    }
-
-    "reject a lookup a specific pod that pod does not exist" in {
-      val f = Fixture()
-      val controller = f.controller()
-
-      f.podManager.find(eq(PathId("mypod"))).returns(Option.empty[PodDefinition])
-
-      Get("/mypod") ~> controller.route ~> check {
-        rejection should be(EntityNotFound(Message("Pod 'mypod' does not exist")))
       }
     }
 
@@ -541,6 +543,39 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
           podId("another-pod"),
           podState(raml.PodState.Degraded)
         )
+      }
+    }
+
+    "respond with all available versions" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val pod = PodDefinition(id = PathId("mypod"))
+      f.podManager.find(eq(PathId("mypod"))).returns(Some(pod))
+
+      val versions = Seq(f.clock.now(), f.clock.now() + 1.minute)
+      f.podManager.versions(eq(PathId("mypod"))).returns(Source(versions))
+
+      Get("/mypod::versions") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        val jsonResponse = Json.parse(responseAs[String])
+        (jsonResponse \ 0).get.asOpt[String] should be(Some("2015-04-09T12:30:00.000Z"))
+        (jsonResponse \ 1).get.asOpt[String] should be(Some("2015-04-09T12:31:00.000Z"))
+      }
+    }
+
+    "respond with a specific version" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val pod = PodDefinition(id = PathId("mypod"))
+      val version = f.clock.now()
+      f.podManager.version(eq(PathId("mypod")), eq(version)).returns(Future.successful(Some(pod)))
+
+      Get("/mypod::versions/2015-04-09T12:30:00.000Z") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(podId("mypod"))
       }
     }
 
