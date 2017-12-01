@@ -416,7 +416,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         .find { e => (e \ "reason").as[String] == "UnfulfilledConstraint" }.get
 
       And("unique constraint reject must happen")
-      (unfulfilledConstraintRejectSummary \ "declined").as[Int] should be >= 1
+      eventually {
+        (unfulfilledConstraintRejectSummary \ "declined").as[Int] should be >= 1
+      }
 
       And("Size of the pod should still be 1")
       val status2 = marathon.status(pod.id)
