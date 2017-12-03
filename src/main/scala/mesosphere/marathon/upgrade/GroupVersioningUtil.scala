@@ -15,7 +15,7 @@ object GroupVersioningUtil {
     * Calculate a new group from the given `to` parameter that sets the version of all changed apps
     * to the given `version`.
     *
-    * The `RootGroup` object returned from this function, has its version set to the given `version`.
+    * The `RootGroup` object returned from this function has its version set to the given `version`.
     * Therefore even if there are no changed apps, the version of `RootGroup` object returned is always
     * set to `version`.
     *
@@ -64,7 +64,7 @@ object GroupVersioningUtil {
     * Calculate a new group from the given `to` parameter that sets the version of all changed pods
     * to the given `version`.
     *
-    * The `RootGroup` object returned from this function, has its version set to the given `version`.
+    * The `RootGroup` object returned from this function has its version set to the given `version`.
     * Therefore even if there are no changed pods, the version of `RootGroup` object returned is always
     * set to `version`.
     *
