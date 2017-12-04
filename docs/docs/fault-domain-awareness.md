@@ -19,7 +19,7 @@ For on-premise deployments, a zone would be a physical data center rack.
 
 For public cloud deployments, a zone would be the "availability zone” concept provided by most cloud providers.
 	
-Spread your services across zones if you are latency-sensitive or if you need a moderate degree of high availability: you can place your apps in one region, but balance across zones.
+Spread your apps or pods across zones if you are latency-sensitive or if you need a moderate degree of high availability: you can place your apps in one region, but balance across zones.
 
 ## Region fault domains
 
@@ -29,7 +29,7 @@ For on-premise deployments, a region might be a data center.
 	 
 For public cloud deployments, most cloud providers expose a “region” concept.
 	 
-You can deploy your services in a specific region region based on the available capacity. <!-- can you say more about what you mean here? -->
+You can deploy your apps or pods in a specific region region based on the available capacity.
 
 ### Local and remote regions
 
@@ -42,17 +42,17 @@ You can deploy your services in a specific region region based on the available 
 	
 - You must have less than 100 ms latency between regions.
 
-## Adding fault domain awareness to your app or  pod definition
+## Adding fault domain awareness to your app or pod definition
 
-In your Marathon service or pod definition, you can use placement constraints to:
+In your Marathon app or pod definition, you can use placement constraints to:
 
-- Specify a region and zone for your service or pod, so that all instances of the service or pod will be scheduled only in that region and zone.
+- Specify a region and zone for your app or pod, so that all instances of the app or pod will be scheduled only in that region and zone.
 
-- Specify a region without a specific zone, so that all instances of a given service or pod will be scheduled in that region (but not necessarily in the same zone).
+- Specify a region without a specific zone, so that all instances of a given app or pod will be scheduled in that region (but not necessarily in the same zone).
 
 ### Placement constraint guidelines
 
-- If no region is specified in your service or pod definition, instances are only scheduled for the local region because of high latency between the local and remote region. No instance will ever be scheduled for an agent outside of the local region unless you explicitly specify.
+- If no region is specified in your app or pod definition, instances are only scheduled for the local region because of high latency between the local and remote region. No instance will ever be scheduled for an agent outside of the local region unless you explicitly specify.
 
 - If a region is specified without a specific zone, instances are scheduled on any agent in the given region.
 
@@ -97,4 +97,4 @@ Suppose we have a Mesos cluster that spans 3 regions: `aws-us-east1`, `aws-us-ea
 
 You can configure apps and pods to use remote regions when extra capacity is needed. Your cluster must consist of one local region, which contains the master agents, system services, and agents, and one or more remote regions, which will contain only agents.
 
-To increase capacity, you will [add new agents](1.11/administering-clusters/add-a-node/) to a remote region or regions of your cluster, and then update your services to be launched in that region or those regions appropriately.
+To increase capacity, you will add new agents to a remote region or regions of your cluster, and then update your apps or pods to be launched in that region or those regions appropriately.
