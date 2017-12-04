@@ -78,9 +78,7 @@ object UpdateGroupStructureOp {
       pods = Map.empty,
       groupsById = groupsById,
       dependencies = groupUpdate.dependencies.fold(Set.empty[PathId])(_.map(PathId(_).normalize)),
-      version = version,
-      transitiveAppsById = appsById ++ groupsById.values.flatMap(_.transitiveAppsById),
-      transitivePodsById = Map.empty // we don't support updates to pods via group-update operations
+      version = version
     )
   }
 
@@ -126,9 +124,7 @@ object UpdateGroupStructureOp {
       pods = current.pods,
       groupsById = effectiveGroups,
       dependencies = effectiveDependencies,
-      version = timestamp,
-      transitiveAppsById = effectiveApps ++ effectiveGroups.values.flatMap(_.transitiveAppsById),
-      transitivePodsById = current.pods ++ effectiveGroups.values.flatMap(_.transitivePodsById))
+      version = timestamp)
   }
 }
 

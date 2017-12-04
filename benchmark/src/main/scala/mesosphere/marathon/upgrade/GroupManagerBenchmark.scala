@@ -86,14 +86,14 @@ class GroupBenchmark {
 @Fork(1)
 class GroupManagerBenchmark extends GroupBenchmark {
 
-  @Benchmark
-  def updateVersionInfoForChangedApps(hole: Blackhole): Unit = {
-    println(rootGroup.groupsById.keys)
-    val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(
-      Timestamp (2),
-      rootGroup, upgraded)
-    hole.consume(newRootGroup)
-  }
+  //  @Benchmark
+  //  def updateVersionInfoForChangedApps(hole: Blackhole): Unit = {
+  //    println(rootGroup.groupsById.keys)
+  //    val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(
+  //      Timestamp (2),
+  //      rootGroup, upgraded)
+  //    hole.consume(newRootGroup)
+  //  }
 
   @Benchmark
   def assignDynamicServicePorts(hole: Blackhole): Unit = {

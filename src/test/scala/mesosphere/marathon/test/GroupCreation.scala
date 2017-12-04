@@ -28,8 +28,6 @@ trait GroupCreation {
       pods,
       groupsById,
       dependencies,
-      version,
-      apps ++ groupsById.values.flatMap(_.transitiveAppsById),
-      pods ++ groupsById.values.flatMap(_.transitivePodsById))
+      version)
   }
 }
