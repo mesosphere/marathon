@@ -406,13 +406,13 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       Then("The pod is not scaled")
       updateResult should be(OK)
-      val queueResult = marathon.launchQueue()
-      val jsQueueResult = queueResult.entityJson
+      def queueResult = marathon.launchQueue()
+      def jsQueueResult = queueResult.entityJson
 
-      val queuedRunspecs = (jsQueueResult \ "queue").as[Seq[JsObject]]
-      val jsonPod = queuedRunspecs.find { spec => (spec \ "pod" \ "id").as[String] == s"/$podName" }.get
+      def queuedRunspecs = (jsQueueResult \ "queue").as[Seq[JsObject]]
+      def jsonPod = queuedRunspecs.find { spec => (spec \ "pod" \ "id").as[String] == s"/$podName" }.get
 
-      val unfulfilledConstraintRejectSummary = (jsonPod \ "processedOffersSummary" \ "rejectSummaryLastOffers").as[Seq[JsObject]]
+      def unfulfilledConstraintRejectSummary = (jsonPod \ "processedOffersSummary" \ "rejectSummaryLastOffers").as[Seq[JsObject]]
         .find { e => (e \ "reason").as[String] == "UnfulfilledConstraint" }.get
 
       And("unique constraint reject must happen")
