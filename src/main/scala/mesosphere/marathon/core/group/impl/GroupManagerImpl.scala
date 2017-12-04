@@ -78,12 +78,12 @@ trait AssignDynamicServiceLogic extends StrictLogging {
           .getOrElse(Nil): _*
       )
 
-      def nextFreeServicePort: Int =
+      def nextFreeServicePort(): Int =
         if (assignedAndAvailable.nonEmpty) assignedAndAvailable.dequeue()
         else nextGlobalFreePort
 
       val servicePorts: Seq[Int] = newApp.servicePorts.map { port =>
-        if (port == 0) nextFreeServicePort else port
+        if (port == 0) nextFreeServicePort() else port
       }
 
       val updatedContainer = newApp.container.find(_.portMappings.nonEmpty).map { container =>
