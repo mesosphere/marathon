@@ -6,7 +6,6 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.OfferMatchResult
@@ -26,10 +25,22 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
 
   "QueueController" should {
 
+    // Unauthenticated access test cases
     {
       val controller = Fixture(authenticated = false).controller
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete("/unknown/delay"))
+    }
+
+    // Entity not found test cases
+    {
+      val f = new Fixture(authenticated = true)
+      behave like unknownEntity(forRoute = f.controller.route, withRequest = Delete("/unknown/delay"), withMessage = "Application /unknown not found in tasks queue.")
+    }
+    {
+      Given("an authenticated but not authorized request")
+      val f = new Fixture(authenticated = true, authorized = false)
+      behave like unknownEntity(forRoute = f.controller.route, withRequest = Delete("/another-unknown/delay"), withMessage = "Application /another-unknown not found in tasks queue.")
     }
 
     "return an empty json array if nothing in the queue" in {
@@ -345,21 +356,6 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       }
     }
 
-    "unknown application's backoff delay can not be reset" in {
-      Given("an authenticated request")
-      val f = new Fixture(authenticated = true)
-
-      When("we try to reset delay")
-      Delete("/unknown/delay") ~> f.controller.route ~> check {
-        Then("we receive a 404 status code")
-        rejection shouldBe a[EntityNotFound]
-        inside(rejection) {
-          case EntityNotFound(message) =>
-            logger.info(s"$message")
-        }
-      }
-    }
-
     "application's backoff delay can be reset" in {
       Given("an authenticated request")
       val f = new Fixture(authenticated = true)
@@ -380,14 +376,14 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
       }
     }
 
-    "access without authorization is denied if the app is in the queue" in new Fixture {
+    "access without authorization is denied if the app is in the queue" in {
       Given("an authenticated but not authorized request")
       val f = new Fixture(authenticated = true, authorized = false)
 
       And("an app in the queue")
       f.launchQueue.listAsync returns Future.successful(Seq(
         LaunchQueue.QueuedInstanceInfo(AppDefinition("app".toRootPath), inProgress = false, 0, 0,
-          backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())))
+          backOffUntil = f.clock.now() + 100.seconds, startedAt = f.clock.now())))
 
       Delete("/app/delay") ~> f.controller.route ~> check {
         Then("the request fails with NotAuthorized")
@@ -398,24 +394,6 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
         }
       }
     }
-
-    "access without authorization leads to a 404 if the app is not in the queue" in new Fixture {
-      Given("an authenticated but not authorized request")
-      val f = new Fixture(authenticated = true, authorized = false)
-
-      And("backoff delay is reset for an unknown app")
-
-      When("we try to reset delay")
-      Delete("/unknown/delay") ~> f.controller.route ~> check {
-        Then("we receive a EntityNotFound")
-        rejection shouldBe a[EntityNotFound]
-        inside(rejection) {
-          case EntityNotFound(message) =>
-            logger.info(s"$message")
-        }
-      }
-    }
-
   }
 
   def queueInfoWithStatistics(f: Fixture): Seq[LaunchQueue.QueuedInstanceInfoWithStatistics] = {

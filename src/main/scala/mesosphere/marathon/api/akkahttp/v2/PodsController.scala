@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.akkahttp.v2
 
 import java.time.Clock
+import java.time.format.DateTimeParseException
 
 import akka.event.EventStream
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
@@ -14,9 +15,8 @@ import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forcePara
 import mesosphere.marathon.api.akkahttp.Rejections.{ ConflictingChange, Message }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, CreateRunSpec, DeleteRunSpec, ViewRunSpec }
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.state.{ PathId, VersionInfo }
+import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
 import akka.http.scaladsl.server.PathMatchers
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
@@ -186,7 +186,6 @@ class PodsController(
       }
     }
 
-  @SuppressWarnings(Array("OptionGet"))
   def status(podId: PathId): Route =
     authenticated.apply { implicit identity =>
       podManager.find(podId) match {
@@ -204,9 +203,38 @@ class PodsController(
       }
     }
 
-  def versions(podId: PathId): Route = ???
+  def versions(podId: PathId): Route =
+    authenticated.apply { implicit identity =>
+      podManager.find(podId) match {
+        case None =>
+          reject(Rejections.EntityNotFound.noPod(podId))
+        case Some(pod) =>
+          authorized(ViewRunSpec, pod).apply {
+            val versions = podManager.versions(podId).runWith(Sink.seq)
+            complete(versions)
+          }
+      }
+    }
 
-  def version(podId: PathId, v: String): Route = ???
+  def version(podId: PathId, v: String): Route =
+    authenticated.apply { implicit identity =>
+      try {
+        val version = Timestamp(v)
+        onSuccess(podManager.version(podId, version)) {
+          case None =>
+            reject(Rejections.EntityNotFound.noPod(podId, Some(version)))
+          case Some(pod) =>
+            authorized(ViewRunSpec, pod).apply {
+              val ramlPod = PodConversion.podRamlWriter.write(pod)
+              complete(ramlPod)
+            }
+        }
+      } catch {
+        case e: DateTimeParseException =>
+          // We reject unparsable versions as not found.
+          reject(Rejections.EntityNotFound.noPod(podId, v))
+      }
+    }
 
   def allStatus(): Route =
     authenticated.apply { implicit identity =>
