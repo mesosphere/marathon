@@ -78,7 +78,7 @@ Suppose we have a Mesos cluster that spans 3 regions: `aws-us-east1`, `aws-us-ea
 - No instance will launch in the local region.
 - All of the 5 instances will be launched in the `aws-us-east1` region.
 
-#### Balanced Placement for a Single Region
+#### Balanced Placement for a Single Region <!-- add to constraints page , @hostname-->
 
 ```
 {
@@ -93,8 +93,8 @@ Suppose we have a Mesos cluster that spans 3 regions: `aws-us-east1`, `aws-us-ea
 
 - Instances will all be launched in the `aws-us-east1` region and evenly divided between `aws-us-east1`‘s zones `a`,`b`,`c`,`d`.
 
-### Use Case: Use Remote Regions to Increase Capacity
+### Increase Cluster Capacity
 
-You can configure app and pod definitions to use remote regions when extra capacity is needed. Your cluster must consist of one local region, which contains the master agents, system services, and agents, and one or more remote regions, which will contain only agents.
+To increase capacity, [add new agents](1.11/administering-clusters/add-a-node/) to a remote region or regions of your cluster, and then update your services to launch instances in that region or those regions appropriately.
 
-To increase capacity, you will add new agents to a remote region or regions of your cluster, and then update your apps or pods definition to launch instances in that region or those regions appropriately.
+**Note:** You cannot configure your service to run in more than one region.
