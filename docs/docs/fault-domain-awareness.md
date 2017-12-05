@@ -1,5 +1,5 @@
 ---
-title: Fault Domain Awareness
+title: Fault Domain Awareness and Capacity Extension
 ---
 
 # Fault Domain Awareness
