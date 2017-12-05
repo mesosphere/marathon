@@ -47,7 +47,7 @@ trait ConstraintConversion {
       case Protos.Constraint.Operator.UNLIKE => ConstraintOperator.Unlike
       case Protos.Constraint.Operator.MAX_PER => ConstraintOperator.MaxPer
     }
-    Constraint(c.getField, operator, Option(c.getValue))
+    Constraint(c.getField, operator, if (c.hasValue) Some(c.getValue) else None)
   }
 
   implicit val constraintToSeqStringWrites: Writes[Protos.Constraint, Seq[String]] = Writes { constraint =>
