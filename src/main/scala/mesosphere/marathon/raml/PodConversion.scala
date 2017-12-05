@@ -5,6 +5,7 @@ import mesosphere.marathon.core.pod
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.pod.PodDefinition._
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state
 
 import scala.concurrent.duration._
 
@@ -52,7 +53,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       containers = podd.containers.map(Raml.fromRaml(_)),
       instances = instances,
       constraints = constraints,
-      version = podd.version.fold(Timestamp.now())(Timestamp(_)),
+      versionInfo = state.VersionInfo.OnlyVersion(podd.version.fold(Timestamp.now())(Timestamp(_))),
       podVolumes = podd.volumes.map(Raml.fromRaml(_)),
       networks = networks,
       backoffStrategy = backoffStrategy,
