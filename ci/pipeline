@@ -361,6 +361,7 @@ def release(requestVersion: String, gitSha: String, latest: Boolean = false): Un
   // publishing to the nexus repository.  This artifact is used by metronome.
   %('sbt, "publish")
 
+  %('sbt, "project plugin-interface", "publish")
   // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
   // %('git, "push", "--tags")
 
