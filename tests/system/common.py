@@ -335,8 +335,8 @@ def get_marathon_leader_not_on_master_leader_node():
         delete_marathon_path('v2/leader')
         shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
         assert_marathon_leadership_changed(marathon_leader)
-        new_leader = marathon_leader()
-        print('switched leader to: {}'.format(marathon_leader))
+        new_leader = get_marathon_leader()
+        print('switched leader to: {}'.format(new_leader))
 
     return marathon_leader
 
