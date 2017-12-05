@@ -35,7 +35,7 @@ class GroupBenchmark {
       id = path,
       networks = Seq(BridgeNetwork()),
       labels = Map("ID" -> path.toString),
-      version = version.lastConfigChangeAt,
+      versionInfo = version,
 
       containers = Seq(
         MesosContainer(
