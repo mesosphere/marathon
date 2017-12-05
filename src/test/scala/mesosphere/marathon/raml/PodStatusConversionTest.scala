@@ -9,6 +9,7 @@ import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefin
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.Protos
@@ -66,7 +67,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
   test("ephemeral pod launched, no official Mesos status yet") {
     implicit val clock = ConstantClock()
-    val pod = basicOneContainerPod.copy(version = clock.now())
+    val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
     clock += 1.seconds
     val fixture = createdInstance(pod)
@@ -96,7 +97,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
   test("ephemeral pod launched, received STAGING status from Mesos") {
     implicit val clock = ConstantClock()
-    val pod = basicOneContainerPod.copy(version = clock.now())
+    val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
     clock += 1.seconds
     val fixture = stagingInstance(pod)
@@ -127,7 +128,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
   test("ephemeral pod launched, received STARTING status from Mesos") {
     implicit val clock = ConstantClock()
-    val pod = basicOneContainerPod.copy(version = clock.now())
+    val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
     clock += 1.seconds
     val fixture = startingInstance(pod)
@@ -161,7 +162,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
   test("ephemeral pod launched, received RUNNING status from Mesos, no task endpoint health info") {
     implicit val clock = ConstantClock()
-    val pod = basicOneContainerPod.copy(version = clock.now())
+    val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
     clock += 1.seconds
     val fixture = runningInstance(pod)
@@ -199,7 +200,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
   test("ephemeral pod launched, received RUNNING status from Mesos, task endpoint health is failing") {
     implicit val clock = ConstantClock()
-    val pod = basicOneContainerPod.copy(version = clock.now())
+    val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
     clock += 1.seconds
     val fixture = runningInstance(pod = pod, maybeHealthy = Some(false)) // task status will say unhealthy
@@ -237,7 +238,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
   test("ephemeral pod launched, received RUNNING status from Mesos, task endpoint health looks great") {
     implicit val clock = ConstantClock()
-    val pod = basicOneContainerPod.copy(version = clock.now())
+    val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
     clock += 1.seconds
     val fixture = runningInstance(pod = pod, maybeHealthy = Some(true)) // task status will say healthy
@@ -276,7 +277,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
   test("ephemeral pod launched, received RUNNING status from Mesos, task command-line health is missing") {
     implicit val clock = ConstantClock()
 
-    val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(version = clock.now()))
+    val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
     clock += 1.seconds
     val fixture = runningInstance(pod = pod) // mesos task status health is missing
@@ -315,7 +316,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
   test("ephemeral pod launched, received RUNNING status from Mesos, task command-line health is failing") {
     implicit val clock = ConstantClock()
 
-    val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(version = clock.now()))
+    val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
     clock += 1.seconds
     val fixture = runningInstance(pod = pod, maybeHealthy = Some(false)) // task status will say unhealthy
@@ -354,7 +355,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
   test("ephemeral pod launched, received RUNNING status from Mesos, task command-line health is passing") {
     implicit val clock = ConstantClock()
 
-    val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(version = clock.now()))
+    val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
     clock += 1.seconds
     val fixture = runningInstance(pod = pod, maybeHealthy = Some(true)) // task status will say healthy

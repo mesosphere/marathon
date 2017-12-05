@@ -32,8 +32,9 @@ case class PodManagerImpl(groupManager: GroupManager)(implicit ctx: ExecutionCon
 
   def find(id: PathId): Future[Option[PodDefinition]] = groupManager.pod(id)
 
-  def update(p: PodDefinition, force: Boolean): Future[DeploymentPlan] =
+  def update(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     groupManager.updatePod(p.id, _ => p, p.version, force)
+  }
 
   def delete(id: PathId, force: Boolean): Future[DeploymentPlan] = {
     groupManager.updateRoot(_.removePod(id), force = force)

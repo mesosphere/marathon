@@ -33,7 +33,7 @@ object FlatDependencyBenchmark {
       id = path,
       networks = Seq(ContainerNetwork("bridge")),
       labels = Map("ID" -> path.toString),
-      version = version.lastConfigChangeAt,
+      versionInfo = version,
 
       containers = Seq(
         MesosContainer(
