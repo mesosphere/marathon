@@ -100,7 +100,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
             resources = Resources()
           )
         ),
-        version = f.version
+        versionInfo = VersionInfo.OnlyVersion(f.version)
       )
 
       val actor = f.readinessActor(podWithReadyCheck, f.checkIsReady, _ => podIsReady = true)
