@@ -49,11 +49,11 @@ class GroupBenchmark {
               Some(0),
               Seq("tcp"))))))
 
-  @Param(value = Array("100", "500", "1000", "2500", "5000")) //  @Param(value = Array("5000"))
+  @Param(value = Array("100", "500", "1000", "2500", "5000"))
   var numberOfSavedApps: Int = _
   lazy val ids = 0 until numberOfSavedApps
 
-  @Param(value = Array("5", "15")) //  @Param(value = Array("5"))
+  @Param(value = Array("5", "15"))
   var numberOfGroups: Int = _
   lazy val groupIds = 0 until numberOfGroups
 

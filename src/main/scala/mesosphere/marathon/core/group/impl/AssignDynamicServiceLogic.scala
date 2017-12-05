@@ -7,6 +7,7 @@ import mesosphere.marathon.state._
 import scala.collection.immutable.Seq
 
 object AssignDynamicServiceLogic extends StrictLogging {
+
   /**
     * Checks whether newApp is new or changed.
     * @param originalApps A map of the original apps form before the update.
@@ -42,7 +43,7 @@ object AssignDynamicServiceLogic extends StrictLogging {
   private def assignPorts(newApp: AppDefinition, oldApp: Option[AppDefinition], portRange: Range,
     unassignedPortsIterator: Iterator[Int]): AppDefinition = {
     /* All ports that are already assigned in old app definition, but not used in the new definition
-     * aif the app uses dynamic ports (0), it will get always the same ports assigned */
+     * if the app uses dynamic ports (0), it will get always the same ports assigned */
     val assignedAndAvailable: Seq[Int] =
       oldApp match {
         case Some(oldApp) =>
@@ -88,7 +89,7 @@ object AssignDynamicServiceLogic extends StrictLogging {
     val dynamicApps: Iterator[AppDefinition] =
       to.transitiveApps
         .iterator
-        .filter{ newApp => changedOrNew(from.transitiveAppsById, newApp) }
+        .filter { newApp => changedOrNew(from.transitiveAppsById, newApp) }
         .map {
           // assign values for service ports that the user has left "blank" (set to zero)
           case app: AppDefinition if app.hasDynamicServicePorts =>
