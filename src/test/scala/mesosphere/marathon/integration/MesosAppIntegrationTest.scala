@@ -3,6 +3,8 @@ package integration
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod._
@@ -11,6 +13,7 @@ import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig
 import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
 import mesosphere.marathon.state.PathId._
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
+import play.api.libs.json.JsObject
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -30,7 +33,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
 
-  private[this] def simplePod(podId: String): PodDefinition = PodDefinition(
+  private[this] def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
     id = testBasePath / s"$podId-${currentAppId.incrementAndGet()}",
     containers = Seq(
       MesosContainer(
@@ -40,7 +43,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       )
     ),
     networks = Seq(HostNetwork),
-    instances = 1
+    instances = instances,
+    constraints = constraints
   )
 
   //clean up state before running the test case
@@ -378,6 +382,55 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val status2 = marathon.status(pod.id)
       status2 should be(OK)
       status2.value.instances.filter(_.status == raml.PodInstanceState.Stable) should have size 3
+    }
+
+    "deploy a simple pod with unique constraint and then " taggedAs WhenEnvSet(envVar, default = "true") in {
+
+      val constraints = Set(
+        Constraint.newBuilder
+        .setField("hostname")
+        .setOperator(UNIQUE)
+        .build
+      )
+
+      Given("a pod with a single task")
+      val podName = "simple-pod-with-unique-constraint"
+      val pod = simplePod(podName, constraints = constraints, instances = 1)
+
+      When("The pod is deployed")
+      val createResult = marathon.createPodV2(pod)
+
+      Then("The pod is created")
+      createResult should be(Created)
+      waitForDeployment(createResult)
+      waitForPod(pod.id)
+
+      When("The pod config is updated")
+      val scaledPod = pod.copy(instances = 2)
+      val updateResult = marathon.updatePod(pod.id, scaledPod, force = true)
+
+      Then("The pod is not scaled")
+      updateResult should be(OK)
+      def queueResult = marathon.launchQueue()
+      def jsQueueResult = queueResult.entityJson
+
+      def queuedRunspecs = (jsQueueResult \ "queue").as[Seq[JsObject]]
+      def jsonPod = queuedRunspecs.find { spec => (spec \ "pod" \ "id").as[String] == s"/$podName" }.get
+
+      def unfulfilledConstraintRejectSummary = (jsonPod \ "processedOffersSummary" \ "rejectSummaryLastOffers").as[Seq[JsObject]]
+        .find { e => (e \ "reason").as[String] == "UnfulfilledConstraint" }.get
+
+      And("unique constraint reject must happen")
+      eventually {
+        (unfulfilledConstraintRejectSummary \ "declined").as[Int] should be >= 1
+      }
+
+      And("Size of the pod should still be 1")
+      val status2 = marathon.status(pod.id)
+      status2 should be(OK)
+      //we have only one agent by default, so we expect one instance to be running.
+      status2.value.instances should have size 1
+
     }
   }
 }
