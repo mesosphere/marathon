@@ -331,10 +331,8 @@ class AppsController(
           case TaskKillingMode.Wipe =>
             val killInstances = async {
               val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
-              // TODO: Does it make sense to set health for a killed task?
-              val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.map { instance =>
-                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, Nil)
               }
             }
 
@@ -344,9 +342,8 @@ class AppsController(
           case TaskKillingMode.KillWithoutWipe =>
             val killInstances = async {
               val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
-              val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.map { instance =>
-                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, Nil)
               }
             }
 

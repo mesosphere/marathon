@@ -119,7 +119,7 @@ class AppTasksResource @Inject() (
         val instances = await(taskKiller.kill(pathId, findToKill, wipe))
         val healthStatuses = await(healthCheckManager.statuses(pathId))
         val enrichedTasks: Seq[EnrichedTask] = instances.map { instance =>
-          val killedTask = instance.appTask // Should this rather be instance.taskMap[taskId]?
+          val killedTask = instance.appTask
           val enrichedTask = EnrichedTask(pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
           enrichedTask
         }
@@ -166,7 +166,7 @@ class AppTasksResource @Inject() (
           case None =>
             unknownTask(id)
           case Some(instance) =>
-            val killedTask = instance.appTask // Should this rather be instance.taskMap[taskId]?
+            val killedTask = instance.appTask
             val enrichedTask = EnrichedTask(pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
             ok(jsonObjString("task" -> enrichedTask.toRaml))
         }
