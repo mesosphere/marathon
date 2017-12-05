@@ -9,7 +9,6 @@ import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{ GroupApiService, TestAuthFixture, TestGroupManagerFixture }
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService }
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -32,6 +31,22 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
   implicit val identity: Identity = new Identity {}
 
   "Group detail" should {
+
+    // Entity not found test cases
+    {
+      val f = new FixtureWithRealGroupManager(authorized = false)
+      behave like unknownEntity(forRoute = f.groupsController.route, withRequest = Delete("/groupname"), withMessage = "Group '/groupname' does not exist")
+
+      val infoService = mock[GroupInfoService]
+      infoService.selectGroup(any, any, any, any) returns Future.successful(None)
+      infoService.selectGroupVersion(any, any, any, any) returns Future.successful(None)
+      val g = new Fixture(infoService = infoService)
+
+      behave like unknownEntity(forRoute = g.groupsController.route, withRequest = Get("/unknown-group"), withMessage = "Group '/unknown-group' does not exist")
+      behave like unknownEntity(forRoute = g.groupsController.route, withRequest = Get("/groupname/versions/2017-10-30T16:08:53.852Z"), withMessage = "Group '/groupname' does not exist in version 2017-10-30T16:08:53.852Z")
+    }
+
+    // Unauthenticated access test cases
     {
       val controller = Fixture(authenticated = false).groupsController
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./).addHeader(Accept(MediaTypes.`text/plain`)))
@@ -56,16 +71,6 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       Get(Uri./.withPath(Path("/"))) ~> f.groupsController.route ~> check {
         status should be(StatusCodes.OK)
         (Json.parse(responseAs[String]) \ "id").get shouldEqual JsString("/")
-      }
-    }
-
-    "rejects with group not found for nonexisting group" in {
-      val infoService = mock[GroupInfoService]
-      infoService.selectGroup(eq(PathId("/groupname")), any, any, any) returns Future.successful(None)
-      val f = new Fixture(infoService = infoService)
-
-      Get(Uri./.withPath(Path("/groupname"))) ~> f.groupsController.route ~> check {
-        rejection should be (EntityNotFound.noGroup("groupname".toRootPath))
       }
     }
   }
@@ -126,16 +131,6 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
         )
       }
     }
-
-    "reject for app and version that does not exist" in {
-      val infoService = mock[GroupInfoService]
-      infoService.selectGroupVersion(any, any, any, any) returns Future.successful(None)
-      val f = new Fixture(infoService = infoService)
-
-      Get(Uri./.withPath(Path("/groupname/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
-        rejection should be (EntityNotFound.noGroup("groupname".toRootPath, Some(Timestamp("2017-10-30T16:08:53.852Z"))))
-      }
-    }
   }
 
   "Create a group" should {
@@ -192,11 +187,6 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
   }
 
   "Delete Group" should {
-    "authenticated delete without authorization leads to a 404 if the resource doesn't exist" in new FixtureWithRealGroupManager(authorized = false) {
-      Delete(Uri./.withPath(Path("/groupname"))) ~> groupsController.route ~> check {
-        rejection should be (Rejections.EntityNotFound.noGroup(PathId("/groupname")))
-      }
-    }
 
     "delete group" in new Fixture {
       groupManager.updateRootEither(org.mockito.Matchers.eq(PathId("/groupname").parent), any, any, org.mockito.Matchers.eq(false), any) returns Future.successful(Right(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero)))
@@ -210,6 +200,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       }
     }
 
+    // Unauthenticated access test cases
     {
       val controller = Fixture(authenticated = false).groupsController
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete(Uri./.withPath(Path("/groupname"))))

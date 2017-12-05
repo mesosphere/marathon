@@ -321,6 +321,5 @@ lazy val benchmark = (project in file("benchmark"))
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
-    libraryDependencies ++= Dependencies.benchmark,
-    generatorType in Jmh := "asm"
+    libraryDependencies ++= Dependencies.benchmark
   )
