@@ -18,8 +18,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.AnyToRaml
-import mesosphere.marathon.raml.EnrichedTask._
-import mesosphere.marathon.raml.EnrichedTaskConversion._
+import mesosphere.marathon.raml.Task._
+import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
 import org.slf4j.LoggerFactory

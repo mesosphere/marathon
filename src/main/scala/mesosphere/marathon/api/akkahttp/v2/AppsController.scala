@@ -30,7 +30,7 @@ import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.raml.EnrichedTaskConversion._
+import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, VersionList }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
@@ -291,7 +291,7 @@ class AppsController(
             await(runningTasks(Set(appId), instancesBySpec).runWith(Sink.seq)).map(_.toRaml)
           }
           onSuccess(tasksF) { tasks =>
-            complete(raml.EnrichedTasksList(tasks))
+            complete(raml.TaskList(tasks))
           }
         }
       case None =>
@@ -339,7 +339,7 @@ class AppsController(
             }
 
             onSuccess(killInstances) { enrichedTasks: Seq[EnrichedTask] =>
-              complete((StatusCodes.OK, raml.EnrichedTasksList(enrichedTasks.toRaml)))
+              complete((StatusCodes.OK, raml.TaskList(enrichedTasks.toRaml)))
             }
           case TaskKillingMode.KillWithoutWipe =>
             val killInstances = async {
@@ -351,7 +351,7 @@ class AppsController(
             }
 
             onSuccess(killInstances) { enrichedTasks: Seq[EnrichedTask] =>
-              complete((StatusCodes.OK, raml.EnrichedTasksList(enrichedTasks.toRaml)))
+              complete((StatusCodes.OK, raml.TaskList(enrichedTasks.toRaml)))
             }
         }
     }
@@ -390,7 +390,7 @@ class AppsController(
               case None =>
                 reject(EntityNotFound.noTask(taskId))
               case Some(enrichedTask) =>
-                complete(raml.EnrichedTaskSingle(enrichedTask.toRaml))
+                complete(raml.TaskSingle(enrichedTask.toRaml))
             }
           case TaskKillingMode.KillWithoutWipe =>
             val killedInstance = async {
@@ -405,7 +405,7 @@ class AppsController(
               case None =>
                 reject(EntityNotFound.noTask(taskId))
               case Some(enrichedTask) =>
-                complete(raml.EnrichedTaskSingle(enrichedTask.toRaml))
+                complete(raml.TaskSingle(enrichedTask.toRaml))
             }
         }
     }

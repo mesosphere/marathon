@@ -467,7 +467,7 @@
             description: The list of running tasks for application `app_id`.
             body:
               application/json:
-                type: enrichedTask.EnrichedTasksList
+                type: task.TaskList
                 example: !include examples/app_tasks.json
               text/plain:
                 example: |
@@ -501,7 +501,7 @@
               If scale=true, than a deployment is triggered and the deployment is returned.
             body:
               application/json:
-                type: enrichedTask.EnrichedTasksList | deploymentResult.DeploymentResult
+                type: task.TaskList | deploymentResult.DeploymentResult
                 example: !include examples/app_tasks.json
           404:
             description: No task found with this `app_id`.
@@ -530,7 +530,7 @@
                 If scale=true, than a deployment is triggered and the deployment is returned.
               body:
                 application/json:
-                  type: enrichedTask.EnrichedTaskSingle | deploymentResult.DeploymentResult
+                  type: task.TaskSingle | deploymentResult.DeploymentResult
                   example: !include examples/app_task.json
             404:
               description: No task found with this task_id.

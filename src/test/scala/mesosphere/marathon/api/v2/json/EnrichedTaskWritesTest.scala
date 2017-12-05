@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.EnrichedTask._
-import mesosphere.marathon.raml.EnrichedTaskConversion._
+import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => MesosProtos }
