@@ -6,6 +6,7 @@ import shlex
 import time
 import uuid
 import sys
+import retrying
 
 from datetime import timedelta
 from dcos import http, mesos
@@ -333,9 +334,8 @@ def get_marathon_leader_not_on_master_leader_node():
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
         shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
-        new_leader = shakedown.marathon_leader_ip()
-        assert new_leader != marathon_leader, "A new Marathon leader has not been elected"
-        marathon_leader = new_leader
+        assert_marathon_leadership_changed(marathon_leader)
+        new_leader = marathon_leader()
         print('switched leader to: {}'.format(marathon_leader))
 
     return marathon_leader
@@ -709,3 +709,17 @@ def deployment_wait(timeout=120, service_id=None):
         the dcos-cli and remove this method later.
     """
     shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
+
+def get_marathon_leader():
+    client = marathon.create_client()
+    about = client.get_about()
+    return about.get("leader")
+
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=ignore_exception)
+def assert_marathon_leadership_changed(original_leader):
+    """ We have to retry here because leader election takes time and what might happen is that some nodes might
+        not be aware of the new leader being elected resulting in HTTP 502.
+    """
+    current_leader = get_marathon_leader()
+    print('leader: {}'.format(current_leader))
+    assert original_leader != current_leader

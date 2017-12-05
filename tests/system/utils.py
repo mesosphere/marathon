@@ -1,6 +1,6 @@
 import os
-import retrying
 import uuid
+import retrying
 
 from dcos import http, util
 from dcos.errors import DCOSException
@@ -46,6 +46,10 @@ def get_resource(resource):
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
 def marathon_leadership_changed(original_leader):
+    """ This method uses mesosDNS to verify that the leadership changed.
+        That might be flaky because mesosDNS checks for changes only every 30s.
+        See also common.assert_marathon_leadership_changed that does the same thing via marathon API.
+    """
     current_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(current_leader))
     assert original_leader != current_leader
