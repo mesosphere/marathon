@@ -16,7 +16,7 @@ import mesosphere.marathon.api.akkahttp.Rejections.{ ConflictingChange, Message 
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
 import akka.http.scaladsl.server.PathMatchers
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
@@ -77,7 +77,7 @@ class PodsController(
         entity(as[raml.Pod]) { podDef =>
           assumeValid(podDefValidator().apply(podDef)) {
             normalized(podDef, podNormalizer) { normalizedPodDef =>
-              val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
+              val pod = Raml.fromRaml(normalizedPodDef).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()))
               assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
                 authorized(CreateRunSpec, pod).apply {
                   val planCreation: Future[DeploymentPlan] = async {
@@ -110,7 +110,7 @@ class PodsController(
       (entity(as[raml.Pod]) & forceParameter & extractClientIP & extractUri) { (ramlPod, force, host, uri) =>
         assumeValid(podDefValidator().apply(ramlPod)) {
           normalized(ramlPod, podNormalizer) { normalizedPodDef =>
-            val pod = Raml.fromRaml(normalizedPodDef).copy(version = clock.now())
+            val pod = Raml.fromRaml(normalizedPodDef).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()))
             assumeValid(PodsValidation.pluginValidators(pluginManager).apply(pod)) {
               authorized(UpdateRunSpec, pod).apply {
                 val deploymentPlan = async {
