@@ -42,7 +42,7 @@ def events_to_file():
         shakedown.run_command(leader_ip,
             '(curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" ' +
             '-H "Authorization: token={}" '.format(shakedown.dcos_acs_token()) +
-            '-o events.txt -k https://marathon.mesos:8443/v2/events; echo $? > events.exitcode) &'.format(leader_ip))
+            '-o events.txt -k https://marathon.mesos:8443/v2/events; echo $? > events.exitcode) &')
 
     # Otherwise marathon runs on HTTP mode on port 8080
     else:
