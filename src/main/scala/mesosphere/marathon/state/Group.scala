@@ -40,6 +40,8 @@ class Group(
   lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
   lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
 
+  def transitivePods: Set[PodDefinition] = transitivePodsById.values.toSet
+
   lazy val transitiveRunSpecsById: Map[PathId, RunSpec] = transitiveAppsById ++ transitivePodsById
   lazy val transitiveRunSpecs: Set[RunSpec] = transitiveRunSpecsById.values.toSet
 
