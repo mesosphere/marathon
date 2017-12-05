@@ -16,7 +16,7 @@ All Marathon operators are supported when the field name is `@hostname`.
 
 ### Region and zone as field names
 
-Use the `@region` and `@zone` field names to configure [fault domain awareness and capacity extension]({{ site.baseurl }}/docs/fault-domain-awareness.html).
+Use @region and @zone as field names to configure [fault domain awareness]({{ site.baseurl }}/docs/fault-domain-awareness.html).
 
 ### Attribute as field name
 
