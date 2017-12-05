@@ -415,7 +415,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       def jsQueueResult = queueResult.entityJson
 
       def queuedRunspecs = (jsQueueResult \ "queue").as[Seq[JsObject]]
-      def jsonPod = queuedRunspecs.find { spec => (spec \ "pod" \ "id").as[String] == s"/$podName" }.get
+      def jsonPod = queuedRunspecs.find { spec => (spec \ "pod" \ "id").as[String] == s"/${pod.id}" }.get
 
       def unfulfilledConstraintRejectSummary = (jsonPod \ "processedOffersSummary" \ "rejectSummaryLastOffers").as[Seq[JsObject]]
         .find { e => (e \ "reason").as[String] == "UnfulfilledConstraint" }.get
