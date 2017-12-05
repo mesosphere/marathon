@@ -538,7 +538,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         val dPod1 = PodDefinition("p1".toRootPath)
         val dPod2 = PodDefinition("p2".toRootPath)
-        val dPod1V2 = dPod1.copy(version = Timestamp(7))
+        val dPod1V2 = dPod1.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(7)))
         val pod3 = PodDefinition("p3".toRootPath)
         f.podRepo.store(dPod1).futureValue
         f.podRepo.storeVersion(dPod2).futureValue
