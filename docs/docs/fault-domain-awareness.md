@@ -6,11 +6,11 @@ title: Fault Domain Awareness
 
 ## Overview
 
-A fault domain is a set of nodes that share similar failure and latency characteristics. Two nodes in the same fault domain are both affected by failure events within the domain. Placing nodes in more than one fault domain reduces the risk that a failure will affect both nodes.
+A fault domain is a section of a network, for example, a rack in a datacenter or an entire datacenter, that is vulnerable to damage if a critical device or system fails. All instances within a fault domain share similar failure and latency characteristics. App or pod instances in the same fault domain are all affected by failure events within the domain. Placing instances in more than one fault domain reduces the risk that a failure will affect all instances.
 
-Marathon supports fault domain awareness, so that you can mitigate the risk of fault domain failure for high availability and configure your apps and pods to take advantage of region awareness to allow for increased capacity when needed.
+Marathon supports fault domain awareness. Use fault domain awareness to make your apps or pods highly available and to allow for increased capacity when needed.
 
-Marathon currently offers hierarchical 2-level fault domain: zone and region.
+Marathon currently supports Mesos's 2-level hierarchical fault domains: zone and region.
 	
 ## Zone fault domains
 Zone fault domains offer a moderate degree of fault isolation because they share the same region. However, network latency between zones in the same region is moderately low (typically < 10ms).
@@ -19,7 +19,7 @@ For on-premise deployments, a zone would be a physical data center rack.
 
 For public cloud deployments, a zone would be the "availability zone” concept provided by most cloud providers.
 	
-Spread your apps or pods across zones if you are latency-sensitive or if you need a moderate degree of high availability: you can place your apps in one region, but balance across zones.
+If your goal is high-availability, and/or you are latency-sensitive, place your instances in a one region and balance them across zones.
 
 ## Region fault domains
 
@@ -29,26 +29,26 @@ For on-premise deployments, a region might be a data center.
 	 
 For public cloud deployments, most cloud providers expose a “region” concept.
 	 
-You can deploy your apps or pods in a specific region region based on the available capacity.
+You can deploy your instances in a specific region region based on the available capacity.
 
 ### Local and remote regions
 
-- A **local region** is a region that contains the master nodes.
-- A **remote region** contains only agent nodes. There is high latency between a remote region and the local region.
+- The **local region** is the region running the Mesos master nodes.
+- A **remote region** contains only Mesos agent nodes. There is usually high latency between a remote region and the local region.
 
 ## Mesos installation considerations
 
-- Masters nodes must be in the same region because otherwise the latency between them will be too high. They should, however, be spread across zones for fault-tolerance.
-	
+- Mesos master nodes must be in the same region because otherwise the latency between them will be too high. They should, however, be spread across zones for fault-tolerance.
+- Marathon must run in the local region.
 - You must have less than 100 ms latency between regions.
 
 ## Adding fault domain awareness to your app or pod definition
 
-In your Marathon app or pod definition, you can use placement constraints to:
+In your Marathon app or pod definition, you can use [placement constraints]({{ site.baseurl }}/docs/constraints.html)to:
 
-- Specify a region and zone for your app or pod, so that all instances of the app or pod will be scheduled only in that region and zone.
+- Specify a region and zone for your app or pod instances, so that all instances will be scheduled only in that region and zone.
 
-- Specify a region without a specific zone, so that all instances of a given app or pod will be scheduled in that region (but not necessarily in the same zone).
+- Specify a region without a specific zone, so that all instances will be scheduled in that region (but not necessarily in the same zone).
 
 ### Placement constraint guidelines
 
@@ -95,6 +95,6 @@ Suppose we have a Mesos cluster that spans 3 regions: `aws-us-east1`, `aws-us-ea
 
 ### Use Case: Use Remote Regions to Increase Capacity
 
-You can configure apps and pods to use remote regions when extra capacity is needed. Your cluster must consist of one local region, which contains the master agents, system services, and agents, and one or more remote regions, which will contain only agents.
+You can configure app and pod definitions to use remote regions when extra capacity is needed. Your cluster must consist of one local region, which contains the master agents, system services, and agents, and one or more remote regions, which will contain only agents.
 
-To increase capacity, you will add new agents to a remote region or regions of your cluster, and then update your apps or pods to be launched in that region or those regions appropriately.
+To increase capacity, you will add new agents to a remote region or regions of your cluster, and then update your apps or pods definition to launch instances in that region or those regions appropriately.
