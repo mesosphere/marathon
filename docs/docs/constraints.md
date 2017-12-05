@@ -8,15 +8,15 @@ Constraints control where apps run to allow optimizing for either fault toleranc
 
 ## Field Names
 
-### Hostname
+### Hostname as field name
 
 Entering `@hostname` as the field name matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
 
 All Marathon operators are supported when the field name is `@hostname`.
 
-### Region and zone
+### Region and zone as field names
 
-Use `@region` and `@zone` to configure [fault domain awareness and capacity extension]({{ site.baseurl }}/docs/fault-domain-awareness.html).
+Use the `@region` and `@zone` field names to configure [fault domain awareness and capacity extension]({{ site.baseurl }}/docs/fault-domain-awareness.html).
 
 ### Attribute as field name
 
