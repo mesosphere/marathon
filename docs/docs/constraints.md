@@ -8,15 +8,19 @@ Constraints control where apps run to allow optimizing for either fault toleranc
 
 ## Field Names
 
-### Hostname as field name
+### Hostname
 
-Entering `hostname` as the field name matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
+Entering `@hostname` as the field name matches the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
 
-All Marathon operators are supported when the field name is `hostname`.
+All Marathon operators are supported when the field name is `@hostname`.
+
+### Region and zone
+
+Use `@region` and `@zone` to configure [fault domain awareness and capacity extension]({{ site.baseurl }}/docs/fault-domain-awareness.html).
 
 ### Attribute as field name
 
-If hostname is not specified as the field name, then the field name is interpreted as a Mesos agent node attribute. A Mesos agent node attribute allows you to tag an agent node. See `mesos-slave --help` to learn how to set the attributes.
+If `@hostname`, `@region`, or `@zone` are not specified as field names, then the field name is interpreted as a Mesos agent node attribute. A Mesos agent node attribute allows you to tag an agent node. See `mesos-slave --help` to learn how to set the attributes.
 
 If the specified attribute is not defined on the agent node, most operators will refuse to run tasks on it. In fact, only the `UNLIKE` operator will (and always will) accept this offer for now, while other operators will always refuse it.
 
