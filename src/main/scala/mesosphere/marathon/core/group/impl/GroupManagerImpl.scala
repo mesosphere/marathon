@@ -23,107 +23,15 @@ import mesosphere.marathon.util.{ LockedVar, WorkQueue }
 
 import scala.async.Async._
 import scala.collection.immutable.Seq
-import scala.collection.mutable
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
-
-trait AssignDynamicServiceLogic extends StrictLogging {
-
-  val config: GroupManagerConfig
-
-  /**
-    * Checks whether newApp is new or changed.
-    * @param originalApps A map of the original apps form before the update.
-    * @param newApp The new app that is tested.
-    * @return true if app is new or an updated, false otherwise.
-    */
-  def changedOrNew(originalApps: Map[AppDefinition.AppKey, AppDefinition], newApp: AppDefinition): Boolean = {
-    originalApps.get(newApp.id) match {
-      case None => true // new app
-      case Some(oldApp) => oldApp.isUpgrade(newApp)
-    }
-  }
-
-  def assignDynamicServicePorts(from: RootGroup, to: RootGroup): RootGroup = {
-    val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
-
-    def nextGlobalFreePort: Int = {
-      val port = portRange.find(!taken.contains(_))
-        .getOrElse(throw new PortRangeExhaustedException(
-          config.localPortMin(),
-          config.localPortMax()
-        ))
-      logger.info(s"Take next configured free port: $port")
-      taken += port
-      port
-    }
-
-    def mergeServicePortsAndPortDefinitions(
-      portDefinitions: Seq[PortDefinition],
-      servicePorts: Seq[Int]): Seq[PortDefinition] =
-      if (portDefinitions.nonEmpty)
-        portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
-          case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
-        }
-      else Seq.empty
-
-    def assignPorts(newApp: AppDefinition): AppDefinition = {
-      //all ports that are already assigned in old app definition, but not used in the new definition
-      //if the app uses dynamic ports (0), it will get always the same ports assigned
-      val assignedAndAvailable = mutable.Queue(
-        from.app(newApp.id)
-          .map{ oldApp => oldApp.servicePorts.filter(p => portRange.contains(p) && !newApp.servicePorts.contains(p)) }
-          .getOrElse(Nil): _*
-      )
-
-      def nextFreeServicePort(): Int =
-        if (assignedAndAvailable.nonEmpty) assignedAndAvailable.dequeue()
-        else nextGlobalFreePort
-
-      val servicePorts: Seq[Int] = newApp.servicePorts.map { port =>
-        if (port == 0) nextFreeServicePort() else port
-      }
-
-      val updatedContainer = newApp.container.find(_.portMappings.nonEmpty).map { container =>
-        val newMappings = container.portMappings.zip(servicePorts).map {
-          case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
-        }
-        container.copyWith(portMappings = newMappings)
-      }
-
-      newApp.copy(
-        portDefinitions = mergeServicePortsAndPortDefinitions(newApp.portDefinitions, servicePorts),
-        container = updatedContainer.orElse(newApp.container)
-      )
-    }
-
-    val dynamicApps: Iterator[AppDefinition] =
-      to.transitiveApps
-        .iterator
-        .filter{ newApp => changedOrNew(from.transitiveAppsById, newApp) }
-        .map {
-          // assign values for service ports that the user has left "blank" (set to zero)
-          case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
-          case app: AppDefinition =>
-            // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-            app.copy(
-              portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
-            )
-        }
-
-    dynamicApps.foldLeft(to) { (rootGroup, app) =>
-      rootGroup.updateApp(app.id, _ => app, app.version)
-    }
-  }
-}
 
 class GroupManagerImpl(
     val config: GroupManagerConfig,
     initialRoot: Option[RootGroup],
     groupRepository: GroupRepository,
-    deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging with AssignDynamicServiceLogic {
+    deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
 
   /**
     * All updates to root() should go through this workqueue and the maxConcurrent should always be "1"
@@ -211,7 +119,11 @@ class GroupManagerImpl(
           case Left(left) =>
             Left(left)
           case Right(changed) =>
-            val unversioned = assignDynamicServicePorts(from, changed)
+            val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
+              Range.inclusive(config.localPortMin(), config.localPortMax()),
+              from,
+              changed)
+
             val to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
             val plan = DeploymentPlan(from, to, version, toKill)

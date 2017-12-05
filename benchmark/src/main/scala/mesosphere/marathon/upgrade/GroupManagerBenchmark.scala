@@ -79,11 +79,6 @@ class GroupBenchmark {
     val appId = childGroupPaths(0) / s"app-$numberOfSavedApps"
     rootGroup.updateApp(appId, (maybeApp) => makeApp(appId))
   }
-
-  object AssignServicePorts extends AssignDynamicServiceLogic {
-    val servicePortsRange: Range = 10000 until 20000
-    val config = AllConf.withTestConfig("--local_port_min", servicePortsRange.start.toString, "--local_port_max", (servicePortsRange.end + 1).toString)
-  }
 }
 
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -102,7 +97,8 @@ class GroupManagerBenchmark extends GroupBenchmark {
 
   @Benchmark
   def assignDynamicServicePorts(hole: Blackhole): Unit = {
-    val newRootGroup = AssignServicePorts.assignDynamicServicePorts(rootGroup, upgraded)
+    val portRange = 10000 until 20000
+    val newRootGroup = AssignDynamicServiceLogic.assignDynamicServicePorts(portRange, rootGroup, upgraded)
     hole.consume(newRootGroup)
   }
 }
