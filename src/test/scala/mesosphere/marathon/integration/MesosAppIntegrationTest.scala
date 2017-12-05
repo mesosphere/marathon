@@ -417,7 +417,7 @@ class MesosAppIntegrationTest
     And("Size of the pod should still be 1")
     val status2 = marathon.status(pod.id)
     status2.code should be (200)
-    //we have only one agent by default, so we expect one instance to be running.
+    //we have only one agent by default, so we expect one instance to be running
     status2.value.instances should have size 1
 
   }
