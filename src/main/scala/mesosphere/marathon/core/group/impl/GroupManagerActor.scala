@@ -224,6 +224,17 @@ private[impl] class GroupManagerActor(
       }
   }
 
+  /**
+    * Checks whether newApp is new or changed.
+    *
+    * @param originalApps A map of the original apps form before the update.
+    * @param newApp       The new app that is tested.
+    * @return true if app is new or an updated, false otherwise.
+    */
+  def changedOrNew(originalApps: Map[AppDefinition.AppKey, AppDefinition], newApp: AppDefinition): Boolean = {
+    originalApps.get(newApp.id).forall { _.isUpgrade(newApp) }
+  }
+
   private[impl] def assignDynamicServicePorts(from: RootGroup, to: RootGroup): RootGroup = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
@@ -248,12 +259,12 @@ private[impl] class GroupManagerActor(
         }
       else Seq.empty
 
-    def assignPorts(app: AppDefinition): AppDefinition = {
+    def assignPorts(newApp: AppDefinition): AppDefinition = {
       //all ports that are already assigned in old app definition, but not used in the new definition
       //if the app uses dynamic ports (0), it will get always the same ports assigned
       val assignedAndAvailable = mutable.Queue(
-        from.app(app.id)
-          .map(_.servicePorts.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
+        from.app(newApp.id)
+          .map { oldApp => oldApp.servicePorts.filter(p => portRange.contains(p) && !newApp.servicePorts.contains(p)) }
           .getOrElse(Nil): _*
       )
 
@@ -261,13 +272,13 @@ private[impl] class GroupManagerActor(
         if (assignedAndAvailable.nonEmpty) assignedAndAvailable.dequeue()
         else nextGlobalFreePort
 
-      val servicePorts: Seq[Int] = app.servicePorts.map { port =>
+      val servicePorts: Seq[Int] = newApp.servicePorts.map { port =>
         if (port == 0) nextFreeServicePort else port
       }
 
       // TODO(portMappings) this should apply for multiple container types
       // defined only if there are port mappings
-      val newContainer = app.container.flatMap { container =>
+      val newContainer = newApp.container.flatMap { container =>
         container.docker.map { docker =>
           val newMappings = docker.portMappings.zip(servicePorts).map {
             case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
@@ -276,22 +287,25 @@ private[impl] class GroupManagerActor(
         }
       }
 
-      app.copy(
-        portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, servicePorts),
-        container = newContainer.orElse(app.container)
+      newApp.copy(
+        portDefinitions = mergeServicePortsAndPortDefinitions(newApp.portDefinitions, servicePorts),
+        container = newContainer.orElse(newApp.container)
       )
     }
 
-    val dynamicApps: Set[AppDefinition] =
-      to.transitiveApps.map {
-        // assign values for service ports that the user has left "blank" (set to zero)
-        case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
-        case app: AppDefinition =>
-          // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-          app.copy(
-            portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
-          )
-      }
+    val dynamicApps: Iterator[AppDefinition] =
+      to.transitiveApps
+        .iterator
+        .filter { newApp => changedOrNew(from.transitiveAppsById, newApp) }
+        .map {
+          // assign values for service ports that the user has left "blank" (set to zero)
+          case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
+          case app: AppDefinition =>
+            // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
+            app.copy(
+              portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
+            )
+        }
 
     dynamicApps.foldLeft(to) { (rootGroup, app) =>
       rootGroup.updateApp(app.id, _ => app, app.version)
