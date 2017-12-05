@@ -17,7 +17,6 @@ import uuid
 
 from dcos import marathon, errors
 from datetime import timedelta
-from utils import marathon_leadership_changed
 
 import dcos_service_marathon_tests
 import marathon_auth_common_tests
@@ -163,7 +162,7 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    common.assert_marathon_leadership_changed(original_leader)
+    common.marathon_leadership_changed(original_leader)
 
 
 @shakedown.masters(3)
@@ -179,7 +178,7 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    common.assert_marathon_leadership_changed(original_leader)
+    common.marathon_leadership_changed(original_leader)
 
 
 @shakedown.public_agents(1)

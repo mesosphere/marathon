@@ -334,9 +334,9 @@ def get_marathon_leader_not_on_master_leader_node():
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
         shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
-        assert_marathon_leadership_changed(marathon_leader)
-        new_leader = get_marathon_leader()
-        print('switched leader to: {}'.format(new_leader))
+        marathon_leadership_changed(marathon_leader)
+        marathon_leader = shakedown.marathon_leader_ip()
+        print('switched leader to: {}'.format(marathon_leader))
 
     return marathon_leader
 
@@ -710,16 +710,11 @@ def deployment_wait(timeout=120, service_id=None):
     """
     shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
 
-def get_marathon_leader():
-    client = marathon.create_client()
-    about = client.get_about()
-    return about.get("leader")
-
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=ignore_exception)
-def assert_marathon_leadership_changed(original_leader):
-    """ We have to retry here because leader election takes time and what might happen is that some nodes might
-        not be aware of the new leader being elected resulting in HTTP 502.
+def marathon_leadership_changed(original_leader):
+    """ This method uses mesosDNS to verify that the leadership changed.
+        We have to retry because mesosDNS checks for changes only every 30s.
     """
-    current_leader = get_marathon_leader()
+    current_leader = shakedown.marathon_leader_ip()
     print('leader: {}'.format(current_leader))
     assert original_leader != current_leader
