@@ -366,7 +366,7 @@ def is_enterprise_cli_package_installed():
     try:
         result_json = json.loads(stdout)
     except JSONDecodeError as error:
-        raise DCOSException('Could not parse: "{}"'.format(stdout)) from error
+        raise DCOSException('Could not parse: "{}"'.format(stdout))(error)
     return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
@@ -709,6 +709,7 @@ def deployment_wait(timeout=120, service_id=None):
         the dcos-cli and remove this method later.
     """
     shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
+
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=ignore_exception)
 def marathon_leadership_changed(original_leader):

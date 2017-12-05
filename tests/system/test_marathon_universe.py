@@ -147,5 +147,5 @@ def uninstall(service, package=PACKAGE_NAME):
             assert shakedown.wait_for_service_endpoint_removal('test-marathon')
             shakedown.delete_zk_node('/universe/{}'.format(service))
 
-    except Exception as e:
+    except Exception:
         pass

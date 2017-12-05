@@ -1,11 +1,8 @@
 import os
 import uuid
-import retrying
 
 from dcos import http, util
 from dcos.errors import DCOSException
-import shakedown
-import common
 
 
 def make_id(prefix=None):
