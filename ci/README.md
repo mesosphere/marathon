@@ -31,7 +31,7 @@ The `pr` target runs the test pipeline followed by Github PR review reporting. I
 update.
 
 The `release` target runs the build and packages Marathon in a Docker image,
-natvie packages for various Linux distributions and a big jar.
+native packages for various Linux distributions and a big jar.
 
 The test pipeline involves the following steps:
 
