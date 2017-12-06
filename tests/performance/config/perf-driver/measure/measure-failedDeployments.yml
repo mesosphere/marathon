@@ -37,4 +37,4 @@ trackers:
   # tracking session
   - class: tracker.CountTracker
     metric: failedDeployments
-    events: MarathonDeploymentFailedEvent
+    events: MarathonDeploymentFailedEvent MarathonDeploymentRequestFailedEvent
