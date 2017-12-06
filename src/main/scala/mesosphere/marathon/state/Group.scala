@@ -20,31 +20,34 @@ class Group(
     val dependencies: Set[PathId] = defaultDependencies,
     val version: Timestamp = defaultVersion) extends IGroup {
 
-  lazy val transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition] = apps ++ groupsById.values.flatMap(_.transitiveAppsById)
-  lazy val transitivePodsById: Map[PathId, PodDefinition] = pods ++ groupsById.values.flatMap(_.transitivePodsById)
+  def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.get(appId))
+  def pod(podId: PathId): Option[PodDefinition] = group(podId.parent).flatMap(_.pods.get(podId))
 
-  def app(appId: PathId): Option[AppDefinition] = transitiveAppsById.get(appId)
-  def pod(podId: PathId): Option[PodDefinition] = transitivePodsById.get(podId)
+  def runSpec(id: PathId): Option[RunSpec] = {
+    val maybeApp = this.app(id)
+    if (maybeApp.isDefined) maybeApp else this.pod(id)
+  }
+
+  /**
+    * Checks whether a runnable spec with the given id exists.
+    * @param id Id of an app or pod.
+    * @return True if app or pod exists, false otherwise.
+    */
+  def exists(id: PathId): Boolean = runSpec(id).isDefined
 
   /**
     * Find and return the child group for the given path. If no match is found, then returns None
     */
-  def group(gid: PathId): Option[Group] = {
-    if (id == gid) Some(this)
-    else {
-      val immediateChild = gid.restOf(id).root
-      groupsById.find { case (_, group) => group.id.restOf(id).root == immediateChild }
-        .flatMap { case (_, group) => group.group(gid) }
-    }
-  }
+  def group(gid: PathId): Option[Group] = transitiveGroupsById.get(gid)
 
-  lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
-  lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
+  lazy val transitiveApps: Set[AppDefinition] = (apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.apps.valuesIterator)).toSet
+  lazy val transitiveAppIds: Set[PathId] = (apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.apps.keysIterator)).toSet
 
-  def transitivePods: Set[PodDefinition] = transitivePodsById.values.toSet
+  def transitivePods: Set[PodDefinition] = (pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.pods.valuesIterator)).toSet
+  def transitivePodIds: Set[PathId] = (pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.pods.keysIterator)).toSet
 
-  lazy val transitiveRunSpecsById: Map[PathId, RunSpec] = transitiveAppsById ++ transitivePodsById
-  lazy val transitiveRunSpecs: Set[RunSpec] = transitiveRunSpecsById.values.toSet
+  lazy val transitiveRunSpecs: Set[RunSpec] = transitiveApps ++ transitivePods
+  lazy val transitiveRunSpecIds: Set[PathId] = transitiveAppIds ++ transitivePodIds
 
   lazy val transitiveGroupsById: Map[Group.GroupKey, Group] = {
     Map(id -> this) ++ groupsById.values.flatMap(_.transitiveGroupsById)
@@ -70,7 +73,7 @@ class Group(
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
-  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version, ${transitiveAppsById}, ${transitivePodsById})"
+  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version)"
 }
 
 object Group {
@@ -107,9 +110,7 @@ object Group {
 
   private def noAppsAndPodsWithSameId: Validator[Group] =
     isTrue("Applications and Pods may not share the same id") { group =>
-      val podIds = group.transitivePodsById.keySet
-      val appIds = group.transitiveAppsById.keySet
-      appIds.intersect(podIds).isEmpty
+      group.transitiveAppIds.intersect(group.transitivePodIds).isEmpty
     }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =

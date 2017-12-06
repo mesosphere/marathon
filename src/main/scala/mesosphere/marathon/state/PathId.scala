@@ -21,7 +21,7 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
 
   def isRoot: Boolean = path.isEmpty
 
-  def parent: PathId = path match {
+  lazy val parent: PathId = path match {
     case Nil => this
     case head +: Nil => PathId(Nil, absolute)
     case head +: rest => PathId(path.init, absolute)

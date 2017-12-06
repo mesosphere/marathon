@@ -73,7 +73,7 @@ class GroupsController(
       assumeValid(groupValidator.apply(normalizeApps(effectiveGroupId, groupUpdate)(appNormalization))) {
         if (rootGroup.group(effectiveGroupId).isDefined) { // group already exists
           reject(Rejections.ConflictingChange(Message(s"Group $effectiveGroupId is already created. Use PUT to change this group.")))
-        } else if (rootGroup.transitiveAppsById.get(effectiveGroupId).isDefined) { // app with the group id already exists
+        } else if (rootGroup.exists(effectiveGroupId)) { // app with the group id already exists
           reject(Rejections.ConflictingChange(Message(s"An app with the path $effectiveGroupId already exists.")))
         } else {
           onComplete(updateOrCreate(groupId, groupUpdate, force)) {
