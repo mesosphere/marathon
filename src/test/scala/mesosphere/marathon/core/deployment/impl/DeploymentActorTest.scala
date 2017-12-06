@@ -216,7 +216,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       val version2 = VersionInfo.forNewConfig(Timestamp(1000))
       val app1New = app1.copy(instances = 2, versionInfo = version2)
 
-      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app1New.id -> app1New))))
+      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/fobar"), Map(app1New.id -> app1New))))
 
       val instance1_1 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
       val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(500)).getInstance()

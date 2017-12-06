@@ -75,7 +75,8 @@ class ModelValidationTest extends UnitTest with GroupCreation {
     "Validators should not produce 'value' string at the end of description." in {
       val validApp = AppDefinition("/test/group1/valid".toPath, cmd = Some("foo"))
       val invalidApp = AppDefinition("/test/group1/invalid".toPath)
-      val rootGroup = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+      val rootGroup = createRootGroup(
+        groups = Set(createGroup("/test".toPath, groups = Set(
         createGroup("/test/group1".toPath, Map(
           validApp.id -> validApp,
           invalidApp.id -> invalidApp),
