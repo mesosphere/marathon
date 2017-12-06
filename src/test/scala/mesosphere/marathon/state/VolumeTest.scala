@@ -61,6 +61,10 @@ class VolumeTest extends UnitTest {
       hostPath = "/host/path",
       mode = Mode.RW
     )
+
+    val secretVol = SecretVolume(
+      containerPath = "secret-path",
+      secret = "secret-name")
   }
   object Fixture extends Fixture
 
@@ -72,6 +76,7 @@ class VolumeTest extends UnitTest {
     behave like survivesProtobufSerializationRoundtrip("ext vol w/o size", external(Fixture.extVolNoSize))
     behave like survivesProtobufSerializationRoundtrip("ext vol w/ size", external(Fixture.extVolWithSize))
     behave like survivesProtobufSerializationRoundtrip("host vol", Fixture.hostVol)
+    behave like survivesProtobufSerializationRoundtrip("secret vol", Fixture.secretVol)
 
     "validating PersistentVolumeInfo constraints accepts an empty constraint list" in new Fixture {
       validate(rootVolNoConstraints).isSuccess shouldBe true

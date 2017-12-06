@@ -35,6 +35,10 @@ object Volume {
         external = ExternalVolumeInfo.fromProto(proto.getExternal),
         mode = proto.getMode
       )
+    else if (proto.hasSecret)
+      SecretVolume(
+        proto.getContainerPath,
+        proto.getSecret.getSecret)
     else
       DockerVolume(
         containerPath = proto.getContainerPath,
