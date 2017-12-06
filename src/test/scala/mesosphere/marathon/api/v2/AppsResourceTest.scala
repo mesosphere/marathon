@@ -78,10 +78,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       Raml.fromRaml(normalized)
     }
 
-    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true): (Array[Byte], DeploymentPlan) = {
+    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate)
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -189,7 +189,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -210,7 +210,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -659,7 +659,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -705,7 +705,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -735,7 +735,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -758,7 +758,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         container = Option(containers),
         secrets = Map("bar" -> SecretDef("foo"))
       )
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds

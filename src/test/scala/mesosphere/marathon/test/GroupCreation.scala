@@ -12,11 +12,12 @@ trait GroupCreation {
     groups: Set[Group] = Set.empty,
     dependencies: Set[PathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
-    validate: Boolean = true): RootGroup = {
+    validate: Boolean = true,
+    enabledFeatures: Set[String] = Set.empty): RootGroup = {
     val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
 
     if (validate) {
-      val validation = accord.validate(group)(RootGroup.rootGroupValidator(Set("secrets")))
+      val validation = accord.validate(group)(RootGroup.rootGroupValidator(enabledFeatures))
       assert(validation.isSuccess, s"Provided test root group was not valid: ${validation.toString}")
     }
 
@@ -30,7 +31,8 @@ trait GroupCreation {
     groups: Set[Group] = Set.empty,
     dependencies: Set[PathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
-    validate: Boolean = true): Group = {
+    validate: Boolean = true,
+    enabledFeatures: Set[String] = Set.empty): Group = {
     val groupsById: Map[Group.GroupKey, Group] = groups.map(group => group.id -> group)(collection.breakOut)
     val group = Group(
       id,
@@ -43,7 +45,7 @@ trait GroupCreation {
       pods ++ groupsById.values.flatMap(_.transitivePodsById))
 
     if (validate) {
-      val validation = accord.validate(group)(Group.validGroup(id.parent, Set("secrets")))
+      val validation = accord.validate(group)(Group.validGroup(id.parent, enabledFeatures))
       assert(validation.isSuccess, s"Provided test group was not valid: ${validation.toString}")
     }
 
