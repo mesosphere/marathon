@@ -12,6 +12,43 @@ import mesosphere.marathon.test.GroupCreation
 
 class RootGroupTest extends UnitTest with GroupCreation {
   "A Group" should {
+
+    "an find an app by its path" in {
+      Given("an existing group with two subgroups")
+      val app1 = AppDefinition("/test/group1/app1".toPath)
+      val app2 = AppDefinition("/test/group2/app2".toPath)
+      val current = createRootGroup(
+          groups = Set(
+              createGroup("/test".toPath, groups = Set(
+                createGroup("/test/group1".toPath, Map(app1.id -> app1)),
+              createGroup("/test/group2".toPath, Map(app2.id -> app2))
+            ))))
+
+        When("an app with a specific path is requested")
+      val path = PathId("/test/group1/app1")
+
+        Then("the group is found")
+      current.app(path) should be('defined)
+    }
+
+    "cannot find an app if it's not existing" in {
+      Given("an existing group with two subgroups")
+      val app1 = AppDefinition("/test/group1/app1".toPath)
+      val app2 = AppDefinition("/test/group2/app2".toPath)
+      val current = createRootGroup(
+        groups = Set(
+          createGroup("/test".toPath, groups = Set(
+            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          ))))
+
+      When("a group with a specific path is requested")
+      val path = PathId("/test/group1/unknown")
+
+      Then("the app is not found")
+      current.app(path) should be('empty)
+    }
+
     "can find a group by its path" in {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition("/test/group1/app1".toPath, cmd = Some("sleep"))
@@ -272,6 +309,24 @@ class RootGroupTest extends UnitTest with GroupCreation {
       )
       ids should equal(expectedIds)
 
+      val actualAppDependencies: List[(String, String)] = current.applicationDependencies.map { case (left, right) => left.id.toString -> right.id.toString }
+      val expectedAppDependencies = List(
+        "/test/frontend/app2/a2" -> "/test/frontend/app1/a1",
+        "/test/frontend/app2/a2" -> "/test/database/mongo/m1",
+        "/test/frontend/app2/a2" -> "/test/service/service2/s2",
+        "/test/frontend/app2/a2" -> "/test/service/service1/s1",
+        "/test/service/service2/s2" -> "/test/service/service1/s1",
+        "/test/service/service2/s2" -> "/test/database/mongo/m1",
+        "/test/service/service2/s2" -> "/test/database/memcache/c1",
+        "/test/service/service2/s2" -> "/test/database/redis/r1",
+        "/test/database/memcache/c1" -> "/test/database/redis/r1",
+        "/test/database/memcache/c1" -> "/test/database/mongo/m1",
+        "/test/service/service1/s1" -> "/test/database/memcache/c1",
+        "/test/database/mongo/m1" -> "/test/database/redis/r1",
+        "/test/frontend/app1/a1" -> "/test/service/service2/s2"
+      )
+      actualAppDependencies should contain theSameElementsAs (expectedAppDependencies)
+
       current.runSpecsWithNoDependencies should have size 2
     }
 
@@ -324,6 +379,21 @@ class RootGroupTest extends UnitTest with GroupCreation {
         "/test/cache/cache1".toPath
       )
       ids should be(expected)
+
+      val actualAppDependencies: List[(String, String)] = current.applicationDependencies.map { case (left, right) => left.id.toString -> right.id.toString }
+      val expectedAppDependencies = List(
+        "/test/frontend/app2" -> "/test/frontend/app1",
+        "/test/frontend/app2" -> "/test/database/mongo",
+        "/test/frontend/app2" -> "/test/service/srv2",
+        "/test/frontend/app1" -> "/test/service/srv2",
+        "/test/database/mongo" -> "/test/database/redis",
+        "/test/database/memcache" -> "/test/database/redis",
+        "/test/database/memcache" -> "/test/database/mongo",
+        "/test/service/srv2" -> "/test/service/srv1",
+        "/test/service/srv2" -> "/test/database/mongo",
+        "/test/service/srv1" -> "/test/database/memcache"
+      )
+      actualAppDependencies should contain theSameElementsAs (expectedAppDependencies)
 
       current.runSpecsWithNoDependencies should have size 2
     }
