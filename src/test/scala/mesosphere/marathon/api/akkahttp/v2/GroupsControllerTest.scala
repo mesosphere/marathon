@@ -8,40 +8,45 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
-import mesosphere.marathon.api.akkahttp.Rejections
-import mesosphere.marathon.api.{ GroupApiService, TestAuthFixture }
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
+import mesosphere.marathon.api.{ GroupApiService, TestAuthFixture, TestGroupManagerFixture }
+import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService }
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.Identity
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup, Timestamp }
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.{ GroupCreation, SettableClock }
-import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
-import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, GroupInfoService }
-import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.test.GroupCreation
 import org.scalatest.Inside
-import play.api.libs.json._
-import play.api.libs.json.Json
-import play.api.libs.functional.syntax._
-
-import scala.concurrent.Future
+import play.api.libs.json.{ Json, _ }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
-class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside with RouteBehaviours with StrictLogging with GroupCreation {
+class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside with RouteBehaviours with StrictLogging with GroupCreation with ResponseMatchers {
 
   implicit val identity: Identity = new Identity {}
 
   "Group detail" should {
+
+    // Entity not found test cases
+    {
+      val f = new FixtureWithRealGroupManager(authorized = false)
+      behave like unknownEntity(forRoute = f.groupsController.route, withRequest = Delete("/groupname"), withMessage = "Group '/groupname' does not exist")
+
+      val infoService = mock[GroupInfoService]
+      infoService.selectGroup(any, any, any, any) returns Future.successful(None)
+      infoService.selectGroupVersion(any, any, any, any) returns Future.successful(None)
+      val g = new Fixture(infoService = infoService)
+
+      behave like unknownEntity(forRoute = g.groupsController.route, withRequest = Get("/unknown-group"), withMessage = "Group '/unknown-group' does not exist")
+      behave like unknownEntity(forRoute = g.groupsController.route, withRequest = Get("/groupname/versions/2017-10-30T16:08:53.852Z"), withMessage = "Group '/groupname' does not exist in version 2017-10-30T16:08:53.852Z")
+    }
+
+    // Unauthenticated access test cases
     {
       val controller = Fixture(authenticated = false).groupsController
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./).addHeader(Accept(MediaTypes.`text/plain`)))
@@ -66,16 +71,6 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       Get(Uri./.withPath(Path("/"))) ~> f.groupsController.route ~> check {
         status should be(StatusCodes.OK)
         (Json.parse(responseAs[String]) \ "id").get shouldEqual JsString("/")
-      }
-    }
-
-    "rejects with group not found for nonexisting group" in {
-      val infoService = mock[GroupInfoService]
-      infoService.selectGroup(eq(PathId("/groupname")), any, any, any) returns Future.successful(None)
-      val f = new Fixture(infoService = infoService)
-
-      Get(Uri./.withPath(Path("/groupname"))) ~> f.groupsController.route ~> check {
-        rejection should be (EntityNotFound.noGroup("groupname".toRootPath))
       }
     }
   }
@@ -131,17 +126,9 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       val f = new Fixture(infoService = infoService)
 
       Get(Uri./.withPath(Path("/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
-        (Json.parse(responseAs[String]) \ "id").get shouldEqual JsString("/")
-      }
-    }
-
-    "reject for app and version that does not exist" in {
-      val infoService = mock[GroupInfoService]
-      infoService.selectGroupVersion(any, any, any, any) returns Future.successful(None)
-      val f = new Fixture(infoService = infoService)
-
-      Get(Uri./.withPath(Path("/groupname/versions/2017-10-30T16:08:53.852Z"))) ~> f.groupsController.route ~> check {
-        rejection should be (EntityNotFound.noGroup("groupname".toRootPath, Some(Timestamp("2017-10-30T16:08:53.852Z"))))
+        Json.parse(responseAs[String]) should have (
+          id(PathId("/"))
+        )
       }
     }
   }
@@ -185,7 +172,8 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       groupApiService.updateGroup(any, any, any, any)(any) returns Future.successful(createRootGroup())
       val groupManager = mock[GroupManager]
       groupManager.rootGroup() returns createRootGroup()
-      groupManager.updateRootAsync(eq(PathId.empty), any, any, eq(false), any) returns Future.successful(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero))
+      groupManager.updateRootAsync(eq(PathId.empty), any, any, eq(false), any).returns(Future.successful(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero)))
+
       val f = new Fixture(groupManager = groupManager, groupApiService = groupApiService)
       val entity = HttpEntity("{}").withContentType(ContentTypes.`application/json`)
 
@@ -195,6 +183,27 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
                                         |  "version" : "1970-01-01T00:00:00Z"
                                         |}""".stripMargin)
       }
+    }
+  }
+
+  "Delete Group" should {
+
+    "delete group" in new Fixture {
+      groupManager.updateRootEither(org.mockito.Matchers.eq(PathId("/groupname").parent), any, any, org.mockito.Matchers.eq(false), any) returns Future.successful(Right(DeploymentPlan.empty.copy(id = "plan", version = Timestamp.zero)))
+
+      Delete(Uri./.withPath(Path("/groupname"))) ~> groupsController.route ~> check {
+        header[Headers.`Marathon-Deployment-Id`] should be(Some(Headers.`Marathon-Deployment-Id`("plan")))
+        responseAs[String] should be ("""{
+                                        |  "deploymentId" : "plan",
+                                        |  "version" : "1970-01-01T00:00:00Z"
+                                        |}""".stripMargin)
+      }
+    }
+
+    // Unauthenticated access test cases
+    {
+      val controller = Fixture(authenticated = false).groupsController
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete(Uri./.withPath(Path("/groupname"))))
     }
   }
 
@@ -238,5 +247,27 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     implicit val authenticator = authFixture.auth
 
     val groupsController: GroupsController = new GroupsController(electionService, infoService, groupManager, groupApiService, config)
+  }
+
+  case class FixtureWithRealGroupManager(
+      authenticated: Boolean = true,
+      authorized: Boolean = true,
+      authFn: Any => Boolean = _ => true,
+      initialRoot: RootGroup = RootGroup.empty,
+      infoService: GroupInfoService = mock[GroupInfoService]) {
+    val authFixture = new TestAuthFixture()
+    authFixture.authenticated = authenticated
+    authFixture.authorized = authorized
+    authFixture.authFn = authFn
+
+    val f = new TestGroupManagerFixture(initialRoot)
+    val config: AllConf = f.config
+    val groupManager: GroupManager = f.groupManager
+    val electionService = mock[ElectionService]
+    electionService.isLeader returns true
+
+    implicit val authenticator = authFixture.auth
+
+    val groupsController: GroupsController = new GroupsController(electionService, infoService, groupManager, new GroupApiService(groupManager), config)
   }
 }

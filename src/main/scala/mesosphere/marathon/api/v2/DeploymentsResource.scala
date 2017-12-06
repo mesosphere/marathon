@@ -19,13 +19,13 @@ import mesosphere.util.Logging
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class DeploymentsResource @Inject() (
-  service: MarathonSchedulerService,
-  groupManager: GroupManager,
-  val authenticator: Authenticator,
-  val authorizer: Authorizer,
-  val config: MarathonConf)
-    extends AuthResource
-    with Logging {
+    service: MarathonSchedulerService,
+    groupManager: GroupManager,
+    val authenticator: Authenticator,
+    val authorizer: Authorizer,
+    val config: MarathonConf)
+  extends AuthResource
+  with Logging {
 
   @GET
   def running(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>

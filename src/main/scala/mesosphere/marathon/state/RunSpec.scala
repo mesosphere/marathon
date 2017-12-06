@@ -20,9 +20,9 @@ import scala.concurrent.duration._
   *   minimum: 0.0
   */
 case class BackoffStrategy(
-  backoff: FiniteDuration = 1.seconds,
-  maxLaunchDelay: FiniteDuration = 1.hour,
-  factor: Double = 1.15)
+    backoff: FiniteDuration = 1.seconds,
+    maxLaunchDelay: FiniteDuration = 1.hour,
+    factor: Double = 1.15)
 
 /**
   * A generic spec that specifies something that Marathon is able to launch instances of.

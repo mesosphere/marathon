@@ -19,16 +19,28 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
   "LeaderResource" should {
 
+    // Unauthenticated access test cases
     {
       val controller = Fixture(authenticated = false, isLeader = true).controller()
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete(Uri./))
     }
 
+    // Unauthorized access test cases
     {
       val controller = Fixture(authorized = false, isLeader = true).controller()
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get(Uri./))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete(Uri./))
+    }
+
+    // Entity not found
+    {
+      Given("no leader has been elected")
+      val f = Fixture()
+      val controller = f.controller()
+      f.electionService.leaderHostPort returns (None)
+
+      behave like unknownEntity(forRoute = controller.route, withRequest = Get(Uri./), withMessage = "There is no leader")
     }
 
     "return the leader info" in {
@@ -46,23 +58,6 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
             |  "leader": "new.leader.com"
             |}""".stripMargin
         JsonTestHelper.assertThatJsonString(responseAs[String]).correspondsToJsonString(expected)
-      }
-    }
-
-    "return 404 if no leader has been elected" in {
-      Given("no leader has been elected")
-      val f = Fixture()
-      val controller = f.controller()
-      f.electionService.leaderHostPort returns (None)
-
-      When("we try to fetch the info")
-      Get(Uri./) ~> controller.route ~> check {
-        Then("we receive EntityNotFound response")
-        rejection shouldBe an[EntityNotFound]
-        inside(rejection) {
-          case EntityNotFound(message) =>
-            message.message should be("There is no leader")
-        }
       }
     }
 

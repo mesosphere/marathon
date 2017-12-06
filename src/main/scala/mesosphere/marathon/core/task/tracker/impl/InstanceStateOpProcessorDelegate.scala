@@ -18,10 +18,10 @@ import scala.util.control.NonFatal
   * Implements the [[InstanceStateOpProcessor]] trait by sending messages to the TaskTracker actor.
   */
 private[tracker] class InstanceStateOpProcessorDelegate(
-  clock: Clock,
-  conf: InstanceTrackerConfig,
-  instanceTrackerRef: ActorRef)
-    extends InstanceStateOpProcessor {
+    clock: Clock,
+    conf: InstanceTrackerConfig,
+    instanceTrackerRef: ActorRef)
+  extends InstanceStateOpProcessor {
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
 

@@ -178,9 +178,9 @@ class ContainerConversionTest extends UnitTest {
             .setOBSOLETENetwork(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
             .addOBSOLETEPortMappings(
               Protos.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping.newBuilder()
-              .setName("http").setContainerPort(1).setHostPort(2).setServicePort(3)
-              .addLabels(Mesos.Label.newBuilder().setKey("foo").setValue("bar"))
-              .build
+                .setName("http").setContainerPort(1).setHostPort(2).setServicePort(3)
+                .addLabels(Mesos.Label.newBuilder().setKey("foo").setValue("bar"))
+                .build
             )
           )
           .build

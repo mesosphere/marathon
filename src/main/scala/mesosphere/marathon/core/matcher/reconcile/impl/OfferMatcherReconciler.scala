@@ -31,7 +31,7 @@ import scala.concurrent.Future
   * * and creating unreserved/destroy operations for tasks in state "garbage" only
   */
 private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker, groupRepository: GroupRepository)
-    extends OfferMatcher with StrictLogging {
+  extends OfferMatcher with StrictLogging {
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
 

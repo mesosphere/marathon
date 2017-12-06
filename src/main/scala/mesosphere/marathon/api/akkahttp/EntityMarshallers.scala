@@ -11,14 +11,11 @@ import akka.http.scaladsl.unmarshalling.{ FromEntityUnmarshaller, FromMessageUnm
 import akka.util.ByteString
 import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord.{ Failure, RuleViolation, Success, Validator }
-import mesosphere.marathon.api.v2.GroupsResource.normalizeApps
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.raml.GroupUpdate
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import play.api.libs.json._
 
 import scala.collection.breakOut
@@ -152,7 +149,10 @@ object EntityMarshallers {
   implicit val rejectionMessageMarshaller = playJsonMarshaller[Rejections.Message]
   implicit val appInfoMarshaller = playJsonMarshaller[AppInfo]
   implicit val podDefMarshaller = playJsonMarshaller[raml.Pod]
+  implicit val podDefSeqMarshaller = playJsonMarshaller[Seq[raml.Pod]]
   implicit val podDefUnmarshaller = playJsonUnmarshaller[raml.Pod]
+  implicit val podStatus = playJsonMarshaller[raml.PodStatus]
+  implicit val podStatuses = playJsonMarshaller[Seq[raml.PodStatus]]
   implicit val leaderInfoMarshaller = playJsonMarshaller[raml.LeaderInfo]
   implicit val messageMarshaller = playJsonMarshaller[raml.Message]
   implicit val infoMarshaller = playJsonMarshaller[raml.MarathonInfo]
@@ -171,6 +171,7 @@ object EntityMarshallers {
   implicit val deleteTasksUnmarshaller = playJsonUnmarshaller[raml.DeleteTasks]
   implicit val seqDateTimeMarshaller = playJsonMarshaller[Seq[Timestamp]]
   implicit val groupUpdateUnmarshaller = playJsonUnmarshaller[raml.GroupUpdate]
+  implicit val verisonListMarshaller = playJsonMarshaller[raml.VersionList]
 
   implicit class FromEntityUnmarshallerOps[T](val um: FromEntityUnmarshaller[T]) extends AnyVal {
     def handleValidationErrors: FromEntityUnmarshaller[T] = um.recover(_ ⇒ _ ⇒ {

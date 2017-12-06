@@ -27,8 +27,6 @@ object Dependencies {
     aws % "compile",
     chaos % "compile",
     mesos % "compile",
-    jodaTime % "compile",
-    jodaConvert % "compile",
     jerseyServlet % "compile",
     jerseyMultiPart % "compile",
     jettyEventSource % "compile",
@@ -79,7 +77,7 @@ object Dependency {
     val Alpakka  = "0.8"
     val Chaos = "0.10.0"
     val Guava = "19.0"
-    val Mesos = "1.4.0"
+    val Mesos = "1.5.0-health-check-ipv6"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.4.0-2.0.1"
     val OpenJDK = "openjdk:8u121-jdk"
@@ -91,15 +89,13 @@ object Dependency {
     val AsyncAwait = "0.9.7"
     val Jersey = "1.18.6"
     val JettyServlets = "9.3.6.v20151106"
-    val JodaTime = "2.9.9"
-    val JodaConvert = "1.8.1"
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
     val Diffson = "2.2.2"
     val PlayJson = "2.6.6"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.5"
-    val MarathonUI = "1.2.0"
+    val MarathonUI = "1.3.0"
     val MarathonApiConsole = "3.0.8-accept"
     val Logback = "1.1.3"
     val Logstash = "4.9"
@@ -136,8 +132,6 @@ object Dependency {
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
-  val jodaTime = "joda-time" % "joda-time" % V.JodaTime
-  val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"

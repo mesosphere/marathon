@@ -27,6 +27,7 @@ node('shakedown') {
           }
         } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
+            archive includes: "diagnostics.zip"
 
             withCredentials([usernamePassword(credentialsId:'a7ac7f84-64ea-4483-8e66-bb204484e58f',passwordVariable:'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
                 sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$JOB_URL" \$(git rev-parse HEAD) $currentBuild.result"""

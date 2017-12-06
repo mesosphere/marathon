@@ -22,25 +22,12 @@ addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
 cleanFiles += baseDirectory { base => base / "sandboxes" }.value
 
-lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
+lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()
-    .setPreference(AlignArguments, false)
-    .setPreference(AlignParameters, false)
-    .setPreference(AlignSingleLineCaseStatements, false)
-    .setPreference(CompactControlReadability, false)
-    .setPreference(DoubleIndentClassDeclaration, true)
     .setPreference(DanglingCloseParenthesis, Preserve)
-    .setPreference(FormatXml, true)
-    .setPreference(IndentSpaces, 2)
-    .setPreference(IndentWithTabs, false)
-    .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
+    .setPreference(DoubleIndentConstructorArguments, true)
     .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
     .setPreference(PreserveSpaceBeforeArguments, true)
-    .setPreference(SpacesAroundMultiImports, true)
-    .setPreference(SpaceBeforeColon, false)
-    .setPreference(SpaceInsideBrackets, false)
-    .setPreference(SpaceInsideParentheses, false)
-    .setPreference(SpacesWithinPatternBinders, true)
 )
 
 lazy val testSettings =
@@ -321,6 +308,5 @@ lazy val benchmark = (project in file("benchmark"))
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
-    libraryDependencies ++= Dependencies.benchmark,
-    generatorType in Jmh := "asm"
+    libraryDependencies ++= Dependencies.benchmark
   )

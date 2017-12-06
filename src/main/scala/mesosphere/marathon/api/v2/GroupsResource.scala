@@ -32,7 +32,7 @@ class GroupsResource @Inject() (
     infoService: GroupInfoService,
     val config: MarathonConf,
     groupsService: GroupApiService)(implicit
-  val authenticator: Authenticator,
+    val authenticator: Authenticator,
     val authorizer: Authorizer,
     mat: Materializer) extends AuthResource {
 
@@ -203,8 +203,6 @@ class GroupsResource @Inject() (
     body: Array[Byte],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    import mesosphere.marathon.core.async.ExecutionContexts.global
-
     assumeValid {
       val validatedId = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
@@ -224,7 +222,7 @@ class GroupsResource @Inject() (
 
         ok(
           Json.obj(
-            "steps". ->(DeploymentPlan(originalGroup, updatedGroup).steps)
+            "steps".->(DeploymentPlan(originalGroup, updatedGroup).steps)
           ).toString()
         )
       } else {
@@ -281,8 +279,6 @@ class GroupsResource @Inject() (
     update: raml.GroupUpdate,
     force: Boolean)(implicit identity: Identity): (DeploymentPlan, PathId) = {
     val version = Timestamp.now()
-
-    import mesosphere.marathon.core.async.ExecutionContexts.global
 
     val effectivePath = update.id.map(PathId(_).canonicalPath(id)).getOrElse(id)
     val deployment = result(groupManager.updateRoot(

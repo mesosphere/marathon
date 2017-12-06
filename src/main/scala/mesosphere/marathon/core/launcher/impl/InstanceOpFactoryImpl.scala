@@ -27,9 +27,9 @@ import org.apache.mesos.{ Protos => Mesos }
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
-  config: MarathonConf,
-  pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
-    extends InstanceOpFactory with StrictLogging {
+    config: MarathonConf,
+    pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
+  extends InstanceOpFactory with StrictLogging {
 
   import InstanceOpFactoryImpl._
 
@@ -70,7 +70,7 @@ class InstanceOpFactoryImpl(
 
     val matchedOffer =
       RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
-        builderConfig.acceptedResourceRoles, config, request.localRegion)
+        builderConfig.acceptedResourceRoles, config, schedulerPlugins, request.localRegion)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -93,7 +93,7 @@ class InstanceOpFactoryImpl(
 
     val matchResponse =
       RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet, config, localRegion)
+        config.defaultAcceptedResourceRolesSet, config, schedulerPlugins, localRegion)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = Task.Id.forRunSpec(app.id)

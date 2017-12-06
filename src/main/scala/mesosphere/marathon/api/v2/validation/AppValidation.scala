@@ -8,6 +8,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.{ featureEnabled, _ }
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.health.IPv4
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ AppDefinition, PathId, ResourceRole }
 import mesosphere.marathon.stream.Implicits._
@@ -40,8 +41,8 @@ trait AppValidation {
   private def portMappingIsCompatibleWithNetworks(networks: Seq[Network]): Validator[ContainerPortMapping] = {
     val hostPortRequiresNetworkName = isTrue[ContainerPortMapping](
       AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks) { mapping =>
-      mapping.hostPort.isEmpty || mapping.networkNames.length == 1
-    }
+        mapping.hostPort.isEmpty || mapping.networkNames.length == 1
+      }
     implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
   }
 
@@ -407,6 +408,7 @@ trait AppValidation {
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
     app.healthChecks is every(portIndexIsValid(portIndices(app)))
+    app.healthChecks is every(complyWithIpProtocolRules(app.container))
     app must haveAtMostOneMesosHealthCheck
     app.fetch is every(valid)
     app.secrets is { secrets: Map[String, SecretDef] =>
@@ -494,6 +496,18 @@ trait AppValidation {
     }
   }
 
+  private def complyWithIpProtocolRules(container: Option[Container]): Validator[AppHealthCheck] =
+    isTrue(AppValidationMessages.HealthCheckIpProtocolLimitation) { healthCheck =>
+      def isMesosHttpHealthCheck: Boolean = healthCheck.protocol match {
+        case AppHealthCheckProtocol.MesosHttp | AppHealthCheckProtocol.MesosHttps | AppHealthCheckProtocol.MesosTcp => true
+        case _ => false
+      }
+      def isDockerContainer = container.exists(c => c.`type` == EngineType.Docker)
+      val hasDefaultIpProtocol = healthCheck.ipProtocol == IpProtocol.Ipv4
+
+      hasDefaultIpProtocol || (isMesosHttpHealthCheck && isDockerContainer)
+    }
+
   private val haveAtMostOneMesosHealthCheck: Validator[App] = {
     val mesosProtocols = Set(
       AppHealthCheckProtocol.Command,
@@ -537,4 +551,7 @@ object AppValidationMessages {
 
   val DockerEngineLimitedToSingleContainerNetwork =
     "may only specify a single container network when using the Docker container engine"
+
+  val HealthCheckIpProtocolLimitation =
+    "IPv6 can only be used for container type DOCKER and Mesos http/https/tcp health checks"
 }

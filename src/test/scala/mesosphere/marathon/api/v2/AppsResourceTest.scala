@@ -194,7 +194,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       When("The create request is made")
       clock += 5.seconds
       val response = appsResource.create(body, force = false, auth.request)
-      val result = Try(prepareApp(app, groupManager))
+      Try(prepareApp(app, groupManager))
 
       Then("It is successful")
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
@@ -215,7 +215,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       When("The create request is made")
       clock += 5.seconds
       val response = appsResource.create(body, force = false, auth.request)
-      val result = Try(prepareApp(app, groupManager))
+      Try(prepareApp(app, groupManager))
 
       Then("It fails")
       assert(response.getStatus == 422, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
@@ -236,7 +236,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       When("The create request is made")
       clock += 5.seconds
       val response = appsResource.create(body, force = false, auth.request)
-      val result = Try(prepareApp(app, groupManager))
+      Try(prepareApp(app, groupManager))
 
       Then("It fails")
       assert(response.getStatus == 422, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
@@ -256,7 +256,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       When("The create request is made")
       clock += 5.seconds
       val response = appsResource.create(body, force = false, auth.request)
-      val result = Try(prepareApp(app, groupManager))
+      Try(prepareApp(app, groupManager))
 
       Then("It is successful")
       response.getStatus should be (422) withClue s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}"
@@ -1578,6 +1578,25 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       (appJson \ "fetch" \ 0 \ "executable" get) should be(JsBoolean(true))
       (appJson \ "fetch" \ 0 \ "cache" get) should be(JsBoolean(false))
       (appJson \ "fetch" \ 0 \ "destPath" get) should be(JsString("bash.copy"))
+    }
+
+    "Allow creating app with network name with underscore" in new Fixture {
+      Given("An app with a network name with underscore")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(
+          image = "image")))
+      val app = App(
+        id = "/app", cmd = Some("cmd"), container = Option(container),
+        networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It is successful")
+      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
     }
   }
 }

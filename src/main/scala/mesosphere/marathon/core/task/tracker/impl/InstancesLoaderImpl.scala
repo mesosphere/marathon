@@ -13,7 +13,7 @@ import scala.concurrent.Future
   * Loads all task data into an [[InstanceTracker.InstancesBySpec]] from an [[InstanceRepository]].
   */
 private[tracker] class InstancesLoaderImpl(repo: InstanceRepository)(implicit val mat: Materializer)
-    extends InstancesLoader {
+  extends InstancesLoader {
   import mesosphere.marathon.core.async.ExecutionContexts.global
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)

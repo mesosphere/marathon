@@ -52,6 +52,7 @@ object RamlTypeGenerator {
 
   val SeqClass = RootClass.newClass("scala.collection.immutable.Seq")
   val SetClass = RootClass.newClass("Set")
+  val IterableClass = RootClass.newClass("Iterable")
 
   def TYPE_SEQ(typ: Type): Type = SeqClass TYPE_OF typ
 
@@ -219,6 +220,7 @@ object RamlTypeGenerator {
           VAL("StringToValue") withType(TYPE_MAP(StringClass, name)) withFlags(Flags.PRIVATE) := REF("Map") APPLY(sortedValues.map { enumValue =>
             TUPLE(LIT(enumValue), REF(underscoreToCamel(camelify(enumValue))))
           }),
+          DEF("all", IterableClass TYPE_OF name) := REF("StringToValue") DOT "values",
           DEF("fromString", TYPE_OPTION(name)) withParams(PARAM("v", StringClass)) := REF("StringToValue") DOT "get" APPLY(REF("v"))
         ) ++ default.map { defaultValue =>
           VAL("DefaultValue") withType(name) := REF(underscoreToCamel(camelify(defaultValue)))

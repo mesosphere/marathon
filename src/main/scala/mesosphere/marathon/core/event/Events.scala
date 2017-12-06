@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.event
 
-import akka.event.EventStream
 import com.fasterxml.jackson.annotation.JsonIgnore
 import mesosphere.marathon.api.v2.json.Formats.eventToJson
 import mesosphere.marathon.core.condition.Condition
@@ -26,11 +25,11 @@ sealed trait MarathonEvent {
 // api
 
 case class ApiPostEvent(
-  clientIp: String,
-  uri: String,
-  appDefinition: AppDefinition,
-  eventType: String = "api_post_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+    clientIp: String,
+    uri: String,
+    appDefinition: AppDefinition,
+    eventType: String = "api_post_event",
+    timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
 case class PodEvent(
     clientIp: String,
@@ -59,50 +58,50 @@ object PodEvent {
 sealed trait MarathonSchedulerEvent extends MarathonEvent
 
 case class SchedulerRegisteredEvent(
-  frameworkId: String,
-  master: String,
-  eventType: String = "scheduler_registered_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonSchedulerEvent
+    frameworkId: String,
+    master: String,
+    eventType: String = "scheduler_registered_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonSchedulerEvent
 
 case class SchedulerReregisteredEvent(
-  master: String,
-  eventType: String = "scheduler_reregistered_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonSchedulerEvent
+    master: String,
+    eventType: String = "scheduler_reregistered_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonSchedulerEvent
 
 case class SchedulerDisconnectedEvent(
-  eventType: String = "scheduler_disconnected_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonSchedulerEvent
+    eventType: String = "scheduler_disconnected_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonSchedulerEvent
 
 // event subscriptions
 
 sealed trait MarathonSubscriptionEvent extends MarathonEvent
 
 case class Subscribe(
-  clientIp: String,
-  callbackUrl: String,
-  eventType: String = "subscribe_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonSubscriptionEvent
+    clientIp: String,
+    callbackUrl: String,
+    eventType: String = "subscribe_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonSubscriptionEvent
 
 case class Unsubscribe(
-  clientIp: String,
-  callbackUrl: String,
-  eventType: String = "unsubscribe_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonSubscriptionEvent
+    clientIp: String,
+    callbackUrl: String,
+    eventType: String = "unsubscribe_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonSubscriptionEvent
 
 case class EventStreamAttached(
-  remoteAddress: String,
-  eventType: String = "event_stream_attached",
-  timestamp: String = Timestamp.now().toString) extends MarathonSubscriptionEvent
+    remoteAddress: String,
+    eventType: String = "event_stream_attached",
+    timestamp: String = Timestamp.now().toString) extends MarathonSubscriptionEvent
 
 case class EventStreamDetached(
-  remoteAddress: String,
-  eventType: String = "event_stream_detached",
-  timestamp: String = Timestamp.now().toString) extends MarathonSubscriptionEvent
+    remoteAddress: String,
+    eventType: String = "event_stream_detached",
+    timestamp: String = Timestamp.now().toString) extends MarathonSubscriptionEvent
 
 // health checks
 
@@ -111,35 +110,35 @@ sealed trait MarathonHealthCheckEvent extends MarathonEvent {
 }
 
 case class AddHealthCheck(
-  appId: PathId,
-  version: Timestamp,
-  healthCheck: HealthCheck,
-  eventType: String = "add_health_check_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonHealthCheckEvent
+    appId: PathId,
+    version: Timestamp,
+    healthCheck: HealthCheck,
+    eventType: String = "add_health_check_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonHealthCheckEvent
 
 case class RemoveHealthCheck(
-  appId: PathId,
-  eventType: String = "remove_health_check_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonHealthCheckEvent
+    appId: PathId,
+    eventType: String = "remove_health_check_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonHealthCheckEvent
 
 case class FailedHealthCheck(
-  appId: PathId,
-  instanceId: Instance.Id,
-  healthCheck: HealthCheck,
-  eventType: String = "failed_health_check_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonHealthCheckEvent
+    appId: PathId,
+    instanceId: Instance.Id,
+    healthCheck: HealthCheck,
+    eventType: String = "failed_health_check_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonHealthCheckEvent
 
 case class HealthStatusChanged(
-  appId: PathId,
-  instanceId: Instance.Id,
-  version: Timestamp,
-  alive: Boolean,
-  eventType: String = "health_status_changed_event",
-  timestamp: String = Timestamp.now().toString)
-    extends MarathonHealthCheckEvent
+    appId: PathId,
+    instanceId: Instance.Id,
+    version: Timestamp,
+    alive: Boolean,
+    eventType: String = "health_status_changed_event",
+    timestamp: String = Timestamp.now().toString)
+  extends MarathonHealthCheckEvent
 
 /**
   * Event published when an instance is killed because it failed too many MarathonHealthChecks
@@ -147,83 +146,83 @@ case class HealthStatusChanged(
   * health checks for pods.
   */
 case class UnhealthyInstanceKillEvent(
-  appId: PathId,
-  taskId: Task.Id,
-  instanceId: Instance.Id,
-  version: Timestamp,
-  reason: String,
-  host: String,
-  slaveId: Option[String],
-  eventType: String = "unhealthy_instance_kill_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
+    appId: PathId,
+    taskId: Task.Id,
+    instanceId: Instance.Id,
+    version: Timestamp,
+    reason: String,
+    host: String,
+    slaveId: Option[String],
+    eventType: String = "unhealthy_instance_kill_event",
+    timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 // upgrade messages
 
 sealed trait UpgradeEvent extends MarathonEvent
 
 case class GroupChangeSuccess(
-  groupId: PathId,
-  version: String,
-  eventType: String = "group_change_success",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+    groupId: PathId,
+    version: String,
+    eventType: String = "group_change_success",
+    timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class GroupChangeFailed(
-  groupId: PathId,
-  version: String,
-  reason: String,
-  eventType: String = "group_change_failed",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+    groupId: PathId,
+    version: String,
+    reason: String,
+    eventType: String = "group_change_failed",
+    timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentSuccess(
-  id: String,
-  plan: DeploymentPlan,
-  eventType: String = "deployment_success",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+    id: String,
+    plan: DeploymentPlan,
+    eventType: String = "deployment_success",
+    timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentFailed(
-  id: String,
-  plan: DeploymentPlan,
-  eventType: String = "deployment_failed",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+    id: String,
+    plan: DeploymentPlan,
+    eventType: String = "deployment_failed",
+    timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStatus(
-  plan: DeploymentPlan,
-  currentStep: DeploymentStep,
-  eventType: String = "deployment_info",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+    plan: DeploymentPlan,
+    currentStep: DeploymentStep,
+    eventType: String = "deployment_info",
+    timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepSuccess(
-  plan: DeploymentPlan,
-  currentStep: DeploymentStep,
-  eventType: String = "deployment_step_success",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+    plan: DeploymentPlan,
+    currentStep: DeploymentStep,
+    eventType: String = "deployment_step_success",
+    timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepFailure(
-  plan: DeploymentPlan,
-  currentStep: DeploymentStep,
-  eventType: String = "deployment_step_failure",
-  timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+    plan: DeploymentPlan,
+    currentStep: DeploymentStep,
+    eventType: String = "deployment_step_failure",
+    timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 // Mesos scheduler
 
 // TODO(jdef) rename this RunSpecTerminatedEvent since that's how it's actually used
 case class AppTerminatedEvent(
-  appId: PathId,
-  eventType: String = "app_terminated_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+    appId: PathId,
+    eventType: String = "app_terminated_event",
+    timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
 case class MesosStatusUpdateEvent(
-  slaveId: String,
-  taskId: Task.Id,
-  taskStatus: Mesos.TaskState,
-  message: String,
-  appId: PathId,
-  host: String,
-  ipAddresses: Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress],
-  ports: Seq[Int],
-  version: String,
-  eventType: String = "status_update_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+    slaveId: String,
+    taskId: Task.Id,
+    taskStatus: Mesos.TaskState,
+    message: String,
+    appId: PathId,
+    host: String,
+    ipAddresses: Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress],
+    ports: Seq[Int],
+    version: String,
+    eventType: String = "status_update_event",
+    timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
 /** Event indicating a status change for a known instance */
 case class InstanceChanged(
@@ -261,8 +260,8 @@ case class InstanceHealthChanged(
 }
 
 case class MesosFrameworkMessageEvent(
-  executorId: String,
-  slaveId: String,
-  message: Array[Byte],
-  eventType: String = "framework_message_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+    executorId: String,
+    slaveId: String,
+    message: Array[Byte],
+    eventType: String = "framework_message_event",
+    timestamp: String = Timestamp.now().toString) extends MarathonEvent
