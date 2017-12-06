@@ -20,8 +20,12 @@ addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.27")
 addSbtPlugin("com.lightbend.sbt" % "sbt-aspectj" % "0.11.0")
-addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-M15")
+addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-RC13")
 
+val JacksonVersion = "2.8.9"
+
+// Plugin dependency hell got you down?
+// Run sbt inside of `./project` and inspect dependencies using the coursierDependencyInverseTree command
 libraryDependencies ++= Seq(
   /* 1.0.4 and later versions cause the raml generator to fail; since we are likely moving to the new dcos type
    * generator, we leave this behind. */
@@ -29,8 +33,19 @@ libraryDependencies ++= Seq(
   "com.eed3si9n" %% "treehugger" % "0.4.3",
   "org.slf4j" % "slf4j-nop" % "1.7.25",
   "org.vafer" % "jdeb" % "1.5" artifacts Artifact("jdeb", "jar", "jar"),
-  "com.typesafe.play" %% "play-json" % "2.6.7"
+  "com.typesafe.play" %% "play-json" % "2.6.7",
+
+  // Other libs depend on older versions, but play JSON bumps a subset of jackson to 2.8.9, and these don't play well.
+  "com.fasterxml.jackson.module" %% "jackson-module-scala" % JacksonVersion,
+  "com.fasterxml.jackson.module" % "jackson-module-paranamer" % JacksonVersion,
+  "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % JacksonVersion
 )
 
 sbtPlugin := true
 
+// Needed for sbt-in-sbt.
+scalaVersion := {
+  sbtBinaryVersion.value match {
+    case "0.13" => "2.10.4"
+  }
+}
