@@ -27,9 +27,9 @@ import org.apache.mesos.{ Protos => Mesos }
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
-  config: MarathonConf,
-  pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
-    extends InstanceOpFactory with StrictLogging {
+    config: MarathonConf,
+    pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
+  extends InstanceOpFactory with StrictLogging {
 
   import InstanceOpFactoryImpl._
 

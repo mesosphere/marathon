@@ -20,7 +20,7 @@ import scala.concurrent.Future
 class PersistenceStoreRepository[Id, V, K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     extractId: V => Id)(implicit
-  ir: IdResolver[Id, V, C, K],
+    ir: IdResolver[Id, V, C, K],
     marshaller: Marshaller[V, S],
     unmarshaller: Unmarshaller[S, V]) extends Repository[Id, V] {
 
@@ -42,12 +42,12 @@ class PersistenceStoreRepository[Id, V, K, C, S](
   * for that value type. This allows the implicits to be hidden from the consumer of the API.
   */
 class PersistenceStoreVersionedRepository[Id, V, K, C, S](
-  persistenceStore: PersistenceStore[K, C, S],
-  extractId: V => Id,
-  extractVersion: V => OffsetDateTime)(implicit
-  ir: IdResolver[Id, V, C, K],
-  marshaller: Marshaller[V, S],
-  unmarshaller: Unmarshaller[S, V]) extends PersistenceStoreRepository[Id, V, K, C, S](
+    persistenceStore: PersistenceStore[K, C, S],
+    extractId: V => Id,
+    extractVersion: V => OffsetDateTime)(implicit
+    ir: IdResolver[Id, V, C, K],
+    marshaller: Marshaller[V, S],
+    unmarshaller: Unmarshaller[S, V]) extends PersistenceStoreRepository[Id, V, K, C, S](
   persistenceStore,
   extractId) with VersionedRepository[Id, V] {
 

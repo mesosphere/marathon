@@ -49,9 +49,9 @@ class SimulatedScheduler(clock: SettableClock) extends Scheduler {
     scheduledTasks(id) = ScheduledTask(
       time = clock.instant.toEpochMilli + delay.toMillis,
       action = () => {
-      cancellable.cancel()
-      executor.execute(runnable)
-    }
+        cancellable.cancel()
+        executor.execute(runnable)
+      }
     )
     poll()
     cancellable
@@ -66,9 +66,9 @@ class SimulatedScheduler(clock: SettableClock) extends Scheduler {
     scheduledTasks(id) = ScheduledTask(
       time = clock.instant.toEpochMilli + initialDelay.toMillis,
       action = () => {
-      scheduledTasks(id).time = clock.instant.toEpochMilli + interval.toMillis
-      executor.execute(runnable)
-    }
+        scheduledTasks(id).time = clock.instant.toEpochMilli + interval.toMillis
+        executor.execute(runnable)
+      }
     )
     poll()
     cancellable

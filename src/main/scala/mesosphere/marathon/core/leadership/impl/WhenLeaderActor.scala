@@ -20,7 +20,7 @@ private[leadership] object WhenLeaderActor {
   * Wraps an actor which is only started when we are currently the leader.
   */
 private[impl] class WhenLeaderActor(childProps: => Props)
-    extends Actor with StrictLogging with Stash {
+  extends Actor with StrictLogging with Stash {
 
   private[this] var leadershipCycle = 1
 

@@ -11,7 +11,7 @@ import scala.concurrent.duration._
   * Health check helper to define health behaviour of launched applications
   */
 class IntegrationHealthCheck(val appId: PathId, val versionId: String, var state: Boolean)
-    extends StrictLogging {
+  extends StrictLogging {
 
   case class HealthStatusChange(deadLine: Deadline, state: Boolean)
   private[this] var changes = List.empty[HealthStatusChange]

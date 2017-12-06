@@ -927,14 +927,14 @@ class TaskBuilderTest extends UnitTest {
         .setName(taskInfo.getName)
         .setPorts(
           MesosProtos.Ports.newBuilder
-          .addPorts(
-            MesosProtos.Port.newBuilder
-            .setName("http")
-            .setNumber(80)
-            .setProtocol("tcp")
-            .setLabels(Map("network-scope" -> "container", "network-name" -> "whatever").toMesosLabels)
+            .addPorts(
+              MesosProtos.Port.newBuilder
+                .setName("http")
+                .setNumber(80)
+                .setProtocol("tcp")
+                .setLabels(Map("network-scope" -> "container", "network-name" -> "whatever").toMesosLabels)
+                .build)
             .build)
-          .build)
         .build
       TextFormat.printToString(discoveryInfo) should equal(TextFormat.printToString(discoveryInfoProto))
       discoveryInfo should equal(discoveryInfoProto)

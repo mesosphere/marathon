@@ -86,10 +86,10 @@ case class ITEvent(eventType: String, info: Map[String, Any]) extends ITSSEEvent
   * @param url the url of the remote marathon instance
   */
 class MarathonFacade(
-  val url: String, baseGroup: PathId, implicit val waitTime: FiniteDuration = 30.seconds)(
-  implicit
-  val system: ActorSystem, mat: Materializer)
-    extends PodConversion with StrictLogging {
+    val url: String, baseGroup: PathId, implicit val waitTime: FiniteDuration = 30.seconds)(
+    implicit
+    val system: ActorSystem, mat: Materializer)
+  extends PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
   import AkkaHttpResponse._
   import mesosphere.marathon.core.async.ExecutionContexts.global

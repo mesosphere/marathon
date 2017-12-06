@@ -13,7 +13,7 @@ object NetworkNormalization {
   }
 
   case class Configure(
-    override val defaultNetworkName: Option[String]
+      override val defaultNetworkName: Option[String]
   ) extends Config
 
   case class Networks(config: Config, networks: Option[Seq[Network]])

@@ -12,14 +12,14 @@ sealed trait InstanceUpdateEffect extends Product with Serializable
 object InstanceUpdateEffect {
   /** The instance must be updated with the given state */
   case class Update(
-    instance: Instance,
-    oldState: Option[Instance],
-    events: Seq[MarathonEvent]) extends InstanceUpdateEffect
+      instance: Instance,
+      oldState: Option[Instance],
+      events: Seq[MarathonEvent]) extends InstanceUpdateEffect
 
   /** The instance with the given Id must be expunged */
   case class Expunge(
-    instance: Instance,
-    events: Seq[MarathonEvent]) extends InstanceUpdateEffect
+      instance: Instance,
+      events: Seq[MarathonEvent]) extends InstanceUpdateEffect
 
   /** The state if the instance didn't change */
   case class Noop(instanceId: Instance.Id) extends InstanceUpdateEffect
