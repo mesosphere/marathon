@@ -43,7 +43,7 @@ object ScalarMatchResult {
 
 /** An unsuccessful match of a scalar resource. */
 case class NoMatch(resourceName: String, requiredValue: Double, offeredValue: Double, scope: ScalarMatchResult.Scope)
-    extends ScalarMatchResult {
+  extends ScalarMatchResult {
 
   require(scope == ScalarMatchResult.Scope.NoneDisk || resourceName == Resource.DISK)
   require(requiredValue > offeredValue)
@@ -94,7 +94,7 @@ case class GeneralScalarMatch(
 object GeneralScalarMatch {
   /** A (potentially partial) consumption of a scalar resource. */
   case class Consumption(consumedValue: Double, role: String,
-    reservation: Option[ReservationInfo]) extends ScalarMatchResult.Consumption
+      reservation: Option[ReservationInfo]) extends ScalarMatchResult.Consumption
 }
 
 case class DiskResourceMatch(

@@ -31,18 +31,18 @@ import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class MarathonSchedulerActor private (
-  groupRepository: GroupRepository,
-  schedulerActions: SchedulerActions,
-  deploymentManager: DeploymentManager,
-  deploymentRepository: DeploymentRepository,
-  historyActorProps: Props,
-  healthCheckManager: HealthCheckManager,
-  killService: KillService,
-  launchQueue: LaunchQueue,
-  marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-  electionService: ElectionService,
-  eventBus: EventStream)(implicit val mat: Materializer) extends Actor
-    with StrictLogging with Stash {
+    groupRepository: GroupRepository,
+    schedulerActions: SchedulerActions,
+    deploymentManager: DeploymentManager,
+    deploymentRepository: DeploymentRepository,
+    historyActorProps: Props,
+    healthCheckManager: HealthCheckManager,
+    killService: KillService,
+    launchQueue: LaunchQueue,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    electionService: ElectionService,
+    eventBus: EventStream)(implicit val mat: Materializer) extends Actor
+  with StrictLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 

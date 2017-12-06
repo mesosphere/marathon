@@ -12,7 +12,7 @@ import scala.concurrent.Future
   * Notify the health check manager of this update.
   */
 class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManagerProvider: Provider[HealthCheckManager])
-    extends InstanceChangeHandler {
+  extends InstanceChangeHandler {
   override def name: String = "notifyHealthCheckManager"
 
   lazy val healthCheckManager = healthCheckManagerProvider.get

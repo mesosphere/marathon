@@ -25,7 +25,7 @@ private[flow] object OfferMatcherLaunchTokensActor {
   * In addition, we periodically reset our token count to a fixed number.
   */
 private[impl] class OfferMatcherLaunchTokensActor(conf: LaunchTokenConfig, offerMatcherManager: OfferMatcherManager)
-    extends Actor {
+  extends Actor {
   var periodicSetToken: Cancellable = _
 
   override def preStart(): Unit = {

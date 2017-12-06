@@ -413,10 +413,10 @@ object PodStatusConversionTest {
   )
 
   case class InstanceFixture(
-    since: Timestamp,
-    agentInfo: core.instance.Instance.AgentInfo,
-    taskIds: Seq[core.task.Task.Id],
-    instance: core.instance.Instance)
+      since: Timestamp,
+      agentInfo: core.instance.Instance.AgentInfo,
+      taskIds: Seq[core.task.Task.Id],
+      instance: core.instance.Instance)
 
   def createdInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
     fakeInstance(pod, core.condition.Condition.Created, core.condition.Condition.Created)

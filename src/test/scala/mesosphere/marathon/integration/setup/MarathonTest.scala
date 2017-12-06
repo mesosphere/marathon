@@ -58,7 +58,7 @@ case class LocalMarathon(
     zkUrl: String,
     conf: Map[String, String] = Map.empty,
     mainClass: String = "mesosphere.marathon.Main")(implicit
-  system: ActorSystem,
+    system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable with StrictLogging {
@@ -783,7 +783,7 @@ trait MarathonSuite extends Suite with StrictLogging with ScalaFutures with Befo
   * Base trait that starts a local marathon but doesn't have mesos/zookeeper yet
   */
 trait LocalMarathonTest extends MarathonTest with ScalaFutures
-    with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
+  with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
 
   def marathonArgs: Map[String, String] = Map.empty
 

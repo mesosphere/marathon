@@ -14,13 +14,13 @@ trait SchedulerDriverFactory {
 }
 
 class MesosSchedulerDriverFactory @Inject() (
-  holder: MarathonSchedulerDriverHolder,
-  config: MarathonConf,
-  httpConfig: HttpConf,
-  frameworkIdRepository: FrameworkIdRepository,
-  scheduler: Scheduler)
+    holder: MarathonSchedulerDriverHolder,
+    config: MarathonConf,
+    httpConfig: HttpConf,
+    frameworkIdRepository: FrameworkIdRepository,
+    scheduler: Scheduler)
 
-    extends SchedulerDriverFactory {
+  extends SchedulerDriverFactory {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 

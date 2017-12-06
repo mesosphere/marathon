@@ -34,8 +34,8 @@ class MarathonHealthCheckManager(
     groupManager: GroupManager)(implicit mat: Materializer) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
-    healthCheck: HealthCheck,
-    actor: ActorRef)
+      healthCheck: HealthCheck,
+      actor: ActorRef)
 
   protected[this] var appHealthChecks: RWLock[mutable.Map[PathId, Map[Timestamp, Set[ActiveHealthCheck]]]] =
     RWLock(mutable.Map.empty.withDefaultValue(Map.empty.withDefaultValue(Set.empty)))

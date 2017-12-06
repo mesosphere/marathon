@@ -83,7 +83,7 @@ class DeploymentRepositoryImpl[K, C, S](
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int)(implicit
-  ir: IdResolver[String, StoredPlan, C, K],
+    ir: IdResolver[String, StoredPlan, C, K],
     marshaller: Marshaller[StoredPlan, S],
     unmarshaller: Unmarshaller[S, StoredPlan],
     ctx: ExecutionContext,
