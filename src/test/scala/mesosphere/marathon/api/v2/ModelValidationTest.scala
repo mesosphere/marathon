@@ -78,9 +78,13 @@ class ModelValidationTest extends UnitTest with GroupCreation {
       val rootGroup = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
         createGroup("/test/group1".toPath, Map(
           validApp.id -> validApp,
-          invalidApp.id -> invalidApp)
+          invalidApp.id -> invalidApp),
+          validate = false
         ),
-        createGroup("/test/group2".toPath)))))
+        createGroup("/test/group2".toPath, validate = false)),
+        validate = false)),
+        validate = false
+      )
 
       validate(rootGroup)(RootGroup.rootGroupValidator(Set())) match {
         case Success => fail()

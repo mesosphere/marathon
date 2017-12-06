@@ -151,7 +151,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
 
     "access without authorization is denied if the resource exists" in new FixtureWithRealGroupManager {
       Given("A real group manager with one app")
-      val app = AppDefinition("/a".toRootPath)
+      val app = AppDefinition("/a".toRootPath, cmd = Some("sleep"))
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
 
       Given("An unauthorized request")
@@ -251,7 +251,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
     "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in new FixtureWithRealGroupManager(
       initialRoot = {
       val app = AppDefinition("/group/app".toRootPath)
-      createRootGroup(groups = Set(createGroup("/group".toRootPath, Map(app.id -> app))))
+      createRootGroup(groups = Set(createGroup("/group".toRootPath, Map(app.id -> app), validate = false)), validate = false)
     }
     ) {
       Given("A real group manager with one app")

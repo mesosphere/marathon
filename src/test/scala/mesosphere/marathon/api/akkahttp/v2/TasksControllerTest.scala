@@ -363,7 +363,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
     "list (txt) tasks with less ports than the current app version" in new Fixture {
       // Regression test for #234
       Given("one app with one task with less ports than required")
-      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
       val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
@@ -386,8 +386,8 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
     "see only apps you are authorized to see" in {
       // Regression test for #234
       Given("one app with one task with less ports than required")
-      val authorizedApp = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
-      val notAuthorizedApp = AppDefinition("/foo2".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+      val authorizedApp = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"))
+      val notAuthorizedApp = AppDefinition("/foo2".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(authorizedApp.id).addTaskRunning().getInstance()
       val notAuthorizedInstance = TestInstanceBuilder.newBuilder(notAuthorizedApp.id).addTaskRunning().getInstance()
       val f = Fixture(authFn = resource => {

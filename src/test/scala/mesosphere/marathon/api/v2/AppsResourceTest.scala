@@ -78,10 +78,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       Raml.fromRaml(normalized)
     }
 
-    def prepareApp(app: App, groupManager: GroupManager): (Array[Byte], DeploymentPlan) = {
+    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef))
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate)
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -686,7 +686,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -775,7 +775,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           mem = -128)
-        val (body, plan) = prepareApp(app, groupManager)
+        val (body, plan) = prepareApp(app, groupManager, validate = false)
 
         Then("A constraint violation exception is thrown")
         val response = appsResource.create(body, force = false, auth.request)
@@ -785,7 +785,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           cpus = -1)
-        val (body, _) = prepareApp(app, groupManager)
+        val (body, _) = prepareApp(app, groupManager, validate = false)
 
         val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
@@ -794,7 +794,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           instances = -1)
-        val (body, _) = prepareApp(app, groupManager)
+        val (body, _) = prepareApp(app, groupManager, validate = false)
 
         val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
@@ -835,7 +835,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
     "Create a new app fails with Validation errors" in new Fixture {
       Given("An app with validation errors")
       val app = App(id = "/app")
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       Then("A constraint violation exception is thrown")
       val response = appsResource.create(body, force = false, auth.request)
@@ -1302,7 +1302,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
     }
 
     "Restart an existing app" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       service.deploy(any, any) returns Future.successful(Done)
@@ -1435,9 +1435,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       restart.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
-    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath)))) {
+    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath, cmd = Some("sleep"))))) {
       Given("A real Group Manager with one app")
-      val appA = AppDefinition("/a".toRootPath)
+      val appA = AppDefinition("/a".toRootPath, cmd = Some("sleep"))
       val rootGroup = initialRoot
 
       Given("An unauthorized request")

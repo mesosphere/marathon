@@ -16,7 +16,7 @@ trait GroupCreation {
     val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
 
     if (validate) {
-      val validation = accord.validate(group)(RootGroup.rootGroupValidator(Set()))
+      val validation = accord.validate(group)(RootGroup.rootGroupValidator(Set("secrets")))
       assert(validation.isSuccess, s"Provided test root group was not valid: ${validation.toString}")
     }
 
@@ -43,7 +43,7 @@ trait GroupCreation {
       pods ++ groupsById.values.flatMap(_.transitivePodsById))
 
     if (validate) {
-      val validation = accord.validate(group)(Group.validGroup(id.parent, Set()))
+      val validation = accord.validate(group)(Group.validGroup(id.parent, Set("secrets")))
       assert(validation.isSuccess, s"Provided test group was not valid: ${validation.toString}")
     }
 
