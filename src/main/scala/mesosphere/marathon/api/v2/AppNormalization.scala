@@ -332,10 +332,10 @@ object AppNormalization {
     * (that uses app.networks, and container.portMappings)
     */
   case class NetworkTranslation(
-    ipAddress: Option[IpAddress],
-    networkType: Option[DockerNetwork],
-    networks: Option[Seq[Network]],
-    config: Config)
+      ipAddress: Option[IpAddress],
+      networkType: Option[DockerNetwork],
+      networks: Option[Seq[Network]],
+      config: Config)
 
   object NetworkTranslation {
     implicit val normalizedNetworks: Normalization[NetworkTranslation] = Normalization { nt =>

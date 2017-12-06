@@ -14,7 +14,7 @@ private[leadership] object LeadershipCoordinatorActor {
 }
 
 private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[ActorRef])
-    extends Actor with StrictLogging with Stash {
+  extends Actor with StrictLogging with Stash {
 
   override def preStart(): Unit = {
     whenLeaderActors.foreach(context.watch)

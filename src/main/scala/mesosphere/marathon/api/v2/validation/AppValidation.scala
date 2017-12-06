@@ -41,8 +41,8 @@ trait AppValidation {
   private def portMappingIsCompatibleWithNetworks(networks: Seq[Network]): Validator[ContainerPortMapping] = {
     val hostPortRequiresNetworkName = isTrue[ContainerPortMapping](
       AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks) { mapping =>
-      mapping.hostPort.isEmpty || mapping.networkNames.length == 1
-    }
+        mapping.hostPort.isEmpty || mapping.networkNames.length == 1
+      }
     implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
   }
 
