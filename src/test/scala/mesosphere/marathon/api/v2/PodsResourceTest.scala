@@ -813,9 +813,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
   }
 
   case class Fixture(
-    podsResource: PodsResource,
-    auth: TestAuthFixture,
-    podSystem: PodManager
+      podsResource: PodsResource,
+      auth: TestAuthFixture,
+      podSystem: PodManager
   )
 
   object Fixture {

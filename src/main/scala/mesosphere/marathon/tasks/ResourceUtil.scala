@@ -38,8 +38,8 @@ object ResourceUtil {
     * be consumed from resources in the offer with the same [[ResourceMatchKey]].
     */
   private[this] case class ResourceMatchKey(
-    role: String, name: String,
-    reservation: Option[ReservationInfo], disk: Option[DiskInfo])
+      role: String, name: String,
+      reservation: Option[ReservationInfo], disk: Option[DiskInfo])
 
   private[this] object ResourceMatchKey {
     def apply(resource: MesosProtos.Resource): ResourceMatchKey = {

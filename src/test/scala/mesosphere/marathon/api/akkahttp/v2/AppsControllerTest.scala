@@ -2148,8 +2148,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
 
       val plan = DeploymentPlan(rootGroup, rootGroup)
@@ -2194,8 +2194,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
       val plan = DeploymentPlan(rootGroup, rootGroup)
 
@@ -2239,8 +2239,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
       groupManager.updateRoot(any, any, any, any, any) returns Future.failed(AppNotFoundException(PathId("/unknown")))
       groupManager.rootGroup() returns rootGroup
@@ -2275,8 +2275,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       )
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
       When("update of multiple apps is done and creation is allowed")
       val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
@@ -2303,8 +2303,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       )
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
       When("update of multiple apps is done and creation is allowed")
       val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(

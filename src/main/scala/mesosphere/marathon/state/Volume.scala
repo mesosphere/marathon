@@ -64,10 +64,10 @@ object Volume {
   * absolute.
   */
 case class DockerVolume(
-  containerPath: String,
-  hostPath: String,
-  mode: Mesos.Volume.Mode)
-    extends Volume
+    containerPath: String,
+    hostPath: String,
+    mode: Mesos.Volume.Mode)
+  extends Volume
 
 object DockerVolume {
   implicit val validDockerVolume = validator[DockerVolume] { vol =>
@@ -153,10 +153,10 @@ object DiskType {
 }
 
 case class PersistentVolumeInfo(
-  size: Long,
-  maxSize: Option[Long] = None,
-  `type`: DiskType = DiskType.Root,
-  constraints: Set[Constraint] = Set.empty)
+    size: Long,
+    maxSize: Option[Long] = None,
+    `type`: DiskType = DiskType.Root,
+    constraints: Set[Constraint] = Set.empty)
 
 object PersistentVolumeInfo {
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
@@ -228,9 +228,9 @@ object PersistentVolumeInfo {
 }
 
 case class PersistentVolume(
-  val containerPath: String,
-  val persistent: PersistentVolumeInfo,
-  val mode: Mesos.Volume.Mode) extends Volume
+    val containerPath: String,
+    val persistent: PersistentVolumeInfo,
+    val mode: Mesos.Volume.Mode) extends Volume
 
 object PersistentVolume {
   import PathPatterns._
@@ -282,10 +282,10 @@ object PathPatterns {
   * @param options contains storage provider-specific configuration configuration
   */
 case class ExternalVolumeInfo(
-  size: Option[Long] = None,
-  name: String,
-  provider: String,
-  options: Map[String, String] = Map.empty[String, String])
+    size: Option[Long] = None,
+    name: String,
+    provider: String,
+    options: Map[String, String] = Map.empty[String, String])
 
 object OptionLabelPatterns {
   val OptionNamespaceSeparator = "/"
@@ -319,9 +319,9 @@ object ExternalVolumeInfo {
 }
 
 case class ExternalVolume(
-  containerPath: String,
-  external: ExternalVolumeInfo,
-  mode: Mesos.Volume.Mode) extends Volume
+    containerPath: String,
+    external: ExternalVolumeInfo,
+    mode: Mesos.Volume.Mode) extends Volume
 
 object ExternalVolume {
   def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] = validator[ExternalVolume] { ev =>

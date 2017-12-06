@@ -209,11 +209,11 @@ private[termination] object KillServiceActor {
     * @param issued the time of the last issued kill request
     */
   case class ToKill(
-    instanceId: Instance.Id,
-    taskIdsToKill: Seq[Task.Id],
-    maybeInstance: Option[Instance],
-    attempts: Int,
-    issued: Timestamp = Timestamp.zero)
+      instanceId: Instance.Id,
+      taskIdsToKill: Seq[Task.Id],
+      maybeInstance: Option[Instance],
+      attempts: Int,
+      issued: Timestamp = Timestamp.zero)
 }
 
 /**

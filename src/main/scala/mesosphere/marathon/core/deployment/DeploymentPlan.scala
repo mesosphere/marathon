@@ -42,9 +42,9 @@ case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAc
 // runnable spec is started, but the instance count should be changed
 // TODO: Why is there an Option[Seq[]]?!
 case class ScaleApplication(
-  runSpec: RunSpec,
-  scaleTo: Int,
-  sentencedToDeath: Option[Seq[Instance]] = None) extends DeploymentAction
+    runSpec: RunSpec,
+    scaleTo: Int,
+    sentencedToDeath: Option[Seq[Instance]] = None) extends DeploymentAction
 
 // runnable spec is started, but shall be completely stopped
 case class StopApplication(runSpec: RunSpec) extends DeploymentAction

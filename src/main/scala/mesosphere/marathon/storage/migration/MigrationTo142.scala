@@ -12,7 +12,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
 class MigrationTo142(appRepository: AppRepository)(implicit
-  ctx: ExecutionContext,
+    ctx: ExecutionContext,
     mat: Materializer) extends StrictLogging {
 
   import MigrationTo142.migrationFlow

@@ -17,10 +17,10 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class AppDefinitionFormatsTest extends UnitTest
-    with AppAndGroupFormats
-    with HealthCheckFormats
-    with Matchers
-    with ValidationTestLike {
+  with AppAndGroupFormats
+  with HealthCheckFormats
+  with Matchers
+  with ValidationTestLike {
 
   import Formats.PathIdFormat
 

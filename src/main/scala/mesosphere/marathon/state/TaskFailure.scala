@@ -9,15 +9,15 @@ import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
 
 case class TaskFailure(
-  appId: PathId,
-  taskId: mesos.TaskID,
-  state: mesos.TaskState,
-  message: String = "",
-  host: String = "",
-  version: Timestamp = Timestamp.now(),
-  timestamp: Timestamp = Timestamp.now(),
-  slaveId: Option[mesos.SlaveID] = None)
-    extends MarathonState[Protos.TaskFailure, TaskFailure] {
+    appId: PathId,
+    taskId: mesos.TaskID,
+    state: mesos.TaskState,
+    message: String = "",
+    host: String = "",
+    version: Timestamp = Timestamp.now(),
+    timestamp: Timestamp = Timestamp.now(),
+    slaveId: Option[mesos.SlaveID] = None)
+  extends MarathonState[Protos.TaskFailure, TaskFailure] {
 
   override def mergeFromProto(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(proto)

@@ -25,10 +25,10 @@ import scala.sys.process.ProcessBuilder
 import scala.util.Try
 
 case class MesosConfig(
-  launcher: String = "posix",
-  containerizers: String = "mesos",
-  isolation: Option[String] = None,
-  imageProviders: Option[String] = None)
+    launcher: String = "posix",
+    containerizers: String = "mesos",
+    isolation: Option[String] = None,
+    imageProviders: Option[String] = None)
 
 case class MesosCluster(
     suiteName: String,
@@ -41,7 +41,7 @@ case class MesosCluster(
     waitForMesosTimeout: FiniteDuration = 5.minutes,
     mastersFaultDomains: Seq[Option[FaultDomain]],
     agentsFaultDomains: Seq[Option[FaultDomain]])(implicit
-  system: ActorSystem,
+    system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable {

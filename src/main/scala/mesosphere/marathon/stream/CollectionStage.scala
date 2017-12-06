@@ -12,7 +12,7 @@ import scala.concurrent.{ Future, Promise }
   * Based on akka's SeqStage
   */
 private final class CollectionStage[T, C](buf: mutable.Builder[T, C])
-    extends GraphStageWithMaterializedValue[SinkShape[T], Future[C]] {
+  extends GraphStageWithMaterializedValue[SinkShape[T], Future[C]] {
   val in = Inlet[T]("collection.in")
 
   override def toString: String = "collectionStage"
