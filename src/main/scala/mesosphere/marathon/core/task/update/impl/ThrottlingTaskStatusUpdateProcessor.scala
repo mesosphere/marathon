@@ -19,9 +19,9 @@ object ThrottlingTaskStatusUpdateProcessor {
 }
 
 private[core] class ThrottlingTaskStatusUpdateProcessor @Inject() (
-  @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag) serializePublish: WorkQueue,
-  @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag) wrapped: TaskStatusUpdateProcessor)
-    extends TaskStatusUpdateProcessor {
+    @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag) serializePublish: WorkQueue,
+    @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag) wrapped: TaskStatusUpdateProcessor)
+  extends TaskStatusUpdateProcessor {
   override def publish(status: TaskStatus): Future[Unit] = {
     serializePublish(wrapped.publish(status))(ExecutionContexts.global)
   }

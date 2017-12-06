@@ -206,15 +206,15 @@ object RuntimeConfigurationRepository {
 }
 
 class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-  ir: IdResolver[PathId, AppDefinition, C, K],
-  marhaller: Marshaller[AppDefinition, S],
-  unmarshaller: Unmarshaller[S, AppDefinition],
-  ctx: ExecutionContext)
-    extends PersistenceStoreVersionedRepository[PathId, AppDefinition, K, C, S](
-      persistenceStore,
-      _.id,
-      _.version.toOffsetDateTime)
-    with AppRepository {
+    ir: IdResolver[PathId, AppDefinition, C, K],
+    marhaller: Marshaller[AppDefinition, S],
+    unmarshaller: Unmarshaller[S, AppDefinition],
+    ctx: ExecutionContext)
+  extends PersistenceStoreVersionedRepository[PathId, AppDefinition, K, C, S](
+    persistenceStore,
+    _.id,
+    _.version.toOffsetDateTime)
+  with AppRepository {
 
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
@@ -244,15 +244,15 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 }
 
 class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-  ir: IdResolver[PathId, PodDefinition, C, K],
-  marshaller: Marshaller[PodDefinition, S],
-  unmarshaller: Unmarshaller[S, PodDefinition],
-  ctx: ExecutionContext)
-    extends PersistenceStoreVersionedRepository[PathId, PodDefinition, K, C, S](
-      persistenceStore,
-      _.id,
-      _.version.toOffsetDateTime
-    ) with PodRepository {
+    ir: IdResolver[PathId, PodDefinition, C, K],
+    marshaller: Marshaller[PodDefinition, S],
+    unmarshaller: Unmarshaller[S, PodDefinition],
+    ctx: ExecutionContext)
+  extends PersistenceStoreVersionedRepository[PathId, PodDefinition, K, C, S](
+    persistenceStore,
+    _.id,
+    _.version.toOffsetDateTime
+  ) with PodRepository {
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
   @SuppressWarnings(Array("all")) // async/await
@@ -281,17 +281,17 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 }
 
 class InstanceRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-  ir: IdResolver[Instance.Id, Instance, C, K],
-  marshaller: Marshaller[Instance, S],
-  unmarshaller: Unmarshaller[S, Instance])
-    extends PersistenceStoreRepository[Instance.Id, Instance, K, C, S](persistenceStore, _.instanceId)
-    with InstanceRepository
+    ir: IdResolver[Instance.Id, Instance, C, K],
+    marshaller: Marshaller[Instance, S],
+    unmarshaller: Unmarshaller[S, Instance])
+  extends PersistenceStoreRepository[Instance.Id, Instance, K, C, S](persistenceStore, _.instanceId)
+  with InstanceRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
-  implicit
-  ir: IdResolver[PathId, TaskFailure, C, K],
-  marshaller: Marshaller[TaskFailure, S],
-  unmarshaller: Unmarshaller[S, TaskFailure]
+    implicit
+    ir: IdResolver[PathId, TaskFailure, C, K],
+    marshaller: Marshaller[TaskFailure, S],
+    unmarshaller: Unmarshaller[S, TaskFailure]
 ) extends PersistenceStoreVersionedRepository[PathId, TaskFailure, K, C, S](
   persistenceStore,
   _.appId,

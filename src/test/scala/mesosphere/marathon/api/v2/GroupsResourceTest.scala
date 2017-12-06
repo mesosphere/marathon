@@ -250,9 +250,9 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
 
     "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in new FixtureWithRealGroupManager(
       initialRoot = {
-      val app = AppDefinition("/group/app".toRootPath)
-      createRootGroup(groups = Set(createGroup("/group".toRootPath, Map(app.id -> app))))
-    }
+        val app = AppDefinition("/group/app".toRootPath)
+        createRootGroup(groups = Set(createGroup("/group".toRootPath, Map(app.id -> app))))
+      }
     ) {
       Given("A real group manager with one app")
 

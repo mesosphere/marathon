@@ -11,8 +11,8 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
   import DVDIProviderVolumeToUnifiedMesosVolumeTest._
 
   case class TestParameters(
-    externalVolume: ExternalVolume,
-    wantsVol: Volume)
+      externalVolume: ExternalVolume,
+      wantsVol: Volume)
 
   val testParameters = Seq[TestParameters](
     TestParameters(

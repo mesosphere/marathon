@@ -119,9 +119,9 @@ object AuthDirectives {
     * @tparam Resource The resource type
     */
   case class AuthorizedActionSet[Resource](
-    create: AuthorizedAction[Resource],
-    update: AuthorizedAction[Resource],
-    delete: AuthorizedAction[Resource],
-    view: AuthorizedAction[Resource]
+      create: AuthorizedAction[Resource],
+      update: AuthorizedAction[Resource],
+      delete: AuthorizedAction[Resource],
+      view: AuthorizedAction[Resource]
   )
 }

@@ -13,10 +13,10 @@ import scala.util.Random
 import scala.util.control.NonFatal
 
 case class RetryConfig(
-  maxAttempts: Int = Retry.DefaultMaxAttempts,
-  minDelay: Duration = Retry.DefaultMinDelay,
-  maxDelay: Duration = Retry.DefaultMaxDelay,
-  maxDuration: Duration = Retry.DefaultMaxDuration)
+    maxAttempts: Int = Retry.DefaultMaxAttempts,
+    minDelay: Duration = Retry.DefaultMinDelay,
+    maxDelay: Duration = Retry.DefaultMaxDelay,
+    maxDuration: Duration = Retry.DefaultMaxDuration)
 
 object RetryConfig {
   def apply(config: Config): RetryConfig = {

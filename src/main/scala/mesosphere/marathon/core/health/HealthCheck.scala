@@ -123,16 +123,16 @@ sealed trait MesosHealthCheckWithPorts extends HealthCheckWithPort { this: Healt
 }
 
 case class MarathonHttpHealthCheck(
-  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
-  interval: FiniteDuration = HealthCheck.DefaultInterval,
-  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
-  maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
-  portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
-  port: Option[Int] = HealthCheckWithPort.DefaultPort,
-  path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
-  protocol: Protocol = MarathonHttpHealthCheck.DefaultProtocol,
-  ignoreHttp1xx: Boolean = MarathonHttpHealthCheck.DefaultIgnoreHttp1xx)
-    extends HealthCheck with MarathonHealthCheck {
+    gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+    interval: FiniteDuration = HealthCheck.DefaultInterval,
+    timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+    maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
+    portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
+    port: Option[Int] = HealthCheckWithPort.DefaultPort,
+    path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
+    protocol: Protocol = MarathonHttpHealthCheck.DefaultProtocol,
+    ignoreHttp1xx: Boolean = MarathonHttpHealthCheck.DefaultIgnoreHttp1xx)
+  extends HealthCheck with MarathonHealthCheck {
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder
       .setProtocol(protocol)
@@ -166,13 +166,13 @@ object MarathonHttpHealthCheck {
 }
 
 case class MarathonTcpHealthCheck(
-  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
-  interval: FiniteDuration = HealthCheck.DefaultInterval,
-  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
-  maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
-  portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
-  port: Option[Int] = HealthCheckWithPort.DefaultPort)
-    extends HealthCheck with MarathonHealthCheck {
+    gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+    interval: FiniteDuration = HealthCheck.DefaultInterval,
+    timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+    maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
+    portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
+    port: Option[Int] = HealthCheckWithPort.DefaultPort)
+  extends HealthCheck with MarathonHealthCheck {
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder.setProtocol(Protos.HealthCheckDefinition.Protocol.TCP)
 
@@ -196,13 +196,13 @@ object MarathonTcpHealthCheck {
 }
 
 case class MesosCommandHealthCheck(
-  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
-  interval: FiniteDuration = HealthCheck.DefaultInterval,
-  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
-  maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
-  delay: FiniteDuration = HealthCheck.DefaultDelay,
-  command: Executable)
-    extends HealthCheck with MesosHealthCheck {
+    gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+    interval: FiniteDuration = HealthCheck.DefaultInterval,
+    timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+    maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
+    delay: FiniteDuration = HealthCheck.DefaultDelay,
+    command: Executable)
+  extends HealthCheck with MesosHealthCheck {
   override def toProto: Protos.HealthCheckDefinition = {
     protoBuilder
       .setProtocol(Protos.HealthCheckDefinition.Protocol.COMMAND)
@@ -236,17 +236,17 @@ object MesosCommandHealthCheck {
 }
 
 case class MesosHttpHealthCheck(
-  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
-  interval: FiniteDuration = HealthCheck.DefaultInterval,
-  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
-  maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
-  portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
-  port: Option[Int] = HealthCheckWithPort.DefaultPort,
-  path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
-  protocol: Protocol = MesosHttpHealthCheck.DefaultProtocol,
-  ipProtocol: IpProtocol = MesosHttpHealthCheck.DefaultIpProtocol,
-  delay: FiniteDuration = HealthCheck.DefaultDelay)
-    extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
+    gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+    interval: FiniteDuration = HealthCheck.DefaultInterval,
+    timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+    maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
+    portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
+    port: Option[Int] = HealthCheckWithPort.DefaultPort,
+    path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
+    protocol: Protocol = MesosHttpHealthCheck.DefaultProtocol,
+    ipProtocol: IpProtocol = MesosHttpHealthCheck.DefaultIpProtocol,
+    delay: FiniteDuration = HealthCheck.DefaultDelay)
+  extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
   require(protocol == Protocol.MESOS_HTTP || protocol == Protocol.MESOS_HTTPS)
 
   import MesosHttpHealthCheck._
@@ -318,15 +318,15 @@ object MesosHttpHealthCheck {
 }
 
 case class MesosTcpHealthCheck(
-  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
-  interval: FiniteDuration = HealthCheck.DefaultInterval,
-  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
-  maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
-  portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
-  port: Option[Int] = HealthCheckWithPort.DefaultPort,
-  ipProtocol: IpProtocol = MesosHttpHealthCheck.DefaultIpProtocol,
-  delay: FiniteDuration = HealthCheck.DefaultDelay)
-    extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
+    gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+    interval: FiniteDuration = HealthCheck.DefaultInterval,
+    timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+    maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
+    portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
+    port: Option[Int] = HealthCheckWithPort.DefaultPort,
+    ipProtocol: IpProtocol = MesosHttpHealthCheck.DefaultIpProtocol,
+    delay: FiniteDuration = HealthCheck.DefaultDelay)
+  extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
 
   import MesosHttpHealthCheck._
 

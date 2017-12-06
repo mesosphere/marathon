@@ -22,7 +22,7 @@ import scala.util.control.NonFatal
   * A Akka-HTTP-based implementation of a ReadinessCheckExecutor.
   */
 private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorSystem, materializer: Materializer)
-    extends ReadinessCheckExecutor {
+  extends ReadinessCheckExecutor {
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
   private[this] val log = LoggerFactory.getLogger(getClass)
