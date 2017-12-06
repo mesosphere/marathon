@@ -27,9 +27,9 @@ object TaskGroupBuilder extends StrictLogging {
   private val ephemeralVolPathPrefix = "volumes/"
 
   case class BuilderConfig(
-    acceptedResourceRoles: Set[String],
-    envVarsPrefix: Option[String],
-    mesosBridgeName: String)
+      acceptedResourceRoles: Set[String],
+      envVarsPrefix: Option[String],
+      mesosBridgeName: String)
 
   def build(
     podDefinition: PodDefinition,
@@ -62,13 +62,13 @@ object TaskGroupBuilder extends StrictLogging {
 
     val taskGroup = mesos.TaskGroupInfo.newBuilder.addAllTasks(
       podDefinition.containers.map { container =>
-      val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
-      val portAssignments = computePortAssignments(podDefinition, endpoints)
+        val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
+        val portAssignments = computePortAssignments(podDefinition, endpoints)
 
-      computeTaskInfo(container, podDefinition, offer, instanceId, resourceMatch.hostPorts, config, portAssignments)
-        .setDiscovery(taskDiscovery(podDefinition, endpoints))
-        .build
-    }.asJava
+        computeTaskInfo(container, podDefinition, offer, instanceId, resourceMatch.hostPorts, config, portAssignments)
+          .setDiscovery(taskDiscovery(podDefinition, endpoints))
+          .build
+      }.asJava
     )
 
     // call all configured run spec customizers here (plugin)

@@ -35,7 +35,7 @@ import scala.util.Random
   */
 case class LazyCachingPersistenceStore[K, Category, Serialized](
     store: BasePersistenceStore[K, Category, Serialized])(implicit
-  mat: Materializer,
+    mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
   private val lock = KeyedLock[String]("LazyCachingStore", Int.MaxValue)
@@ -196,7 +196,7 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
 case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     store: PersistenceStore[K, Category, Serialized],
     config: VersionCacheConfig = VersionCacheConfig.Default)(implicit
-  mat: Materializer,
+    mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
   override def markOpen(): Unit = store.markOpen()

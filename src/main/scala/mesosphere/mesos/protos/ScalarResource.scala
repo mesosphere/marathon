@@ -1,9 +1,9 @@
 package mesosphere.mesos.protos
 
 case class ScalarResource(
-  name: String,
-  value: Double,
-  role: String = "*") extends Resource
+    name: String,
+    value: Double,
+    role: String = "*") extends Resource
 
 object ScalarResource {
   def cpus(value: Double, role: String = "*"): ScalarResource = ScalarResource(Resource.CPUS, value, role)

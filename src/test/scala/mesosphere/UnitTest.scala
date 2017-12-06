@@ -64,20 +64,20 @@ trait CancelFailedTestWithKnownIssue extends TestSuite {
   * helpers all mixed in.
   */
 trait UnitTestLike extends WordSpecLike
-    with GivenWhenThen
-    with ScalaFutures
-    with JavaFutures
-    with Matchers
-    with BeforeAndAfter
-    with BeforeAndAfterEach
-    with OptionValues
-    with TryValues
-    with AppendedClues
-    with StrictLogging
-    with Mockito
-    with BeforeAndAfterAll
-    with TimeLimitedTests
-    with CancelFailedTestWithKnownIssue {
+  with GivenWhenThen
+  with ScalaFutures
+  with JavaFutures
+  with Matchers
+  with BeforeAndAfter
+  with BeforeAndAfterEach
+  with OptionValues
+  with TryValues
+  with AppendedClues
+  with StrictLogging
+  with Mockito
+  with BeforeAndAfterAll
+  with TimeLimitedTests
+  with CancelFailedTestWithKnownIssue {
 
   override val timeLimit = Span(1, Minute)
 

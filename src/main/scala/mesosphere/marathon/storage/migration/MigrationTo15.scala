@@ -21,7 +21,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 case class MigrationTo15(
     migration: Migration)(implicit
-  executionContext: ExecutionContext,
+    executionContext: ExecutionContext,
     materializer: Materializer) extends StrictLogging {
 
   import MigrationTo15._

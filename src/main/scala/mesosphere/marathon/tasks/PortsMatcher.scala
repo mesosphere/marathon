@@ -30,11 +30,11 @@ case class PortsMatch(hostPortsWithRole: Seq[Option[PortWithRole]]) {
   * Utility class for checking if the ports resource in an offer matches the requirements of an app.
   */
 class PortsMatcher private[tasks] (
-  runSpec: RunSpec,
-  offer: MesosProtos.Offer,
-  resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
-  random: Random = Random)
-    extends Logging {
+    runSpec: RunSpec,
+    offer: MesosProtos.Offer,
+    resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
+    random: Random = Random)
+  extends Logging {
 
   import PortsMatcher._
 
