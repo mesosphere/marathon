@@ -8,7 +8,6 @@ resolvers ++= Seq(
 
 addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.8.2")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
-addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.16.0")
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
 addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.1.0")
@@ -17,7 +16,6 @@ addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "1.1.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.9.3")
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.2")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
-addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.27")
 addSbtPlugin("com.lightbend.sbt" % "sbt-aspectj" % "0.11.0")
 addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-RC13")
@@ -49,3 +47,6 @@ scalaVersion := {
     case "0.13" => "2.10.4"
   }
 }
+
+// Needed for jdeb dependency of sbt-native-packager
+classpathTypes += "maven-plugin"
