@@ -71,25 +71,5 @@ class TaskIdTest extends UnitTest {
       originalId shouldNot equal(newTaskId)
       originalId.instanceId shouldEqual newTaskId.instanceId
     }
-
-    "TaskId.reservationId returns the same value for an id w/o attempt counter" in {
-      val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
-      val reservationId = Task.Id.reservationId(originalId.idString)
-
-      reservationId shouldEqual originalId.idString
-    }
-
-    "TaskId.reservationId returns the base value w/o attempt for an id including the attempt" in {
-      val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
-      val reservationIdFromOriginal = Task.Id.reservationId(originalId.idString)
-
-      val residentTaskId = Task.Id.forResidentTask(originalId)
-      residentTaskId.instanceId shouldEqual originalId.instanceId
-      Task.Id.reservationId(residentTaskId.idString) shouldEqual reservationIdFromOriginal
-
-      val anotherResidentTaskId = Task.Id.forResidentTask(residentTaskId)
-      anotherResidentTaskId.instanceId shouldEqual originalId.instanceId
-      Task.Id.reservationId(anotherResidentTaskId.idString) shouldEqual reservationIdFromOriginal
-    }
   }
 }

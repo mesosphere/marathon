@@ -137,7 +137,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
     }
 
     "match resources success with preserved reservations" in {
-      val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar")).labels
+      val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar.instance-uuid")).labels
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
@@ -254,7 +254,9 @@ class ResourceMatcherTest extends UnitTest with Inside {
     "dynamically reserved resources are NOT matched if they have known labels" in {
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal")
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal")
-      val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar")).labels)
+      val memReservation = MarathonTestHelper.reservation(
+        principal = "memPrincipal",
+        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar.instance-uuid")).labels)
       val diskReservation = MarathonTestHelper.reservation(principal = "memPrincipal")
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 

@@ -112,12 +112,7 @@ object Task {
       * For resident tasks, this will denote the number of launched tasks on a reservation since 1.5
       */
     lazy val attempt: Option[Long] = Id.attempt(idString)
-    /**
-      * ID used to create and match reservations. For backwards compatibility, this is basically a legacy taskId string.
-      * resident tasks will be given a launch attempt count with beginning with version 1.5. This count and the
-      * preceding separator are stripped off to end up with a taskId that can match previously launched reservations.
-      */
-    lazy val reservationId: String = Id.reservationId(idString)
+
     override def toString: String = s"task [$idString]"
     override def compare(that: Id): Int = idString.compare(that.idString)
   }
@@ -169,15 +164,6 @@ object Task {
         case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) => Some(attempt.toLong)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) => Some(attempt.toLong)
         case _ => None
-      }
-    }
-
-    def reservationId(taskId: String): String = {
-      taskId match {
-        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
-          runSpecId + "." + prefix + uuid
-        case ResidentTaskIdRegex(runSpecId, separator, uuid, _, attempt) => runSpecId + separator + uuid
-        case _ => taskId
       }
     }
 
