@@ -68,7 +68,7 @@ lazy val commonSettings = testSettings ++
   SbtAspectj.aspectjSettings ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.12.3",
+  scalaVersion := "2.12.4",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -107,7 +107,7 @@ lazy val commonSettings = testSettings ++
     "Mesosphere Public Repo (S3)",
     s3("downloads.mesosphere.io/maven")
   )),
-  s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
+  s3credentials := new EnvironmentVariableCredentialsProvider() | InstanceProfileCredentialsProvider.getInstance(),
 
   scapegoatVersion := "1.3.0",
 
