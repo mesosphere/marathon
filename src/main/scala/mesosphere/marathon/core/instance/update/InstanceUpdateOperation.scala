@@ -51,13 +51,13 @@ object InstanceUpdateOperation {
     *                  context of unique hostname constraints).
     */
   case class LaunchOnReservation(
-    instanceId: Instance.Id,
-    newTaskIds: Seq[Task.Id],
-    runSpecVersion: Timestamp,
-    timestamp: Timestamp,
-    statuses: Map[Task.Id, Task.Status],
-    hostPorts: Map[Task.Id, Seq[Int]],
-    agentInfo: AgentInfo) extends InstanceUpdateOperation
+      instanceId: Instance.Id,
+      newTaskIds: Seq[Task.Id],
+      runSpecVersion: Timestamp,
+      timestamp: Timestamp,
+      statuses: Map[Task.Id, Task.Status],
+      hostPorts: Map[Task.Id, Seq[Int]],
+      agentInfo: AgentInfo) extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.

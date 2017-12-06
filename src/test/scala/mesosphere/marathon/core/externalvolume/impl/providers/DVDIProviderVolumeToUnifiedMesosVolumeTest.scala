@@ -11,9 +11,9 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
   import DVDIProviderVolumeToUnifiedMesosVolumeTest._
 
   case class TestParameters(
-    externalVolume: ExternalVolume,
-    volumeMount: VolumeMount,
-    wantsVol: Volume)
+      externalVolume: ExternalVolume,
+      volumeMount: VolumeMount,
+      wantsVol: Volume)
 
   val mountPath = "/path"
   val readOnly = true
