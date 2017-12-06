@@ -116,7 +116,7 @@ lazy val commonSettings = testSettings ++
   coverageFailOnMinimum := true,
 
   fork in run := true,
-  aspectjVersion in Aspectj := "1.8.12",
+  aspectjVersion in Aspectj := "1.8.13",
   aspectjInputs in Aspectj += (aspectjCompiledClasses in Aspectj).value,
   products in Compile := (products in Aspectj).value,
   products in Runtime := (products in Aspectj).value,

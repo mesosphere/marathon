@@ -4,6 +4,7 @@ object Dependencies {
   import Dependency._
 
   val pluginInterface = Seq(
+    akkaActor % "compile",
     playJson % "compile",
     mesos % "compile",
     guava % "compile",
@@ -47,8 +48,6 @@ object Dependencies {
     alpakkaS3 % "compile",
     commonsCompress % "compile", // used for tar flow
     commonsIO % "compile",
-    akkaSse % "compile",
-
 
     // test
     Test.diffson % "test",
@@ -73,26 +72,25 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Aws = "1.11.129"
-    val Alpakka  = "0.8"
+    val Aws = "1.11.243"
+    val Alpakka  = "0.14"
     val Chaos = "0.10.0"
     val Guava = "19.0"
     val Mesos = "1.5.0-health-check-ipv6"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.4.0-2.0.1"
     val OpenJDK = "openjdk:8u121-jdk"
-    val Akka = "2.4.18"
-    val AkkaHttp = "10.0.6"
-    val AkkaSSE = "2.0.0"
+    val Akka = "2.5.7"
+    val AkkaHttp = "10.0.11"
     val ApacheCommonsCompress = "1.13"
-    val ApacheCommonsIO = "2.5"
+    val ApacheCommonsIO = "2.6"
     val AsyncAwait = "0.9.7"
     val Jersey = "1.18.6"
     val JettyServlets = "9.3.6.v20151106"
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
     val Diffson = "2.2.2"
-    val PlayJson = "2.6.6"
+    val PlayJson = "2.6.7"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.5"
     val MarathonUI = "1.3.0"
@@ -101,13 +99,13 @@ object Dependency {
     val Logstash = "4.9"
     val WixAccord = "0.7.1"
     val Java8Compat = "0.8.0"
-    val ScalaLogging = "3.5.0"
-    val Raven = "7.8.6"
+    val ScalaLogging = "3.7.2"
+    val Raven = "8.0.3"
     val JacksonVersion = "2.8.9"
 
     // test deps versions
     val Mockito = "1.10.19"
-    val ScalaTest = "3.0.3"
+    val ScalaTest = "3.0.4"
     val JUnit = "4.12"
     val JUnitBenchmarks = "0.7.2"
     val JMH = "1.19"
@@ -123,7 +121,7 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % V.AkkaHttp
-  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.17.0"
+  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.18.1"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
@@ -147,7 +145,6 @@ object Dependency {
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
-  val akkaSse = "de.heikoseeberger" %% "akka-sse" % V.AkkaSSE
 
   object Curator {
     /**
@@ -174,15 +171,16 @@ object Dependency {
       "org.apache.curator" % "curator-framework" % Version % "compile",
       "org.apache.curator" % "curator-test" % TestVersion % "test").map(_.excludeAll(excludeZk35))
 
-    val zk = Seq("org.apache.zookeeper" % "zookeeper" % "3.4.8")
+    val zk = Seq("org.apache.zookeeper" % "zookeeper" % "3.4.11")
     val all = curator ++ zk
   }
 
   object Kamon {
     val Version = "0.6.7"
 
+    // Note - While Kamon depends on Akka 2.4.x, version 0.6.7 is compatible with Akka 2.5.x
     val core = "io.kamon" %% "kamon-core" % Version % "compile"
-    val akka = "io.kamon" %% "kamon-akka" % Version % "compile"
+    val akka = "io.kamon" %% "kamon-akka-2.5" % Version % "compile"
     val autoweave = "io.kamon" %% "kamon-autoweave" % "0.6.5" % "compile"
     val scala = "io.kamon" %% "kamon-scala" % Version % "compile"
     val systemMetrics = "io.kamon" %% "kamon-system-metrics" % Version % "compile"
