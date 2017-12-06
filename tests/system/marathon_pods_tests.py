@@ -141,7 +141,7 @@ def test_event_channel_for_pods():
     # look for updated
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_update_message():
-        status, stdout = shakedown.run_command_on_master('cat events.txt')
+        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
         assert 'pod_updated_event' in stdout, 'pod_update_event event has not been produced'
 
     check_update_message()
