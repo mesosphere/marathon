@@ -63,12 +63,12 @@ import scala.util.control.NonFatal
   *   more additional GC Requests were sent to the actor.
   */
 private[storage] class GcActor[K, C, S](
-  val deploymentRepository: DeploymentRepositoryImpl[K, C, S],
-  val groupRepository: StoredGroupRepositoryImpl[K, C, S],
-  val appRepository: AppRepositoryImpl[K, C, S],
-  val podRepository: PodRepositoryImpl[K, C, S],
-  val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext)
-    extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
+    val deploymentRepository: DeploymentRepositoryImpl[K, C, S],
+    val groupRepository: StoredGroupRepositoryImpl[K, C, S],
+    val appRepository: AppRepositoryImpl[K, C, S],
+    val podRepository: PodRepositoryImpl[K, C, S],
+    val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext)
+  extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
   // We already released metrics with these names, so we can't use the Metrics.* methods
   private val totalGcs = Kamon.metrics.counter("GarbageCollector.totalGcs")
@@ -480,20 +480,20 @@ object GcActor {
   private[storage] sealed trait Data extends Product with Serializable
   case object IdleData extends Data
   case class UpdatedEntities(
-    appsStored: Set[PathId] = Set.empty,
-    appVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
-    podsStored: Set[PathId] = Set.empty,
-    podVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
-    rootsStored: Set[OffsetDateTime] = Set.empty,
-    gcRequested: Boolean = false) extends Data
+      appsStored: Set[PathId] = Set.empty,
+      appVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+      podsStored: Set[PathId] = Set.empty,
+      podVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+      rootsStored: Set[OffsetDateTime] = Set.empty,
+      gcRequested: Boolean = false) extends Data
   case class BlockedEntities(
-    appsDeleting: Set[PathId] = Set.empty,
-    appVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
-    podsDeleting: Set[PathId] = Set.empty,
-    podVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
-    rootsDeleting: Set[OffsetDateTime] = Set.empty,
-    promises: List[Promise[Done]] = List.empty,
-    gcRequested: Boolean = false) extends Data
+      appsDeleting: Set[PathId] = Set.empty,
+      appVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+      podsDeleting: Set[PathId] = Set.empty,
+      podVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+      rootsDeleting: Set[OffsetDateTime] = Set.empty,
+      promises: List[Promise[Done]] = List.empty,
+      gcRequested: Boolean = false) extends Data
 
   def props[K, C, S](
     deploymentRepository: DeploymentRepositoryImpl[K, C, S],

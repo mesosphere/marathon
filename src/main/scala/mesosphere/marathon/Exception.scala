@@ -32,8 +32,8 @@ case class AppLockedException(deploymentIds: Seq[String] = Nil)
   )
 
 class PortRangeExhaustedException(
-  val minPort: Int,
-  val maxPort: Int) extends Exception(s"All ports in the range [$minPort-$maxPort) are already in use")
+    val minPort: Int,
+    val maxPort: Int) extends Exception(s"All ports in the range [$minPort-$maxPort) are already in use")
 
 case class UpgradeInProgressException(msg: String) extends Exception(msg)
 

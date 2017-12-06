@@ -9,10 +9,10 @@ import org.scalatest.concurrent.Eventually
 
 @IntegrationTest
 class MarathonStartupIntegrationTest extends AkkaIntegrationTest
-    with MesosClusterTest
-    with ZookeeperServerTest
-    with MarathonFixture
-    with Eventually {
+  with MesosClusterTest
+  with ZookeeperServerTest
+  with MarathonFixture
+  with Eventually {
 
   def withBoundPort(fn: Int => Unit): Unit = {
     val port = PortAllocator.ephemeralPort()

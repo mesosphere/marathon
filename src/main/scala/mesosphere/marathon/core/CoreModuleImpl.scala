@@ -47,20 +47,20 @@ import scala.util.Random
   * [[CoreGuiceModule]] exports some dependencies back to guice.
   */
 class CoreModuleImpl @Inject() (
-  // external dependencies still wired by guice
-  marathonConf: MarathonConf,
-  eventStream: EventStream,
-  @Named(ModuleNames.HOST_PORT) hostPort: String,
-  actorSystem: ActorSystem,
-  marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-  clock: Clock,
-  scheduler: Provider[DeploymentService],
-  instanceUpdateSteps: Seq[InstanceChangeHandler],
-  taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
-  mesosLeaderInfo: MesosLeaderInfo,
-  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
+    // external dependencies still wired by guice
+    marathonConf: MarathonConf,
+    eventStream: EventStream,
+    @Named(ModuleNames.HOST_PORT) hostPort: String,
+    actorSystem: ActorSystem,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    clock: Clock,
+    scheduler: Provider[DeploymentService],
+    instanceUpdateSteps: Seq[InstanceChangeHandler],
+    taskStatusUpdateProcessor: TaskStatusUpdateProcessor,
+    mesosLeaderInfo: MesosLeaderInfo,
+    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef
 )
-    extends CoreModule {
+  extends CoreModule {
 
   // INFRASTRUCTURE LAYER
 
