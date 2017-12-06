@@ -712,10 +712,28 @@ def deployment_wait(timeout=120, service_id=None):
 
 
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=ignore_exception)
-def marathon_leadership_changed(original_leader):
+def __marathon_leadership_changed_in_mesosDNS(original_leader):
     """ This method uses mesosDNS to verify that the leadership changed.
         We have to retry because mesosDNS checks for changes only every 30s.
     """
     current_leader = shakedown.marathon_leader_ip()
-    print('leader: {}'.format(current_leader))
+    print('leader according to MesosDNS: {}'.format(current_leader))
     assert original_leader != current_leader
+
+
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=10, retry_on_exception=ignore_exception)
+def __marathon_leadership_changed_in_marathon_api(original_leader):
+    """ This method uses Marathon API to figure out that leadership changed.
+        We have to retry here because leader election takes time and what might happen is that some nodes might
+        not be aware of the new leader being elected resulting in HTTP 502.
+    """
+    current_leader = marathon.create_client().get_leader()
+    print('leader according to marathon API: {}'.format(current_leader))
+    assert original_leader != current_leader
+
+
+def marathon_leadership_changed(original_leader):
+    """ Verifies leadership changed both by reading v2/leader as well as mesosDNS.
+    """
+    __marathon_leadership_changed_in_marathon_api(original_leader)
+    __marathon_leadership_changed_in_mesosDNS(original_leader)
