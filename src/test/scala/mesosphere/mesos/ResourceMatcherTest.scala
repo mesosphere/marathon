@@ -21,7 +21,6 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Attribute
-import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.Inside
 
 import scala.collection.immutable.Seq

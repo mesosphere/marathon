@@ -5,7 +5,6 @@ import com.wix.accord.Validator
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
-import org.apache.mesos.{ Protos => Mesos }
 
 class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
 

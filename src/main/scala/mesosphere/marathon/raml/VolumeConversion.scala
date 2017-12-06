@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package raml
 
-import com.fasterxml.uuid.Generators
 import mesosphere.marathon.state.DiskType
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._

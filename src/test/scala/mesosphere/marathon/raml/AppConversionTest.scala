@@ -59,7 +59,6 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val ramlApp = app.toRaml[App]
 
       When("The app is translated to json and read back from formats")
-      val json = Json.toJson(ramlApp)
       val features = Set(Features.SECRETS)
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(

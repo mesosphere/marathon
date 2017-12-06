@@ -6,7 +6,6 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
 import mesosphere.marathon.api.v2.ValidationHelper
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
-import org.apache.mesos.Protos.Volume.Mode
 
 class VolumeTest extends UnitTest {
   import mesosphere.marathon.test.MarathonTestHelper.constraint

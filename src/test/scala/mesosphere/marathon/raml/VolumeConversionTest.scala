@@ -3,7 +3,6 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
-import org.apache.mesos.{ Protos => Mesos }
 
 class VolumeConversionTest extends UnitTest {
 
