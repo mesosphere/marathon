@@ -711,7 +711,7 @@ def deployment_wait(timeout=120, service_id=None):
     shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=ignore_exception)
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)
 def __marathon_leadership_changed_in_mesosDNS(original_leader):
     """ This method uses mesosDNS to verify that the leadership changed.
         We have to retry because mesosDNS checks for changes only every 30s.
