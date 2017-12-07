@@ -116,8 +116,7 @@ class ContextPropagatingExecutionContextTest extends AkkaUnitTest {
       /* Akka 2.5.x no longer calls ExecutionContext.prepare(). This is because the method was deprecated and there is
        * not a replacement available.
        *
-       * We are currently not using context propagation. We should either investigate how Kamon is doing context
-       * propagation, and implement it, or consider removing context propagation code.
+       * We are currently not using context propagation.
        */
       "propagate the context in schedule once" ignore {
         val promise = Promise[Option[Int]]
