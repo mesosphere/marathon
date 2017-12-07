@@ -8,9 +8,10 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.core.flow.ReviveOffersConfig
-import mesosphere.marathon.state.{ AppDefinition, PathId, Residency }
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import org.apache.mesos.{ Protos => mesos }
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 
@@ -60,7 +61,15 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
 
       When("the deployment for a resident app stops")
       val valAfterDeploymentStepSuccess = f.futureOffersWanted()
-      val app = AppDefinition(PathId("/resident"), residency = Some(Residency.default))
+      val vol = PersistentVolume("bar", PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
+      val zero = UpgradeStrategy(0, 0)
+      val app = AppDefinition(
+        PathId("/resident"),
+        cmd = Some("sleep"),
+        residency = Some(Residency.default),
+        container = Some(Container.Mesos(Seq(vol))),
+        upgradeStrategy = zero,
+        unreachableStrategy = UnreachableDisabled)
       val plan = DeploymentPlan(original = createRootGroup(apps = Map(app.id -> app)), target = createRootGroup())
       f.eventStream.publish(DeploymentStepSuccess(plan = plan, currentStep = plan.steps.head))
 

@@ -14,9 +14,9 @@ class PathMatchersTest extends UnitTest with GroupCreation with ScalatestRouteTe
   import PathId.StringPathId
 
   class PathMatchersTestFixture {
-    val app1 = AppDefinition("/test/group1/app1".toPath)
-    val app2 = AppDefinition("/test/group2/app2".toPath)
-    val app3 = AppDefinition("/test/group2/restart".toPath)
+    val app1 = AppDefinition("/test/group1/app1".toPath, cmd = Some("sleep"))
+    val app2 = AppDefinition("/test/group2/app2".toPath, cmd = Some("sleep"))
+    val app3 = AppDefinition("/test/group2/restart".toPath, cmd = Some("sleep"))
     val rootGroup = createRootGroup(
       groups = Set(
         createGroup("/test".toPath, groups = Set(
