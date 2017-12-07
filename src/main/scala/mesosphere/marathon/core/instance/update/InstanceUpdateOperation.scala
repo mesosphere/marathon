@@ -52,7 +52,7 @@ object InstanceUpdateOperation {
     */
   case class LaunchOnReservation(
       instanceId: Instance.Id,
-      newTaskIds: Seq[Task.Id],
+      newTaskIds: Map[Task.Id, Task.Id], // mapping of old task IDs to new ones
       runSpecVersion: Timestamp,
       timestamp: Timestamp,
       statuses: Map[Task.Id, Task.Status],

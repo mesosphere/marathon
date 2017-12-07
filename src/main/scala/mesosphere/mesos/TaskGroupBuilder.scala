@@ -24,7 +24,7 @@ object TaskGroupBuilder extends StrictLogging {
   // let's (for now) set these values to reflect that.
   protected[mesos] val LinuxAmd64 = Map("os" -> "linux", "arch" -> "amd64")
 
-  private val volumePathPrefix = "volumes/"
+  private val ephemeralVolumePathPrefix = "volumes/"
 
   case class BuilderConfig(
       acceptedResourceRoles: Set[String],
@@ -219,13 +219,13 @@ object TaskGroupBuilder extends StrictLogging {
         // see the related code in computeContainerInfo
         case e: EphemeralVolume =>
           mesos.Volume.newBuilder()
-            .setContainerPath(volumePathPrefix + e.name.getOrElse(""))
+            .setContainerPath(ephemeralVolumePathPrefix + e.name.getOrElse(""))
             .setMode(mesos.Volume.Mode.RW) // if not RW, then how do containers plan to share anything?
             .setSource(mesos.Volume.Source.newBuilder()
               .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
               .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
                 .setType(mesos.Volume.Source.SandboxPath.Type.SELF)
-                .setPath(volumePathPrefix + e.name.getOrElse("")) // matches the path in computeContainerInfo
+                .setPath(ephemeralVolumePathPrefix + e.name.getOrElse("")) // matches the path in computeContainerInfo
               ))
       }.foreach {
         volume => containerInfo.addVolumes(volume)
@@ -346,7 +346,7 @@ object TaskGroupBuilder extends StrictLogging {
               .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
               .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
                 .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
-                .setPath(volumePathPrefix + volumeName)
+                .setPath(ephemeralVolumePathPrefix + volumeName)
               ))
 
           containerInfo.addVolumes(volume)

@@ -114,10 +114,11 @@ case class TestInstanceBuilder(
   def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) = InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
 
   def taskLaunchedOp(): InstanceUpdateOperation.LaunchOnReservation = {
-    val taskId = Task.Id.forResidentTask(instance.appTask.taskId)
+    val taskId = instance.appTask.taskId
+    val newTaskId = Task.Id.forResidentTask(taskId)
     InstanceUpdateOperation.LaunchOnReservation(
       instanceId = instance.instanceId,
-      newTaskIds = Seq(taskId),
+      newTaskIds = Map(taskId -> newTaskId),
       timestamp = now,
       runSpecVersion = instance.runSpecVersion,
       statuses = Map(taskId -> Task.Status(

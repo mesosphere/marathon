@@ -225,7 +225,7 @@ class InstanceOpFactoryImpl(
 
     spec match {
       case app: AppDefinition =>
-        val currentTaskId = reservedInstance.appTask.taskId
+        val taskId = reservedInstance.appTask.taskId
 
         // The new taskId is based on the previous one. The previous taskId can denote either
         // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
@@ -238,7 +238,7 @@ class InstanceOpFactoryImpl(
         // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
         // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
         // in version 1.5.
-        val newTaskId = Task.Id.forResidentTask(currentTaskId)
+        val newTaskId = Task.Id.forResidentTask(taskId)
 
         val (taskInfo, networkInfo) =
           new TaskBuilder(app, newTaskId, config, runSpecTaskProc)
@@ -246,15 +246,15 @@ class InstanceOpFactoryImpl(
 
         val now = clock.now()
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-          reservedInstance.instanceId,
-          Seq(newTaskId),
+          instanceId = reservedInstance.instanceId,
+          newTaskIds = Map(taskId -> newTaskId),
           runSpecVersion = spec.version,
           timestamp = now,
-          statuses = Map(newTaskId -> Task.Status(
+          statuses = Map(taskId -> Task.Status(
             stagedAt = now,
             condition = Condition.Created,
             networkInfo = networkInfo)),
-          Map(newTaskId -> networkInfo.hostPorts),
+          Map(taskId -> networkInfo.hostPorts),
           agentInfo)
 
         taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
@@ -266,13 +266,22 @@ class InstanceOpFactoryImpl(
           config.mesosBridgeName())
 
         val instanceId = reservedInstance.instanceId
-        val currentTaskIds = Seq(reservedInstance.tasksMap.keys.toSeq: _*)
-        val newTaskIds = currentTaskIds.map(Task.Id.forResidentTask)
+        val taskIds = reservedInstance.tasksMap.keys
+        val newTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
+          taskId -> Task.Id.forResidentTask(taskId)
+        }(collection.breakOut)
+
+        val containerNameToTaskId: Map[String, Task.Id] = newTaskIds.keys.map { taskId =>
+          taskId.containerName.getOrElse(throw new IllegalStateException("reached")) -> taskId
+        }(collection.breakOut)
+        val podContainerTaskIds: Seq[Task.Id] = pod.containers.map { container =>
+          containerNameToTaskId.getOrElse(container.name, throw new IllegalStateException("reached"))
+        }
 
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
-          instanceId, newTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
+          instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
 
-        val networkInfos = podTaskNetworkInfos(pod, agentInfo, newTaskIds, hostPorts)
+        val networkInfos = podTaskNetworkInfos(pod, agentInfo, podContainerTaskIds, hostPorts)
         val now = clock.now()
         val statuses = networkInfos.map {
           case (taskId, networkInfo) =>
@@ -472,5 +481,5 @@ object InstanceOpFactoryImpl {
       runSpecVersion = pod.version,
       unreachableStrategy = pod.unreachableStrategy
     )
-  } // inferPodInstance
+  }
 }

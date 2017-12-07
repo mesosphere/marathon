@@ -85,10 +85,11 @@ object InstanceUpdater extends StrictLogging {
   private[marathon] def launchOnReservation(instance: Instance, op: LaunchOnReservation): InstanceUpdateEffect = {
     if (instance.isReserved) {
       val currentTasks = instance.tasksMap
-      val taskEffects = currentTasks.values.zip(op.newTaskIds).map {
-        case (task, newTaskId) =>
-          task.update(TaskUpdateOperation.LaunchOnReservation(
-            newTaskId, op.runSpecVersion, op.statuses.getOrElse(newTaskId, throw new Exception("reached"))))
+      val taskEffects = currentTasks.map {
+        case (taskId, task) =>
+          val newTaskId = op.newTaskIds.getOrElse(taskId, throw new IllegalStateException("reached"))
+          val status = op.statuses.getOrElse(taskId, throw new IllegalStateException("reached"))
+          task.update(TaskUpdateOperation.LaunchOnReservation(newTaskId, op.runSpecVersion, status))
       }
 
       val nonUpdates = taskEffects.filter {

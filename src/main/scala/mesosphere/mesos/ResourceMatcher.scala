@@ -150,10 +150,10 @@ object ResourceMatcher extends StrictLogging {
       val mounts = runSpec.persistentVolumeMounts
       val (namedVolumes, namedMounts) =
         if (volumes.exists(_.name.isEmpty) && volumes.length == mounts.length) {
-          (
-            volumes.zipWithIndex.map { case (v, i) => v.copy(name = Some(i.toString)) },
-            mounts.zipWithIndex.map { case (m, i) => m.copy(volumeName = Some(i.toString)) }
-          )
+          // give temporary names to volumes and mounts to ease volume mount matching in [[findMatches]]
+          val indexedVolumes = volumes.zipWithIndex.map { case (v, i) => v.copy(name = Some(i.toString)) }
+          val indexedMounts = mounts.zipWithIndex.map { case (m, i) => m.copy(volumeName = Some(i.toString)) }
+          (indexedVolumes, indexedMounts)
         } else {
           (volumes, mounts)
         }
@@ -371,11 +371,11 @@ object ResourceMatcher extends StrictLogging {
               val consumptions = generalConsumptions.map { c =>
                 val volume = nextAllocation.right.toOption
                 val mount = volume.flatMap { volume =>
-
                   volumeMounts.find(_.volumeName == volume.name)
                 }
                 val (volumeToPass, mountToPass) = runSpec match {
                   case _: AppDefinition =>
+                    // strip off temporary names
                     (volume.map(_.copy(name = None)), mount.map(_.copy(volumeName = None)))
                   case _: PodDefinition =>
                     (volume, mount)

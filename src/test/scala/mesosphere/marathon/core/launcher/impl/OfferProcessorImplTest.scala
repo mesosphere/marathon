@@ -143,10 +143,11 @@ class OfferProcessorImplTest extends UnitTest {
       val tasksWithSource = tasks.map {
         case (taskInfo, _, _) =>
           val dummyInstance = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved().getInstance()
-          val taskId = Task.Id.forResidentTask(Task.Id(taskInfo.getTaskId))
+          val taskId = Task.Id(taskInfo.getTaskId)
+          val newTaskId = Task.Id.forResidentTask(taskId)
           val updateOperation = InstanceUpdateOperation.LaunchOnReservation(
             instanceId = dummyInstance.instanceId,
-            newTaskIds = Seq(taskId),
+            newTaskIds = Map(taskId -> newTaskId),
             runSpecVersion = clock.now(),
             timestamp = clock.now(),
             statuses = Map(taskId -> Task.Status(
