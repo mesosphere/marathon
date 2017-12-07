@@ -18,16 +18,16 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app1 = AppDefinition("/test/group1/app1".toPath)
       val app2 = AppDefinition("/test/group2/app2".toPath)
       val current = createRootGroup(
-          groups = Set(
-              createGroup("/test".toPath, groups = Set(
-                createGroup("/test/group1".toPath, Map(app1.id -> app1)),
-              createGroup("/test/group2".toPath, Map(app2.id -> app2))
-            ))))
+        groups = Set(
+          createGroup("/test".toPath, groups = Set(
+            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          ))))
 
-        When("an app with a specific path is requested")
+      When("an app with a specific path is requested")
       val path = PathId("/test/group1/app1")
 
-        Then("the group is found")
+      Then("the group is found")
       current.app(path) should be('defined)
     }
 

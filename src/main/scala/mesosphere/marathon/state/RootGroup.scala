@@ -238,10 +238,10 @@ class RootGroup(
     appId: PathId, fn: Option[AppDefinition] => AppDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
     // If there is a group with a conflicting id which contains no app or pod definitions,
     // replace it. Otherwise do not replace it. Validation should catch conflicting app/pod/group IDs later.
-    group(appId) match {
-      case Some(g) if g.containsAppsOrPodsOrGroups => this // no change
-      case None =>
-    }
+    //    group(appId) match {
+    //      case Some(g) if g.containsAppsOrPodsOrGroups => this // no change
+    //      case None =>
+    //    }
 
     val oldGroup = group(appId.parent).getOrElse(Group.empty(appId.parent))
     val newApp = fn(app(appId))
