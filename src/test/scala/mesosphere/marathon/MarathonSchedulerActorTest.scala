@@ -193,7 +193,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
-      schedulerActor ! ScaleRunSpec("test-app".toPath)
+      schedulerActor ! ScaleRunSpec("test-app-scale".toPath)
 
       eventually {
         verify(queue).add(app, 1)

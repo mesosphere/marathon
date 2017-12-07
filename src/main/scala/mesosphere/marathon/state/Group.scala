@@ -20,8 +20,12 @@ class Group(
     val dependencies: Set[PathId] = defaultDependencies,
     val version: Timestamp = defaultVersion) extends IGroup {
 
-  def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.get(appId))
-  def pod(podId: PathId): Option[PodDefinition] = group(podId.parent).flatMap(_.pods.get(podId))
+  def app(appId: PathId): Option[AppDefinition] = {
+    apps.get(appId) orElse group(appId.parent).flatMap(_.apps.get(appId))
+  }
+  def pod(podId: PathId): Option[PodDefinition] = {
+    pods.get(podId) orElse group(podId.parent).flatMap(_.pods.get(podId))
+  }
 
   def runSpec(id: PathId): Option[RunSpec] = {
     val maybeApp = this.app(id)
