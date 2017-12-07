@@ -42,6 +42,7 @@ object Dependencies {
     wixAccord % "compile",
     java8Compat % "compile",
     scalaLogging % "compile",
+    logback % "compile",
     logstash % "compile",
     raven % "compile",
     akkaHttpPlayJson % "compile",
@@ -95,7 +96,7 @@ object Dependency {
     val RxScala = "0.26.5"
     val MarathonUI = "1.3.0"
     val MarathonApiConsole = "3.0.8-accept"
-    val Logback = "1.1.3"
+    val Logback = "1.2.3"
     val Logstash = "4.9"
     val WixAccord = "0.7.1"
     val Java8Compat = "0.8.0"
@@ -141,6 +142,7 @@ object Dependency {
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
+  val logback = "ch.qos.logback" % "logback-classic" % V.Logback
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
