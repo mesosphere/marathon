@@ -13,9 +13,11 @@ import mesosphere.marathon.state.{ EnvVarString, PathId, PortAssignment, Timesta
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
+import org.apache.mesos.Protos.{ DurationInfo, KillPolicy }
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 object TaskGroupBuilder extends StrictLogging {
 
@@ -181,6 +183,15 @@ object TaskGroupBuilder extends StrictLogging {
 
     container.healthCheck.foreach { healthCheck =>
       computeHealthCheck(healthCheck, portAssignments).foreach(builder.setHealthCheck)
+    }
+
+    for {
+      lc <- container.lifecycle
+      killGracePeriodSeconds <- lc.killGracePeriodSeconds
+    } {
+      val durationInfo = DurationInfo.newBuilder.setNanoseconds((killGracePeriodSeconds * 1000000000).toLong)
+      builder.setKillPolicy(
+        KillPolicy.newBuilder.setGracePeriod(durationInfo))
     }
 
     builder
