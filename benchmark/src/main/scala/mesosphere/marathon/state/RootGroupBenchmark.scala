@@ -69,8 +69,14 @@ class GroupBenchmark {
 class RootGroupBenchmark extends GroupBenchmark {
 
   @Benchmark
-  def accessRandomGroupAndApp(hole: Blackhole): Unit = {
+  def accessRandomGroupAndApp(): Unit = {
     rootGroup.group(randomGroupId())
     rootGroup.app(randomApp())
+  }
+
+  @Benchmark
+  def buildRootGroup(hole: Blackhole): Unit = {
+    val root = fillRootGroup()
+    hole.consume(root)
   }
 }
