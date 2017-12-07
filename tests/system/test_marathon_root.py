@@ -213,13 +213,13 @@ def test_event_channel():
     client.add_app(app_def)
     shakedown.deployment_wait(app_id=app_id)
 
-    master_ip = shakedown.master_ip()
+    leader_ip = shakedown.marathon_leader_ip()
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_deployment_message():
-        status, stdout = shakedown.run_command_on_master('cat events.exitcode')
+        status, stdout = shakedown.run_command(leader_ip, 'cat events.exitcode')
         assert str(stdout).strip() == '', "SSE stream disconnected (CURL exit code is {})".format(stdout.strip())
-        status, stdout = shakedown.run_command(master_ip, 'cat events.txt')
+        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
         assert 'event_stream_attached' in stdout, "event_stream_attached event has not been found"
         assert 'deployment_info' in stdout, "deployment_info event has not been found"
         assert 'deployment_step_success' in stdout, "deployment_step_success has not been found"
@@ -230,7 +230,7 @@ def test_event_channel():
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_kill_message():
-        status, stdout = shakedown.run_command(master_ip, 'cat events.txt')
+        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
         assert 'KILLED' in stdout, "KILLED event has not been found"
 
     check_kill_message()
