@@ -46,16 +46,16 @@ class Group(
 
   private def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
   private def transitiveAppIdsIterator(): Iterator[PathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
-  lazy val transitiveApps: Set[AppDefinition] = transitiveAppsIterator().toSet
-  lazy val transitiveAppIds: Set[PathId] = transitiveAppIdsIterator().toSet
+  lazy val transitiveApps: Iterable[AppDefinition] = transitiveAppsIterator().toIterable
+  lazy val transitiveAppIds: Iterable[PathId] = transitiveAppIdsIterator().toIterable
 
   private def transitivePodsIterator(): Iterator[PodDefinition] = pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
   private def transitivePodIdsIterator(): Iterator[PathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
-  lazy val transitivePods: Set[PodDefinition] = transitivePodsIterator().toSet
-  lazy val transitivePodIds: Set[PathId] = transitivePodIdsIterator().toSet
+  lazy val transitivePods: Iterable[PodDefinition] = transitivePodsIterator().toIterable
+  lazy val transitivePodIds: Iterable[PathId] = transitivePodIdsIterator().toIterable
 
-  lazy val transitiveRunSpecs: Set[RunSpec] = transitiveApps ++ transitivePods
-  lazy val transitiveRunSpecIds: Set[PathId] = transitiveAppIds ++ transitivePodIds
+  lazy val transitiveRunSpecs: Iterable[RunSpec] = transitiveApps ++ transitivePods
+  lazy val transitiveRunSpecIds: Iterable[PathId] = transitiveAppIds ++ transitivePodIds
 
   def transitiveGroups(): Iterator[(Group.GroupKey, Group)] = groupsById.iterator ++ groupsById.valuesIterator.flatMap(_.transitiveGroups())
   lazy val transitiveGroupsById: Map[Group.GroupKey, Group] = {
@@ -122,7 +122,7 @@ object Group {
 
   private def noAppsAndPodsWithSameId: Validator[Group] =
     isTrue("Applications and Pods may not share the same id") { group =>
-      group.transitiveAppIds.intersect(group.transitivePodIds).isEmpty
+      !group.transitiveAppIds.exists(appId => group.pod(appId).isDefined)
     }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =

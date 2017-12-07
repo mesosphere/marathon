@@ -66,7 +66,7 @@ class AppTasksResource @Inject() (
     result(tasksResponse)
   }
 
-  def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Set[EnrichedTask] = {
+  def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Seq[EnrichedTask] = {
     appIds.withFilter(instancesBySpec.hasSpecInstances).flatMap { id =>
       val health = result(healthCheckManager.statuses(id))
       instancesBySpec.specInstances(id).flatMap { instance =>
@@ -74,7 +74,7 @@ class AppTasksResource @Inject() (
           EnrichedTask(id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil))
         }
       }
-    }
+    }(collection.breakOut)
   }
 
   @GET
