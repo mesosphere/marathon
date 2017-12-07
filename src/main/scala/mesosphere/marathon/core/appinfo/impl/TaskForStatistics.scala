@@ -10,12 +10,12 @@ import org.apache.mesos.Protos.TaskState
 /** Precalculated instance infos for internal calculations. */
 // TODO: rename to InstanceForStatistics?
 private[appinfo] class TaskForStatistics(
-  val version: Timestamp,
-  val running: Boolean,
-  val staging: Boolean,
-  val healthy: Boolean,
-  val unhealthy: Boolean,
-  val maybeLifeTime: Option[Double])
+    val version: Timestamp,
+    val running: Boolean,
+    val staging: Boolean,
+    val healthy: Boolean,
+    val unhealthy: Boolean,
+    val maybeLifeTime: Option[Double])
 
 private[appinfo] object TaskForStatistics {
   def forInstances(

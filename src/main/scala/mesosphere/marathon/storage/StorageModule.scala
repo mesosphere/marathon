@@ -120,14 +120,14 @@ object StorageModule {
 }
 
 private[storage] case class StorageModuleImpl(
-  persistenceStore: PersistenceStore[_, _, _],
-  instanceRepository: InstanceRepository,
-  deploymentRepository: DeploymentRepository,
-  taskFailureRepository: TaskFailureRepository,
-  groupRepository: GroupRepository,
-  frameworkIdRepository: FrameworkIdRepository,
-  runtimeConfigurationRepository: RuntimeConfigurationRepository,
-  migration: Migration,
-  leadershipInitializers: Seq[PrePostDriverCallback],
-  persistentStoreBackup: PersistentStoreBackup
+    persistenceStore: PersistenceStore[_, _, _],
+    instanceRepository: InstanceRepository,
+    deploymentRepository: DeploymentRepository,
+    taskFailureRepository: TaskFailureRepository,
+    groupRepository: GroupRepository,
+    frameworkIdRepository: FrameworkIdRepository,
+    runtimeConfigurationRepository: RuntimeConfigurationRepository,
+    migration: Migration,
+    leadershipInitializers: Seq[PrePostDriverCallback],
+    persistentStoreBackup: PersistentStoreBackup
 ) extends StorageModule

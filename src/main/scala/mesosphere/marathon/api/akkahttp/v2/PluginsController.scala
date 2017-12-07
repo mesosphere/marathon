@@ -20,7 +20,7 @@ import mesosphere.marathon.plugin.http.HttpRequestHandler
 class PluginsController(
     requestHandlers: Seq[HttpRequestHandler],
     definitions: PluginDefinitions)(implicit
-  val authenticator: Authenticator,
+    val authenticator: Authenticator,
     authorizer: Authorizer,
     electionService: ElectionService) extends Controller {
 

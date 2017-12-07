@@ -36,7 +36,7 @@ class AppsResource @Inject() (
     val config: MarathonConf,
     groupManager: GroupManager,
     pluginManager: PluginManager)(implicit
-  val authenticator: Authenticator,
+    val authenticator: Authenticator,
     val authorizer: Authorizer) extends RestResource with AuthResource {
 
   import AppHelpers._

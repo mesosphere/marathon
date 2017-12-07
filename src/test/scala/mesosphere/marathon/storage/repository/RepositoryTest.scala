@@ -122,8 +122,8 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
           repo.versions(app.id).runWith(Sink.set).futureValue) should be('empty)
         versions.tail.toSet.diff(
           repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
-          .collect { case Some(g) => g }
-          .runWith(Sink.set).futureValue
+            .collect { case Some(g) => g }
+            .runWith(Sink.set).futureValue
         ) should be ('empty)
 
         And("Get of the current will fail")

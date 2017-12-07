@@ -97,10 +97,10 @@ class ZkPersistenceStore(
         val actualVersion = storageVersion.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
         val data = ByteString(
           ZKStoreEntry.newBuilder().setValue(com.google.protobuf.ByteString.copyFrom(actualVersion.toByteArray))
-          .setName(Migration.StorageVersionName)
-          .setCompressed(false)
-          .setUuid(com.google.protobuf.ByteString.copyFromUtf8(UUID.randomUUID().toString))
-          .build.toByteArray
+            .setName(Migration.StorageVersionName)
+            .setCompressed(false)
+            .setUuid(com.google.protobuf.ByteString.copyFromUtf8(UUID.randomUUID().toString))
+            .build.toByteArray
         )
         await(client.setData(path, data).asTry) match {
           case Success(_) =>

@@ -25,13 +25,13 @@ object ReadinessCheckExecutor {
     * a readiness check.
     */
   case class ReadinessCheckSpec(
-    taskId: Task.Id,
-    checkName: String,
-    url: String,
-    interval: FiniteDuration = ReadinessCheck.DefaultInterval,
-    timeout: FiniteDuration = ReadinessCheck.DefaultTimeout,
-    httpStatusCodesForReady: Set[Int] = ReadinessCheck.DefaultHttpStatusCodesForReady,
-    preserveLastResponse: Boolean = ReadinessCheck.DefaultPreserveLastResponse)
+      taskId: Task.Id,
+      checkName: String,
+      url: String,
+      interval: FiniteDuration = ReadinessCheck.DefaultInterval,
+      timeout: FiniteDuration = ReadinessCheck.DefaultTimeout,
+      httpStatusCodesForReady: Set[Int] = ReadinessCheck.DefaultHttpStatusCodesForReady,
+      preserveLastResponse: Boolean = ReadinessCheck.DefaultPreserveLastResponse)
 
   object ReadinessCheckSpec {
     /**

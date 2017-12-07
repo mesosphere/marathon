@@ -96,9 +96,9 @@ private[manager] object OfferMatcherManagerActor {
 }
 
 private[impl] class OfferMatcherManagerActor private (
-  metrics: OfferMatcherManagerActorMetrics,
-  random: Random, clock: Clock, conf: OfferMatcherManagerConfig, offersWantedObserver: Observer[Boolean])
-    extends Actor with StrictLogging {
+    metrics: OfferMatcherManagerActorMetrics,
+    random: Random, clock: Clock, conf: OfferMatcherManagerConfig, offersWantedObserver: Observer[Boolean])
+  extends Actor with StrictLogging {
 
   var launchTokens: Int = 0
 

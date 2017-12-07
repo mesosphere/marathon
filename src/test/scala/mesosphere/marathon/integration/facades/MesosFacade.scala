@@ -20,18 +20,18 @@ object MesosFacade {
     * Corresponds to parts of `state.json`.
     */
   case class ITMesosState(
-    version: String,
-    gitTag: Option[String],
-    agents: Seq[ITAgent])
+      version: String,
+      gitTag: Option[String],
+      agents: Seq[ITAgent])
 
   case class ITAgent(
-    id: String,
-    attributes: ITAttributes,
-    resources: ITResources,
-    usedResources: ITResources,
-    offeredResources: ITResources,
-    reservedResourcesByRole: Map[String, ITResources],
-    unreservedResources: ITResources)
+      id: String,
+      attributes: ITAttributes,
+      resources: ITResources,
+      usedResources: ITResources,
+      offeredResources: ITResources,
+      reservedResourcesByRole: Map[String, ITResources],
+      unreservedResources: ITResources)
 
   case class ITAttributes(attributes: Map[String, ITResourceValue])
 
@@ -84,7 +84,7 @@ object MesosFacade {
 }
 
 class MesosFacade(url: String, implicit val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
-    extends PlayJsonSupport with StrictLogging {
+  extends PlayJsonSupport with StrictLogging {
 
   import MesosFacade._
   import MesosFormats._

@@ -29,7 +29,7 @@ trait ContextPropagatingExecutionContext extends ExecutionContext { self =>
   * Wrapper around another Execution Context that will Propagate MDC and Context.
   */
 case class ContextPropagatingExecutionContextWrapper(wrapped: ExecutionContext)
-    extends ExecutionContext with ContextPropagatingExecutionContext {
+  extends ExecutionContext with ContextPropagatingExecutionContext {
   override def execute(runnable: Runnable): Unit = wrapped.execute(runnable)
 
   override def reportFailure(cause: Throwable): Unit = wrapped.reportFailure(cause)

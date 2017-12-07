@@ -32,7 +32,7 @@ class GroupsResource @Inject() (
     infoService: GroupInfoService,
     val config: MarathonConf,
     groupsService: GroupApiService)(implicit
-  val authenticator: Authenticator,
+    val authenticator: Authenticator,
     val authorizer: Authorizer,
     mat: Materializer) extends AuthResource {
 
@@ -222,7 +222,7 @@ class GroupsResource @Inject() (
 
         ok(
           Json.obj(
-            "steps". ->(DeploymentPlan(originalGroup, updatedGroup).steps)
+            "steps".->(DeploymentPlan(originalGroup, updatedGroup).steps)
           ).toString()
         )
       } else {

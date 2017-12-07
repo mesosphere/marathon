@@ -29,7 +29,7 @@ import scala.concurrent.duration._
   */
 @Path("")
 class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
-  val authenticator: Authenticator,
+    val authenticator: Authenticator,
     val authorizer: Authorizer,
     actorSystem: ActorSystem) extends RestResource with AuthResource with StrictLogging {
 

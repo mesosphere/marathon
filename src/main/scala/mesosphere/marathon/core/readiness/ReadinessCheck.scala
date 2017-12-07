@@ -10,17 +10,17 @@ import akka.http.scaladsl.model.StatusCodes._
 import scala.concurrent.duration._
 
 case class ReadinessCheck(
-  name: String = ReadinessCheck.DefaultName,
-  protocol: ReadinessCheck.Protocol = ReadinessCheck.DefaultProtocol,
+    name: String = ReadinessCheck.DefaultName,
+    protocol: ReadinessCheck.Protocol = ReadinessCheck.DefaultProtocol,
 
-  path: String = ReadinessCheck.DefaultPath,
-  portName: String = ReadinessCheck.DefaultPortName,
+    path: String = ReadinessCheck.DefaultPath,
+    portName: String = ReadinessCheck.DefaultPortName,
 
-  interval: FiniteDuration = ReadinessCheck.DefaultInterval,
-  timeout: FiniteDuration = ReadinessCheck.DefaultTimeout,
+    interval: FiniteDuration = ReadinessCheck.DefaultInterval,
+    timeout: FiniteDuration = ReadinessCheck.DefaultTimeout,
 
-  httpStatusCodesForReady: Set[Int] = ReadinessCheck.DefaultHttpStatusCodesForReady,
-  preserveLastResponse: Boolean = ReadinessCheck.DefaultPreserveLastResponse)
+    httpStatusCodesForReady: Set[Int] = ReadinessCheck.DefaultHttpStatusCodesForReady,
+    preserveLastResponse: Boolean = ReadinessCheck.DefaultPreserveLastResponse)
 
 object ReadinessCheck {
   import scala.language.implicitConversions
