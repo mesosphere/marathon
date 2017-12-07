@@ -20,13 +20,32 @@ class Group(
     val dependencies: Set[PathId] = defaultDependencies,
     val version: Timestamp = defaultVersion) extends IGroup {
 
+  /**
+    * Get app from this group or any child group.
+    *
+    * @param appId The app to retrieve.
+    * @return None if the app was not found or non empty option with app.
+    */
   def app(appId: PathId): Option[AppDefinition] = {
     apps.get(appId) orElse group(appId.parent).flatMap(_.apps.get(appId))
   }
+
+  /**
+    * Get pod from this group or any child group.
+    *
+    * @param podId The pod to retrieve.
+    * @return None if the pod was not found or non empty option with pod.
+    */
   def pod(podId: PathId): Option[PodDefinition] = {
     pods.get(podId) orElse group(podId.parent).flatMap(_.pods.get(podId))
   }
 
+  /**
+    * Get a runnable specification from this group or any child group.
+    *
+    * @param id The path of the run spec to retrieve.
+    * @return None of run spec was not found or non empty option with run spec.
+    */
   def runSpec(id: PathId): Option[RunSpec] = {
     val maybeApp = this.app(id)
     if (maybeApp.isDefined) maybeApp else this.pod(id)
@@ -34,13 +53,17 @@ class Group(
 
   /**
     * Checks whether a runnable spec with the given id exists.
+    *
     * @param id Id of an app or pod.
     * @return True if app or pod exists, false otherwise.
     */
   def exists(id: PathId): Boolean = runSpec(id).isDefined
 
   /**
-    * Find and return the child group for the given path. If no match is found, then returns None
+    * Find and return the child group for the given path.
+    *
+    * @param gid The path of the group for find.
+    * @return None if no group was found or non empty option with group.
     */
   def group(gid: PathId): Option[Group] = transitiveGroupsById.get(gid)
 
