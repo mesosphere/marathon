@@ -13,7 +13,7 @@ import mesosphere.marathon.test.GroupCreation
 class RootGroupTest extends UnitTest with GroupCreation {
   "A Group" should {
 
-    "an find an app by its path" in {
+    "find an app by its path" in {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition("/test/group1/app1".toPath, cmd = Some("sleep"))
       val app2 = AppDefinition("/test/group2/app2".toPath, cmd = Some("sleep"))
@@ -26,6 +26,18 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       When("an app with a specific path is requested")
       val path = PathId("/test/group1/app1")
+
+      Then("the group is found")
+      current.app(path) should be('defined)
+    }
+
+    "find an app without a parent" in {
+      Given("an existing root group with an app without a parent")
+      val app = AppDefinition("app".toPath, cmd = Some("sleep"))
+      val current = createRootGroup(apps = Map(app.id -> app))
+
+      When("an app with a specific path is requested")
+      val path = PathId("app")
 
       Then("the group is found")
       current.app(path) should be('defined)
@@ -152,7 +164,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       Then("the group with same path has been replaced by the new app definition")
       changed.transitiveGroupsById.keys.map(_.toString) should be(Set("/", "/some"))
-      changed.transitiveAppIds.map(_.toString) should be(Set("/some/nested"))
+      changed.transitiveAppIds.map(_.toString) should contain theSameElementsAs(Vector("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
       validate(changed)(RootGroup.rootGroupValidator(Set())) should be(Success)
@@ -181,7 +193,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Then("the group with same path has NOT been replaced by the new app definition")
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
-      changed.transitiveAppIds.map(_.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
+      changed.transitiveAppIds.map(_.toString) should contain theSameElementsAs(Vector("/some/nested", "/some/nested/path2/app"))
 
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
@@ -213,8 +225,8 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Then("the group with same path has NOT been replaced by the new app definition")
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
-      changed.transitiveAppIds.map(_.toString) should be(Set("/some/nested"))
-      changed.transitivePodIds.map(_.toString) should be(Set("/some/nested/path2/pod"))
+      changed.transitiveAppIds.map(_.toString) should contain theSameElementsAs(Vector("/some/nested"))
+      changed.transitivePodIds.map(_.toString) should contain theSameElementsAs(Vector("/some/nested/path2/pod"))
 
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
@@ -248,8 +260,8 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Then("the group with same path has NOT been replaced by the new pod definition")
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
-      changed.transitiveAppIds.map(_.toString) should be(Set.empty[String])
-      changed.transitivePodIds.map(_.toString) should be(Set("/some/nested", "/some/nested/path2/pod"))
+      changed.transitiveAppIds.map(_.toString) should be('empty)
+      changed.transitivePodIds.map(_.toString) should contain theSameElementsAs(Vector("/some/nested", "/some/nested/path2/pod"))
 
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
