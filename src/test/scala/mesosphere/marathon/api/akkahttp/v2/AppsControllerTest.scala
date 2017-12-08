@@ -114,10 +114,10 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Raml.fromRaml(normalized)
     }
 
-    def prepareApp(app: raml.App, groupManager: GroupManager): (Array[Byte], DeploymentPlan) = {
+    def prepareApp(app: raml.App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef))
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -268,7 +268,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val app = raml.App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> raml.SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -289,7 +289,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val app = raml.App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> raml.SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -1055,7 +1055,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val app = raml.App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, raml.SecretDef]("foo" -> raml.SecretDef("/bar")),
         env = Map[String, raml.EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -1128,7 +1128,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = raml.App(id = "/app", cmd = Some("cmd"),
         env = Map[String, raml.EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -1148,7 +1148,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val app = raml.App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, raml.SecretDef]("foo" -> raml.SecretDef("/bar")),
         container = Some(raml.Container(`type` = raml.EngineType.Mesos, volumes = Seq(raml.AppSecretVolume("/path", "foo")))))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -1226,7 +1226,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val app = raml.App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, raml.SecretDef]("foo" -> raml.SecretDef("/bar")),
         env = Map[String, raml.EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set(Features.SECRETS))
 
       When("The create request is made")
       clock += 5.seconds
@@ -1250,7 +1250,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         container = Option(containers),
         secrets = Map("bar" -> raml.SecretDef("foo"))
       )
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -1268,7 +1268,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       {
         val app = raml.App(id = "/app", cmd = Some("cmd"),
           mem = -128)
-        val (body, _) = prepareApp(app, groupManager)
+        val (body, _) = prepareApp(app, groupManager, validate = false)
         val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
         Then("A constraint violation exception is thrown")
         Post(Uri./, entity) ~> route ~> check {
@@ -1279,7 +1279,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       {
         val app = raml.App(id = "/app", cmd = Some("cmd"),
           cpus = -1)
-        val (body, _) = prepareApp(app, groupManager)
+        val (body, _) = prepareApp(app, groupManager, validate = false)
         val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
         Post(Uri./, entity) ~> route ~> check {
           status shouldEqual StatusCodes.UnprocessableEntity
@@ -1289,7 +1289,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       {
         val app = raml.App(id = "/app", cmd = Some("cmd"),
           instances = -1)
-        val (body, _) = prepareApp(app, groupManager)
+        val (body, _) = prepareApp(app, groupManager, validate = false)
         val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
         Post(Uri./, entity) ~> route ~> check {
           status shouldEqual StatusCodes.UnprocessableEntity
@@ -1369,7 +1369,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Create a new app fails with Validation errors" in new Fixture {
       Given("An app with validation errors")
       val app = raml.App(id = "/app")
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       Then("A constraint violation exception is thrown")
       val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
@@ -1890,7 +1890,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Restart an existing app" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       service.deploy(any, any) returns Future.successful(Done)
@@ -2010,9 +2010,9 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       behave like unauthenticatedRoute(forRoute = appsController.route, withRequest = Post(Uri./.withPath(Path("someAppId") / "restart"), HttpEntity.Empty))
     }
 
-    new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath)))) {
+    new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath, cmd = Some("sleep"))))) {
       Given("A real Group Manager with one app")
-      val appD = AppDefinition("/a".toRootPath)
+      val appD = AppDefinition("/a".toRootPath, cmd = Some("sleep"))
       val rootGroup = initialRoot
 
       Given("An unauthorized request")
@@ -2146,8 +2146,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
 
       val plan = DeploymentPlan(rootGroup, rootGroup)
@@ -2192,8 +2192,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
       val plan = DeploymentPlan(rootGroup, rootGroup)
 
@@ -2237,8 +2237,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
       groupManager.updateRoot(any, any, any, any, any) returns Future.failed(AppNotFoundException(PathId("/unknown")))
       groupManager.rootGroup() returns rootGroup
@@ -2273,8 +2273,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       )
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
       When("update of multiple apps is done and creation is allowed")
       val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
@@ -2301,8 +2301,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       )
       val rootGroup = createRootGroup(
         appDefs.map { appDef =>
-        appDef.id -> appDef
-      }.toMap
+          appDef.id -> appDef
+        }.toMap
       )
       When("update of multiple apps is done and creation is allowed")
       val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
@@ -2319,7 +2319,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Delete a single app if it exists" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.app(PathId("/app")) returns Some(app)
@@ -2338,7 +2338,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
     }
     "Kill tasks and scale" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.app(PathId("/app")) returns Some(app)
@@ -2358,7 +2358,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Kill tasks and wipe" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
 
@@ -2376,7 +2376,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Just Kill tasks" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
 
@@ -2394,7 +2394,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "List running tasks" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
+      val taskId = "task_id"
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
       groupManager.rootGroup() returns rootGroup
@@ -2419,7 +2420,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Kill task and scale" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, now = clock.now(), version = clock.now()).getInstance()
@@ -2444,7 +2445,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Kill task and wipe" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, now = clock.now(), version = clock.now()).getInstance()
       val taskId = instance.appTask.taskId.toString
@@ -2464,7 +2465,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Just kill task" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, now = clock.now(), version = clock.now()).getInstance()
@@ -2484,7 +2485,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "List application versions" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
 
@@ -2501,7 +2502,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Get application by version" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
 

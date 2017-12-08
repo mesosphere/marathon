@@ -270,11 +270,11 @@ object Instance {
     * Info relating to the host on which the Instance has been launched.
     */
   case class AgentInfo(
-    host: String,
-    agentId: Option[String],
-    region: Option[String],
-    zone: Option[String],
-    attributes: Seq[Attribute])
+      host: String,
+      agentId: Option[String],
+      region: Option[String],
+      zone: Option[String],
+      attributes: Seq[Attribute])
 
   object AgentInfo {
     def apply(offer: org.apache.mesos.Protos.Offer): AgentInfo = AgentInfo(

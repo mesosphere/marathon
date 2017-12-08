@@ -72,13 +72,13 @@ object Container {
     * @param networkNames  Specifies one or more container networks, by name, for which this PortMapping applies.
     */
   case class PortMapping(
-    containerPort: Int = AppDefinition.RandomPortValue,
-    hostPort: Option[Int] = None, // defaults to HostPortDefault for BRIDGE mode, None for USER mode
-    servicePort: Int = AppDefinition.RandomPortValue,
-    protocol: String = PortMapping.TCP,
-    name: Option[String] = None,
-    labels: Map[String, String] = Map.empty[String, String],
-    networkNames: Seq[String] = Nil
+      containerPort: Int = AppDefinition.RandomPortValue,
+      hostPort: Option[Int] = None, // defaults to HostPortDefault for BRIDGE mode, None for USER mode
+      servicePort: Int = AppDefinition.RandomPortValue,
+      protocol: String = PortMapping.TCP,
+      name: Option[String] = None,
+      labels: Map[String, String] = Map.empty[String, String],
+      networkNames: Seq[String] = Nil
   )
 
   object PortMapping {
@@ -91,8 +91,8 @@ object Container {
   }
 
   case class Credential(
-    principal: String,
-    secret: Option[String] = None)
+      principal: String,
+      secret: Option[String] = None)
 
   case class DockerPullConfig(secret: String)
 

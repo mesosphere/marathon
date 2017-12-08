@@ -51,7 +51,7 @@ class AuthResourceTest extends UnitTest {
     }
 
     class TestResource(val authenticator: Authenticator, val authorizer: Authorizer, val config: MarathonConf)
-        extends AuthResource {
+      extends AuthResource {
       def foo(request: HttpServletRequest): Response = authenticated(request) { identity =>
         Response.ok("foo").build()
       }

@@ -10,7 +10,7 @@ import mesosphere.marathon.test.GroupCreation
 class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
   "applications with port definitions" when {
     "apps with port definitions should map dynamic ports to a non-0 value" in {
-      val app = AppDefinition("/app".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(1)))
+      val app = AppDefinition("/app".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(1)), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val update = AssignDynamicServiceLogic.assignDynamicServicePorts(10.to(20), createRootGroup(), rootGroup)
       update.apps(app.id).portDefinitions.size should equal(2)
@@ -19,9 +19,9 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
     }
 
     "multiple apps are assigned dynamic app ports" should {
-      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
-      val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(1, 2, 3))
-      val app3 = AppDefinition("/app3".toPath, portDefinitions = PortDefinitions(0, 2, 0))
+      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
+      val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(1, 2, 3), cmd = Some("sleep"))
+      val app3 = AppDefinition("/app3".toPath, portDefinitions = PortDefinitions(0, 2, 0), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(
         app1.id -> app1,
         app2.id -> app2,
@@ -40,8 +40,8 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
 
     //regression for #2743
     "should reassign dynamic service ports specified in the container" in {
-      val app = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))
-      val updatedApp = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 0, 11))
+      val app = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11), cmd = Some("sleep"))
+      val updatedApp = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 0, 11), cmd = Some("sleep"))
       val from = createRootGroup(Map(app.id -> app))
       val to = createRootGroup(Map(updatedApp.id -> updatedApp))
       val update = AssignDynamicServiceLogic.assignDynamicServicePorts(10.to(20), from, to)
@@ -50,8 +50,8 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
 
     "Already taken ports will not be used" in {
       val servicePortsRange = 10.to(20)
-      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
-      val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 2, 0))
+      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
+      val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 2, 0), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(
         app1.id -> app1,
         app2.id -> app2
@@ -63,7 +63,7 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
 
     // Regression test for #2868
     "Don't assign duplicated service ports" in {
-      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 10))
+      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 10), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app1.id -> app1))
       val update = AssignDynamicServiceLogic.assignDynamicServicePorts(10.to(20), createRootGroup(), rootGroup)
 
@@ -72,10 +72,10 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
     }
 
     "Assign unique service ports also when adding a dynamic service port to an app" in {
-      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))
+      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11), cmd = Some("sleep"))
       val originalGroup = createRootGroup(Map(app1.id -> app1))
 
-      val updatedApp1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
+      val updatedApp1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
       val updatedGroup = createRootGroup(Map(updatedApp1.id -> updatedApp1))
       val result = AssignDynamicServiceLogic.assignDynamicServicePorts(10.to(20), originalGroup, updatedGroup)
 
@@ -84,8 +84,8 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
     }
 
     "If there are not enough ports, a PortExhausted exception is thrown" in {
-      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
-      val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 0, 0))
+      val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
+      val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(
         app1.id -> app1,
         app2.id -> app2
@@ -112,7 +112,7 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
         )
         )
         val virtualNetwork = Seq(ContainerNetwork(name = "whatever"))
-        val app = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container), networks = virtualNetwork)
+        val app = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container), networks = virtualNetwork, cmd = Some("sleep"))
         val rootGroup = createRootGroup(Map(app.id -> app))
         val updatedGroup = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), rootGroup)
         val updatedApp = updatedGroup.transitiveApps.head
@@ -132,8 +132,8 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
         )
         ))
         val virtualNetwork = Seq(ContainerNetwork(name = "whatever"))
-        val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1, networks = virtualNetwork)
-        val app2 = AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2, networks = virtualNetwork)
+        val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1, networks = virtualNetwork, cmd = Some("sleep"))
+        val app2 = AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2, networks = virtualNetwork, cmd = Some("sleep"))
         val rootGroup = createRootGroup(Map(
           app1.id -> app1,
           app2.id -> app2
@@ -156,8 +156,8 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
           PortMapping(containerPort = 8082, hostPort = Some(0))
         )
         ))
-        val bridgeModeApp = AppDefinition("/bridgemodeapp".toPath, container = bridgeModeContainer, networks = Seq(BridgeNetwork()))
-        val userModeApp = AppDefinition("/usermodeapp".toPath, container = userModeContainer, networks = Seq(ContainerNetwork("whatever")))
+        val bridgeModeApp = AppDefinition("/bridgemodeapp".toPath, container = bridgeModeContainer, networks = Seq(BridgeNetwork()), cmd = Some("sleep"))
+        val userModeApp = AppDefinition("/usermodeapp".toPath, container = userModeContainer, networks = Seq(ContainerNetwork("whatever")), cmd = Some("sleep"))
         val fromGroup = createRootGroup(Map(bridgeModeApp.id -> bridgeModeApp))
         val toGroup = createRootGroup(Map(
           bridgeModeApp.id -> bridgeModeApp,
@@ -180,7 +180,7 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
           PortMapping()
         )
         ))
-        val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1, networks = Seq(ContainerNetwork("whatever")))
+        val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1, networks = Seq(ContainerNetwork("whatever")), cmd = Some("sleep"))
         val rootGroup = createRootGroup(Map(app1.id -> app1))
         val update = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), rootGroup)
         update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
@@ -196,7 +196,7 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
           PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
         )
         )
-        val app1 = AppDefinition("/app1".toPath, container = Some(container), networks = Seq(ContainerNetwork("foo")))
+        val app1 = AppDefinition("/app1".toPath, container = Some(container), networks = Seq(ContainerNetwork("foo")), cmd = Some("sleep"))
         val rootGroup = createRootGroup(Map(app1.id -> app1))
         val update = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), rootGroup)
         update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
@@ -209,6 +209,7 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
 
         val app1 = AppDefinition(
           id = "/app1".toPath,
+          cmd = Some("sleep"),
           container = Some(container)
         )
         val rootGroup = createRootGroup(Map(app1.id -> app1))
@@ -221,9 +222,9 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
     }
   }
 
-  behave like withContainerNetworking("docker-docker", Container.Docker())
-  behave like withContainerNetworking("mesos-docker", Container.MesosDocker())
-  behave like withContainerNetworking("mesos-appc", Container.MesosAppC())
+  behave like withContainerNetworking("docker-docker", Container.Docker(image = "foobar"))
+  behave like withContainerNetworking("mesos-docker", Container.MesosDocker(image = "foobar"))
+  behave like withContainerNetworking("mesos-appc", Container.MesosAppC(image = "foobar"))
   behave like withContainerNetworking("mesos", Container.Mesos())
 
 }

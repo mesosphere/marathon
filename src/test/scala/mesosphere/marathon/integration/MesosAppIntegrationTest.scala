@@ -175,10 +175,10 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       When("The pod definition is changed")
       val updatedPod = pod.copy(
         containers = pod.containers :+ MesosContainer(
-        name = "task3",
-        exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
-        resources = raml.Resources(cpus = 0.1, mem = 32.0)
-      )
+          name = "task3",
+          exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
+          resources = raml.Resources(cpus = 0.1, mem = 32.0)
+        )
       )
       val updateResult = marathon.updatePod(pod.id, updatedPod)
 
@@ -265,10 +265,10 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       When("A task is added to the pod")
       val updatedPod = pod.copy(
         containers = pod.containers :+ MesosContainer(
-        name = "task3",
-        exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
-        resources = raml.Resources(cpus = 0.1, mem = 32.0)
-      )
+          name = "task3",
+          exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
+          resources = raml.Resources(cpus = 0.1, mem = 32.0)
+        )
       )
       val updateResult = marathon.updatePod(pod.id, updatedPod)
       updateResult should be(OK)
@@ -383,9 +383,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       val constraints = Set(
         Constraint.newBuilder
-        .setField(hostnameField)
-        .setOperator(UNIQUE)
-        .build
+          .setField(hostnameField)
+          .setOperator(UNIQUE)
+          .build
       )
 
       Given("a pod with a single task")

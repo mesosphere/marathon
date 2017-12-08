@@ -10,7 +10,7 @@ import mesosphere.marathon.state
 import scala.concurrent.duration._
 
 trait PodConversion extends NetworkConversion with ConstraintConversion with ContainerConversion with EnvVarConversion
-    with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion {
+  with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion {
 
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podd =>
     val instances = podd.scaling.fold(DefaultInstances) {

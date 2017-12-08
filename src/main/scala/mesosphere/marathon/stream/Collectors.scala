@@ -12,7 +12,7 @@ import scala.collection.immutable.{ IndexedSeq, Seq }
 import scala.collection.mutable
 
 private class GenericCollector[T, C <: TraversableOnce[T]](builder: () => mutable.Builder[T, C])
-    extends Collector[T, mutable.Builder[T, C], C] {
+  extends Collector[T, mutable.Builder[T, C], C] {
   override def supplier(): Supplier[mutable.Builder[T, C]] = builder
 
   override def combiner(): BinaryOperator[mutable.Builder[T, C]] =
@@ -30,7 +30,7 @@ private class GenericCollector[T, C <: TraversableOnce[T]](builder: () => mutabl
 }
 
 private class MapCollector[K, V]()
-    extends Collector[util.Map.Entry[K, V], mutable.Builder[(K, V), Map[K, V]], Map[K, V]] {
+  extends Collector[util.Map.Entry[K, V], mutable.Builder[(K, V), Map[K, V]], Map[K, V]] {
 
   override def supplier(): Supplier[mutable.Builder[(K, V), Map[K, V]]] = () => Map.newBuilder[K, V]
 

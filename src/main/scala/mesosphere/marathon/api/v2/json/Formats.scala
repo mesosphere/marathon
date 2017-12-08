@@ -48,12 +48,12 @@ object Formats extends Formats {
 }
 
 trait Formats
-    extends AppAndGroupFormats
-    with HealthCheckFormats
-    with ReadinessCheckFormats
-    with DeploymentFormats
-    with EventFormats
-    with PluginFormats {
+  extends AppAndGroupFormats
+  with HealthCheckFormats
+  with ReadinessCheckFormats
+  with DeploymentFormats
+  with EventFormats
+  with PluginFormats {
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
     Json.obj(

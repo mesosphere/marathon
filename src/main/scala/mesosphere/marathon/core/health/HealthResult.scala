@@ -12,14 +12,14 @@ sealed trait HealthResult {
 }
 
 case class Healthy(
-  instanceId: Instance.Id,
-  version: Timestamp,
-  time: Timestamp = Timestamp.now(),
-  publishEvent: Boolean = true) extends HealthResult
+    instanceId: Instance.Id,
+    version: Timestamp,
+    time: Timestamp = Timestamp.now(),
+    publishEvent: Boolean = true) extends HealthResult
 
 case class Unhealthy(
-  instanceId: Instance.Id,
-  version: Timestamp,
-  cause: String,
-  time: Timestamp = Timestamp.now(),
-  publishEvent: Boolean = true) extends HealthResult
+    instanceId: Instance.Id,
+    version: Timestamp,
+    cause: String,
+    time: Timestamp = Timestamp.now(),
+    publishEvent: Boolean = true) extends HealthResult

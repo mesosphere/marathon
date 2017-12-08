@@ -46,11 +46,11 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
   * Handle a server side event client stream by delegating events to the stream actor.
   */
 class HttpEventStreamServlet(
-  streamActor: ActorRef,
-  conf: EventConf,
-  val authenticator: Authenticator,
-  val authorizer: Authorizer)
-    extends EventSourceServlet {
+    streamActor: ActorRef,
+    conf: EventConf,
+    val authenticator: Authenticator,
+    val authorizer: Authorizer)
+  extends EventSourceServlet {
 
   override def doGet(request: HttpServletRequest, response: HttpServletResponse): Unit = {
     val requestFacade = new RequestFacade(request)

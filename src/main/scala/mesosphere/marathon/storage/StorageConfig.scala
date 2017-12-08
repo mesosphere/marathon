@@ -67,9 +67,9 @@ sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
 }
 
 case class VersionCacheConfig(
-  maxEntries: Int,
-  purgeCount: Int,
-  pRemove: Double
+    maxEntries: Int,
+    purgeCount: Int,
+    pRemove: Double
 )
 
 object VersionCacheConfig {

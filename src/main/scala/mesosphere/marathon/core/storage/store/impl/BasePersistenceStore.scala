@@ -33,7 +33,7 @@ case class CategorizedKey[C, K](category: C, key: K)
   * @tparam Serialized The serialized format for the persistence store.
   */
 abstract class BasePersistenceStore[K, Category, Serialized](implicit
-  ctx: ExecutionContext,
+    ctx: ExecutionContext,
     mat: Materializer) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
   private val idsTimer: Timer = Metrics.timer(ServiceMetric, getClass, "ids")
   private val getTimer: Timer = Metrics.timer(ServiceMetric, getClass, "get")
