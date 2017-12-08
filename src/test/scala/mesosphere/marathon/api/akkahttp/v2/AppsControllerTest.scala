@@ -2395,7 +2395,6 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "List running tasks" in new Fixture {
       val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
-      val taskId = "task_id"
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
       groupManager.rootGroup() returns rootGroup
