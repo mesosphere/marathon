@@ -10,12 +10,12 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 import akka.Done
 import akka.http.scaladsl.model.StatusCodes._
+import com.google.common.io.{ ByteStreams, Closeables }
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.stream.Implicits._
-import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -294,13 +294,13 @@ class JavaUrlConnectionRequestForwarder @Inject() (
             () => cloneResponseEntity(leaderConnection, response)
           )
         } finally {
-          Try(leaderConnection.getInputStream.close())
-          Try(leaderConnection.getErrorStream.close())
+          Closeables.closeQuietly(leaderConnection.getInputStream())
+          Closeables.closeQuietly(leaderConnection.getErrorStream())
         }
       }
     } finally {
-      Try(request.getInputStream.close())
-      Try(response.getOutputStream.close())
+      Closeables.closeQuietly(request.getInputStream())
+      Closeables.close(response.getOutputStream(), true)
     }
 
   }
@@ -310,7 +310,10 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       for {
         in <- Option(nullableIn)
         out <- Option(nullableOut)
-      } IOUtils.copy(in, out)
+      } {
+        ByteStreams.copy(in, out)
+        out.flush()
+      }
     } catch {
       case e: UnknownServiceException =>
         log.warn("unexpected unknown service exception", e)
