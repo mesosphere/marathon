@@ -5,11 +5,13 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.tasks.OfferUtil
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.util.Try
+import java.text.DecimalFormat
 
 object Int {
   def unapply(s: String): Option[Int] = Try(s.toInt).toOption
@@ -18,6 +20,8 @@ object Int {
 trait Placed {
   def attributes: Seq[Attribute]
   def hostname: String
+  def region: Option[String]
+  def zone: Option[String]
 }
 
 object Constraints {
@@ -31,9 +35,21 @@ object Constraints {
     case _ => default
   }
 
+  /**
+    * Decimal formatter to the 1000th precision. Does not include zeros after the decimal. Rounding mode
+    * ROUND_HALF_EVEN (1.0005 becomes "1", but 1.00051 becomes "1.001" and 1.1005 becomes "1.101").
+    *
+    * ROUND_HALF_EVEN is used for legacy purposes.
+    *
+    * Previously, we used NumberFormat.getInstance, which defaults to the DecimalFormat seen below, but could have
+    * differing behavior depending on the environmental locale configured.
+    */
+  private val decimalFormatter =
+    new DecimalFormat("0.###")
+
   private def getValueString(attribute: Attribute): String = attribute.getType match {
     case Value.Type.SCALAR =>
-      java.text.NumberFormat.getInstance.format(attribute.getScalar.getValue)
+      decimalFormatter.format(attribute.getScalar.getValue)
     case Value.Type.TEXT =>
       attribute.getText.getValue
     case Value.Type.RANGES =>
@@ -47,25 +63,56 @@ object Constraints {
       s"{$s}"
   }
 
+  type FieldReader = (Offer => Option[String], Placed => Option[String])
+  private val hostnameReader: FieldReader = (offer => Some(offer.getHostname), placed => Some(placed.hostname))
+  private val regionReader: FieldReader = (OfferUtil.region(_), _.region)
+  private val zoneReader: FieldReader = (OfferUtil.zone(_), _.zone)
+  private def attributeReader(field: String): FieldReader = (
+    { offer => offer.getAttributesList.find(_.getName == field).map(getValueString) },
+    { p => p.attributes.find(_.getName == field).map(getValueString) })
+
+  val hostnameField = "@hostname"
+  val regionField = "@region"
+  val zoneField = "@zone"
+  def readerForField(field: String): FieldReader =
+    field match {
+      case "hostname" | `hostnameField` => hostnameReader
+      case `regionField` => regionReader
+      case `zoneField` => zoneReader
+      case _ => attributeReader(field)
+    }
+
+  // Regular expressions to determine type based on http://mesos.apache.org/documentation/latest/attributes-resources/
+  private[mesos] val MesosSetValue = "\\{(.+)\\}".r
+  private[mesos] val MesosRangeValue = "\\[(.+)\\]".r
+  private[mesos] val MesosScalarValue = "([0-9]+(?:\\.[0-9]+)?)".r
+
   private final class ConstraintsChecker(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint) {
-    val field = constraint.getField
-    val value = constraint.getValue
-    lazy val attr = offer.getAttributesList.find(_.getName == field)
+    val constraintValue = constraint.getValue
+    def constraintValueAsScalar: Option[Double] = constraintValue match {
+      case MesosScalarValue(v) => Some(v.toDouble)
+      case _ => None
+    }
+    def constraintValueAsSet: Option[Iterable[String]] = {
+      constraintValue match {
+        case MesosSetValue(inner) =>
+          Some(inner.split(',').view.map {
+            case MesosScalarValue(v) => decimalFormatter.format(v.toDouble)
+            case text => text
+          })
 
-    def isMatch: Boolean =
-      if (field == "hostname") {
-        checkHostName
-      } else if (attr.nonEmpty) {
-        checkAttribute
-      } else {
-        // This will be reached in case we want to schedule for an attribute
-        // that's not supplied.
-        checkMissingAttribute
+        case _ => None
       }
+    }
 
-    private def checkGroupBy(constraintValue: String, groupFunc: (Placed) => Option[String]) = {
+    def isMatch: Boolean = {
+      val (offerReader, placedReader) = readerForField(constraint.getField)
+      checkConstraint(offerReader(offer), placedReader)
+    }
+
+    private def checkGroupBy(offerValue: String, groupFunc: (Placed) => Option[String]) = {
       // Minimum group count
-      val minimum = List(GroupByDefault, getIntValue(value, GroupByDefault)).max
+      val minimum = List(GroupByDefault, getIntValue(constraintValue, GroupByDefault)).max
       // Group tasks by the constraint value, and calculate the task count of each group
       val groupedTasks = allPlaced.groupBy(groupFunc).map { case (k, v) => k -> v.size }
       // Task count of the smallest group
@@ -75,87 +122,63 @@ object Constraints {
       // a) this offer matches the smallest grouping when there
       // are >= minimum groupings
       // b) the constraint value from the offer is not yet in the grouping
-      groupedTasks.find(_._1.contains(constraintValue))
+      groupedTasks.find(_._1.contains(offerValue))
         .forall(pair => groupedTasks.size >= minimum && pair._2 == minCount)
     }
 
-    private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (Placed) => Option[String]): Boolean = {
+    private def checkMaxPer(offerValue: String, maxCount: Int, groupFunc: (Placed) => Option[String]): Boolean = {
       // Group tasks by the constraint value, and calculate the task count of each group
       val groupedTasks = allPlaced.groupBy(groupFunc).map { case (k, v) => k -> v.size }
 
-      groupedTasks.find(_._1.contains(constraintValue)).forall(_._2 < maxCount)
+      groupedTasks.find(_._1.contains(offerValue)).forall(_._2 < maxCount)
     }
 
-    private def checkHostName =
-      constraint.getOperator match {
-        case Operator.LIKE => offer.getHostname.matches(value)
-        case Operator.UNLIKE => !offer.getHostname.matches(value)
-        // All running tasks must have a hostname that is different from the one in the offer
-        case Operator.UNIQUE => allPlaced.forall(_.hostname != offer.getHostname)
-        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (p: Placed) => Some(p.hostname))
-        case Operator.MAX_PER => checkMaxPer(offer.getHostname, value.toInt, (p: Placed) => Some(p.hostname))
-        case Operator.CLUSTER =>
-          // Hostname must match or be empty
-          (value.isEmpty || value == offer.getHostname) &&
-            // All running tasks must have the same hostname as the one in the offer
-            allPlaced.forall(_.hostname == offer.getHostname)
-        case _ => false
-      }
+    private def checkCluster(offerValue: String, placedValue: Placed => Option[String]) =
+      if (constraintValue.isEmpty)
+        // If no placements are made, then accept (and make this offerValue) the value on which all future tasks are
+        // placed
+        allPlaced.headOption.fold(true) { p => placedValue(p) contains offerValue }
+      else
+        // Is constraint
+        (offerValue == constraintValue)
 
-    @SuppressWarnings(Array("OptionGet"))
-    private def checkAttribute: Boolean = {
-      def matches: Seq[Placed] = matchTaskAttributes(allPlaced, field, getValueString(attr.get))
-      def groupFunc = (p: Placed) => p.attributes
-        .find(_.getName == field)
-        .map(getValueString)
-      constraint.getOperator match {
-        case Operator.UNIQUE => matches.isEmpty
-        case Operator.CLUSTER =>
-          // If no value is set, accept the first one. Otherwise check for it.
-          (value.isEmpty || getValueString(attr.get) == value) &&
-            // All running tasks should have the matching attribute
-            matches.size == allPlaced.size
-        case Operator.GROUP_BY =>
-          checkGroupBy(getValueString(attr.get), groupFunc)
-        case Operator.MAX_PER =>
-          checkMaxPer(getValueString(attr.get), value.toInt, groupFunc)
-        case Operator.LIKE => checkLike
-        case Operator.UNLIKE => checkUnlike
+    // All running tasks must have a value that is different from the one in the offer
+    private def checkUnique(offerValue: Option[String], placedValue: Placed => Option[String]) = {
+      allPlaced.forall { p => placedValue(p) != offerValue }
+    }
+
+    def checkConstraint(maybeOfferValue: Option[String], placedValue: Placed => Option[String]) = {
+      maybeOfferValue match {
+        case Some(offerValue) =>
+          constraint.getOperator match {
+            case Operator.LIKE => checkLike(offerValue)
+            case Operator.UNLIKE => checkUnlike(offerValue)
+            case Operator.UNIQUE => checkUnique(maybeOfferValue, placedValue)
+            case Operator.GROUP_BY => checkGroupBy(offerValue, placedValue)
+            case Operator.MAX_PER => checkMaxPer(offerValue, constraintValue.toInt, placedValue)
+            case Operator.CLUSTER => checkCluster(offerValue, placedValue)
+            case Operator.IS => offerValue == constraintValueAsScalar.fold(constraintValue)(decimalFormatter.format(_))
+          }
+        case None =>
+          // Only unlike can be matched if this offer does not have the specified value
+          constraint.getOperator == Operator.UNLIKE
       }
     }
 
-    @SuppressWarnings(Array("OptionGet"))
-    private def checkLike: Boolean = {
-      if (value.nonEmpty) {
-        getValueString(attr.get).matches(value)
+    private def checkLike(offerValue: String): Boolean =
+      if (constraintValue.nonEmpty) {
+        offerValue.matches(constraintValue)
       } else {
         log.warn("Error, value is required for LIKE operation")
         false
       }
-    }
 
-    @SuppressWarnings(Array("OptionGet"))
-    private def checkUnlike: Boolean = {
-      if (value.nonEmpty) {
-        !getValueString(attr.get).matches(value)
+    private def checkUnlike(offerValue: String): Boolean =
+      if (constraintValue.nonEmpty) {
+        !offerValue.matches(constraintValue)
       } else {
         log.warn("Error, value is required for UNLIKE operation")
         false
-      }
-    }
-
-    private def checkMissingAttribute = constraint.getOperator == Operator.UNLIKE
-
-    /**
-      * Filters running tasks by matching their attributes to this field & value.
-      */
-    private def matchTaskAttributes(allPlaced: Seq[Placed], field: String, value: String) =
-      allPlaced.filter {
-        _.attributes
-          .exists { y =>
-            y.getName == field &&
-              getValueString(y) == value
-          }
       }
   }
 
@@ -181,12 +204,9 @@ object Constraints {
 
     //currently, only the GROUP_BY operator is able to select instances to kill
     val distributions = runSpec.constraints.withFilter(_.getOperator == Operator.GROUP_BY).map { constraint =>
-      def groupFn(instance: Instance): Option[String] = constraint.getField match {
-        case "hostname" => Some(instance.agentInfo.host)
-        case field: String => instance.agentInfo.attributes.find(_.getName == field).map(getValueString)
-      }
+      val (_, placed) = readerForField(constraint.getField)
       val instanceGroups: Seq[Map[Instance.Id, Instance]] =
-        runningInstances.groupBy(groupFn).values.map(Instance.instancesById)(collection.breakOut)
+        runningInstances.groupBy(placed).values.map(Instance.instancesById)(collection.breakOut)
       GroupByDistribution(constraint, instanceGroups)
     }
 

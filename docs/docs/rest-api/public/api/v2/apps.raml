@@ -293,7 +293,7 @@
               #type: app.AppList
               example: !include examples/app_list.json
         404:
-          description: No task found with this `app_id`.
+          description: No app found with this `app_id`.
           body:
             application/json:
               type: error.Error
@@ -332,6 +332,7 @@
           description: The application has been created and a deployment is started.
           body:
             application/json:
+              type: deploymentResult.DeploymentResult
               example: !include examples/deployments_result.json
         404:
           description: No task found with this `app_id`.
@@ -386,6 +387,7 @@
           description: The application has been updated and a deployment is started.
           body:
             application/json:
+              type: deploymentResult.DeploymentResult
               example: !include examples/deployments_result.json
         404:
           description: No task found with this `app_id`.
@@ -498,6 +500,7 @@
               If scale=true, than a deployment is triggered and the deployment is returned.
             body:
               application/json:
+                type: instance.InstanceList | deploymentResult.DeploymentResult
                 example: !include examples/app_tasks.json
           404:
             description: No task found with this `app_id`.
@@ -508,7 +511,7 @@
 
       /{task_id}:
         ###
-        # Create application
+        # Delete a single task
         #
         delete:
           description: Kill the task with ID `task_id` that belongs to the application `app_id`.
@@ -526,6 +529,7 @@
                 If scale=true, than a deployment is triggered and the deployment is returned.
               body:
                 application/json:
+                  type: instance.SingleInstance | deploymentResult.DeploymentResult
                   example: !include examples/app_task.json
             404:
               description: No task found with this task_id.

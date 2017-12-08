@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package state
 
+import com.wix.accord.Descriptions.{ Generic, Path => WixPath }
 import java.util.regex.Pattern
 
 import com.wix.accord._
@@ -35,6 +36,10 @@ object Volume {
         external = ExternalVolumeInfo.fromProto(proto.getExternal),
         mode = proto.getMode
       )
+    else if (proto.hasSecret)
+      SecretVolume(
+        proto.getContainerPath,
+        proto.getSecret.getSecret)
     else
       DockerVolume(
         containerPath = proto.getContainerPath,
@@ -59,10 +64,10 @@ object Volume {
   * absolute.
   */
 case class DockerVolume(
-  containerPath: String,
-  hostPath: String,
-  mode: Mesos.Volume.Mode)
-    extends Volume
+    containerPath: String,
+    hostPath: String,
+    mode: Mesos.Volume.Mode)
+  extends Volume
 
 object DockerVolume {
   implicit val validDockerVolume = validator[DockerVolume] { vol =>
@@ -148,10 +153,10 @@ object DiskType {
 }
 
 case class PersistentVolumeInfo(
-  size: Long,
-  maxSize: Option[Long] = None,
-  `type`: DiskType = DiskType.Root,
-  constraints: Set[Constraint] = Set.empty)
+    size: Long,
+    maxSize: Option[Long] = None,
+    `type`: DiskType = DiskType.Root,
+    constraints: Set[Constraint] = Set.empty)
 
 object PersistentVolumeInfo {
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
@@ -166,9 +171,9 @@ object PersistentVolumeInfo {
     import Constraint.Operator._
     override def apply(c: Constraint): Result = {
       if (!c.hasField || !c.hasOperator) {
-        Failure(Set(RuleViolation(c, "Missing field and operator", None)))
+        Failure(Set(RuleViolation(c, "Missing field and operator")))
       } else if (c.getField != "path") {
-        Failure(Set(RuleViolation(c, "Unsupported field", Some(c.getField))))
+        Failure(Set(RuleViolation(c, "Unsupported field", WixPath(Generic(c.getField)))))
       } else {
         c.getOperator match {
           case LIKE | UNLIKE =>
@@ -180,14 +185,13 @@ object PersistentVolumeInfo {
                   Failure(Set(RuleViolation(
                     c,
                     "Invalid regular expression",
-                    Some(s"${c.getValue}\n${e.getMessage}"))))
+                    WixPath(Generic("value")))))
               }
             } else {
-              Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
+              Failure(Set(RuleViolation(c, "A regular expression value must be provided", WixPath(Generic("value")))))
             }
           case _ =>
-            Failure(Set(
-              RuleViolation(c, "Operator must be one of LIKE, UNLIKE", None)))
+            Failure(Set(RuleViolation(c, "Operator must be one of LIKE, UNLIKE", WixPath(Generic("operator")))))
         }
       }
     }
@@ -210,7 +214,7 @@ object PersistentVolumeInfo {
     }
 
     val haveProperlyOrderedMaxSize = isTrue[PersistentVolumeInfo]("Max size must be larger than size") { info =>
-      info.maxSize.map(_ > info.size).getOrElse(true)
+      info.maxSize.forall(_ > info.size)
     }
 
     validator[PersistentVolumeInfo] { info =>
@@ -224,9 +228,9 @@ object PersistentVolumeInfo {
 }
 
 case class PersistentVolume(
-  val containerPath: String,
-  val persistent: PersistentVolumeInfo,
-  val mode: Mesos.Volume.Mode) extends Volume
+    val containerPath: String,
+    val persistent: PersistentVolumeInfo,
+    val mode: Mesos.Volume.Mode) extends Volume
 
 object PersistentVolume {
   import PathPatterns._
@@ -278,10 +282,10 @@ object PathPatterns {
   * @param options contains storage provider-specific configuration configuration
   */
 case class ExternalVolumeInfo(
-  size: Option[Long] = None,
-  name: String,
-  provider: String,
-  options: Map[String, String] = Map.empty[String, String])
+    size: Option[Long] = None,
+    name: String,
+    provider: String,
+    options: Map[String, String] = Map.empty[String, String])
 
 object OptionLabelPatterns {
   val OptionNamespaceSeparator = "/"
@@ -302,7 +306,7 @@ object ExternalVolumeInfo {
     info.size.each should be > 0L
     info.name should matchRegex(LabelRegex)
     info.provider should matchRegex(LabelRegex)
-    info.options is valid(validOptions)
+    info.options is validOptions
   }
 
   def fromProto(evi: Protos.Volume.ExternalVolumeInfo): ExternalVolumeInfo =
@@ -315,15 +319,15 @@ object ExternalVolumeInfo {
 }
 
 case class ExternalVolume(
-  containerPath: String,
-  external: ExternalVolumeInfo,
-  mode: Mesos.Volume.Mode) extends Volume
+    containerPath: String,
+    external: ExternalVolumeInfo,
+    mode: Mesos.Volume.Mode) extends Volume
 
 object ExternalVolume {
   def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] = validator[ExternalVolume] { ev =>
     ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
     ev.containerPath is notEmpty
-    ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
+    ev.external is ExternalVolumeInfo.validExternalVolumeInfo
   } and ExternalVolumes.validExternalVolume
 }
 

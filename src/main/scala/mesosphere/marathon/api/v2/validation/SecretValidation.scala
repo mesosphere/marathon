@@ -15,21 +15,20 @@ trait SecretValidation {
       case EnvVarValue(value: String) => value // this should never be called; if it is, validation output will not be friendly
     }
 
-  def secretValidator(secrets: Map[String, EnvVarSecret]) = validator[(String, EnvVarValueOrSecret)] { entry =>
-    entry._2 as stringify(entry._2) is isTrue("references an undefined secret"){
+  def secretValidator(secrets: Map[String, EnvVarSecret]) = validator[EnvVarValueOrSecret] { entry =>
+    entry as "secret" is isTrue("references an undefined secret"){
       case EnvVarSecret(ref: String) => secrets.contains(ref)
       case _ => true
     }
   }
 
-  val secretEntryValidator: Validator[(String, SecretDef)] = validator[(String, SecretDef)] { t =>
-    t._1 as "" is notEmpty
-    t._2.source as "source" is notEmpty
+  private val secretEntryValidator: Validator[SecretDef] = validator[SecretDef] { t =>
+    t.source is notEmpty
   }
 
   val secretValidator = validator[Map[String, SecretDef]] { s =>
     s.keys is every(notEmpty)
-    s.values.map(_.source) as "source" is every(notEmpty)
+    s is everyKeyValue(secretEntryValidator)
   }
 }
 

@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.task.bus
 
+import java.time.{ OffsetDateTime, ZoneOffset }
+
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -9,7 +11,6 @@ import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
 class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val effect: InstanceUpdateEffect) {
@@ -47,7 +48,7 @@ object TaskStatusUpdateTestHelper {
     new TaskStatusUpdateTestHelper(operation, effect)
 
   lazy val defaultInstance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskStaged().getInstance()
-  lazy val defaultTimestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 30, 0, 0))
+  lazy val defaultTimestamp = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
   def taskLaunchFor(instance: Instance) = {
     val operation = InstanceUpdateOperation.LaunchEphemeral(instance)

@@ -33,26 +33,19 @@ apt install -t jessie-backports -y openjdk-8-jdk
 update-java-alternatives -s java-1.8.0-openjdk-amd64
 
 apt-get install -y \
-        git \
-        php5-cli \
-        php5-curl \
-        sbt \
-        docker-engine \
-        curl \
         build-essential \
+        curl \
+        docker-engine \
+        git \
+        npm \
+        python3-pip \
         rpm \
-        npm
+        sbt
 
 # Download (but don't install) Mesos and its dependencies.
 # The CI task will install Mesos later.
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
 systemctl stop mesos-master.service mesos-slave.service mesos_executor.slice
-
-# Add arcanist
-mkdir -p /opt/arcanist
-git clone https://github.com/phacility/libphutil.git /opt/arcanist/libphutil
-git clone https://github.com/phacility/arcanist.git /opt/arcanist/arcanist
-ln -sf /opt/arcanist/arcanist/bin/arc /usr/local/bin/
 
 # Add user to docker group
 gpasswd -a admin docker
@@ -65,15 +58,14 @@ apt-get install -y nodejs
 systemctl enable docker
 update-ca-certificates -f
 
-echo "{\"hosts\":{\"https://phabricator.mesosphere.com/api/\":{\"token\":\"$CONDUIT_TOKEN\"}}}" > /home/admin/.arcrc
-chown admin /home/admin/.arcrc
-chmod 0600 /home/admin/.arcrc
-
 # Install jq
 curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && sudo chmod +x /usr/local/bin/jq
 
 # Install Ammonite
 curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm
+
+# Install falke8
+pip3 install flake8
 
 # Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
 # so we need ivy2 cache in `/root`

@@ -23,7 +23,7 @@ import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager 
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, PodSecretVolume, Raml, Resources }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
+import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy, VersionInfo }
 import mesosphere.marathon.test.{ Mockito, SettableClock }
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -597,7 +597,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
     }
 
     "support versions" when {
-      implicit val ctx = ExecutionContexts.global
 
       "there are no versions" when {
         "list no versions" in {
@@ -619,7 +618,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
-          val response = f.podsResource.version("/id", "2008", f.auth.request)
+          val response = f.podsResource.version("/id", "2008-01-01T12:00:00Z", f.auth.request)
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
             response.getEntity.toString should be ("{\"message\":\"Pod '/id' does not exist\"}")
@@ -629,7 +628,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       "there are versions" when {
         import mesosphere.marathon.state.PathId._
         val pod1 = PodDefinition("/id".toRootPath, containers = Seq(MesosContainer(name = "foo", resources = Resources())))
-        val pod2 = pod1.copy(version = pod1.version + 1.minute)
+        val pod2 = pod1.copy(versionInfo = VersionInfo.OnlyVersion(pod1.version + 1.minute))
         "list the available versions" in {
           val groupManager = mock[GroupManager]
           groupManager.pod(any).returns(Some(pod2))
@@ -667,7 +666,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
           val instance = Instance(
-            Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
+            Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
             InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None),
             Map.empty,
             runSpecVersion = Timestamp.now(),
@@ -684,12 +683,12 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         "attempting to kill multiple instances" in {
           implicit val killer = mock[TaskKiller]
           val instances = Seq(
-            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
+            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default()
             ),
-            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
+            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
               runSpecVersion = Timestamp.now(),
               unreachableStrategy = UnreachableStrategy.default()))
@@ -761,11 +760,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
-        "status of a pod" in {
-          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
-          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
-        }
-
         "versions of a pod" in {
           val response = f.podsResource.versions("mypod", f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
@@ -801,7 +795,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         }
 
         "status of a pod" in {
-          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
+          val response = f.podsResource.status("mypod", f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
@@ -819,9 +813,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
   }
 
   case class Fixture(
-    podsResource: PodsResource,
-    auth: TestAuthFixture,
-    podSystem: PodManager
+      podsResource: PodsResource,
+      auth: TestAuthFixture,
+      podSystem: PodManager
   )
 
   object Fixture {

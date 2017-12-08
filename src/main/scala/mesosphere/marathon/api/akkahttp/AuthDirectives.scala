@@ -54,11 +54,14 @@ trait AuthDirectives extends AkkaDirectives {
     * @param action The action for which to check authorization for the given identity
     * @param resource The entity for which authorization should be checked
     */
-  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
+  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource, onAuthFailure: Rejection)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
     if (authorizer.isAuthorized(identity, action, resource))
       pass
     else
-      reject(NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
+      reject(onAuthFailure)
+
+  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
+    authorized[Resource](action, resource, NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
 
   /**
     * Using the active Authorizer, check for authorization for the specified request
@@ -101,9 +104,9 @@ trait AuthDirectives extends AkkaDirectives {
 
 object AuthDirectives {
 
-  private[AuthDirectives] case object AuthServiceUnavailable extends Rejection
-  private[AuthDirectives] case class NotAuthorized(toResponse: HttpResponse) extends Rejection
-  private[AuthDirectives] case class NotAuthenticated(toResponse: HttpResponse) extends Rejection
+  private[akkahttp] case object AuthServiceUnavailable extends Rejection
+  private[akkahttp] case class NotAuthorized(toResponse: HttpResponse) extends Rejection
+  private[akkahttp] case class NotAuthenticated(toResponse: HttpResponse) extends Rejection
 
   def handleAuthRejections: PartialFunction[Rejection, Route] = {
     case AuthServiceUnavailable => Directives.complete(StatusCodes.ServiceUnavailable -> "Auth Service currently not available.")
@@ -116,9 +119,9 @@ object AuthDirectives {
     * @tparam Resource The resource type
     */
   case class AuthorizedActionSet[Resource](
-    create: AuthorizedAction[Resource],
-    update: AuthorizedAction[Resource],
-    delete: AuthorizedAction[Resource],
-    view: AuthorizedAction[Resource]
+      create: AuthorizedAction[Resource],
+      update: AuthorizedAction[Resource],
+      delete: AuthorizedAction[Resource],
+      view: AuthorizedAction[Resource]
   )
 }

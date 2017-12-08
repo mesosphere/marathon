@@ -23,8 +23,8 @@ for attribute in dir(marathon_common_tests):
     if attribute.startswith('test_'):
         exec("from marathon_common_tests import {}".format(attribute))
 
-from shakedown import dcos_version_less_than, required_private_agents
-from fixtures import wait_for_marathon_user_and_cleanup
+from shakedown import dcos_version_less_than, required_private_agents # NOQA
+from fixtures import wait_for_marathon_user_and_cleanup # NOQA
 
 
 pytestmark = [pytest.mark.usefixtures('wait_for_marathon_user_and_cleanup')]
@@ -46,7 +46,7 @@ def teardown_module(module):
     with shakedown.marathon_on_marathon():
         try:
             common.clean_up_marathon()
-        except:
+        except Exception:
             pass
 
     shakedown.uninstall_package_and_wait('marathon')
@@ -72,8 +72,6 @@ def test_ui_registration_requirement():
             for label in task['labels']:
                 if label['key'] == 'DCOS_PACKAGE_NAME':
                     assert label['value'] == 'marathon'
-                if label['key'] == 'DCOS_PACKAGE_IS_FRAMEWORK':
-                    assert label['value'] == 'true'
                 if label['key'] == 'DCOS_SERVICE_NAME':
                     assert label['value'] == 'marathon-user'
 
@@ -245,7 +243,7 @@ def test_framework_unavailable_on_mom():
 
     try:
         shakedown.wait_for_service_endpoint('pyfw', 15)
-    except:
+    except Exception:
         pass
     else:
         assert False, 'MoM shoud NOT create a service endpoint'

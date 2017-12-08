@@ -21,8 +21,14 @@ trait InMemoryTestClass1Serialization {
 }
 
 class InMemoryPersistenceStoreTest extends AkkaUnitTest with PersistenceStoreTest
-    with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
+  with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
-  behave like basicPersistenceStore("InMemoryPersistenceStore", new InMemoryPersistenceStore())
-  behave like backupRestoreStore("InMemoryPersistenceStore", new InMemoryPersistenceStore())
+  def inMemoryStore: InMemoryPersistenceStore = {
+    val store = new InMemoryPersistenceStore()
+    store.markOpen()
+    store
+  }
+
+  behave like basicPersistenceStore("InMemoryPersistenceStore", inMemoryStore)
+  behave like backupRestoreStore("InMemoryPersistenceStore", inMemoryStore)
 }

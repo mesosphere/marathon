@@ -62,7 +62,7 @@ def test_custom_service_name():
     """  Install MoM with a custom service name.
     """
     cosmos_pm = packagemanager.PackageManager(cosmos.get_cosmos_url())
-    pkg = cosmos_pm.get_package_version('marathon', None)
+    cosmos_pm.get_package_version('marathon', None)
     options = {
         'service': {'name': "test-marathon"}
     }
@@ -147,5 +147,5 @@ def uninstall(service, package=PACKAGE_NAME):
             assert shakedown.wait_for_service_endpoint_removal('test-marathon')
             shakedown.delete_zk_node('/universe/{}'.format(service))
 
-    except Exception as e:
+    except Exception:
         pass

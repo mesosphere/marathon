@@ -42,9 +42,9 @@ case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAc
 // runnable spec is started, but the instance count should be changed
 // TODO: Why is there an Option[Seq[]]?!
 case class ScaleApplication(
-  runSpec: RunSpec,
-  scaleTo: Int,
-  sentencedToDeath: Option[Seq[Instance]] = None) extends DeploymentAction
+    runSpec: RunSpec,
+    scaleTo: Int,
+    sentencedToDeath: Option[Seq[Instance]] = None) extends DeploymentAction
 
 // runnable spec is started, but shall be completely stopped
 case class StopApplication(runSpec: RunSpec) extends DeploymentAction
@@ -186,6 +186,8 @@ case class DeploymentPlan(
       } else " NO STEPS"
     s"DeploymentPlan id=$id,$version$stepString\n"
   }
+
+  def targetIdsString = affectedRunSpecIds.mkString(", ")
 }
 
 object DeploymentPlan {
@@ -339,7 +341,7 @@ object DeploymentPlan {
 
   def deploymentPlanValidator(): Validator[DeploymentPlan] = {
     validator[DeploymentPlan] { plan =>
-      plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
+      plan.createdOrUpdatedApps as "app" is every(AppDefinition.updateIsValid(plan.original))
     }
   }
 }

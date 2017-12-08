@@ -1,7 +1,12 @@
 package mesosphere.marathon
 package raml
 
+import mesosphere.marathon.core.instance
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
+import org.apache.mesos.{ Protos => mesos }
+
+import scala.collection.breakOut
 
 /**
   * All conversions for standard scala types.
@@ -25,7 +30,7 @@ trait DefaultConversions {
   }
 
   implicit def javaListToSeqConversion[A, B](implicit writer: Writes[A, B]): Writes[java.util.List[A], Seq[B]] = Writes { list =>
-    list.toSeq.map(writer.write)
+    list.map(writer.write)(breakOut)
   }
 
   implicit def setConversion[A, B](implicit writer: Writes[A, B]): Writes[Set[A], Set[B]] = Writes { set =>
@@ -36,5 +41,23 @@ trait DefaultConversions {
     map.map {
       case (k, v) => key.write(k) -> value.write(v)
     }
+  }
+
+  implicit val timestampWrites: Writes[Timestamp, String] = Writes { _.toString }
+
+  implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
+
+  implicit val instanceIdWrites: Writes[instance.Instance.Id, String] = Writes { _.toString }
+
+  implicit val taskStateWrites: Writes[mesos.TaskState, MesosTaskState] = Writes { taskState =>
+    val name = taskState.name()
+    MesosTaskState.fromString(name).getOrElse(throw new IllegalArgumentException(s"$name is an unknown Mesos task state"))
+  }
+
+  implicit val ipAddressWrites: Writes[mesos.NetworkInfo.IPAddress, IpAddr] = Writes { ipAddress =>
+    val name = ipAddress.getProtocol.name()
+    val protocol = IpProtocol.fromString(name)
+      .getOrElse(throw new IllegalArgumentException(s"$name is an unknown protocol"))
+    IpAddr(ipAddress.getIpAddress, protocol)
   }
 }

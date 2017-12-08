@@ -11,6 +11,7 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
 
 class ActorOfferMatcherTest extends AkkaUnitTest {
+
   "The ActorOfferMatcher" when {
     "asking the actor" should {
       "find a match in time" in {
@@ -28,7 +29,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
         })
         val offer = MarathonTestHelper.makeBasicOffer().build()
 
-        val offerMatcher = new ActorOfferMatcher(probe.ref, None)(scheduler)
+        val offerMatcher = new ActorOfferMatcher(probe.ref, None)
         val offerMatch: MatchedInstanceOps = offerMatcher.matchOffer(offer).futureValue
 
         offerMatch.offerId should not be (offer.getId)

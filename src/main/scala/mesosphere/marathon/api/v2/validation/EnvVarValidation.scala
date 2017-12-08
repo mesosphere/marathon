@@ -21,22 +21,14 @@ trait EnvVarValidation {
     *                             var names for pod environments is already enforced by the RAML code generator.
     *                             See https://jira.mesosphere.com/browse/MARATHON-7183.
     */
-  def validEnvVar(strictNameValidation: Boolean): Validator[(String, EnvVarValueOrSecret)] = {
-
-    val validName = validator[String] { name =>
-      name is implied(strictNameValidation)(matchRegexWithFailureMessage(EnvVarNamePattern, MustContainOnlyAlphanumeric))
-      name is notEmpty
-    }
-
-    validator[(String, EnvVarValueOrSecret)] { t =>
-      // use of "value" relies on special behavior in Validation that humanizes generated error messages
-      t._1 as "value" is validName
-    }
+  def validEnvVar(strictNameValidation: Boolean): Validator[String] = validator[String] { name =>
+    name is implied(strictNameValidation)(matchRegexWithFailureMessage(EnvVarNamePattern, MustContainOnlyAlphanumeric))
+    name is notEmpty
   }
 
   def envValidator(strictNameValidation: Boolean, secrets: Map[String, SecretDef], enabledFeatures: Set[String]): Validator[Map[String, mesosphere.marathon.raml.EnvVarValueOrSecret]] = forAll(
     validator[Map[String, EnvVarValueOrSecret]] { env =>
-      env is every(validEnvVar(strictNameValidation))
+      env.keys is every(validEnvVar(strictNameValidation))
     },
     isTrue(UseOfSecretRefsRequiresSecretFeature) { (env: Map[String, EnvVarValueOrSecret]) =>
       // if the secrets feature is not enabled then don't allow EnvVarSecretRef's in the environment
@@ -47,7 +39,9 @@ trait EnvVarValidation {
         } == 0
       else true
     },
-    every(SecretValidation.secretValidator(secrets.map(v => v._1 -> EnvVarSecret(v._2.source))))
+    everyKeyValue(SecretValidation.secretValidator(secrets.map {
+      case (secretName, secretValue) => secretName -> EnvVarSecret(secretValue.source)
+    }))
   )
 }
 

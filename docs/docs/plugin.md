@@ -106,6 +106,7 @@ Marathon will load this descriptor with all defined plugins during startup.
 
 - `plugin` (required): the name of the plugin interface.
 - `implementation` (required): the name of the implementing class.
+- `enabled` (optional): disable or enable plugin. By default plugin is enabled.
 - `configuration` (optional): configuration that is available to the plugin via the PluginConfiguration trait.
 - `tags` (optional): meta data attached to this plugin as simple strings.
 - `info` (optional): meta data attached to this plugin as key/value pair.
@@ -126,6 +127,7 @@ Example:
     "authenticator": {
       "plugin": "mesosphere.marathon.plugin.auth.Authenticator",
       "implementation": "my.company.ExampleAuthenticator",
+      "enabled": false,
       "configuration": {
         "users": [
           {

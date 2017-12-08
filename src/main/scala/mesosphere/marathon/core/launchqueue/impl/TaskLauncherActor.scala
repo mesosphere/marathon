@@ -16,13 +16,12 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
-import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.InstanceOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, InstanceOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ RunSpec, Timestamp }
-import org.apache.mesos.{ Protos => Mesos }
+import mesosphere.marathon.state.{ Region, RunSpec, Timestamp }
 import mesosphere.marathon.stream.Implicits._
+import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -36,7 +35,8 @@ private[launchqueue] object TaskLauncherActor {
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
-    offerMatchStatisticsActor: ActorRef)(
+    offerMatchStatisticsActor: ActorRef,
+    localRegion: () => Option[Region])(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -45,7 +45,7 @@ private[launchqueue] object TaskLauncherActor {
       clock, taskOpFactory,
       maybeOfferReviver,
       instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
-      runSpec, initialCount))
+      runSpec, initialCount, localRegion))
   }
 
   sealed trait Requests
@@ -87,7 +87,8 @@ private class TaskLauncherActor(
     offerMatchStatisticsActor: ActorRef,
 
     private[this] var runSpec: RunSpec,
-    private[this] var instancesToLaunch: Int) extends Actor with StrictLogging with Stash {
+    private[this] var instancesToLaunch: Int,
+    localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]
@@ -153,24 +154,6 @@ private class TaskLauncherActor(
     ).reduce(_.orElse[Any, Unit](_))
   }
 
-  private[this] def stopping: Receive = LoggingReceive.withLabel("stopping") {
-    Seq(
-      receiveStop,
-      receiveWaitingForInFlight,
-      receiveUnknown
-    ).reduce(_.orElse[Any, Unit](_))
-  }
-
-  private[this] def receiveWaitingForInFlight: Receive = {
-    case notification: InstanceOpNotification =>
-      receiveTaskLaunchNotification(notification)
-      waitForInFlightIfNecessary()
-
-    case TaskLauncherActor.Stop => // ignore, already stopping
-
-    case "waitingForInFlight" => sender() ! "waitingForInFlight" // for testing
-  }
-
   private[this] def receiveUnknown: Receive = {
     case msg: Any =>
       // fail fast and do not let the sender time out
@@ -180,25 +163,13 @@ private class TaskLauncherActor(
   private[this] def receiveStop: Receive = {
     case TaskLauncherActor.Stop =>
       if (inFlightInstanceOperations.nonEmpty) {
-        // try to stop gracefully but also schedule timeout
-        import context.dispatcher
-        logger.info(s"schedule timeout for stopping in ${config.taskOpNotificationTimeout().milliseconds}")
-        context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, PoisonPill)
+        val taskIds = inFlightInstanceOperations.keys.take(3).mkString(", ")
+        logger.info(
+          s"Still waiting for ${inFlightInstanceOperations.size} inflight messages but stopping anyway. " +
+            s"First three task ids: $taskIds"
+        )
       }
-      waitForInFlightIfNecessary()
-  }
-
-  private[this] def waitForInFlightIfNecessary(): Unit = {
-    if (inFlightInstanceOperations.isEmpty) {
       context.stop(self)
-    } else {
-      val taskIds = inFlightInstanceOperations.keys.take(3).mkString(", ")
-      logger.info(
-        s"Stopping but still waiting for ${inFlightInstanceOperations.size} in-flight messages, " +
-          s"first three task ids: $taskIds"
-      )
-      context.become(stopping)
-    }
   }
 
   /**
@@ -353,7 +324,7 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
-      val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
+      val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
           offerMatchStatisticsActor ! matched
@@ -453,7 +424,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id))(context.system.scheduler)
+      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id))
     }
     private[this] var registeredAsMatcher = false
 

@@ -122,7 +122,7 @@ class SystemResourceTest extends AkkaUnitTest {
       When("we try to change loggers")
       val changeLogger = resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request)
       Then("we receive a NotAuthenticated response")
-      showLoggers.getStatus should be(auth.NotAuthenticatedStatus)
+      changeLogger.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
     "access without authorization is denied" in new Fixture {
@@ -142,7 +142,7 @@ class SystemResourceTest extends AkkaUnitTest {
       When("we try to change loggers")
       val changeLogger = resource.changeLogger("""{ "level": "debug", "logger": "org" }""".getBytes, auth.request)
       Then("we receive a Unauthorized response")
-      showLoggers.getStatus should be(auth.UnauthorizedStatus)
+      changeLogger.getStatus should be(auth.UnauthorizedStatus)
     }
 
     "show all loggers will give a map of all loggers with level" in new Fixture {

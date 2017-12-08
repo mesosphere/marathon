@@ -1,0 +1,14 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : PAW Dump Reporter                  #
+# ----------------------------------------------------------- #
+# This fragment enables the RAWReporter that is going to dump #
+# the collected results in the `results/dump.json` file.      #
+# ----------------------------------------------------------- #
+
+# Reporter configuration
+# ===========================
+reporters:
+
+  # Dump raw time series results to results/dump.json
+  - class: reporter.RawReporter
+    filename: "results/dump-{{versionspec}}.json"

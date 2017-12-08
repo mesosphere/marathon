@@ -9,7 +9,7 @@
         }
       },
       "resources": {
-        "cpus": 0.1,
+        "cpus": 0.5,
         "mem": 32,
         "disk": 0,
         "gpus": 0
@@ -50,7 +50,7 @@
         }
       },
       "resources": {
-        "cpus": 0.1,
+        "cpus": 0.5,
         "mem": 32,
         "disk": 0,
         "gpus": 0

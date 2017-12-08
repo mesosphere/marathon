@@ -39,7 +39,3 @@ def get_resource(resource):
                 raise Exception
         except Exception:
             raise DCOSException("Can't read from resource: {0}. Please check that it exists.".format(resource))
-
-
-def parse_json(response):
-    return response.json()

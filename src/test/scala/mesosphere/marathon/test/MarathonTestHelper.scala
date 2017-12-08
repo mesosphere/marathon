@@ -31,11 +31,14 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
+import org.apache.mesos.Protos.DomainInfo
+import org.apache.mesos.Protos.DomainInfo.FaultDomain
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
+import scala.concurrent.duration._
 import scala.util.Random
 
 object MarathonTestHelper {
@@ -123,6 +126,17 @@ object MarathonTestHelper {
     portsResource.foreach(offerBuilder.addResources)
 
     offerBuilder
+  }
+
+  def makeBasicOfferWithUnavailability(startTime: Timestamp, duration: FiniteDuration = Duration(5, MINUTES)): Offer.Builder = {
+    val unavailableOfferBuilder = Unavailability.newBuilder()
+      .setStart(TimeInfo.newBuilder().setNanoseconds(startTime.nanos))
+
+    if (duration.isFinite()) {
+      unavailableOfferBuilder.setDuration(DurationInfo.newBuilder().setNanoseconds(duration.toNanos))
+    }
+
+    MarathonTestHelper.makeBasicOffer().setUnavailability(unavailableOfferBuilder.build())
   }
 
   def mountSource(path: Option[String]): Mesos.Resource.DiskInfo.Source = {
@@ -243,6 +257,15 @@ object MarathonTestHelper {
       )
   }
 
+  def newDomainInfo(region: String, zone: String): DomainInfo = {
+    DomainInfo.newBuilder
+      .setFaultDomain(
+        FaultDomain.newBuilder
+          .setZone(FaultDomain.ZoneInfo.newBuilder.setName(zone))
+          .setRegion(FaultDomain.RegionInfo.newBuilder.setName(region)))
+      .build
+  }
+
   /**
     * @param ranges how many port ranges should be included in this offer
     * @return
@@ -335,7 +358,11 @@ object MarathonTestHelper {
     store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
 
     implicit val ctx = ExecutionContexts.global
-    val instanceRepo = store.getOrElse(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
+    val instanceRepo = store.getOrElse {
+      val store = new InMemoryPersistenceStore()
+      store.markOpen()
+      InstanceRepository.inMemRepository(store)
+    }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
     new InstanceTrackerModule(clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
@@ -346,7 +373,7 @@ object MarathonTestHelper {
 
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
-    agentInfo = Instance.AgentInfo("", None, Nil),
+    agentInfo = Instance.AgentInfo("", None, None, None, Nil),
     state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None),
     tasksMap = Map.empty[Task.Id, Task],
     runSpecVersion = clock.now(),

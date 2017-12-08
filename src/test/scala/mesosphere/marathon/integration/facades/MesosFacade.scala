@@ -20,18 +20,18 @@ object MesosFacade {
     * Corresponds to parts of `state.json`.
     */
   case class ITMesosState(
-    version: String,
-    gitTag: Option[String],
-    agents: Seq[ITAgent])
+      version: String,
+      gitTag: Option[String],
+      agents: Seq[ITAgent])
 
   case class ITAgent(
-    id: String,
-    attributes: ITAttributes,
-    resources: ITResources,
-    usedResources: ITResources,
-    offeredResources: ITResources,
-    reservedResourcesByRole: Map[String, ITResources],
-    unreservedResources: ITResources)
+      id: String,
+      attributes: ITAttributes,
+      resources: ITResources,
+      usedResources: ITResources,
+      offeredResources: ITResources,
+      reservedResourcesByRole: Map[String, ITResources],
+      unreservedResources: ITResources)
 
   case class ITAttributes(attributes: Map[String, ITResourceValue])
 
@@ -40,7 +40,7 @@ object MesosFacade {
     def apply(vals: (String, Any)*): ITAttributes = {
       val attributes: Map[String, ITResourceValue] = vals.map {
         case (id, value: Double) => id -> ITResourceScalarValue(value)
-        case (id, portsString: String) => id -> ITResourcePortValue(portsString)
+        case (id, value: String) => id -> ITResourceStringValue(value)
       }(collection.breakOut)
       ITAttributes(attributes)
     }
@@ -61,7 +61,7 @@ object MesosFacade {
     def apply(vals: (String, Any)*): ITResources = {
       val resources: Map[String, ITResourceValue] = vals.map {
         case (id, value: Double) => id -> ITResourceScalarValue(value)
-        case (id, portsString: String) => id -> ITResourcePortValue(portsString)
+        case (id, value: String) => id -> ITResourceStringValue(value)
       }(collection.breakOut)
       ITResources(resources)
     }
@@ -74,7 +74,7 @@ object MesosFacade {
     override def isEmpty: Boolean = value == 0
     override def toString: String = value.toString
   }
-  case class ITResourcePortValue(portString: String) extends ITResourceValue {
+  case class ITResourceStringValue(portString: String) extends ITResourceValue {
     override def isEmpty: Boolean = false
     override def toString: String = '"' + portString + '"'
   }
@@ -84,7 +84,7 @@ object MesosFacade {
 }
 
 class MesosFacade(url: String, implicit val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
-    extends PlayJsonSupport with StrictLogging {
+  extends PlayJsonSupport with StrictLogging {
 
   import MesosFacade._
   import MesosFormats._

@@ -19,22 +19,28 @@ import mesosphere.marathon.test.SettableClock
 import scala.concurrent.duration._
 
 class LazyCachingPersistenceStoreTest extends AkkaUnitTest
-    with PersistenceStoreTest with ZkTestClass1Serialization with ZookeeperServerTest
-    with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
+  with PersistenceStoreTest with ZkTestClass1Serialization with ZookeeperServerTest
+  with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
   private def cachedInMemory = {
-    LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    store.markOpen()
+    store
   }
 
-  private def withLazyVersionCaching = LazyVersionCachingPersistentStore(cachedInMemory)
+  private def withLazyVersionCaching = {
+    val store = LazyVersionCachingPersistentStore(new InMemoryPersistenceStore())
+    store.markOpen()
+    store
+  }
 
-  def zkStore: ZkPersistenceStore = {
+  private def cachedZk = {
     val root = UUID.randomUUID().toString
     val client = zkClient(namespace = Some(root))
-    new ZkPersistenceStore(client, Duration.Inf, 8)
+    val store = LazyCachingPersistenceStore(new ZkPersistenceStore(client, Duration.Inf, 8))
+    store.markOpen()
+    store
   }
-
-  private def cachedZk = LazyCachingPersistenceStore(zkStore)
 
   behave like basicPersistenceStore("LazyCache(InMemory)", cachedInMemory)
   behave like basicPersistenceStore("LazyCache(Zk)", cachedZk)

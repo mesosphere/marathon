@@ -8,10 +8,10 @@ object EnvVarRefSerializer {
   def toProto(envVar: (String, EnvVarValue)): Option[Protos.EnvVarReference] = envVar match {
     case (name: String, secretRef: EnvVarSecretRef) => Some(
       Protos.EnvVarReference.newBuilder
-      .setName(name)
-      .setType(Protos.EnvVarReference.Type.SECRET)
-      .setSecretRef(Protos.EnvVarSecretRef.newBuilder.setSecretId(secretRef.secret))
-      .build)
+        .setName(name)
+        .setType(Protos.EnvVarReference.Type.SECRET)
+        .setSecretRef(Protos.EnvVarSecretRef.newBuilder.setSecretId(secretRef.secret))
+        .build)
     case _ => None
   }
 

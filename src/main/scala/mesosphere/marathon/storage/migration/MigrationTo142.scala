@@ -12,13 +12,13 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
 class MigrationTo142(appRepository: AppRepository)(implicit
-  ctx: ExecutionContext,
+    ctx: ExecutionContext,
     mat: Materializer) extends StrictLogging {
 
   import MigrationTo142.migrationFlow
   val sink =
     Flow[AppDefinition]
-      .mapAsync(Int.MaxValue)(appRepository.store)
+      .mapAsync(Migration.maxConcurrency)(appRepository.store)
       .toMat(Sink.ignore)(Keep.right)
 
   def migrate(): Future[Done] = {

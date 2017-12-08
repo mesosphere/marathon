@@ -7,6 +7,7 @@ import akka.{ Done, NotUsed }
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
 import mesosphere.marathon.core.deployment.DeploymentPlan
 
@@ -21,7 +22,19 @@ import scala.collection.immutable.Seq
   */
 trait GroupManager {
 
+  /**
+    * Get a root group, fetching it from a persistence store if necessary.
+    *
+    * @return a root group
+    */
   def rootGroup(): RootGroup
+
+  /**
+    * Get a root group.
+    *
+    * @return a root group if it has been fetched already, otherwise [[None]]
+    */
+  def rootGroupOption(): Option[RootGroup]
 
   /**
     * Get all available versions for given group identifier.
@@ -68,21 +81,28 @@ trait GroupManager {
   /**
     * Get a specific run spec by its Id
     * @param id The id of the runSpec
-    * @return The run spec if it is found, otherwise none.
+    * @return The run spec if it is found, otherwise None.
     */
   def runSpec(id: PathId): Option[RunSpec]
 
   /**
     * Get a specific app definition by its id.
     * @param id the id of the app.
-    * @return the app if it is found, otherwise false
+    * @return the app if it is found, otherwise None
     */
   def app(id: PathId): Option[AppDefinition]
 
   /**
+    * Get a specific app definition by its id.
+    * @param ids the ids of the apps.
+    * @return the app if it is found, otherwise false
+    */
+  def apps(ids: Set[PathId]): Map[PathId, Option[AppDefinition]]
+
+  /**
     * Get a specific pod definition by its id.
     * @param id the id of the pod.
-    * @return the pod if it is found, otherwise false
+    * @return the pod if it is found, otherwise None
     */
   def pod(id: PathId): Option[PodDefinition]
 
@@ -105,12 +125,29 @@ trait GroupManager {
     *              one can control, to stop a current deployment and start a new one.
     * @return the deployment plan which will be executed.
     */
-  def updateRoot(
+  final def updateRoot(
     id: PathId,
     fn: RootGroup => RootGroup,
     version: Timestamp = Group.defaultVersion,
     force: Boolean = false,
-    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan]
+    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = updateRootAsync(id, (g: RootGroup) => Future.successful(fn(g)), version, force, toKill)
+
+  final def updateRootAsync(
+    id: PathId,
+    fn: RootGroup => Future[RootGroup],
+    version: Timestamp = Group.defaultVersion,
+    force: Boolean = false,
+    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = {
+    updateRootEither[Nothing](id, fn(_).map(Right(_))(ExecutionContexts.callerThread), version, force, toKill)
+      .map(_.right.getOrElse(throw new RuntimeException("Either must be Right here")))(ExecutionContexts.callerThread)
+  }
+
+  def updateRootEither[T](
+    id: PathId,
+    fn: RootGroup => Future[Either[T, RootGroup]],
+    version: Timestamp = Timestamp.now(),
+    force: Boolean = false,
+    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[Either[T, DeploymentPlan]]
 
   /**
     * Update application with given identifier and update function.

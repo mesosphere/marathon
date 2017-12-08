@@ -21,17 +21,26 @@ To execute a particular function just invoke the script with function appended a
 The `ci/pipeline` script defines two primary targets
 
 1. `jenkins`
-2. `phabricator`
+2. `pr`
 
-The `jenkins` target is excuted on every branch build by jenkins. It runs
+The `jenkins` target is executed on every release branch, on master, and on each Github pull request. The `jenkins`
+target will check if a build is for a pull-request, and if so, run forward to the `pr` target.
 
-  * `provision.killStaleTestProcesses()`
-  * `provision.installMesos()`
-  * `compileAndTest()`
-  * `createPackages()`
+The `pr` target runs the test pipeline followed by Github PR review reporting. It is triggered with each diff
+update.
 
-The `phabricator` target runs the `jenkins` pipeline followed by Phabricator
-review reporting. It is triggered with each diff update.
+The test pipeline involves the following steps:
+
+* Compile
+* Run unit tests
+* Run integration tests
+* Run scapegoat
+* Build and upload snapshot artifacts
+
+Additionally, for master builds, we:
+
+* Update the DCOS packages for Marathon by pushing an update to the snapshot Marathon DCOS branch (for OSS and
+  Enterprise).
 
 ## Sub Targets
 
@@ -43,37 +52,24 @@ gone.
 The `compileAndTest` target basically runs `sbt clean test integration:test
 scapegoat`. This is the main compilation step.
 
-The `createPackages` target assembles Marathon binary packages and generates the
+The `build` target assembles Marathon binary packages and generates the
 sha1 checksums for the zip and tarball packages. See `createPackageSha1s` in the
 code base for details.
 
-There are several targets in `phabricatorClient`:
+There are several targets in `githubClient`:
 
-  * `accept`
   * `reject`
   * `comment`
-  * `reportTestResults`
+  * `collectTestResults`
   * `reportSuccess`
   * `reportFailure`
 
-All Phabricator targets require the `PHABRICATOR_API_TOKEN` environment variable
-to be set to a valid Phabricator API token. One can generate a token with
-[Conduit](https://phabricator.mesosphere.com/conduit/login/).
-
-The targets can be run locally and expect diff ids and PHIDs. The later can
-either be the ID of a Phabricator Differential review, e.g. `777` for
-`https://phabricator.mesosphere.com/D777` or an ID generator by Harbormaster,
-e.g. `PHID-HMBT-76qfbscvw2vs777hu000`. The ids have to be valid, i.e. they have
-to correspong to an actuall Differential review.
-
-Methods `accept` and `reject` accept or reject a Phabriactor Differential review.
-The `comment` method posts a comment to Phabriactor Differential reviews.
-`reportTestResults` uploads unit and integration test results to a build
-triggered by Phabriactor Harbormaster. It checks `target/phabricator-test-reports/`
-for JSON files and joins them. The methods `reportSuccess` and `reportFailure`
-call the previous methods to report back.
+Method `reject` and `reportFailure` rejects a GitHub pull request review while `reportSuccess` approves it.
+The `comment` method posts a comment to the pull request.
+`collectTestResults` gathers and returns unit and integration test results. It checks `target/phabricator-test-reports/`
+for JSON files and joins them.
 
 One can comment from the CLI with
 ```
-PHABRICATOR_API_TOKEN=<secret> amm ./ci/phabricatorClient.sc comment 777 "test from pipeline"
+amm ./ci/githubClient.sc comment 777 "test from pipeline"
 ```

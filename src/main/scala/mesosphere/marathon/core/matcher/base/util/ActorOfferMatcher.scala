@@ -17,8 +17,8 @@ import scala.concurrent.{ Future, Promise }
   * @param actorRef Reference to actor that matches offers.
   * @param precedenceFor Defines which matcher receives offers first. See [[mesosphere.marathon.core.matcher.base.OfferMatcher.precedenceFor]].
   */
-class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[PathId])(implicit scheduler: akka.actor.Scheduler)
-    extends OfferMatcher with StrictLogging {
+class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[PathId])
+  extends OfferMatcher with StrictLogging {
 
   def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
     val p = Promise[MatchedInstanceOps]()
@@ -27,6 +27,7 @@ class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[P
   }
 
   override def toString: String = s"ActorOfferMatcher($actorRef)"
+
 }
 
 object ActorOfferMatcher {

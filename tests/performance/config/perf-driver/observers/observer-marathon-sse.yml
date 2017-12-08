@@ -1,0 +1,15 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Server-Side-Events Observer        #
+# ----------------------------------------------------------- #
+# This fragment installs an observer that attaches to the     #
+# marathon's SSE event stream and forwards the events in the  #
+# internal event bus.
+# ----------------------------------------------------------- #
+
+# Observer configuration
+# ===========================
+observers:
+
+  # The events observer is subscribing to the
+  - class: observer.MarathonEventsObserver
+    url: "{{marathon_url}}/v2/events"

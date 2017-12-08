@@ -18,11 +18,11 @@ import scala.collection.JavaConverters._
   * and all of the modifying operations are defined at this level.
   */
 class RootGroup(
-  apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-  pods: Map[PathId, PodDefinition] = Group.defaultPods,
-  groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
-  dependencies: Set[PathId] = Group.defaultDependencies,
-  version: Timestamp = Group.defaultVersion) extends Group(
+    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
+    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
+    dependencies: Set[PathId] = Group.defaultDependencies,
+    version: Timestamp = Group.defaultVersion) extends Group(
   PathId.empty,
   apps,
   pods,
@@ -408,12 +408,12 @@ class RootGroup(
       Group(
         id = group.id,
         apps = group.apps.map { case (appId, app) => appId -> app.copy(versionInfo = VersionInfo.NoVersion) },
-        pods = group.pods.map { case (podId, pod) => podId -> pod.copy(version = Timestamp(0)) },
+        pods = group.pods.map { case (podId, pod) => podId -> pod.copy(versionInfo = VersionInfo.NoVersion) },
         groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> in(subGroup) },
         dependencies = group.dependencies,
         version = Timestamp(0),
         transitiveAppsById = group.transitiveAppsById.map { case (appId, app) => appId -> app.copy(versionInfo = VersionInfo.NoVersion) },
-        transitivePodsById = group.transitivePodsById.map { case (podId, pod) => podId -> pod.copy(version = Timestamp(0)) })
+        transitivePodsById = group.transitivePodsById.map { case (podId, pod) => podId -> pod.copy(versionInfo = VersionInfo.NoVersion) })
     }
     RootGroup.fromGroup(in(this))
   }

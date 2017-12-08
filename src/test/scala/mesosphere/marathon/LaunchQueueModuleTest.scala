@@ -2,6 +2,7 @@ package mesosphere.marathon
 
 import java.time.Clock
 
+import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
@@ -166,7 +167,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       When("we ask for matching an offer")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns noMatchResult
-      val now = clock.now()
       val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       val matchedTasks = matchFuture.futureValue
 
@@ -193,7 +193,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       When("we ask for matching an offer")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
-      val now = clock.now()
       val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       val matchedTasks = matchFuture.futureValue
 
@@ -221,7 +220,6 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       And("a task gets launched but not confirmed")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
-      val now = clock.now()
       val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(offer)
       matchFuture.futureValue
 
@@ -264,6 +262,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     lazy val instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val parentActor = newTestActor()
+    lazy val localRegion = () => None
 
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
       config,
@@ -272,7 +271,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       subOfferMatcherManager = offerMatcherManager,
       maybeOfferReviver = None,
       instanceTracker,
-      instanceOpFactory
+      instanceOpFactory,
+      localRegion
     )
 
     def launchQueue = module.launchQueue

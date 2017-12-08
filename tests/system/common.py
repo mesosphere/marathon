@@ -5,13 +5,16 @@ import shakedown
 import shlex
 import time
 import uuid
+import sys
+import retrying
 
 from datetime import timedelta
 from dcos import http, mesos
+from dcos.errors import DCOSException, DCOSHTTPException
 from distutils.version import LooseVersion
+from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
-from dcos.errors import DCOSHTTPException
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -23,14 +26,6 @@ def ignore_exception(exc):
     """Used with @retrying.retry to ignore exceptions in a retry loop.
        ex.  @retrying.retry( retry_on_exception=ignore_exception)
        It does verify that the object passed is an exception
-    """
-    return isinstance(exc, Exception)
-
-
-def ignore_exception(exc):
-    """ Used with @retrying.retry to igmore exceptions in a retry loop.
-    ex.  @retrying.retry( retry_on_exception=ignore_exception)
-    It does verify that the object passed is an exception
     """
     return isinstance(exc, Exception)
 
@@ -125,7 +120,7 @@ def cluster_info(mom_name='marathon-user'):
                 client = marathon.create_client()
                 about = client.get_about()
                 print("Marathon MoM version: {}".format(about.get("version")))
-            except:
+            except Exception:
                 print("Marathon MoM not present")
     else:
         print("Marathon MoM not present")
@@ -202,7 +197,7 @@ def ensure_mom():
         try:
             shakedown.install_package_and_wait('marathon')
             shakedown.deployment_wait()
-        except:
+        except Exception:
             pass
 
         if not shakedown.wait_for_service_endpoint('marathon-user'):
@@ -217,6 +212,12 @@ def restart_master_node():
     """Restarts the master node."""
 
     shakedown.run_command_on_master("sudo /sbin/shutdown -r now")
+
+
+def cpus_on_agent(hostname):
+    """Detects number of cores on an agent"""
+    status, output = shakedown.run_command_on_agent(hostname, "cat /proc/cpuinfo | grep processor | wc -l", noisy=False)
+    return int(output)
 
 
 def systemctl_master(command='restart'):
@@ -248,7 +249,7 @@ def wait_for_task(service, task, timeout_sec=120):
         response = None
         try:
             response = shakedown.get_service_task(service, task)
-        except:
+        except Exception:
             pass
 
         if response is not None and response['state'] == 'TASK_RUNNING':
@@ -267,7 +268,7 @@ def clear_pods():
         for pod in pods:
             client.remove_pod(pod["id"], True)
         shakedown.deployment_wait()
-    except:
+    except Exception:
         pass
 
 
@@ -333,9 +334,8 @@ def get_marathon_leader_not_on_master_leader_node():
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
         shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
-        new_leader = shakedown.marathon_leader_ip()
-        assert new_leader != marathon_leader, "A new Marathon leader has not been elected"
-        marathon_leader = new_leader
+        marathon_leadership_changed(marathon_leader)
+        marathon_leader = shakedown.marathon_leader_ip()
         print('switched leader to: {}'.format(marathon_leader))
 
     return marathon_leader
@@ -362,7 +362,11 @@ def install_enterprise_cli_package():
 def is_enterprise_cli_package_installed():
     """Returns `True` if `dcos-enterprise-cli` package is installed."""
     stdout, stderr, return_code = shakedown.run_dcos_command('package list --json')
-    result_json = json.loads(stdout)
+    print('package list command returned code:{}, stderr:{}, stdout: {}'.format(return_code, stderr, stdout))
+    try:
+        result_json = json.loads(stdout)
+    except JSONDecodeError as error:
+        raise DCOSException('Could not parse: "{}"'.format(stdout))(error)
     return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
@@ -587,22 +591,53 @@ def set_service_account_permissions(service_account, resource='dcos:superuser', 
        `{action}`. For more information consult the DC/OS documentation:
        https://docs.mesosphere.com/1.9/administration/id-and-access-mgt/permissions/user-service-perms/
     """
-    print('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
-    url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
-    req = http.put(url)
-    assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
-
-
-def add_dcos_marathon_root_user_acls():
     try:
-        set_service_account_permissions('dcos_marathon', resource='dcos:mesos:master:task:user:root', action='create')
+        print('Granting {} permissions to {}/users/{}'.format(action, resource, service_account))
+        url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}/users/{}/{}'.format(resource, service_account, action))
+        req = http.put(url)
+        msg = 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)
+        assert req.status_code == 204, msg
     except DCOSHTTPException as e:
         if (e.response.status_code == 409):
-            print('Service account dcos_marathon already has "dcos:mesos:master:task:user:root" permissions set')
+            print('Service account {} already has {} permissions set'.format(service_account, resource))
         else:
+            print("Unexpected HTTP error: {}".format(e.response))
             raise
-    except:
+    except Exception:
+        print("Unexpected error:", sys.exc_info()[0])
         raise
+
+
+def add_acs_resource(resource):
+    """Create given ACS `{resource}`. For more information consult the DC/OS documentation:
+       https://docs.mesosphere.com/1.9/administration/id-and-access-mgt/permissions/user-service-perms/
+    """
+    import json
+    try:
+        print('Adding ACS resource: {}'.format(resource))
+        url = urljoin(shakedown.dcos_url(), 'acs/api/v1/acls/{}'.format(resource))
+        extra_args = {'headers': {'Content-Type': 'application/json'}}
+        req = http.put(url, data=json.dumps({'description': resource}), **extra_args)
+        assert req.status_code == 201, 'Failed create ACS resource: {}, {}'.format(req, req.text)
+    except DCOSHTTPException as e:
+        if (e.response.status_code == 409):
+            print('ACS resource {} already exists'.format(resource))
+        else:
+            print("Unexpected HTTP error: {}, {}".format(e.response, e.response.text))
+            raise
+    except Exception:
+        print("Unexpected error:", sys.exc_info()[0])
+        raise
+
+
+def add_dcos_marathon_user_acls(user='root'):
+    add_service_account_user_acls(service_account='dcos_marathon', user=user)
+
+
+def add_service_account_user_acls(service_account, user='root'):
+    resource = 'dcos:mesos:master:task:user:{}'.format(user)
+    add_acs_resource(resource)
+    set_service_account_permissions(service_account, resource, action='create')
 
 
 def get_marathon_endpoint(path, marathon_name='marathon'):
@@ -654,3 +689,51 @@ def agent_hostname_by_id(agent_id):
             return agent['hostname']
 
     return None
+
+
+def deployment_predicate(service_id=None):
+    deployments = marathon.create_client().get_deployments()
+    if (service_id is None):
+        return len(deployments) == 0
+    else:
+        filtered = [
+            deployment for deployment in deployments
+            if (service_id in deployment['affectedApps'] or service_id in deployment['affectedPods'])
+        ]
+        return len(filtered) == 0
+
+
+def deployment_wait(timeout=120, service_id=None):
+    """ Overriding default shakedown method to make it possible to wait
+        for specific pods in addition to apps. However we should probably fix
+        the dcos-cli and remove this method later.
+    """
+    shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
+
+
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)
+def __marathon_leadership_changed_in_mesosDNS(original_leader):
+    """ This method uses mesosDNS to verify that the leadership changed.
+        We have to retry because mesosDNS checks for changes only every 30s.
+    """
+    current_leader = shakedown.marathon_leader_ip()
+    print('leader according to MesosDNS: {}'.format(current_leader))
+    assert original_leader != current_leader
+
+
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=10, retry_on_exception=ignore_exception)
+def __marathon_leadership_changed_in_marathon_api(original_leader):
+    """ This method uses Marathon API to figure out that leadership changed.
+        We have to retry here because leader election takes time and what might happen is that some nodes might
+        not be aware of the new leader being elected resulting in HTTP 502.
+    """
+    current_leader = marathon.create_client().get_leader()
+    print('leader according to marathon API: {}'.format(current_leader))
+    assert original_leader != current_leader
+
+
+def marathon_leadership_changed(original_leader):
+    """ Verifies leadership changed both by reading v2/leader as well as mesosDNS.
+    """
+    __marathon_leadership_changed_in_marathon_api(original_leader)
+    __marathon_leadership_changed_in_mesosDNS(original_leader)

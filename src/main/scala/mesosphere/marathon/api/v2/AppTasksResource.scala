@@ -6,8 +6,8 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
+import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.group.GroupManager
@@ -17,6 +17,9 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.raml.AnyToRaml
+import mesosphere.marathon.raml.EnrichedTask._
+import mesosphere.marathon.raml.EnrichedTaskConversion._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
 import org.slf4j.LoggerFactory
@@ -50,13 +53,13 @@ class AppTasksResource @Inject() (
           val groupPath = gid.toRootPath
           val maybeGroup = groupManager.group(groupPath)
           withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
-            ok(jsonObjString("tasks" -> runningTasks(group.transitiveAppIds, instancesBySpec)))
+            ok(jsonObjString("tasks" -> runningTasks(group.transitiveAppIds, instancesBySpec).toRaml))
           }
         case _ =>
           val appId = id.toRootPath
           val maybeApp = groupManager.app(appId)
           withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
-            ok(jsonObjString("tasks" -> runningTasks(Set(appId), instancesBySpec)))
+            ok(jsonObjString("tasks" -> runningTasks(Set(appId), instancesBySpec).toRaml))
           }
       }
     }
@@ -84,7 +87,7 @@ class AppTasksResource @Inject() (
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app)))
+        ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
       }
     })
   }

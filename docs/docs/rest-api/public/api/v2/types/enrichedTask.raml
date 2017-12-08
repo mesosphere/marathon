@@ -1,0 +1,48 @@
+#%RAML 1.0 Library
+uses:
+  health: healthCheck.raml
+  numbers: numberTypes.raml
+  strings: stringTypes.raml
+
+types:
+  # Not to be confused with network.IpAddress
+  IpAddr:
+    type: object
+    properties:
+      ipAddress: string
+      protocol: strings.IpProtocol
+
+  LocalVolumeId:
+    type: object
+    properties:
+      runSpecId: strings.PathId
+      containerPath: string
+      uuid: string
+      persistenceId: strings.PersistenceId
+
+  EnrichedTask:
+    type: object
+    properties:
+      appId: strings.PathId
+      healthCheckResults?: health.Health[]
+      host: string
+      id: string
+      ipAddresses?: IpAddr[]
+      ports?: numbers.Port[]
+      servicePorts?: numbers.Port[]
+      slaveId?: string
+      state: strings.MesosTaskState
+      stagedAt?: string
+      startedAt?: string
+      version?: string
+      localVolumes?: LocalVolumeId[]
+
+  EnrichedTasksList:
+    type: object
+    properties:
+      tasks: EnrichedTask[]
+
+  TaskStatusCondition:
+    type: string
+    enum: [ running, staging ]
+    

@@ -3,13 +3,13 @@ language: scala
 jdk:
   - oraclejdk8
 scala:
-  - 2.11.8
+  - 2.12.3
 cache:
   directories:
     - $HOME/.sbt
     - $HOME/.ivy2
 script:
-  - sbt "set parallelExecution in Test := false" clean coverage doc assembly
+  - sbt clean scapegoat doc coverage test
 before_script: # the automated download fails sometimes
     - mkdir -p $HOME/.sbt/launchers/0.13.11/
     - test -r $HOME/.sbt/launchers/0.13.11/sbt-launch.jar || curl -L -o $HOME/.sbt/launchers/0.13.11/sbt-launch.jar http://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.11/sbt-launch.jar

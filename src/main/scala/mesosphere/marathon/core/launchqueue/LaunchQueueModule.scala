@@ -10,7 +10,7 @@ import mesosphere.marathon.core.launchqueue.impl._
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.{ Region, RunSpec }
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given RunSpec.
@@ -22,7 +22,8 @@ class LaunchQueueModule(
     subOfferMatcherManager: OfferMatcherManager,
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: InstanceTracker,
-    taskOpFactory: InstanceOpFactory) {
+    taskOpFactory: InstanceOpFactory,
+    localRegion: () => Option[Region]) {
 
   private[this] val offerMatchStatisticsActor: ActorRef = {
     leadershipModule.startWhenLeader(OfferMatchStatisticsActor.props(), "offerMatcherStatistics")
@@ -38,7 +39,8 @@ class LaunchQueueModule(
         maybeOfferReviver,
         taskTracker,
         rateLimiterActor,
-        offerMatchStatisticsActor)(runSpec, count)
+        offerMatchStatisticsActor,
+        localRegion)(runSpec, count)
     val props = LaunchQueueActor.props(config, offerMatchStatisticsActor, runSpecActorProps)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }

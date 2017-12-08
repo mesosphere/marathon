@@ -54,14 +54,16 @@ trait ZkTestClass1Serialization {
 }
 
 class ZkPersistenceStoreTest extends AkkaUnitTest
-    with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization {
+  with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization {
 
   lazy val rootClient = zkClient()
 
   def defaultStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
     val client = zkClient(namespace = Some(root))
-    new ZkPersistenceStore(client, Duration.Inf)
+    val store = new ZkPersistenceStore(client, Duration.Inf)
+    store.markOpen()
+    store
   }
 
   behave like basicPersistenceStore("ZookeeperPersistenceStore", defaultStore)

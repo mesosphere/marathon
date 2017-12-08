@@ -50,6 +50,10 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   private[store] var valueCache: Future[TrieMap[K, Either[Serialized, Any]]] =
     Future.failed(new NotActiveException())
 
+  override def markOpen(): Unit = store.markOpen()
+  override def markClosed(): Unit = store.markClosed()
+  override def isOpen: Boolean = store.isOpen
+
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
 
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
@@ -199,6 +203,12 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   override def backup(): Source[BackupItem, NotUsed] = store.backup()
 
   override def restore(): Sink[BackupItem, Future[Done]] = store.restore()
+
+  override def sync(): Future[Done] = store.sync()
+
+  override def startMigration(): Future[Done] = store.startMigration()
+
+  override def endMigration(): Future[Done] = store.endMigration()
 
   override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
     store.versions(id)

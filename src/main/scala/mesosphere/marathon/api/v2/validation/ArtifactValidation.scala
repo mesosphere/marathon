@@ -7,7 +7,7 @@ import mesosphere.marathon.raml.Artifact
 
 trait ArtifactValidation {
   implicit val artifactUriIsValid: Validator[Artifact] = validator[Artifact] { artifact =>
-    artifact.uri is valid(api.v2.Validation.uriIsValid)
+    artifact.uri is api.v2.Validation.uriIsValid
   }
 }
 

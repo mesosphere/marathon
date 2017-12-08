@@ -9,7 +9,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.core.deployment.impl.{ DeploymentManagerActor, DeploymentManagerDelegate }
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
@@ -49,10 +49,10 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
   "MarathonSchedulerActor" should {
     "RecoversDeploymentsAndReconcilesHealthChecksOnStart" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "test-app".toPath, instances = 1)
+      val app = AppDefinition(id = "test-app".toPath, instances = 1, cmd = Some("sleep"))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       eventually {
         verify(hcManager).reconcile(Seq(app))
       }
@@ -67,7 +67,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       groupRepo.root() returns Future.successful(createRootGroup())
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(orphanedInstance))))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! ReconcileTasks
 
       expectMsg(TasksReconciled)
@@ -79,13 +79,13 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Terminal tasks should not be submitted in reconciliation" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskUnreachable(containerName = Some("unreachable")).addTaskRunning().addTaskGone(containerName = Some("gone")).getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance))))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! ReconcileTasks
 
       expectMsg(TasksReconciled)
@@ -102,7 +102,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Terminal tasks should not be submitted in reconciliation - Instance with only terminal tasks" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id)
         .addTaskError(containerName = Some("error"))
         .addTaskFailed(containerName = Some("failed"))
@@ -116,7 +116,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Seq(instance))))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! ReconcileTasks
 
       expectMsg(TasksReconciled)
@@ -127,7 +127,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Terminal tasks should not be submitted in reconciliation - Instance with all kind of tasks status" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id)
         .addTaskError(containerName = Some("error"))
         .addTaskFailed(containerName = Some("failed"))
@@ -148,7 +148,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Seq(instance))))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! ReconcileTasks
 
       expectMsg(TasksReconciled)
@@ -169,7 +169,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "ScaleApps" in withFixture() { f =>
       import f._
-      val app: AppDefinition = AppDefinition(id = "/test-app".toPath, instances = 1)
+      val app: AppDefinition = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
 
       val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
 
@@ -177,7 +177,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       instanceTracker.specInstances(mockito.Matchers.eq("nope".toPath))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(instances)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! ScaleRunSpecs
 
       eventually {
@@ -187,12 +187,12 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "ScaleApp" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "test-app".toPath, instances = 1)
+      val app = AppDefinition(id = "test-app".toPath, instances = 1, cmd = Some("sleep"))
 
       queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! ScaleRunSpec("test-app".toPath)
 
       eventually {
@@ -204,7 +204,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Kill tasks with scaling" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
       val failedInstance = TaskStatusUpdateTestHelper.failed(instance).updatedInstance
       val events = InstanceChangedEventsGenerator.events(
@@ -215,7 +215,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! KillTasks(app.id, Seq(instance))
 
       expectMsg(TasksKilled(app.id, Seq(instance.instanceId)))
@@ -236,13 +236,13 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Kill tasks" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       val instanceA = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id).getInstance()
 
       queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! KillTasks(app.id, Seq(instanceA))
 
       expectMsg(TasksKilled(app.id, List(instanceA.instanceId)))
@@ -262,20 +262,20 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         versionInfo = VersionInfo.forNewConfig(Timestamp(0))
       )
       val probe = TestProbe()
-      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
+      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 
       val appNew = app.copy(
         cmd = Some("cmd new"),
         versionInfo = VersionInfo.forNewConfig(Timestamp(1000))
       )
 
-      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(appNew.id -> appNew))))
+      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(appNew.id -> appNew))))
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, Nil, Timestamp.now())
 
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -289,7 +289,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment resets rate limiter for affected apps" in withFixture() { f =>
       import f._
       val app = AppDefinition(
-        id = PathId("/app1"),
+        id = PathId("/foo/app1"),
         cmd = Some("cmd"),
         instances = 2,
         upgradeStrategy = UpgradeStrategy(0.5),
@@ -297,8 +297,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       )
       val probe = TestProbe()
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
-      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
-      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"))))
+      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"))))
 
       val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
@@ -307,7 +307,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! Deploy(plan)
 
       expectMsg(DeploymentStarted(plan))
@@ -327,13 +327,13 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         upgradeStrategy = UpgradeStrategy(0.5),
         versionInfo = VersionInfo.forNewConfig(Timestamp(0))
       )
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
+      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d3"))
 
       groupRepo.root() returns Future.successful(rootGroup)
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted]
@@ -355,7 +355,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         upgradeStrategy = UpgradeStrategy(0.5),
         versionInfo = VersionInfo.forNewConfig(Timestamp(0))
       )
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
+      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d4"))
 
@@ -363,7 +363,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       deploymentRepo.all() returns Source.single(plan)
       deploymentRepo.store(plan) returns Future.successful(Done)
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! Deploy(plan)
 
       // This indicates that the deployment is already running,
@@ -376,13 +376,13 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Forced deployment" in withFixture() { f =>
       import f._
       val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
+      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))
 
       groupRepo.root() returns Future.successful(rootGroup)
 
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
       schedulerActor ! Deploy(plan)
 
       expectMsgType[DeploymentStarted](10.seconds)
@@ -401,7 +401,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         actions.reconcileTasks(any) returns reconciliationPromise.future
         groupRepo.root() returns Future.successful(createRootGroup())
 
-        schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+        schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
 
         schedulerActor ! MarathonSchedulerActor.ReconcileTasks // linter:ignore
         schedulerActor ! MarathonSchedulerActor.ReconcileTasks // linter:ignore
@@ -426,7 +426,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         actions.reconcileTasks(any) returns Future.successful(Status.DRIVER_RUNNING)
         groupRepo.root() returns Future.successful(createRootGroup())
 
-        schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+        schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
 
         schedulerActor ! MarathonSchedulerActor.ReconcileTasks
         expectMsg(MarathonSchedulerActor.TasksReconciled)

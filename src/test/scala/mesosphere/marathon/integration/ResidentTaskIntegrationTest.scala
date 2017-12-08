@@ -8,7 +8,6 @@ import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITRes
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
 import mesosphere.marathon.raml.{ App, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolume, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
 import mesosphere.marathon.state.PathId
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -19,15 +18,6 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
   import Fixture._
 
-  private[this] val log = LoggerFactory.getLogger(getClass)
-
-  //clean up state before running the test case
-  before(cleanUp())
-
-  // Any test in this suite that restarts an existing task can fail because of: https://issues.apache.org/jira/browse/MESOS-7752
-  // TL;DR: we are reusing taskIds for resident task, which triggers a race condition in mesos by reusing the executor of the
-  // previous task. Though reusing taskIds is discouraged it should be possible for tasks after a terminal task status.
-  // Solution: either mesos fixes the bug or we walk away from reusing taskIds which is somewhat non-trivial on our side.
   "ResidentTaskIntegrationTest" should {
     "resident task can be deployed and write to persistent volume" in new Fixture {
       Given("An app that writes into a persistent volume")
@@ -85,11 +75,6 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       When("the app is suspended")
       suspendSuccessfully(PathId(app.id))
 
-      And("we wait for a while")
-      // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-      // probably related to our recycling of the task ID (but unconfirmed)
-      Thread.sleep(2000L)
-
       And("a new task is started that checks for the previously written file")
       // deploy a new version that checks for the data written the above step
       val update = marathon.updateApp(
@@ -108,7 +93,10 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     }
 
     "resident task is launched completely on reserved resources" in new Fixture {
-      Given("A resident app")
+      Given("A clean state of the cluster since we check reserved resources")
+      cleanUp()
+
+      And("A resident app")
       val app = residentApp(
         id = appId("resident-task-is-launched-completely-on-reserved-resources"))
 
@@ -177,10 +165,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val app = createSuccessfully(
         residentApp(
           id = appId("restart-resident-app-with-five-instances"),
-          instances = 5,
-          // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-          // probably related to our recycling of the task ID (but unconfirmed)
-          backoffDuration = 300.milliseconds
+          instances = 5
         )
       )
 
@@ -188,7 +173,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val newVersion = restartSuccessfully(app) withClue ("The app did not restart.")
       val all = allTasks(PathId(app.id))
 
-      log.info("tasks after relaunch: {}", all.mkString(";"))
+      logger.info("tasks after relaunch: {}", all.mkString(";"))
 
       Then("no extra task was created")
       all.size shouldBe 5
@@ -205,10 +190,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val app = createSuccessfully(
         residentApp(
           id = appId("config-change-resident-app-with-five-instances"),
-          instances = 5,
-          // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-          // probably related to our recycling of the task ID (but unconfirmed)
-          backoffDuration = 300.milliseconds
+          instances = 5
         )
       )
 
@@ -216,7 +198,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val newVersion = updateSuccessfully(PathId(app.id), AppUpdate(cmd = Some("sleep 1234"))).toString
       val all = allTasks(PathId(app.id))
 
-      log.info("tasks after config change: {}", all.mkString(";"))
+      logger.info("tasks after config change: {}", all.mkString(";"))
 
       Then("no extra task was created")
       all should have size 5

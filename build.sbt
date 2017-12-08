@@ -22,25 +22,12 @@ addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
 cleanFiles += baseDirectory { base => base / "sandboxes" }.value
 
-lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
+lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()
-    .setPreference(AlignArguments, false)
-    .setPreference(AlignParameters, false)
-    .setPreference(AlignSingleLineCaseStatements, false)
-    .setPreference(CompactControlReadability, false)
-    .setPreference(DoubleIndentClassDeclaration, true)
     .setPreference(DanglingCloseParenthesis, Preserve)
-    .setPreference(FormatXml, true)
-    .setPreference(IndentSpaces, 2)
-    .setPreference(IndentWithTabs, false)
-    .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
+    .setPreference(DoubleIndentConstructorArguments, true)
     .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
     .setPreference(PreserveSpaceBeforeArguments, true)
-    .setPreference(SpacesAroundMultiImports, true)
-    .setPreference(SpaceBeforeColon, false)
-    .setPreference(SpaceInsideBrackets, false)
-    .setPreference(SpaceInsideParentheses, false)
-    .setPreference(SpacesWithinPatternBinders, true)
 )
 
 lazy val testSettings =
@@ -78,10 +65,10 @@ lazy val testSettings =
 )
 
 lazy val commonSettings = testSettings ++
-  aspectjSettings ++ Seq(
+  SbtAspectj.aspectjSettings ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.11.11",
+  scalaVersion := "2.12.3",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -102,10 +89,8 @@ lazy val commonSettings = testSettings ++
     "-Ywarn-nullary-override",
     "-Ywarn-nullary-unit",
     //"-Ywarn-unused", We should turn this one on soon
-    "-Ywarn-unused-import",
+    "-Ywarn-unused-import"
     //"-Ywarn-value-discard", We should turn this one on soon.
-    "-Yclosure-elim",
-    "-Ydead-code"
   ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.
   scalacOptions in (Compile, doc) := Seq("-encoding", "UTF-8", "-deprecation", "-feature", "-Xfuture"),
@@ -126,21 +111,21 @@ lazy val commonSettings = testSettings ++
 
   scapegoatVersion := "1.3.0",
 
-  coverageMinimum := 75,
+  coverageMinimum := 70,
   coverageFailOnMinimum := true,
 
   fork in run := true,
-  AspectjKeys.aspectjVersion in Aspectj := "1.8.10",
-  AspectjKeys.inputs in Aspectj += compiledClasses.value,
+  aspectjVersion in Aspectj := "1.8.12",
+  aspectjInputs in Aspectj += (aspectjCompiledClasses in Aspectj).value,
   products in Compile := (products in Aspectj).value,
   products in Runtime := (products in Aspectj).value,
   products in Compile := (products in Aspectj).value,
-  AspectjKeys.showWeaveInfo := true,
-  AspectjKeys.verbose := true,
+  aspectjShowWeaveInfo := true,
+  aspectjVerbose := true,
   // required for AJC compile time weaving
   javacOptions in Compile += "-g",
-  javaOptions in run ++= (AspectjKeys.weaverOptions in Aspectj).value,
-  javaOptions in Test ++= (AspectjKeys.weaverOptions in Aspectj).value,
+  javaOptions in run ++= (aspectjWeaverOptions in Aspectj).value,
+  javaOptions in Test ++= (aspectjWeaverOptions in Aspectj).value,
   git.useGitDescribe := true,
   // TODO: There appears to be a bug where uncommitted changes is true even if nothing is committed.
   git.uncommittedSignifier := None
@@ -177,7 +162,7 @@ lazy val packagingSettings = Seq(
   dockerRepository := Some("mesosphere"),
   daemonUser in Docker := "root",
   version in Docker := { "v" + (version in Compile).value },
-  dockerBaseImage := "buildpack-deps:jessie-curl",
+  dockerBaseImage := "debian:jessie-slim",
   (defaultLinuxInstallLocation in Docker) := "/marathon",
   dockerCommands := {
     // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
@@ -186,12 +171,15 @@ lazy val packagingSettings = Seq(
     prefixCommands ++
       Seq(Cmd("RUN",
         s"""apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\
+          |apt-get update -y && \\
+          |apt-get upgrade -y && \\
           |echo "deb http://ftp.debian.org/debian jessie-backports main" | tee -a /etc/apt/sources.list && \\
           |echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
           |echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
           |apt-get update && \\
           |
           |# jdk setup
+          |mkdir -p /usr/share/man/man1 && \\
           |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20161107~bpo8+1 && \\
           |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
@@ -320,6 +308,5 @@ lazy val benchmark = (project in file("benchmark"))
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
-    libraryDependencies ++= Dependencies.benchmark,
-    generatorType in Jmh := "asm"
+    libraryDependencies ++= Dependencies.benchmark
   )

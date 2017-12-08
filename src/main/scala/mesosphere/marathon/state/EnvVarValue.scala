@@ -35,7 +35,7 @@ object EnvVarValue {
 
   // forward implicit validation to the internal API we've defined
   implicit def valueValidator: Validator[EnvVarValue] = validator[EnvVarValue] { v =>
-    v is valid(v.valueValidator)
+    v is v.valueValidator
   }
 
   /** @return a validator that checks the validity of a container given the related secrets */
@@ -84,7 +84,7 @@ object EnvVarSecretRef {
     ) { (t: (AppDefinition, String, EnvVarSecretRef)) => t._1.secrets.keySet.contains(t._3.secret) }
 
     validator[(AppDefinition, String, EnvVarSecretRef)] { t =>
-      t as s"env(${t._2})" is valid(ifSecretIsDefined)
+      t as s"env(${t._2})" is ifSecretIsDefined
     }
   }
 }

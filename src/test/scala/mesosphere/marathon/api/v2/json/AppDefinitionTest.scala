@@ -1,9 +1,8 @@
 package mesosphere.marathon
 package api.v2.json
 
-import com.wix.accord._
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
+import mesosphere.marathon.api.v2.{ AppNormalization, AppHelpers }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
@@ -21,12 +20,11 @@ import scala.concurrent.duration._
 
 class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
-  val validAppDefinition = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
+  implicit val validator = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
-    AppsResource.appNormalization(
-      AppsResource.NormalizationConfig(
-        enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name"))).normalized(app)
+    AppHelpers.appNormalization(
+      enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name")).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
@@ -35,34 +33,26 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
   "AppDefinition" should {
     "Validation" in {
-      def shouldViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
-        validate(app) should containViolation(path, template)
-      }
-
-      def shouldNotViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
-        validate(app) shouldNot containViolation(path, template)
-      }
-
       var app = AppDefinition(id = "a b".toRootPath)
       val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
       MarathonTestHelper.validateJsonSchema(app, false)
-      shouldViolate(app, "/id", idError)
+      validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "a#$%^&*b".toRootPath)
       MarathonTestHelper.validateJsonSchema(app, false)
-      shouldViolate(app, "/id", idError)
+      validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "-dash-disallowed-at-start".toRootPath)
       MarathonTestHelper.validateJsonSchema(app, false)
-      shouldViolate(app, "/id", idError)
+      validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "dash-disallowed-at-end-".toRootPath)
       MarathonTestHelper.validateJsonSchema(app, false)
-      shouldViolate(app, "/id", idError)
+      validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "uppercaseLettersNoGood".toRootPath)
       MarathonTestHelper.validateJsonSchema(app, false)
-      shouldViolate(app, "/id", idError)
+      validator(app) should haveViolations("/id" -> idError)
 
       val correct = AppDefinition(id = "test".toRootPath)
 
@@ -75,11 +65,8 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
           )
         )),
         portDefinitions = Nil)
-      shouldNotViolate(
-        app,
-        "/container/portMappings(0)",
-        "hostPort is required for BRIDGE mode."
-      )
+      validator(app) shouldNot haveViolations(
+        "/container/portMappings(0)" -> "hostPort is required for BRIDGE mode.")
 
       val caught = intercept[IllegalArgumentException] {
         correct.copy(
@@ -95,99 +82,64 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       caught.getMessage should include("bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)")
 
       app = correct.copy(executor = "//cmd")
-      shouldNotViolate(
-        app,
-        "/executor",
-        "{javax.validation.constraints.Pattern.message}"
-      )
+      validator(app) shouldNot haveViolations(
+        "/executor" -> "{javax.validation.constraints.Pattern.message}")
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(executor = "some/relative/path.mte")
-      shouldNotViolate(
-        app,
-        "/executor",
-        "{javax.validation.constraints.Pattern.message}"
-      )
+      validator(app) shouldNot haveViolations(
+        "/executor" -> "{javax.validation.constraints.Pattern.message}")
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(executor = "/some/absolute/path")
-      shouldNotViolate(
-        app,
-        "/executor",
-        "{javax.validation.constraints.Pattern.message}"
-      )
+      validator(app) shouldNot haveViolations(
+        "/executor" -> "{javax.validation.constraints.Pattern.message}")
+
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(executor = "")
-      shouldNotViolate(
-        app,
-        "/executor",
-        "{javax.validation.constraints.Pattern.message}"
-      )
+      validator(app) shouldNot haveViolations(
+        "/executor" -> "{javax.validation.constraints.Pattern.message}")
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(executor = "/test/")
-      shouldViolate(
-        app,
-        "/executor",
-        "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'"
-      )
+      validator(app) should haveViolations(
+        "/executor" -> "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'")
       MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(executor = "/test//path")
-      shouldViolate(
-        app,
-        "/executor",
-        "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'"
-      )
+      validator(app) should haveViolations(
+        "/executor" -> "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'")
       MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(cmd = Some("command"), args = Seq("a", "b", "c"))
-      shouldViolate(
-        app,
-        "/",
-        "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
-      )
+      validator(app) should haveViolations(
+        "/" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
       MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(cmd = None, args = Seq("a", "b", "c"))
-      shouldNotViolate(
-        app,
-        "/",
-        "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
-      )
+      validator(app) shouldNot haveViolations(
+        "/" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(1.2))
-      shouldViolate(
-        app,
-        "/upgradeStrategy/minimumHealthCapacity",
-        "got 1.2, expected between 0.0 and 1.0"
-      )
+      validator(app) should haveViolations(
+        "/upgradeStrategy/minimumHealthCapacity" -> "got 1.2, expected between 0.0 and 1.0")
       MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, 1.2))
-      shouldViolate(
-        app,
-        "/upgradeStrategy/maximumOverCapacity",
-        "got 1.2, expected between 0.0 and 1.0"
-      )
+      validator(app) should haveViolations(
+        "/upgradeStrategy/maximumOverCapacity" -> "got 1.2, expected between 0.0 and 1.0")
       MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(-1.2))
-      shouldViolate(
-        app,
-        "/upgradeStrategy/minimumHealthCapacity",
-        "got -1.2, expected between 0.0 and 1.0"
-      )
+      validator(app) should haveViolations(
+        "/upgradeStrategy/minimumHealthCapacity" -> "got -1.2, expected between 0.0 and 1.0")
       MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, -1.2))
-      shouldViolate(
-        app,
-        "/upgradeStrategy/maximumOverCapacity",
-        "got -1.2, expected between 0.0 and 1.0"
-      )
+      validator(app) should haveViolations(
+        "/upgradeStrategy/maximumOverCapacity" -> "got -1.2, expected between 0.0 and 1.0")
       MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(
@@ -201,11 +153,8 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         portDefinitions = Nil,
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(1))))
       )
-      shouldNotViolate(
-        app,
-        "/healthChecks(0)",
-        "Health check port indices must address an element of the ports array or container port mappings."
-      )
+      validator(app) shouldNot haveViolations(
+        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
       MarathonTestHelper.validateJsonSchema(app, false) // missing image
 
       app = correct.copy(
@@ -213,34 +162,23 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         portDefinitions = Nil,
         healthChecks = Set(MarathonHttpHealthCheck(port = Some(80)))
       )
-      shouldNotViolate(
-        app,
-        "/healthChecks(0)",
-        "Health check port indices must address an element of the ports array or container port mappings."
-      )
+      validator(app) shouldNot haveViolations(
+        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
       MarathonTestHelper.validateJsonSchema(app, false) // missing image
 
       app = correct.copy(
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(1))))
       )
-      shouldViolate(
-        app,
-        "/healthChecks(0)",
-        "Health check port indices must address an element of the ports array or container port mappings."
-      )
-
+      validator(app) should haveViolations(
+        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(
         fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "d://\not-a-uri"))
       )
 
-      shouldViolate(
-        app,
-        "/fetch(1)/uri",
-        "URI has invalid syntax."
-      )
-
+      validator(app) should haveViolations(
+        "/fetch(1)/uri" -> "URI has invalid syntax.")
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(
@@ -249,62 +187,57 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       MarathonTestHelper.validateJsonSchema(app)
 
       app = correct.copy(
-        fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "/root/file"))
-      )
+        fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "/root/file")))
 
-      shouldNotViolate(
-        app,
-        "/fetch(1)",
-        "URI has invalid syntax."
-      )
+      validator(app) shouldNot haveViolations("/fetch(1)" -> "URI has invalid syntax.")
 
-      shouldViolate(app.copy(resources = Resources(mem = -3.0)), "/mem", "got -3.0, expected 0.0 or more")
-      shouldViolate(app.copy(resources = Resources(cpus = -3.0)), "/cpus", "got -3.0, expected 0.0 or more")
-      shouldViolate(app.copy(resources = Resources(disk = -3.0)), "/disk", "got -3.0, expected 0.0 or more")
-      shouldViolate(app.copy(resources = Resources(gpus = -3)), "/gpus", "got -3, expected 0 or more")
-      shouldViolate(app.copy(instances = -3), "/instances", "got -3, expected 0 or more")
+      validator(app.copy(resources = Resources(mem = -3.0))) should haveViolations("/mem" -> "got -3.0, expected 0.0 or more")
+      validator(app.copy(resources = Resources(cpus = -3.0))) should haveViolations("/cpus" -> "got -3.0, expected 0.0 or more")
+      validator(app.copy(resources = Resources(disk = -3.0))) should haveViolations("/disk" -> "got -3.0, expected 0.0 or more")
+      validator(app.copy(resources = Resources(gpus = -3))) should haveViolations("/gpus" -> "got -3, expected 0 or more")
+      validator(app.copy(instances = -3)) should haveViolations("/instances" -> "got -3, expected 0 or more")
 
-      shouldViolate(app.copy(resources = Resources(gpus = 1)), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+      validator(app.copy(resources = Resources(gpus = 1))) should haveViolations("/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
       {
-        implicit val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
-        shouldNotViolate(app.copy(resources = Resources(gpus = 1)), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")(appValidator)
+        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
+        appValidator(app.copy(resources = Resources(gpus = 1))) shouldNot haveViolations(
+          "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
       }
 
       app = correct.copy(
         resources = Resources(gpus = 1),
-        container = Some(Container.Docker())
-      )
+        container = Some(Container.Docker()))
 
-      shouldViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+      validator(app) should haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
 
       app = correct.copy(
         resources = Resources(gpus = 1),
         container = Some(Container.Mesos())
       )
 
-      shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+      validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
 
       app = correct.copy(
         resources = Resources(gpus = 1),
         container = Some(Container.MesosDocker())
       )
 
-      shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+      validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
 
       app = correct.copy(
         resources = Resources(gpus = 1),
         container = Some(Container.MesosAppC())
       )
 
-      shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+      validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
 
       app = correct.copy(
         resources = Resources(gpus = 1),
         container = None
       )
 
-      shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+      validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
     }
 
     "SerializationRoundtrip empty" in {
@@ -600,12 +533,32 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     }
 
+    "Validate URIs with query strings correctly" in {
+      val json =
+        """
+      {
+        "id": "app-with-fetch",
+        "cmd": "brew update",
+        "uris": ["http://example.com/file1.tar.gz?foo=10&bar=meh", "http://example.com/file?foo=10&bar=meh"]
+      }
+      """
+
+      val app = fromJson(json)
+
+      app.fetch(0).uri shouldBe "http://example.com/file1.tar.gz?foo=10&bar=meh"
+      app.fetch(0).extract shouldBe true
+
+      app.fetch(1).uri shouldBe "http://example.com/file?foo=10&bar=meh"
+      app.fetch(1).extract shouldBe false
+
+    }
+
     "Serialize deserialize path with fetch" in {
       val app = AppDefinition(
         id = "app-with-fetch".toPath,
         cmd = Some("brew update"),
         fetch = Seq(
-          new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true,
+          new FetchUri(uri = "http://example.com/file1?foo=10&bar=meh", executable = false, extract = true, cache = true,
             outputFile = None),
           new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false,
             outputFile = None)
@@ -616,7 +569,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val deserializedApp = AppDefinition.fromProto(proto)
 
-      assert(deserializedApp.fetch(0).uri == "http://example.com/file1")
+      assert(deserializedApp.fetch(0).uri == "http://example.com/file1?foo=10&bar=meh")
       assert(deserializedApp.fetch(0).extract)
       assert(!deserializedApp.fetch(0).executable)
       assert(deserializedApp.fetch(0).cache)

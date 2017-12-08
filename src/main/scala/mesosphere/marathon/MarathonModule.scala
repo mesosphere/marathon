@@ -19,7 +19,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.util.state._
-import org.apache.mesos.Scheduler
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
@@ -35,7 +34,7 @@ object ModuleNames {
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSystem)
-    extends AbstractModule {
+  extends AbstractModule {
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -44,11 +43,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
     bind(classOf[ZookeeperConf]).toInstance(conf)
-
-    // MesosHeartbeatMonitor decorates MarathonScheduler
-    bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
-    bind(classOf[Scheduler]).annotatedWith(Names.named(MesosHeartbeatMonitor.BASE)).toProvider(getProvider(classOf[MarathonScheduler]))
-    bind(classOf[Scheduler]).to(classOf[MesosHeartbeatMonitor]).in(Scopes.SINGLETON)
 
     bind(classOf[MarathonSchedulerDriverHolder]).in(Scopes.SINGLETON)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)

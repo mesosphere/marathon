@@ -8,8 +8,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.{ DeploymentManager, DeploymentPlan, ScalingProposition }
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
-import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentSuccess }
+import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
+import mesosphere.marathon.core.event.DeploymentSuccess
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
@@ -31,18 +31,18 @@ import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class MarathonSchedulerActor private (
-  groupRepository: GroupRepository,
-  schedulerActions: SchedulerActions,
-  deploymentManager: DeploymentManager,
-  deploymentRepository: DeploymentRepository,
-  historyActorProps: Props,
-  healthCheckManager: HealthCheckManager,
-  killService: KillService,
-  launchQueue: LaunchQueue,
-  marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-  electionService: ElectionService,
-  eventBus: EventStream)(implicit val mat: Materializer) extends Actor
-    with StrictLogging with Stash {
+    groupRepository: GroupRepository,
+    schedulerActions: SchedulerActions,
+    deploymentManager: DeploymentManager,
+    deploymentRepository: DeploymentRepository,
+    historyActorProps: Props,
+    healthCheckManager: HealthCheckManager,
+    killService: KillService,
+    launchQueue: LaunchQueue,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    electionService: ElectionService,
+    eventBus: EventStream)(implicit val mat: Materializer) extends Actor
+  with StrictLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 
@@ -74,7 +74,7 @@ class MarathonSchedulerActor private (
   def receive: Receive = suspended
 
   def suspended: Receive = LoggingReceive.withLabel("suspended"){
-    case LocalLeadershipEvent.ElectedAsLeader =>
+    case LeadershipTransition.ElectedAsLeaderAndReady =>
       logger.info("Starting scheduler actor")
 
       deploymentRepository.all().runWith(Sink.seq).onComplete {
@@ -95,7 +95,7 @@ class MarathonSchedulerActor private (
       context.become(started)
       self ! ReconcileHealthChecks
 
-    case LocalLeadershipEvent.Standby =>
+    case LeadershipTransition.Standby =>
     // ignored
     // FIXME: When we get this while recovering deployments, we become active anyway
     // and drop this message.
@@ -104,13 +104,13 @@ class MarathonSchedulerActor private (
   }
 
   def started: Receive = LoggingReceive.withLabel("started") {
-    case LocalLeadershipEvent.Standby =>
+    case LeadershipTransition.Standby =>
       logger.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
       lockedRunSpecs.clear()
       context.become(suspended)
 
-    case LocalLeadershipEvent.ElectedAsLeader => // ignore
+    case LeadershipTransition.ElectedAsLeaderAndReady => // ignore
 
     case ReconcileTasks =>
       import akka.pattern.pipe
@@ -120,7 +120,7 @@ class MarathonSchedulerActor private (
           logger.info("initiate task reconciliation")
           val newFuture = schedulerActions.reconcileTasks(driver)
           activeReconciliation = Some(newFuture)
-          newFuture.onFailure {
+          newFuture.failed.foreach {
             case NonFatal(e) => logger.error("error while reconciling tasks", e)
           }
           newFuture
@@ -281,14 +281,14 @@ class MarathonSchedulerActor private (
   }
 
   def deploymentSuccess(plan: DeploymentPlan): Unit = {
-    logger.info(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} finished")
+    logger.info(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} finished")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
-    logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} failed", reason)
+    logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} failed", reason)
     Future.sequence(plan.affectedRunSpecIds.map(launchQueue.asyncPurge))
-      .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id}", error); Done }
+      .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id} for ${plan.targetIdsString}", error); Done }
       .foreach { _ => eventBus.publish(core.event.DeploymentFailed(plan.id, plan)) }
   }
 }
@@ -377,35 +377,6 @@ class SchedulerActions(
   def startRunSpec(runSpec: RunSpec): Future[Done] = {
     logger.info(s"Starting runSpec ${runSpec.id}")
     scale(runSpec)
-  }
-
-  @SuppressWarnings(Array("all")) // async/await
-  def stopRunSpec(runSpec: RunSpec): Future[Done] = {
-    logger.info(s"Stopping runSpec ${runSpec.id}")
-
-    healthCheckManager.removeAllFor(runSpec.id)
-
-    async {
-      val tasks = await(instanceTracker.specInstances(runSpec.id))
-
-      tasks.foreach { instance =>
-        if (instance.isLaunched) {
-          logger.info("Killing {}", instance.instanceId)
-          killService.killInstance(instance, KillReason.DeletingApp)
-        }
-      }
-      await(launchQueue.asyncPurge(runSpec.id))
-      Done
-    }.recover {
-      case NonFatal(error) => logger.warn(s"Error in stopping runSpec ${runSpec.id}", error); Done
-    }.map { _ =>
-      launchQueue.resetDelay(runSpec)
-
-      // The tasks will be removed from the InstanceTracker when their termination
-      // was confirmed by Mesos via a task update.
-      eventBus.publish(AppTerminatedEvent(runSpec.id))
-      Done
-    }
   }
 
   /**

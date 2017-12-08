@@ -20,12 +20,13 @@ import mesosphere.marathon.plugin.http.HttpRequestHandler
 class PluginsController(
     requestHandlers: Seq[HttpRequestHandler],
     definitions: PluginDefinitions)(implicit
-  val authenticator: Authenticator,
+    val authenticator: Authenticator,
     authorizer: Authorizer,
     electionService: ElectionService) extends Controller {
 
   import mesosphere.marathon.api.akkahttp.Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
+  import mesosphere.marathon.api.akkahttp.PathMatchers._
 
   private[this] val pluginIdToHandler: Map[String, HttpRequestHandler] = definitions.plugins
     .withFilter(_.plugin == classOf[HttpRequestHandler].getName)

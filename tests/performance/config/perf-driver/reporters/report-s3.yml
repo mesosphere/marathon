@@ -1,0 +1,22 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : S3 Dump Reporter                   #
+# ----------------------------------------------------------- #
+# This fragment enables the S3Reporter that is uploading the  #
+# raw tests results to an S3 bucket.                          #
+# ----------------------------------------------------------- #
+
+# Reporter configuration
+# ===========================
+reporters:
+
+  # Report raw results to amazon S3
+  - class: reporter.S3Reporter
+    bucket: marathon-artifacts
+    path: "metrics/dump-{{versionspec}}-results.json"
+    acl: public-read
+
+    # Update index with the archived test data
+    index:
+      path: dashboards/config/index.json
+      entry: "{{meta:test}}"
+

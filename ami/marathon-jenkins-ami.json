@@ -13,7 +13,9 @@
     "secret_key": "{{user `aws_secret_key`}}",
     "region": "us-east-1",
     "source_ami": "ami-9d6c128a",
-    "instance_type": "m3.xlarge",
+    "instance_type": "m4.xlarge",
+    "vpc_id": "vpc-f46c7c8d",
+    "subnet_id": "subnet-1d724531",
     "ssh_username": "admin",
     "ami_name": "{{user `ami_name`}}",
     "ami_users": ["633059600857", "540164828399"],
@@ -38,7 +40,6 @@
     "script": "install.bash",
     "pause_before": "30s",
     "environment_vars": [
-        "CONDUIT_TOKEN={{user `conduit_token`}}",
         "MESOS_VERSION={{user `mesos_version`}}"
     ]
   }]

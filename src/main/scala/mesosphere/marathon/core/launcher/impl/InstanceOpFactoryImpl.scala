@@ -27,9 +27,9 @@ import org.apache.mesos.{ Protos => Mesos }
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
-  config: MarathonConf,
-  pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
-    extends InstanceOpFactory with StrictLogging {
+    config: MarathonConf,
+    pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
+  extends InstanceOpFactory with StrictLogging {
 
   import InstanceOpFactoryImpl._
 
@@ -69,7 +69,8 @@ class InstanceOpFactoryImpl(
       config.mesosBridgeName())
 
     val matchedOffer =
-      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances, builderConfig.acceptedResourceRoles)
+      RunSpecOfferMatcher.matchOffer(pod, request.offer, request.instances,
+        builderConfig.acceptedResourceRoles, config, schedulerPlugins, request.localRegion)
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
@@ -88,10 +89,11 @@ class InstanceOpFactoryImpl(
   }
 
   private[this] def inferNormalTaskOp(app: AppDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
-    val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
+    val InstanceOpFactory.Request(runSpec, offer, instances, _, localRegion) = request
 
     val matchResponse =
-      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      RunSpecOfferMatcher.matchOffer(app, offer, instances.values.toIndexedSeq,
+        config.defaultAcceptedResourceRolesSet, config, schedulerPlugins, localRegion)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = Task.Id.forRunSpec(app.id)
@@ -116,7 +118,7 @@ class InstanceOpFactoryImpl(
   }
 
   private[this] def inferForResidents(app: AppDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
-    val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches) = request
+    val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches, localRegion) = request
 
     // TODO(jdef) pods should be supported some day
 
@@ -156,8 +158,9 @@ class InstanceOpFactoryImpl(
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels),
-            schedulerPlugins
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
+            schedulerPlugins,
+            localRegion
           )
 
         resourceMatchResponse match {
@@ -183,8 +186,8 @@ class InstanceOpFactoryImpl(
       }
 
       val resourceMatchResponse =
-        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream, ResourceSelector.reservable,
-          schedulerPlugins)
+        ResourceMatcher.matchResources(offer, runSpec, instances.valuesIterator.toStream,
+          ResourceSelector.reservable, config, schedulerPlugins, localRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)

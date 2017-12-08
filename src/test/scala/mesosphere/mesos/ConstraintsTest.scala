@@ -3,25 +3,50 @@ package mesosphere.mesos
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.Protos.Constraint.Operator.{ IS, LIKE, UNLIKE, CLUSTER, GROUP_BY, MAX_PER, UNIQUE }
 import mesosphere.marathon._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
+import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID }
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.{ Attribute, Offer }
+import org.apache.mesos.Protos.{ DomainInfo, Offer }
+import org.scalatest.matchers.{ MatchResult, Matcher }
 
 import scala.util.Random
 
 class ConstraintsTest extends UnitTest {
-
   import mesosphere.mesos.protos.Implicits._
+  import Constraints.{ zoneField, regionField, hostnameField }
+
+  val rackIdField = "rackid"
+  val jdkField = "jdk"
+
+  case class meetConstraint(field: String, operator: Operator, value: String, placed: Seq[Placed] = Nil) extends Matcher[Offer] {
+    override def apply(offer: Offer): MatchResult = {
+      val constraint = makeConstraint(field, operator, value)
+      val matched = Constraints.meetsConstraint(placed, offer, constraint)
+      val (offerReader, placedReader) = Constraints.readerForField(field)
+      val offerValue = offerReader(offer)
+      val placedValues = placed map placedReader
+      val description = s"""Constraint: ${field}:${operator}:${value}
+                           |Offer value: ${offerValue}
+                           |Placed values: ${placedValues.mkString(", ")}""".stripMargin.trim
+      MatchResult(
+        matched,
+        s"Offer did not match constraint\n${description}",
+        s"Offer matched constraint\n${description}")
+    }
+
+    def withPlacements(newPlaced: Placed*): meetConstraint = copy(placed = newPlaced.toList)
+  }
 
   "Constraints" should {
     "Select tasks to kill for a single group by works" in {
       Given("app with hostname group_by and 20 tasks even distributed on 2 hosts")
-      val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
-      val tasks = 0.to(19).map(num => makeInstanceWithHost(app.id, s"${num % 2}"))
+      val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint(hostnameField, GROUP_BY, "")))
+      val tasks = 0.to(19).map(num => makeInstance(app.id, host = s"${num % 2}"))
 
       When("10 tasks should be selected to kill")
       val result = Constraints.selectInstancesToKill(app, tasks, 10)
@@ -35,9 +60,9 @@ class ConstraintsTest extends UnitTest {
 
     "Select only tasks to kill for an unbalanced distribution" in {
       Given("app with hostname group_by and 30 tasks uneven distributed on 2 hosts")
-      val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
-      val tasks = 0.to(19).map(num => makeInstanceWithHost(app.id, "1")) ++
-        20.to(29).map(num => makeInstanceWithHost(app.id, "2"))
+      val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint(hostnameField, GROUP_BY, "")))
+      val tasks = 0.to(19).map(num => makeInstance(app.id, host = "1")) ++
+        20.to(29).map(num => makeInstance(app.id, host = "2"))
 
       When("10 tasks should be selected to kill")
       val result = Constraints.selectInstancesToKill(app, tasks, 10)
@@ -52,13 +77,13 @@ class ConstraintsTest extends UnitTest {
       val app = AppDefinition(
         id = PathId("/test"),
         constraints = Set(
-          makeConstraint("rack", Operator.GROUP_BY, ""),
-          makeConstraint("color", Operator.GROUP_BY, "")))
+          makeConstraint("rack", GROUP_BY, ""),
+          makeConstraint("color", GROUP_BY, "")))
       val tasks =
-        0.to(9).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "blue"))) ++
-          10.to(19).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "green"))) ++
-          20.to(29).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-2", "color" -> "blue"))) ++
-          30.to(39).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-2", "color" -> "green")))
+        0.to(9).map(num => makeInstance(app.id, attributes = "rack:rack-1;color:blue")) ++
+          10.to(19).map(num => makeInstance(app.id, attributes = "rack:rack-1;color:green")) ++
+          20.to(29).map(num => makeInstance(app.id, attributes = "rack:rack-2;color:blue")) ++
+          30.to(39).map(num => makeInstance(app.id, attributes = "rack:rack-2;color:green"))
 
       When("20 tasks should be selected to kill")
       val result = Constraints.selectInstancesToKill(app, tasks, 20)
@@ -74,7 +99,8 @@ class ConstraintsTest extends UnitTest {
     "Does not select any task without constraint" in {
       Given("app with hostname group_by and 10 tasks even distributed on 5 hosts")
       val app = AppDefinition(id = PathId("/test"))
-      val tasks = 0.to(9).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "blue")))
+
+      val tasks = 0.to(9).map(num => makeInstance(app.id, attributes = "rack:rack-1;color:blue"))
 
       When("10 tasks should be selected to kill")
       val result = Constraints.selectInstancesToKill(app, tasks, 5)
@@ -85,375 +111,183 @@ class ConstraintsTest extends UnitTest {
 
     "UniqueHostConstraint" in {
       val appId = PathId("/test")
-      val task1_host1 = makeInstanceWithHost(appId, "host1")
-      val task2_host2 = makeInstanceWithHost(appId, "host2")
-      val task3_host3 = makeInstanceWithHost(appId, "host3")
-      val attributes = Seq.empty[Attribute]
+      val task1_host1 = makeInstance(appId, host = "host1")
+      val task2_host2 = makeInstance(appId, host = "host2")
+      val task3_host3 = makeInstance(appId, host = "host3")
 
-      val firstTask = Seq.empty[Placed]
+      makeOffer("foohost") should meetConstraint(
+        hostnameField, CLUSTER, "").withPlacements()
 
-      val hostnameUnique = makeConstraint("hostname", Operator.UNIQUE, "")
+      makeOffer("wrong.com") shouldNot meetConstraint(
+        hostnameField, CLUSTER, "right.com").withPlacements()
 
-      val firstTaskOnHost = Constraints.meetsConstraint(
-        firstTask,
-        makeOffer("foohost", attributes),
-        makeConstraint("hostname", Operator.CLUSTER, ""))
+      // First placement
+      makeOffer("host2") should meetConstraint(
+        hostnameField, UNIQUE, "").withPlacements()
 
-      assert(firstTaskOnHost, "Should meet first task constraint.")
+      makeOffer("host4") should meetConstraint(
+        hostnameField, UNIQUE, "").withPlacements(task1_host1, task2_host2, task3_host3)
 
-      val wrongHostName = Constraints.meetsConstraint(
-        firstTask,
-        makeOffer("wrong.com", attributes),
-        makeConstraint("hostname", Operator.CLUSTER, "right.com"))
-
-      assert(!wrongHostName, "Should not accept the wrong hostname.")
-
-      val differentHosts = Seq(task1_host1, task2_host2, task3_host3)
-
-      val differentHostsDifferentTasks = Constraints.meetsConstraint(
-        differentHosts,
-        makeOffer("host4", attributes),
-        hostnameUnique)
-
-      assert(differentHostsDifferentTasks, "Should place host in array")
-
-      val reusingOneHost = Constraints.meetsConstraint(
-        differentHosts,
-        makeOffer("host2", attributes),
-        hostnameUnique)
-
-      assert(!reusingOneHost, "Should not place host")
-
-      val firstOfferFirstTaskInstance = Constraints.meetsConstraint(
-        firstTask,
-        makeOffer("host2", attributes),
-        hostnameUnique)
-
-      assert(firstOfferFirstTaskInstance, "Should not place host")
+      makeOffer("host2") shouldNot meetConstraint(
+        hostnameField, UNIQUE, "").withPlacements(task1_host1, task2_host2, task3_host3)
     }
 
-    "RackConstraints" in {
+    "Generic property constraints" in {
       val appId = PathId("/test")
-      val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-      val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-      val task3_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
+      val task1_rack1 = makeInstance(appId, attributes = "rackid:rack-1")
+      val task2_rack1 = makeInstance(appId, attributes = "rackid:rack-1")
+      val task3_rack2 = makeInstance(appId, attributes = "rackid:rack-2")
 
-      val freshRack = Seq.empty[Instance]
-      val sameRack = Seq(task1_rack1, task2_rack1)
-      val uniqueRack = Seq(task1_rack1, task3_rack2)
+      val offerRack1 = makeOffer("foohost", "foo:bar;rackid:rack-1")
+      val offerRack2 = makeOffer("foohost", "foo:bar;rackid:rack-2")
+      val offerRack3 = makeOffer("foohost", "foo:bar;rackid:rack-3")
 
-      val clusterByRackId = makeConstraint("rackid", Constraint.Operator.CLUSTER, "")
-      val uniqueRackId = makeConstraint("rackid", Constraint.Operator.UNIQUE, "")
+      // Should be able to schedule in a fresh rack
+      offerRack1 should meetConstraint(
+        "rackid", CLUSTER, "").withPlacements()
 
-      val clusterFreshRackMet = Constraints.meetsConstraint(
-        freshRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        clusterByRackId)
+      // Should schedule along with same rack
+      offerRack1 should meetConstraint(
+        "rackid", CLUSTER, "").withPlacements(task1_rack1, task2_rack1)
 
-      assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
+      // rack2 offer cant match if there are rack1 placements
+      offerRack2 shouldNot meetConstraint(
+        "rackid", CLUSTER, "").withPlacements(task1_rack1, task2_rack1)
 
-      val clusterRackMet = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        clusterByRackId)
-      assert(clusterRackMet, "Should meet clustered-in-rack constraints.")
+      // If the offer is missing the attribute targetted, then it should not match if no placements yet
+      makeOffer("foohost") shouldNot meetConstraint("rackid", CLUSTER, "").withPlacements()
 
-      val clusterRackNotMet = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
-        clusterByRackId)
+      // Should meet unique constraint for fresh rack.
+      offerRack1 should meetConstraint("rackid", UNIQUE, "").withPlacements()
 
-      assert(!clusterRackNotMet, "Should not meet cluster constraint.")
+      offerRack3 should meetConstraint("rackid", UNIQUE, "").withPlacements(task1_rack1, task3_rack2)
 
-      val clusterNoAttributeNotMet = Constraints.meetsConstraint(
-        freshRack,
-        makeOffer("foohost", Seq.empty),
-        clusterByRackId)
+      offerRack1 shouldNot meetConstraint("rackid", UNIQUE, "").withPlacements(task1_rack1, task3_rack2)
 
-      assert(!clusterNoAttributeNotMet, "Should not meet cluster constraint.")
-
-      val uniqueFreshRackMet = Constraints.meetsConstraint(
-        freshRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        uniqueRackId)
-
-      assert(uniqueFreshRackMet, "Should meet unique constraint for fresh rack.")
-
-      val uniqueRackMet = Constraints.meetsConstraint(
-        uniqueRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-3"))),
-        uniqueRackId)
-
-      assert(uniqueRackMet, "Should meet unique constraint for rack")
-
-      val uniqueRackNotMet = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        uniqueRackId)
-
-      assert(!uniqueRackNotMet, "Should not meet unique constraint for rack.")
-
-      val uniqueNoAttributeNotMet = Constraints.meetsConstraint(
-        freshRack,
-        makeOffer("foohost", Seq.empty),
-        uniqueRackId)
-
-      assert(!uniqueNoAttributeNotMet, "Should not meet unique constraint.")
+      // If the offer is missing the attribute targetted, do not match (even if no placements yet)
+      makeOffer("foohost") shouldNot meetConstraint("rackid", UNIQUE, "").withPlacements()
     }
 
     "AttributesLikeByConstraints" in {
-      val appId = PathId("/test")
-      val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("foo" -> "bar"))
-      val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("jdk" -> "7"))
-      val freshRack = Seq(task1_rack1, task2_rack1)
-      val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.LIKE, "7")
+      val jdk6Offer = makeOffer("foohost", s"${jdkField}:6")
+      val jdk7Offer = makeOffer("foohost", s"${jdkField}:7")
 
-      val likeVersionNotMet = Constraints.meetsConstraint(
-        freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(TextAttribute("jdk", "6"))), // slave attributes
-        jdk7Constraint)
-      assert(!likeVersionNotMet, "Should not meet like-version constraints.")
-
-      val likeVersionMet = Constraints.meetsConstraint(
-        freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(TextAttribute("jdk", "7"))), // slave attributes
-        jdk7Constraint)
-      assert(likeVersionMet, "Should meet like-version constraints.")
-
-      val likeNoAttributeNotMet = Constraints.meetsConstraint(
-        freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq.empty), // no slave attribute
-        jdk7Constraint)
-      assert(!likeNoAttributeNotMet, "Should not meet like-no-attribute constraints.")
+      jdk6Offer shouldNot meetConstraint(jdkField, LIKE, "7")
+      jdk7Offer should meetConstraint(jdkField, LIKE, "7")
+      makeOffer("foohost") shouldNot meetConstraint(jdkField, LIKE, "7")
     }
 
     "AttributesUnlikeByConstraints" in {
-      val appId = PathId("/test")
-      val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("foo" -> "bar"))
-      val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("jdk" -> "7"))
-      val freshRack = Seq(task1_rack1, task2_rack1)
-      val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.UNLIKE, "7")
+      val jdk6Offer = makeOffer("foohost", s"${jdkField}:6")
+      val jdk7Offer = makeOffer("foohost", s"${jdkField}:7")
 
-      val unlikeVersionMet = Constraints.meetsConstraint(
-        freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(TextAttribute("jdk", "6"))), // slave attributes
-        jdk7Constraint)
-      assert(unlikeVersionMet, "Should meet unlike-version constraints.")
+      jdk6Offer should meetConstraint(jdkField, UNLIKE, "7")
+      jdk7Offer shouldNot meetConstraint(jdkField, UNLIKE, "7")
 
-      val unlikeVersionNotMet = Constraints.meetsConstraint(
-        freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(TextAttribute("jdk", "7"))), // slave attributes
-        jdk7Constraint)
-      assert(!unlikeVersionNotMet, "Should not meet unlike-version constraints.")
-
-      val unlikeNoAttributeMet = Constraints.meetsConstraint(
-        freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq.empty), // no slave attribute
-        jdk7Constraint)
-      assert(unlikeNoAttributeMet, "Should meet unlike-no-attribute constraints.")
+      // UNLIKE should match if offer is missing field
+      makeOffer("foohost") should meetConstraint(jdkField, UNLIKE, "7")
     }
 
     "RackGroupedByConstraints" in {
       val appId = PathId("/test")
-      val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-      val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-      val task3_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
-      val task4_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-      val task5_rack3 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-3"))
+      val task1_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
+      val task2_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
+      val task3_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
 
-      var sameRack = Seq.empty[Instance]
+      val rack1Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-1")
+      val rack2Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-2")
 
-      val group2ByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "2")
+      rack1Offer should meetConstraint(rackIdField, GROUP_BY, "2")
+        .withPlacements()
 
-      val groupByFreshRackMet = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        group2ByRack)
+      rack1Offer shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
+        .withPlacements(task1_rack1)
 
-      assert(groupByFreshRackMet, "Should be able to schedule in fresh rack.")
+      rack2Offer should meetConstraint(rackIdField, GROUP_BY, "2")
+        .withPlacements(task1_rack1)
 
-      sameRack ++= Set(task1_rack1)
+      rack1Offer should meetConstraint(rackIdField, GROUP_BY, "2")
+        .withPlacements(task1_rack1, task3_rack2)
 
-      val groupByRackMet = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        group2ByRack)
+      rack1Offer shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
+        .withPlacements(task1_rack1, task2_rack1, task3_rack2)
 
-      assert(!groupByRackMet, "Should not meet group-by-rack constraints.")
-
-      val groupByRackMet2 = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
-        group2ByRack)
-
-      assert(groupByRackMet2, "Should meet group-by-rack constraint.")
-
-      sameRack ++= Set(task3_rack2)
-
-      val groupByRackMet3 = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        group2ByRack)
-
-      assert(groupByRackMet3, "Should meet group-by-rack constraints.")
-
-      sameRack ++= Set(task2_rack1)
-
-      val groupByRackNotMet = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        group2ByRack)
-
-      assert(!groupByRackNotMet, "Should not meet group-by-rack constraint.")
-
-      val groupByNoAttributeNotMet = Constraints.meetsConstraint(
-        sameRack,
-        makeOffer("foohost", Seq.empty),
-        group2ByRack)
-      assert(!groupByNoAttributeNotMet, "Should not meet group-by-no-attribute constraints.")
+      // Should not meet group-by-no-attribute constraints.
+      makeOffer("foohost") shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
     }
 
     "RackGroupedByConstraints2" in {
       val appId = PathId("/test")
-      val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-      val task2_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
-      val task3_rack3 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-3"))
-      val task4_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-      val task5_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
+      val task1_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
+      val task2_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
+      val task3_rack3 = makeInstance(appId, attributes = s"${rackIdField}:rack-3")
+      val task4_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
+      val task5_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
+      val rack1Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-1")
+      val rack2Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-2")
+      val rack3Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-3")
 
-      var groupRack = Seq.empty[Instance]
+      rack1Offer should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements()
 
-      val groupByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "3")
+      rack2Offer should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(task1_rack1)
 
-      val clusterFreshRackMet = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        groupByRack)
+      rack3Offer should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(task1_rack1, task2_rack2)
 
-      assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
+      rack1Offer should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(task1_rack1, task2_rack2, task3_rack3)
 
-      groupRack ++= Set(task1_rack1)
+      rack2Offer should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(task1_rack1, task2_rack2, task3_rack3, task4_rack1)
 
-      val clusterRackMet1 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
-        groupByRack)
-
-      assert(clusterRackMet1, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(task2_rack2)
-
-      val clusterRackMet2 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-3"))),
-        groupByRack)
-
-      assert(clusterRackMet2, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(task3_rack3)
-
-      val clusterRackMet3 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
-        groupByRack)
-
-      assert(clusterRackMet3, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(task4_rack1)
-
-      val clusterRackMet4 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
-        groupByRack)
-
-      assert(clusterRackMet4, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(task5_rack2)
-
-      val clusterRackMet5 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
-        groupByRack)
-
-      assert(!clusterRackMet5, "Should not meet clustered-in-rack constraints.")
+      rack2Offer shouldNot meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(task1_rack1, task2_rack2, task3_rack3, task4_rack1, task5_rack2)
     }
 
     "RackGroupedByConstraints3" in {
       val appId = PathId("/test")
-      val instance1_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 1.0))
-      val instance2_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 2.0))
-      val instance3_rack3 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 3.0))
-      val instance4_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 1.0))
-      val instance5_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 2.0))
+      val instance_rack1 = makeInstance(appId, attributes = s"${rackIdField}:1.0")
+      val instance_rack2 = makeInstance(appId, attributes = s"${rackIdField}:2.0")
+      val instance_rack3 = makeInstance(appId, attributes = s"${rackIdField}:3.0")
 
-      var groupRack = Seq.empty[Instance]
+      val offer_rack1 = makeOffer("foohost", s"foo:bar;${rackIdField}:1")
+      val offer_rack2 = makeOffer("foohost", s"foo:bar;${rackIdField}:2")
+      val offer_rack3 = makeOffer("foohost", s"foo:bar;${rackIdField}:3")
 
-      val groupByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "3")
+      offer_rack1 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements()
 
-      val clusterFreshRackMet = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
-        groupByRack)
+      offer_rack2 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1)
 
-      assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
+      offer_rack3 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2)
 
-      groupRack ++= Set(instance1_rack1)
+      offer_rack1 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2, instance_rack3)
 
-      val clusterRackMet1 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 2))),
-        groupByRack)
+      offer_rack2 should meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2, instance_rack3,
+        instance_rack1)
 
-      assert(clusterRackMet1, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(instance2_rack2)
-
-      val clusterRackMet2 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 3))),
-        groupByRack)
-
-      assert(clusterRackMet2, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(instance3_rack3)
-
-      val clusterRackMet3 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
-        groupByRack)
-
-      assert(clusterRackMet3, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(instance4_rack1)
-
-      val clusterRackMet4 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 2))),
-        groupByRack)
-
-      assert(clusterRackMet4, "Should meet clustered-in-rack constraints.")
-
-      groupRack ++= Set(instance5_rack2)
-
-      val clusterRackMet5 = Constraints.meetsConstraint(
-        groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 2))),
-        groupByRack)
-
-      assert(!clusterRackMet5, "Should not meet clustered-in-rack constraints.")
+      offer_rack2 shouldNot meetConstraint(
+        rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2, instance_rack3,
+        instance_rack1, instance_rack2)
     }
 
     "HostnameGroupedByConstraints" in {
       val appId = PathId("/test")
-      val task1_host1 = makeInstanceWithHost(appId, "host1")
-      val task2_host1 = makeInstanceWithHost(appId, "host1")
-      val task3_host2 = makeInstanceWithHost(appId, "host2")
-      val task4_host3 = makeInstanceWithHost(appId, "host3")
+      val task1_host1 = makeInstance(appId, host = "host1")
+      val task2_host1 = makeInstance(appId, host = "host1")
+      val task3_host2 = makeInstance(appId, host = "host2")
+      val task4_host3 = makeInstance(appId, host = "host3")
 
       var groupHost = Seq.empty[Instance]
-      val attributes = Seq.empty[Attribute]
+      val attributes = ""
 
-      val groupByHost = makeConstraint("hostname", Constraint.Operator.GROUP_BY, "2")
+      val groupByHost = makeConstraint(hostnameField, GROUP_BY, "2")
 
       val groupByFreshHostMet = Constraints.meetsConstraint(
         groupHost,
@@ -529,19 +363,17 @@ class ConstraintsTest extends UnitTest {
 
     "HostnameMaxPerConstraints" in {
       val appId = PathId("/test")
-      val task1_host1 = makeInstanceWithHost(appId, "host1")
-      val task2_host1 = makeInstanceWithHost(appId, "host1")
-      val task3_host2 = makeInstanceWithHost(appId, "host2")
-      val task4_host3 = makeInstanceWithHost(appId, "host3")
+      val task1_host1 = makeInstance(appId, host = "host1")
+      val task2_host1 = makeInstance(appId, host = "host1")
+      val task3_host2 = makeInstance(appId, host = "host2")
 
       var groupHost = Seq.empty[Instance]
-      val attributes = Seq.empty[Attribute]
 
-      val maxPerHost = makeConstraint("hostname", Constraint.Operator.MAX_PER, "2")
+      val maxPerHost = makeConstraint(hostnameField, MAX_PER, "2")
 
       val maxPerFreshHostMet = Constraints.meetsConstraint(
         groupHost,
-        makeOffer("host1", attributes),
+        makeOffer("host1"),
         maxPerHost)
 
       assert(maxPerFreshHostMet, "Should be able to schedule in fresh host.")
@@ -550,7 +382,7 @@ class ConstraintsTest extends UnitTest {
 
       val maxPerHostMet = Constraints.meetsConstraint(
         groupHost,
-        makeOffer("host1", attributes),
+        makeOffer("host1"),
         maxPerHost)
 
       assert(maxPerHostMet, "Should meet max-per-host constraint.")
@@ -559,7 +391,7 @@ class ConstraintsTest extends UnitTest {
 
       val maxPerHostMet2 = Constraints.meetsConstraint(
         groupHost,
-        makeOffer("host2", attributes),
+        makeOffer("host2"),
         maxPerHost)
 
       assert(maxPerHostMet2, "Should meet max-per-host constraint.")
@@ -568,7 +400,7 @@ class ConstraintsTest extends UnitTest {
 
       val maxPerHostMet3 = Constraints.meetsConstraint(
         groupHost,
-        makeOffer("host1", attributes),
+        makeOffer("host1"),
         maxPerHost)
 
       assert(!maxPerHostMet3, "Should not meet max-per-host constraint.")
@@ -577,7 +409,7 @@ class ConstraintsTest extends UnitTest {
 
       val maxPerHostMet4 = Constraints.meetsConstraint(
         groupHost,
-        makeOffer("host3", attributes),
+        makeOffer("host3"),
         maxPerHost)
 
       assert(maxPerHostMet4, "Should meet max-per-host constraint.")
@@ -585,16 +417,16 @@ class ConstraintsTest extends UnitTest {
 
     "RackMaxPerConstraints" in {
       val appId = PathId("/test")
-      val instance1_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 1.0))
-      val instance2_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 2.0))
+      val instance1_rack1 = makeInstance(appId, attributes = s"${rackIdField}:1.0")
+      val instance2_rack2 = makeInstance(appId, attributes = s"${rackIdField}:2.0")
 
       var groupRack = Seq.empty[Instance]
 
-      val groupByRack = makeConstraint("rackid", Constraint.Operator.MAX_PER, "2")
+      val groupByRack = makeConstraint(rackIdField, MAX_PER, "2")
 
       val maxPerFreshRackMet1 = Constraints.meetsConstraint(
         groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
+        makeOffer("foohost", s"foo:bar;${rackIdField}:1"),
         groupByRack)
 
       assert(maxPerFreshRackMet1, "Should be able to schedule in fresh rack 1.")
@@ -603,7 +435,7 @@ class ConstraintsTest extends UnitTest {
 
       val maxPerFreshRackMet2 = Constraints.meetsConstraint(
         groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 2))),
+        makeOffer("foohost", s"foo:bar;${rackIdField}:2"),
         groupByRack)
 
       assert(maxPerFreshRackMet2, "Should be able to schedule in fresh rack 2.")
@@ -612,7 +444,7 @@ class ConstraintsTest extends UnitTest {
 
       val maxPerRackMet3 = Constraints.meetsConstraint(
         groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
+        makeOffer("foohost", s"foo:bar;${rackIdField}:1"),
         groupByRack)
 
       assert(maxPerRackMet3, "Should be able to schedule in rack 1.")
@@ -621,7 +453,7 @@ class ConstraintsTest extends UnitTest {
 
       val maxPerRackNotMet4 = Constraints.meetsConstraint(
         groupRack,
-        makeOffer("foohost", Seq(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
+        makeOffer("foohost", s"foo:bar;${rackIdField}:1"),
         groupByRack)
 
       assert(!maxPerRackNotMet4, "Should not meet max_per constraint on rack 1.")
@@ -629,262 +461,266 @@ class ConstraintsTest extends UnitTest {
 
     "AttributesTypes" in {
       val appId = PathId("/test")
-      val instance1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("foo" -> "bar"))
-      val instance2_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map("jdk" -> 7))
-      val instance3_rack1 = makeSampleInstanceWithRangeAttrs(appId, Map("jdk" -> ((6L, 7L))))
-      val instance4_rack1 = makeSampleInstanceWithSetAttrs(appId, Map("gpu" -> List("0", "1")))
+      val instance1_rack1 = makeInstance(appId, attributes = "foo:bar")
+      val instance2_rack1 = makeInstance(appId, attributes = "jdk:7")
+      val instance3_rack1 = makeInstance(appId, attributes = "jdk:[6-7]")
+      val instance4_rack1 = makeInstance(appId, attributes = "gpu:{0,1}")
       val freshRack = Seq(instance1_rack1, instance2_rack1, instance3_rack1, instance4_rack1)
-      val jdk7ConstraintLike = makeConstraint("jdk", Constraint.Operator.LIKE, "7")
-      val jdk7ConstraintUnlike = makeConstraint("jdk", Constraint.Operator.UNLIKE, "7")
-      val jdk7ConstraintCluster = makeConstraint("jdk", Constraint.Operator.CLUSTER, "7")
-      val jdk7ConstraintLikeRange = makeConstraint("jdk", Constraint.Operator.LIKE, "\\[6-7\\]")
-      val jdk7ConstraintUnlikeRange = makeConstraint("jdk", Constraint.Operator.UNLIKE, "\\[6-7\\]")
-      val jdk7ConstraintClusterRange = makeConstraint("jdk", Constraint.Operator.CLUSTER, "[6-7]")
-      val jdk7ConstraintLikeSet = makeConstraint("gpu", Constraint.Operator.LIKE, "\\{0,1\\}")
-      val jdk7ConstraintUnlikeSet = makeConstraint("gpu", Constraint.Operator.UNLIKE, "\\{0,1\\}")
-      val jdk7ConstraintClusterSet = makeConstraint("gpu", Constraint.Operator.CLUSTER, "{0,1}")
+      val jdk7ConstraintLike = makeConstraint("jdk", LIKE, "7")
+      val jdk7ConstraintUnlike = makeConstraint("jdk", UNLIKE, "7")
+      val jdk7ConstraintCluster = makeConstraint("jdk", CLUSTER, "7")
+      val jdk7ConstraintLikeRange = makeConstraint("jdk", LIKE, "\\[6-7\\]")
+      val jdk7ConstraintUnlikeRange = makeConstraint("jdk", UNLIKE, "\\[6-7\\]")
+      val jdk7ConstraintClusterRange = makeConstraint("jdk", CLUSTER, "[6-7]")
+      val jdk7ConstraintLikeSet = makeConstraint("gpu", LIKE, "\\{0,1\\}")
+      val jdk7ConstraintUnlikeSet = makeConstraint("gpu", UNLIKE, "\\{0,1\\}")
+      val jdk7ConstraintClusterSet = makeConstraint("gpu", CLUSTER, "{0,1}")
 
       val likeVersionNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeScalarAttribute("jdk", 6))), // slave attributes
+        makeOffer("foohost", "jdk:6"), // slave attributes
         jdk7ConstraintLike)
       assert(!likeVersionNotMet, "Should not meet like-version constraints.")
 
       val likeVersionMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeScalarAttribute("jdk", 7))), // slave attributes
+        makeOffer("foohost", "jdk:7"), // slave attributes
         jdk7ConstraintLike)
       assert(likeVersionMet, "Should meet like-version constraints.")
 
       val clusterVersionNotMet = Constraints.meetsConstraint(
         Seq(instance2_rack1), // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeScalarAttribute("jdk", 6))), // slave attributes
+        makeOffer("foohost", "jdk:6"), // slave attributes
         jdk7ConstraintCluster)
       assert(!clusterVersionNotMet, "Should not meet cluster-version constraints.")
 
       val clusterVersionMet = Constraints.meetsConstraint(
         Seq(instance2_rack1), // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeScalarAttribute("jdk", 7))), // slave attributes
+        makeOffer("foohost", "jdk:7"), // slave attributes
         jdk7ConstraintCluster)
       assert(clusterVersionMet, "Should meet cluster-version constraints.")
 
       val likeNoAttributeNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq.empty), // no slave attribute
+        makeOffer("foohost", ""), // no slave attribute
         jdk7ConstraintLike)
       assert(!likeNoAttributeNotMet, "Should not meet like-no-attribute constraints.")
 
       val unlikeVersionNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlike
-        makeOffer("foohost", Seq(makeScalarAttribute("jdk", 7))), // slave attributes
+        makeOffer("foohost", "jdk:7"), // slave attributes
         jdk7ConstraintUnlike)
       assert(!unlikeVersionNotMet, "Should not meet unlike-version constraints.")
 
       val unlikeVersionMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlike
-        makeOffer("foohost", Seq(makeScalarAttribute("jdk", 6))), // slave attributes
+        makeOffer("foohost", "jdk:6"), // slave attributes
         jdk7ConstraintUnlike)
       assert(unlikeVersionMet, "Should meet unlike-version constraints.")
 
       val unlikeNoAttributeNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlike
-        makeOffer("foohost", Seq.empty), // no slave attribute
+        makeOffer("foohost", ""), // no slave attribute
         jdk7ConstraintUnlike)
       assert(unlikeNoAttributeNotMet, "Should meet unlike-no-attribute constraints.")
 
       val likeRangeVersionNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeRangeAttribute("jdk", 5, 7))), // slave attributes
+        makeOffer("foohost", "jdk:[5-7]"), // slave attributes
         jdk7ConstraintLikeRange)
       assert(!likeRangeVersionNotMet, "Should not meet like-range-version constraints.")
 
       val likeRangeVersionMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeRangeAttribute("jdk", 6, 7))), // slave attributes
+        makeOffer("foohost", "jdk:[6-7]"), // slave attributes
         jdk7ConstraintLikeRange)
       assert(likeRangeVersionMet, "Should meet like-range-version constraints.")
 
       val clusterRangeVersionNotMet = Constraints.meetsConstraint(
         Seq(instance3_rack1), // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeRangeAttribute("jdk", 5, 7))), // slave attributes
+        makeOffer("foohost", "jdk:[5-7]"), // slave attributes
         jdk7ConstraintClusterRange)
       assert(!clusterRangeVersionNotMet, "Should not meet cluster-range-version constraints.")
 
       val clusterRangeVersionMet = Constraints.meetsConstraint(
         Seq(instance3_rack1), // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeRangeAttribute("jdk", 6, 7))), // slave attributes
+        makeOffer("foohost", "jdk:[6-7]"), // slave attributes
         jdk7ConstraintClusterRange)
       assert(clusterRangeVersionMet, "Should meet cluster-range-version constraints.")
 
       val likeRangeNoAttributeNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq.empty), // no slave attribute
+        makeOffer("foohost", ""), // no slave attribute
         jdk7ConstraintLikeRange)
       assert(!likeRangeNoAttributeNotMet, "Should not meet like-range-no-attribute constraints.")
 
       val unlikeRangeVersionNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlikeRange
-        makeOffer("foohost", Seq(makeRangeAttribute("jdk", 6, 7))), // slave attributes
+        makeOffer("foohost", "jdk:[6-7]"), // slave attributes
         jdk7ConstraintUnlikeRange)
       assert(!unlikeRangeVersionNotMet, "Should not meet unlike-range-version constraints.")
 
       val unlikeRangeVersionMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlikeRange
-        makeOffer("foohost", Seq(makeRangeAttribute("jdk", 5, 7))), // slave attributes
+        makeOffer("foohost", "jdk:5-7"), // slave attributes
         jdk7ConstraintUnlikeRange)
       assert(unlikeRangeVersionMet, "Should meet unlike-range-version constraints.")
 
       val unlikeRangeNoAttributeNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlikeRange
-        makeOffer("foohost", Seq.empty), // no slave attribute
+        makeOffer("foohost", ""), // no slave attribute
         jdk7ConstraintUnlikeRange)
       assert(unlikeRangeNoAttributeNotMet, "Should meet unlike-range-no-attribute constraints.")
 
       val likeSetVersionNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeSetAttribute("gpu", List("2", "1")))), // slave attributes
+        makeOffer("foohost", "gpu:{2,1}"), // slave attributes
         jdk7ConstraintLikeSet)
       assert(!likeSetVersionNotMet, "Should not meet like-set-version constraints.")
 
       val likeSetVersionMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeSetAttribute("gpu", List("1", "0")))), // slave attributes
+        makeOffer("foohost", "gpu:{1,0}"), // slave attributes
         jdk7ConstraintLikeSet)
       assert(likeSetVersionMet, "Should meet like-set-version constraints.")
 
       val clusterSetVersionNotMet = Constraints.meetsConstraint(
         Seq(instance4_rack1), // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeSetAttribute("jdk", List("2", "1")))), // slave attributes
+        makeOffer("foohost", "jdk:{2,1}"), // slave attributes
         jdk7ConstraintClusterSet)
       assert(!clusterSetVersionNotMet, "Should not meet cluster-set-version constraints.")
 
       val clusterSetVersionMet = Constraints.meetsConstraint(
         Seq(instance4_rack1), // list of tasks register in the cluster
-        makeOffer("foohost", Seq(makeSetAttribute("gpu", List("0", "1")))), // slave attributes
+        makeOffer("foohost", "gpu:{0,1}"), // slave attributes
         jdk7ConstraintClusterSet)
       assert(clusterSetVersionMet, "Should meet cluster-set-version constraints.")
 
       val likeSetNoAttributeNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the cluster
-        makeOffer("foohost", Seq.empty), // no slave attribute
+        makeOffer("foohost", ""), // no slave attribute
         jdk7ConstraintLikeSet)
       assert(!likeSetNoAttributeNotMet, "Should not meet like-set-no-attribute constraints.")
 
       val unlikeSetVersionNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlikeset
-        makeOffer("foohost", Seq(makeSetAttribute("gpu", List("0", "1")))), // slave attributes
+        makeOffer("foohost", "gpu:{0,1}"), // slave attributes
         jdk7ConstraintUnlikeSet)
       assert(!unlikeSetVersionNotMet, "Should not meet unlike-set-version constraints.")
 
       val unlikeSetVersionMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlikeset
-        makeOffer("foohost", Seq(makeSetAttribute("gpu", List("1", "2")))), // slave attributes
+        makeOffer("foohost", "gpu:{1,2}"), // slave attributes
         jdk7ConstraintUnlikeSet)
       assert(unlikeSetVersionMet, "Should meet unlike-set-version constraints.")
 
       val unlikeSetNoAttributeNotMet = Constraints.meetsConstraint(
         freshRack, // list of tasks register in the unlikeset
-        makeOffer("foohost", Seq.empty), // no slave attribute
+        makeOffer("foohost", ""), // no slave attribute
         jdk7ConstraintUnlikeSet)
       assert(unlikeSetNoAttributeNotMet, "Should meet unlike-set-no-attribute constraints.")
     }
-  }
-  private def makeSampleInstanceWithTextAttrs(runSpecId: PathId, attrs: Map[String, String]): Instance = {
-    val attributes: Seq[Attribute] = attrs.map {
-      case (name, value) =>
-        TextAttribute(name, value): Attribute
-    }(collection.breakOut)
-    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withNetworkInfo(hostPorts = Seq(999))
-      .build()
-      .withAgentInfo(attributes = Some(attributes))
-      .getInstance()
+
+    "DomainInfo" should {
+      "apply constraints when *region is specified" in {
+        val regionConstraintUnique = makeConstraint(regionField, UNIQUE, "")
+        val offerRegion1 = makeOffer(hostnameField, "", Some(MarathonTestHelper.newDomainInfo("region1", "zone")))
+        val offerRegion2 = makeOffer(hostnameField, "", Some(MarathonTestHelper.newDomainInfo("region2", "zone")))
+        val instanceOnRegion1 = makeInstance(PathId("/test"), host = hostnameField, region = Some("region1"), zone = Some("zone1"))
+
+        Constraints.meetsConstraint(Seq(instanceOnRegion1), offerRegion1, regionConstraintUnique) shouldBe false
+        Constraints.meetsConstraint(Seq(instanceOnRegion1), offerRegion2, regionConstraintUnique) shouldBe true
+      }
+
+      "apply constraints when *zone is specified" in {
+        val zoneConstraintUnique = makeConstraint(zoneField, UNIQUE, "")
+        val offerZone1 = makeOffer(hostnameField, "", Some(MarathonTestHelper.newDomainInfo("region", "zone1")))
+        val offerZone2 = makeOffer(hostnameField, "", Some(MarathonTestHelper.newDomainInfo("region", "zone2")))
+        val instanceOnZone1 = makeInstance(PathId("/test"), host = hostnameField, region = Some("region"), zone = Some("zone1"))
+
+        Constraints.meetsConstraint(Seq(instanceOnZone1), offerZone1, zoneConstraintUnique) shouldBe false
+        Constraints.meetsConstraint(Seq(instanceOnZone1), offerZone2, zoneConstraintUnique) shouldBe true
+      }
+    }
   }
 
-  private def makeScalarAttribute(name: String, value: Double) = {
-    Protos.Attribute.newBuilder
-      .setType(Protos.Value.Type.SCALAR)
-      .setName(name)
-      .setScalar(Protos.Value.Scalar.newBuilder.setValue(value))
-      .build
+  "IS operator" should {
+    "require that a value match exactly" in {
+      makeOffer("righthost.com") should meetConstraint(hostnameField, IS, "righthost.com")
+      makeOffer("wronghost.com") should meetConstraint(hostnameField, IS, "wronghost.com")
+    }
+
+    "match scalars of the same value but different format" in {
+      makeOffer("host", "number:1") should meetConstraint("number", IS, "1.0")
+      makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1")
+    }
+
+    "match scalars that differ in value by 0.001 or less" in {
+      makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1.0001")
+      makeOffer("host", "number:1.0") should meetConstraint("number", IS, "1.0005")
+      makeOffer("host", "number:1.0") shouldNot meetConstraint("number", IS, "1.00051")
+      makeOffer("host", "number:1.0") shouldNot meetConstraint("number", IS, "1.001")
+    }
   }
 
-  private def makeSampleInstanceWithScalarAttrs(runSpecId: PathId, attrs: Map[String, Double]): Instance = {
-    val attributes: Seq[Attribute] = attrs.map {
-      case (name, value) =>
-        makeScalarAttribute(name, value)
-    }(collection.breakOut)
-    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withNetworkInfo(hostPorts = Seq(999))
-      .build()
-      .withAgentInfo(attributes = Some(attributes))
-      .getInstance()
+  /**
+    * Parse a single attribute:value pair string expression, according to the spec described in
+    * http://mesos.apache.org/documentation/latest/attributes-resources/
+    */
+  private def parseAttr(expression: String): Protos.Attribute = {
+    val Array(name, value) = expression.split(':')
+    val b = Protos.Attribute.newBuilder.setName(name)
+    value match {
+      case Constraints.MesosSetValue(itemsText) =>
+        // Note - Mesos set attributes are actually not supported. https://issues.apache.org/jira/browse/MESOS-8150
+        b.setType(Protos.Value.Type.SET)
+        val setBuilder = Protos.Value.Set.newBuilder
+        itemsText.split(',').foreach(setBuilder.addItem(_))
+        b.setSet(setBuilder)
+      case Constraints.MesosRangeValue(rangeText) =>
+        b.setType(Protos.Value.Type.RANGES)
+        val ranges = Protos.Value.Ranges.newBuilder
+        rangeText.split(',').foreach { r =>
+          val Array(start, end) = r.split('-')
+          ranges.addRange(
+            Protos.Value.Range.newBuilder
+              .setBegin(start.toLong)
+              .setEnd(end.toLong))
+        }
+        b.setRanges(ranges)
+      case Constraints.MesosScalarValue(scalarText) =>
+        b.setType(Protos.Value.Type.SCALAR)
+        b.setScalar(Protos.Value.Scalar.newBuilder.setValue(scalarText.toDouble))
+      case text =>
+        b.setType(Protos.Value.Type.TEXT)
+        b.setText(Protos.Value.Text.newBuilder.setValue(text))
+    }
+    b.build
   }
 
-  private def makeRangeAttribute(name: String, begin: Long, end: Long) = {
-    Protos.Attribute.newBuilder
-      .setType(Protos.Value.Type.RANGES)
-      .setName(name)
-      .setRanges(
-        Protos.Value.Ranges.newBuilder().addRange(
-          Protos.Value.Range.newBuilder()
-            .setBegin(begin)
-            .setEnd(end)
-            .build()
-        ).build()
-      ).build
-  }
+  /**
+    * Parse a series of semi-colon delimited mesos attribute expressions, according to the spec described in
+    * http://mesos.apache.org/documentation/latest/attributes-resources/
+    */
+  private def parseAttrs(expression: String): Seq[Protos.Attribute] =
+    expression.split(';').filter(_.nonEmpty).map(parseAttr(_)).to[Seq]
 
-  private def makeSampleInstanceWithRangeAttrs(runSpecId: PathId, attrs: Map[String, (Long, Long)]): Instance = {
-    val attributes: Seq[Attribute] = attrs.map {
-      case (name, (begin, end)) =>
-        makeRangeAttribute(name, begin, end)
-    }(collection.breakOut)
-    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withNetworkInfo(hostPorts = Seq(999))
-      .build()
-      .withAgentInfo(attributes = Some(attributes))
-      .getInstance()
-  }
-
-  private def makeSetAttribute(name: String, items: List[String]) = {
-    Protos.Attribute.newBuilder
-      .setType(Protos.Value.Type.SET)
-      .setName(name)
-      .setSet(Protos.Value.Set.newBuilder
-        .addAllItem(items.asJava)
-        .build()
-      )
-      .build
-  }
-
-  private def makeSampleInstanceWithSetAttrs(runSpecId: PathId, attrs: Map[String, List[String]]): Instance = {
-    val attributes: Seq[Attribute] = attrs.map {
-      case (name, value) =>
-        makeSetAttribute(name, value)
-    }(collection.breakOut)
-    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withNetworkInfo(hostPorts = Seq(999))
-      .build()
-      .withAgentInfo(attributes = Some(attributes))
-      .getInstance()
-  }
-
-  private def makeOffer(hostname: String, attributes: Seq[Attribute]) = {
-    Offer.newBuilder
+  private def makeOffer(hostname: String, attributes: String = "", domainInfo: Option[DomainInfo] = None) = {
+    val builder = Offer.newBuilder
       .setId(OfferID(Random.nextString(9)))
       .setSlaveId(SlaveID(Random.nextString(9)))
       .setFrameworkId(FrameworkID(Random.nextString(9)))
       .setHostname(hostname)
-      .addAllAttributes(attributes.asJava)
-      .build
+      .addAllAttributes(parseAttrs(attributes).asJava)
+    domainInfo.foreach(builder.setDomain)
+    builder.build
   }
 
-  private def makeInstanceWithHost(appId: PathId, host: String): Instance = {
+  private def makeInstance(appId: PathId, attributes: String = "", host: String = "host", region: Option[String] = None, zone: Option[String] = None): Instance = {
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskRunning()
       .withNetworkInfo(hostName = Some(host), hostPorts = Seq(999))
       .build()
-      .withAgentInfo(hostName = Some(host))
+      .withAgentInfo(hostName = Some(host), region = region, zone = zone, attributes = Some(parseAttrs(attributes)))
       .getInstance()
   }
 

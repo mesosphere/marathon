@@ -134,7 +134,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
         And("the leader must have died")
         WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }
-        leadingProcess.stop() // already stopped, but still need to clear old state
+        leadingProcess.stop().futureValue // already stopped, but still need to clear old state
 
         And("the leader must have changed")
         WaitTestSupport.waitUntil("the leader changes") {
@@ -198,7 +198,7 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
 
       And("the leader must have died")
       WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }
-      leadingProcess.stop() // already stopped, but still need to clear old state
+      leadingProcess.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
       WaitTestSupport.waitUntil("the leader changes") {
@@ -274,7 +274,7 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
 
       And("the leader must have died")
       WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess1.isRunning() }
-      leadingProcess1.stop() // already stopped, but still need to clear old state
+      leadingProcess1.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
       WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
@@ -391,7 +391,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
 
       And("the leader must have died")
       WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }
-      leadingProcess.stop() // already stopped, but still need to clear old state
+      leadingProcess.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
       WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
@@ -421,7 +421,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) {
         !leadingProcess2.isRunning()
       }
-      leadingProcess2.stop() // already stopped, but still need to clear old state
+      leadingProcess2.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
       WaitTestSupport.waitUntil("the leader changes", 30.seconds) {

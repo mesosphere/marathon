@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.termination.KillConfig
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.task.tracker.InstanceStateOpProcessor
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream.Sink
 
@@ -43,7 +43,7 @@ import scala.concurrent.{ Future, Promise }
   */
 private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
-    stateOpProcessor: TaskStateOpProcessor,
+    stateOpProcessor: InstanceStateOpProcessor,
     config: KillConfig,
     clock: Clock) extends Actor with StrictLogging {
   import KillServiceActor._
@@ -194,7 +194,7 @@ private[termination] object KillServiceActor {
 
   def props(
     driverHolder: MarathonSchedulerDriverHolder,
-    stateOpProcessor: TaskStateOpProcessor,
+    stateOpProcessor: InstanceStateOpProcessor,
     config: KillConfig,
     clock: Clock): Props = Props(
     new KillServiceActor(driverHolder, stateOpProcessor, config, clock))
@@ -209,11 +209,11 @@ private[termination] object KillServiceActor {
     * @param issued the time of the last issued kill request
     */
   case class ToKill(
-    instanceId: Instance.Id,
-    taskIdsToKill: Seq[Task.Id],
-    maybeInstance: Option[Instance],
-    attempts: Int,
-    issued: Timestamp = Timestamp.zero)
+      instanceId: Instance.Id,
+      taskIdsToKill: Seq[Task.Id],
+      maybeInstance: Option[Instance],
+      attempts: Int,
+      issued: Timestamp = Timestamp.zero)
 }
 
 /**

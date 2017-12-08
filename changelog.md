@@ -1,4 +1,62 @@
-## Changes from 1.4.x to 1.5.0 (unreleased)
+## Changes from 1.5.1 to 1.5.2 (unreleased)
+Bugfix release
+
+### Fixed issues
+- [MARATHON-7790](https://jira.mesosphere.com/browse/MARATHON-7790) Migrate UnreachableStrategy Saved in Instances
+- Change `Int.MaxValue` to 8 for maximum concurrency during migration (#5676) (#5701)
+- [MARATHON-7848](https://jira.mesosphere.com/browse/MARATHON-7848) Allow underscore for network names (#5687)
+- [MARATHON-7788](https://jira.mesosphere.com/browse/MARATHON-7788) Store a flag node in ZK to indicate that Marathon performs data migration (#5662)
+- [MARATHON-7852](https://jira.mesosphere.com/browse/MARATHON-7852) Switch to use Debian Slim base image (#5668)
+- Extend the set of command-line flags returned by /v2/info (#5612)
+- [MARATHON-7784](https://jira.mesosphere.com/browse/MARATHON-7784) Do not ignore exceptions when resolving apps and pods in GroupRepository (#5607)
+- Update Mesos version to 1.4.0 which is used for building packages and Docker images (#5606)
+- [MARATHON-7763](https://jira.mesosphere.com/browse/MARATHON-7763) Do sync before reading from or writing to ZooKeeper (#5566)
+- Fixes bug in which some Condition values were improperly read (#5555) (#5557)
+- Added an option to disable a plugin (#5524)
+
+### 1.5.1 New Behavior
+#### Migrating unreachableStrategy - running instances
+
+If you already migrated your apps and pods to the new default behavior for `UnreachableStrategy`, you also should consider to migrate the running instances as well.
+
+To change the `unreachableStrategy` of all running instances, set the environment variable `MIGRATION_1_4_6_UNREACHABLE_STRATEGY` to `true`, which leads to the following behavior during migration:
+
+When opting in to the unreachable migration step
+1) all instances that had a config of `UnreachableStrategy(300 seconds, 600 seconds)` (previous default) are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+2) all instances that had a config of `UnreachableStrategy(1 second, x seconds)` are migrated to have `UnreachableStrategy(0 seconds, x seconds)`
+3) all instances that had a config of `UnreachableStrategy(1 second, 2 seconds)` are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+
+**Note**: If you set this variable after upgrading to 1.4.9, it will have no effect.
+
+## Changes from 1.5.0 to 1.5.1
+Bugfix release
+
+### Fixed issues
+- [MARATHON-7576](https://jira.mesosphere.com/browse/MARATHON-7576) Changed default of UnreachableEnabled to (0,0)
+- [D907](https://phabricator.mesosphere.com/D907) TaskLauncherActor doesn't wait for in-flight tasks on stop
+- [MARATHON-7765](https://jira.mesosphere.com/browse/MARATHON-7765) Fixes issue in which /v2/info endpoint always returned 1.5.0-snapshot1, regardless of the actual endpoint.
+- [PR 5421](https://github.com/mesosphere/marathon/pull/5421) Added SchedulerPlugin to enable the ability to customize the rejection of offers. (see below)
+- [MARATHON-2520](https://jira.mesosphere.com/browse/MARATHON-2520) Improved logging around migration
+- [D1044](https://phabricator.mesosphere.com/D1044) EventStream implementation moved to Akka eventStream
+- [MARATHON-7545](https://jira.mesosphere.com/browse/MARATHON-7545) Initialize RunSpecTaskProcessor and RunSpecValidator at startup to early detect misconfiguration.
+- [D974](https://phabricator.mesosphere.com/D974) Plugin configuration or initialization issues are made more obvious, potentially causing Marathon to not launch.
+- [MARATHON-7707](https://jira.mesosphere.com/browse/MARATHON-7707)  Resident tasks now have an up-to-date agentInfo (agentId) when they are re-launched, rather than preserving the agentInfo as received during initial launch.
+- [MARATHON-7724](https://jira.mesosphere.com/browse/MARATHON-7724) Better socket error handling leader proxy.
+-  [MARATHON-7711](https://jira.mesosphere.com/browse/MARATHON-7711), [MARATHON-7338](https://jira.mesosphere.com/browse/MARATHON-7338) Under certain circumstances, resident tasks wouldn't relaunch when resources were available, and reservations wouldn't be freed. In order to address this, Marathon no longer suppresses offers from Mesos.
+- [PR 5432](https://github.com/mesosphere/marathon/pull/5432) App and pod validation errors for missing network name.
+- [MARATHON-1703](https://jira.mesosphere.com/browse/MARATHON-1703) Fixed issue in which constraints would not be properly evaluated when launching multiple resident tasks at a time.
+
+### 1.5.1 New Behavior
+
+#### mesosphere.marathon.plugin.scheduler.SchedulerPlugin
+
+This plugin allows to reject offers. Possible use-cases are:
+  * Maintenance. Mark agent as going to maintenance and reject new offers from it.
+  * Analytics. If task fails, for example, 5 times for 5 minutes, we can assume that it will fail again and reject new offers for it.
+  * Binding to agents. For example, agents can be marked as included into primary or secondary group. Task can be marked with group name.  Plugin can schedule task deployment to primary agents. If all primary agents are busy, task can be scheduled to secondary agents
+
+
+## Changes from 1.4.x to 1.5.0
 
 ### Recommended Mesos version is 1.3.0
 

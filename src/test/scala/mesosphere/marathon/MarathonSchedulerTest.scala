@@ -8,11 +8,14 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
+import mesosphere.marathon.state.Region
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.{ FrameworkId, MutableMesosLeaderInfo }
+import org.apache.mesos.Protos.DomainInfo.FaultDomain.{ RegionInfo, ZoneInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
+import org.apache.mesos.Protos.DomainInfo.FaultDomain
 
 import scala.concurrent.Future
 
@@ -146,6 +149,68 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       Then("Suicide is called with removing the framework id")
       suicideCalled should be(defined)
       suicideCalled.get should be (true)
+    }
+
+    "Store default region when registered" in new Fixture {
+      val driver = mock[SchedulerDriver]
+      val frameworkId = FrameworkID.newBuilder
+        .setValue("some_id")
+        .build()
+
+      val regionName = "some_region"
+      val zoneName = "some_zone"
+
+      val masterInfo = MasterInfo.newBuilder()
+        .setId("")
+        .setIp(0)
+        .setPort(5050)
+        .setHostname("some_host")
+        .setDomain(
+          DomainInfo.newBuilder()
+            .setFaultDomain(
+              FaultDomain.newBuilder()
+                .setRegion(RegionInfo.newBuilder().setName(regionName).build())
+                .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
+                .build()
+            )
+            .build()
+        )
+        .build()
+
+      frameworkIdRepository.store(any) returns Future.successful(Done)
+
+      marathonScheduler.registered(driver, frameworkId, masterInfo)
+
+      marathonScheduler.getLocalRegion shouldEqual Some(Region(regionName))
+    }
+
+    "Store default region when reregistered" in new Fixture {
+      val driver = mock[SchedulerDriver]
+
+      val regionName = "some_region"
+      val zoneName = "some_zone"
+
+      val masterInfo = MasterInfo.newBuilder()
+        .setId("")
+        .setIp(0)
+        .setPort(5050)
+        .setHostname("some_host")
+        .setDomain(
+          DomainInfo.newBuilder()
+            .setFaultDomain(
+              FaultDomain.newBuilder()
+                .setRegion(RegionInfo.newBuilder().setName(regionName).build())
+                .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
+                .build()
+            )
+            .build()
+        )
+        .build()
+
+      marathonScheduler.reregistered(driver, masterInfo)
+
+      marathonScheduler.getLocalRegion shouldEqual Some(Region(regionName))
+
     }
   }
 }

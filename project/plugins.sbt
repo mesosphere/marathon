@@ -6,7 +6,7 @@ resolvers ++= Seq(
   "Era7 maven releases" at "http://releases.era7.com.s3.amazonaws.com"
 )
 
-addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.6.0")
+addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.8.2")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.8.0")
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.15.0")
@@ -19,7 +19,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.2")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.25")
-addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.10.6")
+addSbtPlugin("com.lightbend.sbt" % "sbt-aspectj" % "0.11.0")
 addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-M15")
 
 libraryDependencies ++= Seq(

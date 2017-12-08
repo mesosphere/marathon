@@ -16,6 +16,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.stream.Sink
@@ -64,18 +65,19 @@ trait DeploymentService {
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
-  leadershipCoordinator: LeadershipCoordinator,
-  config: MarathonConf,
-  electionService: ElectionService,
-  prePostDriverCallbacks: Seq[PrePostDriverCallback],
-  groupManager: GroupManager,
-  driverFactory: SchedulerDriverFactory,
-  system: ActorSystem,
-  migration: Migration,
-  deploymentManager: DeploymentManager,
-  @Named("schedulerActor") schedulerActor: ActorRef,
-  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef)(implicit mat: Materializer)
-    extends AbstractExecutionThreadService with ElectionCandidate with DeploymentService {
+    persistenceStore: PersistenceStore[_, _, _],
+    leadershipCoordinator: LeadershipCoordinator,
+    config: MarathonConf,
+    electionService: ElectionService,
+    prePostDriverCallbacks: Seq[PrePostDriverCallback],
+    groupManager: GroupManager,
+    driverFactory: SchedulerDriverFactory,
+    system: ActorSystem,
+    migration: Migration,
+    deploymentManager: DeploymentManager,
+    @Named("schedulerActor") schedulerActor: ActorRef,
+    @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef)(implicit mat: Materializer)
+  extends AbstractExecutionThreadService with ElectionCandidate with DeploymentService {
 
   import mesosphere.marathon.core.async.ExecutionContexts.global
 
@@ -198,6 +200,15 @@ class MarathonSchedulerService @Inject() (
   override def startLeadership(): Unit = synchronized {
     log.info("As new leader running the driver")
 
+    // allow interactions with the persistence store
+    persistenceStore.markOpen()
+
+    // Before reading to and writing from the storage, let's ensure that
+    // no stale values are read from the persistence store.
+    // Although in case of ZK it is done at the time of creation of CuratorZK,
+    // it is better to be safe than sorry.
+    Await.result(persistenceStore.sync(), Duration.Inf)
+
     refreshCachesAndDoMigration()
 
     // run all pre-driver callbacks
@@ -273,6 +284,9 @@ class MarathonSchedulerService @Inject() (
   override def stopLeadership(): Unit = synchronized {
     // invoked by election service upon loss of leadership (state transitioned to Idle)
     log.info("Lost leadership")
+
+    // disallow any interaction with the persistence storage
+    persistenceStore.markClosed()
 
     leadershipCoordinator.stop()
 

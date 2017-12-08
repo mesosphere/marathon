@@ -122,8 +122,8 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
           repo.versions(app.id).runWith(Sink.set).futureValue) should be('empty)
         versions.tail.toSet.diff(
           repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
-          .collect { case Some(g) => g }
-          .runWith(Sink.set).futureValue
+            .collect { case Some(g) => g }
+            .runWith(Sink.set).futureValue
         ) should be ('empty)
 
         And("Get of the current will fail")
@@ -149,11 +149,14 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   }
 
   def createInMemRepo(): AppRepository = {
-    AppRepository.inMemRepository(new InMemoryPersistenceStore())
+    val store = new InMemoryPersistenceStore()
+    store.markOpen()
+    AppRepository.inMemRepository(store)
   }
 
   def createLoadTimeCachingRepo(): AppRepository = {
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    cached.markOpen()
     cached.preDriverStarts.futureValue
     AppRepository.inMemRepository(cached)
   }
@@ -162,15 +165,20 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
     val store = new ZkPersistenceStore(rootClient, Duration.Inf)
+    store.markOpen()
     AppRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(): AppRepository = {
-    AppRepository.inMemRepository(LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
+    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    store.markOpen()
+    AppRepository.inMemRepository(store)
   }
 
   def createLazyVersionCachingRepo(): AppRepository = {
-    AppRepository.inMemRepository(LazyVersionCachingPersistentStore(new InMemoryPersistenceStore()))
+    val store = LazyVersionCachingPersistentStore(new InMemoryPersistenceStore())
+    store.markOpen()
+    AppRepository.inMemRepository(store)
   }
 
   behave like basic("InMemoryPersistence", createInMemRepo)

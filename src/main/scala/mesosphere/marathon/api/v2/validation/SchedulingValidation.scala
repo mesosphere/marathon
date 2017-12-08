@@ -42,19 +42,19 @@ trait SchedulingValidation {
 
   lazy val validForResidentTasks: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
     strategy.minimumHealthCapacity is between(0.0, 1.0)
-    strategy.maximumOverCapacity should valid(be == 0.0)
+    strategy.maximumOverCapacity should be == 0.0
   }
 
   lazy val validForSingleInstanceApps: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
-    strategy.minimumHealthCapacity should valid(be == 0.0)
-    strategy.maximumOverCapacity should valid(be == 0.0)
+    strategy.minimumHealthCapacity should be == 0.0
+    strategy.maximumOverCapacity should be == 0.0
   }
 
   val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
     import mesosphere.marathon.raml.ConstraintOperator._
     override def apply(c: Constraint): Result = {
-      def failure(constraintViolation: String, description: Option[String] = None) =
-        Failure(Set(RuleViolation(c, constraintViolation, description)))
+      def failure(constraintViolation: String) =
+        Failure(Set(RuleViolation(c, constraintViolation)))
       if (c.fieldName.isEmpty) {
         failure(ConstraintRequiresField)
       } else {
@@ -82,8 +82,15 @@ trait SchedulingValidation {
             } { p =>
               Try(Pattern.compile(p)) match {
                 case util.Success(_) => Success
-                case util.Failure(e) => failure(InvalidRegularExpression, Option(e.getMessage))
+                case util.Failure(e) => failure(InvalidRegularExpression)
               }
+            }
+          case Is =>
+            c.value.getOrElse("") match {
+              case MesosLiteralOrFloatValue() =>
+                Success
+              case _ =>
+                failure(IsOnlySupportsText)
             }
         }
       }
@@ -102,11 +109,11 @@ trait SchedulingValidation {
   }
 
   val complyWithAppConstraintRules: Validator[Seq[String]] = new Validator[Seq[String]] {
-    def failureIllegalOperator(c: Any) = Failure(Set(RuleViolation(c, ConstraintOperatorInvalid, None)))
+    def failureIllegalOperator(c: Any) = Failure(Set(RuleViolation(c, ConstraintOperatorInvalid)))
 
     override def apply(c: Seq[String]): Result = {
-      def badConstraint(reason: String, desc: Option[String] = None): Result =
-        Failure(Set(RuleViolation(c, reason, desc)))
+      def badConstraint(reason: String): Result =
+        Failure(Set(RuleViolation(c, reason)))
       if (c.length < 2 || c.length > 3) badConstraint("Each constraint must have either 2 or 3 fields")
       else (c.headOption, c.lift(1), c.lift(2)) match {
         case (None, None, _) =>
@@ -129,6 +136,13 @@ trait SchedulingValidation {
 object SchedulingValidation extends SchedulingValidation
 
 object SchedulingValidationMessages {
+  /* IS currently supports text and scalar values. By disallowing ranges / sets, we can add support for them later
+   * without breaking the API. */
+  val MesosLiteralOrFloatValue = "^[a-zA-Z0-9_/.-]*$".r
+
+  val IsOnlySupportsText = "IS only supports Mesos text and float values (see http://mesos.apache.org/documentation/latest/attributes-resources/)"
+  val InOnlySupportsSets = "IN value expects a Mesos set value (see http://mesos.apache.org/documentation/latest/attributes-resources/)"
+
   val ConstraintRequiresField = "missing field for constraint declaration"
   val InvalidRegularExpression = "is not a valid regular expression"
   val ConstraintLikeAnUnlikeRequireRegexp = "LIKE and UNLIKE require a non-empty, regular expression value"

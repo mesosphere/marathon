@@ -9,7 +9,7 @@ import akka.http.scaladsl.server._
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.akkahttp.Headers._
-import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.election.ElectionServiceLeaderInfo
 
 import scala.util.matching.Regex
 import scala.util.{ Failure, Success }
@@ -22,14 +22,14 @@ trait LeaderDirectives extends StrictLogging {
     *
     * The HTTP service's rejection handler should handle proxying via the handleNonLeader partialFunction below
     */
-  def asLeader(electionService: ElectionService): Directive0 = {
+  def asLeader(leaderInfo: ElectionServiceLeaderInfo): Directive0 = {
     extractRequest.flatMap { request =>
-      if (electionService.isLeader) {
+      if (leaderInfo.isLeader) {
         pass
-      } else if (request.header[`X-Marathon-Via`].exists(_.via == electionService.localHostPort)) {
+      } else if (request.header[`X-Marathon-Via`].exists(_.via == leaderInfo.localHostPort)) {
         reject(ProxyLoop)
-      } else electionService.leaderHostPort match {
-        case Some(host) => reject(ProxyToLeader(request, electionService.localHostPort, host))
+      } else leaderInfo.leaderHostPort match {
+        case Some(host) => reject(ProxyToLeader(request, leaderInfo.localHostPort, host))
         case None => reject(NoLeader)
       }
     }
@@ -43,9 +43,9 @@ object LeaderDirectives extends StrictLogging {
   val HostPort: Regex = """^(.*):(\d+)$""".r
   val FilterHeaders: Set[String] = Set("Host", "Connection", "Timeout-Access")
 
-  private[LeaderDirectives] case class ProxyToLeader(request: HttpRequest, localHostPort: String, leaderHost: String) extends Rejection
-  private[LeaderDirectives] case object NoLeader extends Rejection
-  private[LeaderDirectives] case object ProxyLoop extends Rejection
+  case class ProxyToLeader(request: HttpRequest, localHostPort: String, leaderHost: String) extends Rejection
+  case object NoLeader extends Rejection
+  case object ProxyLoop extends Rejection
 
   def handleNonLeader(implicit actorSystem: ActorSystem, materializer: Materializer): PartialFunction[Rejection, Route] = {
     case ProxyLoop => complete(StatusCodes.BadGateway -> "Detected proxy loop")

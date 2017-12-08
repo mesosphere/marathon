@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api
 
 import mesosphere.UnitTest
+import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
@@ -19,7 +20,7 @@ class EndpointsHelperTest extends UnitTest {
       case (numTasks, agentIndex) =>
         val agentId = agentIndex + 1
         val hostname = s"agent$agentId"
-        val agent = AgentInfo(hostname, None, Nil)
+        val agent = AgentInfo(hostname, None, None, None, Nil)
 
         1.to(numTasks).map { taskIndex =>
           val instanceId = Instance.Id.forRunSpec(app.id)
@@ -54,17 +55,17 @@ class EndpointsHelperTest extends UnitTest {
 
   def endpointsWithoutServicePorts(app: AppDefinition): Unit = {
     "handle single instance without service ports" in {
-      val report = EndpointsHelper.appsToEndpointString(instances(app, Seq(1)), Seq(app))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app)))
       val expected = "foo\t \tagent1\t\n"
       report should equal(expected)
     }
     "handle multiple instances, same agent, without service ports" in {
-      val report = EndpointsHelper.appsToEndpointString(instances(app, Seq(2)), Seq(app))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2)), Seq(app)))
       val expected = "foo\t \tagent1\tagent1\t\n"
       report should equal(expected)
     }
     "handle multiple instances, different agents, without service ports" in {
-      val report = EndpointsHelper.appsToEndpointString(instances(app, Seq(2, 1, 2)), Seq(app))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2, 1, 2)), Seq(app)))
       val expected = "foo\t \tagent1\tagent1\tagent2\tagent3\tagent3\t\n"
       report should equal(expected)
     }
@@ -72,17 +73,17 @@ class EndpointsHelperTest extends UnitTest {
 
   def endpointsWithSingleDynamicServicePorts(app: AppDefinition): Unit = {
     "handle single instance with 1 service port" in {
-      val report = EndpointsHelper.appsToEndpointString(instances(app, Seq(1)), Seq(app))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app)))
       val expected = "foo\t80\tagent1:1010\t\n"
       report should equal(expected)
     }
     "handle multiple instances, same agent, with 1 service port" in {
-      val report = EndpointsHelper.appsToEndpointString(instances(app, Seq(2)), Seq(app))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2)), Seq(app)))
       val expected = "foo\t80\tagent1:1010\tagent1:1020\t\n"
       report should equal(expected)
     }
     "handle multiple instances, different agents, with 1 service port" in {
-      val report = EndpointsHelper.appsToEndpointString(instances(app, Seq(2, 1, 2)), Seq(app))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2, 1, 2)), Seq(app)))
       val expected = "foo\t80\tagent1:1010\tagent1:1020\tagent2:1010\tagent3:1010\tagent3:1020\t\n"
       report should equal(expected)
     }
@@ -90,12 +91,12 @@ class EndpointsHelperTest extends UnitTest {
 
   def endpointsWithSingleStaticServicePorts(app: AppDefinition, servicePort: Int, hostPort: Int): Unit = {
     s"handle single instance with 1 (static) service port $servicePort and host port $hostPort" in {
-      val report = EndpointsHelper.appsToEndpointString(instances(app, Seq(1)), Seq(app))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app)))
       val expected = s"foo\t$servicePort\tagent1:$hostPort\t\n"
       report should equal(expected)
     }
     s"handle multiple instances, different agents, with 1 (static) service port $servicePort and host port $hostPort" in {
-      val report = EndpointsHelper.appsToEndpointString(instances(app, Seq(1, 1, 1)), Seq(app))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1, 1, 1)), Seq(app)))
       val expected = s"foo\t$servicePort\tagent1:$hostPort\tagent2:$hostPort\tagent3:$hostPort\t\n"
       report should equal(expected)
     }

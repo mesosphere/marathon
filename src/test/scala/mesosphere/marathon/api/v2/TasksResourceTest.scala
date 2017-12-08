@@ -12,7 +12,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
@@ -29,7 +29,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       taskTracker: InstanceTracker = mock[InstanceTracker],
-      stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor],
+      stateOpProcessor: InstanceStateOpProcessor = mock[InstanceStateOpProcessor],
       taskKiller: TaskKiller = mock[TaskKiller],
       config: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager],
@@ -51,7 +51,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
     "list (txt) tasks with less ports than the current app version" in new Fixture {
       // Regression test for #234
       Given("one app with one task with less ports than required")
-      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"))
 
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
@@ -77,7 +77,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       Given("no apps")
       config.zkTimeoutDuration returns 5.seconds
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.rootGroup() returns createRootGroup()
+      groupManager.apps(any) returns Map.empty
 
       When("Getting the tasks index")
       val response = taskResource.indexJson("status", new java.util.ArrayList[String], auth.request)

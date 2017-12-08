@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule, InstanceStateOpProcessor }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.InstanceRepository
@@ -25,13 +25,18 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   val TEST_APP_NAME = PathId("/foo")
 
   case class Fixture() {
-    implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
+    val store: InMemoryPersistenceStore = {
+      val store = new InMemoryPersistenceStore()
+      store.markOpen()
+      store
+    }
+    implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(store))
     val config: AllConf = MarathonTestHelper.defaultConfig()
     implicit val clock: SettableClock = new SettableClock()
     val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(
       AlwaysElectedLeadershipModule.forRefFactory(system), Some(state))
     implicit val instanceTracker: InstanceTracker = taskTrackerModule.instanceTracker
-    implicit val stateOpProcessor: TaskStateOpProcessor = taskTrackerModule.stateOpProcessor
+    implicit val stateOpProcessor: InstanceStateOpProcessor = taskTrackerModule.stateOpProcessor
   }
 
   "InstanceTrackerImpl" should {
@@ -57,7 +62,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
     def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec)(
       implicit
-      stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
+      stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
       val instance1 = makeSampleInstance(TEST_APP_NAME / "a")
       val instance2 = makeSampleInstance(TEST_APP_NAME / "b")
       val instance3 = makeSampleInstance(TEST_APP_NAME / "b")
@@ -86,7 +91,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testGetTasks(_.specInstances(TEST_APP_NAME).futureValue)
     }
 
-    def testGetTasks(call: InstanceTracker => Seq[Instance])(implicit stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
+    def testGetTasks(call: InstanceTracker => Seq[Instance])(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
       val task1 = makeSampleInstance(TEST_APP_NAME)
       val task2 = makeSampleInstance(TEST_APP_NAME)
       val task3 = makeSampleInstance(TEST_APP_NAME)
@@ -103,7 +108,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       assert(testAppTasks.size == 3)
     }
 
-    def testCount(count: (InstanceTracker, PathId) => Int)(implicit stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
+    def testCount(count: (InstanceTracker, PathId) => Int)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
       val task1 = makeSampleInstance(TEST_APP_NAME / "a")
 
       stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
@@ -120,7 +125,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testContains(_.hasSpecInstances(_).futureValue)
     }
 
-    def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
+    def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
       val task1 = makeSampleInstance(TEST_APP_NAME / "a")
 
       stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
@@ -194,7 +199,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testStatusUpdateForTerminalState(TaskState.TASK_ERROR)
     }
 
-    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
+    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
       val sampleTask = makeSampleInstance(TEST_APP_NAME)
       val terminalStatusUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, taskState), clock.now())
 

@@ -1,0 +1,42 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Measure Deployment Time            #
+# ----------------------------------------------------------- #
+# This fragment installs a duration tracker that tracks the   #
+# duration in seconds between the completion of the HTTP      #
+# request and the completion of the deployment.
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # Define the metrics we are measuring
+  metrics:
+    - name: fullDeploymentTime
+      uuid: cfac77fceb244862aedd89066441c416
+      desc: The time from the first HTTP request completion till the last deployment success
+      summarize: [mean_err]
+      units: sec
+
+  # Define the indicators that can summarise our values
+  indicators:
+
+    # Calculate `meanFullDeploymentTime` by calculating the normalizing average
+    # of all the `fullDeploymentTime` mean values, normalized against each test's
+    # normalization expression
+    - name: meanFullDeploymentTime
+      class: indicator.NormalizedMeanMetricIndicator
+      metric: fullDeploymentTime.mean_err
+      normalizeto: "{{normalize_to}}"
+
+# Tracker configuration
+# ===========================
+trackers:
+
+  # Track fullDeploymentTime as the duration between an `MarathonDeploymentStartedEvent`
+  # and an `MarathonDeploymentSuccessEvent`
+  - class: tracker.DurationTracker
+    metric: fullDeploymentTime
+    events:
+      start: MarathonDeploymentStartedEvent:first
+      end: MarathonDeploymentSuccessEvent:last

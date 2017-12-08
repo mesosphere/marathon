@@ -17,6 +17,7 @@ import play.api.libs.json.Json
 import scala.concurrent.duration._
 
 class HealthCheckTest extends UnitTest {
+
   "HealthCheck" should {
     "ToProto Marathon HTTP HealthCheck with portIndex" in {
       val healthCheck = MarathonHttpHealthCheck(
@@ -294,7 +295,7 @@ class HealthCheckTest extends UnitTest {
       val check = new MarathonTcpHealthCheck(portIndex = Some(PortReference(0)))
       val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
       val hostName = "hostName"
-      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
         val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(app.id)
         val hostPorts = Seq(4321)

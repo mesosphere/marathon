@@ -1,0 +1,41 @@
+# ----------------------------------------------------------- #
+# Configuration Root : Run N Apps / 1 Instances Scale test    #
+# ----------------------------------------------------------- #
+
+# Global test configuration
+# ===========================
+config:
+
+  # The title of the test
+  title: "Marathon N Apps / 1 Instances Scale Test"
+
+# Fragments to include
+# ===========================
+include:
+
+  # Shared configuration
+  - common/config-common.yml
+
+  # Run the n-apps-1-instances test policy
+  - policies/test-n-apps-1-instances.yml
+
+  # Use marathon's SSE endpoint to measure our metrics
+  - observers/observer-marathon-http-timing.yml
+  - observers/observer-marathon-sse.yml
+  - observers/observer-jmx.yml
+
+  # Measure the given metrics
+  - measure/measure-deploymentTime.yml
+  - measure/measure-fullDeploymentTime.yml
+  - measure/measure-httpRequestTime.yml
+  - measure/measure-failedDeployments.yml
+  - measure/measure-groupsResponseTime.yml
+  - measure/measure-jmx-threadCount.yml
+  - measure/measure-jmx-usedMemory.yml
+  - measure/measure-jmx-cpuUsage.yml
+
+  # Create the following reports
+  - reporters/report-raw.yml
+  - reporters/report-csv.yml
+  - reporters/report-s3.yml
+  - reporters/report-datadog.yml

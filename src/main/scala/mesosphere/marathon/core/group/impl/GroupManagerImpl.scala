@@ -2,12 +2,14 @@ package mesosphere.marathon
 package core.group.impl
 
 import java.time.OffsetDateTime
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Provider
 
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
@@ -21,16 +23,16 @@ import mesosphere.marathon.util.{ LockedVar, WorkQueue }
 
 import scala.async.Async._
 import scala.collection.immutable.Seq
-import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class GroupManagerImpl(
-    config: GroupManagerConfig,
-    initialRoot: RootGroup,
+    val config: GroupManagerConfig,
+    initialRoot: Option[RootGroup],
     groupRepository: GroupRepository,
     deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
+
   /**
     * All updates to root() should go through this workqueue and the maxConcurrent should always be "1"
     * as we don't allow multiple updates to the root at the same time.
@@ -45,7 +47,22 @@ class GroupManagerImpl(
     */
   private[this] val root = LockedVar(initialRoot)
 
-  override def rootGroup(): RootGroup = root.get()
+  @SuppressWarnings(Array("OptionGet"))
+  override def rootGroup(): RootGroup =
+    root.get() match { // linter:ignore:UseGetOrElseNotPatMatch
+      case None =>
+        root.update {
+          case None =>
+            val group = Await.result(groupRepository.root(), config.zkTimeoutDuration)
+            registerMetrics()
+            Some(group)
+          case group =>
+            group
+        }.get
+      case Some(group) => group
+    }
+
+  override def rootGroupOption(): Option[RootGroup] = root.get()
 
   override def versions(id: PathId): Source[Timestamp, NotUsed] = {
     groupRepository.rootVersions().mapAsync(Int.MaxValue) { version =>
@@ -81,38 +98,54 @@ class GroupManagerImpl(
 
   override def app(id: PathId): Option[AppDefinition] = rootGroup().app(id)
 
+  override def apps(ids: Set[PathId]) = ids.map(appId => appId -> app(appId))(collection.breakOut)
+
   override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
 
   @SuppressWarnings(Array("all")) /* async/await */
-  override def updateRoot(
+  override def updateRootEither[T](
     id: PathId,
-    change: (RootGroup) => RootGroup, version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] = {
+    change: (RootGroup) => Future[Either[T, RootGroup]],
+    version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
     // All updates to the root go through the work queue.
-    val deployment = serializeUpdates {
-      async {
-        logger.info(s"Upgrade root group version:$version with force:$force")
+    val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
+      logger.info(s"Upgrade root group version:$version with force:$force")
 
-        val from = rootGroup()
-        val unversioned = assignDynamicServicePorts(from, change(from))
-        val to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
-        Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
-        val plan = DeploymentPlan(from, to, version, toKill)
-        Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
-        logger.info(s"Computed new deployment plan:\n$plan")
-        await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
-        await(deploymentService.get().deploy(plan, force))
-        await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
-        logger.info(s"Updated groups/apps/pods according to plan ${plan.id}")
-        // finally update the root under the write lock.
-        root := plan.target
-        plan
+      val from = rootGroup()
+      async {
+        val changedGroup = await(change(from))
+        changedGroup match {
+          case Left(left) =>
+            Left(left)
+          case Right(changed) =>
+            val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
+              Range.inclusive(config.localPortMin(), config.localPortMax()),
+              from,
+              changed)
+            val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
+            val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
+            Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config.availableFeatures))
+            val plan = DeploymentPlan(from, withVersionedAppsPods, version, toKill)
+            Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
+            logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")
+            await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
+            await(deploymentService.get().deploy(plan, force))
+            await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
+            logger.info(s"Updated groups/apps/pods according to plan ${plan.id} for ${plan.targetIdsString}")
+            // finally update the root under the write lock.
+            root := Option(plan.target)
+            Right(plan)
+        }
       }
     }
-    deployment.onComplete {
-      case Success(plan) =>
-        logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.target.id} acknowledged. Waiting to get processed")
+
+    maybeDeploymentPlan.onComplete {
+      case Success(Right(plan)) =>
+        logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.targetIdsString} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
+      case Success(Left(_)) =>
+        ()
       case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event
         logger.warn(s"Deployment failed for change: $version", ex)
@@ -120,86 +153,39 @@ class GroupManagerImpl(
         logger.warn(s"Deployment failed for change: $version", ex)
         eventStream.publish(GroupChangeFailed(id, version.toString, ex.getMessage))
     }
-    deployment
-  }
-
-  private[group] def assignDynamicServicePorts(from: RootGroup, to: RootGroup): RootGroup = {
-    val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
-
-    def nextGlobalFreePort: Int = {
-      val port = portRange.find(!taken.contains(_))
-        .getOrElse(throw new PortRangeExhaustedException(
-          config.localPortMin(),
-          config.localPortMax()
-        ))
-      logger.info(s"Take next configured free port: $port")
-      taken += port
-      port
-    }
-
-    def mergeServicePortsAndPortDefinitions(
-      portDefinitions: Seq[PortDefinition],
-      servicePorts: Seq[Int]): Seq[PortDefinition] =
-      if (portDefinitions.nonEmpty)
-        portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
-          case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
-        }
-      else Seq.empty
-
-    def assignPorts(app: AppDefinition): AppDefinition = {
-      //all ports that are already assigned in old app definition, but not used in the new definition
-      //if the app uses dynamic ports (0), it will get always the same ports assigned
-      val assignedAndAvailable = mutable.Queue(
-        from.app(app.id)
-          .map(_.servicePorts.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
-          .getOrElse(Nil): _*
-      )
-
-      def nextFreeServicePort: Int =
-        if (assignedAndAvailable.nonEmpty) assignedAndAvailable.dequeue()
-        else nextGlobalFreePort
-
-      val servicePorts: Seq[Int] = app.servicePorts.map { port =>
-        if (port == 0) nextFreeServicePort else port
-      }
-
-      val updatedContainer = app.container.find(_.portMappings.nonEmpty).map { container =>
-        val newMappings = container.portMappings.zip(servicePorts).map {
-          case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
-        }
-        container.copyWith(portMappings = newMappings)
-      }
-
-      app.copy(
-        portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, servicePorts),
-        container = updatedContainer.orElse(app.container)
-      )
-    }
-
-    val dynamicApps: Set[AppDefinition] =
-      to.transitiveApps.map {
-        // assign values for service ports that the user has left "blank" (set to zero)
-        case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
-        case app: AppDefinition =>
-          // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-          app.copy(
-            portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
-          )
-      }
-
-    dynamicApps.foldLeft(to) { (rootGroup, app) =>
-      rootGroup.updateApp(app.id, _ => app, app.version)
-    }
+    maybeDeploymentPlan
+  } catch {
+    case NonFatal(ex) => Future.failed(ex)
   }
 
   @SuppressWarnings(Array("all")) // async/await
   override def invalidateGroupCache(): Future[Done] = async {
+    root := None
+
     // propagation of reset group caches on repository is needed,
     // because manager and repository are holding own caches
     await(groupRepository.invalidateGroupCache())
-    val currentRoot = await(groupRepository.root())
-    root := currentRoot
+
+    // force fetching of the root group from the group repository
+    rootGroup()
     Done
+  }
+
+  private[this] val metricsRegistered: AtomicBoolean = new AtomicBoolean(false)
+  private[this] def registerMetrics(): Unit = {
+    if (metricsRegistered.compareAndSet(false, true)) {
+      // We've already released metrics using these names, so we can't use the Metrics.* methods
+      Kamon.metrics.gauge("service.mesosphere.marathon.app.count") {
+        rootGroupOption().foldLeft(0L) { (_, group) =>
+          group.transitiveApps.size.toLong
+        }
+      }
+
+      Kamon.metrics.gauge("service.mesosphere.marathon.group.count") {
+        rootGroupOption().foldLeft(0L) { (_, group) =>
+          group.transitiveGroupsById.size.toLong
+        }
+      }
+    }
   }
 }

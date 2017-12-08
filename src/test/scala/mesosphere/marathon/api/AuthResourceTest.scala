@@ -32,13 +32,26 @@ class AuthResourceTest extends UnitTest {
       When("we try to authenticate a request")
       val response = resource.foo(f.auth.request)
 
-      Then("we receive a service unavailable response")
+      Then("we receive an ok response")
       response.getStatus should be(Response.Status.OK.getStatusCode)
       response.getEntity.asInstanceOf[String] should be("foo")
     }
 
+    "authenticated returns the result of handleNotAuthenticated if the authenticator does not return an identity" in {
+      Given("An authenticator that always fails")
+      val f = new Fixture
+      f.auth.authenticated = false
+      val resource = new TestResource(f.auth.auth, f.auth.auth, f.config)
+
+      When("we try to authenticate a request")
+      val response = resource.foo(f.auth.request)
+
+      Then("we receive a forbidden response")
+      response.getStatus should be (Response.Status.FORBIDDEN.getStatusCode)
+    }
+
     class TestResource(val authenticator: Authenticator, val authorizer: Authorizer, val config: MarathonConf)
-        extends AuthResource {
+      extends AuthResource {
       def foo(request: HttpServletRequest): Response = authenticated(request) { identity =>
         Response.ok("foo").build()
       }

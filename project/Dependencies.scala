@@ -27,8 +27,6 @@ object Dependencies {
     aws % "compile",
     chaos % "compile",
     mesos % "compile",
-    jodaTime % "compile",
-    jodaConvert % "compile",
     jerseyServlet % "compile",
     jerseyMultiPart % "compile",
     jettyEventSource % "compile",
@@ -41,9 +39,6 @@ object Dependencies {
     marathonUI % "compile",
     marathonApiConsole % "compile",
     wixAccord % "compile",
-    curator % "compile",
-    curatorClient % "compile",
-    curatorFramework % "compile",
     java8Compat % "compile",
     scalaLogging % "compile",
     logstash % "compile",
@@ -60,11 +55,10 @@ object Dependencies {
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test",
+    Test.akkaHttpTestKit % "test",
     Test.junit % "test",
-    Test.scalacheck % "test",
-    Test.wixAccordScalatest % "test",
-    Test.curatorTest % "test"
-  ) ++ Kamon.all).map(
+    Test.scalacheck % "test"
+  ) ++ Curator.all ++ Kamon.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -81,37 +75,35 @@ object Dependency {
     // runtime deps versions
     val Aws = "1.11.129"
     val Alpakka  = "0.8"
-    val Chaos = "0.8.8"
+    val Chaos = "0.10.0"
     val Guava = "19.0"
-    val Mesos = "1.4.0-rc3"
+    val Mesos = "1.5.0-health-check-ipv6"
     // Version of Mesos to use in Dockerfile.
-    val MesosDebian = "1.2.0-2.0.6"
+    val MesosDebian = "1.4.0-2.0.1"
     val OpenJDK = "openjdk:8u121-jdk"
     val Akka = "2.4.18"
     val AkkaHttp = "10.0.6"
     val AkkaSSE = "2.0.0"
     val ApacheCommonsCompress = "1.13"
     val ApacheCommonsIO = "2.5"
-    val AsyncAwait = "0.9.6"
+    val AsyncAwait = "0.9.7"
     val Jersey = "1.18.6"
     val JettyServlets = "9.3.6.v20151106"
-    val JodaTime = "2.9.9"
-    val JodaConvert = "1.8.1"
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
-    val Diffson = "2.0.2"
-    val PlayJson = "2.5.14"
+    val Diffson = "2.2.2"
+    val PlayJson = "2.6.6"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.5"
-    val MarathonUI = "1.2.0"
+    val MarathonUI = "1.3.0"
     val MarathonApiConsole = "3.0.8-accept"
     val Logback = "1.1.3"
     val Logstash = "4.9"
-    val WixAccord = "0.5"
-    val Curator = "2.11.1"
+    val WixAccord = "0.7.1"
     val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
     val Raven = "7.8.6"
+    val JacksonVersion = "2.8.9"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -131,7 +123,7 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % V.AkkaHttp
-  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
+  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.17.0"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
@@ -140,8 +132,6 @@ object Dependency {
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
-  val jodaTime = "joda-time" % "joda-time" % V.JodaTime
-  val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"
@@ -151,9 +141,6 @@ object Dependency {
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
-  val curator = "org.apache.curator" % "curator-recipes" % V.Curator
-  val curatorClient = "org.apache.curator" % "curator-client" % V.Curator
-  val curatorFramework = "org.apache.curator" % "curator-framework" % V.Curator
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
@@ -161,6 +148,35 @@ object Dependency {
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
   val akkaSse = "de.heikoseeberger" %% "akka-sse" % V.AkkaSSE
+
+  object Curator {
+    /**
+      * According to Curator's Zookeeper Compatibility Docs [http://curator.apache.org/zk-compatibility.html], 4.0.0
+      * is the recommended version to use with Zookeeper 3.4.x. You do need to exclude the 3.5.x dependency and specify
+      * your 3.4.x dependency.
+      */
+    val Version = "4.0.0"
+
+    /**
+      * curator-test 4.0.0 causes scary error message for aspectj weaver:
+      *
+      *   java.lang.IllegalStateException: Expecting .,<, or ;, but found curatortest while unpacking (some shaded jar)
+      *
+      * Also, it launches Zookeeper 3.5.3
+      */
+    val TestVersion = "2.11.1" // CuratorTest 4.0.0 causes scary error message for aspectj weaver, and seems to target
+
+    val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
+
+    val curator = Seq(
+      "org.apache.curator" % "curator-recipes" % Version % "compile",
+      "org.apache.curator" % "curator-client" % Version % "compile",
+      "org.apache.curator" % "curator-framework" % Version % "compile",
+      "org.apache.curator" % "curator-test" % TestVersion % "test").map(_.excludeAll(excludeZk35))
+
+    val zk = Seq("org.apache.zookeeper" % "zookeeper" % "3.4.8")
+    val all = curator ++ zk
+  }
 
   object Kamon {
     val Version = "0.6.7"
@@ -186,10 +202,9 @@ object Dependency {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
-    val diffson = "org.gnieh" %% "diffson" % V.Diffson
+    val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % V.AkkaHttp
+    val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
-    val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
-    val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
   }
 }

@@ -13,7 +13,7 @@ import time
 
 from datetime import timedelta
 from dcos import http, marathon
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents
+from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
 def test_launch_mesos_container():
@@ -36,13 +36,14 @@ def test_launch_docker_container():
     """Launches a Docker container on Marathon."""
 
     app_def = apps.docker_http_server()
+    app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
-    tasks = client.get_tasks(app_def["id"])
-    app = client.get_app(app_def["id"])
+    tasks = client.get_tasks(app_id)
+    app = client.get_app(app_id)
 
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
     assert app['container']['type'] == 'DOCKER', "The container type is not DOCKER"
@@ -52,13 +53,14 @@ def test_launch_mesos_container_with_docker_image():
     """Launches a Mesos container with a Docker image."""
 
     app_def = apps.ucr_docker_http_server()
+    app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
-    tasks = client.get_tasks(app_def["id"])
-    app = client.get_app(app_def["id"])
+    tasks = client.get_tasks(app_id)
+    app = client.get_app(app_id)
 
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
     assert app['container']['type'] == 'MESOS', "The container type is not MESOS"
@@ -83,7 +85,7 @@ def test_launch_mesos_grace_period(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     tasks = shakedown.get_service_task(marathon_service_name, app_id)
     assert tasks is not None
@@ -119,7 +121,7 @@ def test_launch_docker_grace_period(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
     tasks = shakedown.get_service_task(marathon_service_name, app_id)
     assert tasks is not None
@@ -146,7 +148,7 @@ def test_docker_port_mappings():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     tasks = client.get_tasks(app_def["id"])
     host = tasks[0]['host']
@@ -166,7 +168,7 @@ def test_docker_dns_mapping(marathon_service_name):
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     bad_cmd = 'ping -c 1 docker-test.marathon-user.mesos-bad'
     status, output = shakedown.run_command_on_master(bad_cmd)
@@ -215,7 +217,7 @@ def test_task_failure_recovers():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_def["id"])
 
     tasks = client.get_tasks(app_def["id"])
     old_task_id = tasks[0]['id']
@@ -239,12 +241,13 @@ def test_run_app_with_specified_user():
 
     app_def = apps.sleep_app()
     app_def['user'] = 'core'
+    app_id = app_def['id']
 
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
-    tasks = client.get_tasks(app_def["id"])
+    tasks = client.get_tasks(app_id)
     task = tasks[0]
     assert task['state'] == 'TASK_RUNNING', "The task is not running: {}".format(task['state'])
 
@@ -446,12 +449,13 @@ def test_app_with_no_health_check_not_healthy():
     """Makes sure that no task is marked as healthy if no health check is defined for the corresponding app."""
 
     app_def = apps.sleep_app()
+    app_id = app_def["id"]
     client = marathon.create_client()
     client.add_app(app_def)
 
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
-    app = client.get_app(app_def["id"])
+    app = client.get_app(app_id)
 
     assert app['tasksRunning'] == 1, \
         "The number of running tasks is {}, but 1 was expected".format(app['tasksRunning'])
@@ -641,19 +645,25 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     """
 
     app_def = apps.sleep_app()
-    app_def['cpus'] = 3.5
+    app_id = app_def['id']
+
     host = common.ip_other_than_mom()
+    print('Constraint set to host: {}'.format(host))
+    # the size of cpus is designed to be greater than 1/2 of a node
+    # such that only 1 task can land on the node.
+    cores = common.cpus_on_agent(host)
+    app_def['cpus'] = max(0.6, cores - 0.5)
     common.pin_to_host(app_def, host)
 
     client = marathon.create_client()
     client.add_app(app_def)
 
-    shakedown.deployment_wait()
-    client.scale_app(app_def["id"], 2)
+    shakedown.deployment_wait(app_id=app_id)
+    client.scale_app(app_id, 2)
 
     time.sleep(5)
-    deployments = client.get_deployments()
-    tasks = client.get_tasks(app_def["id"])
+    deployments = client.get_deployments(app_id=app_id)
+    tasks = client.get_tasks(app_id)
 
     # still deploying
     assert len(deployments) == 1, "The number of deployments is {}, but 1 was expected".format(len(deployments))
@@ -798,7 +808,7 @@ def test_unhealthy_app_can_be_rolled_back():
 
     try:
         shakedown.deployment_wait()
-    except:
+    except Exception:
         client.rollback_deployment(deployment_id)
         shakedown.deployment_wait()
 
