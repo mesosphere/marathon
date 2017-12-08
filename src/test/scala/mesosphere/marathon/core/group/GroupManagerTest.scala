@@ -37,7 +37,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
 
     "Don't store invalid groups" in new Fixture {
       val app1 = AppDefinition("/app1".toPath)
-      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)))
+      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)), validate = false)
 
       groupRepository.root() returns Future.successful(createRootGroup())
 
@@ -49,8 +49,8 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     }
 
     "return multiple apps when asked" in {
-      val app1 = AppDefinition("/app1".toPath)
-      val app2 = AppDefinition("/app2".toPath)
+      val app1 = AppDefinition("/app1".toPath, cmd = Some("sleep"))
+      val app2 = AppDefinition("/app2".toPath, cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app1.id -> app1, app2.id -> app2))
       val f = new Fixture(initialRoot = Some(rootGroup))
 

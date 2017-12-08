@@ -6,6 +6,7 @@ import shlex
 import time
 import uuid
 import sys
+import retrying
 
 from datetime import timedelta
 from dcos import http, mesos
@@ -333,9 +334,8 @@ def get_marathon_leader_not_on_master_leader_node():
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
         shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
-        new_leader = shakedown.marathon_leader_ip()
-        assert new_leader != marathon_leader, "A new Marathon leader has not been elected"
-        marathon_leader = new_leader
+        marathon_leadership_changed(marathon_leader)
+        marathon_leader = shakedown.marathon_leader_ip()
         print('switched leader to: {}'.format(marathon_leader))
 
     return marathon_leader
@@ -366,7 +366,7 @@ def is_enterprise_cli_package_installed():
     try:
         result_json = json.loads(stdout)
     except JSONDecodeError as error:
-        raise DCOSException('Could not parse: "{}"'.format(stdout)) from error
+        raise DCOSException('Could not parse: "{}"'.format(stdout))(error)
     return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
 
 
@@ -709,3 +709,31 @@ def deployment_wait(timeout=120, service_id=None):
         the dcos-cli and remove this method later.
     """
     shakedown.time_wait(lambda: deployment_predicate(service_id), timeout)
+
+
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=ignore_exception)
+def __marathon_leadership_changed_in_mesosDNS(original_leader):
+    """ This method uses mesosDNS to verify that the leadership changed.
+        We have to retry because mesosDNS checks for changes only every 30s.
+    """
+    current_leader = shakedown.marathon_leader_ip()
+    print('leader according to MesosDNS: {}'.format(current_leader))
+    assert original_leader != current_leader
+
+
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=10, retry_on_exception=ignore_exception)
+def __marathon_leadership_changed_in_marathon_api(original_leader):
+    """ This method uses Marathon API to figure out that leadership changed.
+        We have to retry here because leader election takes time and what might happen is that some nodes might
+        not be aware of the new leader being elected resulting in HTTP 502.
+    """
+    current_leader = marathon.create_client().get_leader()
+    print('leader according to marathon API: {}'.format(current_leader))
+    assert original_leader != current_leader
+
+
+def marathon_leadership_changed(original_leader):
+    """ Verifies leadership changed both by reading v2/leader as well as mesosDNS.
+    """
+    __marathon_leadership_changed_in_marathon_api(original_leader)
+    __marathon_leadership_changed_in_mesosDNS(original_leader)

@@ -51,7 +51,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
     "list (txt) tasks with less ports than the current app version" in new Fixture {
       // Regression test for #234
       Given("one app with one task with less ports than required")
-      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"))
 
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
