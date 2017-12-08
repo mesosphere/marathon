@@ -156,8 +156,6 @@ def provisionHost(): Unit = utils.stage("Provision") {
   provision.installMesos()
 }
 
-//////////////////// MAIN TARGETS ////////////////////
-
 /**
  * Run the main build pipeline.
  *
