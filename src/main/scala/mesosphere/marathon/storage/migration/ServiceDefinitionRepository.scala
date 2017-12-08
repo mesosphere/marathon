@@ -28,9 +28,9 @@ private[storage] object ServiceDefinitionRepository {
     new ZkStoreSerialization.ZkPathIdResolver[ServiceDefinition]("apps", true, v => OffsetDateTime.parse(v.getVersion))
 
   private[this] class ServiceDefinitionRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-    ir: IdResolver[PathId, ServiceDefinition, C, K],
-    marshaller: Marshaller[ServiceDefinition, S],
-    unmarshaller: Unmarshaller[S, ServiceDefinition]) extends PersistenceStoreVersionedRepository[PathId, ServiceDefinition, K, C, S](
+      ir: IdResolver[PathId, ServiceDefinition, C, K],
+      marshaller: Marshaller[ServiceDefinition, S],
+      unmarshaller: Unmarshaller[S, ServiceDefinition]) extends PersistenceStoreVersionedRepository[PathId, ServiceDefinition, K, C, S](
     persistenceStore, _.getId.toPath, v => OffsetDateTime.parse(v.getVersion)
   )(ir, marshaller, unmarshaller) with ServiceDefinitionRepository
 

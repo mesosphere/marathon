@@ -17,12 +17,12 @@ import mesosphere.marathon.stream.UriIO
 
 @Path("v2/leader")
 class LeaderResource @Inject() (
-  electionService: ElectionService,
-  val config: MarathonConf with HttpConf,
-  val runtimeConfigRepo: RuntimeConfigurationRepository,
-  val authenticator: Authenticator,
-  val authorizer: Authorizer)
-    extends RestResource with AuthResource {
+    electionService: ElectionService,
+    val config: MarathonConf with HttpConf,
+    val runtimeConfigRepo: RuntimeConfigurationRepository,
+    val authenticator: Authenticator,
+    val authorizer: Authorizer)
+  extends RestResource with AuthResource {
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))

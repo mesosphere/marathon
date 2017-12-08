@@ -28,9 +28,11 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
             apps = Map(
               app1.id -> app1,
               app2.id -> app2
-            )
+            ),
+            validate = false
           )
-        )
+        ),
+        validate = false
       )
 
       f.checkResult(
@@ -51,9 +53,11 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
             apps = Map(
               app1.id -> app1,
               app2.id -> app2
-            )
+            ),
+            validate = false
           )
-        )
+        ),
+        validate = false
       )
 
       f.checkResult(

@@ -34,7 +34,7 @@ object ModuleNames {
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSystem)
-    extends AbstractModule {
+  extends AbstractModule {
 
   val log = LoggerFactory.getLogger(getClass.getName)
 

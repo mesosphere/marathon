@@ -54,7 +54,7 @@ case $CLUSTER_LAUNCH_CODE in
   0)
       ./ci/system_integration.sh "$DCOS_URL"
       SI_CODE=$?
-      if [ ${SI_CODE} -eq 1 ]; then
+      if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
       fi
       ./dcos-launch delete

@@ -13,8 +13,8 @@ object SchedulerActor {
   private val log = LoggerFactory.getLogger(getClass)
 
   case class Registered(
-    frameworkId: FrameworkID,
-    master: MasterInfo)
+      frameworkId: FrameworkID,
+      master: MasterInfo)
 
   case class ResourceOffers(offers: Seq[Offer])
 }

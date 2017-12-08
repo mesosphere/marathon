@@ -29,10 +29,10 @@ class HttpEventStreamActorMetrics() {
   * It subscribes to the event stream and pushes all marathon events to all listener.
   */
 class HttpEventStreamActor(
-  electionService: ElectionService,
-  metrics: HttpEventStreamActorMetrics,
-  handleStreamProps: HttpEventStreamHandle => Props)
-    extends Actor {
+    electionService: ElectionService,
+    metrics: HttpEventStreamActorMetrics,
+    handleStreamProps: HttpEventStreamHandle => Props)
+  extends Actor {
   //map from handle to actor
   private[impl] var streamHandleActors = Map.empty[HttpEventStreamHandle, ActorRef]
   private[this] val log = LoggerFactory.getLogger(getClass)

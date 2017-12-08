@@ -110,7 +110,7 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
 
   def genTimestamp = Timestamp.now()
 
-  def genApp = AppDefinition(id = genId)
+  def genApp = AppDefinition(id = genId, cmd = Some("sleep"))
 
   def genStep = DeploymentStep(actions = Seq(
     StartApplication(genApp, genInt),
@@ -122,13 +122,13 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
   def genGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createGroup(genId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp)
+    createGroup(genId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp, validate = false)
   }
 
   def genRootGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp)
+    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp, validate = false)
   }
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =

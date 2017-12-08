@@ -67,7 +67,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
       And("a bogus app")
-      val app = AppDefinition(appId)
+      val app = AppDefinition(appId, cmd = Some("sleep"))
       f.groupRepository.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       And("no tasks")
       f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
@@ -125,7 +125,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
       And("a matching bogus app")
-      val app = AppDefinition(appId)
+      val app = AppDefinition(appId, cmd = Some("sleep"))
       f.groupRepository.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       And("a matching bogus task")
       f.taskTracker.instancesBySpec()(any) returns Future.successful(
