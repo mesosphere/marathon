@@ -111,6 +111,8 @@ lazy val commonSettings = testSettings ++
 
   scapegoatVersion := "1.3.0",
 
+  s3region :=  com.amazonaws.services.s3.model.Region.EU_Ireland,
+
   coverageMinimum := 70,
   coverageFailOnMinimum := true,
 
