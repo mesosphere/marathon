@@ -9,8 +9,8 @@ case class Residency(relaunchEscalationTimeoutSeconds: Long, taskLostBehavior: T
 object Residency {
   def default: Residency = Residency(defaultRelaunchEscalationTimeoutSeconds, defaultTaskLostBehaviour)
 
-  def defaultTaskLostBehaviour: TaskLostBehavior = raml.AppResidency.DefaultTaskLostBehavior.fromRaml
-  def defaultRelaunchEscalationTimeoutSeconds: Long = raml.AppResidency.DefaultRelaunchEscalationTimeoutSeconds
+  def defaultTaskLostBehaviour: TaskLostBehavior = raml.Residency.DefaultTaskLostBehavior.fromRaml
+  def defaultRelaunchEscalationTimeoutSeconds: Long = raml.Residency.DefaultRelaunchEscalationTimeoutSeconds
 
   implicit val residencyValidator = validator[Residency] { residency =>
     residency.relaunchEscalationTimeoutSeconds >= 0

@@ -410,12 +410,9 @@ class TaskBuilderTest extends UnitTest {
           executor = "//cmd",
           portDefinitions = Nil,
           container = Some(Docker(
-            volumes = Seq[Volume](
-              DockerVolume("/container/path", "relativeDirName", MesosProtos.Volume.Mode.RW)
-            )
-          ))
-        )
-      )
+            volumes = Seq(VolumeWithMount(
+              volume = HostVolume(None, "relativeDirName"),
+              mount = VolumeMount(None, "/container/path")))))))
 
       val Some((taskInfo: TaskInfo, _)) = task
 
@@ -451,17 +448,16 @@ class TaskBuilderTest extends UnitTest {
           executor = "//cmd",
           portDefinitions = Nil,
           container = Some(Docker(
-            volumes = Seq[Volume](
-              ExternalVolume("/container/path", ExternalVolumeInfo(
-                name = "namedFoo",
-                provider = "dvdi",
-                options = Map[String, String]("dvdi/driver" -> "bar")
-              ), MesosProtos.Volume.Mode.RW),
-              DockerVolume("/container/path", "relativeDirName", MesosProtos.Volume.Mode.RW)
-            )
-          ))
-        )
-      )
+            volumes = Seq(
+              VolumeWithMount(
+                volume = ExternalVolume(None, ExternalVolumeInfo(
+                  name = "namedFoo",
+                  provider = "dvdi",
+                  options = Map[String, String]("dvdi/driver" -> "bar"))),
+                mount = VolumeMount(None, "/container/path")),
+              VolumeWithMount(
+                volume = HostVolume(None, "relativeDirName"),
+                mount = VolumeMount(None, "/container/path")))))))
 
       val Some((taskInfo: TaskInfo, _)) = task
 
@@ -511,21 +507,19 @@ class TaskBuilderTest extends UnitTest {
           executor = "//cmd",
           portDefinitions = Nil,
           container = Some(Docker(
-            volumes = Seq[Volume](
-              ExternalVolume("/container/path", ExternalVolumeInfo(
-                name = "namedFoo",
-                provider = "dvdi",
-                options = Map[String, String]("dvdi/driver" -> "bar")
-              ), MesosProtos.Volume.Mode.RW),
-              ExternalVolume("/container/path2", ExternalVolumeInfo(
-                name = "namedEdc",
-                provider = "dvdi",
-                options = Map[String, String]("dvdi/driver" -> "ert", "dvdi/boo" -> "baa")
-              ), MesosProtos.Volume.Mode.RO)
-            )
-          ))
-        )
-      )
+            volumes = Seq(
+              VolumeWithMount(
+                volume = ExternalVolume(None, ExternalVolumeInfo(
+                  name = "namedFoo",
+                  provider = "dvdi",
+                  options = Map("dvdi/driver" -> "bar"))),
+                mount = VolumeMount(None, "/container/path")),
+              VolumeWithMount(
+                ExternalVolume(None, ExternalVolumeInfo(
+                  name = "namedEdc",
+                  provider = "dvdi",
+                  options = Map("dvdi/driver" -> "ert", "dvdi/boo" -> "baa"))),
+                mount = VolumeMount(None, "/container/path2", true)))))))
 
       val Some((taskInfo: TaskInfo, _)) = task
 
@@ -574,22 +568,20 @@ class TaskBuilderTest extends UnitTest {
           executor = "/qazwsx",
           portDefinitions = Nil,
           container = Some(Container.Mesos(
-            volumes = Seq[Volume](
-              ExternalVolume("/container/path", ExternalVolumeInfo(
-                name = "namedFoo",
-                provider = "dvdi",
-                options = Map[String, String]("dvdi/driver" -> "bar")
-              ), MesosProtos.Volume.Mode.RW),
-              ExternalVolume("/container/path2", ExternalVolumeInfo(
-                size = Some(2L),
-                name = "namedEdc",
-                provider = "dvdi",
-                options = Map[String, String]("dvdi/driver" -> "ert")
-              ), MesosProtos.Volume.Mode.RW)
-            )
-          ))
-        )
-      )
+            volumes = Seq(
+              VolumeWithMount(
+                volume = ExternalVolume(None, ExternalVolumeInfo(
+                  name = "namedFoo",
+                  provider = "dvdi",
+                  options = Map("dvdi/driver" -> "bar"))),
+                mount = VolumeMount(None, "/container/path")),
+              VolumeWithMount(
+                volume = ExternalVolume(None, ExternalVolumeInfo(
+                  size = Some(2L),
+                  name = "namedEdc",
+                  provider = "dvdi",
+                  options = Map("dvdi/driver" -> "ert"))),
+                mount = VolumeMount(None, "/container/path2")))))))
 
       val Some((taskInfo: TaskInfo, _)) = task
 

@@ -54,7 +54,9 @@ trait RunSpec extends plugin.RunSpec {
   val args = Seq.empty[String]
   val isSingleInstance: Boolean = false
   val volumes = Seq.empty[Volume]
+  val volumeMounts = Seq.empty[VolumeMount]
   val persistentVolumes = Seq.empty[PersistentVolume]
+  val persistentVolumeMounts = Seq.empty[VolumeMount]
   val externalVolumes = Seq.empty[ExternalVolume]
   val diskForPersistentVolumes: Double = 0.0
   val user: Option[String]

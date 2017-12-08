@@ -29,7 +29,9 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       fetch = Seq(FetchUri("http://test.this")),
       backoffStrategy = BackoffStrategy(),
       container = Some(state.Container.Docker(
-        volumes = Seq(state.DockerVolume("/container", "/host", Mesos.Volume.Mode.RW)),
+        volumes = Seq(state.VolumeWithMount(
+          volume = state.HostVolume(None, "/host"),
+          mount = state.VolumeMount(None, "/container"))),
         image = "foo/bla",
         portMappings = Seq(state.Container.PortMapping(12, name = Some("http-api"), hostPort = Some(23), servicePort = 123)),
         privileged = true
@@ -57,7 +59,6 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val ramlApp = app.toRaml[App]
 
       When("The app is translated to json and read back from formats")
-      val json = Json.toJson(ramlApp)
       val features = Set(Features.SECRETS)
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
@@ -135,7 +136,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
           labels = Map("try" -> "me"),
           networkName = Option("fubar")
         )),
-        residency = Option(AppResidency(
+        residency = Option(Residency(
           relaunchEscalationTimeoutSeconds = 33,
           taskLostBehavior = TaskLostBehavior.RelaunchAfterTimeout
         )),

@@ -6,6 +6,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Features
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -35,7 +36,7 @@ object ResourceMatcher extends StrictLogging {
         portsMatch.resources
 
     // TODO - this assumes that volume matches are one resource to one volume, which should be correct, but may not be.
-    val localVolumes: Seq[(DiskSource, PersistentVolume)] =
+    val localVolumes: Seq[(DiskSource, PersistentVolume, VolumeMount)] =
       scalarMatches.collect { case r: DiskResourceMatch => r.volumes }.flatten
   }
 
@@ -144,13 +145,27 @@ object ResourceMatcher extends StrictLogging {
     // that means if the resources that are matched are still unreserved.
     def needToReserveDisk = selector.needToReserve && runSpec.diskForPersistentVolumes > 0
 
-    val diskMatch = if (needToReserveDisk)
+    val diskMatch = if (needToReserveDisk) {
+      val volumes = runSpec.persistentVolumes
+      val mounts = runSpec.persistentVolumeMounts
+      val (namedVolumes, namedMounts) =
+        if (volumes.exists(_.name.isEmpty) && volumes.length == mounts.length) {
+          // give temporary names to volumes and mounts to ease volume mount matching in [[findMatches]]
+          val indexedVolumes = volumes.zipWithIndex.map { case (v, i) => v.copy(name = Some(i.toString)) }
+          val indexedMounts = mounts.zipWithIndex.map { case (m, i) => m.copy(volumeName = Some(i.toString)) }
+          (indexedVolumes, indexedMounts)
+        } else {
+          (volumes, mounts)
+        }
       diskResourceMatch(
+        runSpec,
         runSpec.resources.disk,
-        runSpec.persistentVolumes,
+        namedVolumes,
+        namedMounts,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
-    else
-      diskResourceMatch(runSpec.resources.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+    } else {
+      diskResourceMatch(runSpec, runSpec.resources.disk, Nil, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+    }
 
     val scalarMatchResults = (
       Seq(
@@ -309,9 +324,21 @@ object ResourceMatcher extends StrictLogging {
     */
   private[this] def matchDiskResource(
     groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
+    runSpec: RunSpec,
     scratchDisk: Double,
     volumes: Seq[PersistentVolume],
+    volumeMounts: Seq[VolumeMount],
     scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): Seq[ScalarMatchResult] = {
+
+    def matchesProfileName(profileName: Option[String], resource: Protos.Resource): Boolean = {
+      profileName.forall { specifiedProfileName =>
+        if (resource.hasDisk && resource.getDisk.hasSource && resource.getDisk.getSource.hasProfile) {
+          specifiedProfileName == resource.getDisk.getSource.getProfile
+        } else {
+          false
+        }
+      }
+    }
 
     @tailrec
     def findMatches(
@@ -327,10 +354,13 @@ object ResourceMatcher extends StrictLogging {
         case nextAllocation :: restAllocations =>
           val (matcher, nextAllocationSize) = nextAllocation match {
             case Left(size) => ({ _: Protos.Resource => true }, size)
-            case Right(v) => (
-              VolumeConstraints.meetsAllConstraints(_: Protos.Resource, v.persistent.constraints),
-              v.persistent.size.toDouble
-            )
+            case Right(v) =>
+              def matcher(resource: Protos.Resource): Boolean = {
+                VolumeConstraints.meetsAllConstraints(resource, v.persistent.constraints) &&
+                  matchesProfileName(v.persistent.profileName, resource)
+              }
+
+              (matcher _, v.persistent.size.toDouble)
           }
 
           findDiskGroupMatches(nextAllocationSize, orderedResources, orderedResources, matcher) match {
@@ -339,7 +369,18 @@ object ResourceMatcher extends StrictLogging {
                 DiskResourceNoMatch(resourcesConsumed, resourcesRemaining.flatMap(_.resources), nextAllocation, scope))
             case Some((source, generalConsumptions, decrementedResources)) =>
               val consumptions = generalConsumptions.map { c =>
-                DiskResourceMatch.Consumption(c, source, nextAllocation.right.toOption)
+                val volume = nextAllocation.right.toOption
+                val mount = volume.flatMap { volume =>
+                  volumeMounts.find(_.volumeName == volume.name)
+                }
+                val (volumeToPass, mountToPass) = runSpec match {
+                  case _: AppDefinition =>
+                    // strip off temporary names
+                    (volume.map(_.copy(name = None)), mount.map(_.copy(volumeName = None)))
+                  case _: PodDefinition =>
+                    (volume, mount)
+                }
+                DiskResourceMatch.Consumption(c, source, volumeToPass, mountToPass)
               }
 
               findMatches(
@@ -360,7 +401,8 @@ object ResourceMatcher extends StrictLogging {
       *
       * If this method can be generalized to worth with the above code, then so be it.
       */
-    @tailrec def findMountMatches(
+    @tailrec
+    def findMountMatches(
       pendingAllocations: List[PersistentVolume],
       resources: List[Protos.Resource],
       resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil): Either[DiskResourceNoMatch, DiskResourceMatch] = {
@@ -372,7 +414,8 @@ object ResourceMatcher extends StrictLogging {
             val resourceSize = resource.getScalar.getValue
             VolumeConstraints.meetsAllConstraints(resource, nextAllocation.persistent.constraints) &&
               (resourceSize >= nextAllocation.persistent.size) &&
-              (resourceSize <= nextAllocation.persistent.maxSize.getOrElse(Long.MaxValue))
+              (resourceSize <= nextAllocation.persistent.maxSize.getOrElse(Long.MaxValue)) &&
+              matchesProfileName(nextAllocation.persistent.profileName, resource)
           } match {
             case Some(matchedResource) =>
               val consumedAmount = matchedResource.getScalar.getValue
@@ -380,13 +423,18 @@ object ResourceMatcher extends StrictLogging {
                 nextAllocation.copy(
                   persistent = nextAllocation.persistent.copy(
                     size = consumedAmount.toLong))
+              val volumeMount = VolumeMount(
+                volumeName = grownVolume.name,
+                mountPath = matchedResource.getDisk.getVolume.getContainerPath,
+                readOnly = matchedResource.getDisk.getVolume.getMode == Protos.Volume.Mode.RO)
               val consumption =
                 DiskResourceMatch.Consumption(
                   consumedAmount,
                   role = matchedResource.getRole,
                   reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
                   source = DiskSource.fromMesos(matchedResource.getDiskSourceOption),
-                  Some(grownVolume))
+                  Some(grownVolume),
+                  Some(volumeMount))
 
               findMountMatches(
                 restAllocations,

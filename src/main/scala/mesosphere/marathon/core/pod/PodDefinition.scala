@@ -25,11 +25,12 @@ case class PodDefinition(
     instances: Int = PodDefinition.DefaultInstances,
     constraints: Set[Protos.Constraint] = PodDefinition.DefaultConstraints,
     versionInfo: VersionInfo = VersionInfo.OnlyVersion(PodDefinition.DefaultVersion),
-    podVolumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
     executorResources: Resources = PodDefinition.DefaultExecutorResources,
+    override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
+    override val residency: Option[Residency] = PodDefinition.DefaultResidency,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
@@ -42,6 +43,16 @@ case class PodDefinition(
 
   val endpoints: Seq[Endpoint] = containers.flatMap(_.endpoints)
   val resources = aggregateResources()
+
+  override val volumeMounts: Seq[VolumeMount] = containers.flatMap(_.volumeMounts)
+
+  override val persistentVolumes: Seq[PersistentVolume] = volumes.collect { case pv: PersistentVolume => pv }
+
+  override val persistentVolumeMounts: Seq[VolumeMount] = volumeMounts.filter { mount =>
+    persistentVolumes.exists(_.name == mount.volumeName)
+  }
+
+  override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
     cpus = executorResources.cpus + containers.withFilter(filter).map(_.resources.cpus).sum,
@@ -63,7 +74,7 @@ case class PodDefinition(
           secrets != to.secrets ||
           containers != to.containers ||
           constraints != to.constraints ||
-          podVolumes != to.podVolumes ||
+          volumes != to.volumes ||
           networks != to.networks ||
           backoffStrategy != to.backoffStrategy ||
           upgradeStrategy != to.upgradeStrategy
@@ -99,7 +110,7 @@ case class PodDefinition(
   def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
   def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container(_))
   def volume(volumeName: String): Volume =
-    podVolumes.find(_.name == volumeName).getOrElse(
+    volumes.find(_.name.contains(volumeName)).getOrElse(
       throw new IllegalArgumentException(s"volume named $volumeName is unknown to this pod"))
 }
 
@@ -124,4 +135,5 @@ object PodDefinition {
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
   val DefaultUnreachableStrategy = UnreachableStrategy.default(resident = false)
+  val DefaultResidency = Option.empty[Residency]
 }

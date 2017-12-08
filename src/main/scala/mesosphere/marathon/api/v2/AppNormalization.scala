@@ -267,7 +267,7 @@ object AppNormalization {
 
     // cheating: we know that this is invoked before canonical validation so we provide a default here.
     // it would be nice to use RAML "object" default values here but our generator isn't that smart yet.
-    val residency: Option[AppResidency] = app.container.find(_.volumes.existsAn[AppPersistentVolume])
+    val residency: Option[Residency] = app.container.find(_.volumes.existsAn[AppPersistentVolume])
       .fold(app.residency)(_ => app.residency.orElse(DefaultAppResidency))
 
     app.copy(

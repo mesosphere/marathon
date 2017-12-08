@@ -25,7 +25,7 @@ object TaskLabels {
     val labels = ReservationLabels(resource)
 
     val maybeMatchingFrameworkId = labels.get(FRAMEWORK_ID_LABEL).filter(_ == frameworkId.id)
-    def maybeInstanceId = labels.get(TASK_ID_LABEL).map(Task.Id(_).instanceId)
+    def maybeInstanceId = labels.get(TASK_ID_LABEL).map(Instance.Id(_))
 
     maybeMatchingFrameworkId.flatMap(_ => maybeInstanceId)
   }
@@ -34,7 +34,7 @@ object TaskLabels {
     ReservationLabels(Map(
       FRAMEWORK_ID_LABEL -> frameworkId.id,
       // This uses taskId.reservationId to match against the id that was originally used to create the reservation
-      TASK_ID_LABEL -> taskId.reservationId
+      TASK_ID_LABEL -> taskId.instanceId.idString
     ))
   }
 

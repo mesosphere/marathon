@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.externalvolume.impl.providers
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{ ExternalVolume, ExternalVolumeInfo }
+import mesosphere.marathon.state.{ ExternalVolume, ExternalVolumeInfo, VolumeMount }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.{ Parameter, Parameters, Volume }
 
@@ -12,20 +12,26 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
 
   case class TestParameters(
       externalVolume: ExternalVolume,
+      volumeMount: VolumeMount,
       wantsVol: Volume)
+
+  val mountPath = "/path"
+  val readOnly = true
 
   val testParameters = Seq[TestParameters](
     TestParameters(
-      ExternalVolume("/path", ExternalVolumeInfo(None, "foo", "dvdi", Map("dvdi/driver" -> "bar")), Volume.Mode.RO),
-      wantsVol = volumeWith(
+      ExternalVolume(None, ExternalVolumeInfo(None, "foo", "dvdi", Map("dvdi/driver" -> "bar"))),
+      VolumeMount(None, mountPath, readOnly),
+      volumeWith(
         containerPath("/path"),
         mode(Volume.Mode.RO),
         volumeRef(driver = "bar", name = "foo")
       )
     ),
     TestParameters(
-      ExternalVolume("/path", ExternalVolumeInfo(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar")), Volume.Mode.RO),
-      wantsVol = volumeWith(
+      ExternalVolume(None, ExternalVolumeInfo(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar"))),
+      VolumeMount(None, mountPath, readOnly),
+      volumeWith(
         containerPath("/path"),
         mode(Volume.Mode.RO),
         volumeRef("bar", "foo"),
@@ -33,11 +39,11 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
       )
     ),
     TestParameters(
-      ExternalVolume("/path", ExternalVolumeInfo(Some(1L), "foo", "dvdi", Map(
+      ExternalVolume(None, ExternalVolumeInfo(Some(1L), "foo", "dvdi", Map(
         "dvdi/driver" -> "bar",
-        "dvdi/size" -> "2"
-      )), Volume.Mode.RO),
-      wantsVol = volumeWith(
+        "dvdi/size" -> "2"))),
+      VolumeMount(None, mountPath, readOnly),
+      volumeWith(
         containerPath("/path"),
         mode(Volume.Mode.RO),
         volumeRef("bar", "foo"),
@@ -45,11 +51,12 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
       )
     ),
     TestParameters(
-      ExternalVolume("/path", ExternalVolumeInfo(None, "foo", "dvdi", Map(
+      ExternalVolume(None, ExternalVolumeInfo(None, "foo", "dvdi", Map(
         "dvdi/driver" -> "bar",
         "dvdi/size" -> "abc"
-      )), Volume.Mode.RO),
-      wantsVol = volumeWith(
+      ))),
+      VolumeMount(None, mountPath, readOnly),
+      volumeWith(
         containerPath("/path"),
         mode(Volume.Mode.RO),
         volumeRef("bar", "foo"),
@@ -62,7 +69,7 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
     for ((testParams, idx) <- testParameters.zipWithIndex) {
       s"toUnifiedMesosVolume $idx" in {
         assertResult(testParams.wantsVol, "generated volume doesn't match expectations") {
-          DVDIProvider.Builders.toUnifiedContainerVolume(testParams.externalVolume)
+          DVDIProvider.Builders.toUnifiedContainerVolume(testParams.externalVolume, testParams.volumeMount)
         }
       }
     }

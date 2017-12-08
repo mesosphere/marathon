@@ -10,7 +10,7 @@ import mesosphere.marathon.state
 import scala.concurrent.duration._
 
 trait PodConversion extends NetworkConversion with ConstraintConversion with ContainerConversion with EnvVarConversion
-  with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion {
+  with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion with ResidencyConversion {
 
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podd =>
     val instances = podd.scaling.fold(DefaultInstances) {
@@ -29,6 +29,10 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
     val unreachableStrategy = podd.scheduling.flatMap(_.unreachableStrategy).fold(DefaultUnreachableStrategy)(Raml.fromRaml(_))
     val killSelection: state.KillSelection = podd.scheduling.fold(state.KillSelection.DefaultKillSelection) {
       _.killSelection.fold(state.KillSelection.DefaultKillSelection)(Raml.fromRaml(_))
+    }
+
+    val residency = podd.scheduling.flatMap(_.residency).fold(DefaultResidency) { residency =>
+      Some(residency.fromRaml)
     }
 
     val backoffStrategy = podd.scheduling.flatMap { policy =>
@@ -54,11 +58,12 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       instances = instances,
       constraints = constraints,
       versionInfo = state.VersionInfo.OnlyVersion(podd.version.fold(Timestamp.now())(Timestamp(_))),
-      podVolumes = podd.volumes.map(Raml.fromRaml(_)),
+      volumes = podd.volumes.map(Raml.fromRaml(_)),
       networks = networks,
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
       executorResources = executorResources.fromRaml,
+      residency = residency,
       unreachableStrategy = unreachableStrategy,
       killSelection = killSelection
     )
@@ -74,6 +79,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       backoff = podDef.backoffStrategy.backoff.toMillis.toDouble / 1000.0,
       maxLaunchDelay = podDef.backoffStrategy.maxLaunchDelay.toMillis.toDouble / 1000.0,
       backoffFactor = podDef.backoffStrategy.factor)
+
     val schedulingPolicy = PodSchedulingPolicy(
       Some(ramlBackoffStrategy),
       Some(ramlUpgradeStrategy),
@@ -81,7 +87,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
         podDef.constraints.toRaml[Set[Constraint]],
         podDef.acceptedResourceRoles.toIndexedSeq)),
       Some(podDef.killSelection.toRaml),
-      Some(podDef.unreachableStrategy.toRaml)
+      Some(podDef.unreachableStrategy.toRaml),
+      podDef.residency.toRaml
     )
 
     val scalingPolicy = FixedPodScalingPolicy(podDef.instances)
@@ -96,7 +103,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       scaling = Some(scalingPolicy),
       secrets = Raml.toRaml(podDef.secrets),
       scheduling = Some(schedulingPolicy),
-      volumes = podDef.podVolumes.map(Raml.toRaml(_)),
+      volumes = podDef.volumes.map(Raml.toRaml(_)),
       networks = podDef.networks.map(Raml.toRaml(_)),
       executorResources = Some(podDef.executorResources.toRaml)
     )
