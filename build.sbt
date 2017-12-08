@@ -108,10 +108,9 @@ lazy val commonSettings = testSettings ++
     s3("downloads.mesosphere.io/maven")
   )),
   s3credentials := new EnvironmentVariableCredentialsProvider() | InstanceProfileCredentialsProvider.getInstance(),
+  s3region :=  com.amazonaws.services.s3.model.Region.US_East_2,
 
   scapegoatVersion := "1.3.0",
-
-  s3region :=  com.amazonaws.services.s3.model.Region.US_East_2,
 
   coverageMinimum := 70,
   coverageFailOnMinimum := true,
