@@ -16,8 +16,8 @@ import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.{ DurationInfo, KillPolicy }
 import org.apache.mesos.{ Protos => mesos }
 
+import java.util.concurrent.TimeUnit.SECONDS
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 
 object TaskGroupBuilder extends StrictLogging {
 
@@ -189,7 +189,7 @@ object TaskGroupBuilder extends StrictLogging {
       lc <- container.lifecycle
       killGracePeriodSeconds <- lc.killGracePeriodSeconds
     } {
-      val durationInfo = DurationInfo.newBuilder.setNanoseconds((killGracePeriodSeconds * 1000000000).toLong)
+      val durationInfo = DurationInfo.newBuilder.setNanoseconds((killGracePeriodSeconds * SECONDS.toNanos(1)).toLong)
       builder.setKillPolicy(
         KillPolicy.newBuilder.setGracePeriod(durationInfo))
     }
