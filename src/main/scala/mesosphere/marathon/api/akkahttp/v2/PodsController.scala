@@ -230,9 +230,12 @@ class PodsController(
             }
         }
       } catch {
-        case e: DateTimeParseException =>
-          // We reject unparsable versions as not found.
-          reject(Rejections.EntityNotFound.noPod(podId, v))
+        case e: IllegalArgumentException =>
+          e.getCause match {
+            case e2: DateTimeParseException =>
+              // We reject unparsable versions as not found.
+              reject(Rejections.EntityNotFound.noPod(podId, v))
+          }
       }
     }
 
