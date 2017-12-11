@@ -88,7 +88,6 @@ class GroupManagerBenchmark extends GroupBenchmark {
 
   @Benchmark
   def updateVersionInfoForChangedApps(hole: Blackhole): Unit = {
-    println(rootGroup.groupsById.keys)
     val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(
       Timestamp (2),
       rootGroup, upgraded)

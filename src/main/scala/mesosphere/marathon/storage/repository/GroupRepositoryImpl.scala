@@ -88,9 +88,7 @@ case class StoredGroup(
       pods = pods,
       groupsById = groups,
       dependencies = dependencies,
-      version = Timestamp(version),
-      transitiveAppsById = apps ++ groups.values.flatMap(_.transitiveAppsById),
-      transitivePodsById = pods ++ groups.values.flatMap(_.transitivePodsById)
+      version = Timestamp(version)
     )
   }
 
