@@ -24,12 +24,10 @@ class GroupBenchmark {
         Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
     )
 
-  //  @Param(value = Array("100", "500", "1000", "2500", "5000"))
-  @Param(value = Array("2", "10", "100"))
+  @Param(value = Array("2", "10", "100", "1000"))
   var appsPerGroup: Int = _
   lazy val appIds = 0 until appsPerGroup
 
-  //  @Param(value = Array("5", "15", "100", "1000"))
   @Param(value = Array("5", "10", "20"))
   var groupDepth: Int = _
   lazy val groupIds = 0 until groupDepth

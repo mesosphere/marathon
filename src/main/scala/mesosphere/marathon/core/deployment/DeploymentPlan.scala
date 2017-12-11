@@ -127,7 +127,7 @@ case class DeploymentPlan(
   }
 
   lazy val deletedApps: Seq[PathId] = {
-    original.transitiveAppIds.diff(target.transitiveAppIds).toIndexedSeq
+    original.transitiveAppIds.filter(appId => target.app(appId).isEmpty).toIndexedSeq
   }
 
   lazy val createdOrUpdatedPods: Seq[PodDefinition] = {
@@ -135,7 +135,7 @@ case class DeploymentPlan(
   }
 
   lazy val deletedPods: Seq[PathId] = {
-    original.transitivePodIds.diff(target.transitivePodIds).toIndexedSeq
+    original.transitivePodIds.filter(podId => target.pod(podId).isEmpty).toIndexedSeq
   }
 
   override def toString: String = {
@@ -200,7 +200,7 @@ object DeploymentPlan {
     */
   private[deployment] def runSpecsGroupedByLongestPath(
     affectedRunSpecIds: Set[PathId],
-    rootGroup: RootGroup): SortedMap[Int, Set[RunSpec]] = {
+    rootGroup: RootGroup): SortedMap[Int, Iterable[RunSpec]] = {
 
     import org.jgrapht.DirectedGraph
     import org.jgrapht.graph.DefaultEdge
@@ -236,10 +236,10 @@ object DeploymentPlan {
   def dependencyOrderedSteps(original: RootGroup, target: RootGroup, affectedIds: Set[PathId],
     toKill: Map[PathId, Seq[Instance]]): Seq[DeploymentStep] = {
 
-    val runsByLongestPath: SortedMap[Int, Set[RunSpec]] = runSpecsGroupedByLongestPath(affectedIds, target)
+    val runsByLongestPath: SortedMap[Int, Iterable[RunSpec]] = runSpecsGroupedByLongestPath(affectedIds, target)
 
-    runsByLongestPath.values.map { (equivalenceClass: Set[RunSpec]) =>
-      val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newSpec: RunSpec) =>
+    runsByLongestPath.values.map { (equivalenceClass: Iterable[RunSpec]) =>
+      val actions: Iterable[DeploymentAction] = equivalenceClass.flatMap { (newSpec: RunSpec) =>
         original.runSpec(newSpec.id) match {
           // New run spec.
           case None =>
@@ -297,14 +297,19 @@ object DeploymentPlan {
     )
 
     // applications that are either new or the specs are different should be considered for the dependency graph
-    val addedOrChanged: Set[PathId] = target.transitiveRunSpecs.collect {
+    val addedOrChanged: Iterable[PathId] = target.transitiveRunSpecs.collect {
       case (spec) if (!original.runSpec(spec.id).contains(spec)) =>
         // the above could be optimized/refined further by checking the version info. The tests are actually
         // really bad about structuring this correctly though, so for now, we just make sure that
         // the specs are different (or brand new)
         spec.id
     }
-    val affectedApplications = addedOrChanged ++ (original.transitiveRunSpecIds -- target.transitiveRunSpecIds)
+    val affectedApplications: Set[PathId] = {
+      val builder = Set.newBuilder[PathId]
+      builder ++= addedOrChanged
+      builder ++= original.transitiveRunSpecIds.filter(id => !target.exists(id))
+      builder.result()
+    }
 
     // 3. For each runSpec in each dependency class,
     //
