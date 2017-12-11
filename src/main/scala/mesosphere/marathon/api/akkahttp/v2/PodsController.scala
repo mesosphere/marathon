@@ -7,9 +7,8 @@ import java.time.format.DateTimeParseException
 import akka.event.EventStream
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.model.headers.Location
-import akka.http.scaladsl.server.Route
 import mesosphere.marathon.api.akkahttp.{ Controller, Headers, Rejections }
-import akka.http.scaladsl.server.{ Directive1, PathMatchers, RejectionError, Route }
+import akka.http.scaladsl.server.{ PathMatchers, Route }
 import mesosphere.marathon.api.akkahttp._
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ PodsPathIdLike, forceParameter }
 import mesosphere.marathon.api.akkahttp.Rejections.{ ConflictingChange, Message }
@@ -17,7 +16,6 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
-import akka.http.scaladsl.server.PathMatchers
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import com.wix.accord.Validator
@@ -34,8 +32,6 @@ import mesosphere.marathon.util.SemanticVersion
 
 import async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class PodsController(
