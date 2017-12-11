@@ -37,8 +37,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       val actualAppIds = actual.transitiveAppIds
       val expectedAppIds = expected.transitiveAppIds
 
-      val unexpectedAppIds = actualAppIds -- expectedAppIds
-      val missingAppIds = expectedAppIds -- actualAppIds
+      val unexpectedAppIds = actualAppIds.filter(appId => expected.app(appId).isEmpty)
+      val missingAppIds = expectedAppIds.filter(appId => actual.app(appId).isEmpty)
 
       withClue(s"unexpected apps $unexpectedAppIds, missing apps $missingAppIds: ") {
         actualAppIds should equal(expectedAppIds)
