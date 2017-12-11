@@ -1436,10 +1436,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
     }
 
     "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath, cmd = Some("sleep"))))) {
-      Given("A real Group Manager with one app")
-      val appA = AppDefinition("/a".toRootPath, cmd = Some("sleep"))
-      val rootGroup = initialRoot
-
       Given("An unauthorized request")
       auth.authenticated = true
       auth.authorized = false

@@ -12,6 +12,43 @@ import mesosphere.marathon.test.GroupCreation
 
 class RootGroupTest extends UnitTest with GroupCreation {
   "A Group" should {
+
+    "an find an app by its path" in {
+      Given("an existing group with two subgroups")
+      val app1 = AppDefinition("/test/group1/app1".toPath, cmd = Some("sleep"))
+      val app2 = AppDefinition("/test/group2/app2".toPath, cmd = Some("sleep"))
+      val current = createRootGroup(
+        groups = Set(
+          createGroup("/test".toPath, groups = Set(
+            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          ))))
+
+      When("an app with a specific path is requested")
+      val path = PathId("/test/group1/app1")
+
+      Then("the group is found")
+      current.app(path) should be('defined)
+    }
+
+    "cannot find an app if it's not existing" in {
+      Given("an existing group with two subgroups")
+      val app1 = AppDefinition("/test/group1/app1".toPath, cmd = Some("sleep"))
+      val app2 = AppDefinition("/test/group2/app2".toPath, cmd = Some("sleep"))
+      val current = createRootGroup(
+        groups = Set(
+          createGroup("/test".toPath, groups = Set(
+            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          ))))
+
+      When("a group with a specific path is requested")
+      val path = PathId("/test/group1/unknown")
+
+      Then("the app is not found")
+      current.app(path) should be('empty)
+    }
+
     "can find a group by its path" in {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition("/test/group1/app1".toPath, cmd = Some("sleep"))
@@ -115,7 +152,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       Then("the group with same path has been replaced by the new app definition")
       changed.transitiveGroupsById.keys.map(_.toString) should be(Set("/", "/some"))
-      changed.transitiveAppsById.keys.map(_.toString) should be(Set("/some/nested"))
+      changed.transitiveAppIds.map(_.toString) should be(Set("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
       validate(changed)(RootGroup.rootGroupValidator(Set())) should be(Success)
@@ -177,7 +214,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
       changed.transitiveAppIds.map(_.toString) should be(Set("/some/nested"))
-      changed.transitivePodsById.keySet.map(_.toString) should be(Set("/some/nested/path2/pod"))
+      changed.transitivePodIds.map(_.toString) should be(Set("/some/nested/path2/pod"))
 
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
@@ -212,7 +249,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
       changed.transitiveAppIds.map(_.toString) should be(Set.empty[String])
-      changed.transitivePodsById.keySet.map(_.toString) should be(Set("/some/nested", "/some/nested/path2/pod"))
+      changed.transitivePodIds.map(_.toString) should be(Set("/some/nested", "/some/nested/path2/pod"))
 
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
@@ -272,6 +309,24 @@ class RootGroupTest extends UnitTest with GroupCreation {
       )
       ids should equal(expectedIds)
 
+      val actualAppDependencies: List[(String, String)] = current.applicationDependencies.map { case (left, right) => left.id.toString -> right.id.toString }
+      val expectedAppDependencies = List(
+        "/test/frontend/app2/a2" -> "/test/frontend/app1/a1",
+        "/test/frontend/app2/a2" -> "/test/database/mongo/m1",
+        "/test/frontend/app2/a2" -> "/test/service/service2/s2",
+        "/test/frontend/app2/a2" -> "/test/service/service1/s1",
+        "/test/service/service2/s2" -> "/test/service/service1/s1",
+        "/test/service/service2/s2" -> "/test/database/mongo/m1",
+        "/test/service/service2/s2" -> "/test/database/memcache/c1",
+        "/test/service/service2/s2" -> "/test/database/redis/r1",
+        "/test/database/memcache/c1" -> "/test/database/redis/r1",
+        "/test/database/memcache/c1" -> "/test/database/mongo/m1",
+        "/test/service/service1/s1" -> "/test/database/memcache/c1",
+        "/test/database/mongo/m1" -> "/test/database/redis/r1",
+        "/test/frontend/app1/a1" -> "/test/service/service2/s2"
+      )
+      actualAppDependencies should contain theSameElementsAs (expectedAppDependencies)
+
       current.runSpecsWithNoDependencies should have size 2
     }
 
@@ -324,6 +379,21 @@ class RootGroupTest extends UnitTest with GroupCreation {
         "/test/cache/cache1".toPath
       )
       ids should be(expected)
+
+      val actualAppDependencies: List[(String, String)] = current.applicationDependencies.map { case (left, right) => left.id.toString -> right.id.toString }
+      val expectedAppDependencies = List(
+        "/test/frontend/app2" -> "/test/frontend/app1",
+        "/test/frontend/app2" -> "/test/database/mongo",
+        "/test/frontend/app2" -> "/test/service/srv2",
+        "/test/frontend/app1" -> "/test/service/srv2",
+        "/test/database/mongo" -> "/test/database/redis",
+        "/test/database/memcache" -> "/test/database/redis",
+        "/test/database/memcache" -> "/test/database/mongo",
+        "/test/service/srv2" -> "/test/service/srv1",
+        "/test/service/srv2" -> "/test/database/mongo",
+        "/test/service/srv1" -> "/test/database/memcache"
+      )
+      actualAppDependencies should contain theSameElementsAs (expectedAppDependencies)
 
       current.runSpecsWithNoDependencies should have size 2
     }
@@ -491,7 +561,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       val newVersion = Timestamp.now()
       val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
-      updated.transitiveAppsById.keySet should contain(appPath)
+      updated.transitiveAppIds should contain(appPath)
     }
 
     "should receive a non-root Group with nested groups as an updated and properly propagate transitiveAppsByI2 2" in {
@@ -509,7 +579,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       val newVersion = Timestamp.now()
       val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
-      updated.transitiveAppsById.keySet should contain(appPath)
+      updated.transitiveAppIds should contain(appPath)
     }
 
     "should receive a non-root Group without nested groups as an updated and properly propagate transitiveAppsById 3" in {
@@ -522,7 +592,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       val newVersion = Timestamp.now()
       val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
-      updated.transitiveAppsById.keySet should contain(appPath)
+      updated.transitiveAppIds should contain(appPath)
     }
   }
 }

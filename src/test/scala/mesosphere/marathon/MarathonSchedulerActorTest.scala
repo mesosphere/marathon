@@ -187,13 +187,13 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "ScaleApp" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = "test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
 
       queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
-      schedulerActor ! ScaleRunSpec("test-app".toPath)
+      schedulerActor ! ScaleRunSpec("test-app-scale".toPath)
 
       eventually {
         verify(queue).add(app, 1)
@@ -204,7 +204,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Kill tasks with scaling" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = "/test-app-kill-with-scale".toPath, instances = 1, cmd = Some("sleep"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
       val failedInstance = TaskStatusUpdateTestHelper.failed(instance).updatedInstance
       val events = InstanceChangedEventsGenerator.events(

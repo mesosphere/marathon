@@ -36,7 +36,7 @@ class RootGroup(
     },
     "`RootGroup` cannot be a child of `RootGroup`.")
 
-  private lazy val applicationDependencies: List[(AppDefinition, AppDefinition)] = {
+  lazy val applicationDependencies: List[(AppDefinition, AppDefinition)] = {
     var result = List.empty[(AppDefinition, AppDefinition)]
 
     //group->group dependencies
@@ -53,7 +53,7 @@ class RootGroup(
       group <- transitiveGroupsById.values.filter(_.apps.nonEmpty)
       app <- group.apps.values
       dependencyId <- app.dependencies
-      dependentApp = transitiveAppsById.get(dependencyId).map(Set(_))
+      dependentApp = this.app(dependencyId).map(Set(_))
       dependentGroup = transitiveGroupsById.get(dependencyId).map(_.transitiveApps)
       dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
     } result ::= app -> dependent
@@ -66,7 +66,7 @@ class RootGroup(
     */
   lazy val dependencyGraph: DirectedGraph[RunSpec, DefaultEdge] = {
     val graph = new DefaultDirectedGraph[RunSpec, DefaultEdge](classOf[DefaultEdge])
-    for (runnableSpec <- transitiveRunSpecsById.values) graph.addVertex(runnableSpec)
+    for (runnableSpec <- transitiveRunSpecs) graph.addVertex(runnableSpec)
     for ((app, dependent) <- applicationDependencies) graph.addEdge(app, dependent)
     new UnmodifiableDirectedGraph(graph)
   }
@@ -98,7 +98,6 @@ class RootGroup(
     * @return the new root group with `newGroup` added.
     */
   def putGroup(newGroup: Group, version: Timestamp = Group.defaultVersion): RootGroup = {
-    val oldGroup = group(newGroup.id).getOrElse(Group.empty(newGroup.id))
     @tailrec def rebuildTree(allParents: List[PathId], result: Group): Group = {
       allParents match {
         case Nil => result

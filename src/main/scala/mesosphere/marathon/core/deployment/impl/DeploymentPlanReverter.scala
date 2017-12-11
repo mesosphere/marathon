@@ -35,8 +35,10 @@ private[deployment] object DeploymentPlanReverter {
 
     /* a sequence of tuples with the old and the new run definition */
     val runSpecChanges: Seq[(Option[RunSpec], Option[RunSpec])] = {
-      changesOnIds(original.transitiveRunSpecsById, target.transitiveRunSpecsById)
+      val ids = original.transitiveRunSpecIds ++ target.transitiveRunSpecIds
+      ids.map { id => original.runSpec(id) -> target.runSpec(id) }
         .filter { case (oldOpt, newOpt) => oldOpt != newOpt }
+        .toIndexedSeq
     }
 
     // We need to revert run changes first so that runs have already been deleted when we check

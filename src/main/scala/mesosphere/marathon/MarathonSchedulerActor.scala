@@ -391,7 +391,7 @@ class SchedulerActions(
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
     val root = await(groupRepository.root())
 
-    val runSpecIds = root.transitiveRunSpecsById.keySet
+    val runSpecIds = root.transitiveRunSpecIds
     val instances = await(instanceTracker.instancesBySpec())
 
     val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
@@ -419,7 +419,7 @@ class SchedulerActions(
 
   def reconcileHealthChecks(): Unit = {
     groupRepository.root().flatMap { rootGroup =>
-      healthCheckManager.reconcile(rootGroup.transitiveAppsById.valuesIterator.to[Seq])
+      healthCheckManager.reconcile(rootGroup.transitiveApps.toIndexedSeq)
     }
   }
 
@@ -490,7 +490,7 @@ class SchedulerActions(
   }
 
   def runSpecById(id: PathId): Future[Option[RunSpec]] = {
-    groupRepository.root().map(_.transitiveRunSpecsById.get(id))
+    groupRepository.root().map(_.runSpec(id))
   }
 }
 
