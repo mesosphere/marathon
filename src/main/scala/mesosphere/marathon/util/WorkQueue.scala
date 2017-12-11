@@ -112,6 +112,13 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
       }
     }
   }
+
+  /**
+    * @return size a tuple (queue.size(), openSlotCount)
+    */
+  def stats(): (Int, Int) = synchronized {
+    (queue.size, openSlotsCount)
+  }
 }
 
 /**

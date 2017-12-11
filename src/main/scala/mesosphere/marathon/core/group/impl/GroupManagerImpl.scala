@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.group.impl
 
 import java.time.OffsetDateTime
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{ AtomicBoolean, AtomicInteger }
 import javax.inject.Provider
 
 import akka.event.EventStream
@@ -102,36 +102,86 @@ class GroupManagerImpl(
 
   override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
 
+  val updateRequests = new AtomicInteger(0) // DEBUG
+  val updateResponses = new AtomicInteger(0)
+
   @SuppressWarnings(Array("all")) /* async/await */
   override def updateRootEither[T](
     id: PathId,
     change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
+    val atSerializedUpdates = Timestamp.now()
+    logger.info(s">>> CreateResource ${version.until(atSerializedUpdates).toMillis}")
+
+    logger.info(s">>> UpdateRequestsNum ${updateRequests.incrementAndGet()}")
+    logger.info(s">>> SerializedUpdatesQueueSize (queueSize,slotsNum) ${serializeUpdates.stats()}")
+
     // All updates to the root go through the work queue.
     val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
       logger.info(s"Upgrade root group version:$version with force:$force")
 
+      val atReadRootGroup = Timestamp.now() // DEBUG
+      logger.info(s">>> SerializedUpdates ${atSerializedUpdates.until(atReadRootGroup).toMillis}")
+
       val from = rootGroup()
       async {
+        val atChangedGroup = Timestamp.now() // DEBUG
+        logger.info(s">>> ReadRootGroup ${atReadRootGroup.until(atChangedGroup).toMillis}")
+
         val changedGroup = await(change(from))
         changedGroup match {
           case Left(left) =>
             Left(left)
           case Right(changed) =>
+            val atAssignDynamicPorts = Timestamp.now() // DEBUG
+            logger.info(s">>> ChangeRootGroup ${atChangedGroup.until(atAssignDynamicPorts).toMillis}")
+
             val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
               from,
               changed)
+
+            val atUpdateVersionInfo = Timestamp.now() // DEBUG
+            logger.info(s">>> AssignDynamicServicePorts ${atAssignDynamicPorts.until(atUpdateVersionInfo).toMillis}")
+
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
+
+            val atValidateRootGroup = Timestamp.now() // DEBUG
+            logger.info(s">>> UpdateVersionInfo ${atUpdateVersionInfo.until(atValidateRootGroup).toMillis}")
+
             Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config.availableFeatures))
+
+            val atMakeDeploymentPlan = Timestamp.now() // DEBUG
+            logger.info(s">>> ValidateRootGroup ${atValidateRootGroup.until(atMakeDeploymentPlan).toMillis}")
+
             val plan = DeploymentPlan(from, withVersionedAppsPods, version, toKill)
+
+            val atValidateDeploymentPlan = Timestamp.now() // DEBUG
+            logger.info(s">>> MakeDeploymentPlan ${atMakeDeploymentPlan.until(atValidateDeploymentPlan).toMillis}")
+
             Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
+
+            val atStoreRootGroupVersion = Timestamp.now() // DEBUG
+            logger.info(s">>> ValidateDeploymentPlan ${atValidateDeploymentPlan.until(atStoreRootGroupVersion).toMillis}")
+
             logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")
             await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
+
+            val atDeploymentService = Timestamp.now() // DEBUG
+            logger.info(s">>> StoreRootGroupVersion ${atStoreRootGroupVersion.until(atDeploymentService).toMillis}")
+
             await(deploymentService.get().deploy(plan, force))
+
+            val atStoreRootGroup = Timestamp.now() // DEBUG
+            logger.info(s">>> DeploymentServiceDeploy ${atDeploymentService.until(atStoreRootGroup).toMillis}")
+
             await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
+
+            val atReturnDeploymentPlan = Timestamp.now() // DEBUG
+            logger.info(s">>> StoreRootGroup ${atStoreRootGroup.until(atReturnDeploymentPlan).toMillis}")
+
             logger.info(s"Updated groups/apps/pods according to plan ${plan.id} for ${plan.targetIdsString}")
             // finally update the root under the write lock.
             root := Option(plan.target)
@@ -142,9 +192,14 @@ class GroupManagerImpl(
 
     maybeDeploymentPlan.onComplete {
       case Success(Right(plan)) =>
+        logger.info(s">>> UpdateResponsesNum ${updateResponses.incrementAndGet()}")
+        logger.info(s">>> SerializedUpdatesQueueSizeOnSuccess (queueSize,slotsNum) ${serializeUpdates.stats()}")
+        logger.info(s">>> TotalTimeToDeploy ${version.until(Timestamp.now()).toMillis}")
+
         logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.targetIdsString} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
       case Success(Left(_)) =>
+        logger.info(s"No root group update required for ${id}")
         ()
       case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event
