@@ -10,12 +10,12 @@ object AssignDynamicServiceLogic extends StrictLogging {
 
   /**
     * Checks whether newApp is new or changed.
-    * @param originalApps A map of the original apps form before the update.
+    * @param original The original root group from before the update.
     * @param newApp The new app that is tested.
     * @return true if app is new or an updated, false otherwise.
     */
-  private def changedOrNew(originalApps: Map[AppDefinition.AppKey, AppDefinition], newApp: AppDefinition): Boolean = {
-    originalApps.get(newApp.id).forall { _.isUpgrade(newApp) }
+  private def changedOrNew(original: RootGroup, newApp: AppDefinition): Boolean = {
+    original.app(newApp.id).forall { _.isUpgrade(newApp) }
   }
 
   private def mergeServicePortsAndPortDefinitions(
@@ -89,7 +89,7 @@ object AssignDynamicServiceLogic extends StrictLogging {
     val dynamicApps: Iterator[AppDefinition] =
       to.transitiveApps
         .iterator
-        .filter { newApp => changedOrNew(from.transitiveAppsById, newApp) }
+        .filter { newApp => changedOrNew(from, newApp) }
         .map {
           // assign values for service ports that the user has left "blank" (set to zero)
           case app: AppDefinition if app.hasDynamicServicePorts =>

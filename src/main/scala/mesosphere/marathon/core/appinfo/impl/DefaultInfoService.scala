@@ -112,7 +112,7 @@ private[appinfo] class DefaultInfoService(
       val statusById: Map[PathId, PodStatus] =
         if (groupEmbedPods) {
           val filteredPods: IndexedSeq[PodDefinition] =
-            group.transitivePodsById.values.filterAs(selectors.podSelector.matches)(collection.breakOut)
+            group.transitivePods.filterAs(selectors.podSelector.matches)(collection.breakOut)
           await(resolvePodInfos(filteredPods, cachedBaseData.value)).map { status =>
             PathId(status.id) -> status
           }(collection.breakOut)

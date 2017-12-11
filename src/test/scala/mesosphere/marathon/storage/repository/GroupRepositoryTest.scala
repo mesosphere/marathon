@@ -26,7 +26,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       "return an empty root if no root exists" in {
         val repo = createRepo(mock[AppRepository], mock[PodRepository], 1)
         val root = repo.root().futureValue
-        root.transitiveAppsById should be('empty)
+        root.transitiveApps should be('empty)
         root.dependencies should be('empty)
         root.groupsById should be('empty)
       }

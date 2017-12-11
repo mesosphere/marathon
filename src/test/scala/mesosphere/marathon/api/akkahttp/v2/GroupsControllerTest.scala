@@ -18,7 +18,6 @@ import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup, Timestamp }
-import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.scalatest.Inside
 import play.api.libs.json.{ Json, _ }
