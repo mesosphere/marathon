@@ -425,7 +425,7 @@ def test_pod_with_container_network():
 
     tasks = common.get_pod_tasks(pod_id)
 
-    network_info = tasks[0]['statuses'][0]['container_status']['network_infos'][0]
+    network_info = common.running_status_network_info(tasks[0]['statuses'])
     assert network_info['name'] == "dcos", \
         "The network name is {}, but 'dcos' was expected".format(network_info['name'])
 
