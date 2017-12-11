@@ -18,9 +18,10 @@ class Group(
     val pods: Map[PathId, PodDefinition] = defaultPods,
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     val dependencies: Set[PathId] = defaultDependencies,
-    val version: Timestamp = defaultVersion,
-    val transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition],
-    val transitivePodsById: Map[PathId, PodDefinition]) extends IGroup {
+    val version: Timestamp = defaultVersion) extends IGroup {
+
+  lazy val transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition] = apps ++ groupsById.values.flatMap(_.transitiveAppsById)
+  lazy val transitivePodsById: Map[PathId, PodDefinition] = pods ++ groupsById.values.flatMap(_.transitivePodsById)
 
   def app(appId: PathId): Option[AppDefinition] = transitiveAppsById.get(appId)
   def pod(podId: PathId): Option[PodDefinition] = transitivePodsById.get(podId)
@@ -81,13 +82,11 @@ object Group {
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion,
-    transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition],
-    transitivePodsById: Map[PathId, PodDefinition]): Group =
-    new Group(id, apps, pods, groupsById, dependencies, version, transitiveAppsById, transitivePodsById)
+    version: Timestamp = Group.defaultVersion): Group =
+    new Group(id, apps, pods, groupsById, dependencies, version)
 
   def empty(id: PathId): Group =
-    Group(id = id, version = Timestamp(0), transitiveAppsById = Map.empty, transitivePodsById = Map.empty)
+    Group(id = id, version = Timestamp(0))
 
   def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
   val defaultPods = Map.empty[PathId, PodDefinition]
