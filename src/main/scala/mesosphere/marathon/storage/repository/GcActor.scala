@@ -174,10 +174,10 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
       promise.success(Done)
       val originalUpdates =
         addAppVersions(
-          plan.original.transitiveAppsById.map { case (id, app) => id -> app.version.toOffsetDateTime },
+          plan.original.transitiveApps.map(app => app.id -> app.version.toOffsetDateTime)(collection.breakOut),
           updates.appVersionsStored)
       val allUpdates =
-        addAppVersions(plan.target.transitiveAppsById.map { case (id, app) => id -> app.version.toOffsetDateTime }, originalUpdates)
+        addAppVersions(plan.target.transitiveApps.map(app => app.id -> app.version.toOffsetDateTime)(collection.breakOut), originalUpdates)
       val newRootsStored = updates.rootsStored ++
         Set(plan.original.version.toOffsetDateTime, plan.target.version.toOffsetDateTime)
       stay using updates.copy(appVersionsStored = allUpdates, rootsStored = newRootsStored)
@@ -265,9 +265,8 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
     def appsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
-      currentRoot.transitiveAppsById.foreach {
-        case (id, app) =>
-          appVersionsInUse.addBinding(id, app.version.toOffsetDateTime)
+      currentRoot.transitiveApps.foreach { app =>
+        appVersionsInUse.addBinding(app.id, app.version.toOffsetDateTime)
       }
       roots.foreach { root =>
         root.transitiveAppIds.foreach {
@@ -280,9 +279,8 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
     def podsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val podVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
-      currentRoot.transitivePodsById.foreach {
-        case (id, pod) =>
-          podVersionsInUse.addBinding(id, pod.version.toOffsetDateTime)
+      currentRoot.transitivePods.foreach { pod =>
+        podVersionsInUse.addBinding(pod.id, pod.version.toOffsetDateTime)
       }
       roots.foreach { root =>
         root.transitivePodIds.foreach {

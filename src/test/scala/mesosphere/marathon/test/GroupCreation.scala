@@ -40,9 +40,7 @@ trait GroupCreation {
       pods,
       groupsById,
       dependencies,
-      version,
-      apps ++ groupsById.values.flatMap(_.transitiveAppsById),
-      pods ++ groupsById.values.flatMap(_.transitivePodsById))
+      version)
 
     if (validate) {
       val validation = accord.validate(group)(Group.validGroup(id.parent, enabledFeatures))

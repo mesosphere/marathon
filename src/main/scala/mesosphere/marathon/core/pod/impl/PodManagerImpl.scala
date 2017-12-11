@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 case class PodManagerImpl(groupManager: GroupManager) extends PodManager {
 
-  override def ids(): Set[PathId] = groupManager.rootGroup().transitivePodsById.keySet
+  override def ids(): Set[PathId] = groupManager.rootGroup().transitivePodIds.toSet
 
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt
@@ -24,7 +24,7 @@ case class PodManagerImpl(groupManager: GroupManager) extends PodManager {
   }
 
   def findAll(filter: (PodDefinition) => Boolean): Seq[PodDefinition] = {
-    groupManager.rootGroup().transitivePodsById.values.filterAs(filter)(collection.breakOut)
+    groupManager.rootGroup().transitivePods.filterAs(filter)(collection.breakOut)
   }
 
   def find(id: PathId): Option[PodDefinition] = groupManager.pod(id)
