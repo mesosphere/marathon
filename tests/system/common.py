@@ -110,8 +110,7 @@ def cluster_info(mom_name='marathon-user'):
     print("DC/OS: {}, in {} mode".format(shakedown.dcos_version(), shakedown.ee_version()))
     agents = shakedown.get_private_agents()
     print("Agents: {}".format(len(agents)))
-    client = marathon.create_client()
-    about = client.get_about()
+    about = wait_for_marathon_about()
     print("Marathon version: {}".format(about.get("version")))
 
     if shakedown.service_available_predicate(mom_name):
@@ -125,6 +124,16 @@ def cluster_info(mom_name='marathon-user'):
     else:
         print("Marathon MoM not present")
 
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=5, retry_on_exception=ignore_exception)
+def wait_for_marathon_about():
+    """ When the cluster is starting, it might happen that there is some delay in:
+    - marathon leader registration with mesos
+    - admin router refreshing cache (every 30s)
+
+    To improve our chances everything happened before we hit the v2/info we retry here.
+    """
+    client = marathon.create_client()
+    return client.get_about()
 
 def delete_all_apps():
     client = marathon.create_client()
