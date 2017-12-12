@@ -280,7 +280,6 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val status = MesosTaskStatusTestHelper.running(instance.appTask.taskId)
 
-      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
       taskTracker.instance(instance.instanceId) returns Future.successful(None)
 
       When("publish the status")
@@ -289,6 +288,26 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       verify(taskTracker).instance(instance.instanceId)
       Then("initiate the task kill")
       verify(killService).killUnknownTask(instance.appTask.taskId, KillReason.Unknown)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
+    }
+
+    "receiving an running update for known instnace but unknown task" in new Fixture {
+      val appId = PathId("/app")
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched().getInstance()
+      val incrementedTaskId = Task.Id.forResidentTask(Task.Id(instance.instanceId.idString))
+      val status = MesosTaskStatusTestHelper.running(incrementedTaskId)
+
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+      When("publish the status")
+      updateProcessor.publish(status).futureValue
+      Then("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("initiate the task kill")
+      verify(killService).killUnknownTask(incrementedTaskId, KillReason.Unknown)
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")
