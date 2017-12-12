@@ -12,14 +12,16 @@ import scala.util.Random
 @State(Scope.Benchmark)
 object PathIdBenchmark {
 
-  lazy val pathIdSegments = (1 to 100)
+  @Param(value = Array("2", "10", "100", "1000"))
+  var numberOfPaths: Int = _
+  lazy val pathIdSegments = (1 to numberOfPaths)
 
   lazy val pathId = PathId(pathIdSegments.map(_ => Random.alphanumeric.filter(_.isLetter).take(10).mkString).toList)
 
 }
 
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-@BenchmarkMode(Array(Mode.Throughput, Mode.AverageTime))
+@BenchmarkMode(Array(Mode.AverageTime))
 @Fork(1)
 class PathIdBenchmark {
   import PathIdBenchmark._
