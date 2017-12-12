@@ -22,25 +22,12 @@ addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
 cleanFiles += baseDirectory { base => base / "sandboxes" }.value
 
-lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
+lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()
-    .setPreference(AlignArguments, false)
-    .setPreference(AlignParameters, false)
-    .setPreference(AlignSingleLineCaseStatements, false)
-    .setPreference(CompactControlReadability, false)
-    .setPreference(DoubleIndentClassDeclaration, true)
     .setPreference(DanglingCloseParenthesis, Preserve)
-    .setPreference(FormatXml, true)
-    .setPreference(IndentSpaces, 2)
-    .setPreference(IndentWithTabs, false)
-    .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
+    .setPreference(DoubleIndentConstructorArguments, true)
     .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
     .setPreference(PreserveSpaceBeforeArguments, true)
-    .setPreference(SpacesAroundMultiImports, true)
-    .setPreference(SpaceBeforeColon, false)
-    .setPreference(SpaceInsideBrackets, false)
-    .setPreference(SpaceInsideParentheses, false)
-    .setPreference(SpacesWithinPatternBinders, true)
 )
 
 lazy val testSettings =
@@ -81,7 +68,7 @@ lazy val commonSettings = testSettings ++
   SbtAspectj.aspectjSettings ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.12.3",
+  scalaVersion := "2.12.4",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -120,7 +107,8 @@ lazy val commonSettings = testSettings ++
     "Mesosphere Public Repo (S3)",
     s3("downloads.mesosphere.io/maven")
   )),
-  s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
+  s3credentials := new EnvironmentVariableCredentialsProvider() | InstanceProfileCredentialsProvider.getInstance(),
+  s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
 
   scapegoatVersion := "1.3.0",
 
@@ -272,7 +260,7 @@ addCommandAlias("packageLinux",
 )
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
-    .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
+    .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
     .configs(IntegrationTest)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
@@ -284,7 +272,7 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
 lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, DebianPlugin, RpmPlugin, JDebPackaging,
-    CopyPasteDetector, RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, TestWithCoveragePlugin)
+    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, TestWithCoveragePlugin)
   .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -304,7 +292,7 @@ lazy val marathon = (project in file("."))
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .configs(IntegrationTest)
-  .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
@@ -315,12 +303,11 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
   .configs(IntegrationTest)
-  .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
+  .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin, TestWithCoveragePlugin)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
-    libraryDependencies ++= Dependencies.benchmark,
-    generatorType in Jmh := "asm"
+    libraryDependencies ++= Dependencies.benchmark
   )

@@ -135,6 +135,9 @@ types:
       protocol?:
         type: AppHealthCheckProtocol
         default: HTTP
+      ipProtocol?:
+        type: strings.IpProtocol
+        default: IPv4
       timeoutSeconds?:
         type: integer
         format: int32

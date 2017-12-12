@@ -13,8 +13,10 @@ import mesosphere.marathon.state.{ EnvVarString, PathId, PortAssignment, Timesta
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
+import org.apache.mesos.Protos.{ DurationInfo, KillPolicy }
 import org.apache.mesos.{ Protos => mesos }
 
+import java.util.concurrent.TimeUnit.SECONDS
 import scala.collection.immutable.Seq
 
 object TaskGroupBuilder extends StrictLogging {
@@ -27,9 +29,9 @@ object TaskGroupBuilder extends StrictLogging {
   private val ephemeralVolPathPrefix = "volumes/"
 
   case class BuilderConfig(
-    acceptedResourceRoles: Set[String],
-    envVarsPrefix: Option[String],
-    mesosBridgeName: String)
+      acceptedResourceRoles: Set[String],
+      envVarsPrefix: Option[String],
+      mesosBridgeName: String)
 
   def build(
     podDefinition: PodDefinition,
@@ -62,13 +64,13 @@ object TaskGroupBuilder extends StrictLogging {
 
     val taskGroup = mesos.TaskGroupInfo.newBuilder.addAllTasks(
       podDefinition.containers.map { container =>
-      val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
-      val portAssignments = computePortAssignments(podDefinition, endpoints)
+        val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
+        val portAssignments = computePortAssignments(podDefinition, endpoints)
 
-      computeTaskInfo(container, podDefinition, offer, instanceId, resourceMatch.hostPorts, config, portAssignments)
-        .setDiscovery(taskDiscovery(podDefinition, endpoints))
-        .build
-    }.asJava
+        computeTaskInfo(container, podDefinition, offer, instanceId, resourceMatch.hostPorts, config, portAssignments)
+          .setDiscovery(taskDiscovery(podDefinition, endpoints))
+          .build
+      }.asJava
     )
 
     // call all configured run spec customizers here (plugin)
@@ -181,6 +183,15 @@ object TaskGroupBuilder extends StrictLogging {
 
     container.healthCheck.foreach { healthCheck =>
       computeHealthCheck(healthCheck, portAssignments).foreach(builder.setHealthCheck)
+    }
+
+    for {
+      lc <- container.lifecycle
+      killGracePeriodSeconds <- lc.killGracePeriodSeconds
+    } {
+      val durationInfo = DurationInfo.newBuilder.setNanoseconds((killGracePeriodSeconds * SECONDS.toNanos(1)).toLong)
+      builder.setKillPolicy(
+        KillPolicy.newBuilder.setGracePeriod(durationInfo))
     }
 
     builder

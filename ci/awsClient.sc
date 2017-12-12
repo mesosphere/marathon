@@ -94,6 +94,9 @@ def uploadFileAndSha(uploadFile: Path, s3path: S3Path): Artifact = {
   val shaFile = fileUtil.writeSha1ForFile(uploadFile)
 
   upload(uploadFile, s3path)
+  println(s"Sha1 for file: ${uploadFile}")
+  val sha1 = %%('cat, shaFile).out.string
+  println(sha1)
   upload(shaFile, s3path)
   Artifact(s3path / uploadFile.last, read(shaFile))
 }

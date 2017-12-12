@@ -15,7 +15,7 @@ import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithStatistics
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import play.api.libs.json._
 
 import scala.collection.breakOut
@@ -151,6 +151,8 @@ object EntityMarshallers {
   implicit val podDefMarshaller = playJsonMarshaller[raml.Pod]
   implicit val podDefSeqMarshaller = playJsonMarshaller[Seq[raml.Pod]]
   implicit val podDefUnmarshaller = playJsonUnmarshaller[raml.Pod]
+  implicit val podStatus = playJsonMarshaller[raml.PodStatus]
+  implicit val podStatuses = playJsonMarshaller[Seq[raml.PodStatus]]
   implicit val leaderInfoMarshaller = playJsonMarshaller[raml.LeaderInfo]
   implicit val messageMarshaller = playJsonMarshaller[raml.Message]
   implicit val infoMarshaller = playJsonMarshaller[raml.MarathonInfo]
@@ -162,10 +164,9 @@ object EntityMarshallers {
   implicit val pluginDefinitionsMarshaller = playJsonMarshaller[PluginDefinitions]
   implicit val queueMarashaller = internalToRamlJsonMarshaller[(Seq[QueuedInstanceInfoWithStatistics], Boolean, Clock), raml.Queue]
   implicit val deploymentResultMarshaller = playJsonMarshaller[raml.DeploymentResult]
-  implicit val enrichedTaskMarshaller = playJsonMarshaller[raml.EnrichedTask]
-  implicit val enrichedTasksListMarshaller = playJsonMarshaller[raml.EnrichedTasksList]
-  implicit val instanceListMarshaller = playJsonMarshaller[raml.InstanceList]
-  implicit val singleInstanceMarshaller = playJsonMarshaller[raml.SingleInstance]
+  implicit val enrichedTaskMarshaller = playJsonMarshaller[raml.Task]
+  implicit val enrichedTaskSingleMarshaller = playJsonMarshaller[raml.TaskSingle]
+  implicit val enrichedTasksListMarshaller = playJsonMarshaller[raml.TaskList]
   implicit val deleteTasksUnmarshaller = playJsonUnmarshaller[raml.DeleteTasks]
   implicit val seqDateTimeMarshaller = playJsonMarshaller[Seq[Timestamp]]
   implicit val groupUpdateUnmarshaller = playJsonUnmarshaller[raml.GroupUpdate]

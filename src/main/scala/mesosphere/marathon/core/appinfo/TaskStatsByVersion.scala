@@ -8,10 +8,10 @@ import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.{ Timestamp, VersionInfo }
 
 case class TaskStatsByVersion(
-  maybeStartedAfterLastScaling: Option[TaskStats],
-  maybeWithLatestConfig: Option[TaskStats],
-  maybeWithOutdatedConfig: Option[TaskStats],
-  maybeTotalSummary: Option[TaskStats])
+    maybeStartedAfterLastScaling: Option[TaskStats],
+    maybeWithLatestConfig: Option[TaskStats],
+    maybeWithOutdatedConfig: Option[TaskStats],
+    maybeTotalSummary: Option[TaskStats])
 
 object TaskStatsByVersion {
 
@@ -54,8 +54,8 @@ object TaskStatsByVersion {
 }
 
 case class TaskStats(
-  counts: TaskCounts,
-  maybeLifeTime: Option[TaskLifeTime])
+    counts: TaskCounts,
+    maybeLifeTime: Option[TaskLifeTime])
 
 object TaskStats {
   def forSomeTasks(

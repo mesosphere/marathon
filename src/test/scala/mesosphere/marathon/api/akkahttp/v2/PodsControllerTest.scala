@@ -4,21 +4,27 @@ package api.akkahttp.v2
 import java.net.InetAddress
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.Uri.Query
+import akka.http.scaladsl.model.Uri.{ Path, Query }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
 import mesosphere.{ UnitTest, ValidationTestLike }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
-import mesosphere.marathon.api.akkahttp.Headers
+import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
 import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
+import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.raml.FixedPodScalingPolicy
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
@@ -26,6 +32,7 @@ import play.api.libs.json._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with ValidationTestLike with ResponseMatchers {
 
@@ -38,14 +45,18 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
+    // Unauthenticated access test cases
     {
       val controller = Fixture(authenticated = false).controller()
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Head(Uri./))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Post(Uri./))
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/::status"))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
+      behave like unauthenticatedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
     }
 
+    // Unauthorized access test cases
     {
       val f = Fixture(authorized = false)
       val controller = f.controller()
@@ -67,6 +78,27 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = request)
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Delete("/mypod"))
       behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod"))
+      behave like unauthorizedRoute(forRoute = controller.route, withRequest = Get("/mypod::status"))
+    }
+
+    // Entity not found test cases
+    {
+      val f = Fixture()
+      val controller = f.controller()
+      val mypodId = PathId("mypod")
+      val podDefinition = PodDefinition(id = mypodId)
+
+      f.podManager.find(eq(PathId("unknown-pod"))).returns(None)
+      f.podManager.find(eq(mypodId)).returns(Some(podDefinition))
+
+      f.podManager.version(any, any).returns(Future.successful(None))
+      def unknownPod(withRequest: HttpRequest, withMessage: String) = unknownEntity(controller.route, withRequest, withMessage)
+
+      behave like unknownPod(withRequest = Delete("/unknown-pod"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/unknown-pod"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/unknown-pod::versions"), withMessage = "Pod 'unknown-pod' does not exist")
+      behave like unknownPod(withRequest = Get("/mypod::versions/2015-04-09T12:30:00.000Z"), withMessage = "Pod 'mypod' does not exist in version 2015-04-09T12:30:00.000Z")
+      behave like unknownPod(withRequest = Get("/mypod::versions/unparsable-datetime"), withMessage = "Pod 'mypod' does not exist in version unparsable-datetime")
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
@@ -416,16 +448,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    "reject deletion of unknown pod" in {
-      val f = Fixture()
-      val controller = f.controller()
-
-      f.podManager.find(eq(PathId("unknown-pod"))).returns(None)
-
-      Delete("/unknown-pod") ~> controller.route ~> check {
-        rejection should be(EntityNotFound(Message("Pod 'unknown-pod' does not exist")))
-      }
-    }
     "respond with a pod for a lookup" in {
       val f = Fixture()
       val controller = f.controller()
@@ -440,14 +462,31 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
-    "reject a lookup a specific pod that pod does not exist" in {
+    "respond with status for a pod" in {
       val f = Fixture()
       val controller = f.controller()
 
-      f.podManager.find(eq(PathId("mypod"))).returns(Option.empty[PodDefinition])
+      val pod = PodDefinition(id = PathId("an-awesome-group/mypod"))
+      f.podManager.find(eq(PathId("an-awesome-group/mypod"))).returns(Some(pod))
 
-      Get("/mypod") ~> controller.route ~> check {
-        rejection should be(EntityNotFound(Message("Pod 'mypod' does not exist")))
+      val podStatus = raml.PodStatus(
+        id = "an-awesome-group/mypod",
+        spec = raml.Pod(id = "an-awesome-group/mypod", containers = Seq.empty),
+        status = raml.PodState.Stable,
+        statusSince = f.clock.now().toOffsetDateTime,
+        lastUpdated = f.clock.now().toOffsetDateTime,
+        lastChanged = f.clock.now().toOffsetDateTime
+      )
+      f.podStatusService.selectPodStatus(eq(PathId("an-awesome-group/mypod")), any).returns(Future.successful(Some(podStatus)))
+
+      Get("/an-awesome-group/mypod::status") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(
+          podId("an-awesome-group/mypod"),
+          podState(raml.PodState.Stable)
+        )
       }
     }
 
@@ -464,6 +503,173 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         jsonResponse shouldBe a[JsArray]
         (jsonResponse \ 0).get should have(podId("mypod"))
         (jsonResponse \ 1).get should have(podId("another_pod"))
+      }
+    }
+
+    "response with statuses for all pods" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val podStatus0 = raml.PodStatus(
+        id = "mypod",
+        spec = raml.Pod(id = "mypod", containers = Seq.empty),
+        status = raml.PodState.Stable,
+        statusSince = f.clock.now().toOffsetDateTime,
+        lastUpdated = f.clock.now().toOffsetDateTime,
+        lastChanged = f.clock.now().toOffsetDateTime
+      )
+      f.podStatusService.selectPodStatus(eq(PathId("mypod")), any).returns(Future.successful(Some(podStatus0)))
+
+      val podStatus1 = raml.PodStatus(
+        id = "another-pod",
+        spec = raml.Pod(id = "another-pod", containers = Seq.empty),
+        status = raml.PodState.Degraded,
+        statusSince = f.clock.now().toOffsetDateTime,
+        lastUpdated = f.clock.now().toOffsetDateTime,
+        lastChanged = f.clock.now().toOffsetDateTime
+      )
+      f.podStatusService.selectPodStatus(eq(PathId("another-pod")), any).returns(Future.successful(Some(podStatus1)))
+      f.podManager.ids().returns(Set(PathId("mypod"), PathId("another-pod")))
+
+      Get("/::status") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+
+        val jsonResponse = Json.parse(responseAs[String])
+        (jsonResponse \ 0).get should have(
+          podId("mypod"),
+          podState(raml.PodState.Stable)
+        )
+        (jsonResponse \ 1).get should have(
+          podId("another-pod"),
+          podState(raml.PodState.Degraded)
+        )
+      }
+    }
+
+    "respond with all available versions" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val pod = PodDefinition(id = PathId("mypod"))
+      f.podManager.find(eq(PathId("mypod"))).returns(Some(pod))
+
+      val versions = Seq(f.clock.now(), f.clock.now() + 1.minute)
+      f.podManager.versions(eq(PathId("mypod"))).returns(Source(versions))
+
+      Get("/mypod::versions") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        val jsonResponse = Json.parse(responseAs[String])
+        (jsonResponse \ 0).get.asOpt[String] should be(Some("2015-04-09T12:30:00.000Z"))
+        (jsonResponse \ 1).get.asOpt[String] should be(Some("2015-04-09T12:31:00.000Z"))
+      }
+    }
+
+    "respond with a specific version" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val pod = PodDefinition(id = PathId("mypod"))
+      val version = f.clock.now()
+      f.podManager.version(eq(PathId("mypod")), eq(version)).returns(Future.successful(Some(pod)))
+
+      Get("/mypod::versions/2015-04-09T12:30:00.000Z") ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(podId("mypod"))
+      }
+    }
+
+    "update a simple single-container pod from docker image w/ shell command" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.update(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val postJson = """
+                       | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                       |   { "name": "webapp",
+                       |     "resources": { "cpus": 0.03, "mem": 64 },
+                       |     "image": { "kind": "DOCKER", "id": "busybox" },
+                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                     """.stripMargin
+      val entity = HttpEntity(postJson).withContentType(ContentTypes.`application/json`)
+      val request = Put("/mypod")
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        val jsonResponse = Json.parse(responseAs[String])
+        jsonResponse should have(
+          podId("/mypod"),
+          executorResources(cpus = 0.1, mem = 32.0, disk = 10.0),
+          noDefinedNetworkname,
+          networkMode(raml.NetworkMode.Host)
+        )
+      }
+    }
+
+    "do not update if we have concurrent change error" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+      val controller = f.controller()
+
+      val podId = PathId("/unknownpod")
+
+      f.podManager.update(any, eq(false)).returns(Future.failed(ConflictingChangeException("pod is already there")))
+
+      val postJson = """
+                       | { "id": "/unknownpod", "networks": [ { "mode": "host" } ], "containers": [
+                       |   { "name": "webapp",
+                       |     "resources": { "cpus": 0.03, "mem": 64 },
+                       |     "image": { "kind": "DOCKER", "id": "busybox" },
+                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                     """.stripMargin
+      val entity = HttpEntity(postJson).withContentType(ContentTypes.`application/json`)
+      val request = Put(podId.toString)
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        rejection shouldBe a[Rejections.ConflictingChange]
+        inside(rejection) {
+          case r: Rejections.ConflictingChange => r.message.message shouldEqual "pod is already there"
+        }
+      }
+    }
+
+    "save pod with more than one instance" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.update(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val postJson = """
+                       | { "id": "/mypod", "networks": [ { "mode": "host" } ],
+                       | "scaling": { "kind": "fixed", "instances": 2 }, "containers": [
+                       |   { "name": "webapp",
+                       |     "resources": { "cpus": 0.03, "mem": 64 },
+                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                     """.stripMargin
+
+      val entity = HttpEntity(postJson).withContentType(ContentTypes.`application/json`)
+      val request = Put("/mypod")
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.OK)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+
+        val jsonResponse = Json.parse(responseAs[String])
+
+        jsonResponse should have(
+          scalingPolicyInstances(2)
+        )
       }
     }
   }
@@ -483,6 +689,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     val electionService = mock[ElectionService]
     val groupManager = mock[GroupManager]
     val podManager = mock[PodManager]
+    val podStatusService = mock[PodStatusService]
     val pluginManager = PluginManager.None
     val eventBus = mock[EventStream]
     val scheduler = mock[MarathonScheduler]
@@ -491,6 +698,7 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
 
     implicit val authenticator = auth.auth
-    def controller() = new PodsController(config, electionService, podManager, groupManager, pluginManager, eventBus, scheduler, clock)
+    implicit val mat: Materializer = mock[Materializer]
+    def controller() = new PodsController(config, electionService, podManager, podStatusService, groupManager, pluginManager, eventBus, scheduler, clock)
   }
 }

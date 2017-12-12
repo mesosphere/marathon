@@ -41,6 +41,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     groupApiService: GroupApiService,
     groupManager: GroupManager,
     podManager: PodManager,
+    podStatusService: PodStatusService,
     pluginManager: PluginManager,
     marathonSchedulerService: MarathonSchedulerService,
     marathonScheduler: MarathonScheduler,
@@ -81,7 +82,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     val queueController = new QueueController(clock, launchQueue, electionService)
     val tasksController = new TasksController(instanceTracker, groupManager, healthCheckManager, taskKiller, electionService)
     val groupsController = new GroupsController(electionService, groupInfoService, groupManager, groupApiService, conf)
-    val podsController = new PodsController(conf, electionService, podManager, groupManager, pluginManager, eventBus, marathonScheduler, clock)
+    val podsController = new PodsController(conf, electionService, podManager, podStatusService, groupManager, pluginManager, eventBus, marathonScheduler, clock)
 
     val v2Controller = new V2Controller(
       appsController,

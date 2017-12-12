@@ -7,8 +7,8 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.state.PathId
 
 case class EnrichedTask(
-  appId: PathId,
-  task: Task,
-  agentInfo: AgentInfo,
-  healthCheckResults: Seq[Health],
-  servicePorts: Seq[Int] = Nil)
+    appId: PathId,
+    task: Task,
+    agentInfo: AgentInfo,
+    healthCheckResults: Seq[Health],
+    servicePorts: Seq[Int] = Nil)

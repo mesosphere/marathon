@@ -8,14 +8,14 @@ import mesosphere.marathon.metrics.MetricsReporterConf
 import org.rogach.scallop.ScallopConf
 
 class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
-    with MetricsReporterConf
-    with HttpConf
-    with MarathonConf
-    with AppConfiguration
-    with EventConf
-    with DebugConf
-    with PluginManagerConfiguration
-    with FeaturesConf {
+  with MetricsReporterConf
+  with HttpConf
+  with MarathonConf
+  with AppConfiguration
+  with EventConf
+  with DebugConf
+  with PluginManagerConfiguration
+  with FeaturesConf {
   verify()
 }
 

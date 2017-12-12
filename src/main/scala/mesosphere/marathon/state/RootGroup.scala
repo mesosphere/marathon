@@ -18,19 +18,17 @@ import scala.collection.JavaConverters._
   * and all of the modifying operations are defined at this level.
   */
 class RootGroup(
-  apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-  pods: Map[PathId, PodDefinition] = Group.defaultPods,
-  groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
-  dependencies: Set[PathId] = Group.defaultDependencies,
-  version: Timestamp = Group.defaultVersion) extends Group(
+    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
+    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
+    dependencies: Set[PathId] = Group.defaultDependencies,
+    version: Timestamp = Group.defaultVersion) extends Group(
   PathId.empty,
   apps,
   pods,
   groupsById,
   dependencies,
-  version,
-  apps ++ groupsById.values.flatMap(_.transitiveAppsById),
-  pods ++ groupsById.values.flatMap(_.transitivePodsById)) {
+  version) {
   require(
     groupsById.forall {
       case (_, _: RootGroup) => false
@@ -38,7 +36,7 @@ class RootGroup(
     },
     "`RootGroup` cannot be a child of `RootGroup`.")
 
-  private lazy val applicationDependencies: List[(AppDefinition, AppDefinition)] = {
+  lazy val applicationDependencies: List[(AppDefinition, AppDefinition)] = {
     var result = List.empty[(AppDefinition, AppDefinition)]
 
     //group->group dependencies
@@ -55,7 +53,7 @@ class RootGroup(
       group <- transitiveGroupsById.values.filter(_.apps.nonEmpty)
       app <- group.apps.values
       dependencyId <- app.dependencies
-      dependentApp = transitiveAppsById.get(dependencyId).map(Set(_))
+      dependentApp = this.app(dependencyId).map(Set(_))
       dependentGroup = transitiveGroupsById.get(dependencyId).map(_.transitiveApps)
       dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
     } result ::= app -> dependent
@@ -68,7 +66,7 @@ class RootGroup(
     */
   lazy val dependencyGraph: DirectedGraph[RunSpec, DefaultEdge] = {
     val graph = new DefaultDirectedGraph[RunSpec, DefaultEdge](classOf[DefaultEdge])
-    for (runnableSpec <- transitiveRunSpecsById.values) graph.addVertex(runnableSpec)
+    for (runnableSpec <- transitiveRunSpecs) graph.addVertex(runnableSpec)
     for ((app, dependent) <- applicationDependencies) graph.addEdge(app, dependent)
     new UnmodifiableDirectedGraph(graph)
   }
@@ -100,7 +98,6 @@ class RootGroup(
     * @return the new root group with `newGroup` added.
     */
   def putGroup(newGroup: Group, version: Timestamp = Group.defaultVersion): RootGroup = {
-    val oldGroup = group(newGroup.id).getOrElse(Group.empty(newGroup.id))
     @tailrec def rebuildTree(allParents: List[PathId], result: Group): Group = {
       allParents match {
         case Nil => result
@@ -112,9 +109,7 @@ class RootGroup(
             pods = oldParent.pods,
             groupsById = oldParent.groupsById + (result.id -> result),
             dependencies = oldParent.dependencies,
-            version = version,
-            transitiveAppsById = oldParent.transitiveAppsById -- oldGroup.transitiveAppsById.keys ++ newGroup.transitiveAppsById,
-            transitivePodsById = oldParent.transitivePodsById -- oldGroup.transitivePodsById.keys ++ newGroup.transitivePodsById)
+            version = version)
           rebuildTree(tail, newParent)
       }
     }
@@ -158,9 +153,7 @@ class RootGroup(
         pods = group.pods,
         groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> updateApps(subGroup) },
         dependencies = group.dependencies,
-        version = version,
-        transitiveAppsById = group.transitiveAppsById.map { case (appId, appDef) => appId -> app(appDef) },
-        transitivePodsById = group.transitivePodsById)
+        version = version)
     }
     val oldGroup = group(groupId).getOrElse(Group.empty(groupId))
     val newGroup = updateApps(oldGroup)
@@ -193,9 +186,7 @@ class RootGroup(
       pods = oldGroup.pods,
       groupsById = oldGroup.groupsById,
       dependencies = oldGroup.dependencies,
-      version = version,
-      transitiveAppsById = oldGroup.transitiveAppsById -- oldApps.keys ++ newApps,
-      transitivePodsById = oldGroup.transitivePodsById)
+      version = version)
     putGroup(newGroup, version)
   }
 
@@ -223,9 +214,7 @@ class RootGroup(
       pods = oldGroup.pods,
       groupsById = oldGroup.groupsById,
       dependencies = newDependencies,
-      version = version,
-      transitiveAppsById = oldGroup.transitiveAppsById,
-      transitivePodsById = oldGroup.transitivePodsById
+      version = version
     )
     putGroup(newGroup, version)
   }
@@ -261,9 +250,7 @@ class RootGroup(
         case (_, group) => group.id != newApp.id || group.containsApps || group.containsPods
       },
       dependencies = oldGroup.dependencies,
-      version = version,
-      transitiveAppsById = oldGroup.transitiveAppsById + (newApp.id -> newApp),
-      transitivePodsById = oldGroup.transitivePodsById)
+      version = version)
     putGroup(newGroup, version)
   }
 
@@ -298,9 +285,7 @@ class RootGroup(
         case (_, group) => group.id != newPod.id || group.containsApps || group.containsPods
       },
       dependencies = oldGroup.dependencies,
-      version = version,
-      transitiveAppsById = oldGroup.transitiveAppsById,
-      transitivePodsById = oldGroup.transitivePodsById + (newPod.id -> newPod))
+      version = version)
     putGroup(newGroup, version)
   }
 
@@ -311,9 +296,7 @@ class RootGroup(
       pods = group.pods,
       groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> updateVersion(subGroup, version) },
       dependencies = group.dependencies,
-      version = version,
-      transitiveAppsById = group.transitiveAppsById,
-      transitivePodsById = group.transitivePodsById)
+      version = version)
   }
 
   /**
@@ -345,9 +328,7 @@ class RootGroup(
           pods = oldParent.pods,
           groupsById = oldParent.groupsById - oldGroup.id,
           dependencies = oldParent.dependencies,
-          version = version,
-          transitiveAppsById = oldParent.transitiveAppsById -- oldGroup.transitiveAppsById.keys,
-          transitivePodsById = oldParent.transitivePodsById -- oldGroup.transitivePodsById.keys), version)
+          version = version), version)
     }
   }
 
@@ -369,9 +350,7 @@ class RootGroup(
         pods = oldGroup.pods,
         groupsById = oldGroup.groupsById,
         dependencies = oldGroup.dependencies,
-        version = version,
-        transitiveAppsById = oldGroup.transitiveAppsById - oldApp.id,
-        transitivePodsById = oldGroup.transitivePodsById), version)
+        version = version), version)
     }
   }
 
@@ -393,9 +372,7 @@ class RootGroup(
         pods = oldGroup.pods - oldPod.id,
         groupsById = oldGroup.groupsById,
         dependencies = oldGroup.dependencies,
-        version = version,
-        transitiveAppsById = oldGroup.transitiveAppsById,
-        transitivePodsById = oldGroup.transitivePodsById - oldPod.id), version)
+        version = version), version)
     }
   }
 
@@ -408,12 +385,10 @@ class RootGroup(
       Group(
         id = group.id,
         apps = group.apps.map { case (appId, app) => appId -> app.copy(versionInfo = VersionInfo.NoVersion) },
-        pods = group.pods.map { case (podId, pod) => podId -> pod.copy(version = Timestamp(0)) },
+        pods = group.pods.map { case (podId, pod) => podId -> pod.copy(versionInfo = VersionInfo.NoVersion) },
         groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> in(subGroup) },
         dependencies = group.dependencies,
-        version = Timestamp(0),
-        transitiveAppsById = group.transitiveAppsById.map { case (appId, app) => appId -> app.copy(versionInfo = VersionInfo.NoVersion) },
-        transitivePodsById = group.transitivePodsById.map { case (podId, pod) => podId -> pod.copy(version = Timestamp(0)) })
+        version = Timestamp(0))
     }
     RootGroup.fromGroup(in(this))
   }

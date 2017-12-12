@@ -18,33 +18,74 @@ class Group(
     val pods: Map[PathId, PodDefinition] = defaultPods,
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     val dependencies: Set[PathId] = defaultDependencies,
-    val version: Timestamp = defaultVersion,
-    val transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition],
-    val transitivePodsById: Map[PathId, PodDefinition]) extends IGroup {
-
-  def app(appId: PathId): Option[AppDefinition] = transitiveAppsById.get(appId)
-  def pod(podId: PathId): Option[PodDefinition] = transitivePodsById.get(podId)
+    val version: Timestamp = defaultVersion) extends IGroup {
 
   /**
-    * Find and return the child group for the given path. If no match is found, then returns None
+    * Get app from this group or any child group.
+    *
+    * @param appId The app to retrieve.
+    * @return None if the app was not found or non empty option with app.
     */
-  def group(gid: PathId): Option[Group] = {
-    if (id == gid) Some(this)
-    else {
-      val immediateChild = gid.restOf(id).root
-      groupsById.find { case (_, group) => group.id.restOf(id).root == immediateChild }
-        .flatMap { case (_, group) => group.group(gid) }
-    }
+  def app(appId: PathId): Option[AppDefinition] = {
+    apps.get(appId) orElse group(appId.parent).flatMap(_.apps.get(appId))
   }
 
-  lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
-  lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
+  /**
+    * Get pod from this group or any child group.
+    *
+    * @param podId The pod to retrieve.
+    * @return None if the pod was not found or non empty option with pod.
+    */
+  def pod(podId: PathId): Option[PodDefinition] = {
+    pods.get(podId) orElse group(podId.parent).flatMap(_.pods.get(podId))
+  }
 
-  lazy val transitiveRunSpecsById: Map[PathId, RunSpec] = transitiveAppsById ++ transitivePodsById
-  lazy val transitiveRunSpecs: Set[RunSpec] = transitiveRunSpecsById.values.toSet
+  /**
+    * Get a runnable specification from this group or any child group.
+    *
+    * @param id The path of the run spec to retrieve.
+    * @return None of run spec was not found or non empty option with run spec.
+    */
+  def runSpec(id: PathId): Option[RunSpec] = {
+    val maybeApp = this.app(id)
+    if (maybeApp.isDefined) maybeApp else this.pod(id)
+  }
 
+  /**
+    * Checks whether a runnable spec with the given id exists.
+    *
+    * @param id Id of an app or pod.
+    * @return True if app or pod exists, false otherwise.
+    */
+  def exists(id: PathId): Boolean = runSpec(id).isDefined
+
+  /**
+    * Find and return the child group for the given path.
+    *
+    * @param gid The path of the group for find.
+    * @return None if no group was found or non empty option with group.
+    */
+  def group(gid: PathId): Option[Group] = transitiveGroupsById.get(gid)
+
+  private def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
+  private def transitiveAppIdsIterator(): Iterator[PathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
+  lazy val transitiveApps: Iterable[AppDefinition] = transitiveAppsIterator().toVector
+  lazy val transitiveAppIds: Iterable[PathId] = transitiveAppIdsIterator().toVector
+
+  private def transitivePodsIterator(): Iterator[PodDefinition] = pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
+  private def transitivePodIdsIterator(): Iterator[PathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
+  lazy val transitivePods: Iterable[PodDefinition] = transitivePodsIterator().toVector
+  lazy val transitivePodIds: Iterable[PathId] = transitivePodIdsIterator().toVector
+
+  lazy val transitiveRunSpecs: Iterable[RunSpec] = transitiveApps ++ transitivePods
+  lazy val transitiveRunSpecIds: Iterable[PathId] = transitiveAppIds ++ transitivePodIds
+
+  def transitiveGroups(): Iterator[(Group.GroupKey, Group)] = groupsById.iterator ++ groupsById.valuesIterator.flatMap(_.transitiveGroups())
   lazy val transitiveGroupsById: Map[Group.GroupKey, Group] = {
-    Map(id -> this) ++ groupsById.values.flatMap(_.transitiveGroupsById)
+    val builder = Map.newBuilder[Group.GroupKey, Group]
+    builder += id -> this
+    builder ++= transitiveGroups()
+    builder.result()
   }
 
   /** @return true if and only if this group directly or indirectly contains app definitions. */
@@ -67,7 +108,7 @@ class Group(
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
-  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version, ${transitiveAppsById}, ${transitivePodsById})"
+  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version)"
 }
 
 object Group {
@@ -79,13 +120,11 @@ object Group {
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion,
-    transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition],
-    transitivePodsById: Map[PathId, PodDefinition]): Group =
-    new Group(id, apps, pods, groupsById, dependencies, version, transitiveAppsById, transitivePodsById)
+    version: Timestamp = Group.defaultVersion): Group =
+    new Group(id, apps, pods, groupsById, dependencies, version)
 
   def empty(id: PathId): Group =
-    Group(id = id, version = Timestamp(0), transitiveAppsById = Map.empty, transitivePodsById = Map.empty)
+    Group(id = id, version = Timestamp(0))
 
   def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
   val defaultPods = Map.empty[PathId, PodDefinition]
@@ -106,9 +145,7 @@ object Group {
 
   private def noAppsAndPodsWithSameId: Validator[Group] =
     isTrue("Applications and Pods may not share the same id") { group =>
-      val podIds = group.transitivePodsById.keySet
-      val appIds = group.transitiveAppsById.keySet
-      appIds.intersect(podIds).isEmpty
+      !group.transitiveAppIds.exists(appId => group.pod(appId).isDefined)
     }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =

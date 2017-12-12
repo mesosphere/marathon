@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.marshalling.{ Marshaller, ToEntityMarshaller }
 import akka.http.scaladsl.model.MediaTypes.`text/plain`
 import akka.http.scaladsl.model.{ MediaTypes, StatusCodes }
-import akka.http.scaladsl.server.{ MalformedQueryParamRejection, Rejection, Route }
+import akka.http.scaladsl.server.{ Rejection, Route }
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -24,7 +24,7 @@ import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, _ }
-import mesosphere.marathon.raml.{ AnyToRaml, DeploymentResult, EnrichedTasksList, Reads, Writes }
+import mesosphere.marathon.raml.{ AnyToRaml, DeploymentResult, Reads, Writes }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
 
@@ -48,7 +48,7 @@ class TasksController(
 
   import mesosphere.marathon.api.akkahttp.Directives._
   import mesosphere.marathon.api.akkahttp.EntityMarshallers._
-  import mesosphere.marathon.raml.EnrichedTaskConversion._
+  import mesosphere.marathon.raml.TaskConversion._
 
   override val route = {
     asLeader(electionService) {
@@ -223,8 +223,8 @@ class TasksController(
   }
 
   case class TasksList(tasks: Seq[EnrichedTask])
-  implicit val tasksListWrite: Writes[TasksList, EnrichedTasksList] = Writes { tasksList =>
-    EnrichedTasksList(tasksList.tasks.map(_.toRaml))
+  implicit val tasksListWrite: Writes[TasksList, raml.TaskList] = Writes { tasksList =>
+    raml.TaskList(tasksList.tasks.map(_.toRaml))
   }
 
   implicit val deleteTasksReader: Reads[raml.DeleteTasks, TasksToDelete] = Reads {

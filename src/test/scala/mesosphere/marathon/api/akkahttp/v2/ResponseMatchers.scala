@@ -107,4 +107,43 @@ trait ResponseMatchers { this: UnitTest =>
       HavePropertyMatchResult(matches, "podId", Some(id), maybeId)
     }
   }
+
+  /**
+    * Have property matcher for a valid task id.
+    * @param taskId The expected task id.
+    * @return Match result
+    */
+  def taskId(taskId: String) = new HavePropertyMatcher[JsValue, Option[String]] {
+    override def apply(actual: JsValue) = {
+      val maybeId = (actual \ "id").asOpt[String]
+      val matches = maybeId.contains(taskId)
+      HavePropertyMatchResult(matches, "id", Some(taskId), maybeId)
+    }
+  }
+
+  /**
+    * Have property matcher for a pod status.
+    * @param state The expected RAML pod state
+    * @return Match result
+    */
+  def podState(state: raml.PodState) = new HavePropertyMatcher[JsValue, Option[raml.PodState]] {
+    override def apply(actual: JsValue) = {
+      val maybeState = (actual \ "status").asOpt[String].flatMap(raml.PodState.fromString)
+      val matches = maybeState.contains(state)
+      HavePropertyMatchResult(matches, "podState", Some(state), maybeState)
+    }
+  }
+
+  /**
+    * Have property matcher for scaling policy instances.
+    * @param instances expected number of instances
+    * @return Match result
+    */
+  def scalingPolicyInstances(instances: Int) = new HavePropertyMatcher[JsValue, Option[Int]] {
+    override def apply(actual: JsValue) = {
+      val maybeScalingPolicy = (actual \ "scaling" \ "instances").asOpt[Int]
+      val matches = maybeScalingPolicy.contains(instances)
+      HavePropertyMatchResult(matches, "podScalingPolicy", Some(instances), maybeScalingPolicy)
+    }
+  }
 }

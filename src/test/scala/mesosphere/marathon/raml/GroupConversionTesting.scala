@@ -22,9 +22,7 @@ trait GroupConversionTesting {
       pods = Map.empty[PathId, PodDefinition], // we never read in pods
       groupsById = groupsById,
       dependencies = group.dependencies.map(_.toPath),
-      version = group.version.map(Timestamp(_)).getOrElse(Timestamp.now()),
-      transitiveAppsById = appsById ++ groupsById.values.flatMap(_.transitiveAppsById),
-      transitivePodsById = groupsById.values.flatMap(_.transitivePodsById)(collection.breakOut)
+      version = group.version.map(Timestamp(_)).getOrElse(Timestamp.now())
     )
   }
 }

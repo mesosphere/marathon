@@ -209,8 +209,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val f = Fixture(5)()()
         f.actor.setState(Scanning, UpdatedEntities())
         val deployPromise = Promise[Done]()
-        val app1 = AppDefinition("a".toRootPath)
-        val app2 = AppDefinition("b".toRootPath)
+        val app1 = AppDefinition("a".toRootPath, cmd = Some("sleep"))
+        val app2 = AppDefinition("b".toRootPath, cmd = Some("sleep"))
         val root1 = createRootGroup(Map("a".toRootPath -> app1))
         val root2 = createRootGroup(Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Timestamp.now()), deployPromise)
@@ -232,8 +232,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val f = Fixture(5)()(compactWaitOnSem(compactedAppIds, compactedAppVersions,
           compactedPodIds, compactedPodVersions, compactedRoots, sem))
         f.actor.setState(Scanning, UpdatedEntities())
-        val app1 = AppDefinition("a".toRootPath)
-        val app2 = AppDefinition("b".toRootPath)
+        val app1 = AppDefinition("a".toRootPath, cmd = Some("sleep"))
+        val app2 = AppDefinition("b".toRootPath, cmd = Some("sleep"))
         val pod1 = PodDefinition("p1".toRootPath)
         val pod2 = PodDefinition("p2".toRootPath)
         val root1 = createRootGroup(Map("a".toRootPath -> app1), Map(pod1.id -> pod1))
@@ -393,8 +393,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val f = Fixture(2)()()
         f.actor.setState(Compacting, BlockedEntities())
         val promise = Promise[Done]()
-        val app1 = AppDefinition("a".toRootPath)
-        val app2 = AppDefinition("b".toRootPath)
+        val app1 = AppDefinition("a".toRootPath, cmd = Some("sleep"))
+        val app2 = AppDefinition("b".toRootPath, cmd = Some("sleep"))
         val root1 = createRootGroup(Map("a".toRootPath -> app1))
         val root2 = createRootGroup(Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Timestamp.now()), promise)
@@ -405,12 +405,12 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "block plans with deleted roots until compaction completes" in {
         val f = Fixture(2)()()
-        val app1 = AppDefinition("a".toRootPath)
+        val app1 = AppDefinition("a".toRootPath, cmd = Some("sleep"))
         val root1 = createRootGroup(Map("a".toRootPath -> app1))
 
         f.actor.setState(Compacting, BlockedEntities(rootsDeleting = Set(root1.version.toOffsetDateTime)))
         val promise = Promise[Done]()
-        val app2 = AppDefinition("b".toRootPath)
+        val app2 = AppDefinition("b".toRootPath, cmd = Some("sleep"))
         val root2 = createRootGroup(Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
@@ -528,17 +528,17 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "delete unused apps, pods, and roots" in {
         val f = Fixture(1)()()
-        val dApp1 = AppDefinition("a".toRootPath)
-        val dApp2 = AppDefinition("b".toRootPath)
+        val dApp1 = AppDefinition("a".toRootPath, cmd = Some("sleep"))
+        val dApp2 = AppDefinition("b".toRootPath, cmd = Some("sleep"))
         val dApp1V2 = dApp1.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(7)))
-        val app3 = AppDefinition("c".toRootPath)
+        val app3 = AppDefinition("c".toRootPath, cmd = Some("sleep"))
         f.appRepo.store(dApp1).futureValue
         f.appRepo.storeVersion(dApp2).futureValue
         f.appRepo.store(app3)
 
         val dPod1 = PodDefinition("p1".toRootPath)
         val dPod2 = PodDefinition("p2".toRootPath)
-        val dPod1V2 = dPod1.copy(version = Timestamp(7))
+        val dPod1V2 = dPod1.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(7)))
         val pod3 = PodDefinition("p3".toRootPath)
         f.podRepo.store(dPod1).futureValue
         f.podRepo.storeVersion(dPod2).futureValue
@@ -546,14 +546,14 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         val dRoot1 = createRootGroup(Map(dApp1.id -> dApp1), Map(dPod1.id -> dPod1), version = Timestamp(1))
         f.groupRepo.storeRoot(dRoot1, dRoot1.transitiveApps.toIndexedSeq, Seq(dApp2.id),
-          dRoot1.transitivePodsById.values.toIndexedSeq, Seq(dPod2.id)).futureValue
+          dRoot1.transitivePods.toIndexedSeq, Seq(dPod2.id)).futureValue
 
         val root2 = createRootGroup(
           Map(app3.id -> app3, dApp1V2.id -> dApp1V2),
           Map(pod3.id -> pod3, dPod1V2.id -> dPod1V2), version = Timestamp(2))
         val root3 = createRootGroup(version = Timestamp(3))
         val root4 = createRootGroup(Map(dApp1V2.id -> dApp1V2), Map(dPod1V2.id -> dPod1V2), version = Timestamp(4))
-        f.groupRepo.storeRoot(root2, root2.transitiveApps.toIndexedSeq, Nil, root2.transitivePodsById.values.toIndexedSeq, Nil).futureValue
+        f.groupRepo.storeRoot(root2, root2.transitiveApps.toIndexedSeq, Nil, root2.transitivePods.toIndexedSeq, Nil).futureValue
         f.groupRepo.storeRoot(root3, Nil, Nil, Nil, Nil).futureValue
 
         val plan = DeploymentPlan(root2, root3)

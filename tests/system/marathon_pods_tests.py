@@ -120,12 +120,14 @@ def test_event_channel_for_pods():
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
+    leader_ip = shakedown.marathon_leader_ip()
+
     # look for created
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_deployment_message():
-        status, stdout = shakedown.run_command_on_master('cat events.exitcode')
+        status, stdout = shakedown.run_command(leader_ip, 'cat events.exitcode')
         assert str(stdout).strip() == '', "SSE stream disconnected (CURL exit code is {})".format(stdout.strip())
-        status, stdout = shakedown.run_command_on_master('cat events.txt')
+        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
         assert 'event_stream_attached' in stdout, "event_stream_attached event has not been produced"
         assert 'pod_created_event' in stdout, "pod_created_event event has not been produced"
         assert 'deployment_step_success' in stdout, "deployment_step_success event has not beed produced"
@@ -139,7 +141,7 @@ def test_event_channel_for_pods():
     # look for updated
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_update_message():
-        status, stdout = shakedown.run_command_on_master('cat events.txt')
+        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
         assert 'pod_updated_event' in stdout, 'pod_update_event event has not been produced'
 
     check_update_message()
@@ -397,11 +399,9 @@ def test_pod_health_check():
     common.deployment_wait(service_id=pod_id)
 
     tasks = common.get_pod_tasks(pod_id)
-    c1_health = tasks[0]['statuses'][0]['healthy']
-    c2_health = tasks[1]['statuses'][0]['healthy']
-
-    assert c1_health, "One of the pod's tasks is unhealthy"
-    assert c2_health, "One of the pod's tasks is unhealthy"
+    for task in tasks:
+        health = common.running_task_status(task['statuses'])['healthy']
+        assert health, "One of the pod's tasks (%s) is unhealthy" % (task['name'])
 
 
 @shakedown.dcos_1_9
@@ -421,9 +421,9 @@ def test_pod_with_container_network():
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    tasks = common.get_pod_tasks(pod_id)
+    task = common.task_by_name(common.get_pod_tasks(pod_id), "nginx")
 
-    network_info = tasks[0]['statuses'][0]['container_status']['network_infos'][0]
+    network_info = common.running_status_network_info(task['statuses'])
     assert network_info['name'] == "dcos", \
         "The network name is {}, but 'dcos' was expected".format(network_info['name'])
 
@@ -451,8 +451,8 @@ def test_pod_with_container_bridge_network():
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    task = common.get_pod_tasks(pod_id)[0]
-    network_info = task['statuses'][0]['container_status']['network_infos'][0]
+    task = common.task_by_name(common.get_pod_tasks(pod_id), "nginx")
+    network_info = common.running_status_network_info(task['statuses'])
     assert network_info['name'] == "mesos-bridge", \
         "The network is {}, but mesos-bridge was expected".format(network_info['name'])
 

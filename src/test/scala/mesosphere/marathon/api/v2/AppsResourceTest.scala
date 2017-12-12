@@ -78,10 +78,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       Raml.fromRaml(normalized)
     }
 
-    def prepareApp(app: App, groupManager: GroupManager): (Array[Byte], DeploymentPlan) = {
+    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef))
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -189,7 +189,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -210,7 +210,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -659,7 +659,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -686,7 +686,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -705,7 +705,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -735,7 +735,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -758,7 +758,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         container = Option(containers),
         secrets = Map("bar" -> SecretDef("foo"))
       )
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -775,7 +775,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           mem = -128)
-        val (body, plan) = prepareApp(app, groupManager)
+        val (body, plan) = prepareApp(app, groupManager, validate = false)
 
         Then("A constraint violation exception is thrown")
         val response = appsResource.create(body, force = false, auth.request)
@@ -785,7 +785,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           cpus = -1)
-        val (body, _) = prepareApp(app, groupManager)
+        val (body, _) = prepareApp(app, groupManager, validate = false)
 
         val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
@@ -794,7 +794,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           instances = -1)
-        val (body, _) = prepareApp(app, groupManager)
+        val (body, _) = prepareApp(app, groupManager, validate = false)
 
         val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
@@ -835,7 +835,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
     "Create a new app fails with Validation errors" in new Fixture {
       Given("An app with validation errors")
       val app = App(id = "/app")
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       Then("A constraint violation exception is thrown")
       val response = appsResource.create(body, force = false, auth.request)
@@ -1302,7 +1302,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
     }
 
     "Restart an existing app" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"))
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       service.deploy(any, any) returns Future.successful(Done)
@@ -1435,11 +1435,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       restart.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
-    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath)))) {
-      Given("A real Group Manager with one app")
-      val appA = AppDefinition("/a".toRootPath)
-      val rootGroup = initialRoot
-
+    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath, cmd = Some("sleep"))))) {
       Given("An unauthorized request")
       auth.authenticated = true
       auth.authorized = false
@@ -1578,6 +1574,25 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       (appJson \ "fetch" \ 0 \ "executable" get) should be(JsBoolean(true))
       (appJson \ "fetch" \ 0 \ "cache" get) should be(JsBoolean(false))
       (appJson \ "fetch" \ 0 \ "destPath" get) should be(JsString("bash.copy"))
+    }
+
+    "Allow creating app with network name with underscore" in new Fixture {
+      Given("An app with a network name with underscore")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(
+          image = "image")))
+      val app = App(
+        id = "/app", cmd = Some("cmd"), container = Option(container),
+        networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It is successful")
+      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
     }
   }
 }

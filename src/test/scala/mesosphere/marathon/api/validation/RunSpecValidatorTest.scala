@@ -638,8 +638,8 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
             case "mesosphere.marathon.plugin.validation.RunSpecValidator" =>
               List(
                 isTrue[mesosphere.marathon.plugin.ApplicationSpec]("SECURITY_* environment variables are not permitted") {
-                _.env.keys.count(_.startsWith("SECURITY_")) == 0
-              }.asInstanceOf[T]
+                  _.env.keys.count(_.startsWith("SECURITY_")) == 0
+                }.asInstanceOf[T]
               )
             case _ => List.empty
           }

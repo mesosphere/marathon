@@ -31,18 +31,18 @@ import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class MarathonSchedulerActor private (
-  groupRepository: GroupRepository,
-  schedulerActions: SchedulerActions,
-  deploymentManager: DeploymentManager,
-  deploymentRepository: DeploymentRepository,
-  historyActorProps: Props,
-  healthCheckManager: HealthCheckManager,
-  killService: KillService,
-  launchQueue: LaunchQueue,
-  marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-  electionService: ElectionService,
-  eventBus: EventStream)(implicit val mat: Materializer) extends Actor
-    with StrictLogging with Stash {
+    groupRepository: GroupRepository,
+    schedulerActions: SchedulerActions,
+    deploymentManager: DeploymentManager,
+    deploymentRepository: DeploymentRepository,
+    historyActorProps: Props,
+    healthCheckManager: HealthCheckManager,
+    killService: KillService,
+    launchQueue: LaunchQueue,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    electionService: ElectionService,
+    eventBus: EventStream)(implicit val mat: Materializer) extends Actor
+  with StrictLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 
@@ -391,7 +391,7 @@ class SchedulerActions(
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = async {
     val root = await(groupRepository.root())
 
-    val runSpecIds = root.transitiveRunSpecsById.keySet
+    val runSpecIds = root.transitiveRunSpecIds.toSet
     val instances = await(instanceTracker.instancesBySpec())
 
     val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
@@ -419,7 +419,7 @@ class SchedulerActions(
 
   def reconcileHealthChecks(): Unit = {
     groupRepository.root().flatMap { rootGroup =>
-      healthCheckManager.reconcile(rootGroup.transitiveAppsById.valuesIterator.to[Seq])
+      healthCheckManager.reconcile(rootGroup.transitiveApps.toIndexedSeq)
     }
   }
 
@@ -490,7 +490,7 @@ class SchedulerActions(
   }
 
   def runSpecById(id: PathId): Future[Option[RunSpec]] = {
-    groupRepository.root().map(_.transitiveRunSpecsById.get(id))
+    groupRepository.root().map(_.runSpec(id))
   }
 }
 

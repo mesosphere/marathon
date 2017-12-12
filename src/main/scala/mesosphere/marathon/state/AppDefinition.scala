@@ -26,62 +26,62 @@ import scala.concurrent.duration._
 
 case class AppDefinition(
 
-  id: PathId,
+    id: PathId,
 
-  override val cmd: Option[String] = App.DefaultCmd,
+    override val cmd: Option[String] = App.DefaultCmd,
 
-  override val args: Seq[String] = App.DefaultArgs,
+    override val args: Seq[String] = App.DefaultArgs,
 
-  user: Option[String] = App.DefaultUser,
+    user: Option[String] = App.DefaultUser,
 
-  env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
+    env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
 
-  instances: Int = App.DefaultInstances,
+    instances: Int = App.DefaultInstances,
 
-  resources: Resources = Apps.DefaultResources,
+    resources: Resources = Apps.DefaultResources,
 
-  executor: String = App.DefaultExecutor,
+    executor: String = App.DefaultExecutor,
 
-  constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
+    constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
-  fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
+    fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
-  portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+    portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
 
-  requirePorts: Boolean = App.DefaultRequirePorts,
+    requirePorts: Boolean = App.DefaultRequirePorts,
 
-  backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
+    backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
 
-  override val container: Option[Container] = AppDefinition.DefaultContainer,
+    override val container: Option[Container] = AppDefinition.DefaultContainer,
 
-  healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+    healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
 
-  readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
+    readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
-  taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+    taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
-  dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
+    dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
-  upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
+    upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
 
-  labels: Map[String, String] = AppDefinition.DefaultLabels,
+    labels: Map[String, String] = AppDefinition.DefaultLabels,
 
-  acceptedResourceRoles: Set[String] = AppDefinition.DefaultAcceptedResourceRoles,
+    acceptedResourceRoles: Set[String] = AppDefinition.DefaultAcceptedResourceRoles,
 
-  networks: Seq[Network] = AppDefinition.DefaultNetworks,
+    networks: Seq[Network] = AppDefinition.DefaultNetworks,
 
-  versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
+    versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
 
-  override val residency: Option[Residency] = AppDefinition.DefaultResidency,
+    override val residency: Option[Residency] = AppDefinition.DefaultResidency,
 
-  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
+    secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
 
-  override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
+    override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
 
-  override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
+    override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
 
-  tty: Option[Boolean] = AppDefinition.DefaultTTY) extends RunSpec
-    with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    tty: Option[Boolean] = AppDefinition.DefaultTTY) extends RunSpec
+  with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
     * As an optimization, we precompute and cache the hash of this object
@@ -620,7 +620,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   def updateIsValid(from: RootGroup): Validator[AppDefinition] = {
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
-        from.transitiveAppsById.get(app.id) match {
+        from.app(app.id) match {
           case (Some(last)) if last.isResident || app.isResident => residentUpdateIsValid(last)(app)
           case _ => Success
         }

@@ -9,14 +9,14 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
-import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
+import akka.http.scaladsl.server.{ Rejection, RejectionError, Route }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.api.akkahttp.AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, ExistingRunSpecId, RemainingTaskId, Version }
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
+import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -30,9 +30,8 @@ import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.raml.EnrichedTaskConversion._
-import mesosphere.marathon.raml.InstanceConversion._
-import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, SingleInstance, VersionList }
+import mesosphere.marathon.raml.TaskConversion._
+import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, VersionList }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
@@ -40,8 +39,6 @@ import PathMatchers.forceParameter
 
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
 
 class AppsController(
     val clock: Clock,
@@ -127,7 +124,7 @@ class AppsController(
             plan -> appWithDeployments
           }
         }
-        onSuccessLegacy(Some(rawApp.id))(create).apply {
+        onSuccessLegacy(create).apply {
           case (plan, createdApp) =>
             eventBus.publish(ApiPostEvent(remoteAddr.toString, reqUri.toString, createdApp.app))
             complete((StatusCodes.Created, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), createdApp))
@@ -161,7 +158,7 @@ class AppsController(
     val version = clock.now()
     (forceParameter & entity(as(appUpdatesUnmarshaller(partialUpdate)))) { (force, appUpdates) =>
       val updateGroupFn = updateAppsRootGroupModifier(appUpdates, partialUpdate, allowCreation, version)
-      onSuccessLegacy(None)(groupManager.updateRoot(PathId.empty, updateGroupFn, version, force)).apply { plan =>
+      onSuccessLegacy(groupManager.updateRoot(PathId.empty, updateGroupFn, version, force)).apply { plan =>
         complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
       }
     }
@@ -191,37 +188,6 @@ class AppsController(
     }
   }
 
-  /**
-    * It'd be neat if we didn't need this. Would take some heavy-ish refactoring to get all of the update functions to
-    * take an either.
-    */
-  private def onSuccessLegacy[T](maybeAppId: Option[PathId])(f: => Future[T])(implicit identity: Identity): Directive1[T] = onComplete({
-    try { f }
-    catch {
-      case NonFatal(ex) =>
-        Future.failed(ex)
-    }
-  }).flatMap {
-    case Success(t) =>
-      provide(t)
-    case Failure(ValidationFailedException(_, failure)) =>
-      reject(EntityMarshallers.ValidationFailed(failure))
-    case Failure(AccessDeniedException(msg)) =>
-      reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
-    case Failure(_: AppNotFoundException) =>
-      reject(
-        maybeAppId.map { appId =>
-          Rejections.EntityNotFound.noApp(appId)
-        } getOrElse Rejections.EntityNotFound()
-      )
-    case Failure(RejectionError(rejection)) =>
-      reject(rejection)
-    case Failure(ConflictingChangeException(msg)) =>
-      reject(Rejections.ConflictingChange(Message(msg)))
-    case Failure(ex) =>
-      throw ex
-  }
-
   private def putSingle(appId: PathId)(implicit identity: Identity): Route =
     parameter('partialUpdate.as[Boolean].?(true)) { partialUpdate =>
       update(appId, partialUpdate = partialUpdate, allowCreation = true)
@@ -248,7 +214,7 @@ class AppsController(
         def fn(appDefinition: Option[AppDefinition]) = updateOrCreate(
           appId, appDefinition, appUpdate, partialUpdate, allowCreation, clock.now(), marathonSchedulerService)
 
-        onSuccessLegacy(Some(appId))(groupManager.updateApp(appId, fn, version, force)).apply { plan =>
+        onSuccessLegacy(groupManager.updateApp(appId, fn, version, force)).apply { plan =>
           plan.target.app(appId).foreach { appDef =>
             eventBus.publish(ApiPostEvent(remoteAddr.toString, requestUri.toString, appDef))
           }
@@ -295,7 +261,7 @@ class AppsController(
   private def restartApp(appId: PathId)(implicit identity: Identity): Route = {
     forceParameter { force =>
       val newVersion = clock.now()
-      onSuccessLegacy(Some(appId))(
+      onSuccessLegacy(
         groupManager.updateApp(
           appId,
           markAppForRestarting(appId),
@@ -325,7 +291,7 @@ class AppsController(
             await(runningTasks(Set(appId), instancesBySpec).runWith(Sink.seq)).map(_.toRaml)
           }
           onSuccess(tasksF) { tasks =>
-            complete(raml.EnrichedTasksList(tasks))
+            complete(raml.TaskList(tasks))
           }
         }
       case None =>
@@ -348,6 +314,7 @@ class AppsController(
       .mapConcat(identity)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def killTasks(appId: PathId)(implicit identity: Identity): Route = {
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & extractTaskKillingMode) {
@@ -362,17 +329,32 @@ class AppsController(
               complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
             }
           case TaskKillingMode.Wipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
-              complete(raml.InstanceList(instances.map(_.toRaml)))
+            val killInstances = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
+              instances.map { instance =>
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, Nil)
+              }
+            }
+
+            onSuccess(killInstances) { enrichedTasks: Seq[EnrichedTask] =>
+              complete((StatusCodes.OK, raml.TaskList(enrichedTasks.toRaml)))
             }
           case TaskKillingMode.KillWithoutWipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
-              complete(raml.InstanceList(instances.map(_.toRaml)))
+            val killInstances = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
+              instances.map { instance =>
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, Nil)
+              }
+            }
+
+            onSuccess(killInstances) { enrichedTasks: Seq[EnrichedTask] =>
+              complete((StatusCodes.OK, raml.TaskList(enrichedTasks.toRaml)))
             }
         }
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = {
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & extractTaskKillingMode) {
@@ -393,21 +375,34 @@ class AppsController(
               complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
             }
           case TaskKillingMode.Wipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
+            val killedInstance = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
+              val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.headOption.map { instance =>
-                complete(SingleInstance(instance.toRaml))
-              }.getOrElse(
-                reject(EntityNotFound.noTask(taskId))
-              )
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+              }
+            }
 
+            onSuccess(killedInstance) {
+              case None =>
+                reject(EntityNotFound.noTask(taskId))
+              case Some(enrichedTask) =>
+                complete(raml.TaskSingle(enrichedTask.toRaml))
             }
           case TaskKillingMode.KillWithoutWipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
+            val killedInstance = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
+              val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.headOption.map { instance =>
-                complete(SingleInstance(instance.toRaml))
-              }.getOrElse(
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+              }
+            }
+
+            onSuccess(killedInstance) {
+              case None =>
                 reject(EntityNotFound.noTask(taskId))
-              )
+              case Some(enrichedTask) =>
+                complete(raml.TaskSingle(enrichedTask.toRaml))
             }
         }
     }

@@ -139,7 +139,7 @@ private[heartbeat] object HeartbeatInternal {
 
   /** @constructor capture the state of an active heartbeat monitor */
   case class DataActive(
-    reactor: Reactor,
-    sessionToken: AnyRef,
-    missed: Int = 0) extends Data
+      reactor: Reactor,
+      sessionToken: AnyRef,
+      missed: Int = 0) extends Data
 }

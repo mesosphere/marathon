@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package state
 
-import java.time.format.DateTimeFormatter
-import java.time.{ OffsetDateTime, Instant, ZoneOffset, Duration }
+import java.time.format.{ DateTimeFormatter, DateTimeParseException }
+import java.time.{ Duration, Instant, OffsetDateTime, ZoneOffset }
 import java.util.concurrent.TimeUnit
 
 import org.apache.mesos
@@ -10,6 +10,7 @@ import org.apache.mesos
 import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
 import scala.math.Ordered
+import scala.util.{ Failure, Success, Try }
 
 /**
   * An ordered wrapper for UTC timestamps.
@@ -67,10 +68,12 @@ object Timestamp {
 
   /**
     * Returns a new Timestamp representing the supplied time.
-    *
-    * See the Joda time documentation for a description of acceptable formats:
     */
-  def apply(time: String): Timestamp = Timestamp(OffsetDateTime.parse(time))
+  def apply(time: String): Timestamp = Timestamp(Try(OffsetDateTime.parse(time)) match {
+    case Success(parsed) => parsed
+    case Failure(e: DateTimeParseException) => throw new IllegalArgumentException(s"Invalid timestamp provided '$time'. Expecting ISO-8601 datetime string.", e)
+    case Failure(e) => throw e
+  })
 
   /**
     * Returns a new Timestamp representing the current instant.

@@ -63,12 +63,12 @@ import scala.util.control.NonFatal
   *   more additional GC Requests were sent to the actor.
   */
 private[storage] class GcActor[K, C, S](
-  val deploymentRepository: DeploymentRepositoryImpl[K, C, S],
-  val groupRepository: StoredGroupRepositoryImpl[K, C, S],
-  val appRepository: AppRepositoryImpl[K, C, S],
-  val podRepository: PodRepositoryImpl[K, C, S],
-  val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext)
-    extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
+    val deploymentRepository: DeploymentRepositoryImpl[K, C, S],
+    val groupRepository: StoredGroupRepositoryImpl[K, C, S],
+    val appRepository: AppRepositoryImpl[K, C, S],
+    val podRepository: PodRepositoryImpl[K, C, S],
+    val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext)
+  extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
   // We already released metrics with these names, so we can't use the Metrics.* methods
   private val totalGcs = Kamon.metrics.counter("GarbageCollector.totalGcs")
@@ -174,10 +174,10 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
       promise.success(Done)
       val originalUpdates =
         addAppVersions(
-          plan.original.transitiveAppsById.map { case (id, app) => id -> app.version.toOffsetDateTime },
+          plan.original.transitiveApps.map(app => app.id -> app.version.toOffsetDateTime)(collection.breakOut),
           updates.appVersionsStored)
       val allUpdates =
-        addAppVersions(plan.target.transitiveAppsById.map { case (id, app) => id -> app.version.toOffsetDateTime }, originalUpdates)
+        addAppVersions(plan.target.transitiveApps.map(app => app.id -> app.version.toOffsetDateTime)(collection.breakOut), originalUpdates)
       val newRootsStored = updates.rootsStored ++
         Set(plan.original.version.toOffsetDateTime, plan.target.version.toOffsetDateTime)
       stay using updates.copy(appVersionsStored = allUpdates, rootsStored = newRootsStored)
@@ -265,9 +265,8 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
     def appsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
-      currentRoot.transitiveAppsById.foreach {
-        case (id, app) =>
-          appVersionsInUse.addBinding(id, app.version.toOffsetDateTime)
+      currentRoot.transitiveApps.foreach { app =>
+        appVersionsInUse.addBinding(app.id, app.version.toOffsetDateTime)
       }
       roots.foreach { root =>
         root.transitiveAppIds.foreach {
@@ -280,9 +279,8 @@ private[storage] trait ScanBehavior[K, C, S] extends StrictLogging { this: FSM[S
 
     def podsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val podVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
-      currentRoot.transitivePodsById.foreach {
-        case (id, pod) =>
-          podVersionsInUse.addBinding(id, pod.version.toOffsetDateTime)
+      currentRoot.transitivePods.foreach { pod =>
+        podVersionsInUse.addBinding(pod.id, pod.version.toOffsetDateTime)
       }
       roots.foreach { root =>
         root.transitivePodIds.foreach {
@@ -480,20 +478,20 @@ object GcActor {
   private[storage] sealed trait Data extends Product with Serializable
   case object IdleData extends Data
   case class UpdatedEntities(
-    appsStored: Set[PathId] = Set.empty,
-    appVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
-    podsStored: Set[PathId] = Set.empty,
-    podVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
-    rootsStored: Set[OffsetDateTime] = Set.empty,
-    gcRequested: Boolean = false) extends Data
+      appsStored: Set[PathId] = Set.empty,
+      appVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+      podsStored: Set[PathId] = Set.empty,
+      podVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+      rootsStored: Set[OffsetDateTime] = Set.empty,
+      gcRequested: Boolean = false) extends Data
   case class BlockedEntities(
-    appsDeleting: Set[PathId] = Set.empty,
-    appVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
-    podsDeleting: Set[PathId] = Set.empty,
-    podVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
-    rootsDeleting: Set[OffsetDateTime] = Set.empty,
-    promises: List[Promise[Done]] = List.empty,
-    gcRequested: Boolean = false) extends Data
+      appsDeleting: Set[PathId] = Set.empty,
+      appVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+      podsDeleting: Set[PathId] = Set.empty,
+      podVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+      rootsDeleting: Set[OffsetDateTime] = Set.empty,
+      promises: List[Promise[Done]] = List.empty,
+      gcRequested: Boolean = false) extends Data
 
   def props[K, C, S](
     deploymentRepository: DeploymentRepositoryImpl[K, C, S],
