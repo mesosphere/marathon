@@ -452,7 +452,7 @@ def test_pod_with_container_bridge_network():
     common.deployment_wait(service_id=pod_id)
 
     task = common.task_by_name(common.get_pod_tasks(pod_id), "nginx")
-    network_info = common.running_status_network_info(task[0]['statuses'])
+    network_info = common.running_status_network_info(task['statuses'])
     assert network_info['name'] == "mesos-bridge", \
         "The network is {}, but mesos-bridge was expected".format(network_info['name'])
 
