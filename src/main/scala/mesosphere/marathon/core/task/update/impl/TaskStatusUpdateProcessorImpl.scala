@@ -55,7 +55,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
       case Some(instance) if taskIsUnknown(instance, taskId) =>
         if (killWhenUnknown(taskCondition)) {
           killUnknownTaskTimer {
-            logger.warn(s"Kill unknown ${taskId} because instance doesn't contain it")
+            logger.warn(s"Kill unknown ${taskId} because it's not tracked by marathon")
             Future.successful(killService.killUnknownTask(taskId, KillReason.Unknown))
           }
         }

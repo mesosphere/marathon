@@ -294,7 +294,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       verifyNoMoreInteractions()
     }
 
-    "receiving an running update for known instnace but unknown task" in new Fixture {
+    "kill the orphaned task when receiving an running update for the known instance but unknown task" in new Fixture {
       val appId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched().getInstance()
       val incrementedTaskId = Task.Id.forResidentTask(Task.Id(instance.instanceId.idString))
