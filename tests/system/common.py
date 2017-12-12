@@ -124,6 +124,7 @@ def cluster_info(mom_name='marathon-user'):
     else:
         print("Marathon MoM not present")
 
+
 @retrying.retry(wait_fixed=1000, stop_max_attempt_number=5, retry_on_exception=ignore_exception)
 def wait_for_marathon_about():
     """ When the cluster is starting, it might happen that there is some delay in:
@@ -134,6 +135,7 @@ def wait_for_marathon_about():
     """
     client = marathon.create_client()
     return client.get_about()
+
 
 def delete_all_apps():
     client = marathon.create_client()
