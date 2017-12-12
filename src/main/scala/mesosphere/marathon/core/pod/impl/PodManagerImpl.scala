@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 case class PodManagerImpl(groupManager: GroupManager) extends PodManager {
 
-  override def ids(): Set[PathId] = groupManager.rootGroup().transitivePodIds
+  override def ids(): Set[PathId] = groupManager.rootGroup().transitivePodIds.toSet
 
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt

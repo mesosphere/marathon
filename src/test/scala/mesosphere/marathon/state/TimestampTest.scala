@@ -50,6 +50,11 @@ class TimestampTest extends UnitTest {
         (t1 == t2) shouldBe true
         (t1.hashCode == t2.hashCode) shouldBe true
       }
+      "fail for incorrect string" in {
+        intercept[IllegalArgumentException] {
+          Timestamp("20:39:32.972Z")
+        }
+      }
     }
     "converting from Mesos" should {
       import org.apache.mesos

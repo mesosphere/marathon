@@ -79,16 +79,15 @@ object AssignDynamicServiceLogic extends StrictLogging {
      * app in the case that servicePorts are re-posted all as 0's.
      */
     val usedServicePorts: Set[Int] =
-      (from.transitiveApps.iterator ++ to.transitiveApps.iterator).flatMap(_.servicePorts).toSet
+      (from.transitiveApps ++ to.transitiveApps).flatMap(_.servicePorts).toSet
     val unassignedPortsIterator = portRange.iterator
       .filter { p => !usedServicePorts.contains(p) }
       .map { port =>
         logger.debug(s"Take next configured free port: $port")
         port
       }
-    val dynamicApps: Iterator[AppDefinition] =
+    val dynamicApps: Iterable[AppDefinition] =
       to.transitiveApps
-        .iterator
         .filter { newApp => changedOrNew(from, newApp) }
         .map {
           // assign values for service ports that the user has left "blank" (set to zero)
