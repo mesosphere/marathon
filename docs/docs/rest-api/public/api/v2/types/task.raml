@@ -6,14 +6,6 @@ uses:
 
 types:
 
-  LocalVolumeId:
-    type: object
-    properties:
-      runSpecId: strings.PathId
-      containerPath: string
-      uuid: string
-      persistenceId: string
-
   Timeout:
     type: object
     properties:
@@ -59,12 +51,48 @@ types:
       condition: strings.Condition
       networkInfo: NetworkInfo
 
+  # Not to be confused with network.IpAddress
+  IpAddr:
+    type: object
+    properties:
+      ipAddress: string
+      protocol: strings.IpProtocol
+
+  LocalVolumeId:
+    type: object
+    properties:
+      runSpecId: strings.PathId
+      containerPath: string
+      uuid: string
+      persistenceId: strings.PersistenceId
+
   Task:
     type: object
     properties:
-      taskId: string
-      reservation?: Reservation
-      status: Status
-      runSpecVersion: datetime
+      appId: strings.PathId
+      healthCheckResults?: health.Health[]
+      host: string
+      id: string
+      ipAddresses?: IpAddr[]
+      ports?: numbers.Port[]
+      servicePorts?: numbers.Port[]
+      slaveId?: string
+      state: strings.MesosTaskState
+      stagedAt?: string
+      startedAt?: string
+      version?: string
+      localVolumes?: LocalVolumeId[]
 
-    
+  TaskSingle:
+    type: object
+    properties:
+      task: Task
+
+  TaskList:
+    type: object
+    properties:
+      tasks: Task[]
+
+  TaskStatusCondition:
+    type: string
+    enum: [ running, staging ]

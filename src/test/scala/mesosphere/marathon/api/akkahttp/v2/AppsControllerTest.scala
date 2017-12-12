@@ -24,17 +24,15 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.Instance.AgentInfo
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.Reservation
-import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity }
-import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer }
+import mesosphere.marathon.raml.Raml
+//import mesosphere.marathon.raml.{, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork,
+//, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode,
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -50,7 +48,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest with RouteBehaviours {
+class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRouteTest with RouteBehaviours with ResponseMatchers {
 
   case class Fixture(
       clock: SettableClock = new SettableClock(),
@@ -106,17 +104,17 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     implicit val rejectionHandler: RejectionHandler = AkkaHttpMarathonService.rejectionHandler
     val route: Route = Route.seal(appsController.route)
 
-    def normalize(app: App): App = {
+    def normalize(app: raml.App): raml.App = {
       val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
       AppNormalization(normalizationConfig).normalized(migrated)
     }
 
-    def normalizeAndConvert(app: App): AppDefinition = {
+    def normalizeAndConvert(app: raml.App): AppDefinition = {
       val normalized = normalize(app)
       Raml.fromRaml(normalized)
     }
 
-    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
+    def prepareApp(app: raml.App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
       val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
@@ -129,7 +127,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     def createAppWithVolumes(`type`: String, volumes: String, groupManager: GroupManager, auth: TestAuthFixture): HttpEntity.Strict = {
-      val app = App(id = "/app", cmd = Some(
+      val app = raml.App(id = "/app", cmd = Some(
         "foo"))
 
       prepareApp(app, groupManager)
@@ -199,7 +197,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
   "Apps Controller" should {
     "Create a new app successfully" in new Fixture {
       Given("An app and group")
-      val app = App(id = "/app", cmd = Some("cmd"))
+      val app = raml.App(id = "/app", cmd = Some("cmd"))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -262,14 +260,14 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Create a new app with w/ Mesos containerizer and a Docker config.json" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
       Given("An app with a Docker config.json")
-      val container = RamlContainer(
-        `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(
+      val container = raml.Container(
+        `type` = raml.EngineType.Mesos,
+        docker = Option(raml.DockerContainer(
           image = "private/image",
-          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
-      val app = App(
+          pullConfig = Option(raml.DockerPullConfig("pullConfigSecret")))))
+      val app = raml.App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
-        secrets = Map("pullConfigSecret" -> SecretDef("/config")))
+        secrets = Map("pullConfigSecret" -> raml.SecretDef("/config")))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -283,14 +281,14 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating a new app with w/ Docker containerizer and a Docker config.json should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
       Given("An app with a Docker config.json")
-      val container = RamlContainer(
-        `type` = EngineType.Docker,
-        docker = Option(DockerContainer(
+      val container = raml.Container(
+        `type` = raml.EngineType.Docker,
+        docker = Option(raml.DockerContainer(
           image = "private/image",
-          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
-      val app = App(
+          pullConfig = Option(raml.DockerPullConfig("pullConfigSecret")))))
+      val app = raml.App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
-        secrets = Map("pullConfigSecret" -> SecretDef("/config")))
+        secrets = Map("pullConfigSecret" -> raml.SecretDef("/config")))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -305,12 +303,12 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating a new app with non-existing Docker config.json secret should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
       Given("An app with a Docker config.json")
-      val container = RamlContainer(
-        `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(
+      val container = raml.Container(
+        `type` = raml.EngineType.Mesos,
+        docker = Option(raml.DockerContainer(
           image = "private/image",
-          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
-      val app = App(
+          pullConfig = Option(raml.DockerPullConfig("pullConfigSecret")))))
+      val app = raml.App(
         id = "/app", cmd = Some("cmd"), container = Option(container))
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -326,12 +324,12 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creation of an app with valid pull config should fail if secrets feature is disabled" in new Fixture {
       Given("An app with a Docker config.json")
-      val container = RamlContainer(
-        `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(
+      val container = raml.Container(
+        `type` = raml.EngineType.Mesos,
+        docker = Option(raml.DockerContainer(
           image = "private/image",
-          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+          pullConfig = Option(raml.DockerPullConfig("pullConfigSecret")))))
+      val app = raml.App(id = "/app", cmd = Some("cmd"), container = Option(container))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -350,13 +348,13 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Allow creating app with network name with underscore" in new Fixture {
       Given("An app with a network name with underscore")
-      val container = RamlContainer(
-        `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(
+      val container = raml.Container(
+        `type` = raml.EngineType.Mesos,
+        docker = Option(raml.DockerContainer(
           image = "image")))
-      val app = App(
+      val app = raml.App(
         id = "/app", cmd = Some("cmd"), container = Option(container),
-        networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
+        networks = Seq(raml.Network(name = Some("name_with_underscore"), mode = raml.NetworkMode.Container)))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -370,7 +368,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Do partial update with patch methods" in new Fixture {
       Given("An app")
       val id = "/app"
-      val app = App(
+      val app = raml.App(
         id = id,
         cmd = Some("cmd"),
         instances = 1
@@ -381,7 +379,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       system.eventStream.subscribe(eventStreamProbe.ref, classOf[ApiPostEvent])
 
       When("The application is updated")
-      val updateRequest = App(id = id, instances = 2)
+      val updateRequest = raml.App(id = id, instances = 2)
       val updatedBody = Json.stringify(Json.toJson(updateRequest)).getBytes("UTF-8")
 
       val entity = HttpEntity(updatedBody).withContentType(ContentTypes.`application/json`)
@@ -396,10 +394,10 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Fail creating application when network name is missing" in new Fixture {
       Given("An app and group")
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container))
+        networks = Seq(raml.Network(mode = raml.NetworkMode.Container))
       )
 
       When("The create request is made")
@@ -413,10 +411,10 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Create a new app with IP/CT on virtual network foo" in new Fixture {
       Given("An app and group")
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo")))
+        networks = Seq(raml.Network(mode = raml.NetworkMode.Container, name = Some("foo")))
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -484,12 +482,12 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Create a new app with IP/CT on virtual network foo w/ MESOS container spec" in new Fixture {
       Given("An app and group")
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo"))),
+        networks = Seq(raml.Network(mode = raml.NetworkMode.Container, name = Some("foo"))),
 
-        container = Some(raml.Container(`type` = EngineType.Mesos))
+        container = Some(raml.Container(`type` = raml.EngineType.Mesos))
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -557,15 +555,15 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Create a new app with IP/CT on virtual network foo, then update it to bar" in new Fixture {
       Given("An app and group")
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo")))
+        networks = Seq(raml.Network(mode = raml.NetworkMode.Container, name = Some("foo")))
       )
       prepareApp(app, groupManager)
 
       When("The application is updated")
-      val updatedApp = app.copy(networks = Seq(Network(mode = NetworkMode.Container, name = Some("bar"))))
+      val updatedApp = app.copy(networks = Seq(raml.Network(mode = raml.NetworkMode.Container, name = Some("bar"))))
       val updatedJson = Json.toJson(updatedApp).as[JsObject]
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
 
@@ -588,10 +586,10 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       ))
     ) {
       Given("An app and group")
-      val updatedApp = App(
+      val updatedApp = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container))
+        networks = Seq(raml.Network(mode = raml.NetworkMode.Container))
       )
 
       When("The application is updated")
@@ -608,7 +606,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Create a new app without IP/CT when default virtual network is bar" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
       Given("An app and group")
 
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd")
       )
@@ -671,10 +669,10 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
       Given("An app and group")
 
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container)))
+        networks = Seq(raml.Network(mode = raml.NetworkMode.Container)))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -742,10 +740,10 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Create a new app with IP/CT when default virtual network is bar, but Alice specified foo" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
       Given("An app and group")
 
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo")))
+        networks = Seq(raml.Network(mode = raml.NetworkMode.Container, name = Some("foo")))
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -814,17 +812,17 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Create a new app with IP/CT with virtual network foo w/ Docker" in new Fixture {
       // we intentionally use the deprecated API to ensure that we're more fully exercising normalization
       Given("An app and group")
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        ipAddress = Some(IpAddress(networkName = Some("foo"))),
+        ipAddress = Some(raml.IpAddress(networkName = Some("foo"))),
         container = Some(raml.Container(
-          `type` = EngineType.Docker,
-          docker = Some(DockerContainer(
+          `type` = raml.EngineType.Docker,
+          docker = Some(raml.DockerContainer(
             portMappings = Option(Seq(
-              ContainerPortMapping(containerPort = 0))),
+              raml.ContainerPortMapping(containerPort = 0))),
             image = "jdef/helpme",
-            network = Some(DockerNetwork.User)
+            network = Some(raml.DockerNetwork.User)
           ))
         ))
       )
@@ -898,18 +896,18 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Create a new app in BRIDGE mode w/ Docker" in new Fixture {
       Given("An app and group")
-      val container = DockerContainer(
-        network = Some(DockerNetwork.Bridge),
+      val container = raml.DockerContainer(
+        network = Some(raml.DockerNetwork.Bridge),
         image = "jdef/helpme",
         portMappings = Option(Seq(
-          ContainerPortMapping(containerPort = 0)
+          raml.ContainerPortMapping(containerPort = 0)
         ))
       )
 
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        container = Some(raml.Container(`type` = EngineType.Docker, docker = Some(container))),
+        container = Some(raml.Container(`type` = raml.EngineType.Docker, docker = Some(container))),
         portDefinitions = None
       )
 
@@ -1029,19 +1027,19 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Create a new app in HOST mode w/ ipAddress.discoveryInfo w/ Docker" in new Fixture {
       Given("An app and group")
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
-        ipAddress = Some(IpAddress(
+        ipAddress = Some(raml.IpAddress(
           networkName = Some("foo"),
-          discovery = Some(IpDiscovery(ports = Seq(
-            IpDiscoveryPort(number = 1, name = "bob")
+          discovery = Some(raml.IpDiscovery(ports = Seq(
+            raml.IpDiscoveryPort(number = 1, name = "bob")
           )))
         )),
         container = Some(raml.Container(
-          `type` = EngineType.Docker,
-          docker = Some(DockerContainer(
-            network = Some(DockerNetwork.Host),
+          `type` = raml.EngineType.Docker,
+          docker = Some(raml.DockerContainer(
+            network = Some(raml.DockerNetwork.Host),
             image = "jdef/helpme"
           ))
         ))
@@ -1054,9 +1052,9 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
-      val app = App(id = "/app", cmd = Some("cmd"),
-        secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
+      val app = raml.App(id = "/app", cmd = Some("cmd"),
+        secrets = Map[String, raml.SecretDef]("foo" -> raml.SecretDef("/bar")),
+        env = Map[String, raml.EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -1128,8 +1126,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Given("The secrets feature is enabled")
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
-      val app = App(id = "/app", cmd = Some("cmd"),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
+      val app = raml.App(id = "/app", cmd = Some("cmd"),
+        env = Map[String, raml.EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
@@ -1147,9 +1145,9 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
-      val app = App(id = "/app", cmd = Some("cmd"),
-        secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
+      val app = raml.App(id = "/app", cmd = Some("cmd"),
+        secrets = Map[String, raml.SecretDef]("foo" -> raml.SecretDef("/bar")),
+        container = Some(raml.Container(`type` = raml.EngineType.Mesos, volumes = Seq(raml.AppSecretVolume("/path", "foo")))))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -1225,9 +1223,9 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       config.isFeatureSet(Features.SECRETS) should be(false)
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
-      val app = App(id = "/app", cmd = Some("cmd"),
-        secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
+      val app = raml.App(id = "/app", cmd = Some("cmd"),
+        secrets = Map[String, raml.SecretDef]("foo" -> raml.SecretDef("/bar")),
+        env = Map[String, raml.EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set(Features.SECRETS))
 
       When("The create request is made")
@@ -1246,11 +1244,11 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       config.isFeatureSet(Features.SECRETS) should be(false)
 
       And("An app with an envvar secret-def")
-      val secretVolume = AppSecretVolume("/path", "bar")
-      val containers = raml.Container(`type` = EngineType.Mesos, volumes = Seq(secretVolume))
-      val app = App(id = "/app", cmd = Some("cmd"),
+      val secretVolume = raml.AppSecretVolume("/path", "bar")
+      val containers = raml.Container(`type` = raml.EngineType.Mesos, volumes = Seq(secretVolume))
+      val app = raml.App(id = "/app", cmd = Some("cmd"),
         container = Option(containers),
-        secrets = Map("bar" -> SecretDef("foo"))
+        secrets = Map("bar" -> raml.SecretDef("foo"))
       )
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
@@ -1268,7 +1266,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Given("An app with negative resources")
 
       {
-        val app = App(id = "/app", cmd = Some("cmd"),
+        val app = raml.App(id = "/app", cmd = Some("cmd"),
           mem = -128)
         val (body, _) = prepareApp(app, groupManager, validate = false)
         val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
@@ -1279,7 +1277,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
 
       {
-        val app = App(id = "/app", cmd = Some("cmd"),
+        val app = raml.App(id = "/app", cmd = Some("cmd"),
           cpus = -1)
         val (body, _) = prepareApp(app, groupManager, validate = false)
         val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
@@ -1289,7 +1287,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       }
 
       {
-        val app = App(id = "/app", cmd = Some("cmd"),
+        val app = raml.App(id = "/app", cmd = Some("cmd"),
           instances = -1)
         val (body, _) = prepareApp(app, groupManager, validate = false)
         val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
@@ -1302,7 +1300,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Create a new app successfully using ports instead of portDefinitions" in new Fixture {
       Given("An app and group")
-      val app = App(
+      val app = raml.App(
         id = "/app",
         cmd = Some("cmd"),
         portDefinitions = Some(raml.PortDefinitions(1000, 1001))
@@ -1370,7 +1368,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Create a new app fails with Validation errors" in new Fixture {
       Given("An app with validation errors")
-      val app = App(id = "/app")
+      val app = raml.App(id = "/app")
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       Then("A constraint violation exception is thrown")
@@ -1417,7 +1415,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Replace an existing application using ports instead of portDefinitions" in new Fixture {
       Given("An app and group")
-      val app = App(id = "/app", cmd = Some("foo"))
+      val app = raml.App(id = "/app", cmd = Some("foo"))
       prepareApp(app, groupManager)
 
       val appJson = Json.toJson(app).as[JsObject]
@@ -1436,7 +1434,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Replace an existing application fails due to docker container validation" in new Fixture {
       Given("An app update with an invalid container (missing docker field)")
-      val app = App(id = "/app", cmd = Some("foo"))
+      val app = raml.App(id = "/app", cmd = Some("foo"))
       prepareApp(app, groupManager)
 
       val body =
@@ -1871,7 +1869,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val appUpdate = {
         implicit val appUpdateUnmarshaller = EntityMarshallers.appUpdateUnmarshaller(app.id, partialUpdate = false)
         val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
-        Unmarshal(entity).to[AppUpdate].futureValue
+        Unmarshal(entity).to[raml.AppUpdate].futureValue
       }
 
       Then("the application is updated")
@@ -1883,7 +1881,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val partUpdate = {
         implicit val appUpdateUnmarshaller = EntityMarshallers.appUpdateUnmarshaller(app.id, partialUpdate = true)
         val entity = HttpEntity(body).withContentType(ContentTypes.`application/json`)
-        Unmarshal(entity).to[AppUpdate].futureValue
+        Unmarshal(entity).to[raml.AppUpdate].futureValue
       }
       val app2 = AppHelpers.updateOrCreate(
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
@@ -2082,7 +2080,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
         versionInfo = VersionInfo.forNewConfig(Timestamp(1))
       )
 
-      val updateCmd = AppUpdate(cmd = Some("sleep 2"))
+      val updateCmd = raml.AppUpdate(cmd = Some("sleep 2"))
       val updatedApp = AppHelpers.updateOrCreate(
         appId = app.id,
         existing = Some(app),
@@ -2096,7 +2094,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
 
     "Creating an app with artifacts to fetch specified should succeed and return all the artifact properties passed" in new Fixture {
-      val app = App(id = "/app", cmd = Some("foo"))
+      val app = raml.App(id = "/app", cmd = Some("foo"))
       prepareApp(app, groupManager)
 
       Given("An app with artifacts to fetch provided")
@@ -2281,8 +2279,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       When("update of multiple apps is done and creation is allowed")
       val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
         List(
-          AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
-          AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
+          raml.AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
+          raml.AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
         ),
         partialUpdate = true,
         allowCreation = true,
@@ -2309,8 +2307,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       When("update of multiple apps is done and creation is allowed")
       val rootGroupUpdatefn = appsController.updateAppsRootGroupModifier(
         List(
-          AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
-          AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
+          raml.AppUpdate(id = Some("/app1"), cmd = Some("newCmd")),
+          raml.AppUpdate(id = Some("/newapp"), cmd = Some("newCmd2"))
         ),
         partialUpdate = true,
         allowCreation = false,
@@ -2347,6 +2345,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       groupManager.rootGroup() returns rootGroup
       taskKiller.killAndScale(equalTo(app.id), any, any)(any) returns Future.successful(plan)
+      healthCheckManager.statuses(app.id) returns Future.successful(collection.immutable.Map.empty)
 
       val entity = HttpEntity.Empty
 
@@ -2365,6 +2364,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       groupManager.rootGroup() returns rootGroup
       taskKiller.kill(equalTo(app.id), any, equalTo(true))(any) returns Future.successful(Seq.empty)
+      healthCheckManager.statuses(app.id) returns Future.successful(collection.immutable.Map.empty)
 
       val entity = HttpEntity.Empty
 
@@ -2382,6 +2382,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       groupManager.rootGroup() returns rootGroup
       taskKiller.kill(equalTo(app.id), any, equalTo(false))(any) returns Future.successful(Seq.empty)
+      healthCheckManager.statuses(app.id) returns Future.successful(collection.immutable.Map.empty)
 
       val entity = HttpEntity.Empty
 
@@ -2394,25 +2395,10 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "List running tasks" in new Fixture {
       val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
-      val taskId = "task_id"
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
       groupManager.rootGroup() returns rootGroup
-      val instance = mock[Instance]
-      instance.instanceId returns Instance.Id.forRunSpec(app.id)
-      instance.tasksMap returns Map(Task.Id(taskId) -> Task.Reserved(
-        Task.Id(taskId),
-        Reservation(Seq.empty, Reservation.State.Launched),
-        Task.Status(
-          stagedAt = clock.now(),
-          startedAt = Some(clock.now()),
-          mesosStatus = None,
-          condition = Condition.Running,
-          networkInfo = NetworkInfoPlaceholder()
-        ),
-        clock.now()
-      ))
-      instance.agentInfo returns AgentInfo("host", None, None, None, Nil)
+      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, now = clock.now(), version = clock.now()).getInstance()
 
       instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(
         InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance))
@@ -2425,7 +2411,10 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
       Get(uri, entity) ~> route ~> check {
         status shouldEqual StatusCodes.OK
-        (Json.parse(responseAs[String]) \ "tasks" \ 0 \ "id").get shouldEqual JsString(taskId)
+        val jsonResponse = Json.parse(responseAs[String])
+        (jsonResponse \ "tasks" \ 0).get should have(
+          taskId(instance.appTask.taskId.idString)
+        )
       }
     }
 
@@ -2433,14 +2422,20 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
+      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, now = clock.now(), version = clock.now()).getInstance()
+      val taskId = instance.appTask.taskId.toString
       groupManager.app(PathId("/app")) returns Some(app)
 
+      instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(
+        InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance))
+      ))
       groupManager.rootGroup() returns rootGroup
       taskKiller.killAndScale(equalTo(app.id), any, any)(any) returns Future.successful(plan)
+      healthCheckManager.statuses(app.id) returns Future.successful(collection.immutable.Map.empty)
 
       val entity = HttpEntity.Empty
 
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("scale" -> "true", "host" -> "*"))
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / taskId).withQuery(Query("scale" -> "true", "host" -> "*"))
 
       Delete(uri, entity) ~> route ~> check {
         status shouldEqual StatusCodes.OK
@@ -2451,14 +2446,17 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Kill task and wipe" in new Fixture {
       val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
+      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, now = clock.now(), version = clock.now()).getInstance()
+      val taskId = instance.appTask.taskId.toString
       groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.rootGroup() returns rootGroup
-      taskKiller.kill(equalTo(app.id), any, equalTo(true))(any) returns Future.successful(fakeInstance :: Nil)
+      taskKiller.kill(equalTo(app.id), any, equalTo(true))(any) returns Future.successful(Seq(instance))
+      healthCheckManager.statuses(app.id) returns Future.successful(collection.immutable.Map.empty)
 
       val entity = HttpEntity.Empty
 
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("wipe" -> "true", "host" -> "*"))
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / taskId).withQuery(Query("wipe" -> "true", "host" -> "*"))
 
       Delete(uri, entity) ~> route ~> check {
         status shouldEqual StatusCodes.OK
@@ -2469,13 +2467,16 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       groupManager.app(PathId("/app")) returns Some(app)
+      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, now = clock.now(), version = clock.now()).getInstance()
+      val taskId = instance.appTask.taskId.toString
 
       groupManager.rootGroup() returns rootGroup
-      taskKiller.kill(equalTo(app.id), any, equalTo(false))(any) returns Future.successful(fakeInstance :: Nil)
+      taskKiller.kill(equalTo(app.id), any, equalTo(false))(any) returns Future.successful(Seq(instance))
+      healthCheckManager.statuses(app.id) returns Future.successful(collection.immutable.Map.empty)
 
       val entity = HttpEntity.Empty
 
-      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / "task_id").withQuery(Query("host" -> "*"))
+      val uri = Uri./.withPath(Path(app.id.toString) / "tasks" / taskId).withQuery(Query("host" -> "*"))
 
       Delete(uri, entity) ~> route ~> check {
         status shouldEqual StatusCodes.OK
