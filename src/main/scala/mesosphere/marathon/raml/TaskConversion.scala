@@ -1,77 +1,50 @@
 package mesosphere.marathon
 package raml
 
-import java.util.Base64
+import mesosphere.marathon.core.condition
+import mesosphere.marathon.core.task
 
-import core.task
-import EnrichedTaskConversion._
-import mesosphere.marathon.core.task.Task.Reservation.State.{ Garbage, Launched, New, Suspended, Unknown }
+object TaskConversion extends HealthConversion with DefaultConversions {
 
-object TaskConversion extends DefaultConversions with OfferConversion {
-
-  implicit val timeoutRamlWrites: Writes[task.Task.Reservation.Timeout, raml.Timeout] = Writes { timeout =>
-    Timeout(
-      initiated = timeout.initiated.toOffsetDateTime,
-      deadline = timeout.deadline.toOffsetDateTime,
-      reason = timeout.reason.toString
+  implicit val localVolumeIdWrites: Writes[task.Task.LocalVolumeId, LocalVolumeId] = Writes { localVolumeId =>
+    LocalVolumeId(
+      runSpecId = localVolumeId.runSpecId.toRaml,
+      containerPath = localVolumeId.containerPath,
+      uuid = localVolumeId.uuid,
+      persistenceId = localVolumeId.idString
     )
   }
 
-  implicit val stateRamlWrites: Writes[task.Task.Reservation.State, raml.State] = Writes { state =>
+  implicit val enrichedTaskRamlWrite: Writes[core.appinfo.EnrichedTask, Task] = Writes { enrichedTask =>
+    val task: core.task.Task = enrichedTask.task
 
-    val name = state match {
-      case _: New => "new"
-      case Launched => "launched"
-      case _: Suspended => "suspended"
-      case _: Garbage => "garbage"
-      case _: Unknown => "unknown"
+    val (startedAt, stagedAt, ports, version) =
+      if (task.isActive) {
+        (task.status.startedAt, Some(task.status.stagedAt), task.status.networkInfo.hostPorts, Some(task.runSpecVersion))
+      } else {
+        (None, None, Nil, None)
+      }
+
+    val ipAddresses = task.status.networkInfo.ipAddresses.toRaml
+
+    val localVolumes = task.reservationWithVolumes.fold(Seq.empty[LocalVolumeId]) { reservation =>
+      reservation.volumeIds.toRaml
     }
 
-    State(
-      name = name,
-      timeout = state.timeout.toRaml
-    )
-  }
-
-  implicit val reservationRamlWrites: Writes[task.Task.Reservation, raml.Reservation] = Writes { res =>
-    Reservation(
-      volumeIds = res.volumeIds.map(_.toRaml),
-      state = res.state.toRaml
-    )
-  }
-
-  implicit val networkInfoRamlWrites: Writes[task.state.NetworkInfo, raml.NetworkInfo] = Writes { networkInfo =>
-    NetworkInfo(
-      hostName = networkInfo.hostName,
-      hostPorts = networkInfo.hostPorts.map(_.toDouble),
-      ipAddresses = networkInfo.ipAddresses.map { ipAddr =>
-        NetworkInfoIPAddress(
-          ipAddress = ipAddr.getIpAddress,
-          protocol = IpProtocol.fromString(ipAddr.getProtocol.name())
-            .getOrElse(throw new RuntimeException(s"can't convert protocol name to RAML model: unexpected ${ipAddr.getProtocol.name()}")),
-        )
-      }
-    )
-  }
-
-  implicit val statusRamlWrites: Writes[task.Task.Status, raml.Status] = Writes { status =>
-    Status(
-      stagedAt = status.stagedAt.toOffsetDateTime,
-      startedAt = status.startedAt.map(_.toOffsetDateTime),
-      mesosStatus = status.mesosStatus.map(s => Base64.getEncoder.encodeToString(s.toByteArray)),
-      condition = Condition.fromString(status.condition.toString)
-        .getOrElse(throw new RuntimeException(s"can't convert mesos condition to RAML model: unexpected ${status.condition}")),
-      networkInfo = status.networkInfo.toRaml
-    )
-  }
-
-  implicit val taskRamlWrites: Writes[task.Task, raml.Task] = Writes { task =>
     Task(
-      taskId = task.taskId.idString,
-      reservation = task.reservationWithVolumes.toRaml,
-      status = task.status.toRaml,
-      runSpecVersion = task.runSpecVersion.toOffsetDateTime
+      appId = enrichedTask.appId.toRaml,
+      healthCheckResults = enrichedTask.healthCheckResults.toRaml,
+      host = enrichedTask.agentInfo.host,
+      id = task.taskId.idString,
+      ipAddresses = ipAddresses,
+      ports = ports,
+      servicePorts = enrichedTask.servicePorts,
+      slaveId = enrichedTask.agentInfo.agentId,
+      state = condition.Condition.toMesosTaskStateOrStaging(task.status.condition).toRaml,
+      stagedAt = stagedAt.toRaml,
+      startedAt = startedAt.toRaml,
+      version = version.toRaml,
+      localVolumes = localVolumes
     )
   }
-
 }
