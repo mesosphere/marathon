@@ -752,4 +752,4 @@ def running_task_status(task_statuses):
         if task_status['state'] == "TASK_RUNNING":
             return task_status
 
-    assert False, "Did not found a TASK_RUNNING status in task statuses: %s" % (task_statuses,)
+    assert False, "Did not find a TASK_RUNNING status in task statuses: %s" % (task_statuses,)
