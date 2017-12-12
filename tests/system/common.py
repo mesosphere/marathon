@@ -746,4 +746,4 @@ def running_status_network_info(task_statuses):
         if task_status['state'] == "TASK_RUNNING":
             return task_status['container_status']['network_infos'][0]
 
-    pytest.fail("did not found a TASK_RUNNING status in task statuses: %s" %(task_statuses,))
+    assert False, "Did not found a TASK_RUNNING status in task statuses: %s" % (task_statuses,)
