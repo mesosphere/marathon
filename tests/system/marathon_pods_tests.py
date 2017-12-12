@@ -454,7 +454,7 @@ def test_pod_with_container_bridge_network():
     common.deployment_wait(service_id=pod_id)
 
     task = common.get_pod_tasks(pod_id)[0]
-    network_info = task['statuses'][0]['container_status']['network_infos'][0]
+    network_info = common.running_status_network_info(task[0]['statuses'])
     assert network_info['name'] == "mesos-bridge", \
         "The network is {}, but mesos-bridge was expected".format(network_info['name'])
 
