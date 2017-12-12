@@ -30,9 +30,8 @@ import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
-import mesosphere.marathon.raml.EnrichedTaskConversion._
-import mesosphere.marathon.raml.InstanceConversion._
-import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, SingleInstance, VersionList }
+import mesosphere.marathon.raml.TaskConversion._
+import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, VersionList }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
@@ -292,7 +291,7 @@ class AppsController(
             await(runningTasks(Set(appId), instancesBySpec).runWith(Sink.seq)).map(_.toRaml)
           }
           onSuccess(tasksF) { tasks =>
-            complete(raml.EnrichedTasksList(tasks))
+            complete(raml.TaskList(tasks))
           }
         }
       case None =>
@@ -315,6 +314,7 @@ class AppsController(
       .mapConcat(identity)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def killTasks(appId: PathId)(implicit identity: Identity): Route = {
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & extractTaskKillingMode) {
@@ -329,17 +329,32 @@ class AppsController(
               complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
             }
           case TaskKillingMode.Wipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
-              complete(raml.InstanceList(instances.map(_.toRaml)))
+            val killInstances = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
+              instances.map { instance =>
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, Nil)
+              }
+            }
+
+            onSuccess(killInstances) { enrichedTasks: Seq[EnrichedTask] =>
+              complete((StatusCodes.OK, raml.TaskList(enrichedTasks.toRaml)))
             }
           case TaskKillingMode.KillWithoutWipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
-              complete(raml.InstanceList(instances.map(_.toRaml)))
+            val killInstances = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
+              instances.map { instance =>
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, Nil)
+              }
+            }
+
+            onSuccess(killInstances) { enrichedTasks: Seq[EnrichedTask] =>
+              complete((StatusCodes.OK, raml.TaskList(enrichedTasks.toRaml)))
             }
         }
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def killTask(appId: PathId, taskId: TaskId)(implicit identity: Identity): Route = {
     // the line below doesn't look nice but it doesn't compile if we use parameters directive
     (forceParameter & parameter("host") & extractTaskKillingMode) {
@@ -360,21 +375,34 @@ class AppsController(
               complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(plan.id)), DeploymentResult(plan.id, plan.version.toOffsetDateTime)))
             }
           case TaskKillingMode.Wipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = true)) { instances =>
+            val killedInstance = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
+              val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.headOption.map { instance =>
-                complete(SingleInstance(instance.toRaml))
-              }.getOrElse(
-                reject(EntityNotFound.noTask(taskId))
-              )
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+              }
+            }
 
+            onSuccess(killedInstance) {
+              case None =>
+                reject(EntityNotFound.noTask(taskId))
+              case Some(enrichedTask) =>
+                complete(raml.TaskSingle(enrichedTask.toRaml))
             }
           case TaskKillingMode.KillWithoutWipe =>
-            onSuccess(taskKiller.kill(appId, findToKill, wipe = false)) { instances =>
+            val killedInstance = async {
+              val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
+              val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.headOption.map { instance =>
-                complete(SingleInstance(instance.toRaml))
-              }.getOrElse(
+                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+              }
+            }
+
+            onSuccess(killedInstance) {
+              case None =>
                 reject(EntityNotFound.noTask(taskId))
-              )
+              case Some(enrichedTask) =>
+                complete(raml.TaskSingle(enrichedTask.toRaml))
             }
         }
     }
