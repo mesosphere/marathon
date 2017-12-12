@@ -759,8 +759,6 @@ def task_by_name(tasks, name):
     """ Find mesos task by its name
     """
     for task in tasks:
-        print(task['name'])
-        print(name)
         if task['name'] == name:
             return task
 
