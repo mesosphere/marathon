@@ -753,3 +753,13 @@ def running_task_status(task_statuses):
             return task_status
 
     assert False, "Did not find a TASK_RUNNING status in task statuses: %s" % (task_statuses,)
+
+
+def task_by_name(tasks, name):
+    """ Find mesos task by its name
+    """
+    for task in tasks:
+        if task['name'] == name:
+            return
+
+    assert False, "Did not find task with name %s in this list of tasks: %s" % (name, tasks,)

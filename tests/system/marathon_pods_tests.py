@@ -421,9 +421,9 @@ def test_pod_with_container_network():
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    tasks = common.get_pod_tasks(pod_id)
+    task = common.task_by_name(common.get_pod_tasks(pod_id), "nginx")
 
-    network_info = common.running_status_network_info(tasks[0]['statuses'])
+    network_info = common.running_status_network_info(task['statuses'])
     assert network_info['name'] == "dcos", \
         "The network name is {}, but 'dcos' was expected".format(network_info['name'])
 
@@ -451,7 +451,7 @@ def test_pod_with_container_bridge_network():
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    task = common.get_pod_tasks(pod_id)[0]
+    task = common.task_by_name(common.get_pod_tasks(pod_id), "nginx")
     network_info = common.running_status_network_info(task[0]['statuses'])
     assert network_info['name'] == "mesos-bridge", \
         "The network is {}, but mesos-bridge was expected".format(network_info['name'])
