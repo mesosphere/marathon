@@ -18,8 +18,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.AnyToRaml
-import mesosphere.marathon.raml.EnrichedTask._
-import mesosphere.marathon.raml.EnrichedTaskConversion._
+import mesosphere.marathon.raml.Task._
+import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
 import org.slf4j.LoggerFactory
@@ -93,6 +93,7 @@ class AppTasksResource @Inject() (
   }
 
   @DELETE
+  @SuppressWarnings(Array("all")) // async/await
   def deleteMany(
     @PathParam("appId") appId: String,
     @QueryParam("host") host: String,
@@ -114,14 +115,26 @@ class AppTasksResource @Inject() (
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
     } else {
-      reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
-        tasks => ok(jsonObjString("tasks" -> tasks))
+      val response: Future[Response] = async {
+        val instances = await(taskKiller.kill(pathId, findToKill, wipe))
+        val healthStatuses = await(healthCheckManager.statuses(pathId))
+        val enrichedTasks: Seq[EnrichedTask] = instances.map { instance =>
+          val killedTask = instance.appTask
+          val enrichedTask = EnrichedTask(pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+          enrichedTask
+        }
+        ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
+      }.recover {
+        case PathNotFoundException(appId, version) => unknownApp(appId, version)
       }
+
+      result(response)
     }
   }
 
   @DELETE
   @Path("{taskId}")
+  @SuppressWarnings(Array("all")) // async/await
   def deleteOne(
     @PathParam("appId") appId: String,
     @PathParam("taskId") id: String,
@@ -146,20 +159,22 @@ class AppTasksResource @Inject() (
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
     } else {
-      reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
-        tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
+      val response: Future[Response] = async {
+        val instances = await(taskKiller.kill(pathId, findToKill, wipe))
+        val healthStatuses = await(healthCheckManager.statuses(pathId))
+        instances.headOption match {
+          case None =>
+            unknownTask(id)
+          case Some(instance) =>
+            val killedTask = instance.appTask
+            val enrichedTask = EnrichedTask(pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+            ok(jsonObjString("task" -> enrichedTask.toRaml))
+        }
+      }.recover {
+        case PathNotFoundException(appId, version) => unknownApp(appId, version)
       }
+
+      result(response)
     }
   }
-
-  private def reqToResponse(
-    future: Future[Seq[Instance]])(toResponse: Seq[Instance] => Response): Response = {
-    val response = future.map { tasks =>
-      toResponse(tasks)
-    } recover {
-      case PathNotFoundException(appId, version) => unknownApp(appId, version)
-    }
-    result(response)
-  }
-
 }

@@ -109,6 +109,19 @@ trait ResponseMatchers { this: UnitTest =>
   }
 
   /**
+    * Have property matcher for a valid task id.
+    * @param taskId The expected task id.
+    * @return Match result
+    */
+  def taskId(taskId: String) = new HavePropertyMatcher[JsValue, Option[String]] {
+    override def apply(actual: JsValue) = {
+      val maybeId = (actual \ "id").asOpt[String]
+      val matches = maybeId.contains(taskId)
+      HavePropertyMatchResult(matches, "id", Some(taskId), maybeId)
+    }
+  }
+
+  /**
     * Have property matcher for a pod status.
     * @param state The expected RAML pod state
     * @return Match result
