@@ -546,14 +546,14 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         val dRoot1 = createRootGroup(Map(dApp1.id -> dApp1), Map(dPod1.id -> dPod1), version = Timestamp(1))
         f.groupRepo.storeRoot(dRoot1, dRoot1.transitiveApps.toIndexedSeq, Seq(dApp2.id),
-          dRoot1.transitivePodsById.values.toIndexedSeq, Seq(dPod2.id)).futureValue
+          dRoot1.transitivePods.toIndexedSeq, Seq(dPod2.id)).futureValue
 
         val root2 = createRootGroup(
           Map(app3.id -> app3, dApp1V2.id -> dApp1V2),
           Map(pod3.id -> pod3, dPod1V2.id -> dPod1V2), version = Timestamp(2))
         val root3 = createRootGroup(version = Timestamp(3))
         val root4 = createRootGroup(Map(dApp1V2.id -> dApp1V2), Map(dPod1V2.id -> dPod1V2), version = Timestamp(4))
-        f.groupRepo.storeRoot(root2, root2.transitiveApps.toIndexedSeq, Nil, root2.transitivePodsById.values.toIndexedSeq, Nil).futureValue
+        f.groupRepo.storeRoot(root2, root2.transitiveApps.toIndexedSeq, Nil, root2.transitivePods.toIndexedSeq, Nil).futureValue
         f.groupRepo.storeRoot(root3, Nil, Nil, Nil, Nil).futureValue
 
         val plan = DeploymentPlan(root2, root3)

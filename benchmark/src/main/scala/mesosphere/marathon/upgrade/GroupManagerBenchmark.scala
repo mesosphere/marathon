@@ -49,7 +49,7 @@ class GroupBenchmark {
               Some(0),
               Seq("tcp"))))))
 
-  @Param(value = Array("100", "500", "1000", "2500", "5000"))
+  @Param(value = Array("100", "500", "1000", "2500", "5000", "10000"))
   var numberOfSavedApps: Int = _
   lazy val ids = 0 until numberOfSavedApps
 
@@ -88,7 +88,6 @@ class GroupManagerBenchmark extends GroupBenchmark {
 
   @Benchmark
   def updateVersionInfoForChangedApps(hole: Blackhole): Unit = {
-    println(rootGroup.groupsById.keys)
     val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(
       Timestamp (2),
       rootGroup, upgraded)

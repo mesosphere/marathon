@@ -9,14 +9,14 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
-import akka.http.scaladsl.server.{ Directive1, Rejection, RejectionError, Route }
+import akka.http.scaladsl.server.{ Rejection, RejectionError, Route }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TaskKiller
 import mesosphere.marathon.api.akkahttp.AppsDirectives.{ TaskKillingMode, extractTaskKillingMode }
 import mesosphere.marathon.api.akkahttp.AuthDirectives.NotAuthorized
 import mesosphere.marathon.api.akkahttp.PathMatchers.{ AppPathIdLike, ExistingRunSpecId, RemainingTaskId, Version }
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
+import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.api.v2.{ AppHelpers, AppNormalization, InfoEmbedResolver, LabelSelectorParsers }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -40,8 +40,6 @@ import PathMatchers.forceParameter
 
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
 
 class AppsController(
     val clock: Clock,
