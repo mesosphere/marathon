@@ -742,8 +742,14 @@ def marathon_leadership_changed(original_leader):
 def running_status_network_info(task_statuses):
     """ From a given list of statuses retrieved from mesos API it returns network info of running task.
     """
+    return running_task_status['container_status']['network_infos'][0]
+
+
+def running_task_status(task_statuses):
+    """ From a given list of statuses retrieved from mesos API it returns status of running task.
+    """
     for task_status in task_statuses:
         if task_status['state'] == "TASK_RUNNING":
-            return task_status['container_status']['network_infos'][0]
+            return task_status
 
     assert False, "Did not found a TASK_RUNNING status in task statuses: %s" % (task_statuses,)

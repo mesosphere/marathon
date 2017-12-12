@@ -399,8 +399,8 @@ def test_pod_health_check():
     common.deployment_wait(service_id=pod_id)
 
     tasks = common.get_pod_tasks(pod_id)
-    c1_health = tasks[0]['statuses'][0]['healthy']
-    c2_health = tasks[1]['statuses'][0]['healthy']
+    c1_health = common.running_task_status(tasks[0]['statuses'])['healthy']
+    c2_health = common.running_task_status(tasks[2]['statuses'])['healthy']
 
     assert c1_health, "One of the pod's tasks is unhealthy"
     assert c2_health, "One of the pod's tasks is unhealthy"
