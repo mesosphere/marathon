@@ -11,8 +11,8 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{ Raml }
-import mesosphere.marathon.raml.EnrichedTask._
-import mesosphere.marathon.raml.EnrichedTaskConversion._
+import mesosphere.marathon.raml.Task._
+import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.JsonValidationError
