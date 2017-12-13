@@ -60,7 +60,12 @@ def marathon_service_name():
 
 
 def setup_module(module):
-    common.wait_for_marathon_about()
+    # When the cluster is starting, it might happen that there is some delay in:
+    # - marathon leader registration with mesos
+    # - admin router refreshing cache (every 30s)
+    # We should not start our tests before marathon is accessible through service endpoint.
+    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+
     common.cluster_info()
     common.clean_up_marathon()
 
