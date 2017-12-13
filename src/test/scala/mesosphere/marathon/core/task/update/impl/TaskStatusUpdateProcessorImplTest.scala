@@ -307,7 +307,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       Then("load the task in the task tracker")
       verify(instanceTracker).instance(instance.instanceId)
       Then("initiate the task kill")
-      verify(killService).killUnknownTask(incrementedTaskId, KillReason.Outdated)
+      verify(killService).killUnknownTask(incrementedTaskId, KillReason.NotInSync)
       Then("acknowledge the update")
       verify(schedulerDriver).acknowledgeStatusUpdate(status)
       Then("not do anything else")

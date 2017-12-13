@@ -57,7 +57,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
           killUnknownTaskTimer {
             logger.warn(s"Kill ${taskId} because it's unknown to marathon. " +
               s"The related instance ${instance.instanceId} is associated with ${instance.tasksMap.keys}")
-            Future.successful(killService.killUnknownTask(taskId, KillReason.Outdated))
+            Future.successful(killService.killUnknownTask(taskId, KillReason.NotInSync))
           }
         }
         acknowledge(status)
