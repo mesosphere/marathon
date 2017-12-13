@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package tasks
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, Container, ResourceRole, RunSpec }
 import mesosphere.marathon.stream.Implicits._
@@ -8,7 +9,6 @@ import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{ RangesResource, Resource }
-import mesosphere.util.Logging
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.annotation.tailrec
@@ -34,7 +34,7 @@ class PortsMatcher private[tasks] (
     offer: MesosProtos.Offer,
     resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
     random: Random = Random)
-  extends Logging {
+  extends StrictLogging {
 
   import PortsMatcher._
 
@@ -83,7 +83,7 @@ class PortsMatcher private[tasks] (
           PortWithRole(offeredRange.role, port, offeredRange.reservation)
         } orElse {
           if (failLog)
-            log.info(
+            logger.info(
               s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
                 s"Couldn't find host port $port (of ${requiredPorts.mkString(", ")}) " +
                 s"in any offered range for run spec [${runSpec.id}]")
@@ -100,7 +100,7 @@ class PortsMatcher private[tasks] (
     takeEnoughPortsOrNone(expectedSize = numberOfPorts) {
       shuffledAvailablePorts.map(Some(_))
     } orElse {
-      log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
+      logger.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
         s"Couldn't find $numberOfPorts ports in offer for run spec [${runSpec.id}]")
       None
     }
@@ -122,7 +122,7 @@ class PortsMatcher private[tasks] (
       ports.iterator.map {
         case Some(port) if port == 0 =>
           if (!availablePortsWithoutStaticHostPorts.hasNext) {
-            log.info(
+            logger.info(
               s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
                 s"Insufficient ports in offer for run spec [${runSpec.id}]")
             None
@@ -134,7 +134,7 @@ class PortsMatcher private[tasks] (
             case Some(PortRange(role, _, _, reservation)) =>
               Some(PortWithRole(role, port, reservation))
             case None =>
-              log.info(
+              logger.info(
                 s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
                   s"Cannot find range with host port $port for run spec [${runSpec.id}]")
               None
