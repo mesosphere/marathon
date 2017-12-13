@@ -34,6 +34,9 @@ object KillReason {
   /** The task is killed because it is unknown */
   case object Unknown extends KillReason
 
+  /** The task is killed because it is not in sync with marathon state */
+  case object NotInSync extends KillReason
+
   /** The task is killed because it exceeded the maximum number of consecutive failures */
   case object FailedHealthChecks extends KillReason
 }
