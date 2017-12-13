@@ -7,19 +7,25 @@ import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
-import mesosphere.marathon.raml
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.{ AllConf, raml }
+import mesosphere.marathon.raml.{ Lifecycle, Resources }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Command, EnvVarString, ResourceRole }
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
 import scala.collection.breakOut
+import scala.concurrent.duration._
 
-class TaskGroupBuilderTest extends UnitTest {
+class TaskGroupBuilderTest extends UnitTest with Inside {
+
+  implicit val clock = new SettableClock()
+  val config = AllConf.withTestConfig()
+
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
     acceptedResourceRoles = Set(ResourceRole.Unreserved),
     envVarsPrefix = None)
@@ -886,6 +892,28 @@ class TaskGroupBuilderTest extends UnitTest {
       )
       taskGroupInfo.getTasksCount should be(1)
       taskGroupInfo.getTasks(0).getName should be(s"${container.name}-extended")
+    }
+
+    "killPolicy is specified correctly" in {
+      val killDuration = 3.seconds
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
+      val container = MesosContainer(
+        name = "withTTY",
+        resources = Resources(),
+        lifecycle = Some(Lifecycle(Some(killDuration.toSeconds.toDouble))))
+
+      val podSpec = PodDefinition(id = PathId("/tty"), containers = Seq(container))
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty, defaultBuilderConfig.acceptedResourceRoles)
+      val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+      )
+
+      taskGroupInfo.getTasks(0).getKillPolicy.getGracePeriod.getNanoseconds shouldBe (killDuration.toNanos)
     }
   }
 }
