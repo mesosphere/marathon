@@ -16,7 +16,6 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
-import akka.http.scaladsl.server.PathMatchers
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import com.wix.accord.Validator

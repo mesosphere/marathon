@@ -47,7 +47,21 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val taskId = Task.Id(status.getTaskId)
     val taskCondition = TaskCondition(status)
 
+    def taskIsUnknown(instance: Instance, taskId: Task.Id) = {
+      instance.tasksMap.get(taskId).isEmpty
+    }
+
     instanceTracker.instance(taskId.instanceId).flatMap {
+      case Some(instance) if taskIsUnknown(instance, taskId) =>
+        if (killWhenUnknown(taskCondition)) {
+          killUnknownTaskTimer {
+            logger.warn(s"Kill ${taskId} because it's unknown to marathon. " +
+              s"The related instance ${instance.instanceId} is associated with ${instance.tasksMap.keys}")
+            Future.successful(killService.killUnknownTask(taskId, KillReason.NotInSync))
+          }
+        }
+        acknowledge(status)
+
       case Some(instance) =>
         // TODO(PODS): we might as well pass the taskCondition here
         val op = InstanceUpdateOperation.MesosUpdate(instance, status, now)
