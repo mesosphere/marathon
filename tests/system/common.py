@@ -737,3 +737,29 @@ def marathon_leadership_changed(original_leader):
     """
     __marathon_leadership_changed_in_marathon_api(original_leader)
     __marathon_leadership_changed_in_mesosDNS(original_leader)
+
+
+def running_status_network_info(task_statuses):
+    """ From a given list of statuses retrieved from mesos API it returns network info of running task.
+    """
+    return running_task_status(task_statuses)['container_status']['network_infos'][0]
+
+
+def running_task_status(task_statuses):
+    """ From a given list of statuses retrieved from mesos API it returns status of running task.
+    """
+    for task_status in task_statuses:
+        if task_status['state'] == "TASK_RUNNING":
+            return task_status
+
+    assert False, "Did not find a TASK_RUNNING status in task statuses: %s" % (task_statuses,)
+
+
+def task_by_name(tasks, name):
+    """ Find mesos task by its name
+    """
+    for task in tasks:
+        if task['name'] == name:
+            return task
+
+    assert False, "Did not find task with name %s in this list of tasks: %s" % (name, tasks,)
