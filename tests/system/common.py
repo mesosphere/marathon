@@ -110,7 +110,8 @@ def cluster_info(mom_name='marathon-user'):
     print("DC/OS: {}, in {} mode".format(shakedown.dcos_version(), shakedown.ee_version()))
     agents = shakedown.get_private_agents()
     print("Agents: {}".format(len(agents)))
-    about = wait_for_marathon_about()
+    client = marathon.create_client()
+    about = client.get_about()
     print("Marathon version: {}".format(about.get("version")))
 
     if shakedown.service_available_predicate(mom_name):

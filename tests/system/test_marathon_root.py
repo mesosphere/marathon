@@ -60,6 +60,7 @@ def marathon_service_name():
 
 
 def setup_module(module):
+    common.wait_for_marathon_about()
     common.cluster_info()
     common.clean_up_marathon()
 
