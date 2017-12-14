@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration.setup
 
+import com.typesafe.scalalogging.Logger
 import java.io.File
 import java.net.{ URLDecoder, URLEncoder }
 import java.nio.file.Files
@@ -319,7 +320,8 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
 /**
   * Base trait for tests that need a marathon
   */
-trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutures with Eventually {
+trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually {
+  protected def logger: Logger
   def marathonUrl: String
   def marathon: MarathonFacade
   def leadingMarathon: Future[LocalMarathon]
@@ -734,12 +736,14 @@ object MarathonTest extends StrictLogging {
   * Fixture that can be used for a single test case.
   */
 trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with ZookeeperServerTest {
+  protected def logger: Logger
   def withMarathon[T](suiteName: String, marathonArgs: Map[String, String] = Map.empty)(f: (LocalMarathon, MarathonTest) => T): T = {
     val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
       zkUrl = s"zk://${zkServer.connectUri}/marathon-$suiteName", conf = marathonArgs)
     marathonServer.start().futureValue
 
     val marathonTest = new MarathonTest {
+      override protected val logger: Logger = MarathonFixture.this.logger
       override def marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
       override def marathon: MarathonFacade = marathonServer.client
       override def mesos: MesosFacade = MarathonFixture.this.mesos
