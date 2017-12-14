@@ -65,7 +65,7 @@ We prefer not to play this game when working on Marathon. Instead, we focus on r
 
 ### On Imports
 
-We prefer, almost always, that implicits go at the top of the file.
+We prefer, almost always, that imports go at the top of the file. Additionally, prefer explicit imports over wildcard imports.
 
 Prefer:
 
@@ -113,7 +113,7 @@ We prefer to focus on state recovery, and not graceful tear down. We'd prefer to
 
 ## Don't Panic
 
-We prefer to that Exceptions are used only when something goes unexpectedly wrong.
+We prefer to that Exceptions are thrown only when something goes unexpectedly wrong outside of domain of the library.
 
 For example:
 
