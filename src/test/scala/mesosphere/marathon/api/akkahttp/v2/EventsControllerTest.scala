@@ -3,12 +3,12 @@ package api.akkahttp.v2
 
 import akka.event.EventStream
 import akka.http.scaladsl.client.RequestBuilding
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, RemoteAddress, Uri }
 import akka.http.scaladsl.model.headers.`X-Real-Ip`
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, RemoteAddress, Uri }
 import akka.http.scaladsl.server.Route
-import akka.stream.scaladsl.{ BroadcastHub, Keep, Source }
+import akka.http.scaladsl.unmarshalling.sse.EventStreamParser
 import akka.stream.OverflowStrategy
-import de.heikoseeberger.akkasse.EventStreamParser
+import akka.stream.scaladsl.{ BroadcastHub, Keep, Source }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.election.{ ElectionServiceLeaderInfo, LeadershipTransition }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, SchedulerReregisteredEvent }
@@ -79,8 +79,8 @@ class EventsControllerTest extends AkkaUnitTest with Inside {
       .runWith(Sink.head)
       .futureValue
 
-    attachedEvent.`type` shouldBe Some("event_stream_attached")
-    attachedEvent.data.get should include("1.2.3.4")
+    attachedEvent.eventType shouldBe Some("event_stream_attached")
+    attachedEvent.data should include("1.2.3.4")
   }
 
   "Relays events that are published after it is connected" in withFixture() { f =>
@@ -95,8 +95,8 @@ class EventsControllerTest extends AkkaUnitTest with Inside {
     f.eventBus.publish(testTerminatedEvent)
 
     val sse = output.futureValue
-    sse.`type` shouldBe Some("app_terminated_event")
-    sse.data.get should include("/my-app")
+    sse.eventType shouldBe Some("app_terminated_event")
+    sse.data should include("/my-app")
   }
 
   "Respects filtering conditions" in withFixture() { f =>
@@ -111,7 +111,7 @@ class EventsControllerTest extends AkkaUnitTest with Inside {
     inside(output.pull().futureValue) {
       case Some(sse) =>
         // It should skip the scheduler registration event, and the original event_stream_attached event
-        sse.`type` shouldBe Some("app_terminated_event")
+        sse.eventType shouldBe Some("app_terminated_event")
     }
     output.cancel()
   }
@@ -121,7 +121,7 @@ class EventsControllerTest extends AkkaUnitTest with Inside {
 
     val events = response.entity.dataBytes
       .via(EventStreamParser(Int.MaxValue, Int.MaxValue))
-      .map(_.`type`)
+      .map(_.eventType)
       .runWith(Sink.queue())
 
     inside(events.pull().futureValue) {
