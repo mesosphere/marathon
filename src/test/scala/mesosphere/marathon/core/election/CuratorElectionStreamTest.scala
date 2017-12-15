@@ -58,9 +58,8 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
         override lazy val zkTimeoutDuration = 250.milliseconds
       }
 
-      inside(Try(CuratorElectionStream.newCuratorConnection(conf))) {
-        case Failure(ex) =>
-          ex shouldBe a[UnknownHostException]
+      a[Throwable] shouldBe thrownBy {
+        CuratorElectionStream.newCuratorConnection(conf)
       }
     }
   }

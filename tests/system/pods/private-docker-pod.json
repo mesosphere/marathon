@@ -28,7 +28,7 @@
   ],
   "secrets": {
     "pullConfigSecret": {
-      "source": "/pullConfig"
+      "source": "/pullconfig"
     }
   }
 }
