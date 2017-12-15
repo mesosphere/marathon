@@ -9,6 +9,7 @@ import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.test.Mockito
+import org.scalactic.source.Position
 import org.scalatest.matchers.{ BeMatcher, MatchResult }
 import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
@@ -78,6 +79,24 @@ trait UnitTestLike extends WordSpecLike
   with BeforeAndAfterAll
   with TimeLimitedTests
   with CancelFailedTestWithKnownIssue {
+
+  private class LoggingInformer(info: Informer) extends Informer {
+    def apply(message: String, payload: Option[Any] = None)(implicit pos: Position): Unit = {
+      logger.info(s"===== ${message} (${pos.fileName}:${pos.lineNumber}) =====")
+      info.apply(message, payload)(pos)
+    }
+  }
+
+  /**
+    * We wrap the informer so that we can see where we are in the test in the logs
+    */
+  override protected def info: Informer = {
+    new LoggingInformer(super.info)
+  }
+  abstract protected override def runTest(testName: String, args: Args): Status = {
+    logger.info(s"=== Test: ${testName} ===")
+    super.runTest(testName, args)
+  }
 
   override val timeLimit = Span(1, Minute)
 

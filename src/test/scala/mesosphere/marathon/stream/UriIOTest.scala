@@ -50,7 +50,7 @@ class UriIOTest extends AkkaUnitTest {
       // creating a file and disable reading does not work with root privileges.
       val tmpDir = new File(sys.props("java.io.tmpdir"))
       val future = UriIO.reader(new URI(s"file://${tmpDir.getAbsolutePath}")).runWith(Sink.ignore)
-      future.failed.futureValue shouldBe a[IOException]
+      future.failed.futureValue shouldBe a[IllegalArgumentException]
     }
 
     "write to a file that is not writable fails" in {

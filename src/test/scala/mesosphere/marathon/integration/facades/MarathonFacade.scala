@@ -8,8 +8,10 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.{ Delete, Get, Patch, Post, Put }
 import akka.http.scaladsl.model.Uri.Query
-import akka.http.scaladsl.model.{ MediaType, _ }
 import akka.http.scaladsl.model.headers.Accept
+import akka.http.scaladsl.model.sse.ServerSentEvent
+import akka.http.scaladsl.model.{ MediaType, _ }
+import akka.http.scaladsl.unmarshalling.sse.EventStreamUnmarshalling
 import akka.http.scaladsl.unmarshalling.{ Unmarshal => AkkaUnmarshal }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -18,7 +20,6 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
-import de.heikoseeberger.akkasse.{ EventStreamUnmarshalling, ServerSentEvent }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{ AkkaHttpResponse, RestResult }
 import mesosphere.marathon.raml.{ App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml }
@@ -160,12 +161,9 @@ class MarathonFacade(
       .map { stream =>
         stream
           .map { event =>
-            event.data.map { d =>
-              val json = mapper.readValue[Map[String, Any]](d) // linter:ignore
-              ITEvent(event.`type`.getOrElse("unknown"), json)
-            }
+            val json = mapper.readValue[Map[String, Any]](event.data) // linter:ignore
+            ITEvent(event.eventType.getOrElse("unknown"), json)
           }
-          .collect { case Some(event) => event }
       }
   }
 
