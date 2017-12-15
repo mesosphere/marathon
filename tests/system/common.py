@@ -770,3 +770,4 @@ def assert_event(event_type, events):
     """ Skip events until event with given type was found."""
     next_event = next(events)
     assert next_event['eventType'] == event_type, "Event '{}' did not arrive in time".format(event_type)
+    print("Event {}".format(event_type))

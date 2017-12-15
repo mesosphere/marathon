@@ -40,7 +40,7 @@ def events():
     url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
-    response = requests.get(url, headers=headers, stream=True)
+    response = requests.get(url, headers=headers, stream=True, verify=False)
     client = sseclient.SSEClient(response)
 
     # We yield a generator of the parsed events to the test. Note: This must be lazy.
