@@ -4,8 +4,8 @@ object Dependencies {
   import Dependency._
 
   val pluginInterface = Seq(
-    /* pluginInterface doesn't directly use these, but we want to expose them as transitive dependencies so that plugin
-     * can use it */
+    /* Marathon plugin-interface doesn't directly use these, but we want to expose them as transitive dependencies so
+     * that plugins can use it */
     akkaActor % "compile",
     akkaStream % "compile",
     akkaHttp % "compile",
@@ -13,7 +13,7 @@ object Dependencies {
     scalaLogging % "compile",
     logback % "compile",
 
-    /** pluginInterface directly uses these via the interfaces exposed to plugins */
+    /** Marathon plugin-interface directly uses these via the interfaces exposed to plugins */
     mesos % "compile",
     guava % "compile",
     wixAccord % "compile"
@@ -82,7 +82,7 @@ object Dependency {
     val Aws = "1.11.243"
     val Alpakka  = "0.14"
     val Chaos = "0.10.0"
-    val Guava = "19.0"
+    val Guava = "20.0"
     val Mesos = "1.5.0-health-check-ipv6"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.4.0-2.0.1"
