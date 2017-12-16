@@ -3,11 +3,11 @@ package api.akkahttp.v2
 
 import akka.event.EventStream
 import akka.http.scaladsl.model.RemoteAddress
+import akka.http.scaladsl.model.sse.ServerSentEvent
 import akka.http.scaladsl.server.Route
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{ Keep, Source }
 import com.typesafe.scalalogging.StrictLogging
-import de.heikoseeberger.akkasse.ServerSentEvent
 import mesosphere.marathon.api.akkahttp.Controller
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.async.ExecutionContexts
@@ -35,7 +35,7 @@ class EventsController(
 ) extends Controller with StrictLogging {
 
   import mesosphere.marathon.api.akkahttp.Directives._
-  import de.heikoseeberger.akkasse.EventStreamMarshalling._
+  import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
 
   /**
     * GET /v2/events SSE endpoint
