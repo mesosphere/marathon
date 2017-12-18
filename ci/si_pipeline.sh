@@ -52,7 +52,7 @@ DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 case $CLUSTER_LAUNCH_CODE in
   0)
-      ./ci/system_integration.sh "$DCOS_URL"
+      (cd tests && make init test)
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
