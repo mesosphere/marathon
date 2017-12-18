@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration
 
 import java.io.File
-import akka.stream.scaladsl.Sink
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds
 import mesosphere.marathon.integration.setup._
@@ -431,23 +430,6 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
 
       And("app should not be available")
       client3.app(app.id.toPath) should be(NotFound)
-    }
-  }
-}
-
-@IntegrationTest
-class NonLeaderEventsTest extends LeaderIntegrationTest {
-
-  "A non-leader" should {
-    "post all events to the event stream" in {
-      val nonLeaderClient = nonLeader()
-      println(s"### ${nonLeaderClient.url}")
-
-      val allEvents = nonLeaderClient.events().futureValue
-        .map(_.eventType)
-        .runWith(Sink.seq)
-
-      allEvents.futureValue should be(Seq("hello"))
     }
   }
 }
