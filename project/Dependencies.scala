@@ -4,13 +4,19 @@ object Dependencies {
   import Dependency._
 
   val pluginInterface = Seq(
+    /* Marathon plugin-interface doesn't directly use these, but we want to expose them as transitive dependencies so
+     * that plugins can use it */
     akkaActor % "compile",
+    akkaStream % "compile",
+    akkaHttp % "compile",
     playJson % "compile",
+    scalaLogging % "compile",
+    logback % "compile",
+
+    /** Marathon plugin-interface directly uses these via the interfaces exposed to plugins */
     mesos % "compile",
     guava % "compile",
-    wixAccord % "compile",
-    scalaLogging % "compile",
-    scalaxml % "provided" // for scapegoat
+    wixAccord % "compile"
   )
 
   val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
@@ -76,7 +82,7 @@ object Dependency {
     val Aws = "1.11.243"
     val Alpakka  = "0.14"
     val Chaos = "0.10.0"
-    val Guava = "19.0"
+    val Guava = "20.0"
     val Mesos = "1.5.0-health-check-ipv6"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.4.0-2.0.1"
@@ -143,7 +149,6 @@ object Dependency {
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val logback = "ch.qos.logback" % "logback-classic" % V.Logback
-  val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
