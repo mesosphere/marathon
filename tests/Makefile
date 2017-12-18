@@ -20,7 +20,7 @@ build:
 	flake8 --count --max-line-length=120
 
 test:
-	shakedown \
+	pipenv run shakedown \
       --stdout all \
       --stdout-inline \
       --ssl-no-verify \
