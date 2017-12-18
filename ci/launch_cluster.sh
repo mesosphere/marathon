@@ -53,4 +53,6 @@ if ! ./dcos-launch wait; then
 fi
 
 # Return dcos_url
-echo "http://$(./dcos-launch describe | jq -r ".masters[0].public_ip")/"
+export DCOS_URL
+DCOS_URL="http://$(./dcos-launch describe | jq -r ".masters[0].public_ip")/"
+echo "Set DCOS_URL=$DCOS_URL"

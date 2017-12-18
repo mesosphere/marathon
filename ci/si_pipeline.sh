@@ -44,11 +44,11 @@ function download-diagnostics-bundle {
 		sleep 5
 		STATUS_OUTPUT="$(dcos node diagnostics --status)"
 	done
-	dcos node diagnostics download ${BUNDLE_NAME} --location=./diagnostics.zip
+	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
 
 # Launch cluster and run tests if launch was successful.
-export DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
+./ci/launch_cluster.sh "$CHANNEL" "$VARIANT"
 CLUSTER_LAUNCH_CODE=$?
 case $CLUSTER_LAUNCH_CODE in
   0)
