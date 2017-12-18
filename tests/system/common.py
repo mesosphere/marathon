@@ -236,9 +236,7 @@ def restore_iptables(host):
 
 
 def block_port(host, port, direction='INPUT'):
-    status, output = shakedown.run_command_on_agent(host, 'sudo iptables -I {} -p tcp --dport {} -j DROP'.format(direction, port))
-    print("Received status {} when blocking direction {}. Stdout: {}".format(status, direction, output))
-    return status, output
+    shakedown.run_command_on_agent(host, 'sudo iptables -I {} -p tcp --dport {} -j DROP'.format(direction, port))
 
 
 def wait_for_task(service, task, timeout_sec=120):
