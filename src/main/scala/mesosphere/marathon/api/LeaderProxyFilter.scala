@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api
 
-import java.io.{ IOException, InputStream, OutputStream }
+import java.io.{ Closeable, IOException, InputStream, OutputStream }
 import java.net._
 import javax.inject.Named
 import javax.net.ssl._
@@ -270,13 +270,13 @@ class JavaUrlConnectionRequestForwarder @Inject() (
 
     log.info(s"Proxying request to ${request.getMethod} $url from $myHostPort")
 
-    try {
+    withTryClosing(Seq(request.getInputStream, response.getOutputStream)) {
       if (hasProxyLoop) {
         log.error("Prevent proxy cycle, rejecting request")
         response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
       } else {
         val leaderConnection: HttpURLConnection = createAndConfigureConnection(url)
-        try {
+        withTryClosing(Seq(leaderConnection.getInputStream, leaderConnection.getErrorStream)) {
           copyRequestToConnection(leaderConnection, request) match {
             case Failure(ex: ConnectException) =>
               log.error(ERROR_STATUS_CONNECTION_REFUSED, ex)
@@ -288,21 +288,31 @@ class JavaUrlConnectionRequestForwarder @Inject() (
               log.error(ERROR_STATUS_BAD_CONNECTION, ex)
               response.sendError(InternalServerError.intValue)
             case Success(_) => // ignore
+              copyConnectionResponse(response)(
+                () => cloneResponseStatusAndHeader(leaderConnection, response),
+                () => cloneResponseEntity(leaderConnection, response)
+              )
           }
-          copyConnectionResponse(response)(
-            () => cloneResponseStatusAndHeader(leaderConnection, response),
-            () => cloneResponseEntity(leaderConnection, response)
-          )
-        } finally {
-          Try(leaderConnection.getInputStream.close())
-          Try(leaderConnection.getErrorStream.close())
         }
       }
-    } finally {
-      Try(request.getInputStream.close())
-      Try(response.getOutputStream.close())
     }
+  }
 
+  /**
+    * Closes the closeables when the provided body returns
+    * If close fails, log and proceed to close next closeable.
+    */
+  def withTryClosing(closeables: => Seq[Closeable])(body: => Unit): Unit = {
+    try { body }
+    finally {
+      closeables.foreach { closeable =>
+        Try(if (closeable != null) closeable.close()) match {
+          case Failure(ex) =>
+            log.error(s"Error closing ${closeable}", ex)
+          case Success(_) => ()
+        }
+      }
+    }
   }
 
   def copy(nullableIn: InputStream, nullableOut: OutputStream): Unit = {
