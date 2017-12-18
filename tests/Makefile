@@ -4,7 +4,8 @@ Marathon system integration tests ⚙️
 Commands:
   init      Install Python dependencies with pipenv
   build     Run formatter and linter.
-  test      Test system integration.
+  test      Test system integration. The DCOS_URL environment variable must be
+            present.
 endef
 
 export USAGE
