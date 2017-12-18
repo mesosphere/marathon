@@ -336,8 +336,7 @@ def get_marathon_leader_not_on_master_leader_node():
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
         shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
-        marathon_leadership_changed(marathon_leader)
-        marathon_leader = shakedown.marathon_leader_ip()
+        marathon_leader = marathon_leadership_changed(marathon_leader)
         print('switched leader to: {}'.format(marathon_leader))
 
     return marathon_leader
@@ -732,13 +731,15 @@ def __marathon_leadership_changed_in_marathon_api(original_leader):
     current_leader = marathon.create_client().get_leader()
     print('leader according to marathon API: {}'.format(current_leader))
     assert original_leader != current_leader
+    return current_leader
 
 
 def marathon_leadership_changed(original_leader):
     """ Verifies leadership changed both by reading v2/leader as well as mesosDNS.
     """
-    __marathon_leadership_changed_in_marathon_api(original_leader)
+    new_leader = __marathon_leadership_changed_in_marathon_api(original_leader)
     __marathon_leadership_changed_in_mesosDNS(original_leader)
+    return new_leader
 
 
 def running_status_network_info(task_statuses):
