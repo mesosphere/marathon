@@ -236,7 +236,9 @@ def restore_iptables(host):
 
 
 def block_port(host, port, direction='INPUT'):
-    shakedown.run_command_on_agent(host, 'sudo iptables -I {} -p tcp --dport {} -j DROP'.format(direction, port))
+    status, output = shakedown.run_command_on_agent(host, 'sudo iptables -I {} -p tcp --dport {} -j DROP'.format(direction, port))
+    print("Received status {} when blocking direction {}. Stdout: {}".format(status, direction, output))
+    return status, output
 
 
 def wait_for_task(service, task, timeout_sec=120):
@@ -328,8 +330,8 @@ def assert_app_tasks_healthy(client, app_def):
 def get_marathon_leader_not_on_master_leader_node():
     marathon_leader = shakedown.marathon_leader_ip()
     master_leader = shakedown.master_leader_ip()
-    print('marathon: {}'.format(marathon_leader))
-    print('leader: {}'.format(master_leader))
+    print('marathon leader: {}'.format(marathon_leader))
+    print('mesos leader: {}'.format(master_leader))
 
     if marathon_leader == master_leader:
         delete_marathon_path('v2/leader')
