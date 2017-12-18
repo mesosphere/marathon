@@ -40,16 +40,28 @@ how long activities like saving to zk will take at different levels of scale.
 
 ## System Testing
 
-The system integration tests are integration tests with [DCOS](http://dcos.io) and verifies
-system integration behavior from a user perspective using DCOS as the context.   The tests are
-written in python using [shakedown](https://github.com/dcos/shakedown) as the testing tool.
+The system integration tests are integration tests with [DCOS](http://dcos.io)
+and verify system integration behavior from a user perspective using DCOS as the
+context. The tests are written in Python using [shakedown](https://github.com/dcos/shakedown)
+as the testing tool.
 
-Instructions for installing shakedown are:
+The tests require an installed Python 3 and pip3. You can then prepare an
+virtualenv with
 
 ```
-git clone github.com:mesosphere/shakedown.git
-cd shakedown
-pip install -e .
+cd test
+make init
 ```
+
+The target uses [Pipenv](https://docs.pipenv.org/) under the hood.
+
+The tests are run with
+
+```
+make test
+```
+
+To start a shell in the environment call `pipenv shell`.
+
 For more details checkout the [shakedown site](https://github.com/dcos/shakedown).
 The tests are written under the project [test/system](system/README.md).
