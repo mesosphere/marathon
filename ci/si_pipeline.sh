@@ -48,13 +48,11 @@ function download-diagnostics-bundle {
 }
 
 # Launch cluster and run tests if launch was successful.
-export DCOS_URL='bogus'
-(cd tests && make init test)
-exit 0
 export DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 case $CLUSTER_LAUNCH_CODE in
   0)
+      cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
       (cd tests && make init test)
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
