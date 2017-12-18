@@ -726,7 +726,8 @@ def __marathon_leadership_changed_in_marathon_api(original_leader):
         We have to retry here because leader election takes time and what might happen is that some nodes might
         not be aware of the new leader being elected resulting in HTTP 502.
     """
-    current_leader = marathon.create_client().get_leader()
+    # Leader is returned like this 10.0.6.88:8080 - we want just the IP
+    current_leader = marathon.create_client().get_leader().split(':', 1)
     print('leader according to marathon API: {}'.format(current_leader))
     assert original_leader != current_leader
     return current_leader
