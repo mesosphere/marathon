@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package stream
 
+import com.amazonaws.auth.{ AWSCredentials, AWSStaticCredentialsProvider, BasicAWSCredentials }
 import java.net.URI
 import java.nio.file.Paths
 
@@ -9,7 +10,6 @@ import akka.http.scaladsl.model.ContentTypes
 import akka.stream.Materializer
 import akka.stream.alpakka.s3.S3Settings
 import akka.stream.alpakka.s3.acl.CannedAcl
-import akka.stream.alpakka.s3.auth.AWSCredentials
 import akka.stream.alpakka.s3.impl.MetaHeaders
 import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.scaladsl.{ FileIO, Source, Sink => ScalaSink }
@@ -117,19 +117,21 @@ object UriIO extends StrictLogging {
   private[this] def s3Client(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer): S3Client = {
     val params = parseParams(uri)
     val region = params.getOrElse("region", "us-east-1")
-    val credentials = {
+    val credentials: AWSCredentials = {
       def fromURL: Option[AWSCredentials] = for {
         accessKey <- params.get("access_key")
         accessSecret <- params.get("secret_key")
-      } yield AWSCredentials(accessKey, accessSecret)
+      } yield new BasicAWSCredentials(accessKey, accessSecret)
       def fromProviderChain: Option[AWSCredentials] = {
         Try(new DefaultAWSCredentialsProviderChain().getCredentials)
           .toOption
-          .map(creds => AWSCredentials(creds.getAWSAccessKeyId, creds.getAWSSecretKey))
+          .map(creds => new BasicAWSCredentials(creds.getAWSAccessKeyId, creds.getAWSSecretKey))
       }
-      fromURL.orElse(fromProviderChain).getOrElse(S3Settings(actorSystem).awsCredentials)
+      fromURL.orElse(fromProviderChain).getOrElse {
+        S3Settings().credentialsProvider.getCredentials
+      }
     }
-    new S3Client(credentials, region)
+    S3Client(new AWSStaticCredentialsProvider(credentials), region)
   }
 
   private[this] def parseParams(uri: URI): Map[String, String] = {

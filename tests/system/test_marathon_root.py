@@ -60,6 +60,12 @@ def marathon_service_name():
 
 
 def setup_module(module):
+    # When the cluster is starting, it might happen that there is some delay in:
+    # - marathon leader registration with mesos
+    # - admin router refreshing cache (every 30s)
+    # We should not start our tests before marathon is accessible through service endpoint.
+    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
+
     common.cluster_info()
     common.clean_up_marathon()
 
@@ -431,7 +437,7 @@ def test_private_repository_mesos_app():
     username = os.environ['DOCKER_HUB_USERNAME']
     password = os.environ['DOCKER_HUB_PASSWORD']
 
-    secret_name = "pullConfig"
+    secret_name = "pullconfig"
     secret_value_json = common.create_docker_pull_config_json(username, password)
     secret_value = json.dumps(secret_value_json)
 
