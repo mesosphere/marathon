@@ -33,7 +33,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       case Some(version) =>
         val targetVersion = Timestamp(version)
         groupManager.group(group.id, targetVersion)
-          .filter(checkAuthorizationOrThrow(ViewGroup, _))
+          .filter(isAllowed(ViewGroup, _))
           .map(g => {
             val existingGroup = g.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion"))
             Some(rootGroup.putGroup(existingGroup, newVersion))
@@ -52,7 +52,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       val updatedGroup: Group = Raml.fromRaml(
         GroupConversion(groupUpdate, group, newVersion) -> appConversionFunc)
 
-      if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateRunSpec, updatedGroup)
+      if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateGroup, updatedGroup)
 
       rootGroup.putGroup(updatedGroup, newVersion)
     }
@@ -60,6 +60,10 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     await(revertToOlderVersion)
       .orElse(scaleChange)
       .getOrElse(createOrUpdateChange)
+  }
+
+  def isAllowed[Resource](action: AuthorizedAction[Resource], mayResource: Option[Resource])(implicit identity: Identity, authorizer: Authorizer): Boolean = {
+    checkAuthorizationOrThrow(action, mayResource.get)(identity, authorizer)
   }
 
   private def checkAuthorizationOrThrow[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit identity: Identity, authorizer: Authorizer): Boolean = {

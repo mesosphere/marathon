@@ -125,7 +125,9 @@ class TasksController(
       .groupBy(instance => instance.instanceId.runSpecId)
       .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut))
   }
+
   private def isAuthorized(appIds: Iterable[PathId])(implicit identity: Identity): Boolean = appIds.forall(id => authorizer.isAuthorized(identity, UpdateRunSpec, id))
+
   private def tryParseTaskIds(taskIds: TasksToDelete): Either[Rejection, Map[Id, PathId]] = {
     val maybeInstanceIdToAppId: Try[Map[Id, PathId]] = Try(taskIds.ids.map { id =>
       try { Task.Id(id).instanceId -> Task.Id.runSpecId(id) }
