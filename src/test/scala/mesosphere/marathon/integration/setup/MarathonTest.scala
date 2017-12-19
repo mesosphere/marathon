@@ -878,10 +878,6 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
     super.afterAll()
   }
 
-  def nonLeader(leader: ITLeaderResult): MarathonFacade = {
-    marathonFacades.find(!_.url.contains(leader.port.toString)).get
-  }
-
   override def cleanUp(): Unit = {
     Future.sequence(marathonServer.start() +: additionalMarathons.map(_.start())).futureValue
     super.cleanUp()
