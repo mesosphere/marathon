@@ -721,7 +721,7 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
     assert original_leader != current_leader
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=10, retry_on_exception=ignore_exception)
+@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=30000, retry_on_exception=ignore_exception)
 def __marathon_leadership_changed_in_marathon_api(original_leader):
     """ This method uses Marathon API to figure out that leadership changed.
         We have to retry here because leader election takes time and what might happen is that some nodes might
