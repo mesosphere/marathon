@@ -33,11 +33,9 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       case Some(version) =>
         val targetVersion = Timestamp(version)
         groupManager.group(group.id, targetVersion)
-          .filter(isAllowed(ViewGroup, _))
-          .map(g => {
-            val existingGroup = g.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion"))
-            Some(rootGroup.putGroup(existingGroup, newVersion))
-          })
+            .map(_.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion")))
+          .filter(checkAuthorizationOrThrow(ViewGroup, _))
+          .map(g => Some(rootGroup.putGroup(g, newVersion)))
       case None => Future.successful(None)
     }
 
@@ -60,10 +58,6 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     await(revertToOlderVersion)
       .orElse(scaleChange)
       .getOrElse(createOrUpdateChange)
-  }
-
-  def isAllowed[Resource](action: AuthorizedAction[Resource], mayResource: Option[Resource])(implicit identity: Identity, authorizer: Authorizer): Boolean = {
-    checkAuthorizationOrThrow(action, mayResource.get)(identity, authorizer)
   }
 
   private def checkAuthorizationOrThrow[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit identity: Identity, authorizer: Authorizer): Boolean = {
