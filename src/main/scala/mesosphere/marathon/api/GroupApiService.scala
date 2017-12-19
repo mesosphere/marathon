@@ -33,7 +33,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       case Some(version) =>
         val targetVersion = Timestamp(version)
         groupManager.group(group.id, targetVersion)
-            .map(_.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion")))
+          .map(_.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion")))
           .filter(checkAuthorizationOrThrow(ViewGroup, _))
           .map(g => Some(rootGroup.putGroup(g, newVersion)))
       case None => Future.successful(None)

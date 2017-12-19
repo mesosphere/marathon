@@ -145,7 +145,7 @@ class AppsController(
         case None =>
           reject(Rejections.EntityNotFound.noApp(appId))
         case Some(info) =>
-          authorized(ViewResource, SystemConfig).apply {
+          authorized(ViewRunSpec, info.app).apply {
             complete(Json.obj("app" -> info))
           }
       }
@@ -411,10 +411,14 @@ class AppsController(
 
   private def listVersions(appId: PathId)(implicit identity: Identity): Route = {
     val versions = groupManager.appVersions(appId).runWith(Sink.seq)
-    authorized(ViewRunSpec, groupManager.runSpec(appId).get, Rejections.EntityNotFound.noApp(appId)).apply {
-      onSuccess(versions) { versions =>
-        complete(VersionList(versions))
-      }
+    groupManager.app(appId) match {
+      case Some(app) =>
+        authorized(ViewRunSpec, app, Rejections.EntityNotFound.noApp(appId)).apply {
+          onSuccess(versions) { versions =>
+            complete(VersionList(versions))
+          }
+        }
+      case None => reject(Rejections.EntityNotFound.noApp(appId))
     }
   }
 
