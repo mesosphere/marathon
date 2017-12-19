@@ -25,7 +25,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, _ }
 import mesosphere.marathon.raml.{ AnyToRaml, DeploymentResult, Reads, Writes }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream.Implicits._
 
 import scala.async.Async._
@@ -100,7 +100,8 @@ class TasksController(
         tryParseTaskIds(taskIds) match {
           case Left(rejection) => reject(rejection)
           case Right(instanceIdsToAppId) =>
-            if (!isAuthorized(instanceIdsToAppId.values)) {
+            val affectedApps = instanceIdsToAppId.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
+            if (!isAuthorized(affectedApps)) {
               reject(AuthDirectives.NotAuthorized(HttpPluginFacade.response(authorizer.handleNotAuthorized(identity, _))))
             } else {
               val tasksByAppId: Future[Map[PathId, Seq[Instance]]] = getTasksByAppId(instanceIdsToAppId)
@@ -110,7 +111,7 @@ class TasksController(
                   complete((StatusCodes.OK, List(Headers.`Marathon-Deployment-Id`(deploymentResult.deploymentId)), deploymentResult))
                 }
               } else {
-                onSuccess(kill(tasksByAppId, instanceIdsToAppId, taskKillingMode == TaskKillingMode.Wipe)) { tasks =>
+                onSuccess(kill(tasksByAppId, affectedApps, taskKillingMode == TaskKillingMode.Wipe)) { tasks =>
                   complete(TasksList(tasks).toRaml)
                 }
               }
@@ -126,7 +127,10 @@ class TasksController(
       .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut))
   }
 
-  private def isAuthorized(appIds: Iterable[PathId])(implicit identity: Identity): Boolean = appIds.forall(id => authorizer.isAuthorized(identity, UpdateRunSpec, id))
+  private def isAuthorized(apps: Iterable[AppDefinition])(implicit identity: Identity): Boolean =
+    apps
+      .map(app => authorizer.isAuthorized(identity, UpdateRunSpec, app))
+      .forall(_ == true)
 
   private def tryParseTaskIds(taskIds: TasksToDelete): Either[Rejection, Map[Id, PathId]] = {
     val maybeInstanceIdToAppId: Try[Map[Id, PathId]] = Try(taskIds.ids.map { id =>
@@ -197,9 +201,8 @@ class TasksController(
     * @return list of killed tasks
     */
   @SuppressWarnings(Array("all")) // async/await
-  private def kill(toKillFuture: Future[Map[PathId, Seq[Instance]]], tasksIdToAppId: Map[Id, PathId], wipe: Boolean)(implicit identity: Identity): Future[Seq[EnrichedTask]] = async {
+  private def kill(toKillFuture: Future[Map[PathId, Seq[Instance]]], affectedApps: Seq[AppDefinition], wipe: Boolean)(implicit identity: Identity): Future[Seq[EnrichedTask]] = async {
     val toKill = await(toKillFuture)
-    val affectedApps = tasksIdToAppId.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
 
     val killedTasks = await(Future.sequence(toKill
       .filter { case (appId, _) => affectedApps.exists(app => app.id == appId) }
