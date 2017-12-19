@@ -7,7 +7,7 @@ package plugin
 trait RunSpec {
 
   /**
-    * The uniqie id of this run specification
+    * The unique id of this run specification
     */
   val id: PathId
 
@@ -25,6 +25,16 @@ trait RunSpec {
     * The networks that this run specification will join.
     */
   val networks: Seq[NetworkSpec]
+
+  /**
+    * Volume definitions
+    */
+  val volumes: Seq[VolumeSpec]
+
+  /**
+    * Volume mounts.
+    */
+  val volumeMounts: Seq[VolumeMountSpec]
 }
 
 /**
@@ -46,11 +56,6 @@ trait ApplicationSpec extends RunSpec {
     * The labels in that app.
     */
   val labels: Map[String, String]
-
-  /**
-    * Container volumes
-    */
-  val volumes: Seq[AppVolumeSpec]
 }
 
 /**
@@ -79,7 +84,7 @@ trait ContainerSpec {
   val labels: Map[String, String]
 
   /**
-    * Pod volume mounts.
+    * Volume mounts.
     */
   val volumeMounts: Seq[VolumeMountSpec]
 }
@@ -114,53 +119,52 @@ trait PodSpec extends RunSpec {
     * The labels in that pod.
     */
   val labels: Map[String, String]
+}
 
+/**
+  * VolumeSpec is a base trait for all the volume types supported by
+  * Marathon. A volume can have an optional name. An application volume
+  * does not have a name, whereas a pod volume does have one. This is
+  * due to the difference in the app and pod JSON definitions. In case
+  * of apps, both volume and its mount point are defined using the same
+  * JSON object. On the other hand, in case of pods, a volume is defined
+  * separately from its mount points, which refer to the volume using its
+  * name.
+  */
+trait VolumeSpec {
   /**
-    * Pod volumes
+    * A volume name.
     */
-  val podVolumes: Seq[PodVolumeSpec]
+  val name: Option[String]
 }
 
 /**
-  * Application volume definition
+  * A volume referring to a secret to be made available to containers.
   */
-trait AppVolumeSpec {
-
-  val containerPath: String
-}
-
-/**
-  * Application volume with a secret
-  */
-trait AppSecretVolumeSpec extends AppVolumeSpec {
-
+trait SecretVolumeSpec extends VolumeSpec {
+  /**
+    * A secret name.
+    */
   val secret: String
 }
 
 /**
-  * Pod volume definition
-  */
-trait PodVolumeSpec {
-
-  val name: String
-}
-
-/**
-  * Pod volume witch a secret
-  */
-trait PodSecretVolumeSpec extends PodVolumeSpec {
-
-  val secret: String
-}
-
-/**
-  * Pod volume mount
+  * A volume mount specifying a path to mount a volume at.
   */
 trait VolumeMountSpec {
+  /**
+    * The volume name this mount is for.
+    */
+  val volumeName: Option[String]
 
-  val name: String
-
+  /**
+    * A mount path for the corresponding volume.
+    */
   val mountPath: String
 
-  val readOnly: Option[Boolean]
+  /**
+    * This field specifies whether to mount the volume
+    * as read-only or not.
+    */
+  val readOnly: Boolean
 }

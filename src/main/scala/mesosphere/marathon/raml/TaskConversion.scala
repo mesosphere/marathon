@@ -9,7 +9,7 @@ object TaskConversion extends HealthConversion with DefaultConversions {
   implicit val localVolumeIdWrites: Writes[task.Task.LocalVolumeId, LocalVolumeId] = Writes { localVolumeId =>
     LocalVolumeId(
       runSpecId = localVolumeId.runSpecId.toRaml,
-      containerPath = localVolumeId.containerPath,
+      containerPath = localVolumeId.name,
       uuid = localVolumeId.uuid,
       persistenceId = localVolumeId.idString
     )

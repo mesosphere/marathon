@@ -58,6 +58,17 @@ class InstanceOpFactoryHelper(
     InstanceOp.LaunchTask(taskInfo, newState, Some(oldState), createOperations)
   }
 
+  def launchOnReservation(
+    executorInfo: Mesos.ExecutorInfo,
+    groupInfo: Mesos.TaskGroupInfo,
+    newState: InstanceUpdateOperation.LaunchOnReservation,
+    oldState: Instance): InstanceOp.LaunchTaskGroup = {
+
+    def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
+
+    InstanceOp.LaunchTaskGroup(executorInfo, groupInfo, newState, Some(oldState), createOperations)
+  }
+
   /**
     * Returns a set of operations to reserve ALL resources (cpu, mem, ports, disk, etc.) and then create persistent
     * volumes against them as needed

@@ -56,13 +56,17 @@ class InstanceOpFactoryImpl(
           inferNormalTaskOp(app, request)
         }
       case pod: PodDefinition =>
-        inferPodInstanceOp(request, pod)
+        if (request.isForResidentRunSpec) {
+          inferForResidents(pod, request)
+        } else {
+          inferPodInstanceOp(pod, request)
+        }
       case _ =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${request.runSpec}")
     }
   }
 
-  protected def inferPodInstanceOp(request: InstanceOpFactory.Request, pod: PodDefinition): OfferMatchResult = {
+  protected def inferPodInstanceOp(pod: PodDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
     val builderConfig = TaskGroupBuilder.BuilderConfig(
       config.defaultAcceptedResourceRolesSet,
       config.envVarsPrefix.get,
@@ -74,8 +78,12 @@ class InstanceOpFactoryImpl(
 
     matchedOffer match {
       case matches: ResourceMatchResponse.Match =>
-        val (executorInfo, groupInfo, hostPorts, instanceId) = TaskGroupBuilder.build(pod, request.offer,
-          Instance.Id.forRunSpec, builderConfig, runSpecTaskProc, matches.resourceMatch)
+        val instanceId = Instance.Id.forRunSpec(pod.id)
+        val taskIds = pod.containers.map { container =>
+          Task.Id.forInstanceId(instanceId, Some(container))
+        }
+        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, request.offer,
+          instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
 
         // TODO(jdef) no support for resident tasks inside pods for the MVP
         val agentInfo = Instance.AgentInfo(request.offer)
@@ -117,10 +125,8 @@ class InstanceOpFactoryImpl(
     }
   }
 
-  private[this] def inferForResidents(app: AppDefinition, request: InstanceOpFactory.Request): OfferMatchResult = {
+  private[this] def inferForResidents(spec: RunSpec, request: InstanceOpFactory.Request): OfferMatchResult = {
     val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches, localRegion) = request
-
-    // TODO(jdef) pods should be supported some day
 
     val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
     val needToReserve = request.numberOfWaitingReservations < additionalLaunches
@@ -136,7 +142,7 @@ class InstanceOpFactoryImpl(
      *  - if we don't: skip for now
      *
      * Scenario 2:
-     *  We ned to reserve resources and receive an offer that has matching resources
+     *  We need to reserve resources and receive an offer that has matching resources
      *  - schedule a ReserveAndCreate TaskOp
      */
 
@@ -165,10 +171,10 @@ class InstanceOpFactoryImpl(
 
         resourceMatchResponse match {
           case matches: ResourceMatchResponse.Match =>
-            val instanceOp = launchOnReservation(app, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
-            OfferMatchResult.Match(app, request.offer, instanceOp, clock.now())
+            val instanceOp = launchOnReservation(spec, offer, volumeMatch.instance, matches.resourceMatch, volumeMatch)
+            OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now())
           case matchesNot: ResourceMatchResponse.NoMatch =>
-            OfferMatchResult.NoMatch(app, request.offer, matchesNot.reasons, clock.now())
+            OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now())
         }
       }
     } else None
@@ -191,9 +197,9 @@ class InstanceOpFactoryImpl(
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)
-          Some(OfferMatchResult.Match(app, request.offer, instanceOp, clock.now()))
+          Some(OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
-          Some(OfferMatchResult.NoMatch(app, request.offer, matchesNot.reasons, clock.now()))
+          Some(OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now()))
       }
     } else None
 
@@ -201,52 +207,106 @@ class InstanceOpFactoryImpl(
       .orElse(maybeReserveAndCreateVolumes)
       .getOrElse {
         logger.warn("No need to reserve or launch and offer request isForResidentRunSpec")
-        OfferMatchResult.NoMatch(app, request.offer,
+        OfferMatchResult.NoMatch(spec, request.offer,
           Seq(NoOfferMatchReason.NoCorrespondingReservationFound), clock.now())
       }
   }
 
   private[this] def launchOnReservation(
-    spec: AppDefinition,
+    spec: RunSpec,
     offer: Mesos.Offer,
     reservedInstance: Instance,
     resourceMatch: ResourceMatcher.ResourceMatch,
     volumeMatch: PersistentVolumeMatcher.VolumeMatch): InstanceOp = {
 
-    val currentTaskId = reservedInstance.appTask.taskId
-
-    // The new taskId is based on the previous one. The previous taskId can denote either
-    // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
-    //    perfectly normal taskIds.
-    // 2. a task that was created to hold a reservation in 1.5 or later, this still is a completely normal taskId.
-    // 3. an existing reservation from a previous version of Marathon, or a new reservation created in 1.5 or later. In
-    //    this case, this is also a normal taskId
-    // 4. a resident task that was created with 1.5 or later. In this case, the taskId has an appended launch attempt,
-    //    a number prefixed with a separator.
-    // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
-    // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
-    // in version 1.5.
-    val newTaskId = Task.Id.forResidentTask(currentTaskId)
-    val (taskInfo, networkInfo) = new TaskBuilder(spec, newTaskId, config, runSpecTaskProc)
-      .build(offer, resourceMatch, Some(volumeMatch))
-
     // The agentInfo could have possibly changed after a reboot. See the docs for
     // InstanceUpdateOperation.LaunchOnReservation for more details
     val agentInfo = Instance.AgentInfo(offer)
-    val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-      reservedInstance.instanceId,
-      newTaskId,
-      runSpecVersion = spec.version,
-      timestamp = clock.now(),
-      status = Task.Status(
-        stagedAt = clock.now(),
-        condition = Condition.Created,
-        networkInfo = networkInfo
-      ),
-      networkInfo.hostPorts,
-      agentInfo)
 
-    taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
+    spec match {
+      case app: AppDefinition =>
+        val taskId = reservedInstance.appTask.taskId
+
+        // The new taskId is based on the previous one. The previous taskId can denote either
+        // 1. a resident task that was created with a previous version. In this case, both reservation label and taskId are
+        //    perfectly normal taskIds.
+        // 2. a task that was created to hold a reservation in 1.5 or later, this still is a completely normal taskId.
+        // 3. an existing reservation from a previous version of Marathon, or a new reservation created in 1.5 or later. In
+        //    this case, this is also a normal taskId
+        // 4. a resident task that was created with 1.5 or later. In this case, the taskId has an appended launch attempt,
+        //    a number prefixed with a separator.
+        // All of these cases are handled in one way: by creating a new taskId for a resident task based on the previous
+        // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
+        // in version 1.5.
+        val newTaskId = Task.Id.forResidentTask(taskId)
+
+        val (taskInfo, networkInfo) =
+          new TaskBuilder(app, newTaskId, config, runSpecTaskProc)
+            .build(offer, resourceMatch, Some(volumeMatch))
+
+        val now = clock.now()
+        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
+          instanceId = reservedInstance.instanceId,
+          oldToNewTaskIds = Map(taskId -> newTaskId),
+          runSpecVersion = spec.version,
+          timestamp = now,
+          statuses = Map(newTaskId -> Task.Status(
+            stagedAt = now,
+            condition = Condition.Created,
+            networkInfo = networkInfo)),
+          Map(newTaskId -> networkInfo.hostPorts),
+          agentInfo)
+
+        taskOperationFactory.launchOnReservation(taskInfo, stateOp, reservedInstance)
+
+      case pod: PodDefinition =>
+        val builderConfig = TaskGroupBuilder.BuilderConfig(
+          config.defaultAcceptedResourceRolesSet,
+          config.envVarsPrefix.get,
+          config.mesosBridgeName())
+
+        val instanceId = reservedInstance.instanceId
+        val taskIds = reservedInstance.tasksMap.keys
+        val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
+          taskId -> Task.Id.forResidentTask(taskId)
+        }(collection.breakOut)
+
+        val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.map { taskId =>
+          val containerName = taskId.containerName.getOrElse(
+            throw new IllegalStateException("failed to extract a container name from a task ID"))
+          containerName -> taskId
+        }(collection.breakOut)
+        val podContainerTaskIds: Seq[Task.Id] = pod.containers.map { container =>
+          containerNameToTaskId.getOrElse(container.name, throw new IllegalStateException(
+            s"failed to get a task ID for the given container name: ${container.name}"))
+        }
+
+        val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, offer,
+          instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
+
+        val networkInfos = podTaskNetworkInfos(pod, agentInfo, podContainerTaskIds, hostPorts)
+        val now = clock.now()
+        val statuses = networkInfos.map {
+          case (newTaskId, networkInfo) =>
+            newTaskId -> Task.Status(stagedAt = now, condition = Condition.Created, networkInfo = networkInfo)
+        }
+        val taskHostPorts = networkInfos.map {
+          case (newTaskId, networkInfo) =>
+            newTaskId -> networkInfo.hostPorts
+        }
+
+        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
+          instanceId = reservedInstance.instanceId,
+          oldToNewTaskIds = oldToNewTaskIds,
+          runSpecVersion = pod.version,
+          timestamp = now,
+          statuses = statuses,
+          hostPorts = taskHostPorts,
+          agentInfo = agentInfo
+        )
+
+        taskOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
+    }
   }
 
   private[this] def reserveAndCreateVolumes(
@@ -257,9 +317,10 @@ class InstanceOpFactoryImpl(
 
     val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
-        case (source, volume) =>
-          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume), volume))
+        case (source, volume, mount) =>
+          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume, mount), volume, mount))
       }
+
     val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
@@ -268,40 +329,86 @@ class InstanceOpFactoryImpl(
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
     val agentInfo = Instance.AgentInfo(offer)
-    val hostPorts = resourceMatch.hostPorts.flatten
-    val networkInfo = NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
 
-    // The first taskId does not have an attempt count - this is only the task created to hold the reservation and it
-    // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
-    // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
-    // there was always a 1:1 correlation from reservation to taskId)
-    val taskId = Task.Id.forRunSpec(runSpec.id)
-    val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
-    val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
-    val task = Task.Reserved(
-      taskId = taskId,
-      reservation = reservation,
-      status = Task.Status(
-        stagedAt = now,
-        condition = Condition.Reserved,
-        networkInfo = networkInfo
-      ),
-      runSpecVersion = runSpec.version
-    )
-    val instance = Instance(
-      instanceId = task.taskId.instanceId,
-      agentInfo = agentInfo,
-      state = InstanceState(
-        condition = Condition.Reserved,
-        since = now,
-        activeSince = None,
-        healthy = None
-      ),
-      tasksMap = Map(task.taskId -> task),
-      runSpecVersion = runSpec.version,
-      unreachableStrategy = runSpec.unreachableStrategy
-    )
-    val stateOp = InstanceUpdateOperation.Reserve(instance)
+    val (reservationLabels, stateOp) = runSpec match {
+      case _: AppDefinition =>
+        val hostPorts = resourceMatch.hostPorts.flatten
+        val networkInfo = NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
+
+        // The first taskId does not have an attempt count - this is only the task created to hold the reservation and it
+        // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
+        // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
+        // there was always a 1:1 correlation from reservation to taskId)
+        val taskId = Task.Id.forRunSpec(runSpec.id)
+        val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
+        val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
+        val task = Task.Reserved(
+          taskId = taskId,
+          reservation = reservation,
+          status = Task.Status(
+            stagedAt = now,
+            condition = Condition.Reserved,
+            networkInfo = networkInfo
+          ),
+          runSpecVersion = runSpec.version
+        )
+        val instance = Instance(
+          instanceId = task.taskId.instanceId,
+          agentInfo = agentInfo,
+          state = InstanceState(
+            condition = Condition.Reserved,
+            since = now,
+            activeSince = None,
+            healthy = None
+          ),
+          tasksMap = Map(task.taskId -> task),
+          runSpecVersion = runSpec.version,
+          unreachableStrategy = runSpec.unreachableStrategy
+        )
+        val stateOp = InstanceUpdateOperation.Reserve(instance)
+        (reservationLabels, stateOp)
+
+      case pod: PodDefinition =>
+        val instanceId = Instance.Id.forRunSpec(runSpec.id)
+        val taskIds = pod.containers.map { container =>
+          Task.Id.forInstanceId(instanceId, Some(container))
+        }
+
+        val networkInfos = podTaskNetworkInfos(pod, agentInfo, taskIds, resourceMatch.hostPorts)
+        val reservationLabels = TaskLabels.labelsForTask(
+          frameworkId,
+          taskIds.headOption.getOrElse(throw new IllegalStateException("pod does not have any container")))
+        val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
+
+        val tasks = taskIds.map { taskId =>
+          Task.Reserved(
+            taskId = taskId,
+            reservation = reservation,
+            status = Task.Status(
+              stagedAt = now,
+              condition = Condition.Reserved,
+              networkInfo = networkInfos.getOrElse(
+                taskId, throw new Exception("failed to retrieve a task network info"))
+            ),
+            runSpecVersion = runSpec.version
+          )
+        }
+        val instance = Instance(
+          instanceId = instanceId,
+          agentInfo = agentInfo,
+          state = InstanceState(
+            condition = Condition.Reserved,
+            since = now,
+            activeSince = None,
+            healthy = None
+          ),
+          tasksMap = tasks.map(t => t.taskId -> t)(collection.breakOut),
+          runSpecVersion = runSpec.version,
+          unreachableStrategy = runSpec.unreachableStrategy
+        )
+        val stateOp = InstanceUpdateOperation.Reserve(instance)
+        (reservationLabels, stateOp)
+    }
     taskOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }
 
@@ -317,12 +424,12 @@ class InstanceOpFactoryImpl(
 
 object InstanceOpFactoryImpl {
 
-  protected[impl] def ephemeralPodInstance(
+  protected[impl] def podTaskNetworkInfos(
     pod: PodDefinition,
     agentInfo: Instance.AgentInfo,
     taskIDs: Seq[Task.Id],
-    hostPorts: Seq[Option[Int]],
-    instanceId: Instance.Id)(implicit clock: Clock): Instance = {
+    hostPorts: Seq[Option[Int]]
+  ): Map[Task.Id, NetworkInfo] = {
 
     val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
       ct.endpoints.map { ep =>
@@ -336,11 +443,30 @@ object InstanceOpFactoryImpl {
 
     assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
 
-    val since = clock.now()
-
     val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
       case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
     }(collection.breakOut)
+
+    taskIDs.map { taskId =>
+      // the task level host ports are needed for fine-grained status/reporting later on
+      val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+      }.getOrElse(Seq.empty[Int])
+
+      val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+      taskId -> networkInfo
+    }(collection.breakOut)
+  }
+
+  protected[impl] def ephemeralPodInstance(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]],
+    instanceId: Instance.Id)(implicit clock: Clock): Instance = {
+
+    val since = clock.now()
+    val taskNetworkInfos = podTaskNetworkInfos(pod, agentInfo, taskIDs, hostPorts)
 
     Instance(
       instanceId,
@@ -348,11 +474,9 @@ object InstanceOpFactoryImpl {
       state = InstanceState(Condition.Created, since, activeSince = None, healthy = None),
       tasksMap = taskIDs.map { taskId =>
         // the task level host ports are needed for fine-grained status/reporting later on
-        val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
-          allocPortsByCTName.withFilter{ case (name, port) => name == ctName }.map(_._2)
-        }.getOrElse(Seq.empty[Int])
-
-        val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
+        val networkInfo = taskNetworkInfos.getOrElse(
+          taskId,
+          throw new IllegalStateException("failed to retrieve a task network info"))
         val task = Task.LaunchedEphemeral(
           taskId = taskId,
           runSpecVersion = pod.version,
@@ -363,5 +487,5 @@ object InstanceOpFactoryImpl {
       runSpecVersion = pod.version,
       unreachableStrategy = pod.unreachableStrategy
     )
-  } // inferPodInstance
+  }
 }

@@ -61,7 +61,9 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
 
       When("the deployment for a resident app stops")
       val valAfterDeploymentStepSuccess = f.futureOffersWanted()
-      val vol = PersistentVolume("bar", PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
+      val vol = VolumeWithMount(
+        volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(123)),
+        mount = VolumeMount(volumeName = None, mountPath = "bar", readOnly = false))
       val zero = UpgradeStrategy(0, 0)
       val app = AppDefinition(
         PathId("/resident"),

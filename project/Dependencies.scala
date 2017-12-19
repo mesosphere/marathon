@@ -83,7 +83,7 @@ object Dependency {
     val Alpakka  = "0.14"
     val Chaos = "0.10.0"
     val Guava = "20.0"
-    val Mesos = "1.5.0-health-check-ipv6"
+    val Mesos = "1.5.0-SNAPSHOT"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.4.0-2.0.1"
     val OpenJDK = "openjdk:8u121-jdk"
