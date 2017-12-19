@@ -277,7 +277,7 @@ class GroupsResource @Inject() (
 
       maybeExistingGroup match {
         case Some(existingGroup) => checkAuthorization(UpdateGroup, existingGroup)
-        case None => checkAuthorization(CreateRunSpec, updatedGroup)
+        case None => checkAuthorization(CreateGroup, updatedGroup)
       }
 
       updatedGroup
