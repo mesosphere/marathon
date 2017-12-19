@@ -44,6 +44,7 @@ Configure a persistent volume with the following options:
 - `mode`: The access mode of the volume. Currently, `"RW"` is the only possible value and will let your application read from and write to the volume.
 - `persistent.type`: The type of mesos disk resource to use; the valid options are `root`, `path`, and `mount`, corresponding to the [valid mesos multi-disk resource types](http://mesos.apache.org/documentation/latest/multiple-disk/).
 - `persistent.size`: The size of the persistent volume in MiBs.
+- `persistent.profileName`: (not seen above) The storage volume profile. Only volumes with the specified profile are used to launch an application. It this option is not given, any volume (with or without a profile) will be used for launching.
 - `persistent.maxSize`: (not seen above) For `root` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
 - `persistent.constraints`: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.
 
@@ -76,14 +77,16 @@ The default `UpgradeStrategy` for a stateful application is a `minimumHealthCapa
 Let's configure a persistent volume with the following options:
 
 ```json
-{
-  "name": "pst",
-  "persistent": {
-    "type": "root",
-    "size": 10,
-    "constraints": []
+"volumes": [
+  {
+    "name": "pst",
+    "persistent": {
+      "type": "root",
+      "size": 10,
+      "constraints": []
+    }
   }
-}
+]
 ```
 
 - `name`: Name of the pod level volume
@@ -94,13 +97,13 @@ Let's configure a persistent volume with the following options:
 - `persistent.constraints`: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.
 
 
-Next, we also need to set the `residency` node in order to tell Marathon to setup a stateful pod. 
-Currently, the only valid option for this is:
+Next, we also need to define the `residency` part as well as disable `unreachableStrategy` in order to tell Marathon 
+to setup a stateful pod:
 
 ```
+"unreachableStrategy": "disabled",
 "residency": {
-  "taskLostBehavior": "WAIT_FOREVER",
-  "relaunchEscalationTimeoutSeconds": 3600
+  "taskLostBehavior": "WAIT_FOREVER"
 }
 ```
 
