@@ -136,7 +136,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
           labels = Map("try" -> "me"),
           networkName = Option("fubar")
         )),
-        residency = Option(Residency(
+        residency = Option(AppResidency(
           relaunchEscalationTimeoutSeconds = 33,
           taskLostBehavior = TaskLostBehavior.RelaunchAfterTimeout
         )),

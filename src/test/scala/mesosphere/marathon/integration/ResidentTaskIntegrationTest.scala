@@ -6,7 +6,7 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
-import mesosphere.marathon.raml.{ App, AppPersistentVolume, Residency, AppUpdate, AppVolume, Container, EngineType, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, AppPersistentVolume, AppResidency, AppUpdate, AppVolume, Container, EngineType, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy }
 import mesosphere.marathon.state.PathId
 
 import scala.collection.immutable.Seq
@@ -246,7 +246,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val app = App(
         id.toString,
         instances = instances,
-        residency = Some(Residency()),
+        residency = Some(AppResidency()),
         constraints = constraints,
         container = Some(Container(
           `type` = EngineType.Mesos,

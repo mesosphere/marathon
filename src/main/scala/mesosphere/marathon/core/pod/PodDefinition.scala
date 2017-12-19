@@ -134,5 +134,4 @@ object PodDefinition {
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
   val DefaultUnreachableStrategy = UnreachableStrategy.default(resident = false)
-  val DefaultResidency = Option.empty[Residency]
 }
