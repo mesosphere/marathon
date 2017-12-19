@@ -45,7 +45,3 @@ def container_bridge_pod():
 
 def persistent_volume_pod():
     return load_pod('persistent-volume-pod')
-
-
-def resident_docker_pod():
-    return load_pod('resident-docker-pod')
