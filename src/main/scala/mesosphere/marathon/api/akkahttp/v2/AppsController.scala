@@ -425,7 +425,7 @@ class AppsController(
   private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = {
     onSuccess(groupManager.appVersion(appId, version.toOffsetDateTime)) {
       case Some(app) =>
-        authorized(ViewRunSpec, app, Rejections.EntityNotFound.noApp(appId)).apply {
+        authorized(ViewRunSpec, app).apply {
           complete(app.toRaml)
         }
       case None =>
