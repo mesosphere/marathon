@@ -37,16 +37,23 @@ def wait_for_marathon_user_and_cleanup():
 @pytest.fixture(scope="function")
 def events():
 
+    print("entering events fixture")
+
     url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
+    print('Query {} for events'.format(url))
     response = requests.get(url, headers=headers, stream=True, verify=False)
+    print('Connected to {}'.format(url))
     client = sseclient.SSEClient(response)
+    print('Created SSE Client.')
 
     # We yield a generator of the parsed events to the test. Note: This must be lazy.
     yield (json.loads(event.data) for event in client.events())
 
     client.close()
+
+    print("exiting events fixture")
 
 
 @pytest.fixture(scope="function")

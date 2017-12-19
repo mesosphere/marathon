@@ -128,7 +128,7 @@ def test_event_channel_for_pods(events):
     client.update_pod(pod_id, pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    common.assert_event('pod_update_event', events)
+    common.assert_event('pod_updated_event', events)
 
 
 @shakedown.dcos_1_9
