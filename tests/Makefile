@@ -25,7 +25,7 @@ test:
       --stdout-inline \
       --ssl-no-verify \
       --timeout 360000 \
-      --pytest-option "--junitxml=shakedown.xml" \
+      --pytest-option "--junitxml=../shakedown.xml" \
       --pytest-option --verbose \
       --pytest-option --full-trace \
       --ssh-key-file "$(CLI_TEST_SSH_KEY)" \
