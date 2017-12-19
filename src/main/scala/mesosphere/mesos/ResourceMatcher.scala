@@ -150,7 +150,11 @@ object ResourceMatcher extends StrictLogging {
       val mounts = runSpec.persistentVolumeMounts
       val (namedVolumes, namedMounts) =
         if (volumes.exists(_.name.isEmpty) && volumes.length == mounts.length) {
-          // give temporary names to volumes and mounts to ease volume mount matching in [[findMatches]]
+          // Give temporary names to volumes and mounts to ease volume mount matching in [[findMatches]].
+          // Since application volumes are not named, and there is 1:1 mapping between application volumes and
+          // volume mounts, and 1:many mapping between pod ones, in order to make it easier to find a volume
+          // corresponding to a volume mount in [[findMatches]], temporary names are assigned to volumes
+          // and volume mounts.
           val indexedVolumes = volumes.zipWithIndex.map { case (v, i) => v.copy(name = Some(i.toString)) }
           val indexedMounts = mounts.zipWithIndex.map { case (m, i) => m.copy(volumeName = Some(i.toString)) }
           (indexedVolumes, indexedMounts)
@@ -332,11 +336,8 @@ object ResourceMatcher extends StrictLogging {
 
     def matchesProfileName(profileName: Option[String], resource: Protos.Resource): Boolean = {
       profileName.forall { specifiedProfileName =>
-        if (resource.hasDisk && resource.getDisk.hasSource && resource.getDisk.getSource.hasProfile) {
+        resource.hasDisk && resource.getDisk.hasSource && resource.getDisk.getSource.hasProfile &&
           specifiedProfileName == resource.getDisk.getSource.getProfile
-        } else {
-          false
-        }
       }
     }
 

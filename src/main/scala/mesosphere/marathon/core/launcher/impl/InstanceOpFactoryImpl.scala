@@ -474,7 +474,9 @@ object InstanceOpFactoryImpl {
       state = InstanceState(Condition.Created, since, activeSince = None, healthy = None),
       tasksMap = taskIDs.map { taskId =>
         // the task level host ports are needed for fine-grained status/reporting later on
-        val networkInfo = taskNetworkInfos.getOrElse(taskId, throw new Exception("should not have happened"))
+        val networkInfo = taskNetworkInfos.getOrElse(
+          taskId,
+          throw new IllegalStateException("failed to retrieve a task network info"))
         val task = Task.LaunchedEphemeral(
           taskId = taskId,
           runSpecVersion = pod.version,
