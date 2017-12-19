@@ -43,15 +43,15 @@ def events():
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
     print('Query {} for events'.format(url))
-    response = requests.get(url, headers=headers, stream=True, verify=False)
-    print('Connected to {}'.format(url))
-    client = sseclient.SSEClient(response)
-    print('Created SSE Client.')
+    with requests.get(url, headers=headers, stream=True, verify=False) as response:
+        print('Connected to {}'.format(url))
+        client = sseclient.SSEClient(response)
+        print('Created SSE Client.')
 
-    # We yield a generator of the parsed events to the test. Note: This must be lazy.
-    yield (json.loads(event.data) for event in client.events())
+        # We yield a generator of the parsed events to the test. Note: This must be lazy.
+        yield (json.loads(event.data) for event in client.events())
 
-    client.close()
+        client.close()
 
     print("exiting events fixture")
 
