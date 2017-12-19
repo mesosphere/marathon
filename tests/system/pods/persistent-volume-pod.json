@@ -15,9 +15,6 @@
     "instances": 1
   },
   "scheduling": {
-    "residency": {
-      "taskLostBehavior": "WAIT_FOREVER"
-    },
     "unreachableStrategy": "disabled",
     "upgrade": {
       "minimumHealthCapacity": 0,

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.externalvolume.impl.{ ExternalVolumeProvider, Ex
 import mesosphere.marathon.raml.{ App, AppExternalVolume, EngineType, ReadMode, Container => AppContainer }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import org.apache.mesos.Protos.{ ContainerInfo, Parameter, Parameters, Volume => MesosVolume }
+import org.apache.mesos.Protos.{ Parameter, Parameters, Volume => MesosVolume }
 
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles external volumes allocated
@@ -19,7 +19,7 @@ import org.apache.mesos.Protos.{ ContainerInfo, Parameter, Parameters, Volume =>
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-private[impl] case object DVDIProvider extends ExternalVolumeProvider {
+private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider {
   override val name: String = "dvdi"
 
   override def validations: ExternalVolumeValidations = DVDIProviderValidations
@@ -78,8 +78,8 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
     }
   } // Builders
 
-  override def build(builder: ContainerInfo.Builder, ev: ExternalVolume, mount: VolumeMount): Unit =
-    builder.addVolumes(Builders.toUnifiedContainerVolume(ev, mount))
+  override def build(ev: ExternalVolume, mount: VolumeMount): MesosVolume =
+    Builders.toUnifiedContainerVolume(ev, mount)
 
   val driverOption = "dvdi/driver"
   val quotedDriverOption = '"' + driverOption + '"'

@@ -1,21 +1,23 @@
 package mesosphere.marathon
 package core.externalvolume
 
-import com.wix.accord.Descriptions.{ Path, Explicit }
+import com.wix.accord.Descriptions.{ Explicit, Path }
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
+import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProvider
 import mesosphere.marathon.raml.AppExternalVolume
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.ContainerInfo
+import org.apache.mesos.Protos
 
 /**
   * API facade for callers interested in storage volumes
   */
 object ExternalVolumes {
-  private[this] lazy val providers: ExternalVolumeProviderRegistry = StaticExternalVolumeProviderRegistry
+  private[this] lazy val providers: Map[String, ExternalVolumeProvider] =
+    Map(DVDIProvider.name -> DVDIProvider)
 
-  def build(builder: ContainerInfo.Builder, v: ExternalVolume, mount: VolumeMount): Unit = {
-    providers.get(v.external.provider).foreach { _.build(builder, v, mount) }
+  def build(v: ExternalVolume, mount: VolumeMount): Option[Protos.Volume] = {
+    providers.get(v.external.provider).map { _.build(v, mount) }
   }
 
   def validExternalVolume: Validator[ExternalVolume] = new Validator[ExternalVolume] {
@@ -64,7 +66,7 @@ object ExternalVolumes {
   /** @return a validator that checks the validity of a group given the related volume providers */
   def validRootGroup(): Validator[RootGroup] = new Validator[RootGroup] {
     override def apply(rootGroup: RootGroup): Result =
-      providers.all.map { provider =>
+      providers.values.map { provider =>
         validate(rootGroup)(provider.validations.rootGroup)
       }.fold(Success)(_ and _)
   }

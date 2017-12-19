@@ -72,7 +72,7 @@ case class AppDefinition(
 
     versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
 
-    override val residency: Option[Residency] = AppDefinition.DefaultResidency,
+    residency: Option[Residency] = AppDefinition.DefaultResidency,
 
     secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
 
@@ -115,7 +115,7 @@ case class AppDefinition(
 
   val portNumbers: Seq[Int] = portDefinitions.map(_.port)
 
-  val isResident: Boolean = residency.isDefined
+  override val isResident: Boolean = residency.isDefined
 
   override val version: Timestamp = versionInfo.version
 
@@ -135,7 +135,7 @@ case class AppDefinition(
 
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
-  private[state] val persistentVolumesAndMounts: Seq[VolumeWithMount] =
+  private[state] val persistentVolumesWithMounts: Seq[VolumeWithMount] =
     container.map(_.volumes.collect { case vm @ VolumeWithMount(_: PersistentVolume, _) => vm }).getOrElse(Seq.empty)
 
   def toProto: Protos.ServiceDefinition = {
@@ -603,8 +603,8 @@ object AppDefinition extends GeneralPurposeCombinators {
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
     val changeNoVolumes =
       isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>
-        val fromVolumes = from.persistentVolumesAndMounts
-        val toVolumes = to.persistentVolumesAndMounts
+        val fromVolumes = from.persistentVolumesWithMounts
+        val toVolumes = to.persistentVolumesWithMounts
         def sameSize = fromVolumes.size == toVolumes.size
         def noChange = fromVolumes.forall { fromVolume =>
           toVolumes.find(_.mount.mountPath == fromVolume.mount.mountPath).contains(fromVolume)

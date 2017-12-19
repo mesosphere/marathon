@@ -84,7 +84,7 @@ object ContainerSerializer {
       case VolumeWithMount(volume, mount) =>
         volume match {
           case _: PersistentVolume => // PersistentVolumes are handled differently
-          case ev: ExternalVolume => ExternalVolumes.build(builder, ev, mount) // this also adds the volume
+          case ev: ExternalVolume => ExternalVolumes.build(ev, mount).foreach(builder.addVolumes)
           case dv: HostVolume => builder.addVolumes(VolumeSerializer.toMesos(dv, mount))
           case _: SecretVolume => // SecretVolumes are handled differently
         }

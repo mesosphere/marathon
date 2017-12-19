@@ -10,7 +10,7 @@ import mesosphere.marathon.state
 import scala.concurrent.duration._
 
 trait PodConversion extends NetworkConversion with ConstraintConversion with ContainerConversion with EnvVarConversion
-  with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion with ResidencyConversion {
+  with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion {
 
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podd =>
     val instances = podd.scaling.fold(DefaultInstances) {
@@ -29,10 +29,6 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
     val unreachableStrategy = podd.scheduling.flatMap(_.unreachableStrategy).fold(DefaultUnreachableStrategy)(Raml.fromRaml(_))
     val killSelection: state.KillSelection = podd.scheduling.fold(state.KillSelection.DefaultKillSelection) {
       _.killSelection.fold(state.KillSelection.DefaultKillSelection)(Raml.fromRaml(_))
-    }
-
-    val residency = podd.scheduling.flatMap(_.residency).fold(DefaultResidency) { residency =>
-      Some(residency.fromRaml)
     }
 
     val backoffStrategy = podd.scheduling.flatMap { policy =>
@@ -63,7 +59,6 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
       executorResources = executorResources.fromRaml,
-      residency = residency,
       unreachableStrategy = unreachableStrategy,
       killSelection = killSelection
     )
@@ -87,8 +82,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
         podDef.constraints.toRaml[Set[Constraint]],
         podDef.acceptedResourceRoles.toIndexedSeq)),
       Some(podDef.killSelection.toRaml),
-      Some(podDef.unreachableStrategy.toRaml),
-      podDef.residency.toRaml
+      Some(podDef.unreachableStrategy.toRaml)
     )
 
     val scalingPolicy = FixedPodScalingPolicy(podDef.instances)

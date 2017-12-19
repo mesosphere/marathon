@@ -42,8 +42,8 @@ trait RunSpec extends plugin.RunSpec {
   val version: Timestamp
   val resources: Resources
   val backoffStrategy: BackoffStrategy
-  val residency: Option[Residency] = Option.empty[Residency]
   val upgradeStrategy: UpgradeStrategy
+  def isResident: Boolean = persistentVolumes.nonEmpty
   def withInstances(instances: Int): RunSpec
   def isUpgrade(to: RunSpec): Boolean
   def needsRestart(to: RunSpec): Boolean
