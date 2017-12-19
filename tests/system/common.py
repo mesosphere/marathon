@@ -7,6 +7,7 @@ import time
 import uuid
 import sys
 import retrying
+import contextlib
 
 from datetime import timedelta
 from dcos import http, mesos
@@ -224,15 +225,33 @@ def systemctl_master(command='restart'):
     shakedown.run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
 
 
-def save_iptables(host):
+def save_iptables(host, filename='iptables.rules'):
+    """ Saves iptables firewall rules such they can be restored
+    """
+
     shakedown.run_command_on_agent(
         host,
-        'if [ ! -e iptables.rules ] ; then sudo iptables -L > /dev/null && sudo iptables-save > iptables.rules ; fi')
+        'if [ ! -e {} ] ; then sudo iptables -L > /dev/null && sudo iptables-save > {} ; fi'.format(filename, filename))
 
+def restore_iptables(host, filename='iptables.rules'):
+    """ Reconnect a previously partitioned node to the network
+        :param hostname: host or IP of the machine to partition from the cluster
+    """
 
-def restore_iptables(host):
     shakedown.run_command_on_agent(
-        host, 'if [ -e iptables.rules ]; then sudo iptables-restore < iptables.rules && rm iptables.rules ; fi')
+        host,
+        'if [ -e {} ]; then sudo iptables-restore < {} && rm {} ; fi'.format(filename, filename, filename))
+
+
+@contextlib.contextmanager
+def iptable_rules(host):
+    filename = 'iptables-{}.rules'.format(uuid.uuid4().hex)
+    save_iptables(host, filename)
+    try:
+        yield
+    finally:
+        # return config to previous state
+        restore_iptables(host, filename)
 
 
 def block_port(host, port, direction='INPUT'):

@@ -533,7 +533,7 @@ def test_task_gets_restarted_due_to_network_split():
     port = tasks[0]['ports'][0]
 
     # introduce a network partition
-    with shakedown.iptable_rules(host):
+    with common.iptable_rules(host):
         common.block_port(host, port)
         time.sleep(10)
 
@@ -863,7 +863,7 @@ def test_marathon_when_disconnected_from_zk():
     tasks = client.get_tasks(app_def["id"])
     original_task_id = tasks[0]['id']
 
-    with shakedown.iptable_rules(host):
+    with common.iptable_rules(host):
         common.block_port(host, 2181)
         time.sleep(10)
 
