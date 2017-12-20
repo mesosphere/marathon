@@ -112,7 +112,7 @@ lazy val commonSettings = testSettings ++
     InstanceProfileCredentialsProvider.getInstance()),
   s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
 
-  scapegoatVersion := "1.3.0",
+  (scapegoatVersion in ThisBuild) := "1.3.0",
 
   coverageMinimum := 70,
   coverageFailOnMinimum := true,
