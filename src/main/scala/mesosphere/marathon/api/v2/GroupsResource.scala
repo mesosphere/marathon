@@ -333,7 +333,7 @@ class GroupsResource @Inject() (
       val updatedGroup: Group = Raml.fromRaml(
         GroupConversion(groupUpdate, group, newVersion) -> appConversionFunc)
 
-      maybeExistingGroup.fold(checkAuthorization(CreateRunSpec, updatedGroup))(checkAuthorization(UpdateGroup, _))
+      maybeExistingGroup.fold(checkAuthorization(UpdateGroup, updatedGroup))(checkAuthorization(UpdateGroup, _))
 
       rootGroup.putGroup(updatedGroup, newVersion)
     }
