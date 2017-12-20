@@ -6,6 +6,7 @@
 """
 
 import aiohttp
+import asyncio
 import apps
 import common
 import json
@@ -219,10 +220,13 @@ async def test_event_channel():
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
 
-    async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get(url) as response:
-            async for line in response.content:
-                print(line)
+    async def assert_event():
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url) as response:
+                async for line in response.content:
+                    print(line)
+
+    await asyncio.wait_for(assert_event(), 10)
 
     assert 'hi' == 'hello'
 
