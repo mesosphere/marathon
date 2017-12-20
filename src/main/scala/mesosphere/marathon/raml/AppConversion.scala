@@ -9,7 +9,8 @@ import mesosphere.mesos.protos.Implicits._
 import scala.concurrent.duration._
 
 trait AppConversion extends DefaultConversions with ConstraintConversion with EnvVarConversion with HealthCheckConversion
-  with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion with UnreachableStrategyConversion with KillSelectionConversion {
+  with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion
+  with UnreachableStrategyConversion with KillSelectionConversion {
 
   import AppConversion._
 

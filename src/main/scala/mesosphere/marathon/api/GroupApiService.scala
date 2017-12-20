@@ -33,11 +33,9 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       case Some(version) =>
         val targetVersion = Timestamp(version)
         groupManager.group(group.id, targetVersion)
+          .map(_.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion")))
           .filter(checkAuthorizationOrThrow(ViewGroup, _))
-          .map(g => {
-            val existingGroup = g.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion"))
-            Some(rootGroup.putGroup(existingGroup, newVersion))
-          })
+          .map(g => Some(rootGroup.putGroup(g, newVersion)))
       case None => Future.successful(None)
     }
 
@@ -52,7 +50,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       val updatedGroup: Group = Raml.fromRaml(
         GroupConversion(groupUpdate, group, newVersion) -> appConversionFunc)
 
-      if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateRunSpec, updatedGroup)
+      if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateGroup, updatedGroup)
 
       rootGroup.putGroup(updatedGroup, newVersion)
     }

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.raml.Endpoint
-import mesosphere.marathon.state.{ EnvVarString, PathId, PortAssignment, Timestamp }
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
@@ -26,7 +26,7 @@ object TaskGroupBuilder extends StrictLogging {
   // let's (for now) set these values to reflect that.
   protected[mesos] val LinuxAmd64 = Map("os" -> "linux", "arch" -> "amd64")
 
-  private val ephemeralVolPathPrefix = "volumes/"
+  private val ephemeralVolumePathPrefix = "volumes/"
 
   case class BuilderConfig(
       acceptedResourceRoles: Set[String],
@@ -36,21 +36,23 @@ object TaskGroupBuilder extends StrictLogging {
   def build(
     podDefinition: PodDefinition,
     offer: mesos.Offer,
-    newInstanceId: PathId => Instance.Id,
+    instanceId: Instance.Id,
+    taskIds: Seq[Task.Id],
     config: BuilderConfig,
     runSpecTaskProcessor: RunSpecTaskProcessor,
-    resourceMatch: ResourceMatcher.ResourceMatch
-  ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id) = {
-    val instanceId = newInstanceId(podDefinition.id)
-
+    resourceMatch: ResourceMatcher.ResourceMatch,
+    volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch]
+  ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]]) = {
     val allEndpoints = podDefinition.containers.flatMap(_.endpoints)
 
-    val mesosNetworks = buildMesosNetworks(podDefinition.networks, allEndpoints, resourceMatch.hostPorts, config.mesosBridgeName)
+    val mesosNetworks = buildMesosNetworks(
+      podDefinition.networks, allEndpoints, resourceMatch.hostPorts, config.mesosBridgeName)
 
     val executorInfo = computeExecutorInfo(
       podDefinition,
       resourceMatch.portsMatch,
       mesosNetworks,
+      volumeMatchOption,
       instanceId,
       offer.getFrameworkId)
 
@@ -62,21 +64,23 @@ object TaskGroupBuilder extends StrictLogging {
           k -> s.map { case (t, hp) => t._2.copy(hostPort = hp) }
       }
 
-    val taskGroup = mesos.TaskGroupInfo.newBuilder.addAllTasks(
-      podDefinition.containers.map { container =>
-        val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
-        val portAssignments = computePortAssignments(podDefinition, endpoints)
+    val taskGroup = mesos.TaskGroupInfo.newBuilder.addAllTasks {
+      podDefinition.containers.zip(taskIds).map {
+        case (container, taskId) =>
+          val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
+          val portAssignments = computePortAssignments(podDefinition, endpoints)
 
-        computeTaskInfo(container, podDefinition, offer, instanceId, resourceMatch.hostPorts, config, portAssignments)
-          .setDiscovery(taskDiscovery(podDefinition, endpoints))
-          .build
+          val task = computeTaskInfo(container, podDefinition, offer, instanceId, taskId,
+            resourceMatch.hostPorts, config, portAssignments)
+            .setDiscovery(taskDiscovery(podDefinition, endpoints))
+          task.build
       }.asJava
-    )
+    }
 
     // call all configured run spec customizers here (plugin)
     runSpecTaskProcessor.taskGroup(podDefinition, executorInfo, taskGroup)
 
-    (executorInfo.build, taskGroup.build, resourceMatch.hostPorts, instanceId)
+    (executorInfo.build, taskGroup.build, resourceMatch.hostPorts)
   }
 
   // The resource match provides us with a list of host ports.
@@ -144,13 +148,12 @@ object TaskGroupBuilder extends StrictLogging {
     podDefinition: PodDefinition,
     offer: mesos.Offer,
     instanceId: Instance.Id,
+    taskId: Task.Id,
     hostPorts: Seq[Option[Int]],
     config: BuilderConfig,
     portAssignments: Seq[PortAssignment]): mesos.TaskInfo.Builder = {
 
     val endpointVars = endpointEnvVars(podDefinition, hostPorts, config)
-
-    val taskId = Task.Id.forInstanceId(instanceId, Some(container))
 
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
@@ -201,6 +204,7 @@ object TaskGroupBuilder extends StrictLogging {
     podDefinition: PodDefinition,
     portsMatch: PortsMatch,
     mesosNetworks: Seq[mesos.NetworkInfo],
+    volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
     instanceId: Instance.Id,
     frameworkId: mesos.FrameworkID): mesos.ExecutorInfo.Builder = {
     val executorID = mesos.ExecutorID.newBuilder.setValue(instanceId.executorIdString)
@@ -220,23 +224,27 @@ object TaskGroupBuilder extends StrictLogging {
       val containerInfo = mesos.ContainerInfo.newBuilder
         .setType(mesos.ContainerInfo.Type.MESOS)
 
-      mesosNetworks.foreach(containerInfo.addNetworkInfos(_))
+      mesosNetworks.foreach(containerInfo.addNetworkInfos)
 
-      podDefinition.volumes.collect{
+      podDefinition.volumes.collect {
         // see the related code in computeContainerInfo
         case e: EphemeralVolume =>
+          val volumeName = e.name.getOrElse(
+            throw new IllegalStateException("failed to retrieve an ephemeral volume name"))
+          val volumePath = ephemeralVolumePathPrefix + volumeName
           mesos.Volume.newBuilder()
+            .setContainerPath(volumePath)
             .setMode(mesos.Volume.Mode.RW) // if not RW, then how do containers plan to share anything?
             .setSource(mesos.Volume.Source.newBuilder()
               .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
               .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
                 .setType(mesos.Volume.Source.SandboxPath.Type.SELF)
-                .setPath(ephemeralVolPathPrefix + e.name) // matches the path in computeContainerInfo
-              ))
-      }.foreach{
+                .setPath(volumePath))) // matches the path in computeContainerInfo
+      }.foreach {
         volume => containerInfo.addVolumes(volume)
       }
 
+      volumeMatchOption.foreach(_.persistentVolumeResources.foreach(executorInfo.addResources))
       executorInfo.setContainer(containerInfo)
     }
 
@@ -329,9 +337,10 @@ object TaskGroupBuilder extends StrictLogging {
     container.volumeMounts.foreach { volumeMount =>
 
       // Read-write mode will be used when the "readOnly" option isn't set.
-      val mode = if (volumeMount.readOnly.getOrElse(false)) mesos.Volume.Mode.RO else mesos.Volume.Mode.RW
-
-      podDefinition.volume(volumeMount.name) match {
+      val mode = VolumeMount.readOnlyToProto(volumeMount.readOnly)
+      val volumeName = volumeMount.volumeName.getOrElse(
+        throw new IllegalArgumentException("volumeName must be not empty"))
+      podDefinition.volume(volumeName) match {
         case hostVolume: HostVolume =>
           val volume = mesos.Volume.newBuilder()
             .setMode(mode)
@@ -350,8 +359,20 @@ object TaskGroupBuilder extends StrictLogging {
               .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
               .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
                 .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
-                .setPath(ephemeralVolPathPrefix + volumeMount.name)
+                .setPath(ephemeralVolumePathPrefix + volumeName)
               ))
+
+          containerInfo.addVolumes(volume)
+
+        case _: PersistentVolume =>
+          val volume = mesos.Volume.newBuilder()
+            .setMode(mode)
+            .setContainerPath(volumeMount.mountPath)
+            .setSource(mesos.Volume.Source.newBuilder()
+              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
+              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
+                .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
+                .setPath(volumeName)))
 
           containerInfo.addVolumes(volume)
 

@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.{ Result, Validator, Failure }
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, EphemeralVolume, Image, ImageType, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount }
+import com.wix.accord.{ Failure, Result, Validator }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, Pod, PodContainer, PodEphemeralVolume, PodSecretVolume, Resources, SecretDef, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.{ UnitTest, ValidationTestLike }
 
@@ -64,7 +64,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     }
 
     "be rejected if volume names are not unique" in new Fixture() {
-      val volume = EphemeralVolume("volume")
+      val volume = PodEphemeralVolume("volume")
       val volumeMount = VolumeMount(volume.name, "/bla")
       private val invalid = validPod.copy(
         volumes = Seq(volume, volume),

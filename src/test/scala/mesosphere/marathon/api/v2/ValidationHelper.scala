@@ -7,9 +7,9 @@ import play.api.libs.json.{ JsError, JsResult }
 
 object ValidationHelper {
 
-  def getAllRuleConstrains(r: Result): Set[ConstraintViolation] = Validation.allViolations(r).toSet
+  def getAllRuleConstraints(r: Result): Set[ConstraintViolation] = Validation.allViolations(r).toSet
 
-  def getAllRuleConstrains(r: JsResult[_]): Set[ConstraintViolation] = {
+  def getAllRuleConstraints(r: JsResult[_]): Set[ConstraintViolation] = {
     r match {
       case f: JsError => f.errors.flatMap {
         case (path, errors) =>

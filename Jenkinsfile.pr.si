@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 timeout(120) {
-node('shakedown') {
+node('py35') {
   wrap([$class: 'MesosSingleUseSlave']) {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
 

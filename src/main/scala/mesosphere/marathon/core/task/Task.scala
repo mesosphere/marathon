@@ -112,12 +112,7 @@ object Task {
       * For resident tasks, this will denote the number of launched tasks on a reservation since 1.5
       */
     lazy val attempt: Option[Long] = Id.attempt(idString)
-    /**
-      * ID used to create and match reservations. For backwards compatibility, this is basically a legacy taskId string.
-      * resident tasks will be given a launch attempt count with beginning with version 1.5. This count and the
-      * preceding separator are stripped off to end up with a taskId that can match previously launched reservations.
-      */
-    lazy val reservationId: String = Id.reservationId(idString)
+
     override def toString: String = s"task [$idString]"
     override def compare(that: Id): Int = idString.compare(that.idString)
   }
@@ -137,12 +132,15 @@ object Task {
 
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
+    private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(taskId: String): PathId = {
       taskId match {
-        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceId, maybeContainer) => PathId.fromSafePath(runSpecId)
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          PathId.fromSafePath(runSpecId)
+        case TaskIdWithInstanceIdRegex(runSpecId, _, _, _) => PathId.fromSafePath(runSpecId)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) => PathId.fromSafePath(runSpecId)
         case LegacyTaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
@@ -151,6 +149,8 @@ object Task {
 
     def containerName(taskId: String): Option[String] = {
       taskId match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          if (container == Names.anonymousContainer) None else Some(container)
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, maybeContainer) =>
           if (maybeContainer == Names.anonymousContainer) None else Some(maybeContainer)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) => None
@@ -161,20 +161,16 @@ object Task {
 
     def attempt(taskId: String): Option[Long] = {
       taskId match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) => Some(attempt.toLong)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) => Some(attempt.toLong)
         case _ => None
       }
     }
 
-    def reservationId(taskId: String): String = {
-      taskId match {
-        case ResidentTaskIdRegex(runSpecId, separator, uuid, _, attempt) => runSpecId + separator + uuid
-        case _ => taskId
-      }
-    }
-
     def instanceId(taskId: String): Instance.Id = {
       taskId match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          Instance.Id(runSpecId + "." + prefix + uuid)
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
           Instance.Id(runSpecId + "." + prefix + instanceUuid)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) =>
@@ -217,6 +213,10 @@ object Task {
       */
     def forResidentTask(taskId: Task.Id): Task.Id = {
       taskId.idString match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          val newAttempt = attempt.toLong + 1
+          val newIdString = s"$runSpecId.$prefix$uuid.$container.$newAttempt"
+          Task.Id(newIdString)
         case ResidentTaskIdRegex(runSpecId, separator1, uuid, separator2, attempt) =>
           val newAttempt = attempt.toLong + 1
           val newIdString = s"$runSpecId$separator1$uuid$separator2$newAttempt"
@@ -243,11 +243,11 @@ object Task {
     def calculateLegacyExecutorId(taskId: String): String = s"marathon-$taskId"
   }
 
-  case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)
+  case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume, mount: VolumeMount)
 
-  case class LocalVolumeId(runSpecId: PathId, containerPath: String, uuid: String) {
+  case class LocalVolumeId(runSpecId: PathId, name: String, uuid: String) {
     import LocalVolumeId._
-    lazy val idString = runSpecId.safePath + delimiter + containerPath + delimiter + uuid
+    lazy val idString = runSpecId.safePath + delimiter + name + delimiter + uuid
 
     override def toString: String = s"LocalVolume [$idString]"
   }
@@ -257,11 +257,13 @@ object Task {
     private val delimiter = "#"
     private val LocalVolumeEncoderRE = s"^([^$delimiter]+)[$delimiter]([^$delimiter]+)[$delimiter]([^$delimiter]+)$$".r
 
-    def apply(runSpecId: PathId, volume: PersistentVolume): LocalVolumeId =
-      LocalVolumeId(runSpecId, volume.containerPath, uuidGenerator.generate().toString)
+    def apply(runSpecId: PathId, volume: PersistentVolume, mount: VolumeMount): LocalVolumeId = {
+      val name = volume.name.getOrElse(mount.mountPath)
+      LocalVolumeId(runSpecId, name, uuidGenerator.generate().toString)
+    }
 
     def unapply(id: String): Option[(LocalVolumeId)] = id match {
-      case LocalVolumeEncoderRE(runSpec, path, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), path, uuid))
+      case LocalVolumeEncoderRE(runSpec, name, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), name, uuid))
       case _ => None
     }
 
@@ -274,7 +276,7 @@ object Task {
     implicit val localVolumeIdWriter = Writes[LocalVolumeId] { localVolumeId =>
       JsObject(Seq(
         "runSpecId" -> Json.toJson(localVolumeId.runSpecId),
-        "containerPath" -> Json.toJson(localVolumeId.containerPath),
+        "containerPath" -> Json.toJson(localVolumeId.name),
         "uuid" -> Json.toJson(localVolumeId.uuid),
         "persistenceId" -> Json.toJson(localVolumeId.idString)
       ))
