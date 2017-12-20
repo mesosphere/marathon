@@ -1,6 +1,5 @@
 import java.time.{ ZonedDateTime, ZoneId }
 import java.time.format.DateTimeFormatter
-import play.api.libs.json.Json
 import sbt._
 import sbt.Keys._
 import sbt.plugins.JvmPlugin
@@ -78,9 +77,6 @@ object TestWithCoveragePlugin extends AutoPlugin {
 
     IO.write(file, csv.mkString("\n"))
   }
-
-  case class HMTest(name: String, coverage: Map[String, String], result: String = "pass")
-  implicit val hmtestFormat = Json.format[HMTest]
 
   def writeCoverageReport(name: String, sourceDirs: Seq[File], coverage: Coverage, outputDir: File, target: File, baseDir: File, log: Logger): Unit = {
     log.info(s"Generating scoverage reports")

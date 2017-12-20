@@ -30,13 +30,7 @@ libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.3",
   "com.eed3si9n" %% "treehugger" % "0.4.3",
   "org.slf4j" % "slf4j-nop" % "1.7.25",
-  "org.vafer" % "jdeb" % "1.5" artifacts Artifact("jdeb", "jar", "jar"),
-  "com.typesafe.play" %% "play-json" % "2.6.7",
-
-  // Other libs depend on older versions, but play JSON bumps a subset of jackson to 2.8.9, and these don't play well.
-  "com.fasterxml.jackson.module" %% "jackson-module-scala" % JacksonVersion,
-  "com.fasterxml.jackson.module" % "jackson-module-paranamer" % JacksonVersion,
-  "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % JacksonVersion
+  "org.vafer" % "jdeb" % "1.5" artifacts Artifact("jdeb", "jar", "jar")
 )
 
 sbtPlugin := true
