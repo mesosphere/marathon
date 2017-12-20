@@ -44,15 +44,16 @@ function download-diagnostics-bundle {
 		sleep 5
 		STATUS_OUTPUT="$(dcos node diagnostics --status)"
 	done
-	dcos node diagnostics download ${BUNDLE_NAME} --location=./diagnostics.zip
+	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
 
 # Launch cluster and run tests if launch was successful.
-DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
+export DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 case $CLUSTER_LAUNCH_CODE in
   0)
-      ./ci/system_integration.sh "$DCOS_URL"
+      cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
+      (cd tests && make init test)
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
