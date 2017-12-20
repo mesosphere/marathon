@@ -87,7 +87,7 @@ def test_marathon_delete_leader(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    common.marathon_leadership_changed(original_leader)
+    common.assert_marathon_leadership_changed(original_leader)
 
 
 @shakedown.masters(3)
@@ -111,7 +111,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     # wait until leader changed
-    common.marathon_leadership_changed(original_leader)
+    common.assert_marathon_leadership_changed(original_leader)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_app_existence(expected_instances):
@@ -143,7 +143,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     # wait until leader changed
-    common.marathon_leadership_changed(original_leader)
+    common.assert_marathon_leadership_changed(original_leader)
 
     # check if app definition is still not there
     try:
@@ -168,7 +168,7 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    common.marathon_leadership_changed(original_leader)
+    common.assert_marathon_leadership_changed(original_leader)
 
 
 @shakedown.masters(3)
@@ -184,7 +184,7 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
-    common.marathon_leadership_changed(original_leader)
+    common.assert_marathon_leadership_changed(original_leader)
 
 
 @shakedown.public_agents(1)
@@ -379,7 +379,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
     # wait until leader changed
-    common.marathon_leadership_changed(original_leader)
+    common.assert_marathon_leadership_changed(original_leader)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_app_existence(expected_instances):
@@ -419,7 +419,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     # wait until leader changed
     # if leader changed, this means that marathon was able to start again, which is great :-).
-    common.marathon_leadership_changed(original_leader)
+    common.assert_marathon_leadership_changed(original_leader)
 
     # check if app definition is still not there and no instance is running after new leader was elected
     check_app_existence(0)
