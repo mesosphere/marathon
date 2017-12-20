@@ -48,12 +48,6 @@ Configure a persistent volume with the following options:
 - `persistent.maxSize`: (not seen above) For `root` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
 - `persistent.constraints`: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.
 
-You also need to set the `residency` node in order to tell Marathon to setup a stateful application. Currently, the only valid option for this is:
-```
-"residency": {
-  "taskLostBehavior": "WAIT_FOREVER"
-}
-```
 
 ### Scaling stateful applications
 
@@ -97,14 +91,10 @@ Let's configure a persistent volume with the following options:
 - `persistent.constraints`: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.
 
 
-Next, we also need to define the `residency` part as well as disable `unreachableStrategy` in order to tell Marathon 
-to setup a stateful pod:
+Next, we also need to disable `unreachableStrategy` in order to tell Marathon to setup a stateful pod:
 
 ```
 "unreachableStrategy": "disabled",
-"residency": {
-  "taskLostBehavior": "WAIT_FOREVER"
-}
 ```
 
 Finally, we have to specify volume mount parameter:
@@ -231,9 +221,6 @@ A model app definition for PostgreSQL on Marathon would look like this. Note tha
     "POSTGRES_PASSWORD": "password",
     "PGDATA": "pgdata"
   },
-  "residency": {
-    "taskLostBehavior": "WAIT_FOREVER"
-  },
   "upgradeStrategy": {
     "maximumOverCapacity": 0,
     "minimumHealthCapacity": 0
@@ -343,10 +330,6 @@ Following example will create a pod with 2 containers and one shared persistent 
     "instances": 1
   },
   "scheduling": {
-    "residency": {
-      "taskLostBehavior": "WAIT_FOREVER",
-      "relaunchEscalationTimeoutSeconds": 3600
-    },
     "unreachableStrategy": "disabled",
     "upgrade": {
       "minimumHealthCapacity": 0,
