@@ -36,6 +36,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
 import PathMatchers.forceParameter
+import mesosphere.marathon.plugin.auth.AuthorizedResource.SystemConfig
 
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -144,7 +145,7 @@ class AppsController(
         case None =>
           reject(Rejections.EntityNotFound.noApp(appId))
         case Some(info) =>
-          authorized(ViewResource, info.app).apply {
+          authorized(ViewRunSpec, info.app).apply {
             complete(Json.obj("app" -> info))
           }
       }
@@ -410,17 +411,21 @@ class AppsController(
 
   private def listVersions(appId: PathId)(implicit identity: Identity): Route = {
     val versions = groupManager.appVersions(appId).runWith(Sink.seq)
-    authorized(ViewRunSpec, groupManager.app(appId), Rejections.EntityNotFound.noApp(appId)).apply {
-      onSuccess(versions) { versions =>
-        complete(VersionList(versions))
-      }
+    groupManager.app(appId) match {
+      case Some(app) =>
+        authorized(ViewRunSpec, app, Rejections.EntityNotFound.noApp(appId)).apply {
+          onSuccess(versions) { versions =>
+            complete(VersionList(versions))
+          }
+        }
+      case None => reject(Rejections.EntityNotFound.noApp(appId))
     }
   }
 
   private def getVersion(appId: PathId, version: Timestamp)(implicit identity: Identity): Route = {
     onSuccess(groupManager.appVersion(appId, version.toOffsetDateTime)) {
       case Some(app) =>
-        authorized(ViewRunSpec, app, Rejections.EntityNotFound.noApp(appId)).apply {
+        authorized(ViewRunSpec, app).apply {
           complete(app.toRaml)
         }
       case None =>

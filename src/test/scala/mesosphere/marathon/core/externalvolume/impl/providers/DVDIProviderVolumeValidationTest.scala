@@ -4,7 +4,6 @@ package core.externalvolume.impl.providers
 import com.wix.accord._
 import mesosphere.UnitTest
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.Volume.Mode
 
 class DVDIProviderVolumeValidationTest extends UnitTest {
   case class TestParameters(volumes: Seq[ExternalVolume], wantsValid: Boolean)
@@ -18,190 +17,169 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
       // various combinations of INVALID external persistent volume parameters
       Seq[ExternalVolume](
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driverNam" -> "rexray", "dvdi/volumetype" -> "io1")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/volumetype" -> "io1 ")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/newfstype" -> " xfs")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/newfstype" -> "")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/iops" -> "0")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/iops" -> "b")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/overwritefs" -> "b")
-          ),
-          mode = Mode.RO
+          )
         ),
-
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "qaz",
             options = Map("dvdi/driver" -> "bar")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("driver" -> "bar")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "",
             options = Map("dvdi/driver" -> "bar"
             )
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "", provider = "dvdi",
             options = Map("dvdi/driver" -> "bar"
             )
-          ),
-          mode = Mode.
-            RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "",
             options = Map.empty[String, String]
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = Some(1L), name = "", provider = "",
             options = Map.empty[String, String]
-          ),
-          mode = Mode.RO)
-      ), wantsValid = false
+          )
+        )
+      ),
+      wantsValid = false
     ),
     TestParameters(
       // various combinations of VALID external persistent volume parameters
       Seq[ExternalVolume](
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/volumetype" -> "io1")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/newfstype" -> "xfs")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/iops" -> "1")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/overwritefs" -> "true")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/overwritefs" -> "false")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = Some(1L), name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "a" -> "b")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = Some(1L), name = "f", provider = "dvdi", options = Map("dvdi/driver" -> "bar")
-          ),
-          mode = Mode.RO
+          )
         ),
         ExternalVolume(
-          containerPath = "",
+          name = None,
           external = ExternalVolumeInfo(
             size = None, name = "f", provider = "dvdi",
             options = Map("dvdi/driver" -> "bar"
             )
-          ),
-          mode = Mode.RO
+          )
         )
-      ), wantsValid = true
+      ),
+      wantsValid = true
     )
   )
 

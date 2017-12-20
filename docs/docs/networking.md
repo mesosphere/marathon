@@ -473,6 +473,8 @@ The default is `tcp`:
   }
 ```
 
+It is possible to specify multiple protocols by using a comma as a separator: `udp,tcp` (note the lack of spaces).
+
 ##### Specifying Service Ports
 
 By default, Marathon will create associated service ports for each of these declared mappings and dynamically assign them values.

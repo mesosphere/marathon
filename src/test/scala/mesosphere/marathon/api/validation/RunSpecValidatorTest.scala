@@ -12,7 +12,6 @@ import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{ App, Apps, Raml, Resources }
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -284,7 +283,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "valid docker volume" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume)
+        volumes = Seq(f.persistentVolume())
       )
       assert(validate(container)(validContainer()).isSuccess)
     }
@@ -292,7 +291,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "docker volume with missing containerPath is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validDockerVolume.copy(containerPath = ""))
+        volumes = Seq(f.hostVolume(mountPath = ""))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -300,7 +299,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "docker volume with missing hostPath is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validDockerVolume.copy(hostPath = ""))
+        volumes = Seq(f.hostVolume(hostPath = ""))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -308,7 +307,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with missing containerPath is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(containerPath = ""))
+        volumes = Seq(f.persistentVolume(mountPath = ""))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -316,7 +315,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with mode RO is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(mode = mesos.Volume.Mode.RO))
+        volumes = Seq(f.persistentVolume(readOnly = true))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -324,7 +323,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with size 0 is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(0)))
+        volumes = Seq(f.persistentVolume(size = 0))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -332,7 +331,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with size < 0 is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(-1)))
+        volumes = Seq(f.persistentVolume(size = -1))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -340,7 +339,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with container path '.' is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(containerPath = "."))
+        volumes = Seq(f.persistentVolume(mountPath = "."))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -348,7 +347,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with container path '..' is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(containerPath = ".."))
+        volumes = Seq(f.persistentVolume(mountPath = ".."))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -356,7 +355,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with container path '.hidden' is valid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(containerPath = ".hidden"))
+        volumes = Seq(f.persistentVolume(mountPath = ".hidden"))
       )
       assert(validate(container)(validContainer()).isSuccess)
     }
@@ -364,7 +363,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with container path with dots in the middle is valid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo..bar"))
+        volumes = Seq(f.persistentVolume(mountPath = "foo..bar"))
       )
       assert(validate(container)(validContainer()).isSuccess)
     }
@@ -372,7 +371,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with container path starting with a forward slash is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(containerPath = "/path"))
+        volumes = Seq(f.persistentVolume(mountPath = "/path"))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -380,7 +379,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "persistent volume with container path containing forward slashes is invalid" in {
       val f = new Fixture
       val container = f.validDockerContainer.copy(
-        volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo/bar"))
+        volumes = Seq(f.persistentVolume(mountPath = "foo/bar"))
       )
       assert(validate(container)(validContainer()).isFailure)
     }
@@ -677,20 +676,19 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       )
 
       // scalastyle:off magic.number
-      def validPersistentVolume: PersistentVolume = PersistentVolume(
-        containerPath = "test",
-        persistent = PersistentVolumeInfo(10),
-        mode = mesos.Volume.Mode.RW)
+      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test", readOnly: Boolean = false): VolumeWithMount =
+        VolumeWithMount(
+          volume = HostVolume(name = None, hostPath = hostPath),
+          mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))
 
-      def validDockerVolume: DockerVolume = DockerVolume(
-        containerPath = "/test",
-        hostPath = "/etc/foo",
-        mode = mesos.Volume.Mode.RW)
+      def persistentVolume(size: Long = 10, mountPath: String = "test", readOnly: Boolean = false): VolumeWithMount =
+        VolumeWithMount(
+          volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size)),
+          mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))
 
-      def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
       val zero = UpgradeStrategy(0, 0)
 
-      def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
+      def residentApp(id: String, volumes: Seq[VolumeWithMount]): AppDefinition = {
         AppDefinition(
           id = PathId(id),
           cmd = Some("test"),
@@ -700,9 +698,9 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
           unreachableStrategy = UnreachableStrategy.default(resident = true)
         )
       }
-      val vol1 = persistentVolume("foo")
-      val vol2 = persistentVolume("bla")
-      val vol3 = persistentVolume("test")
+      val vol1 = persistentVolume(mountPath = "foo")
+      val vol2 = persistentVolume(mountPath = "bla")
+      val vol3 = persistentVolume(mountPath = "test")
       val validResident = residentApp("/app1", Seq(vol1, vol2)).copy(upgradeStrategy = zero)
 
       def cassandraWithoutResidency =

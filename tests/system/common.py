@@ -20,6 +20,7 @@ from urllib.parse import urljoin
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
 marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
 marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
+marathon_1_6 = pytest.mark.skipif('marthon_version_less_than("1.6")')
 
 
 def ignore_exception(exc):
@@ -720,7 +721,7 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
     assert original_leader != current_leader
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=10, retry_on_exception=ignore_exception)
+@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=30000, retry_on_exception=ignore_exception)
 def __marathon_leadership_changed_in_marathon_api(original_leader):
     """ This method uses Marathon API to figure out that leadership changed.
         We have to retry here because leader election takes time and what might happen is that some nodes might

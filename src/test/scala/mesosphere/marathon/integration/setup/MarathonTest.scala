@@ -23,7 +23,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppDockerVolume, AppHealthCheck, Network, NetworkMode, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppHostVolume, AppHealthCheck, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.{ Lock, Retry, Timeout }
 import mesosphere.util.PortAllocator
@@ -424,7 +424,7 @@ trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually
           image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
-          new AppDockerVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+          AppHostVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,
@@ -876,10 +876,6 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
   override def afterAll(): Unit = {
     Try(additionalMarathons.foreach(_.close()))
     super.afterAll()
-  }
-
-  def nonLeader(leader: ITLeaderResult): MarathonFacade = {
-    marathonFacades.find(!_.url.contains(leader.port.toString)).get
   }
 
   override def cleanUp(): Unit = {

@@ -65,7 +65,9 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
           )
         }
         val expected = basicCommandApp.copy(
-          container = Some(Container.Mesos(Seq(DockerVolume("containerPath", "/host", Mesos.Volume.Mode.RW))))
+          container = Some(Container.Mesos(Seq(VolumeWithMount(
+            volume = HostVolume(None, "/host"),
+            mount = VolumeMount(None, "containerPath")))))
         )
         migrateSingleApp(sd) should be(expected)
       }
