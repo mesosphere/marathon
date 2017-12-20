@@ -18,7 +18,7 @@ Marathon Health Checks will continue functioning, but are not actively supported
 
 If you launch Marathon 1.7.0 and have app definitions with Marathon Health Checks, then Marathon will refuse to start. You will be able to temporarily re-enable them via an extended grace-period flag.
 
-Marathon Health Checks will be completely removed in Marathon 1.8.0, and Marathon will refuse to start if the extended grace-period deprecation flag is specified).
+Marathon Health Checks will be completely removed in Marathon 1.8.0, and Marathon will refuse to start if the extended grace-period deprecation flag is specified.
 
 ## Changes from 1.5.1 to 1.5.2
 Bugfix release
