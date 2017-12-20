@@ -6,6 +6,12 @@
 
 The Sentry Raven log appender has been updated to version 8.0.x. Users that have enabled the Sentry Raven appender will need to update their configuration according to the [sentry migration guide](https://docs.sentry.io/clients/java/migration/).
 
+### Deprecations
+
+#### /v2/schema route is deprecated
+
+The /v2/schema route, and JSON Schema definitions, are deprecated in favor of RAML. They will not be kept up-to-date, and will be removed (with a feature flag) in a future release of Marathon.
+
 ## Changes from 1.5.1 to 1.5.2
 Bugfix release
 
