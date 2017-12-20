@@ -81,3 +81,7 @@ def fake_framework():
 
 def external_volume_mesos_app():
     return load_app('external-volume-mesos-app')
+
+
+def ipv6_healthcheck():
+    return load_app('ipv6-healthcheck')

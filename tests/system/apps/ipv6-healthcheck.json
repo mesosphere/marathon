@@ -1,0 +1,25 @@
+{
+  "id": "/test-ipv6",
+  "instances": 1,
+  "cmd": "python3 -m http.server 8080",
+  "cpus": 0.5,
+  "mem": 32.0,
+  "networks": [ { "mode": "container", "name": "mesos-docker-ipv6-test" } ],
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "python:3"
+    },
+    "portMappings": [
+      { "containerPort": 8080, "hostPort": 0 }
+    ]
+  },
+  "healthChecks": [
+    {
+      "portIndex": 0,
+      "protocol": "MESOS_HTTP",
+      "path": "/",
+      "ipProtocol": "IPv6"
+    }
+  ]
+}
