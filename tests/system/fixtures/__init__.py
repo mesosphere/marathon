@@ -5,6 +5,7 @@ import pytest
 import requests
 import sseclient
 import shakedown
+import time
 from datetime import timedelta
 from urllib.parse import urljoin
 
@@ -43,7 +44,12 @@ def events():
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
     print('Query {} for events'.format(url))
-    with requests.get(url, headers=headers, stream=True, verify=False) as response:
+
+    # Timeouts in seconds
+    connect = 5
+    until_first_event = 20
+
+    with requests.get(url, headers=headers, stream=True, verify=False, timeout(connect, until_first_event)) as response:
         print('Connected to {}'.format(url))
         client = sseclient.SSEClient(response)
         print('Created SSE Client.')
