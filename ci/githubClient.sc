@@ -73,16 +73,11 @@ def reportSuccess(
   buildTag: String,
   maybeArtifact: Option[awsClient.Artifact]): Unit = {
 
-  val testResults = collectTestResults()
-
-  // Collect unsound, i.e. canceled, tests
-  val unsoundTests = testResults.value
-    .collect { case test: Js.Obj if test("result").value == "unsound" => test  }
-  val hasUnsoundTests = unsoundTests.nonEmpty
-
-  // Construct message
   val buildinfoDiff = maybeArtifact.fold(""){ artifact =>
     s"""
+      |You can create a DC/OS with your patched Marathon by creating a new pull
+      |request with the following changes in [buildinfo.json](https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json):
+      |
       |```json
       |"url": "${artifact.downloadUrl}",
       |"sha1": "${artifact.sha1}"
@@ -95,33 +90,14 @@ def reportSuccess(
     |
     |See details at [$buildTag]($buildUrl).
     |
-    |You can create a DC/OS with your patched Marathon by creating a new pull
-    |request with the following changes in [buildinfo.json](https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json):
-    |
     |$buildinfoDiff
     |
     |You can run system integration test changes of this PR against Marathon
     |master by triggering [this Jenkins job](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/build?delay=0sec) with the `Pull_Request_id` `$pullNumber`.
     |The job then reports back to this PR.
     |
+    |**＼\\ ٩( ᐛ )و /／**
     |""".stripMargin
-
-  if (!hasUnsoundTests) {
-    msg += "**＼\\ ٩( ᐛ )و /／**"
-  } else {
-    val unsoundTestsList: String = unsoundTests.foldLeft("") { (msg:String, test: Js.Obj) =>
-      msg + s"""\n- `${test("name").value}`"""
-    }
-
-    msg += s"""
-    |The following tests failed and have been marked as canceled. Are you sure you want to land this patch?
-    | $unsoundTestsList
-    |
-    |Anyhow, check the [skipped tests]($buildUrl/testReport) on Jenkins for details and decide for yourself.
-    |
-    |**¯\\_(ツ)_/¯**
-    |""".stripMargin
-  }
 
   comment(pullNumber, msg, event="APPROVE")
 }
