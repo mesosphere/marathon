@@ -231,7 +231,7 @@ def save_iptables(host, filename='iptables.rules'):
 
     shakedown.run_command_on_agent(
         host,
-        'if [ ! -e {} ] ; then sudo iptables -L > /dev/null && sudo iptables-save > {} ; fi'.format(filename, filename))
+        'if [ ! -e {} ] ; then sudo iptables-save > {} ; fi'.format(filename, filename))
 
 def restore_iptables(host, filename='iptables.rules'):
     """ Reconnect a previously partitioned node to the network
@@ -240,7 +240,7 @@ def restore_iptables(host, filename='iptables.rules'):
 
     shakedown.run_command_on_agent(
         host,
-        'if [ -e {} ]; then sudo iptables-restore < {} && rm {} ; fi'.format(filename, filename, filename))
+        'if [ -e {} ]; then sudo iptables-restore < {} && sudo rm {} ; fi'.format(filename, filename, filename))
 
 
 @contextlib.contextmanager
