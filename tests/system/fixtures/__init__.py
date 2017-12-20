@@ -1,3 +1,4 @@
+import aiohttp
 import common
 import json
 import os.path
@@ -5,6 +6,7 @@ import pytest
 import requests
 import sseclient
 import shakedown
+from aiohttp.test_utils import loop_context
 from datetime import timedelta
 from urllib.parse import urljoin
 
@@ -59,6 +61,40 @@ def events():
         client.close()
 
     print("exiting events fixture")
+
+
+@pytest.fixture(scope="function")
+def events_async():
+    print("entering events fixture")
+
+    print('call events endpoint')
+    url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
+    headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
+               'Accept': 'text/event-stream'}
+
+    # Python 3.6 makes this easier.
+    class async_event_generator:
+        def __init__(self):
+            self._session = aiohttp.ClientSession(headers=headers)
+            print('created session')
+
+        async def __aiter__(self):
+            response = await self._session.get(url)
+            self._content = response.content
+            return self
+
+        async def __anext__(self):
+            try:
+                print('return next content item')
+                return self._content.__anext__()
+            finally:
+                await self._session.close()
+
+
+    yield async_event_generator()
+
+
+    # print("exiting events fixture")
 
 
 @pytest.fixture(scope="function")

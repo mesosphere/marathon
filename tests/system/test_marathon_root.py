@@ -5,6 +5,7 @@
     tests round dcos services registration and control and security.
 """
 
+import aiohttp
 import apps
 import common
 import json
@@ -17,6 +18,7 @@ import uuid
 
 from dcos import marathon, errors
 from datetime import timedelta
+from urllib.parse import urljoin
 
 import dcos_service_marathon_tests
 import marathon_auth_common_tests
@@ -24,7 +26,7 @@ import marathon_common_tests
 import marathon_pods_tests
 
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA
-from fixtures import events, wait_for_marathon_and_cleanup, user_billy # NOQA
+from fixtures import events, events_async, wait_for_marathon_and_cleanup, user_billy # NOQA
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -207,11 +209,22 @@ def test_launch_app_on_public_agent():
 @pytest.mark.skipif("shakedown.ee_version() == 'strict'") # NOQA
 @pytest.mark.skipif('marthon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
-def test_event_channel(events):
+@pytest.mark.asyncio
+async def test_event_channel():
     """ Tests the event channel. The way events are verified is by converting
         the parsed events to an iterator and asserting the right oder of certain
         events. Unknown events are skipped.
     """
+    url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
+    headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
+               'Accept': 'text/event-stream'}
+
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.get(url) as response:
+            async for line in response.content:
+                print(line)
+
+    assert 'hi' == 'hello'
 
     common.assert_event('event_stream_attached', events)
 

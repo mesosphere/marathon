@@ -13,6 +13,8 @@ python_version = "3.5"
 [packages]
 
 shakedown = {git = "https://github.com/dcos/shakedown.git", ref = "1.4.11"}
+aiohttp = "*"
+pytest-asyncio = "*"
 
 
 [dev-packages]
