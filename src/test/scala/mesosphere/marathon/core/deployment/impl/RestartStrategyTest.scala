@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{ AppDefinition, PathId, Residency, UpgradeStrategy }
+import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 
 class RestartStrategyTest extends UnitTest {
 
@@ -14,7 +14,7 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        residency = Some(Residency.default))
+        isResident = true)
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
@@ -32,7 +32,7 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        residency = Some(Residency.default))
+        isResident = true)
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = 0)
@@ -50,7 +50,7 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 5,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        residency = Some(Residency.default))
+        isResident = true)
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
@@ -68,7 +68,7 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        residency = Some(Residency.default))
+        isResident = true)
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances + 2)
@@ -86,7 +86,7 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        residency = Some(Residency.default))
+        isResident = true)
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances - 2)
@@ -104,7 +104,7 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        residency = Some(Residency.default))
+        isResident = true)
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)

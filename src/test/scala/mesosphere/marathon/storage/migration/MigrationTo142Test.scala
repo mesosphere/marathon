@@ -25,7 +25,7 @@ class MigrationTo142Test extends AkkaUnitTest with GroupCreation {
     "fix wrong UnreachableStrategy for resident apps" in {
       val badApp = AppDefinition(
         id = PathId("/badApp"),
-        residency = Some(Residency(23L, TaskLostBehavior.WAIT_FOREVER)),
+        isResident = true,
         unreachableStrategy = UnreachableStrategy.default(resident = false))
       val goodApp = AppDefinition(id = PathId("/goodApp"))
       val fixedApp = badApp.copy(unreachableStrategy = UnreachableDisabled)

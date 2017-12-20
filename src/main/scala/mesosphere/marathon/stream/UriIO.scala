@@ -128,7 +128,7 @@ object UriIO extends StrictLogging {
           .map(creds => new BasicAWSCredentials(creds.getAWSAccessKeyId, creds.getAWSSecretKey))
       }
       fromURL.orElse(fromProviderChain).getOrElse {
-        S3Settings().credentialsProvider.getCredentials
+        S3Settings()(actorSystem).credentialsProvider.getCredentials
       }
     }
     S3Client(new AWSStaticCredentialsProvider(credentials), region)

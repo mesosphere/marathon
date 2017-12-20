@@ -8611,17 +8611,17 @@ public final class Protos {
     mesosphere.marathon.Protos.ObsoleteIpAddressOrBuilder getOBSOLETEIpAddressOrBuilder();
 
     /**
-     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
      */
-    boolean hasResidency();
+    @java.lang.Deprecated boolean hasResidency();
     /**
-     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
      */
-    mesosphere.marathon.Protos.ResidencyDefinition getResidency();
+    @java.lang.Deprecated mesosphere.marathon.Protos.ResidencyDefinition getResidency();
     /**
-     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
      */
-    mesosphere.marathon.Protos.ResidencyDefinitionOrBuilder getResidencyOrBuilder();
+    @java.lang.Deprecated mesosphere.marathon.Protos.ResidencyDefinitionOrBuilder getResidencyOrBuilder();
 
     /**
      * <code>repeated .mesos.Port portDefinitions = 27;</code>
@@ -8814,6 +8814,15 @@ public final class Protos {
      * <code>optional .mesos.TTYInfo tty = 35;</code>
      */
     org.apache.mesos.Protos.TTYInfoOrBuilder getTtyOrBuilder();
+
+    /**
+     * <code>optional bool isResident = 36 [default = false];</code>
+     */
+    boolean hasIsResident();
+    /**
+     * <code>optional bool isResident = 36 [default = false];</code>
+     */
+    boolean getIsResident();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -8853,6 +8862,7 @@ public final class Protos {
       taskKillGracePeriod_ = 0L;
       killSelection_ = 1;
       networks_ = java.util.Collections.emptyList();
+      isResident_ = false;
     }
 
     @java.lang.Override
@@ -9197,6 +9207,11 @@ public final class Protos {
                 tty_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00200000;
+              break;
+            }
+            case 288: {
+              bitField0_ |= 0x00400000;
+              isResident_ = input.readBool();
               break;
             }
           }
@@ -9934,21 +9949,21 @@ public final class Protos {
     public static final int RESIDENCY_FIELD_NUMBER = 26;
     private mesosphere.marathon.Protos.ResidencyDefinition residency_;
     /**
-     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
      */
-    public boolean hasResidency() {
+    @java.lang.Deprecated public boolean hasResidency() {
       return ((bitField0_ & 0x00020000) == 0x00020000);
     }
     /**
-     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
      */
-    public mesosphere.marathon.Protos.ResidencyDefinition getResidency() {
+    @java.lang.Deprecated public mesosphere.marathon.Protos.ResidencyDefinition getResidency() {
       return residency_ == null ? mesosphere.marathon.Protos.ResidencyDefinition.getDefaultInstance() : residency_;
     }
     /**
-     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+     * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
      */
-    public mesosphere.marathon.Protos.ResidencyDefinitionOrBuilder getResidencyOrBuilder() {
+    @java.lang.Deprecated public mesosphere.marathon.Protos.ResidencyDefinitionOrBuilder getResidencyOrBuilder() {
       return residency_ == null ? mesosphere.marathon.Protos.ResidencyDefinition.getDefaultInstance() : residency_;
     }
 
@@ -10228,6 +10243,21 @@ public final class Protos {
       return tty_ == null ? org.apache.mesos.Protos.TTYInfo.getDefaultInstance() : tty_;
     }
 
+    public static final int ISRESIDENT_FIELD_NUMBER = 36;
+    private boolean isResident_;
+    /**
+     * <code>optional bool isResident = 36 [default = false];</code>
+     */
+    public boolean hasIsResident() {
+      return ((bitField0_ & 0x00400000) == 0x00400000);
+    }
+    /**
+     * <code>optional bool isResident = 36 [default = false];</code>
+     */
+    public boolean getIsResident() {
+      return isResident_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -10440,6 +10470,9 @@ public final class Protos {
       if (((bitField0_ & 0x00200000) == 0x00200000)) {
         output.writeMessage(35, getTty());
       }
+      if (((bitField0_ & 0x00400000) == 0x00400000)) {
+        output.writeBool(36, isResident_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -10593,6 +10626,10 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(35, getTty());
       }
+      if (((bitField0_ & 0x00400000) == 0x00400000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(36, isResident_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -10743,6 +10780,11 @@ public final class Protos {
       if (hasTty()) {
         result = result && getTty()
             .equals(other.getTty());
+      }
+      result = result && (hasIsResident() == other.hasIsResident());
+      if (hasIsResident()) {
+        result = result && (getIsResident()
+            == other.getIsResident());
       }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
@@ -10897,6 +10939,11 @@ public final class Protos {
       if (hasTty()) {
         hash = (37 * hash) + TTY_FIELD_NUMBER;
         hash = (53 * hash) + getTty().hashCode();
+      }
+      if (hasIsResident()) {
+        hash = (37 * hash) + ISRESIDENT_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+            getIsResident());
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -11185,6 +11232,8 @@ public final class Protos {
           ttyBuilder_.clear();
         }
         bitField1_ = (bitField1_ & ~0x00000002);
+        isResident_ = false;
+        bitField1_ = (bitField1_ & ~0x00000004);
         return this;
       }
 
@@ -11430,6 +11479,10 @@ public final class Protos {
         } else {
           result.tty_ = ttyBuilder_.build();
         }
+        if (((from_bitField1_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00400000;
+        }
+        result.isResident_ = isResident_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -11809,6 +11862,9 @@ public final class Protos {
         }
         if (other.hasTty()) {
           mergeTty(other.getTty());
+        }
+        if (other.hasIsResident()) {
+          setIsResident(other.getIsResident());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -14499,15 +14555,15 @@ public final class Protos {
       private com.google.protobuf.SingleFieldBuilderV3<
           mesosphere.marathon.Protos.ResidencyDefinition, mesosphere.marathon.Protos.ResidencyDefinition.Builder, mesosphere.marathon.Protos.ResidencyDefinitionOrBuilder> residencyBuilder_;
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
-      public boolean hasResidency() {
+      @java.lang.Deprecated public boolean hasResidency() {
         return ((bitField0_ & 0x01000000) == 0x01000000);
       }
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
-      public mesosphere.marathon.Protos.ResidencyDefinition getResidency() {
+      @java.lang.Deprecated public mesosphere.marathon.Protos.ResidencyDefinition getResidency() {
         if (residencyBuilder_ == null) {
           return residency_ == null ? mesosphere.marathon.Protos.ResidencyDefinition.getDefaultInstance() : residency_;
         } else {
@@ -14515,9 +14571,9 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
-      public Builder setResidency(mesosphere.marathon.Protos.ResidencyDefinition value) {
+      @java.lang.Deprecated public Builder setResidency(mesosphere.marathon.Protos.ResidencyDefinition value) {
         if (residencyBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -14531,9 +14587,9 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
-      public Builder setResidency(
+      @java.lang.Deprecated public Builder setResidency(
           mesosphere.marathon.Protos.ResidencyDefinition.Builder builderForValue) {
         if (residencyBuilder_ == null) {
           residency_ = builderForValue.build();
@@ -14545,9 +14601,9 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
-      public Builder mergeResidency(mesosphere.marathon.Protos.ResidencyDefinition value) {
+      @java.lang.Deprecated public Builder mergeResidency(mesosphere.marathon.Protos.ResidencyDefinition value) {
         if (residencyBuilder_ == null) {
           if (((bitField0_ & 0x01000000) == 0x01000000) &&
               residency_ != null &&
@@ -14565,9 +14621,9 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
-      public Builder clearResidency() {
+      @java.lang.Deprecated public Builder clearResidency() {
         if (residencyBuilder_ == null) {
           residency_ = null;
           onChanged();
@@ -14578,17 +14634,17 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
-      public mesosphere.marathon.Protos.ResidencyDefinition.Builder getResidencyBuilder() {
+      @java.lang.Deprecated public mesosphere.marathon.Protos.ResidencyDefinition.Builder getResidencyBuilder() {
         bitField0_ |= 0x01000000;
         onChanged();
         return getResidencyFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
-      public mesosphere.marathon.Protos.ResidencyDefinitionOrBuilder getResidencyOrBuilder() {
+      @java.lang.Deprecated public mesosphere.marathon.Protos.ResidencyDefinitionOrBuilder getResidencyOrBuilder() {
         if (residencyBuilder_ != null) {
           return residencyBuilder_.getMessageOrBuilder();
         } else {
@@ -14597,7 +14653,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26;</code>
+       * <code>optional .mesosphere.marathon.ResidencyDefinition residency = 26 [deprecated = true];</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           mesosphere.marathon.Protos.ResidencyDefinition, mesosphere.marathon.Protos.ResidencyDefinition.Builder, mesosphere.marathon.Protos.ResidencyDefinitionOrBuilder> 
@@ -16203,6 +16259,38 @@ public final class Protos {
           tty_ = null;
         }
         return ttyBuilder_;
+      }
+
+      private boolean isResident_ ;
+      /**
+       * <code>optional bool isResident = 36 [default = false];</code>
+       */
+      public boolean hasIsResident() {
+        return ((bitField1_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bool isResident = 36 [default = false];</code>
+       */
+      public boolean getIsResident() {
+        return isResident_;
+      }
+      /**
+       * <code>optional bool isResident = 36 [default = false];</code>
+       */
+      public Builder setIsResident(boolean value) {
+        bitField1_ |= 0x00000004;
+        isResident_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool isResident = 36 [default = false];</code>
+       */
+      public Builder clearIsResident() {
+        bitField1_ = (bitField1_ & ~0x00000004);
+        isResident_ = false;
+        onChanged();
+        return this;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -46860,7 +46948,7 @@ public final class Protos {
       "here.marathon.NetworkDefinition.Mode\022\014\n\004" +
       "name\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.Label" +
       "\"8\n\004Mode\022\013\n\007UNKNOWN\020\000\022\010\n\004HOST\020\001\022\r\n\tCONTA" +
-      "INER\020\002\022\n\n\006BRIDGE\020\003\"\276\013\n\021ServiceDefinition" +
+      "INER\020\002\022\n\n\006BRIDGE\020\003\"\335\013\n\021ServiceDefinition" +
       "\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mesos.Comman" +
       "dInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tresources\030\004 " +
       "\003(\0132\017.mesos.Resource\022\023\n\013description\030\005 \001(" +
@@ -46883,124 +46971,125 @@ public final class Protos {
       "on.ResourceRoles\022\027\n\017last_scaling_at\030\027 \001(" +
       "\003\022\035\n\025last_config_change_at\030\030 \001(\003\022B\n\022OBSO" +
       "LETE_ipAddress\030\031 \001(\0132&.mesosphere.marath" +
-      "on.ObsoleteIpAddress\022;\n\tresidency\030\032 \001(\0132" +
+      "on.ObsoleteIpAddress\022?\n\tresidency\030\032 \001(\0132" +
       "(.mesosphere.marathon.ResidencyDefinitio" +
-      "n\022$\n\017portDefinitions\030\033 \003(\0132\013.mesos.Port\022" +
-      "O\n\030readinessCheckDefinition\030\034 \003(\0132-.meso" +
-      "sphere.marathon.ReadinessCheckDefinition" +
-      "\022,\n\007secrets\030\035 \003(\0132\033.mesosphere.marathon." +
-      "Secret\022>\n\020envVarReferences\030\036 \003(\0132$.mesos" +
-      "phere.marathon.EnvVarReference\022\033\n\023taskKi" +
-      "llGracePeriod\030\037 \001(\003\022E\n\023unreachableStrate" +
-      "gy\030  \001(\0132(.mesosphere.marathon.Unreachab" +
-      "leStrategy\022H\n\rkillSelection\030! \001(\0162\".meso" +
-      "sphere.marathon.KillSelection:\rYoungestF" +
-      "irst\0228\n\010networks\030\" \003(\0132&.mesosphere.mara" +
-      "thon.NetworkDefinition\022\033\n\003tty\030# \001(\0132\016.me" +
-      "sos.TTYInfo\"]\n\023UnreachableStrategy\022!\n\024in" +
-      "activeAfterSeconds\030\001 \001(\004:\003900\022#\n\023expunge" +
-      "AfterSeconds\030\002 \001(\004:\006604800\"\024\n\004Json\022\014\n\004js" +
-      "on\030\001 \002(\t\"\035\n\rResourceRoles\022\014\n\004role\030\001 \003(\t\"" +
-      "1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opt" +
-      "ions\030\002 \003(\014\"\356\013\n\025ExtendedContainerInfo\022\'\n\004" +
-      "type\030\001 \002(\0162\031.mesos.ContainerInfo.Type\022,\n" +
-      "\007volumes\030\002 \003(\0132\033.mesosphere.marathon.Vol" +
-      "ume\022M\n\rport_mappings\030\006 \003(\01326.mesosphere." +
-      "marathon.ExtendedContainerInfo.PortMappi" +
-      "ng\022E\n\006docker\030\003 \001(\01325.mesosphere.marathon" +
-      ".ExtendedContainerInfo.DockerInfo\022O\n\013mes" +
-      "osDocker\030\004 \001(\0132:.mesosphere.marathon.Ext" +
-      "endedContainerInfo.MesosDockerInfo\022K\n\tme" +
-      "sosAppC\030\005 \001(\01328.mesosphere.marathon.Exte" +
-      "ndedContainerInfo.MesosAppCInfo\032\361\004\n\nDock" +
-      "erInfo\022\r\n\005image\030\001 \002(\t\022G\n\020OBSOLETE_networ" +
-      "k\030\002 \001(\0162\'.mesos.ContainerInfo.DockerInfo" +
-      ".Network:\004HOST\022o\n\026OBSOLETE_port_mappings" +
-      "\030\003 \003(\0132O.mesosphere.marathon.ExtendedCon" +
-      "tainerInfo.DockerInfo.ObsoleteDockerPort" +
-      "Mapping\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\npa" +
-      "rameters\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020forc" +
-      "e_pull_image\030\006 \001(\010\032\236\001\n\017ImagePullConfig\022X" +
-      "\n\004type\030\001 \002(\0162J.mesosphere.marathon.Exten" +
-      "dedContainerInfo.DockerInfo.ImagePullCon" +
-      "fig.Type\022\035\n\006secret\030\002 \001(\0132\r.mesos.Secret\"" +
-      "\022\n\004Type\022\n\n\006SECRET\020\001\032\235\001\n\031ObsoleteDockerPo" +
+      "nB\002\030\001\022$\n\017portDefinitions\030\033 \003(\0132\013.mesos.P" +
+      "ort\022O\n\030readinessCheckDefinition\030\034 \003(\0132-." +
+      "mesosphere.marathon.ReadinessCheckDefini" +
+      "tion\022,\n\007secrets\030\035 \003(\0132\033.mesosphere.marat" +
+      "hon.Secret\022>\n\020envVarReferences\030\036 \003(\0132$.m" +
+      "esosphere.marathon.EnvVarReference\022\033\n\023ta" +
+      "skKillGracePeriod\030\037 \001(\003\022E\n\023unreachableSt" +
+      "rategy\030  \001(\0132(.mesosphere.marathon.Unrea" +
+      "chableStrategy\022H\n\rkillSelection\030! \001(\0162\"." +
+      "mesosphere.marathon.KillSelection:\rYoung" +
+      "estFirst\0228\n\010networks\030\" \003(\0132&.mesosphere." +
+      "marathon.NetworkDefinition\022\033\n\003tty\030# \001(\0132" +
+      "\016.mesos.TTYInfo\022\031\n\nisResident\030$ \001(\010:\005fal" +
+      "se\"]\n\023UnreachableStrategy\022!\n\024inactiveAft" +
+      "erSeconds\030\001 \001(\004:\003900\022#\n\023expungeAfterSeco" +
+      "nds\030\002 \001(\004:\006604800\"\024\n\004Json\022\014\n\004json\030\001 \002(\t\"" +
+      "\035\n\rResourceRoles\022\014\n\004role\030\001 \003(\t\"1\n\rContai" +
+      "nerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(" +
+      "\014\"\356\013\n\025ExtendedContainerInfo\022\'\n\004type\030\001 \002(" +
+      "\0162\031.mesos.ContainerInfo.Type\022,\n\007volumes\030" +
+      "\002 \003(\0132\033.mesosphere.marathon.Volume\022M\n\rpo" +
+      "rt_mappings\030\006 \003(\01326.mesosphere.marathon." +
+      "ExtendedContainerInfo.PortMapping\022E\n\006doc" +
+      "ker\030\003 \001(\01325.mesosphere.marathon.Extended" +
+      "ContainerInfo.DockerInfo\022O\n\013mesosDocker\030" +
+      "\004 \001(\0132:.mesosphere.marathon.ExtendedCont" +
+      "ainerInfo.MesosDockerInfo\022K\n\tmesosAppC\030\005" +
+      " \001(\01328.mesosphere.marathon.ExtendedConta" +
+      "inerInfo.MesosAppCInfo\032\361\004\n\nDockerInfo\022\r\n" +
+      "\005image\030\001 \002(\t\022G\n\020OBSOLETE_network\030\002 \001(\0162\'" +
+      ".mesos.ContainerInfo.DockerInfo.Network:" +
+      "\004HOST\022o\n\026OBSOLETE_port_mappings\030\003 \003(\0132O." +
+      "mesosphere.marathon.ExtendedContainerInf" +
+      "o.DockerInfo.ObsoleteDockerPortMapping\022\031" +
+      "\n\nprivileged\030\004 \001(\010:\005false\022$\n\nparameters\030" +
+      "\005 \003(\0132\020.mesos.Parameter\022\030\n\020force_pull_im" +
+      "age\030\006 \001(\010\032\236\001\n\017ImagePullConfig\022X\n\004type\030\001 " +
+      "\002(\0162J.mesosphere.marathon.ExtendedContai" +
+      "nerInfo.DockerInfo.ImagePullConfig.Type\022" +
+      "\035\n\006secret\030\002 \001(\0132\r.mesos.Secret\"\022\n\004Type\022\n" +
+      "\n\006SECRET\020\001\032\235\001\n\031ObsoleteDockerPortMapping" +
+      "\022\021\n\thost_port\030\001 \001(\r\022\026\n\016container_port\030\002 " +
+      "\002(\r\022\020\n\010protocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006l" +
+      "abels\030\005 \003(\0132\014.mesos.Label\022\027\n\014service_por" +
+      "t\030d \001(\r:\0010\032\310\001\n\017MesosDockerInfo\022\r\n\005image\030" +
+      "\001 \002(\t\0220\n\025deprecated_credential\030\002 \001(\0132\021.m" +
+      "esos.Credential\022\030\n\020force_pull_image\030\003 \001(" +
+      "\010\022Z\n\013pull_config\030\004 \001(\0132E.mesosphere.mara" +
+      "thon.ExtendedContainerInfo.DockerInfo.Im" +
+      "agePullConfig\032b\n\rMesosAppCInfo\022\r\n\005image\030" +
+      "\001 \002(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.meso" +
+      "s.Label\022\030\n\020force_pull_image\030\004 \001(\010\032\246\001\n\013Po" +
       "rtMapping\022\021\n\thost_port\030\001 \001(\r\022\026\n\016containe" +
       "r_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014\n\004name\030\004" +
       " \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.Label\022\027\n\014se" +
-      "rvice_port\030d \001(\r:\0010\032\310\001\n\017MesosDockerInfo\022" +
-      "\r\n\005image\030\001 \002(\t\0220\n\025deprecated_credential\030" +
-      "\002 \001(\0132\021.mesos.Credential\022\030\n\020force_pull_i" +
-      "mage\030\003 \001(\010\022Z\n\013pull_config\030\004 \001(\0132E.mesosp" +
-      "here.marathon.ExtendedContainerInfo.Dock" +
-      "erInfo.ImagePullConfig\032b\n\rMesosAppCInfo\022" +
-      "\r\n\005image\030\001 \002(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003" +
-      "(\0132\014.mesos.Label\022\030\n\020force_pull_image\030\004 \001" +
-      "(\010\032\246\001\n\013PortMapping\022\021\n\thost_port\030\001 \001(\r\022\026\n" +
-      "\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022" +
-      "\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.La" +
-      "bel\022\027\n\014service_port\030\006 \001(\r:\0010\022\025\n\rnetwork_" +
-      "names\030\007 \003(\t\"\341\004\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.m" +
-      "esos.Volume.Mode\022\026\n\016container_path\030\001 \002(\t" +
-      "\022\021\n\thost_path\030\002 \001(\t\022\033\n\005image\030\004 \001(\0132\014.mes" +
-      "os.Image\022D\n\npersistent\030\005 \001(\01320.mesospher" +
-      "e.marathon.Volume.PersistentVolumeInfo\022@" +
-      "\n\010external\030\006 \001(\0132..mesosphere.marathon.V" +
-      "olume.ExternalVolumeInfo\022<\n\006secret\030\007 \001(\013" +
-      "2,.mesosphere.marathon.Volume.SecretVolu" +
-      "meInfo\032\237\001\n\024PersistentVolumeInfo\022\014\n\004size\030" +
-      "\001 \002(\004\0222\n\004type\030\002 \001(\0162$.mesos.Resource.Dis" +
-      "kInfo.Source.Type\0224\n\013constraints\030\003 \003(\0132\037" +
-      ".mesosphere.marathon.Constraint\022\017\n\007maxSi" +
-      "ze\030\004 \001(\004\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001" +
-      " \001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007" +
-      "options\030\004 \003(\0132\014.mesos.Label\032\"\n\020SecretVol" +
-      "umeInfo\022\016\n\006secret\030\001 \002(\t\"\274\001\n\016StorageVersi" +
-      "on\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patc" +
-      "h\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.mesosphere.mar" +
-      "athon.StorageVersion.StorageFormat:\006LEGA" +
-      "CY\"2\n\rStorageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSI" +
-      "STENCE_STORE\020\001\"Z\n\031UpgradeStrategyDefinit" +
-      "ion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023ma" +
-      "ximumOverCapacity\030\002 \001(\001:\0011\"\236\003\n\017GroupDefi" +
-      "nition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017d" +
-      "eprecated_apps\030\003 \003(\0132&.mesosphere.marath" +
-      "on.ServiceDefinition\0222\n\017deprecated_pods\030" +
-      "\010 \003(\0132\031.mesosphere.marathon.Json\0224\n\006grou" +
-      "ps\030\004 \003(\0132$.mesosphere.marathon.GroupDefi" +
-      "nition\022\024\n\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003" +
-      "(\01321.mesosphere.marathon.GroupDefinition" +
-      ".AppReference\022?\n\004pods\030\007 \003(\01321.mesosphere" +
-      ".marathon.GroupDefinition.AppReference\032+" +
-      "\n\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 " +
-      "\002(\t\"\371\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001" +
-      " \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023deprecated_or" +
-      "iginal\030\004 \001(\0132$.mesosphere.marathon.Group" +
-      "Definition\022?\n\021deprecated_target\030\005 \001(\0132$." +
-      "mesosphere.marathon.GroupDefinition\022\035\n\025o" +
-      "riginal_root_version\030\006 \001(\t\022\033\n\023target_roo" +
-      "t_version\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006app_i" +
-      "d\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022" +
-      "\037\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007mess" +
-      "age\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006" +
-      " \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\013" +
-      "2\016.mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name" +
-      "\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\nc" +
-      "ompressed\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefi" +
-      "nition\022(\n relaunchEscalationTimeoutSecon" +
-      "ds\030\001 \001(\003\022S\n\020taskLostBehavior\030\002 \001(\01629.mes" +
-      "osphere.marathon.ResidencyDefinition.Tas" +
-      "kLostBehavior\"@\n\020TaskLostBehavior\022\032\n\026REL" +
-      "AUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"" +
-      "$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001" +
-      "\n\017EnvVarReference\0227\n\004type\030\001 \002(\0162).mesosp" +
-      "here.marathon.EnvVarReference.Type\022\014\n\004na" +
-      "me\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.mesosphere" +
-      ".marathon.EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNK" +
-      "NOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n" +
-      "\010secretId\030\001 \002(\t*3\n\rKillSelection\022\021\n\rYoun" +
-      "gestFirst\020\001\022\017\n\013OldestFirst\020\002B\035\n\023mesosphe" +
-      "re.marathonB\006Protos"
+      "rvice_port\030\006 \001(\r:\0010\022\025\n\rnetwork_names\030\007 \003" +
+      "(\t\"\341\004\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.mesos.Volu" +
+      "me.Mode\022\026\n\016container_path\030\001 \002(\t\022\021\n\thost_" +
+      "path\030\002 \001(\t\022\033\n\005image\030\004 \001(\0132\014.mesos.Image\022" +
+      "D\n\npersistent\030\005 \001(\01320.mesosphere.maratho" +
+      "n.Volume.PersistentVolumeInfo\022@\n\010externa" +
+      "l\030\006 \001(\0132..mesosphere.marathon.Volume.Ext" +
+      "ernalVolumeInfo\022<\n\006secret\030\007 \001(\0132,.mesosp" +
+      "here.marathon.Volume.SecretVolumeInfo\032\237\001" +
+      "\n\024PersistentVolumeInfo\022\014\n\004size\030\001 \002(\004\0222\n\004" +
+      "type\030\002 \001(\0162$.mesos.Resource.DiskInfo.Sou" +
+      "rce.Type\0224\n\013constraints\030\003 \003(\0132\037.mesosphe" +
+      "re.marathon.Constraint\022\017\n\007maxSize\030\004 \001(\004\032" +
+      "a\n\022ExternalVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014\n\004n" +
+      "ame\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007options\030\004" +
+      " \003(\0132\014.mesos.Label\032\"\n\020SecretVolumeInfo\022\016" +
+      "\n\006secret\030\001 \002(\t\"\274\001\n\016StorageVersion\022\r\n\005maj" +
+      "or\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I" +
+      "\n\006format\030\004 \001(\01621.mesosphere.marathon.Sto" +
+      "rageVersion.StorageFormat:\006LEGACY\"2\n\rSto" +
+      "rageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSISTENCE_ST" +
+      "ORE\020\001\"Z\n\031UpgradeStrategyDefinition\022\035\n\025mi" +
+      "nimumHealthCapacity\030\001 \002(\001\022\036\n\023maximumOver" +
+      "Capacity\030\002 \001(\001:\0011\"\236\003\n\017GroupDefinition\022\n\n" +
+      "\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017deprecated" +
+      "_apps\030\003 \003(\0132&.mesosphere.marathon.Servic" +
+      "eDefinition\0222\n\017deprecated_pods\030\010 \003(\0132\031.m" +
+      "esosphere.marathon.Json\0224\n\006groups\030\004 \003(\0132" +
+      "$.mesosphere.marathon.GroupDefinition\022\024\n" +
+      "\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003(\01321.meso" +
+      "sphere.marathon.GroupDefinition.AppRefer" +
+      "ence\022?\n\004pods\030\007 \003(\01321.mesosphere.marathon" +
+      ".GroupDefinition.AppReference\032+\n\014AppRefe" +
+      "rence\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\"\371\001\n\030D" +
+      "eploymentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\021\n\tt" +
+      "imestamp\030\002 \001(\t\022A\n\023deprecated_original\030\004 " +
+      "\001(\0132$.mesosphere.marathon.GroupDefinitio" +
+      "n\022?\n\021deprecated_target\030\005 \001(\0132$.mesospher" +
+      "e.marathon.GroupDefinition\022\035\n\025original_r" +
+      "oot_version\030\006 \001(\t\022\033\n\023target_root_version" +
+      "\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036" +
+      "\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030" +
+      "\003 \002(\0162\020.mesos.TaskState\022\021\n\007message\030\004 \001(\t" +
+      ":\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\tt" +
+      "imestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos." +
+      "SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n" +
+      "\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed" +
+      "\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefinition\022(\n" +
+      " relaunchEscalationTimeoutSeconds\030\001 \001(\003\022" +
+      "S\n\020taskLostBehavior\030\002 \001(\01629.mesosphere.m" +
+      "arathon.ResidencyDefinition.TaskLostBeha" +
+      "vior\"@\n\020TaskLostBehavior\022\032\n\026RELAUNCH_AFT" +
+      "ER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"$\n\006Secret" +
+      "\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n\017EnvVarR" +
+      "eference\0227\n\004type\030\001 \002(\0162).mesosphere.mara" +
+      "thon.EnvVarReference.Type\022\014\n\004name\030\002 \002(\t\022" +
+      "7\n\tsecretRef\030\003 \001(\0132$.mesosphere.marathon" +
+      ".EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n" +
+      "\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n\010secretId" +
+      "\030\001 \002(\t*3\n\rKillSelection\022\021\n\rYoungestFirst" +
+      "\020\001\022\017\n\013OldestFirst\020\002B\035\n\023mesosphere.marath" +
+      "onB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -47056,7 +47145,7 @@ public final class Protos {
     internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-        new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "OBSOLETEIpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", "UnreachableStrategy", "KillSelection", "Networks", "Tty", });
+        new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "OBSOLETEIpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", "UnreachableStrategy", "KillSelection", "Networks", "Tty", "IsResident", });
     internal_static_mesosphere_marathon_UnreachableStrategy_descriptor =
       getDescriptor().getMessageTypes().get(7);
     internal_static_mesosphere_marathon_UnreachableStrategy_fieldAccessorTable = new

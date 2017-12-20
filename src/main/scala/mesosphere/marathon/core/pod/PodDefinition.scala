@@ -28,6 +28,7 @@ case class PodDefinition(
     podVolumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
+    isResident: Boolean = false,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
     executorResources: Resources = PodDefinition.DefaultExecutorResources,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,

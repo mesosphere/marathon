@@ -132,7 +132,7 @@ message ServiceDefinition {
   optional int64 last_scaling_at = 23;
   optional int64 last_config_change_at = 24;
   optional ObsoleteIpAddress OBSOLETE_ipAddress = 25; // deprecated since 1.5
-  optional ResidencyDefinition residency = 26;
+  optional ResidencyDefinition residency = 26 [deprecated = true];
   repeated mesos.Port portDefinitions = 27;
   repeated ReadinessCheckDefinition readinessCheckDefinition = 28;
   repeated Secret secrets = 29;
@@ -142,6 +142,7 @@ message ServiceDefinition {
   optional KillSelection killSelection = 33 [ default = YoungestFirst ];
   repeated NetworkDefinition networks = 34; // supersedes ObsoleteIpAddress
   optional mesos.TTYInfo tty = 35;
+  optional bool isResident = 36 [default = false];
 }
 
 enum KillSelection {

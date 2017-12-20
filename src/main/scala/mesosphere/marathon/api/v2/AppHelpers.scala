@@ -37,13 +37,13 @@ object AppHelpers {
     */
   def withoutPriorAppDefinition(update: raml.AppUpdate, appId: PathId): raml.App = {
     val selectedStrategy = AppConversion.ResidencyAndUpgradeStrategy(
-      residency = update.residency.map(Raml.fromRaml(_)),
+      isResident = update.residency.nonEmpty,
       upgradeStrategy = update.upgradeStrategy.map(Raml.fromRaml(_)),
       hasPersistentVolumes = update.container.exists(_.volumes.existsAn[AppPersistentVolume]),
       hasExternalVolumes = update.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
     val template = AppDefinition(
-      appId, residency = selectedStrategy.residency, upgradeStrategy = selectedStrategy.upgradeStrategy)
+      appId, isResident = selectedStrategy.isResident, upgradeStrategy = selectedStrategy.upgradeStrategy)
     Raml.fromRaml(update -> template)
   }
 
