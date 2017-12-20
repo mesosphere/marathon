@@ -4,7 +4,7 @@ package core.matcher.base.util
 import mesosphere.UnitTest
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ DiskSource, PathId, PersistentVolume, PersistentVolumeInfo }
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{ Protos => Mesos }
@@ -96,8 +96,8 @@ class OfferOperationFactoryTest extends UnitTest {
       volume.getDisk.hasPersistence shouldEqual true
       volume.getDisk.getPersistence.getId shouldEqual originalVolume.id.idString
       volume.getDisk.hasVolume shouldEqual true
-      volume.getDisk.getVolume.getContainerPath shouldEqual originalVolume.persistentVolume.containerPath
-      volume.getDisk.getVolume.getMode shouldEqual originalVolume.persistentVolume.mode
+      volume.getDisk.getVolume.getContainerPath shouldEqual originalVolume.mount.mountPath
+      volume.getDisk.getVolume.getMode shouldEqual Mesos.Volume.Mode.RW
     }
   }
   class Fixture {
@@ -109,12 +109,10 @@ class OfferOperationFactoryTest extends UnitTest {
     val role = Some("role")
     val factory = new OfferOperationFactory(principal, role)
 
-    def localVolume(containerPath: String): Task.LocalVolume = {
-      val pv = PersistentVolume(
-        containerPath = containerPath,
-        persistent = PersistentVolumeInfo(size = 10),
-        mode = Mesos.Volume.Mode.RW)
-      Task.LocalVolume(Task.LocalVolumeId(runSpecId, pv), pv)
+    def localVolume(mountPath: String): Task.LocalVolume = {
+      val pv = PersistentVolume(None, PersistentVolumeInfo(size = 10))
+      val mount = VolumeMount(None, mountPath)
+      Task.LocalVolume(Task.LocalVolumeId(runSpecId, pv, mount), pv, mount)
     }
   }
 }

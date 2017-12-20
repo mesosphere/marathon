@@ -62,10 +62,10 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
       else {
         def createInstanceOps(instancesBySpec: InstancesBySpec, rootGroup: RootGroup): MatchedInstanceOps = {
 
-          // TODO(jdef) pods don't support resident resources yet so we don't need to worry about including them here
           /* Was this task launched from a previous app definition, or a prior launch that did not clean up properly */
           def spurious(instanceId: Instance.Id): Boolean =
-            instancesBySpec.instance(instanceId).isEmpty || rootGroup.app(instanceId.runSpecId).isEmpty
+            instancesBySpec.instance(instanceId).isEmpty ||
+              (rootGroup.app(instanceId.runSpecId).isEmpty && rootGroup.pod(instanceId.runSpecId).isEmpty)
 
           val instanceOps: Seq[InstanceOpWithSource] = resourcesByInstanceId.collect {
             case (instanceId, spuriousResources) if spurious(instanceId) =>

@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.core.pod
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.state.Parameter
 import mesosphere.marathon.stream.Implicits._
@@ -233,12 +232,14 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
     )
   }
 
-  implicit val volumeMountRamlReads: Reads[raml.VolumeMount, pod.VolumeMount] = Reads { volMnt =>
-    pod.VolumeMount(volMnt.name, volMnt.mountPath, volMnt.readOnly)
+  implicit val volumeMountRamlReads: Reads[raml.VolumeMount, state.VolumeMount] = Reads { volMnt =>
+    state.VolumeMount(Some(volMnt.name), volMnt.mountPath, volMnt.readOnly.getOrElse(false))
   }
 
-  implicit val volumeMountRamlWrites: Writes[pod.VolumeMount, raml.VolumeMount] = Writes { volMnt =>
-    raml.VolumeMount(volMnt.name, volMnt.mountPath, volMnt.readOnly)
+  implicit val volumeMountRamlWrites: Writes[state.VolumeMount, raml.VolumeMount] = Writes { volMnt =>
+    raml.VolumeMount(
+      volMnt.volumeName.getOrElse(throw new IllegalArgumentException("volumeName must not be empty")),
+      volMnt.mountPath, Some(volMnt.readOnly))
   }
 }
 

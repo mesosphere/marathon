@@ -312,6 +312,6 @@ class HealthCheckTest extends UnitTest {
 
   private[this] def shouldBeValid(hc: HealthCheck): Unit = {
     val result = validate(hc)
-    assert(result.isSuccess, s"violations: ${ValidationHelper.getAllRuleConstrains(result)}")
+    assert(result.isSuccess, s"violations: ${ValidationHelper.getAllRuleConstraints(result)}")
   }
 }

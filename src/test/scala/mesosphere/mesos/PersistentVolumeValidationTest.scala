@@ -1,15 +1,13 @@
 package mesosphere.mesos
 
 import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.state.{ PersistentVolume, PersistentVolumeInfo, Volume }
-import org.apache.mesos
+import mesosphere.marathon.state._
 
 class PersistentVolumeValidationTest extends UnitTest with ValidationTestLike {
   "PersistentVolumeValidation" should {
     "create a PersistentVolume with no validation violations" in {
       Given("a PersistentVolume with no validation violations")
-      val path = "path"
-      val volume = PersistentVolume(path, PersistentVolumeInfo(1), mesos.Protos.Volume.Mode.RW)
+      val volume = PersistentVolume(None, PersistentVolumeInfo(1))
 
       When("The volume is created and validation succeeded")
       volume should not be null
@@ -21,16 +19,16 @@ class PersistentVolumeValidationTest extends UnitTest with ValidationTestLike {
 
     "create a PersistentVolume with validation violation in containerPath" in {
       Given("a PersistentVolume with validation violation in containerPath")
-      val path = "/path"
-      val volume = PersistentVolume(path, PersistentVolumeInfo(1), mesos.Protos.Volume.Mode.RW)
+      val persistentVolume = PersistentVolume(None, PersistentVolumeInfo(1))
+      val mount = VolumeMount(None, "/path")
+      val volume = VolumeWithMount(persistentVolume, mount)
 
       When("The volume is created and validation failed")
       volume should not be null
-      volume.containerPath should be (path)
 
       Then("A validation exists with a readable error message")
-      Volume.validVolume(Set())(volume) should haveViolations(
-        "/containerPath" -> "value must not contain \"/\"")
+      VolumeWithMount.validVolumeWithMount(Set())(volume) should haveViolations(
+        "/mount/mountPath" -> "value must not contain \"/\"")
     }
   }
 }
