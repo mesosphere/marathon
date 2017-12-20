@@ -8,7 +8,7 @@ import org.raml.v2.api.model.v10.datamodel._
 import treehuggerDSL._
 
 import scala.annotation.tailrec
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 object RamlTypeGenerator {
@@ -99,7 +99,7 @@ object RamlTypeGenerator {
   })
 
   def enumName(s: StringTypeDeclaration, default: Option[String] = None): String = {
-    s.annotations().find(_.name() == "(pragma.scalaType)").fold(default.getOrElse(s.name()).capitalize) { annotation =>
+    s.annotations().asScala.find(_.name() == "(pragma.scalaType)").fold(default.getOrElse(s.name()).capitalize) { annotation =>
       annotation.structuredValue().value().toString
     }
   }
@@ -122,18 +122,18 @@ object RamlTypeGenerator {
   }
 
   def isUpdateType(o: ObjectTypeDeclaration): Boolean =
-    (o.`type`() == "object") && o.annotations.exists(_.name() == "(pragma.asUpdateType)")
+    (o.`type`() == "object") && o.annotations.asScala.exists(_.name() == "(pragma.asUpdateType)")
 
   def isOmitEmpty(field: TypeDeclaration): Boolean =
-    field.annotations.exists(_.name() == "(pragma.omitEmpty)")
+    field.annotations.asScala.exists(_.name() == "(pragma.omitEmpty)")
 
   def pragmaForceOptional(o: TypeDeclaration): Boolean =
-    o.annotations().exists(_.name() == "(pragma.forceOptional)")
+    o.annotations().asScala.exists(_.name() == "(pragma.forceOptional)")
 
   def generateUpdateTypeName(o: ObjectTypeDeclaration): Option[String] =
     if (o.`type`() == "object" && !isUpdateType(o)) {
       // use the attribute value as the type name if specified ala enumName; otherwise just append "Update"
-      o.annotations().find(_.name() == "(pragma.generateUpdateType)").map { annotation =>
+      o.annotations().asScala.find(_.name() == "(pragma.generateUpdateType)").map { annotation =>
         Option(annotation.structuredValue().value()).fold(o.name()+"Update")(_.toString)
       }
     } else {
@@ -155,7 +155,7 @@ object RamlTypeGenerator {
               build(s.tail, result ++ next)
             case u: UnionTypeDeclaration =>
               build(s.tail, result + (u.name() -> RootClass.newClass(u.name)))
-            case e: StringTypeDeclaration if e.enumValues().nonEmpty =>
+            case e: StringTypeDeclaration if e.enumValues().asScala.nonEmpty =>
               build(s.tail, result + (e.name -> RootClass.newClass(e.name)))
             case str: StringTypeDeclaration =>
               build(s.tail, result + (str.name -> StringClass))
@@ -643,7 +643,7 @@ object RamlTypeGenerator {
   @tailrec def libraryTypes(libraries: List[Library], result: Set[TypeDeclaration] = Set.empty): Set[TypeDeclaration] = {
     libraries match {
       case head :: tail =>
-        libraryTypes(head.uses.toList ::: tail, result ++ head.types().toSet)
+        libraryTypes(head.uses.asScala.toList ::: tail, result ++ head.types().asScala.toSet)
       case Nil =>
         result
     }
@@ -653,7 +653,7 @@ object RamlTypeGenerator {
     models match {
       case head +: tail =>
         val types = libraryTypes(Option(head.getLibrary).toList) ++
-          libraryTypes(Option(head.getApiV10).map(_.uses().toList).getOrElse(Nil))
+          libraryTypes(Option(head.getApiV10).map(_.uses().asScala.toList).getOrElse(Nil))
         allTypes(tail, result ++ types)
       case Nil =>
         result
@@ -689,7 +689,7 @@ object RamlTypeGenerator {
 
   def typeIsActuallyAMap(t: TypeDeclaration): Boolean = t match {
     case o: ObjectTypeDeclaration =>
-      o.properties.toList match {
+      o.properties.asScala.toList match {
         case field :: Nil if field.name().startsWith('/') && field.name().endsWith('/') => true
         case _ => false
       }
@@ -726,8 +726,8 @@ object RamlTypeGenerator {
             ).flatten
           case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
             // last field of map-types has the pattern-matching spec that defines the key space, see typeIsActuallyAMap
-            val pattern = o.properties.last.name()
-            val valueType = typeTable(o.properties.last.`type`())
+            val pattern = o.properties.asScala.last.name
+            val valueType = typeTable(o.properties.asScala.last.`type`)
             if(pattern != "/.*/" && pattern != "/^.*$/") {
               Seq(Constraint.KeyPattern(pattern.substring(1, pattern.length() - 1), valueType))
             } else Nil
@@ -771,7 +771,7 @@ object RamlTypeGenerator {
             val fieldType = typeTable(Option(n.format()).getOrElse("double"))
             FieldT(n.name(), fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
           case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
-            val fieldType = o.properties.head match {
+            val fieldType = o.properties.asScala.head match {
               case n: NumberTypeDeclaration =>
                 TYPE_MAP(StringClass, typeTable(Option(n.format()).getOrElse("double")))
               case t =>
@@ -801,7 +801,7 @@ object RamlTypeGenerator {
                 val subTypes = subTypeDeclarations.map {
                   case o: ObjectTypeDeclaration =>
                     val (name, parent) = objectName(o)
-                    val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
+                    val fields: Seq[FieldT] = o.properties.asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
                     ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
                   case s: StringTypeDeclaration =>
                     StringT(s.name, Option(s.defaultValue()))
@@ -816,7 +816,7 @@ object RamlTypeGenerator {
             case o: ObjectTypeDeclaration if !typeIsActuallyAMap(o) =>
               if (!results.exists(_.name == o.name())) {
                 val (name, parent) = objectName(o)
-                val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
+                val fields: Seq[FieldT] = o.properties().asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
                 if (isUpdateType(o)) {
                   val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
                   buildTypes(s.tail, results + objectType)
@@ -832,9 +832,9 @@ object RamlTypeGenerator {
               }
             case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
               buildTypes(s.tail, results)
-            case e: StringTypeDeclaration if e.enumValues().nonEmpty =>
+            case e: StringTypeDeclaration if e.enumValues().asScala.nonEmpty =>
               val enumType = EnumT(e.name(),
-                e.enumValues().toSet,
+                e.enumValues().asScala.toSet,
                 Option(e.defaultValue()),
                 comment(e))
               buildTypes(s.tail, results + enumType)
@@ -846,7 +846,7 @@ object RamlTypeGenerator {
       }
     }
     val all = buildTypes(allTypes)
-    val childTypes = all.collect { case obj: ObjectT if obj.parentType.isDefined => obj }.groupBy(_.parentType.get)
+    val childTypes: Map[String, Set[ObjectT]] = all.collect { case obj: ObjectT if obj.parentType.isDefined => obj }.groupBy(_.parentType.get)
     val childNames = childTypes.values.flatMap(_.map(_.name)).toSet
 
 
@@ -861,7 +861,7 @@ object RamlTypeGenerator {
           case t => t
         }
         u.copy(childTypes = children)
-      case obj: ObjectT if childTypes.containsKey(obj.name) =>
+      case obj: ObjectT if childTypes.contains(obj.name) =>
         val children = childTypes(obj.name)
         obj.copy(childTypes = children.to[Seq])
       case t => t
