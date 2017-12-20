@@ -121,8 +121,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
     * has a `versionInfo` constructed from `OnlyVersion(app.version)`.
     */
   implicit val appRamlReader: Reads[App, AppDefinition] = Reads[App, AppDefinition] { app =>
-    val selectedStrategy = ResidencyAndUpgradeStrategy(
-      app.residency.isDefined,
+    val selectedStrategy = UpgradeStrategyConverter(
       app.upgradeStrategy.map(Raml.fromRaml(_)),
       hasPersistentVolumes = app.container.exists(_.volumes.existsAn[AppPersistentVolume]),
       hasExternalVolumes = app.container.exists(_.volumes.existsAn[AppExternalVolume])
@@ -155,12 +154,11 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       readinessChecks = app.readinessChecks.map(Raml.fromRaml(_)),
       taskKillGracePeriod = app.taskKillGracePeriodSeconds.map(_.second),
       dependencies = app.dependencies.map(PathId(_))(collection.breakOut),
-      upgradeStrategy = selectedStrategy.upgradeStrategy,
+      upgradeStrategy = selectedStrategy,
       labels = app.labels,
       acceptedResourceRoles = app.acceptedResourceRoles.getOrElse(AppDefinition.DefaultAcceptedResourceRoles),
       networks = app.networks.map(Raml.fromRaml(_)),
       versionInfo = versionInfo,
-      isResident = app.residency.isDefined,
       secrets = Raml.fromRaml(app.secrets),
       unreachableStrategy = app.unreachableStrategy.map(_.fromRaml).getOrElse(AppDefinition.DefaultUnreachableStrategy),
       killSelection = app.killSelection.fromRaml,
@@ -307,7 +305,9 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
 
     val unreachableStrategy = service.when(_.hasUnreachableStrategy, _.getUnreachableStrategy.toRaml).orElse(App.DefaultUnreachableStrategy)
 
-    val residency = if (service.hasIsResident || service.hasResidency) {
+    val hasPersistentVolumes = service.hasContainer && service.getContainer.getVolumesList.exists(_.hasPersistent)
+
+    val residency = if (hasPersistentVolumes || service.hasResidency) {
       unreachableStrategy.flatMap {
         case raml.UnreachableDisabled(_) => None
         case raml.UnreachableEnabled(inactiveAfterSeconds, _) => Some(AppResidency(
@@ -422,24 +422,19 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
 
 object AppConversion extends AppConversion {
 
-  case class ResidencyAndUpgradeStrategy(isResident: Boolean, upgradeStrategy: state.UpgradeStrategy)
-
-  object ResidencyAndUpgradeStrategy {
+  object UpgradeStrategyConverter {
     def apply(
-      isResident: Boolean,
       upgradeStrategy: Option[state.UpgradeStrategy],
       hasPersistentVolumes: Boolean,
-      hasExternalVolumes: Boolean): ResidencyAndUpgradeStrategy = {
+      hasExternalVolumes: Boolean): state.UpgradeStrategy = {
 
       import state.UpgradeStrategy.{ empty, forResidentTasks }
 
-      val residency: Boolean = isResident || hasPersistentVolumes
-
       val selectedUpgradeStrategy = upgradeStrategy.getOrElse {
-        if (residency || hasExternalVolumes) forResidentTasks else empty
+        if (hasPersistentVolumes || hasExternalVolumes) forResidentTasks else empty
       }
 
-      ResidencyAndUpgradeStrategy(residency, selectedUpgradeStrategy)
+      selectedUpgradeStrategy
     }
   }
 }

@@ -432,7 +432,6 @@ object MarathonTestHelper {
   def appWithPersistentVolume(): AppDefinition = {
     MarathonTestHelper.makeBasicApp().copy(
       container = Some(mesosContainerWithPersistentVolume),
-      isResident = true
     )
   }
 

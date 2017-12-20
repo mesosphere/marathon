@@ -72,8 +72,6 @@ case class AppDefinition(
 
     versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
 
-    isResident: Boolean = AppDefinition.DefaultIsResident,
-
     secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
 
     override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
@@ -179,7 +177,6 @@ case class AppDefinition(
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
       .setUnreachableStrategy(unreachableStrategy.toProto)
       .setKillSelection(killSelection.toProto)
-      .setIsResident(isResident)
 
     tty.filter(tty => tty).foreach(builder.setTty(_))
     networks.foreach { network => builder.addNetworks(Network.toProto(network)) }
@@ -286,7 +283,6 @@ case class AppDefinition(
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
       networks = if (networks.isEmpty) AppDefinition.DefaultNetworks else networks,
-      isResident = proto.getIsResident,
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
       unreachableStrategy = unreachableStrategy,
       killSelection = KillSelection.fromProto(proto.getKillSelection),

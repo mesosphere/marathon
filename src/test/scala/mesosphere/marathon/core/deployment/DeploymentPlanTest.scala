@@ -434,7 +434,6 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
         id = PathId(id),
         cmd = Some("foo"),
         container = Some(Container.Mesos(volumes)),
-        isResident = true,
         unreachableStrategy = UnreachableDisabled
       )
     }

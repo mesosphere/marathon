@@ -27,7 +27,6 @@ case class PodDefinition(
     versionInfo: VersionInfo = VersionInfo.OnlyVersion(PodDefinition.DefaultVersion),
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
-    isResident: Boolean = false,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
     executorResources: Resources = PodDefinition.DefaultExecutorResources,
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
