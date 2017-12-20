@@ -1,3 +1,9 @@
+## Changes from 1.3.13 to 1.3.14
+
+- [MARATHON-7974](https://jira.mesosphere.com/browse/MARATHON-7974) Fixes a security concern for a non super user.  It was discovered that permissions for GroupResources was not honored and is now resolved.
+
+changes: https://github.com/mesosphere/marathon/compare/v1.3.13...5019e6f4eb3f287f698d7fce8b58c010c86720ea
+
 ## Changes from 1.3.12 to 1.3.13
 
 ### Fixed issues:
