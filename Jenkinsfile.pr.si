@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 timeout(120) {
-node('py35') {
+node('py36') {
   wrap([$class: 'MesosSingleUseSlave']) {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
 

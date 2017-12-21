@@ -19,6 +19,7 @@ import uuid
 
 from dcos import marathon, errors
 from datetime import timedelta
+from sseclient.async import SSEClient
 from urllib.parse import urljoin
 
 import dcos_service_marathon_tests
@@ -220,17 +221,30 @@ async def test_event_channel():
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
 
-    async def assert_event():
+    async def events():
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.get(url) as response:
-                async for line in response.content:
-                    print(line)
+                client = SSEClient(response.content)
+                async for event in client.events():
+                    yield json.loads(event.data) # TODO: Parse asynchronously
 
-    await asyncio.wait_for(assert_event(), 10)
+    sse_events = events()
 
-    assert 'hi' == 'hello'
+    async def find_event(eventType):
+        async for event in sse_events:
+            print('Check event: {}'.format(event))
+            if event['eventType'] == eventType:
+                return event
 
-    common.assert_event('event_stream_attached', events)
+    # Asynchronous assert
+    async def assert_event(eventType, within=10):
+        await asyncio.wait_for(find_event(eventType), within)
+
+    # Synchronous assert
+    # def assert_event(eventType):
+    #    yield from find_event(eventType)
+
+    await assert_event('event_stream_attached')
 
     app_def = apps.mesos_app()
     app_id = app_def['id']
@@ -239,13 +253,13 @@ async def test_event_channel():
     client.add_app(app_def)
     shakedown.deployment_wait(app_id=app_id)
 
-    common.assert_event('deployment_info', events)
-    common.assert_event('deployment_step_success', events)
+    await assert_event('deployment_info')
+    await assert_event('deployment_step_success')
 
     client.remove_app(app_id, True)
     shakedown.deployment_wait(app_id=app_id)
 
-    common.assert_event('app_terminated_event', events)
+    await assert_event('app_terminated_event')
 
 
 @shakedown.dcos_1_9
