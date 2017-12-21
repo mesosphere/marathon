@@ -131,7 +131,7 @@ object RamlTypeGenerator {
     o.annotations().asScala.exists(_.name() == "(pragma.forceOptional)")
 
   def pragmaSerializeOnly(o: TypeDeclaration): Boolean =
-    o.annotations().exists(_.name() == "(pragma.serializeOnly)")
+    o.annotations().asScala.exists(_.name() == "(pragma.serializeOnly)")
 
   def generateUpdateTypeName(o: ObjectTypeDeclaration): Option[String] =
     if (o.`type`() == "object" && !isUpdateType(o)) {
