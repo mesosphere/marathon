@@ -148,23 +148,23 @@ class VolumeTest extends UnitTest {
     }
 
     "validating that DiskSource asMesos converts to an Option Mesos Protobuffer" in {
-      DiskSource(DiskType.Root, None).asMesos shouldBe None
-      val Some(pathDisk) = DiskSource(DiskType.Path, Some("/path/to/folder")).asMesos
+      DiskSource(DiskType.Root, None, None, None).asMesos shouldBe None
+      val Some(pathDisk) = DiskSource(DiskType.Path, Some("/path/to/folder"), None, None).asMesos
       pathDisk.getPath.getRoot shouldBe "/path/to/folder"
       pathDisk.getType shouldBe Source.Type.PATH
 
-      val Some(mountDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount")).asMesos
+      val Some(mountDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount"), None, None).asMesos
       mountDisk.getMount.getRoot shouldBe "/path/to/mount"
       mountDisk.getType shouldBe Source.Type.MOUNT
 
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Root, Some("/path")).asMesos
+        DiskSource(DiskType.Root, Some("/path"), None, None).asMesos
       }
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Path, None).asMesos
+        DiskSource(DiskType.Path, None, None, None).asMesos
       }
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Mount, None).asMesos
+        DiskSource(DiskType.Mount, None, None, None).asMesos
       }
     }
   }

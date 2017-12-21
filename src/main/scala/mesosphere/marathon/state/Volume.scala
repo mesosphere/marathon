@@ -105,7 +105,7 @@ object HostVolume {
   }
 }
 
-case class DiskSource(diskType: DiskType, path: Option[String]) {
+case class DiskSource(diskType: DiskType, path: Option[String], id: Option[String], profileName: Option[String]) {
   if (diskType == DiskType.Root)
     require(path.isEmpty, "Path is not allowed for diskType")
   else
@@ -127,6 +127,8 @@ case class DiskSource(diskType: DiskType, path: Option[String]) {
         bld.setMount(Source.Mount.newBuilder().setRoot(p))
       else
         bld.setPath(Source.Path.newBuilder().setRoot(p))
+      id.foreach(bld.setId)
+      profileName.foreach(bld.setProfile)
       Some(bld.build)
     case (_, _) =>
       throw new RuntimeException("invalid state")
@@ -134,17 +136,20 @@ case class DiskSource(diskType: DiskType, path: Option[String]) {
 }
 
 object DiskSource {
-  val root = DiskSource(DiskType.Root, None)
+  val root = DiskSource(DiskType.Root, None, None, None)
+
   @SuppressWarnings(Array("OptionGet"))
   def fromMesos(source: Option[Source]): DiskSource = {
     val diskType = DiskType.fromMesosType(source.map(_.getType))
+    val id = source.flatMap(s => if (s.hasId) Some(s.getId) else None)
+    val profileName = source.flatMap(s => if (s.hasProfile) Some(s.getProfile) else None)
     diskType match {
       case DiskType.Root =>
-        DiskSource(DiskType.Root, None)
+        DiskSource(DiskType.Root, None, id, profileName)
       case DiskType.Mount =>
-        DiskSource(DiskType.Mount, Some(source.get.getMount.getRoot))
+        DiskSource(DiskType.Mount, Some(source.get.getMount.getRoot), id, profileName)
       case DiskType.Path =>
-        DiskSource(DiskType.Path, Some(source.get.getPath.getRoot))
+        DiskSource(DiskType.Path, Some(source.get.getPath.getRoot), id, profileName)
     }
   }
 }
