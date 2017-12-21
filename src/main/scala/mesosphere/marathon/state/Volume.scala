@@ -72,24 +72,22 @@ object VolumeMount {
   def readOnlyToProto(readOnly: Boolean): Mode = if (readOnly) Mode.RO else Mode.RW
 }
 
-case class VolumeWithMount(volume: Volume, mount: VolumeMount)
+case class VolumeWithMount[+A <: Volume](volume: A, mount: VolumeMount)
 
 object VolumeWithMount {
-  def apply(volumeName: Option[String], proto: Protos.Volume): VolumeWithMount =
+  def apply(volumeName: Option[String], proto: Protos.Volume): VolumeWithMount[Volume] =
     new VolumeWithMount(volume = Volume(volumeName, proto), mount = VolumeMount(volumeName, proto))
 
-  def apply(volume: Volume, mount: VolumeMount): VolumeWithMount =
-    new VolumeWithMount(volume = volume, mount = mount)
-
-  def validVolumeWithMount(enabledFeatures: Set[String]): Validator[VolumeWithMount] = validator[VolumeWithMount] { vm =>
-    vm.volume is Volume.validVolume(enabledFeatures)
-    vm.mount is VolumeMount.validVolumeMount
-    vm.volume match {
-      case _: PersistentVolume =>
-        vm.mount is PersistentVolume.validPersistentVolumeMount
-      case _ =>
+  def validVolumeWithMount(enabledFeatures: Set[String]): Validator[VolumeWithMount[Volume]] =
+    validator[VolumeWithMount[Volume]] { vm =>
+      vm.volume is Volume.validVolume(enabledFeatures)
+      vm.mount is VolumeMount.validVolumeMount
+      vm.volume match {
+        case _: PersistentVolume =>
+          vm.mount is PersistentVolume.validPersistentVolumeMount
+        case _ =>
+      }
     }
-  }
 }
 
 /**

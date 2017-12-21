@@ -181,7 +181,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
       )
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
-          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(diskReservation), DiskSource.root, None, None)
+          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(diskReservation), DiskSource.root, None)
         )
       )
 
@@ -241,7 +241,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
           DiskResourceMatch.Consumption(
-            2.0, ResourceRole.Unreserved, reservation = Some(diskReservation), DiskSource.root, None, None)
+            2.0, ResourceRole.Unreserved, reservation = Some(diskReservation), DiskSource.root, None)
         )
       )
 
@@ -702,9 +702,9 @@ class ResourceMatcherTest extends UnitTest with Inside {
       resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch.scalarMatch("disk").get.consumed.toSet shouldBe Set(
         DiskResourceMatch.Consumption(1024.0, "*", None, DiskSource(DiskType.Path, Some("/path2")),
-          Some(persistentVolume), Some(mount)),
+          Some(VolumeWithMount(persistentVolume, mount))),
         DiskResourceMatch.Consumption(476.0, "*", None, DiskSource(DiskType.Path, Some("/path2")),
-          Some(persistentVolume), Some(mount)))
+          Some(VolumeWithMount(persistentVolume, mount))))
     }
 
     "match disk enforces constraints" in {
@@ -784,7 +784,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
         case matches: ResourceMatchResponse.Match =>
           matches.resourceMatch.scalarMatches.collectFirst {
             case m: DiskResourceMatch =>
-              (m.consumedValue, m.consumed.head.persistentVolume.get.persistent.size)
+              (m.consumedValue, m.consumed.head.persistentVolumeWithMount.get.volume.persistent.size)
           } shouldBe Some((1024, 1024))
       }
 

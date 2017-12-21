@@ -317,8 +317,10 @@ class InstanceOpFactoryImpl(
 
     val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
-        case (source, volume, mount) =>
-          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume, mount), volume, mount))
+        case (source, volumeWithMount) =>
+          (source, Task.LocalVolume(
+            Task.LocalVolumeId(runSpec.id, volumeWithMount.volume, volumeWithMount.mount),
+            volumeWithMount.volume, volumeWithMount.mount))
       }
 
     val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
