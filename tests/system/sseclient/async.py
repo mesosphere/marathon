@@ -7,6 +7,7 @@ import logging
 
 _FIELD_SEPARATOR = ':'
 
+
 class SSEClient(object):
     """Implementation of a SSE client.
 
@@ -40,7 +41,6 @@ class SSEClient(object):
                 data = b''
         if data:
             yield data
-
 
     async def events(self):
         async for chunk in self._read():
@@ -98,7 +98,6 @@ class SSEClient(object):
             # Dispatch the event
             self._logger.debug('Dispatching %s...', event)
             yield event
-
 
 
 class Event(object):

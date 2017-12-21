@@ -3,11 +3,9 @@ import common
 import json
 import os.path
 import pytest
-import requests
-import sseclient
 import shakedown
-from aiohttp.test_utils import loop_context
 from datetime import timedelta
+from sseclient.async import SSEClient
 from urllib.parse import urljoin
 
 
@@ -36,65 +34,19 @@ def wait_for_marathon_user_and_cleanup():
     print("exiting wait_for_marathon_user_and_cleanup fixture")
 
 
-@pytest.fixture(scope="function")
-def events():
-
-    print("entering events fixture")
-
+@pytest.fixture
+async def sse_events():
     url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
-    print('Query {} for events'.format(url))
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.get(url) as response:
+            async def internal_generator():
+                client = SSEClient(response.content)
+                async for event in client.events():
+                    yield json.loads(event.data)
 
-    # Timeouts in seconds
-    connect = 5
-    first_event = 20
-
-    with requests.get(url, headers=headers, stream=True, verify=False, timeout=(connect, first_event)) as response:
-        print('Connected to {}'.format(url))
-        client = sseclient.SSEClient(response)
-        print('Created SSE Client.')
-
-        # We yield a generator of the parsed events to the test. Note: This must be lazy.
-        yield (json.loads(event.data) for event in client.events())
-
-        client.close()
-
-    print("exiting events fixture")
-
-
-@pytest.fixture(scope="function")
-def events_async():
-    print("entering events fixture")
-
-    print('call events endpoint')
-    url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
-    headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
-               'Accept': 'text/event-stream'}
-
-    # Python 3.6 makes this easier.
-    class async_event_generator:
-        def __init__(self):
-            self._session = aiohttp.ClientSession(headers=headers)
-            print('created session')
-
-        async def __aiter__(self):
-            response = await self._session.get(url)
-            self._content = response.content
-            return self
-
-        async def __anext__(self):
-            try:
-                print('return next content item')
-                return self._content.__anext__()
-            finally:
-                await self._session.close()
-
-
-    yield async_event_generator()
-
-
-    # print("exiting events fixture")
+            yield internal_generator()
 
 
 @pytest.fixture(scope="function")

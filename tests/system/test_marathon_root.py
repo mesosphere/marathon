@@ -5,8 +5,6 @@
     tests round dcos services registration and control and security.
 """
 
-import aiohttp
-import asyncio
 import apps
 import common
 import json
@@ -19,8 +17,6 @@ import uuid
 
 from dcos import marathon, errors
 from datetime import timedelta
-from sseclient.async import SSEClient
-from urllib.parse import urljoin
 
 import dcos_service_marathon_tests
 import marathon_auth_common_tests
@@ -28,7 +24,7 @@ import marathon_common_tests
 import marathon_pods_tests
 
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA
-from fixtures import events, events_async, wait_for_marathon_and_cleanup, user_billy # NOQA
+from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy # NOQA
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -208,21 +204,6 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents(), "The application task got started on a private agent"
 
 
-@pytest.fixture
-async def sse_events():
-    url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
-    headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
-               'Accept': 'text/event-stream'}
-    async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get(url) as response:
-            async def internal():
-                client = SSEClient(response.content)
-                async for event in client.events():
-                    yield json.loads(event.data) # TODO: Parse asynchronously
-
-            yield internal()
-
-
 @pytest.mark.skipif("shakedown.ee_version() == 'strict'") # NOQA
 @pytest.mark.skipif('marthon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
@@ -233,23 +214,7 @@ async def test_event_channel(sse_events):
         events. Unknown events are skipped.
     """
 
-    # sse_events = events()
-
-    async def find_event(eventType):
-        async for event in sse_events:
-            print('Check event: {}'.format(event))
-            if event['eventType'] == eventType:
-                return event
-
-    # Asynchronous assert
-    async def assert_event(eventType, within=10):
-        await asyncio.wait_for(find_event(eventType), within)
-
-    # Synchronous assert
-    # def assert_event(eventType):
-    #    yield from find_event(eventType)
-
-    await assert_event('event_stream_attached')
+    await common.assert_event('event_stream_attached', sse_events)
 
     app_def = apps.mesos_app()
     app_id = app_def['id']
@@ -258,13 +223,13 @@ async def test_event_channel(sse_events):
     client.add_app(app_def)
     shakedown.deployment_wait(app_id=app_id)
 
-    await assert_event('deployment_info')
-    await assert_event('deployment_step_success')
+    await common.assert_event('deployment_info', sse_events)
+    await common.assert_event('deployment_step_success', sse_events)
 
     client.remove_app(app_id, True)
     shakedown.deployment_wait(app_id=app_id)
 
-    await assert_event('app_terminated_event')
+    await common.assert_event('app_terminated_event', sse_events)
 
 
 @shakedown.dcos_1_9

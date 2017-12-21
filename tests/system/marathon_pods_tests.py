@@ -13,7 +13,7 @@ from dcos import marathon, http
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 from urllib.parse import urljoin
 
-from fixtures import events, wait_for_marathon_and_cleanup # NOQA
+from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA
 
 
 PACKAGE_NAME = 'marathon'
@@ -103,10 +103,11 @@ def test_create_pod_with_private_image():
 
 @shakedown.dcos_1_9 # NOQA
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
-def test_event_channel_for_pods(events):
+@pytest.mark.asyncio
+async def test_event_channel_for_pods(sse_events):
     """Tests the Marathon event channel specific to pod events."""
 
-    common.assert_event('event_stream_attached', events)
+    await common.assert_event('event_stream_attached', sse_events)
 
     pod_def = pods.simple_pod()
     pod_id = pod_def['id']
@@ -121,14 +122,14 @@ def test_event_channel_for_pods(events):
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    common.assert_event('pod_created_event', events)
-    common.assert_event('deployment_step_success', events)
+    await common.assert_event('pod_created_event', sse_events)
+    await common.assert_event('deployment_step_success', sse_events)
 
     pod_def["scaling"]["instances"] = 3
     client.update_pod(pod_id, pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    common.assert_event('pod_updated_event', events)
+    await common.assert_event('pod_updated_event', sse_events)
 
 
 @shakedown.dcos_1_9

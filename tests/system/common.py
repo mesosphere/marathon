@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import pytest
@@ -766,9 +767,12 @@ def task_by_name(tasks, name):
     assert False, "Did not find task with name %s in this list of tasks: %s" % (name, tasks,)
 
 
-@retrying.retry(wait_fixed=100, stop_max_attempt_number=30, retry_on_exception=ignore_exception, stop_max_delay=30000)
-def assert_event(event_type, events):
-    """ Skip events until event with given type was found."""
-    next_event = next(events)
-    assert next_event['eventType'] == event_type, "Event '{}' did not arrive in time".format(event_type)
-    print("Event {}".format(event_type))
+async def find_event(event_type, event_stream):
+    async for event in event_stream:
+        print('Check event: {}'.format(event))
+        if event['eventType'] == event_type:
+            return event
+
+
+async def assert_event(event_type, event_stream, within=10):
+    await asyncio.wait_for(find_event(event_type, event_stream), within)
