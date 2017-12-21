@@ -50,7 +50,7 @@ function download-diagnostics-bundle {
 # We need to use master (leader) public IP as DCOS_URL not just random master public IP.
 # Tests that introduce network partition never partition cluster leader node.
 function use-leader-ip-as-dcos-url {
-    LEADER_PUBLIC_IP=`for id in $(dcos node --json | jq --raw-output '.[] | select(.type == "master (leader)") | .ip'); do dcos node ssh --option StrictHostKeyChecking=no --option LogLevel=quiet --master-proxy --private-ip=$id "curl -s ifconfig.co" ; done 2>/dev/null`
+    LEADER_PUBLIC_IP=`for id in $(dcos node --json | jq --raw-output '.[] | select(.type == "master (leader)") | .ip'); do dcos node ssh --option StrictHostKeyChecking=no --option LogLevel=quiet --master-proxy --private-ip=$id "curl -s ifconfig.co" ; done`
     export DCOS_URL="http://$LEADER_PUBLIC_IP/"
 }
 
