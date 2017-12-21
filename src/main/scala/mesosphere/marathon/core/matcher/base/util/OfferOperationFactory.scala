@@ -72,10 +72,10 @@ class OfferOperationFactory(
 
   def createVolumes(
     reservationLabels: ReservationLabels,
-    localVolumes: Seq[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
+    localVolumes: Seq[(Option[String], DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
 
     val volumes: Seq[Mesos.Resource] = localVolumes.map {
-      case (source, vol) =>
+      case (providerId, source, vol) =>
         val disk = {
           val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)
           principalOpt.foreach(persistence.setPrincipal)
@@ -103,14 +103,20 @@ class OfferOperationFactory(
           .setLabels(reservationLabels.mesosLabels)
         principalOpt.foreach(reservation.setPrincipal)
 
-        Mesos.Resource.newBuilder()
+        val builder = Mesos.Resource.newBuilder()
           .setName("disk")
           .setType(Mesos.Value.Type.SCALAR)
           .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
           .setRole(role)
           .setReservation(reservation)
           .setDisk(disk)
-          .build()
+
+        providerId.foreach { providerIdValue =>
+          val providerIdProto = Mesos.ResourceProviderID.newBuilder().setValue(providerIdValue).build()
+          builder.setProviderId(providerIdProto)
+        }
+
+        builder.build()
     }
 
     val create = Mesos.Offer.Operation.Create.newBuilder()

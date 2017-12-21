@@ -36,7 +36,7 @@ object ResourceMatcher extends StrictLogging {
         portsMatch.resources
 
     // TODO - this assumes that volume matches are one resource to one volume, which should be correct, but may not be.
-    val localVolumes: Seq[(DiskSource, VolumeWithMount[PersistentVolume])] =
+    val localVolumes: Seq[(Option[String], DiskSource, VolumeWithMount[PersistentVolume])] =
       scalarMatches.collect { case r: DiskResourceMatch => r.volumes }.flatten
   }
 
@@ -413,6 +413,7 @@ object ResourceMatcher extends StrictLogging {
                 DiskResourceMatch.Consumption(
                   consumedAmount,
                   role = matchedResource.getRole,
+                  providerId = if (matchedResource.hasProviderId) Option(matchedResource.getProviderId.getValue) else None,
                   reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
                   source = DiskSource.fromMesos(matchedResource.getDiskSourceOption),
                   Some(grownVolumeWithMount))
@@ -507,8 +508,9 @@ object ResourceMatcher extends StrictLogging {
             val consume = Math.min(valueLeft, nextResource.getScalar.getValue)
             val decrementedResource = ResourceUtil.consumeScalarResource(nextResource, consume)
             val newValueLeft = valueLeft - consume
+            val providerId = if (nextResource.hasProviderId) Option(nextResource.getProviderId.getValue) else None
             val reservation = if (nextResource.hasReservation) Option(nextResource.getReservation) else None
-            val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole, reservation)
+            val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole, providerId, reservation)
 
             consumeResources(newValueLeft, restResources, (decrementedResource ++ resourcesNotConsumed).toList,
               consumedValue :: resourcesConsumed, matcher)

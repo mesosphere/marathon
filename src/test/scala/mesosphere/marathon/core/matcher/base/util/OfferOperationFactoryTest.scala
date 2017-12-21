@@ -77,7 +77,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val resource = MarathonTestHelper.scalarResource("disk", 1024)
 
       When("We create a reserve operation")
-      val operation = factory.createVolumes(f.reservationLabels, volumes.map(v => (DiskSource.root, v)))
+      val operation = factory.createVolumes(f.reservationLabels, volumes.map(v => (None, DiskSource.root, v)))
 
       Then("The operation is as expected")
       operation.getType shouldEqual Mesos.Offer.Operation.Type.CREATE

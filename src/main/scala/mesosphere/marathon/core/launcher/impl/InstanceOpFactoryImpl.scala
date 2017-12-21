@@ -315,15 +315,15 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
-    val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
+    val localVolumes: Seq[(Option[String], DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
-        case (source, volumeWithMount) =>
-          (source, Task.LocalVolume(
+        case (providerId, source, volumeWithMount) =>
+          (providerId, source, Task.LocalVolume(
             Task.LocalVolumeId(runSpec.id, volumeWithMount.volume, volumeWithMount.mount),
             volumeWithMount.volume, volumeWithMount.mount))
       }
 
-    val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
+    val persistentVolumeIds = localVolumes.map { case (_, _, localVolume) => localVolume.id }
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
       initiated = now,

@@ -74,9 +74,13 @@ case class GeneralScalarMatch(
 
   def consumedResources: Seq[Protos.Resource] = {
     consumed.map {
-      case GeneralScalarMatch.Consumption(value, role, reservation) =>
+      case GeneralScalarMatch.Consumption(value, role, providerId, reservation) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
+        providerId.foreach { providerIdValue =>
+          val providerIdProto = Protos.ResourceProviderID.newBuilder().setValue(providerIdValue).build()
+          builder.setProviderId(providerIdProto)
+        }
         reservation.foreach(builder.setReservation)
         builder.build()
     }
@@ -94,7 +98,7 @@ case class GeneralScalarMatch(
 object GeneralScalarMatch {
   /** A (potentially partial) consumption of a scalar resource. */
   case class Consumption(consumedValue: Double, role: String,
-      reservation: Option[ReservationInfo]) extends ScalarMatchResult.Consumption
+      providerId: Option[String], reservation: Option[ReservationInfo]) extends ScalarMatchResult.Consumption
 }
 
 case class DiskResourceMatch(
@@ -109,9 +113,13 @@ case class DiskResourceMatch(
 
   def consumedResources: Seq[Protos.Resource] = {
     consumed.map {
-      case DiskResourceMatch.Consumption(value, role, reservation, source, _) =>
+      case DiskResourceMatch.Consumption(value, role, providerId, reservation, source, _) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
+        providerId.foreach { providerIdValue =>
+          val providerIdProto = Protos.ResourceProviderID.newBuilder().setValue(providerIdValue).build()
+          builder.setProviderId(providerIdProto)
+        }
         reservation.foreach(builder.setReservation)
         source.asMesos.foreach { s =>
           builder.setDisk(DiskInfo.newBuilder.setSource(s))
@@ -126,9 +134,10 @@ case class DiskResourceMatch(
     * return all volumes for this disk resource match
     * Distinct because a persistentVolume may be associated with multiple resources.
     */
-  def volumes: Seq[(DiskSource, VolumeWithMount[PersistentVolume])] =
+  def volumes: Seq[(Option[String], DiskSource, VolumeWithMount[PersistentVolume])] =
     consumed.collect {
-      case d @ DiskResourceMatch.Consumption(_, _, _, _, Some(volumeWithMount)) => (d.source, volumeWithMount)
+      case d @ DiskResourceMatch.Consumption(_, _, _, _, _, Some(volumeWithMount)) =>
+        (d.providerId, d.source, volumeWithMount)
     }.toList.distinct
 
   override def toString: String = {
@@ -139,19 +148,19 @@ case class DiskResourceMatch(
 object DiskResourceMatch {
   /** A (potentially partial) consumption of a scalar resource. */
   case class Consumption(consumedValue: Double, role: String,
-      reservation: Option[ReservationInfo], source: DiskSource,
+      providerId: Option[String], reservation: Option[ReservationInfo], source: DiskSource,
       persistentVolumeWithMount: Option[VolumeWithMount[PersistentVolume]]) extends ScalarMatchResult.Consumption {
 
     def requested: Either[Double, VolumeWithMount[PersistentVolume]] =
       persistentVolumeWithMount.map(Right(_)).getOrElse(Left(consumedValue))
   }
-  type ApplyFn = ((Double, String, Option[ReservationInfo], DiskSource, Option[VolumeWithMount[PersistentVolume]]) => Consumption)
+  type ApplyFn = ((Double, String, Option[String], Option[ReservationInfo], DiskSource, Option[VolumeWithMount[PersistentVolume]]) => Consumption)
   object Consumption extends ApplyFn {
     def apply(
       c: GeneralScalarMatch.Consumption,
       source: Option[DiskInfo.Source],
       persistentVolumeWithMount: Option[VolumeWithMount[PersistentVolume]]): Consumption = {
-      Consumption(c.consumedValue, c.role, c.reservation, DiskSource.fromMesos(source), persistentVolumeWithMount)
+      Consumption(c.consumedValue, c.role, c.providerId, c.reservation, DiskSource.fromMesos(source), persistentVolumeWithMount)
     }
   }
 

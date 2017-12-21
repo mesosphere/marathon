@@ -169,19 +169,19 @@ class ResourceMatcherTest extends UnitTest with Inside {
       res.scalarMatches should have size 3
       res.scalarMatch(Resource.CPUS).get.consumed.toSet should be(
         Set(
-          GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
-          GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation2))
+          GeneralScalarMatch.Consumption(1.0, "marathon", None, reservation = Some(cpuReservation)),
+          GeneralScalarMatch.Consumption(1.0, "marathon", None, reservation = Some(cpuReservation2))
         )
       )
 
       res.scalarMatch(Resource.MEM).get.consumed.toSet should be(
         Set(
-          GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, reservation = Some(memReservation))
+          GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, None, reservation = Some(memReservation))
         )
       )
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
-          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(diskReservation), DiskSource.root, None)
+          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, None, Some(diskReservation), DiskSource.root, None)
         )
       )
 
@@ -228,20 +228,20 @@ class ResourceMatcherTest extends UnitTest with Inside {
       res.scalarMatches should have size 3
       res.scalarMatch(Resource.CPUS).get.consumed.toSet should be(
         Set(
-          GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
-          GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation2))
+          GeneralScalarMatch.Consumption(1.0, "marathon", None, reservation = Some(cpuReservation)),
+          GeneralScalarMatch.Consumption(1.0, "marathon", None, reservation = Some(cpuReservation2))
         )
       )
 
       res.scalarMatch(Resource.MEM).get.consumed.toSet should be(
         Set(
-          GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, reservation = Some(memReservation))
+          GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, None, reservation = Some(memReservation))
         )
       )
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
           DiskResourceMatch.Consumption(
-            2.0, ResourceRole.Unreserved, reservation = Some(diskReservation), DiskSource.root, None)
+            2.0, ResourceRole.Unreserved, None, reservation = Some(diskReservation), DiskSource.root, None)
         )
       )
 
@@ -701,9 +701,9 @@ class ResourceMatcherTest extends UnitTest with Inside {
 
       resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch.scalarMatch("disk").get.consumed.toSet shouldBe Set(
-        DiskResourceMatch.Consumption(1024.0, "*", None, DiskSource(DiskType.Path, Some("/path2"), None, None),
+        DiskResourceMatch.Consumption(1024.0, "*", None, None, DiskSource(DiskType.Path, Some("/path2"), None, Map.empty, None),
           Some(VolumeWithMount(persistentVolume, mount))),
-        DiskResourceMatch.Consumption(476.0, "*", None, DiskSource(DiskType.Path, Some("/path2"), None, None),
+        DiskResourceMatch.Consumption(476.0, "*", None, None, DiskSource(DiskType.Path, Some("/path2"), None, Map.empty, None),
           Some(VolumeWithMount(persistentVolume, mount))))
     }
 

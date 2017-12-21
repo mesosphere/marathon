@@ -10,6 +10,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Volume.Mode
 
@@ -105,7 +106,9 @@ object HostVolume {
   }
 }
 
-case class DiskSource(diskType: DiskType, path: Option[String], id: Option[String], profileName: Option[String]) {
+case class DiskSource(
+    diskType: DiskType, path: Option[String],
+    id: Option[String], metadata: Map[String, String], profileName: Option[String]) {
   if (diskType == DiskType.Root)
     require(path.isEmpty, "Path is not allowed for diskType")
   else
@@ -128,6 +131,7 @@ case class DiskSource(diskType: DiskType, path: Option[String], id: Option[Strin
       else
         bld.setPath(Source.Path.newBuilder().setRoot(p))
       id.foreach(bld.setId)
+      bld.setMetadata(metadata.toMesosLabels)
       profileName.foreach(bld.setProfile)
       Some(bld.build)
     case (_, _) =>
@@ -136,20 +140,23 @@ case class DiskSource(diskType: DiskType, path: Option[String], id: Option[Strin
 }
 
 object DiskSource {
-  val root = DiskSource(DiskType.Root, None, None, None)
+  val root = DiskSource(DiskType.Root, None, None, Map.empty, None)
 
   @SuppressWarnings(Array("OptionGet"))
   def fromMesos(source: Option[Source]): DiskSource = {
     val diskType = DiskType.fromMesosType(source.map(_.getType))
     val id = source.flatMap(s => if (s.hasId) Some(s.getId) else None)
+    val metadata = source.map {
+      s => if (s.hasMetadata) s.getMetadata.fromProto else Map.empty[String, String]
+    }.getOrElse(Map.empty[String, String])
     val profileName = source.flatMap(s => if (s.hasProfile) Some(s.getProfile) else None)
     diskType match {
       case DiskType.Root =>
-        DiskSource(DiskType.Root, None, id, profileName)
+        DiskSource(DiskType.Root, None, id, metadata, profileName)
       case DiskType.Mount =>
-        DiskSource(DiskType.Mount, Some(source.get.getMount.getRoot), id, profileName)
+        DiskSource(DiskType.Mount, Some(source.get.getMount.getRoot), id, metadata, profileName)
       case DiskType.Path =>
-        DiskSource(DiskType.Path, Some(source.get.getPath.getRoot), id, profileName)
+        DiskSource(DiskType.Path, Some(source.get.getPath.getRoot), id, metadata, profileName)
     }
   }
 }
