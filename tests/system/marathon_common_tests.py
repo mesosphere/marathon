@@ -1145,7 +1145,7 @@ def test_ipv6_healthcheck():
     """
     agents = shakedown.get_agents()
     for agent in agents:
-        status, stdout = shakedown.run_command_on_agent(agent, "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ip6-test")
+        status, stdout = shakedown.run_command_on_agent(agent, "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test")
         print("Finished creating docker network on agent '{}' with status {} and stdout: {}".format(agent, status, stdout))
 
     app_def = apps.ipv6_healthcheck()
@@ -1162,5 +1162,5 @@ def test_ipv6_healthcheck():
         "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], target_instances_count)
 
     client.remove_app(app['id'], True)
-    for agent in agents:
-        shakedown.run_command_on_agent(agent, "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ip6-test")
+    # for agent in agents:
+    #     shakedown.run_command_on_agent(agent, "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test")
