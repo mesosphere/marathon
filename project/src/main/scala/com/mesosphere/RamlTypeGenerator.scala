@@ -130,6 +130,9 @@ object RamlTypeGenerator {
   def pragmaForceOptional(o: TypeDeclaration): Boolean =
     o.annotations().asScala.exists(_.name() == "(pragma.forceOptional)")
 
+  def pragmaSerializeOnly(o: TypeDeclaration): Boolean =
+    o.annotations().asScala.exists(_.name() == "(pragma.serializeOnly)")
+
   def generateUpdateTypeName(o: ObjectTypeDeclaration): Option[String] =
     if (o.`type`() == "object" && !isUpdateType(o)) {
       // use the attribute value as the type name if specified ala enumName; otherwise just append "Update"
@@ -413,7 +416,7 @@ object RamlTypeGenerator {
     }
   }
 
-  case class ObjectT(name: String, fields: Seq[FieldT], parentType: Option[String], comments: Seq[String], childTypes: Seq[ObjectT] = Nil, discriminator: Option[String] = None, discriminatorValue: Option[String] = None) extends GeneratedClass {
+  case class ObjectT(name: String, fields: Seq[FieldT], parentType: Option[String], comments: Seq[String], childTypes: Seq[ObjectT] = Nil, discriminator: Option[String] = None, discriminatorValue: Option[String] = None, serializeOnly: Boolean = false) extends GeneratedClass {
     override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
 
     override def toTree(): Seq[Tree] = {
@@ -482,54 +485,59 @@ object RamlTypeGenerator {
       } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty) ||
         actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
         actualFields.map(_.constraints).requiredImports ++ Seq(
-          OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
-            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-              actualFields.map { field =>
-                VAL(field.name) := field.playValidator
-              } ++ Seq(
-                VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
-                  CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY(REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
-                IF(REF("_errors") DOT "nonEmpty") THEN (
-                  REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
-                  ) ELSE (
-                  REF(PlayJsSuccess) APPLY (REF(name) APPLY
-                    actualFields.map { field =>
-                      REF(field.name) := (REF(field.name) DOT "get")
-                    }))
-              )
-            ),
-            DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
-              actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-                val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
-                if (field.omitEmpty && field.repeated && !field.forceOptional) {
-                  VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
-                    serialized
-                    ) ELSE (
-                    PlayJsNull
-                    )
-                } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
-                  // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
-                  // see buildTypes
-                  VAL(field.name) := serialized MATCH(
-                    // avoid serializing JS objects w/o any fields
-                    CASE(ID("obj") withType (PlayJsObject),
-                      IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
-                    CASE(ID("rs")) ==> REF("rs")
-                  )
-                } else {
-                  VAL(field.name) := serialized
-                }
-              } ++
-                Seq(
-                  REF(PlayJsObject) APPLY (SEQ(
-                    actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-                      TUPLE(LIT(field.rawName), REF(field.name))
-                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull) DOT("++") APPLY(
-                      actualFields.find(_.name == AdditionalProperties).fold(REF("Seq") DOT "empty") { extraPropertiesField =>
-                      REF("o.additionalProperties") DOT "fields"
-                    })
+          OBJECTDEF("playJsonFormat") withParents (if (serializeOnly) PLAY_JSON_WRITES(name) else PLAY_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
+            if (serializeOnly) {
+              Seq()
+            } else  Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
+                BLOCK(
+                  actualFields.map { field =>
+                    VAL(field.name) := field.playValidator
+                  } ++ Seq(
+                    VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
+                      CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY (REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
+                    IF(REF("_errors") DOT "nonEmpty") THEN (
+                      REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
+                      ) ELSE (
+                      REF(PlayJsSuccess) APPLY (REF(name) APPLY
+                        actualFields.map { field =>
+                          REF(field.name) := (REF(field.name) DOT "get")
+                        }))
                   )
                 )
+            }) ++ Seq(
+              DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+                actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+                  val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
+                  if (field.omitEmpty && field.repeated && !field.forceOptional) {
+                    VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
+                      serialized
+                      ) ELSE (
+                      PlayJsNull
+                      )
+                  } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
+                    // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
+                    // see buildTypes
+                    VAL(field.name) := serialized MATCH(
+                      // avoid serializing JS objects w/o any fields
+                      CASE(ID("obj") withType (PlayJsObject),
+                        IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
+                      CASE(ID("rs")) ==> REF("rs")
+                    )
+                  } else {
+                    VAL(field.name) := serialized
+                  }
+                } ++
+                  Seq(
+                    REF(PlayJsObject) APPLY (SEQ(
+                      actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+                        TUPLE(LIT(field.rawName), REF(field.name))
+                      }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull) DOT("++") APPLY(
+                        actualFields.find(_.name == AdditionalProperties).fold(REF("Seq") DOT "empty") { extraPropertiesField =>
+                        REF("o.additionalProperties") DOT "fields"
+                      })
+                    )
+                  )
+              )
             )
           )
         )
@@ -550,7 +558,7 @@ object RamlTypeGenerator {
           Seq(VAL("Default") withType (name) := REF(name) APPLY())
         } else Nil
 
-      val obj = if (childTypes.isEmpty) {
+      val obj = if (childTypes.isEmpty || serializeOnly) {
         (OBJECTDEF(name)) := BLOCK(
           playFormat ++ defaultFields ++ defaultInstance ++ fields.flatMap { f =>
             f.constraints.flatMap(_.withFieldLimit(f).limitField)
@@ -802,7 +810,7 @@ object RamlTypeGenerator {
                   case o: ObjectTypeDeclaration =>
                     val (name, parent) = objectName(o)
                     val fields: Seq[FieldT] = o.properties.asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
-                    ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
+                    ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
                   case s: StringTypeDeclaration =>
                     StringT(s.name, Option(s.defaultValue()))
                   case t =>
@@ -818,10 +826,10 @@ object RamlTypeGenerator {
                 val (name, parent) = objectName(o)
                 val fields: Seq[FieldT] = o.properties().asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
                 if (isUpdateType(o)) {
-                  val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
+                  val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
                   buildTypes(s.tail, results + objectType)
                 } else {
-                  val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
+                  val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
                   val updateType = generateUpdateTypeName(o).withFilter(n => !results.exists(_.name == n)).map { updateName =>
                     objectType.copy(name = updateName, fields = fields.map(_.copy(forceOptional = true)))
                   }
