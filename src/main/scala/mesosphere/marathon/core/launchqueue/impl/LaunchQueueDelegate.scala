@@ -20,8 +20,8 @@ import scala.util.control.NonFatal
 
 private[launchqueue] class LaunchQueueDelegate(
     config: LaunchQueueConfig,
-    actorRef: ActorRef,
-    rateLimiterRef: ActorRef) extends LaunchQueue with StrictLogging {
+    launchQueueActor: ActorRef,
+    rateLimiterActor: ActorRef) extends LaunchQueue with StrictLogging {
 
   // When purging, we wait for the TaskLauncherActor to shut down. This actor will wait for
   // in-flight task op notifications before complying, therefore we need to adjust the timeout accordingly.
@@ -87,7 +87,7 @@ private[launchqueue] class LaunchQueueDelegate(
     timeout: Timeout = launchQueueRequestTimeout)(message: T): Future[R] = {
 
     implicit val timeoutImplicit: Timeout = timeout
-    val answerFuture = actorRef ? message
+    val answerFuture = launchQueueActor ? message
     import mesosphere.marathon.core.async.ExecutionContexts.global
     answerFuture.recover {
       case NonFatal(e) => throw new RuntimeException(s"in $method", e)
@@ -95,11 +95,11 @@ private[launchqueue] class LaunchQueueDelegate(
     answerFuture.mapTo[R]
   }
 
-  override def addDelay(spec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(spec)
+  override def addDelay(spec: RunSpec): Unit = rateLimiterActor ! RateLimiterActor.AddDelay(spec)
 
-  override def resetDelay(spec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(spec)
+  override def resetDelay(spec: RunSpec): Unit = rateLimiterActor ! RateLimiterActor.ResetDelay(spec)
 
-  override def advanceDelay(spec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.AdvanceDelay(spec)
+  override def advanceDelay(spec: RunSpec): Unit = rateLimiterActor ! RateLimiterActor.AdvanceDelay(spec)
 }
 
 private[impl] object LaunchQueueDelegate {

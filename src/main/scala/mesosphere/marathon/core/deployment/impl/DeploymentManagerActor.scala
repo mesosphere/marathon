@@ -152,11 +152,11 @@ class DeploymentManagerActor(
         deploymentRepository.delete(plan.id)
       }
 
-    case LaunchDeploymentActor(plan) if isScheduledDeployment(plan.id) =>
+    case LaunchDeployment(plan) if isScheduledDeployment(plan.id) =>
       logger.info(s"Launching DeploymentActor for ${plan.id} for ${plan.targetIdsString}")
       startDeployment(runningDeployments(plan.id))
 
-    case LaunchDeploymentActor(plan) =>
+    case LaunchDeployment(plan) =>
       logger.info(s"Deployment ${plan.id} for ${plan.targetIdsString} was already canceled or overridden by another one. Not proceeding with it")
 
     case stepInfo: DeploymentStepInfo => deploymentStatus += stepInfo.plan.id -> stepInfo
@@ -209,7 +209,7 @@ class DeploymentManagerActor(
 
       if (origSender != Actor.noSender) origSender ! DeploymentStarted(plan)
 
-      self ! LaunchDeploymentActor(plan)
+      self ! LaunchDeployment(plan)
     }.recover {
       case NonFatal(e) =>
         logger.error(s"Couldn't start deployment ${plan.id} for ${plan.targetIdsString}. Repository store failed with:", e)
@@ -245,7 +245,7 @@ class DeploymentManagerActor(
       await(Future.sequence(cancellations))
 
       logger.info(s"Conflicting deployments ${toCancel.map(_.plan.id)} for deployment ${plan.id} have been canceled")
-      self ! LaunchDeploymentActor(plan)
+      self ! LaunchDeployment(plan)
     }
   }
 
@@ -373,7 +373,7 @@ object DeploymentManagerActor {
   case class CancelDeletedConflicts(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo], origSender: ActorRef)
   case class DeploymentFinished(plan: DeploymentPlan)
   case class ReadinessCheckUpdate(deploymentId: String, result: ReadinessCheckResult)
-  case class LaunchDeploymentActor(plan: DeploymentPlan)
+  case class LaunchDeployment(plan: DeploymentPlan)
   case class FailedRepositoryOperation(plan: DeploymentPlan, reason: Throwable)
 
   case class DeploymentInfo(

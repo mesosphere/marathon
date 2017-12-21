@@ -18,7 +18,7 @@ import mesosphere.marathon.core.async.ExecutionContexts.global
 
 @SuppressWarnings(Array("all")) // async/await
 class TaskStartActor(
-    val deploymentManager: ActorRef,
+    val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
     val scheduler: SchedulerActions,
     val launchQueue: LaunchQueue,
