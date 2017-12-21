@@ -208,27 +208,32 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents(), "The application task got started on a private agent"
 
 
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'") # NOQA
-@pytest.mark.skipif('marthon_version_less_than("1.3.9")')
-@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
-@pytest.mark.asyncio
-async def test_event_channel():
-    """ Tests the event channel. The way events are verified is by converting
-        the parsed events to an iterator and asserting the right oder of certain
-        events. Unknown events are skipped.
-    """
+@pytest.fixture
+async def sse_events():
     url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
-
-    async def events():
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url) as response:
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.get(url) as response:
+            async def internal():
                 client = SSEClient(response.content)
                 async for event in client.events():
                     yield json.loads(event.data) # TODO: Parse asynchronously
 
-    sse_events = events()
+            yield internal()
+
+
+@pytest.mark.skipif("shakedown.ee_version() == 'strict'") # NOQA
+@pytest.mark.skipif('marthon_version_less_than("1.3.9")')
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
+@pytest.mark.asyncio
+async def test_event_channel(sse_events):
+    """ Tests the event channel. The way events are verified is by converting
+        the parsed events to an iterator and asserting the right oder of certain
+        events. Unknown events are skipped.
+    """
+
+    # sse_events = events()
 
     async def find_event(eventType):
         async for event in sse_events:
