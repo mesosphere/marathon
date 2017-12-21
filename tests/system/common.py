@@ -764,3 +764,11 @@ def task_by_name(tasks, name):
             return task
 
     assert False, "Did not find task with name %s in this list of tasks: %s" % (name, tasks,)
+
+
+@retrying.retry(wait_fixed=100, stop_max_attempt_number=30, retry_on_exception=ignore_exception, stop_max_delay=30000)
+def assert_event(event_type, events):
+    """ Skip events until event with given type was found."""
+    next_event = next(events)
+    assert next_event['eventType'] == event_type, "Event '{}' did not arrive in time".format(event_type)
+    print("Event {}".format(event_type))

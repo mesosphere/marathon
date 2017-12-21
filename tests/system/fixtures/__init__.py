@@ -1,9 +1,12 @@
 import common
+import json
 import os.path
 import pytest
+import requests
+import sseclient
 import shakedown
-
 from datetime import timedelta
+from urllib.parse import urljoin
 
 
 def fixtures_dir():
@@ -32,31 +35,30 @@ def wait_for_marathon_user_and_cleanup():
 
 
 @pytest.fixture(scope="function")
-def events_to_file():
-    leader_ip = shakedown.marathon_leader_ip()
-    print("entering events_to_file fixture")
-    shakedown.run_command(leader_ip, 'rm events.txt')
+def events():
 
-    # In strict mode marathon runs in SSL mode on port 8443 and requires authentication
-    if shakedown.ee_version() == 'strict':
-        shakedown.run_command(
-            leader_ip,
-            '(curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" ' +
-            '-H "Authorization: token={}" '.format(shakedown.dcos_acs_token()) +
-            '-o events.txt -k https://marathon.mesos:8443/v2/events; echo $? > events.exitcode) &')
+    print("entering events fixture")
 
-    # Otherwise marathon runs on HTTP mode on port 8080
-    else:
-        shakedown.run_command(
-            leader_ip,
-            '(curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" '
-            '-o events.txt http://marathon.mesos:8080/v2/events; echo $? > events.exitcode) &')
+    url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
+    headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
+               'Accept': 'text/event-stream'}
+    print('Query {} for events'.format(url))
 
-    yield
-    shakedown.kill_process_on_host(leader_ip, '[c]url')
-    shakedown.run_command(leader_ip, 'rm events.txt')
-    shakedown.run_command(leader_ip, 'rm events.exitcode')
-    print("exiting events_to_file fixture")
+    # Timeouts in seconds
+    connect = 5
+    first_event = 20
+
+    with requests.get(url, headers=headers, stream=True, verify=False, timeout=(connect, first_event)) as response:
+        print('Connected to {}'.format(url))
+        client = sseclient.SSEClient(response)
+        print('Created SSE Client.')
+
+        # We yield a generator of the parsed events to the test. Note: This must be lazy.
+        yield (json.loads(event.data) for event in client.events())
+
+        client.close()
+
+    print("exiting events fixture")
 
 
 @pytest.fixture(scope="function")

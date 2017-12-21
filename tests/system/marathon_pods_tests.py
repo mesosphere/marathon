@@ -5,7 +5,6 @@ import json
 import os
 import pods
 import pytest
-import retrying
 import shakedown
 import time
 
@@ -14,7 +13,7 @@ from dcos import marathon, http
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 from urllib.parse import urljoin
 
-from fixtures import wait_for_marathon_and_cleanup # NOQA
+from fixtures import events, wait_for_marathon_and_cleanup # NOQA
 
 
 PACKAGE_NAME = 'marathon'
@@ -102,10 +101,12 @@ def test_create_pod_with_private_image():
         common.delete_secret(secret_name)
 
 
-@shakedown.dcos_1_9
-@pytest.mark.usefixtures("wait_for_marathon_and_cleanup", "events_to_file")
-def test_event_channel_for_pods():
+@shakedown.dcos_1_9 # NOQA
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
+def test_event_channel_for_pods(events):
     """Tests the Marathon event channel specific to pod events."""
+
+    common.assert_event('event_stream_attached', events)
 
     pod_def = pods.simple_pod()
     pod_id = pod_def['id']
@@ -120,31 +121,14 @@ def test_event_channel_for_pods():
     client.add_pod(pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    leader_ip = shakedown.marathon_leader_ip()
-
-    # look for created
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_deployment_message():
-        status, stdout = shakedown.run_command(leader_ip, 'cat events.exitcode')
-        assert str(stdout).strip() == '', "SSE stream disconnected (CURL exit code is {})".format(stdout.strip())
-        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
-        assert 'event_stream_attached' in stdout, "event_stream_attached event has not been produced"
-        assert 'pod_created_event' in stdout, "pod_created_event event has not been produced"
-        assert 'deployment_step_success' in stdout, "deployment_step_success event has not beed produced"
-
-    check_deployment_message()
+    common.assert_event('pod_created_event', events)
+    common.assert_event('deployment_step_success', events)
 
     pod_def["scaling"]["instances"] = 3
     client.update_pod(pod_id, pod_def)
     common.deployment_wait(service_id=pod_id)
 
-    # look for updated
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_update_message():
-        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
-        assert 'pod_updated_event' in stdout, 'pod_update_event event has not been produced'
-
-    check_update_message()
+    common.assert_event('pod_updated_event', events)
 
 
 @shakedown.dcos_1_9
