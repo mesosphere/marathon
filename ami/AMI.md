@@ -12,7 +12,6 @@ packer build -color \
     -var 'aws_access_key=%AWS_ACCESS_KEY' \
     -var 'aws_secret_key=%AWS_SECRET_KEY' \
     -var 'ami_name=%AMI_NAME' \
-    -var 'conduit_token=%PHABRICATOR_CREDENTIALS' \
     -var 'mesos_version=%MESOS_VERSION' \
     marathon-jenkins-ami.json
 ```
