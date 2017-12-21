@@ -23,8 +23,8 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA
-from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy # NOQA
+from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
+from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy # NOQA F401
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -204,7 +204,7 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents(), "The application task got started on a private agent"
 
 
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'") # NOQA
+@pytest.mark.skipif("shakedown.ee_version() == 'strict'") # NOQA F811
 @pytest.mark.skipif('marthon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @pytest.mark.asyncio
