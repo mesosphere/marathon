@@ -50,9 +50,11 @@ class OfferOperationFactoryTest extends UnitTest {
       val task = MarathonTestHelper.makeOneCPUTask(f.taskId)
 
       When("We create a reserve operation")
-      val operation = factory.reserve(f.reservationLabels, task.getResourcesList.to[Seq])
+      val operations = factory.reserve(f.reservationLabels, task.getResourcesList.to[Seq])
 
       Then("The operation is as expected")
+      operations.length shouldEqual 1
+      val operation = operations.head
       operation.getType shouldEqual Mesos.Offer.Operation.Type.RESERVE
       operation.hasReserve shouldEqual true
       operation.getReserve.getResourcesCount shouldEqual task.getResourcesCount
@@ -77,9 +79,11 @@ class OfferOperationFactoryTest extends UnitTest {
       val resource = MarathonTestHelper.scalarResource("disk", 1024)
 
       When("We create a reserve operation")
-      val operation = factory.createVolumes(f.reservationLabels, volumes.map(v => (None, DiskSource.root, v)))
+      val operations = factory.createVolumes(f.reservationLabels, volumes.map(v => (None, DiskSource.root, v)))
 
       Then("The operation is as expected")
+      operations.length shouldEqual 1
+      val operation = operations.head
       operation.getType shouldEqual Mesos.Offer.Operation.Type.CREATE
       operation.hasCreate shouldEqual true
       operation.getCreate.getVolumesCount shouldEqual volumes.size

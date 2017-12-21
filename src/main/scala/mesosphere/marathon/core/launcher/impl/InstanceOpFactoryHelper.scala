@@ -80,11 +80,9 @@ class InstanceOpFactoryHelper(
     resources: Seq[Mesos.Resource],
     localVolumes: Seq[(Option[String], DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
 
-    def createOperations = Seq(
-      offerOperationFactory.reserve(reservationLabels, resources),
-      offerOperationFactory.createVolumes(
-        reservationLabels,
-        localVolumes))
+    def createOperations =
+      offerOperationFactory.reserve(reservationLabels, resources) ++
+        offerOperationFactory.createVolumes(reservationLabels, localVolumes)
 
     InstanceOp.ReserveAndCreateVolumes(newState, resources, createOperations)
   }
