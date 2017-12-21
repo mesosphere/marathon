@@ -424,18 +424,22 @@ object ResourceMatcher extends StrictLogging {
                 nextAllocation.copy(
                   persistent = nextAllocation.persistent.copy(
                     size = consumedAmount.toLong))
-              val volumeMount = VolumeMount(
-                volumeName = grownVolume.name,
-                mountPath = matchedResource.getDisk.getVolume.getContainerPath,
-                readOnly = matchedResource.getDisk.getVolume.getMode == Protos.Volume.Mode.RO)
+              val volumeMount = volumeMounts.find(_.volumeName == grownVolume.name)
+              val (volumeToPass, mountToPass) = runSpec match {
+                case _: AppDefinition =>
+                  // strip off temporary names
+                  (grownVolume.copy(name = None), volumeMount.map(_.copy(volumeName = None)))
+                case _: PodDefinition =>
+                  (grownVolume, volumeMount)
+              }
               val consumption =
                 DiskResourceMatch.Consumption(
                   consumedAmount,
                   role = matchedResource.getRole,
                   reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
                   source = DiskSource.fromMesos(matchedResource.getDiskSourceOption),
-                  Some(grownVolume),
-                  Some(volumeMount))
+                  Some(volumeToPass),
+                  mountToPass)
 
               findMountMatches(
                 restAllocations,
