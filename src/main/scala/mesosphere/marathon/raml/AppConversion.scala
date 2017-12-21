@@ -62,7 +62,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       mem = app.resources.mem,
       networks = app.networks.toRaml,
       ports = None, // deprecated field
-      portDefinitions = if (app.networks.hasNonHostNetworking) None else Some(app.portDefinitions.toRaml),
+      portDefinitions = if (app.networks.hasNonHostNetworking || app.portDefinitions.isEmpty) None else Some(app.portDefinitions.toRaml),
       readinessChecks = app.readinessChecks.toRaml,
       residency = app.residency.toRaml,
       requirePorts = app.requirePorts,
