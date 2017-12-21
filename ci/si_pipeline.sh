@@ -47,11 +47,19 @@ function download-diagnostics-bundle {
 	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
 
+# We need to use master (leader) public IP as DCOS_URL not just random master public IP.
+# Tests that introduce network partition never partition cluster leader node.
+function use-leader-ip-as-dcos-url {
+    LEADER_PUBLIC_IP=`for id in $(dcos node --json | jq --raw-output '.[] | select(.type == "master (leader)") | .ip'); do dcos node ssh --option StrictHostKeyChecking=no --option LogLevel=quiet --master-proxy --private-ip=$id "curl -s ifconfig.co" ; done 2>/dev/null`
+    export DCOS_URL="http://$LEADER_PUBLIC_IP/"
+}
+
 # Launch cluster and run tests if launch was successful.
 export DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 case $CLUSTER_LAUNCH_CODE in
   0)
+      use-leader-ip-as-dcos-url
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
       (cd tests && make init test)
       SI_CODE=$?
