@@ -15,7 +15,7 @@ import mesosphere.marathon.state.RunSpec
 import scala.concurrent.{ Future, Promise }
 
 class AppStartActor(
-    val deploymentManager: ActorRef,
+    val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
     val scheduler: SchedulerActions,
     val launchQueue: LaunchQueue,
@@ -53,7 +53,7 @@ class AppStartActor(
 object AppStartActor {
   @SuppressWarnings(Array("MaxParameters"))
   def props(
-    deploymentManager: ActorRef,
+    deploymentManagerActor: ActorRef,
     status: DeploymentStatus,
     scheduler: SchedulerActions,
     launchQueue: LaunchQueue,
@@ -64,7 +64,7 @@ object AppStartActor {
     scaleTo: Int,
     currentInstances: Seq[Instance],
     promise: Promise[Unit]): Props = {
-    Props(new AppStartActor(deploymentManager, status, scheduler, launchQueue, taskTracker, eventBus,
+    Props(new AppStartActor(deploymentManagerActor, status, scheduler, launchQueue, taskTracker, eventBus,
       readinessCheckExecutor, runSpec, scaleTo, currentInstances, promise))
   }
 }
