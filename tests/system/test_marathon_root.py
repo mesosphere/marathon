@@ -158,14 +158,11 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
 
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
 
-    # blocking zk on marathon leader (not master leader)
-    with common.iptable_rules(original_leader):
-        common.block_port(original_leader, 2181, direction='INPUT')
-        common.block_port(original_leader, 2181, direction='OUTPUT')
-        #  Wait for a leader change before restoring  iptables rules
-        common.marathon_leadership_changed(original_leader)
-        # Make sure marathon is available
-        shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.block_iptable_rules(original_leader, 2181, 30)
+
+    common.marathon_leadership_changed(original_leader)
+    # Make sure marathon is available
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
 
 @shakedown.masters(3)
@@ -174,12 +171,11 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
 
     # blocking outbound connection to mesos master
-    with common.iptable_rules(original_leader):
-        common.block_port(original_leader, 5050, direction='OUTPUT')
-        #  Wait for a leader change before restoring  iptables rules
-        common.marathon_leadership_changed(original_leader)
-        # Make sure marathon is available
-        shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.block_iptable_rules(original_leader, 5050, 60, False, True)
+
+    common.marathon_leadership_changed(original_leader)
+    # Make sure marathon is available
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
 
 @shakedown.public_agents(1)
