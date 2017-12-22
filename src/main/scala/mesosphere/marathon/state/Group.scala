@@ -3,14 +3,15 @@ package state
 
 import java.util.Objects
 
+import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{ Group => IGroup }
-import mesosphere.marathon.state.Group._
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.Group.{ defaultApps, defaultPods, defaultGroups, defaultDependencies, defaultVersion }
+import mesosphere.marathon.state.PathId.{ validPathWithBase, StringPathId }
 
 class Group(
     val id: PathId,
@@ -111,7 +112,7 @@ class Group(
   override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version)"
 }
 
-object Group {
+object Group extends StrictLogging {
   type GroupKey = PathId
 
   def apply(
@@ -152,6 +153,8 @@ object Group {
     isTrue("Groups and Applications may not have the same identifier.") { group =>
       val groupIds = group.groupsById.keySet
       val clashingIds = groupIds.intersect(group.apps.keySet)
+      if (clashingIds.nonEmpty)
+        logger.info(s"Found the following clashingIds in group ${group.id}: ${clashingIds}")
       clashingIds.isEmpty
     }
 
