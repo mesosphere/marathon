@@ -12,9 +12,7 @@ import os
 import pytest
 import retrying
 import shakedown
-import time
 import uuid
-import contextlib
 
 from dcos import marathon, errors
 from datetime import timedelta
@@ -182,8 +180,6 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
         common.marathon_leadership_changed(original_leader)
         # Make sure marathon is available
         shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
-
-
 
 
 @shakedown.public_agents(1)

@@ -233,6 +233,7 @@ def save_iptables(host, filename='iptables.rules'):
         host,
         'if [ ! -e {} ] ; then sudo iptables-save > {} ; fi'.format(filename, filename))
 
+
 def restore_iptables(host, filename='iptables.rules'):
     """ Reconnect a previously partitioned node to the network
         :param hostname: host or IP of the machine to partition from the cluster
