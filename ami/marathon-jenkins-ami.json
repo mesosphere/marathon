@@ -12,11 +12,12 @@
     "access_key": "{{user `aws_access_key`}}",
     "secret_key": "{{user `aws_secret_key`}}",
     "region": "us-east-1",
-    "source_ami": "ami-9d6c128a",
+    "source_ami": "ami-f6e6948c",
     "instance_type": "m4.xlarge",
     "vpc_id": "vpc-f46c7c8d",
     "subnet_id": "subnet-1d724531",
     "ssh_username": "admin",
+    "run_tags": {"created_by": "jenkins"},
     "ami_name": "{{user `ami_name`}}",
     "ami_users": ["633059600857", "540164828399"],
     "ami_block_device_mappings": [{
