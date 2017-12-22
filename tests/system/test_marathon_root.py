@@ -158,7 +158,7 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
 
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
 
-    common.block_iptable_rules(original_leader, 2181, 30)
+    common.block_iptable_rules_for_seconds(original_leader, 2181, sleep_seconds=30)
 
     common.marathon_leadership_changed(original_leader)
     # Make sure marathon is available
@@ -171,7 +171,8 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
 
     # blocking outbound connection to mesos master
-    common.block_iptable_rules(original_leader, 5050, 60, False, True)
+    common.block_iptable_rules_for_seconds(original_leader, 5050, sleep_seconds=60,
+                                           block_input=False, block_output=True)
 
     common.marathon_leadership_changed(original_leader)
     # Make sure marathon is available

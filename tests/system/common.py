@@ -7,7 +7,6 @@ import time
 import uuid
 import sys
 import retrying
-import contextlib
 
 from datetime import timedelta
 from dcos import http, mesos
@@ -226,21 +225,26 @@ def systemctl_master(command='restart'):
     shakedown.run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
 
 
-def block_iptable_rules(host, port_number, sleep_seconds, input=True, output=True):
+def block_iptable_rules_for_seconds(host, port_number, sleep_seconds, block_input=True, block_output=True):
+    """ For testing network partitions we alter iptables rules to block ports for some time.
+        We do that as a single SSH command because otherwise it makes it hard to ensure that iptable rules are restored.
+    """
     filename = 'iptables-{}.rules'.format(uuid.uuid4().hex)
-    shakedown.run_command_on_agent(
-        host,
-        """if [ ! -e {} ] ; then sudo iptables-save > {} ; fi;
-        {}
-        sleep {};
-        if [ -e {} ]; then sudo iptables-restore < {} && sudo rm {} ; fi"""
-            .format(filename, filename, iptables_block_string(input, output, port_number),
-                    sleep_seconds, filename, filename, filename))
+    cmd = """
+          if [ ! -e {backup} ] ; then sudo iptables-save > {backup} ; fi;
+          {block}
+          sleep {seconds};
+          if [ -e {backup} ]; then sudo iptables-restore < {backup} && sudo rm {backup} ; fi
+        """.format(backup=filename, seconds=sleep_seconds,
+                   block=iptables_block_string(block_input, block_output, port_number))
+
+    shakedown.run_command_on_agent(host, cmd)
 
 
-def iptables_block_string(input, output, port):
-    str = "sudo iptables -I INPUT -p tcp --dport {} -j DROP;".format(port) if input else ""
-    return str + "sudo iptables -I OUTPUT -p tcp --dport {} -j DROP;".format(port) if output else ""
+def iptables_block_string(block_input, block_output, port):
+    """ Produces a string of iptables blocking command that can be executed on an agent. """
+    str = "sudo iptables -I INPUT -p tcp --dport {} -j DROP;".format(port) if block_input else ""
+    return str + "sudo iptables -I OUTPUT -p tcp --dport {} -j DROP;".format(port) if block_output else ""
 
 
 def wait_for_task(service, task, timeout_sec=120):
