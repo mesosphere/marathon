@@ -277,7 +277,7 @@ class GroupsResource @Inject() (
       val maybeExistingGroup = result(groupManager.group(group.id))
       val updatedGroup = groupUpdate.apply(group, newVersion)
 
-      maybeExistingGroup.fold(checkAuthorization(CreateRunSpec, updatedGroup))(checkAuthorization(UpdateGroup, _))
+      maybeExistingGroup.fold(checkAuthorization(CreateGroup, updatedGroup))(checkAuthorization(UpdateGroup, _))
 
       rootGroup.putGroup(updatedGroup, newVersion)
     }
