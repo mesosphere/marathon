@@ -29,7 +29,7 @@ function create-junit-xml {
 }
 
 function exit-as-unstable {
-    echo "Cluster launch failed."
+    echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
     ./dcos-launch delete
     exit 0
@@ -63,5 +63,5 @@ case $CLUSTER_LAUNCH_CODE in
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
   3) exit-as-unstable "Cluster did not start in time.";;
-  *) echo "Unknown error in cluster launch"; exit "$CLUSTER_LAUNCH_CODE";;
+  *) exit-as-unstalbe "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
 esac
