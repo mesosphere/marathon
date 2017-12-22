@@ -59,9 +59,10 @@ export DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 case $CLUSTER_LAUNCH_CODE in
   0)
-      use-leader-ip-as-dcos-url
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
-      (cd tests && make init test)
+      (cd tests && make init)
+      use-leader-ip-as-dcos-url
+      (cd tests && make test)
       SI_CODE=$?
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
