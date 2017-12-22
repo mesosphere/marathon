@@ -109,7 +109,23 @@ class Group(
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
-  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version)"
+  private def summarize[T](iterator: Iterator[T]): String = {
+    val s = new StringBuilder
+    s ++= "Seq("
+    s ++= iterator.take(3).toSeq.mkString(", ")
+    if (iterator.hasNext)
+      s ++= s", ... ${iterator.length} more"
+    s ++= ")"
+    s.toString
+  }
+  override def toString = {
+    val summarizedApps = summarize(apps.valuesIterator.map(_.id))
+    val summarizedPods = summarize(pods.valuesIterator.map(_.id))
+    val summarizedGroups = summarize(groupsById.valuesIterator.map(_.id))
+    val summarizedDependencies = summarize(dependencies.iterator)
+
+    s"Group($id, $summarizedApps, $summarizedPods, $summarizedGroups, $summarizedDependencies, $version)"
+  }
 }
 
 object Group extends StrictLogging {
