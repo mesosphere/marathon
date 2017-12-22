@@ -17,7 +17,7 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.plugin.auth.{ Authenticator => MarathonAuthenticator, Authorizer, CreateRunSpec, Identity, ViewResource }
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, Identity, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId }
 import play.api.libs.json.Json
 import PathId._
@@ -105,7 +105,7 @@ class AppsController(
         case None =>
           reject(Rejections.EntityNotFound.app(appId))
         case Some(info) =>
-          authorized(ViewResource, info.app).apply {
+          authorized(ViewRunSpec, info.app).apply {
             complete(Json.obj("app" -> info))
           }
       }
