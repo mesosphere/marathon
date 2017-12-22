@@ -63,5 +63,5 @@ case $CLUSTER_LAUNCH_CODE in
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
   3) exit-as-unstable "Cluster did not start in time.";;
-  *) exit-as-unstalbe "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
+  *) exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
 esac
