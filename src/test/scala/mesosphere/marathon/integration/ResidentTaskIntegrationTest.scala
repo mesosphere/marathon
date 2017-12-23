@@ -72,6 +72,12 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
       waitForDeployment(result)
 
+      And("default residency values are set")
+      val deployedApp = marathon.app(PathId(app.id))
+      val residency = deployedApp.value.app.residency.get
+      residency.taskLostBehavior shouldEqual raml.TaskLostBehavior.WaitForever
+      residency.relaunchEscalationTimeoutSeconds shouldEqual 3600L
+
       When("the app is suspended")
       suspendSuccessfully(PathId(app.id))
 

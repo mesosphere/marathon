@@ -62,7 +62,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       readinessChecks = app.readinessChecks.toRaml,
       residency = if (app.isResident)
         app.unreachableStrategy match {
-        case state.UnreachableDisabled => None
+        case state.UnreachableDisabled => Some(AppResidency())
         case state.UnreachableEnabled(inactiveAfterSeconds, _) => Some(AppResidency(
           relaunchEscalationTimeoutSeconds = inactiveAfterSeconds.toSeconds,
           taskLostBehavior = TaskLostBehavior.WaitForever
@@ -309,7 +309,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
 
     val residency = if (hasPersistentVolumes || service.hasResidency) {
       unreachableStrategy.flatMap {
-        case raml.UnreachableDisabled(_) => None
+        case raml.UnreachableDisabled(_) => Some(AppResidency())
         case raml.UnreachableEnabled(inactiveAfterSeconds, _) => Some(AppResidency(
           relaunchEscalationTimeoutSeconds = inactiveAfterSeconds,
           taskLostBehavior = TaskLostBehavior.WaitForever

@@ -470,11 +470,6 @@ object AppDefinition extends GeneralPurposeCombinators {
       }
     }
 
-  private val complyWithResidencyRules: Validator[AppDefinition] =
-    isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
-      !(app.isResident ^ app.persistentVolumes.nonEmpty)
-    }
-
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
     isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
       val cmd = app.cmd.nonEmpty
@@ -568,7 +563,6 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithGpuRules(enabledFeatures)
     appDef must complyWithMigrationAPI
     appDef must complyWithReadinessCheckRules
-    appDef must complyWithResidencyRules
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithUpgradeStrategyRules
     appDef should requireUnreachableDisabledForResidentTasks
