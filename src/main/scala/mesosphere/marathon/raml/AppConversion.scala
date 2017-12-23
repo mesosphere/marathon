@@ -121,7 +121,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
     * has a `versionInfo` constructed from `OnlyVersion(app.version)`.
     */
   implicit val appRamlReader: Reads[App, AppDefinition] = Reads[App, AppDefinition] { app =>
-    val selectedStrategy = UpgradeStrategyConverter(
+    val selectedStrategy: state.UpgradeStrategy = UpgradeStrategyConverter(
       app.upgradeStrategy.map(Raml.fromRaml(_)),
       hasPersistentVolumes = app.container.exists(_.volumes.existsAn[AppPersistentVolume]),
       hasExternalVolumes = app.container.exists(_.volumes.existsAn[AppExternalVolume])
@@ -303,7 +303,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       ))
       else None
 
-    val unreachableStrategy = service.when(_.hasUnreachableStrategy, _.getUnreachableStrategy.toRaml).orElse(App.DefaultUnreachableStrategy)
+    val unreachableStrategy: Option[raml.UnreachableStrategy] = service.when(_.hasUnreachableStrategy, _.getUnreachableStrategy.toRaml).orElse(App.DefaultUnreachableStrategy)
 
     val hasPersistentVolumes = service.hasContainer && service.getContainer.getVolumesList.exists(_.hasPersistent)
 

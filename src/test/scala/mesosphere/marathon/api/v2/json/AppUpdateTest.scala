@@ -418,6 +418,39 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       assert(update.upgradeStrategy.map(Raml.fromRaml(_)).contains(create.upgradeStrategy))
     }
 
+    "empty app persists existing residency" in {
+
+      val json = """
+        {
+          "id": "/app",
+          "args": [],
+          "container": {
+            "type": "DOCKER",
+            "volumes": [
+              {
+                "containerPath": "data",
+                "mode": "RW",
+                "persistent": {
+                  "size": 100
+                }
+              }
+            ],
+            "docker": {
+              "image": "anImage"
+            }
+          },
+          "residency": {
+            "taskLostBehavior": "WAIT_FOREVER",
+            "relaunchEscalationTimeoutSeconds": 1234
+          }
+        }
+      """
+
+      val update = fromJsonString(json)
+      Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/app".toPath))
+      assert(update.residency.isDefined)
+    }
+
     "empty app update strategy on external volumes" in {
       val json =
         """

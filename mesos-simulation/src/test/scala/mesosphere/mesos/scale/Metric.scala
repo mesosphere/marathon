@@ -23,18 +23,18 @@ case class Counter(name: String, count: Int) extends Metric {
 }
 
 case class Histogram(
-    name: String,
-    count: Int,
-    max: Double,
-    mean: Double,
-    min: Double,
-    p50: Double,
-    p75: Double,
-    p95: Double,
-    p98: Double,
-    p99: Double,
-    p999: Double,
-    stddev: Double) extends Metric
+  name: String,
+  count: Int,
+  max: Double,
+  mean: Double,
+  min: Double,
+  p50: Double,
+  p75: Double,
+  p95: Double,
+  p98: Double,
+  p99: Double,
+  p999: Double,
+  stddev: Double) extends Metric
 
 case class Meter(
     name: String,
@@ -48,24 +48,24 @@ case class Meter(
 }
 
 case class Timer(
-    name: String,
-    count: Int,
-    max: Double,
-    mean: Double,
-    min: Double,
-    p50: Double,
-    p75: Double,
-    p95: Double,
-    p98: Double,
-    p99: Double,
-    p999: Double,
-    stddev: Double,
-    m15_rate: Double,
-    m1_rate: Double,
-    m5_rate: Double,
-    mean_rate: Double,
-    duration_units: String,
-    rate_units: String) extends Metric
+  name: String,
+  count: Int,
+  max: Double,
+  mean: Double,
+  min: Double,
+  p50: Double,
+  p75: Double,
+  p95: Double,
+  p98: Double,
+  p99: Double,
+  p999: Double,
+  stddev: Double,
+  m15_rate: Double,
+  m1_rate: Double,
+  m5_rate: Double,
+  mean_rate: Double,
+  duration_units: String,
+  rate_units: String) extends Metric
 
 case class MetricsSample(
     version: String,
