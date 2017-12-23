@@ -48,6 +48,13 @@ Configure a persistent volume with the following options:
 - `persistent.maxSize`: (not seen above) For `root` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
 - `persistent.constraints`: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.
 
+Next, we also need to disable `unreachableStrategy` in order to tell Marathon to setup a stateful app:
+
+```
+"unreachableStrategy": "disabled",
+```
+Unreachable strategy must be set to `disabled`, otherwise marathon will complain.
+
 
 ### Scaling stateful applications
 
@@ -96,6 +103,7 @@ Next, we also need to disable `unreachableStrategy` in order to tell Marathon to
 ```
 "unreachableStrategy": "disabled",
 ```
+Unreachable strategy must be set to `disabled`, otherwise marathon will complain.
 
 Finally, we have to specify volume mount parameter:
 
