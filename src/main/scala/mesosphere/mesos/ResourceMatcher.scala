@@ -352,13 +352,13 @@ object ResourceMatcher extends StrictLogging {
         case nextAllocation :: restAllocations =>
           val (matcher, nextAllocationSize) = nextAllocation match {
             case Left(size) => ({ _: Protos.Resource => true }, size)
-            case Right(vm) =>
+            case Right(VolumeWithMount(volume, _)) =>
               def matcher(resource: Protos.Resource): Boolean = {
-                VolumeConstraints.meetsAllConstraints(resource, vm.volume.persistent.constraints) &&
-                  matchesProfileName(vm.volume.persistent.profileName, resource)
+                VolumeConstraints.meetsAllConstraints(resource, volume.persistent.constraints) &&
+                  matchesProfileName(volume.persistent.profileName, resource)
               }
 
-              (matcher _, vm.volume.persistent.size.toDouble)
+              (matcher _, volume.persistent.size.toDouble)
           }
 
           findDiskGroupMatches(nextAllocationSize, orderedResources, orderedResources, matcher) match {
