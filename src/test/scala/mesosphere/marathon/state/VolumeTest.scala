@@ -157,6 +157,26 @@ class VolumeTest extends UnitTest {
       mountDisk.getMount.getRoot shouldBe "/path/to/mount"
       mountDisk.getType shouldBe Source.Type.MOUNT
 
+      val Some(pathCsiDisk) = DiskSource(DiskType.Path, Some("/path/to/folder"),
+        Some("csiPathDisk"), Map("pathKey" -> "pathValue"), Some("pathProfile")).asMesos
+      pathCsiDisk.getPath.getRoot shouldBe "/path/to/folder"
+      pathCsiDisk.getType shouldBe Source.Type.PATH
+      pathCsiDisk.getId shouldBe "csiPathDisk"
+      pathCsiDisk.getMetadata.getLabelsCount shouldBe 1
+      pathCsiDisk.getMetadata.getLabels(0).getKey shouldBe "pathKey"
+      pathCsiDisk.getMetadata.getLabels(0).getValue shouldBe "pathValue"
+      pathCsiDisk.getProfile shouldBe "pathProfile"
+
+      val Some(mountCsiDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount"),
+        Some("csiMountDisk"), Map("mountKey" -> "mountValue"), Some("mountProfile")).asMesos
+      mountCsiDisk.getMount.getRoot shouldBe "/path/to/mount"
+      mountCsiDisk.getType shouldBe Source.Type.MOUNT
+      mountCsiDisk.getId shouldBe "csiMountDisk"
+      mountCsiDisk.getMetadata.getLabelsCount shouldBe 1
+      mountCsiDisk.getMetadata.getLabels(0).getKey shouldBe "mountKey"
+      mountCsiDisk.getMetadata.getLabels(0).getValue shouldBe "mountValue"
+      mountCsiDisk.getProfile shouldBe "mountProfile"
+
       a[IllegalArgumentException] shouldBe thrownBy {
         DiskSource(DiskType.Root, Some("/path"), None, Map.empty, None).asMesos
       }

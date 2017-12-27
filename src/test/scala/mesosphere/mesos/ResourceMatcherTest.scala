@@ -18,7 +18,7 @@ import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.{ Resource, TextAttribute }
+import mesosphere.mesos.protos.{ Resource, ResourceProviderID, TextAttribute }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Attribute
 import org.scalatest.Inside
@@ -140,7 +140,8 @@ class ResourceMatcherTest extends UnitTest with Inside {
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
-      val diskReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
+      val diskReservation = MarathonTestHelper.reservation(principal = "diskPrincipal", labels)
+      val diskReservation2 = MarathonTestHelper.reservation(principal = "diskPrincipal", labels)
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal", labels)
 
       val offer =
@@ -149,7 +150,8 @@ class ResourceMatcherTest extends UnitTest with Inside {
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation)))
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation2)))
           .addResources(MarathonTestHelper.scalarResource("mem", 128.0, reservation = Some(memReservation)))
-          .addResources(MarathonTestHelper.scalarResource("disk", 2, reservation = Some(diskReservation)))
+          .addResources(MarathonTestHelper.scalarResource("disk", 2,
+            providerId = Some(ResourceProviderID("pID")), reservation = Some(diskReservation)))
           .addResources(MarathonTestHelper.portsResource(80, 80, reservation = Some(portsReservation)))
           .build()
 
@@ -181,7 +183,8 @@ class ResourceMatcherTest extends UnitTest with Inside {
       )
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
-          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, None, Some(diskReservation), DiskSource.root, None)
+          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(ResourceProviderID("pID")),
+            Some(diskReservation2), DiskSource.root, None)
         )
       )
 
@@ -256,7 +259,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
       val memReservation = MarathonTestHelper.reservation(
         principal = "memPrincipal",
         labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar.instance-uuid")).labels)
-      val diskReservation = MarathonTestHelper.reservation(principal = "memPrincipal")
+      val diskReservation = MarathonTestHelper.reservation(principal = "diskPrincipal")
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 
       val offer =
