@@ -3,12 +3,13 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
+import mesosphere.marathon.state.Volume
 
 class VolumeConversionTest extends UnitTest {
 
-  def convertToProtobufThenToRAML(volume: => state.VolumeWithMount, raml: => AppVolume): Unit = {
+  def convertToProtobufThenToRAML(volumeWithMount: => state.VolumeWithMount[Volume], raml: => AppVolume): Unit = {
     "convert to protobuf, then to RAML" in {
-      val proto = VolumeSerializer.toProto(volume)
+      val proto = VolumeSerializer.toProto(volumeWithMount)
       val proto2Raml = proto.toRaml
       proto2Raml should be(raml)
     }

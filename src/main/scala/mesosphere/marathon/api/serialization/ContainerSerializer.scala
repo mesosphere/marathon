@@ -123,7 +123,7 @@ object ContainerSerializer {
 }
 
 object VolumeSerializer {
-  def toProto(volumeWithMount: VolumeWithMount): Protos.Volume = {
+  def toProto(volumeWithMount: VolumeWithMount[Volume]): Protos.Volume = {
     val volume = volumeWithMount.volume
     val mount = volumeWithMount.mount
     val mode = VolumeMount.readOnlyToProto(mount.readOnly)

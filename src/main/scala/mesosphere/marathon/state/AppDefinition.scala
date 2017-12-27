@@ -135,8 +135,10 @@ case class AppDefinition(
 
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
-  private[state] val persistentVolumesWithMounts: Seq[VolumeWithMount] =
-    container.map(_.volumes.collect { case vm @ VolumeWithMount(_: PersistentVolume, _) => vm }).getOrElse(Seq.empty)
+  private[state] val persistentVolumesWithMounts: Seq[VolumeWithMount[PersistentVolume]] =
+    container.map(_.volumes.collect {
+      case vm @ VolumeWithMount(_: PersistentVolume, _) => vm.asInstanceOf[VolumeWithMount[PersistentVolume]]
+    }).getOrElse(Seq.empty)
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(

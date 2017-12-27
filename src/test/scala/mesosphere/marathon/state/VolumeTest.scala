@@ -10,21 +10,21 @@ import org.apache.mesos.Protos.Resource.DiskInfo.Source
 class VolumeTest extends UnitTest {
   import mesosphere.marathon.test.MarathonTestHelper.constraint
 
-  def survivesProtobufSerializationRoundtrip(title: => String, volume: => VolumeWithMount): Unit = {
+  def survivesProtobufSerializationRoundtrip(title: => String, volumeWithMount: => VolumeWithMount[Volume]): Unit = {
     s"$title survives protobuf serialization round-trip" in {
-      val protobuf = VolumeSerializer.toProto(volume)
+      val protobuf = VolumeSerializer.toProto(volumeWithMount)
       val resurrected = VolumeWithMount(None, protobuf)
-      resurrected should be(volume)
+      resurrected should be(volumeWithMount)
     }
   }
 
-  def persistent(info: PersistentVolumeInfo, mountPath: String = "cpath", readOnly: Boolean = false): VolumeWithMount = {
+  def persistent(info: PersistentVolumeInfo, mountPath: String = "cpath", readOnly: Boolean = false): VolumeWithMount[PersistentVolume] = {
     val volume = PersistentVolume(None, info)
     val mount = VolumeMount(None, mountPath, readOnly)
     VolumeWithMount(volume, mount)
   }
 
-  def external(info: ExternalVolumeInfo, mountPath: String = "cpath", readOnly: Boolean = false): VolumeWithMount = {
+  def external(info: ExternalVolumeInfo, mountPath: String = "cpath", readOnly: Boolean = false): VolumeWithMount[ExternalVolume] = {
     val volume = ExternalVolume(None, info)
     val mount = VolumeMount(None, mountPath, readOnly)
     VolumeWithMount(volume, mount)
@@ -148,23 +148,43 @@ class VolumeTest extends UnitTest {
     }
 
     "validating that DiskSource asMesos converts to an Option Mesos Protobuffer" in {
-      DiskSource(DiskType.Root, None).asMesos shouldBe None
-      val Some(pathDisk) = DiskSource(DiskType.Path, Some("/path/to/folder")).asMesos
+      DiskSource(DiskType.Root, None, None, Map.empty, None).asMesos shouldBe None
+      val Some(pathDisk) = DiskSource(DiskType.Path, Some("/path/to/folder"), None, Map.empty, None).asMesos
       pathDisk.getPath.getRoot shouldBe "/path/to/folder"
       pathDisk.getType shouldBe Source.Type.PATH
 
-      val Some(mountDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount")).asMesos
+      val Some(mountDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount"), None, Map.empty, None).asMesos
       mountDisk.getMount.getRoot shouldBe "/path/to/mount"
       mountDisk.getType shouldBe Source.Type.MOUNT
 
+      val Some(pathCsiDisk) = DiskSource(DiskType.Path, Some("/path/to/folder"),
+        Some("csiPathDisk"), Map("pathKey" -> "pathValue"), Some("pathProfile")).asMesos
+      pathCsiDisk.getPath.getRoot shouldBe "/path/to/folder"
+      pathCsiDisk.getType shouldBe Source.Type.PATH
+      pathCsiDisk.getId shouldBe "csiPathDisk"
+      pathCsiDisk.getMetadata.getLabelsCount shouldBe 1
+      pathCsiDisk.getMetadata.getLabels(0).getKey shouldBe "pathKey"
+      pathCsiDisk.getMetadata.getLabels(0).getValue shouldBe "pathValue"
+      pathCsiDisk.getProfile shouldBe "pathProfile"
+
+      val Some(mountCsiDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount"),
+        Some("csiMountDisk"), Map("mountKey" -> "mountValue"), Some("mountProfile")).asMesos
+      mountCsiDisk.getMount.getRoot shouldBe "/path/to/mount"
+      mountCsiDisk.getType shouldBe Source.Type.MOUNT
+      mountCsiDisk.getId shouldBe "csiMountDisk"
+      mountCsiDisk.getMetadata.getLabelsCount shouldBe 1
+      mountCsiDisk.getMetadata.getLabels(0).getKey shouldBe "mountKey"
+      mountCsiDisk.getMetadata.getLabels(0).getValue shouldBe "mountValue"
+      mountCsiDisk.getProfile shouldBe "mountProfile"
+
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Root, Some("/path")).asMesos
+        DiskSource(DiskType.Root, Some("/path"), None, Map.empty, None).asMesos
       }
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Path, None).asMesos
+        DiskSource(DiskType.Path, None, None, Map.empty, None).asMesos
       }
       a[IllegalArgumentException] shouldBe thrownBy {
-        DiskSource(DiskType.Mount, None).asMesos
+        DiskSource(DiskType.Mount, None, None, Map.empty, None).asMesos
       }
     }
   }

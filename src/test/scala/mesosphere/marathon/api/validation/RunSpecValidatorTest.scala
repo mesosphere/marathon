@@ -676,19 +676,20 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       )
 
       // scalastyle:off magic.number
-      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test", readOnly: Boolean = false): VolumeWithMount =
+      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test",
+        readOnly: Boolean = false): VolumeWithMount[HostVolume] =
         VolumeWithMount(
           volume = HostVolume(name = None, hostPath = hostPath),
           mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))
 
-      def persistentVolume(size: Long = 10, mountPath: String = "test", readOnly: Boolean = false): VolumeWithMount =
+      def persistentVolume(size: Long = 10, mountPath: String = "test", readOnly: Boolean = false): VolumeWithMount[PersistentVolume] =
         VolumeWithMount(
           volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size)),
           mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))
 
       val zero = UpgradeStrategy(0, 0)
 
-      def residentApp(id: String, volumes: Seq[VolumeWithMount]): AppDefinition = {
+      def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {
         AppDefinition(
           id = PathId(id),
           cmd = Some("test"),

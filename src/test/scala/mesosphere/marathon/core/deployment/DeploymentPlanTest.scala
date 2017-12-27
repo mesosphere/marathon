@@ -429,7 +429,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       mount = VolumeMount(volumeName = None, mountPath = path, readOnly = false))
     val zero = UpgradeStrategy(0, 0)
 
-    def residentApp(id: String, volumes: Seq[VolumeWithMount]): AppDefinition = {
+    def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {
       AppDefinition(
         id = PathId(id),
         cmd = Some("foo"),

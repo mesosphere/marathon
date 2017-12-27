@@ -18,7 +18,7 @@ import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.{ Resource, TextAttribute }
+import mesosphere.mesos.protos.{ Resource, ResourceProviderID, TextAttribute }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Attribute
 import org.scalatest.Inside
@@ -140,7 +140,8 @@ class ResourceMatcherTest extends UnitTest with Inside {
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
-      val diskReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
+      val diskReservation = MarathonTestHelper.reservation(principal = "diskPrincipal", labels)
+      val diskReservation2 = MarathonTestHelper.reservation(principal = "diskPrincipal", labels)
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal", labels)
 
       val offer =
@@ -149,7 +150,8 @@ class ResourceMatcherTest extends UnitTest with Inside {
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation)))
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation2)))
           .addResources(MarathonTestHelper.scalarResource("mem", 128.0, reservation = Some(memReservation)))
-          .addResources(MarathonTestHelper.scalarResource("disk", 2, reservation = Some(diskReservation)))
+          .addResources(MarathonTestHelper.scalarResource("disk", 2,
+            providerId = Some(ResourceProviderID("pID")), reservation = Some(diskReservation)))
           .addResources(MarathonTestHelper.portsResource(80, 80, reservation = Some(portsReservation)))
           .build()
 
@@ -169,19 +171,20 @@ class ResourceMatcherTest extends UnitTest with Inside {
       res.scalarMatches should have size 3
       res.scalarMatch(Resource.CPUS).get.consumed.toSet should be(
         Set(
-          GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
-          GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation2))
+          GeneralScalarMatch.Consumption(1.0, "marathon", None, reservation = Some(cpuReservation)),
+          GeneralScalarMatch.Consumption(1.0, "marathon", None, reservation = Some(cpuReservation2))
         )
       )
 
       res.scalarMatch(Resource.MEM).get.consumed.toSet should be(
         Set(
-          GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, reservation = Some(memReservation))
+          GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, None, reservation = Some(memReservation))
         )
       )
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
-          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(diskReservation), DiskSource.root, None, None)
+          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(ResourceProviderID("pID")),
+            Some(diskReservation2), DiskSource.root, None)
         )
       )
 
@@ -228,20 +231,20 @@ class ResourceMatcherTest extends UnitTest with Inside {
       res.scalarMatches should have size 3
       res.scalarMatch(Resource.CPUS).get.consumed.toSet should be(
         Set(
-          GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
-          GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation2))
+          GeneralScalarMatch.Consumption(1.0, "marathon", None, reservation = Some(cpuReservation)),
+          GeneralScalarMatch.Consumption(1.0, "marathon", None, reservation = Some(cpuReservation2))
         )
       )
 
       res.scalarMatch(Resource.MEM).get.consumed.toSet should be(
         Set(
-          GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, reservation = Some(memReservation))
+          GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, None, reservation = Some(memReservation))
         )
       )
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
           DiskResourceMatch.Consumption(
-            2.0, ResourceRole.Unreserved, reservation = Some(diskReservation), DiskSource.root, None, None)
+            2.0, ResourceRole.Unreserved, None, reservation = Some(diskReservation), DiskSource.root, None)
         )
       )
 
@@ -256,7 +259,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
       val memReservation = MarathonTestHelper.reservation(
         principal = "memPrincipal",
         labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar.instance-uuid")).labels)
-      val diskReservation = MarathonTestHelper.reservation(principal = "memPrincipal")
+      val diskReservation = MarathonTestHelper.reservation(principal = "diskPrincipal")
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 
       val offer =
@@ -701,10 +704,10 @@ class ResourceMatcherTest extends UnitTest with Inside {
 
       resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch.scalarMatch("disk").get.consumed.toSet shouldBe Set(
-        DiskResourceMatch.Consumption(1024.0, "*", None, DiskSource(DiskType.Path, Some("/path2")),
-          Some(persistentVolume), Some(mount)),
-        DiskResourceMatch.Consumption(476.0, "*", None, DiskSource(DiskType.Path, Some("/path2")),
-          Some(persistentVolume), Some(mount)))
+        DiskResourceMatch.Consumption(1024.0, "*", None, None, DiskSource(DiskType.Path, Some("/path2"), None, Map.empty, None),
+          Some(VolumeWithMount(persistentVolume, mount))),
+        DiskResourceMatch.Consumption(476.0, "*", None, None, DiskSource(DiskType.Path, Some("/path2"), None, Map.empty, None),
+          Some(VolumeWithMount(persistentVolume, mount))))
     }
 
     "match disk enforces constraints" in {
@@ -784,7 +787,7 @@ class ResourceMatcherTest extends UnitTest with Inside {
         case matches: ResourceMatchResponse.Match =>
           matches.resourceMatch.scalarMatches.collectFirst {
             case m: DiskResourceMatch =>
-              (m.consumedValue, m.consumed.head.persistentVolume.get.persistent.size)
+              (m.consumedValue, m.consumed.head.persistentVolumeWithMount.get.volume.persistent.size)
           } shouldBe Some((1024, 1024))
       }
 
