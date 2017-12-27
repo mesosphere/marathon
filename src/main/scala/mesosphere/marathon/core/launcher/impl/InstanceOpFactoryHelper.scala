@@ -3,11 +3,9 @@ package core.launcher.impl
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.launcher.InstanceOp
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.LocalVolume
-import mesosphere.marathon.state.DiskSource
 import org.apache.mesos.{ Protos => Mesos }
 
 class InstanceOpFactoryHelper(
@@ -78,7 +76,7 @@ class InstanceOpFactoryHelper(
     reservationLabels: ReservationLabels,
     newState: InstanceUpdateOperation.Reserve,
     resources: Seq[Mesos.Resource],
-    localVolumes: Seq[(Option[String], DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
+    localVolumes: Seq[InstanceOpFactory.OfferedVolume]): InstanceOp.ReserveAndCreateVolumes = {
 
     def createOperations =
       offerOperationFactory.reserve(reservationLabels, resources) ++

@@ -1,10 +1,11 @@
 package mesosphere.marathon
 package core.matcher.base.util
 
+import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.ReservationLabels
-import mesosphere.marathon.core.task.Task.LocalVolume
-import mesosphere.marathon.state.{ DiskSource, VolumeMount }
+import mesosphere.marathon.state.VolumeMount
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.mesos.protos.ResourceProviderID
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -47,18 +48,10 @@ class OfferOperationFactory(
       .build()
   }
 
-  private def getProviderId(resource: Mesos.Resource): Option[String] = {
-    if (resource.hasProviderId && resource.getProviderId.hasValue) {
-      Some(resource.getProviderId.getValue)
-    } else {
-      None
-    }
-  }
-
   def reserve(reservationLabels: ReservationLabels, resources: Seq[Mesos.Resource]): Seq[Mesos.Offer.Operation] = {
 
     // Mesos requires that there is an operation per each resource provider ID
-    resources.groupBy(getProviderId).values.map { resources =>
+    resources.groupBy(ResourceProviderID.fromResourceProto).values.map { resources =>
       val reservedResources = resources.map { resource =>
 
         val reservation = ReservationInfo.newBuilder()
@@ -84,12 +77,12 @@ class OfferOperationFactory(
 
   def createVolumes(
     reservationLabels: ReservationLabels,
-    localVolumes: Seq[(Option[String], DiskSource, LocalVolume)]): Seq[Mesos.Offer.Operation] = {
+    localVolumes: Seq[InstanceOpFactory.OfferedVolume]): Seq[Mesos.Offer.Operation] = {
 
     // Mesos requires that there is an operation per each resource provider ID
-    localVolumes.groupBy(_._1).values.map { localVolumes =>
+    localVolumes.groupBy(_.providerId).values.map { localVolumes =>
       val volumes: Seq[Mesos.Resource] = localVolumes.map {
-        case (providerId, source, vol) =>
+        case InstanceOpFactory.OfferedVolume(providerId, source, vol) =>
           val disk = {
             val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)
             principalOpt.foreach(persistence.setPrincipal)
@@ -125,8 +118,8 @@ class OfferOperationFactory(
             .setReservation(reservation)
             .setDisk(disk)
 
-          providerId.foreach { providerIdValue =>
-            val providerIdProto = Mesos.ResourceProviderID.newBuilder().setValue(providerIdValue).build()
+          providerId.foreach { providerId =>
+            val providerIdProto = Mesos.ResourceProviderID.newBuilder().setValue(providerId.value).build()
             builder.setProviderId(providerIdProto)
           }
 

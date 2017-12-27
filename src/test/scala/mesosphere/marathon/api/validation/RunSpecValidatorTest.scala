@@ -676,7 +676,8 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       )
 
       // scalastyle:off magic.number
-      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test", readOnly: Boolean = false): VolumeWithMount[Volume] =
+      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test",
+        readOnly: Boolean = false): VolumeWithMount[HostVolume] =
         VolumeWithMount(
           volume = HostVolume(name = None, hostPath = hostPath),
           mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))

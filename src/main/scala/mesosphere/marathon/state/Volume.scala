@@ -114,11 +114,16 @@ case class DiskSource(
   else
     require(path.isDefined, "Path is required for non-root diskTypes")
 
-  override def toString: String =
-    path match {
-      case Some(p) => s"$diskType:$p"
-      case None => diskType.toString
+  override def toString: String = {
+    val diskTypeStr = path match {
+      case Some(p) => Some(s"$diskType:$p")
+      case None => Some(diskType.toString)
     }
+    val idStr = id.map(id => s"id:$id")
+    val profileNameStr = profileName.map(name => s"profile:$name")
+    val components = Seq(diskTypeStr, idStr, profileNameStr).flatten
+    components.mkString(";")
+  }
 
   def asMesos: Option[Source] = (path, diskType) match {
     case (None, DiskType.Root) =>
@@ -146,9 +151,10 @@ object DiskSource {
   def fromMesos(source: Option[Source]): DiskSource = {
     val diskType = DiskType.fromMesosType(source.map(_.getType))
     val id = source.flatMap(s => if (s.hasId) Some(s.getId) else None)
-    val metadata = source.map {
-      s => if (s.hasMetadata) s.getMetadata.fromProto else Map.empty[String, String]
-    }.getOrElse(Map.empty[String, String])
+    val metadata: Map[String, String] = source match {
+      case Some(s) => if (s.hasMetadata) s.getMetadata.fromProto else Map.empty
+      case None => Map.empty
+    }
     val profileName = source.flatMap(s => if (s.hasProfile) Some(s.getProfile) else None)
     diskType match {
       case DiskType.Root =>

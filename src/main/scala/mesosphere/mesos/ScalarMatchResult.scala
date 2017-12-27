@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.mesos.protos.{ Resource, ScalarResource }
+import mesosphere.mesos.protos.{ Resource, ResourceProviderID, ScalarResource }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 
@@ -77,8 +77,8 @@ case class GeneralScalarMatch(
       case GeneralScalarMatch.Consumption(value, role, providerId, reservation) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
-        providerId.foreach { providerIdValue =>
-          val providerIdProto = Protos.ResourceProviderID.newBuilder().setValue(providerIdValue).build()
+        providerId.foreach { providerId =>
+          val providerIdProto = Protos.ResourceProviderID.newBuilder().setValue(providerId.value).build()
           builder.setProviderId(providerIdProto)
         }
         reservation.foreach(builder.setReservation)
@@ -98,7 +98,7 @@ case class GeneralScalarMatch(
 object GeneralScalarMatch {
   /** A (potentially partial) consumption of a scalar resource. */
   case class Consumption(consumedValue: Double, role: String,
-      providerId: Option[String], reservation: Option[ReservationInfo]) extends ScalarMatchResult.Consumption
+      providerId: Option[ResourceProviderID], reservation: Option[ReservationInfo]) extends ScalarMatchResult.Consumption
 }
 
 case class DiskResourceMatch(
@@ -116,8 +116,8 @@ case class DiskResourceMatch(
       case DiskResourceMatch.Consumption(value, role, providerId, reservation, source, _) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
-        providerId.foreach { providerIdValue =>
-          val providerIdProto = Protos.ResourceProviderID.newBuilder().setValue(providerIdValue).build()
+        providerId.foreach { providerId =>
+          val providerIdProto = Protos.ResourceProviderID.newBuilder().setValue(providerId.value).build()
           builder.setProviderId(providerIdProto)
         }
         reservation.foreach(builder.setReservation)
@@ -134,10 +134,10 @@ case class DiskResourceMatch(
     * return all volumes for this disk resource match
     * Distinct because a persistentVolume may be associated with multiple resources.
     */
-  def volumes: Seq[(Option[String], DiskSource, VolumeWithMount[PersistentVolume])] =
+  def volumes: Seq[DiskResourceMatch.ConsumedVolume] =
     consumed.collect {
       case d @ DiskResourceMatch.Consumption(_, _, _, _, _, Some(volumeWithMount)) =>
-        (d.providerId, d.source, volumeWithMount)
+        DiskResourceMatch.ConsumedVolume(d.providerId, d.source, volumeWithMount)
     }.toList.distinct
 
   override def toString: String = {
@@ -148,13 +148,13 @@ case class DiskResourceMatch(
 object DiskResourceMatch {
   /** A (potentially partial) consumption of a scalar resource. */
   case class Consumption(consumedValue: Double, role: String,
-      providerId: Option[String], reservation: Option[ReservationInfo], source: DiskSource,
+      providerId: Option[ResourceProviderID], reservation: Option[ReservationInfo], source: DiskSource,
       persistentVolumeWithMount: Option[VolumeWithMount[PersistentVolume]]) extends ScalarMatchResult.Consumption {
 
     def requested: Either[Double, VolumeWithMount[PersistentVolume]] =
       persistentVolumeWithMount.map(Right(_)).getOrElse(Left(consumedValue))
   }
-  type ApplyFn = ((Double, String, Option[String], Option[ReservationInfo], DiskSource, Option[VolumeWithMount[PersistentVolume]]) => Consumption)
+  type ApplyFn = ((Double, String, Option[ResourceProviderID], Option[ReservationInfo], DiskSource, Option[VolumeWithMount[PersistentVolume]]) => Consumption)
   object Consumption extends ApplyFn {
     def apply(
       c: GeneralScalarMatch.Consumption,
@@ -164,6 +164,10 @@ object DiskResourceMatch {
     }
   }
 
+  case class ConsumedVolume(
+      providerId: Option[ResourceProviderID],
+      source: DiskSource,
+      volume: VolumeWithMount[PersistentVolume])
 }
 
 case class DiskResourceNoMatch(

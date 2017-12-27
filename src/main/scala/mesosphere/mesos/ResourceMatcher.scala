@@ -11,7 +11,7 @@ import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.{ OfferUtil, PortsMatch, PortsMatcher, ResourceUtil }
-import mesosphere.mesos.protos.Resource
+import mesosphere.mesos.protos.{ Resource, ResourceProviderID }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
@@ -36,7 +36,7 @@ object ResourceMatcher extends StrictLogging {
         portsMatch.resources
 
     // TODO - this assumes that volume matches are one resource to one volume, which should be correct, but may not be.
-    val localVolumes: Seq[(Option[String], DiskSource, VolumeWithMount[PersistentVolume])] =
+    val localVolumes: Seq[DiskResourceMatch.ConsumedVolume] =
       scalarMatches.collect { case r: DiskResourceMatch => r.volumes }.flatten
   }
 
@@ -413,7 +413,7 @@ object ResourceMatcher extends StrictLogging {
                 DiskResourceMatch.Consumption(
                   consumedAmount,
                   role = matchedResource.getRole,
-                  providerId = if (matchedResource.hasProviderId) Option(matchedResource.getProviderId.getValue) else None,
+                  providerId = if (matchedResource.hasProviderId) Option(ResourceProviderID(matchedResource.getProviderId.getValue)) else None,
                   reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
                   source = DiskSource.fromMesos(matchedResource.getDiskSourceOption),
                   Some(grownVolumeWithMount))
@@ -508,7 +508,7 @@ object ResourceMatcher extends StrictLogging {
             val consume = Math.min(valueLeft, nextResource.getScalar.getValue)
             val decrementedResource = ResourceUtil.consumeScalarResource(nextResource, consume)
             val newValueLeft = valueLeft - consume
-            val providerId = if (nextResource.hasProviderId) Option(nextResource.getProviderId.getValue) else None
+            val providerId = if (nextResource.hasProviderId) Option(ResourceProviderID(nextResource.getProviderId.getValue)) else None
             val reservation = if (nextResource.hasReservation) Option(nextResource.getReservation) else None
             val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole, providerId, reservation)
 

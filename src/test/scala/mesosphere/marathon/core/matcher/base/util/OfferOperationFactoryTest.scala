@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.matcher.base.util
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
@@ -79,7 +80,8 @@ class OfferOperationFactoryTest extends UnitTest {
       val resource = MarathonTestHelper.scalarResource("disk", 1024)
 
       When("We create a reserve operation")
-      val operations = factory.createVolumes(f.reservationLabels, volumes.map(v => (None, DiskSource.root, v)))
+      val offeredVolumes = volumes.map(v => InstanceOpFactory.OfferedVolume(None, DiskSource.root, v))
+      val operations = factory.createVolumes(f.reservationLabels, offeredVolumes)
 
       Then("The operation is as expected")
       operations.length shouldEqual 1
