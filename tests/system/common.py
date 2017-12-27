@@ -7,7 +7,6 @@ import time
 import uuid
 import sys
 import retrying
-import contextlib
 
 from datetime import timedelta
 from dcos import http, mesos
@@ -226,38 +225,26 @@ def systemctl_master(command='restart'):
     shakedown.run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
 
 
-def save_iptables(host, filename='iptables.rules'):
-    """ Saves iptables firewall rules such they can be restored
+def block_iptable_rules_for_seconds(host, port_number, sleep_seconds, block_input=True, block_output=True):
+    """ For testing network partitions we alter iptables rules to block ports for some time.
+        We do that as a single SSH command because otherwise it makes it hard to ensure that iptable rules are restored.
     """
-
-    shakedown.run_command_on_agent(
-        host,
-        'if [ ! -e {} ] ; then sudo iptables-save > {} ; fi'.format(filename, filename))
-
-
-def restore_iptables(host, filename='iptables.rules'):
-    """ Reconnect a previously partitioned node to the network
-        :param hostname: host or IP of the machine to partition from the cluster
-    """
-
-    shakedown.run_command_on_agent(
-        host,
-        'if [ -e {} ]; then sudo iptables-restore < {} && sudo rm {} ; fi'.format(filename, filename, filename))
-
-
-@contextlib.contextmanager
-def iptable_rules(host):
     filename = 'iptables-{}.rules'.format(uuid.uuid4().hex)
-    save_iptables(host, filename)
-    try:
-        yield
-    finally:
-        # return config to previous state
-        restore_iptables(host, filename)
+    cmd = """
+          if [ ! -e {backup} ] ; then sudo iptables-save > {backup} ; fi;
+          {block}
+          sleep {seconds};
+          if [ -e {backup} ]; then sudo iptables-restore < {backup} && sudo rm {backup} ; fi
+        """.format(backup=filename, seconds=sleep_seconds,
+                   block=iptables_block_string(block_input, block_output, port_number))
+
+    shakedown.run_command_on_agent(host, cmd)
 
 
-def block_port(host, port, direction='INPUT'):
-    shakedown.run_command_on_agent(host, 'sudo iptables -I {} -p tcp --dport {} -j DROP'.format(direction, port))
+def iptables_block_string(block_input, block_output, port):
+    """ Produces a string of iptables blocking command that can be executed on an agent. """
+    str = "sudo iptables -I INPUT -p tcp --dport {} -j DROP;".format(port) if block_input else ""
+    return str + "sudo iptables -I OUTPUT -p tcp --dport {} -j DROP;".format(port) if block_output else ""
 
 
 def wait_for_task(service, task, timeout_sec=120):
