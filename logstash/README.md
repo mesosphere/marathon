@@ -9,5 +9,12 @@ Given you have a running Elasticsearch instance listening on `localhost:9200`
 simply run
 
 ```
-cat <path to Marathon logfile> | logstash -f <path to Marathon repo>/logstash/conf/
+bin/target.sc <path-to-diagnostic-bundle>
+
+bin/clear-indices.sh
+logstash -f target/loading
 ```
+
+The target script will automatically detect masters in the bundle, unzip the files, and
+
+Then, you can run Kibana and analyze, etc.
