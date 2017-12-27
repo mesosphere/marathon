@@ -84,7 +84,8 @@ class TasksResource @Inject() (
             task,
             instance.agentInfo,
             health.getOrElse(instance.instanceId, Nil),
-            appToPorts.getOrElse(appId, Nil)
+            appToPorts.getOrElse(appId, Nil),
+            reservation = instance.reservation
           )
         }
       }
@@ -148,7 +149,7 @@ class TasksResource @Inject() (
         })).flatten
       ok(jsonObjString("tasks" -> killed.flatMap { instance =>
         instance.tasksMap.valuesIterator.map { task =>
-          EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty).toRaml
+          EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty, reservation = instance.reservation).toRaml
         }
       }))
     }

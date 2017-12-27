@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.launcher.impl
 
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, LocalVolume }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
@@ -16,7 +16,7 @@ class InstanceOpFactoryHelper(
 
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
-    newTask: Task.LaunchedEphemeral,
+    newTask: Task,
     instance: Instance): InstanceOp.LaunchTask = {
 
     assume(newTask.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")

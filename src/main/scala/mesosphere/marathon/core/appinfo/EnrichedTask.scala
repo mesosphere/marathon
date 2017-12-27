@@ -4,6 +4,7 @@ package core.appinfo
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
+import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.state.PathId
 
 case class EnrichedTask(
@@ -11,4 +12,5 @@ case class EnrichedTask(
     task: Task,
     agentInfo: AgentInfo,
     healthCheckResults: Seq[Health],
-    servicePorts: Seq[Int] = Nil)
+    servicePorts: Seq[Int] = Nil,
+    reservation: Option[Reservation] = None)

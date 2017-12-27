@@ -180,7 +180,8 @@ class TasksController(
           t,
           instance.agentInfo,
           instancesHealth.getOrElse(instance.instanceId, Nil),
-          appToPorts.getOrElse(appId, Nil)
+          appToPorts.getOrElse(appId, Nil),
+          reservation = instance.reservation
         ))
       }.to[Seq]
   }
@@ -211,7 +212,7 @@ class TasksController(
 
     killedTasks.flatMap { instance =>
       instance.tasksMap.valuesIterator.map { task =>
-        EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty)
+        EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty, reservation = instance.reservation)
       }
     }.to[Seq]
   }

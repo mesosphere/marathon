@@ -1,8 +1,7 @@
 package mesosphere.marathon
 package core.launcher
 
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.{ Instance, LocalVolume }
 import mesosphere.marathon.state.{ DiskSource, Region, RunSpec }
 import mesosphere.mesos.protos.ResourceProviderID
 import mesosphere.util.state.FrameworkId
@@ -52,5 +51,5 @@ object InstanceOpFactory {
   case class OfferedVolume(
       providerId: Option[ResourceProviderID],
       source: DiskSource,
-      volume: Task.LocalVolume)
+      volume: LocalVolume)
 }

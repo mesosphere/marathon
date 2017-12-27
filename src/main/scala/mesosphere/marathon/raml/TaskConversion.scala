@@ -2,11 +2,11 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.core.condition
-import mesosphere.marathon.core.task
+import mesosphere.marathon.core.instance
 
 object TaskConversion extends HealthConversion with DefaultConversions {
 
-  implicit val localVolumeIdWrites: Writes[task.Task.LocalVolumeId, LocalVolumeId] = Writes { localVolumeId =>
+  implicit val localVolumeIdWrites: Writes[instance.LocalVolumeId, LocalVolumeId] = Writes { localVolumeId =>
     LocalVolumeId(
       runSpecId = localVolumeId.runSpecId.toRaml,
       containerPath = localVolumeId.name,
@@ -27,7 +27,7 @@ object TaskConversion extends HealthConversion with DefaultConversions {
 
     val ipAddresses = task.status.networkInfo.ipAddresses.toRaml
 
-    val localVolumes = task.reservationWithVolumes.fold(Seq.empty[LocalVolumeId]) { reservation =>
+    val localVolumes = enrichedTask.reservation.fold(Seq.empty[LocalVolumeId]) { reservation =>
       reservation.volumeIds.toRaml
     }
 

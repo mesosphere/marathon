@@ -120,7 +120,7 @@ class InstanceStateOpProcessorDelegateTest extends AkkaUnitTest {
       val f = new Fixture
       val appId: PathId = PathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val task: Task.LaunchedEphemeral = instance.appTask
+      val task: Task = instance.appTask
       val taskIdString = task.taskId.idString
       val now = f.clock.now()
 
@@ -146,7 +146,7 @@ class InstanceStateOpProcessorDelegateTest extends AkkaUnitTest {
       val f = new Fixture
       val appId: PathId = PathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-      val task: Task.LaunchedEphemeral = instance.appTask
+      val task: Task = instance.appTask
       val taskId = task.taskId
       val now = f.clock.now()
 

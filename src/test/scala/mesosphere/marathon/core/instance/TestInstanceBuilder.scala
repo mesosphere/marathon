@@ -13,9 +13,7 @@ import org.apache.mesos
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-case class TestInstanceBuilder(
-    instance: Instance, now: Timestamp = Timestamp.now()
-) {
+case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
 
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLaunched(container).build()
@@ -23,17 +21,20 @@ case class TestInstanceBuilder(
   def addTaskReserved(containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskReserved(containerName).build()
 
-  def addTaskReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentReserved(localVolumeIds: _*).build()
+  def addTaskReserved(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
 
-  def addTaskResidentReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentReserved(localVolumeIds: _*).build()
+  def addTaskResidentReserved(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
 
-  def addTaskResidentLaunched(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentLaunched(localVolumeIds: _*).build()
+  def addTaskResidentReserved(state: Reservation.State): TestInstanceBuilder =
+    withReservation(state).addTaskWithBuilder().taskResidentReserved().build()
 
-  def addTaskResidentUnreachable(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentUnreachable(localVolumeIds: _*).build()
+  def addTaskResidentLaunched(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds).addTaskWithBuilder().taskResidentLaunched().build()
+
+  def addTaskResidentUnreachable(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds).addTaskWithBuilder().taskResidentUnreachable().build()
 
   def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(containerName, stagedAt, startedAt).build()
@@ -106,8 +107,21 @@ case class TestInstanceBuilder(
       host = hostName.getOrElse(instance.agentInfo.host),
       region = region.orElse(instance.agentInfo.region),
       zone = zone.orElse(instance.agentInfo.zone),
-      attributes = attributes.getOrElse(instance.agentInfo.attributes)
-    )))
+      attributes = attributes.getOrElse(instance.agentInfo.attributes))))
+
+  def withReservation(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds, reservationStateNew)
+
+  def withReservation(state: Reservation.State): TestInstanceBuilder =
+    withReservation(Seq.empty, state)
+
+  def withReservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State): TestInstanceBuilder =
+    withReservation(Reservation(volumeIds, state))
+
+  def withReservation(reservation: Reservation): TestInstanceBuilder =
+    copy(instance = instance.copy(reservation = Some(reservation)))
+
+  def reservationStateNew = Reservation.State.New(timeout = None)
 
   def stateOpLaunch() = InstanceUpdateOperation.LaunchEphemeral(instance)
 
@@ -140,7 +154,8 @@ object TestInstanceBuilder {
     state = InstanceState(Condition.Created, now, None, healthy = None),
     tasksMap = Map.empty,
     runSpecVersion = version,
-    UnreachableStrategy.default()
+    UnreachableStrategy.default(),
+    None
   )
 
   private val defaultAgentInfo = Instance.AgentInfo(

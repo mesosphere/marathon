@@ -53,10 +53,10 @@ class TaskLauncherActorTest extends AkkaUnitTest {
     import org.apache.mesos.{ Protos => Mesos }
     val app = AppDefinition(id = PathId("/testapp"))
     val marathonInstance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, version = app.version, now = Timestamp.now()).getInstance()
-    val marathonTask: Task.LaunchedEphemeral = marathonInstance.appTask
+    val marathonTask: Task = marathonInstance.appTask
     val instanceId = marathonInstance.instanceId
     val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId, None)).build()
-    val opFactory = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral, _: Instance)
+    val opFactory = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
     val launch = opFactory(task, marathonTask, marathonInstance)
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, Timestamp.now())

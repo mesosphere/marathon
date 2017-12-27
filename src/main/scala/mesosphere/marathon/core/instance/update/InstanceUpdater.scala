@@ -36,7 +36,7 @@ object InstanceUpdater extends StrictLogging {
     val now = op.now
     val taskId = Task.Id(op.mesosStatus.getTaskId)
     instance.tasksMap.get(taskId).map { task =>
-      val taskEffect = task.update(TaskUpdateOperation.MesosUpdate(op.condition, op.mesosStatus, now))
+      val taskEffect = task.update(instance, TaskUpdateOperation.MesosUpdate(op.condition, op.mesosStatus, now))
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated: Instance = updatedInstance(instance, updatedTask, now)
@@ -93,7 +93,7 @@ object InstanceUpdater extends StrictLogging {
           val status = op.statuses.getOrElse(
             newTaskId,
             throw new IllegalStateException("failed to retrieve a task status"))
-          task.update(TaskUpdateOperation.LaunchOnReservation(newTaskId, op.runSpecVersion, status))
+          task.update(instance, TaskUpdateOperation.LaunchOnReservation(newTaskId, op.runSpecVersion, status))
       }
 
       val nonUpdates = taskEffects.filter {

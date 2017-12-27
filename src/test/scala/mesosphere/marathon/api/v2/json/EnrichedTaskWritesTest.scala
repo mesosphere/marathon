@@ -36,7 +36,9 @@ class EnrichedTaskWritesTest extends UnitTest {
         .withAgentInfo(agentInfo)
         .addTaskStaging(since = time)
         .getInstance()
-      EnrichedTask(runSpecId, instance.appTask, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
+      EnrichedTask(
+        runSpecId, instance.appTask, agentInfo, healthCheckResults = Nil, servicePorts = Nil,
+        reservation = instance.reservation)
     }
 
     def mesosStatus(taskId: Task.Id) = {
@@ -56,17 +58,9 @@ class EnrichedTaskWritesTest extends UnitTest {
         .addTaskWithBuilder().taskStaging(since = time)
         .withNetworkInfo(networkInfo)
         .build().getInstance()
-      EnrichedTask(runSpecId, instance.appTask, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
-    }
-
-    val taskWithLocalVolumes = {
-      val localVolumeId = Task.LocalVolumeId.unapply("appid#container#random").value
-      val instance = TestInstanceBuilder.newBuilder(runSpecId = runSpecId, version = time)
-        .withAgentInfo(agentInfo)
-        .addTaskWithBuilder()
-        .taskResidentLaunched(localVolumeId)
-        .build().getInstance()
-      EnrichedTask(runSpecId, instance.appTask, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
+      EnrichedTask(
+        runSpecId, instance.appTask, agentInfo, healthCheckResults = Nil, servicePorts = Nil,
+        reservation = instance.reservation)
     }
   }
 
@@ -87,7 +81,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "stagedAt": "1970-01-01T00:00:01.024Z",
         |  "version": "1970-01-01T00:00:01.024Z",
         |  "slaveId": "abcd-1234",
-        |  "localVolumes" : []
+        |  "localVolumes" : [ ]
         |}
       """.stripMargin
       JsonTestHelper.assertThatJsonOf(f.taskWithoutIp.toRaml).correspondsToJsonString(json)
@@ -118,43 +112,10 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "stagedAt": "1970-01-01T00:00:01.024Z",
         |  "version": "1970-01-01T00:00:01.024Z",
         |  "slaveId": "abcd-1234",
-        |  "localVolumes" : []
+        |  "localVolumes" : [ ]
         |}
       """.stripMargin
       JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs.toRaml).correspondsToJsonString(json)
-    }
-
-    "JSON serialization of a Task with reserved local volumes" in {
-      val f = new Fixture()
-      val enrichedTask = f.taskWithLocalVolumes
-      val task = enrichedTask.task
-      val status = task.status
-      val json =
-        s"""
-        |{
-        |  "appId": "${f.runSpecId}",
-        |  "healthCheckResults" : [],
-        |  "id": "${task.taskId.idString}",
-        |  "ipAddresses" : [],
-        |  "host": "agent1.mesos",
-        |  "state" : "TASK_RUNNING",
-        |  "ports": [],
-        |  "servicePorts" : [],
-        |  "startedAt": "${status.startedAt.value.toString}",
-        |  "stagedAt": "${status.stagedAt.toString}",
-        |  "version": "${task.runSpecVersion}",
-        |  "slaveId": "abcd-1234",
-        |  "localVolumes": [
-        |    {
-        |      "runSpecId" : "/appid",
-        |      "containerPath": "container",
-        |      "uuid": "random",
-        |      "persistenceId": "appid#container#random"
-        |    }
-        |  ]
-        |}
-      """.stripMargin
-      JsonTestHelper.assertThatJsonOf(f.taskWithLocalVolumes.toRaml).correspondsToJsonString(json)
     }
   }
 }

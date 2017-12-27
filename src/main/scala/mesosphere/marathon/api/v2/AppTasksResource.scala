@@ -71,7 +71,9 @@ class AppTasksResource @Inject() (
       val health = result(healthCheckManager.statuses(id))
       instancesBySpec.specInstances(id).flatMap { instance =>
         instance.tasksMap.values.map { task =>
-          EnrichedTask(id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil))
+          EnrichedTask(
+            id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil),
+            reservation = instance.reservation)
         }
       }
     }(collection.breakOut)
@@ -120,7 +122,9 @@ class AppTasksResource @Inject() (
         val healthStatuses = await(healthCheckManager.statuses(pathId))
         val enrichedTasks: Seq[EnrichedTask] = instances.map { instance =>
           val killedTask = instance.appTask
-          val enrichedTask = EnrichedTask(pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+          val enrichedTask = EnrichedTask(
+            pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil),
+            reservation = instance.reservation)
           enrichedTask
         }
         ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
@@ -167,7 +171,9 @@ class AppTasksResource @Inject() (
             unknownTask(id)
           case Some(instance) =>
             val killedTask = instance.appTask
-            val enrichedTask = EnrichedTask(pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+            val enrichedTask = EnrichedTask(
+              pathId, killedTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil),
+              reservation = instance.reservation)
             ok(jsonObjString("task" -> enrichedTask.toRaml))
         }
       }.recover {

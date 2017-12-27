@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.matcher.base.util
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.instance.{ LocalVolume, LocalVolumeId }
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
@@ -145,10 +146,10 @@ class OfferOperationFactoryTest extends UnitTest {
     val role = Some("role")
     val factory = new OfferOperationFactory(principal, role)
 
-    def localVolume(mountPath: String): Task.LocalVolume = {
+    def localVolume(mountPath: String): LocalVolume = {
       val pv = PersistentVolume(None, PersistentVolumeInfo(size = 10))
       val mount = VolumeMount(None, mountPath)
-      Task.LocalVolume(Task.LocalVolumeId(runSpecId, pv, mount), pv, mount)
+      LocalVolume(LocalVolumeId(runSpecId, pv, mount), pv, mount)
     }
   }
 }
