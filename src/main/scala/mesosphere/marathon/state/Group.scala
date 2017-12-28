@@ -124,7 +124,7 @@ class Group(
     val summarizedGroups = summarize(groupsById.valuesIterator.map(_.id))
     val summarizedDependencies = summarize(dependencies.iterator)
 
-    s"Group($id, $summarizedApps, $summarizedPods, $summarizedGroups, $summarizedDependencies, $version)"
+    s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version)"
   }
 }
 
