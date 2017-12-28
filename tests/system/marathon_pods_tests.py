@@ -519,7 +519,7 @@ def test_pod_with_persistent_volume():
 
     tasks = common.get_pod_tasks(pod_id)
 
-    host = tasks[0]['statuses'][0]['container_status']['network_infos'][0]['ip_addresses'][0]['ip_address']
+    host = common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address']
     port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
     dir1 = tasks[0]['container']['volumes'][0]['container_path']
