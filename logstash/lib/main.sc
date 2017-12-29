@@ -14,6 +14,7 @@ import akka.stream.scaladsl._
 import ammonite.ops._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.util.{Try, Success, Failure}
 
 @tailrec def await[T](f: Future[T]): T = f.value match {
   case None =>
@@ -38,14 +39,24 @@ def bundleLogGzipped(masterPath: Path) =
 def bundleLogGunzipped(masterPath: Path) =
   masterPath / "dcos-marathon.service"
 
-def unzipLogs(masters: Map[String, Path])(implicit mat: Materializer): Map[String, Path] = {
+def warningLineSplitter(file: Path, warnLength: Int) =
+  Framing.delimiter(ByteString("\n"), 128000000, true).map { line =>
+    if (line.length >= warnLength)
+      println(s"WARNING!!! ${file} has a line length of ${line.length}")
+    line
+  }
+
+def unzipAndStripLogs(masters: Map[String, Path])(implicit mat: Materializer): Map[String, Path] = {
   masters.map { case (master, masterPath) =>
-    val gzippedFilePath = bundleLogGzipped(masterPath)
     val gunzippedFilePath = bundleLogGunzipped(masterPath)
     if (!gunzippedFilePath.toIO.exists) {
+
+      val gzippedFilePath = bundleLogGzipped(masterPath)
       println(s"Extracting ${gzippedFilePath} to ${gunzippedFilePath}")
       val result = await {
         gzipSource(gzippedFilePath)
+          .via(warningLineSplitter(gzippedFilePath, 128000))
+          .map { bytes => ByteString(util.stripAnsi(bytes.utf8String)) }
           .runWith(FileIO.toPath(gunzippedFilePath.toNIO))
       }
       if (!result.wasSuccessful) {
@@ -57,35 +68,47 @@ def unzipLogs(masters: Map[String, Path])(implicit mat: Materializer): Map[Strin
 }
 
 def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): LogFormat = {
-  def sampleIOSource = {
-    val input = logFiles
-      .filter(_.toIO.exists)
-      .toSeq
-      .sortBy(_.toIO.length)
-      .last
-    FileIO.fromPath(input.toNIO)
-  }
+  logFiles
+    .filter(_.toIO.exists)
+    .toSeq
+    .sortBy(_.toIO.length)
+    .reverse
+    .toStream
+    .map { input =>
+      val result = Try {
+        val linesSample = await(
+          FileIO.fromPath(input.toNIO)
+            .via(warningLineSplitter(input, 128000))
+            .take(100)
+            .runWith(Sink.seq))
 
-  val linesSample = await(
-    sampleIOSource.via(Framing.delimiter(ByteString("\n"), 128000, false))
-      .take(100)
-      .map { bytes => util.stripAnsi(bytes.utf8String) }
-      .runWith(Sink.seq))
+        val maybeCodec = (for {
+          line <- linesSample.take(100)
+          codec <- LogFormat.all if codec.matches(line.utf8String)
+        } yield codec).headOption
 
-  val maybeCodec = (for {
-    line <- linesSample.take(100)
-    codec <- LogFormat.all if codec.matches(line)
-  } yield codec).headOption
-
-  maybeCodec match {
-    case Some(codec) => codec
-    case _ =>
-      println(s"Couldn't find a codec for these lines:")
-      println()
-      linesSample.foreach(println)
-      // sys.exit(1)
-      ???
-  }
+        maybeCodec match {
+          case Some(codec) => codec
+          case _ =>
+            println(s"Couldn't find a codec for these lines:")
+            println()
+            linesSample.foreach(println)
+            // sys.exit(1)
+            ???
+        }
+      }
+      input -> result
+    }
+    .flatMap {
+      case (_, Success(result)) => Some(result)
+      case (input, Failure(ex)) =>
+        println(s"Failed to detect format in ${input}; ${ex}")
+        None
+    }
+    .headOption
+    .getOrElse {
+      throw new Exception("Couldn't detect log format in any input files")
+    }
 }
 
 def setupTarget(target: Path): (Path, Path, Path) = {
@@ -107,9 +130,9 @@ def generateTargetBundle(path: Path): Unit = {
 
   println(s"${masters.size} masters discovered: ${masters.keys.mkString(", ")}")
 
-  val (target, loading, printing) = setupTarget(pwd / 'target)
+  val (target, printing, loading) = setupTarget(pwd / 'target)
 
-  val unzippedLogLocations = unzipLogs(masters)
+  val unzippedLogLocations = unzipAndStripLogs(masters)
 
   val logFormat = detectLogFormat(unzippedLogLocations.values.toSeq)
 
@@ -119,7 +142,6 @@ def generateTargetBundle(path: Path): Unit = {
     "CODEC" -> logFormat.codec)
 
   write.over(printing / "10-input.conf", tcpReader)
-  write.over(printing / "12-filters-remove-ansi.conf", read!(pwd / "conf" / "filter-remove-ansi.conf"))
   write.over(printing / "15-filters-format.conf", logFormat.unframe)
   write.over(printing / "20-filters.conf", read!(pwd / "conf" / "dcos-marathon-1.4.x-filters.conf"))
   write.over(printing / "30-output.conf", read!(pwd / "conf" / "output-console.conf"))
@@ -138,10 +160,11 @@ def generateTargetBundle(path: Path): Unit = {
     write.over(loading / s"10-input-${master}.conf", inputConf)
   }
 
-  write.over(loading / "12-filters-remove-ansi.conf", read!(pwd / "conf" / "filter-remove-ansi.conf"))
   write.over(loading / "15-filters-format.conf", logFormat.unframe)
   write.over(loading / "20-filters.conf", read!(pwd / "conf" / "dcos-marathon-1.4.x-filters.conf"))
   write.over(loading / "30-output.conf", read!(pwd / "conf" / "output-elasticsearch.conf"))
+
+  println(s"All Done")
 }
 
 @main def config(kind: String, path: Path): Unit = {
