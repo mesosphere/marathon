@@ -57,6 +57,7 @@ def unzipAndStripLogs(masters: Map[String, Path])(implicit mat: Materializer): M
         gzipSource(gzippedFilePath)
           .via(warningLineSplitter(gzippedFilePath, 128000))
           .map { bytes => ByteString(util.stripAnsi(bytes.utf8String)) }
+          .intersperse(ByteString("\n"))
           .runWith(FileIO.toPath(gunzippedFilePath.toNIO))
       }
       if (!result.wasSuccessful) {
@@ -143,7 +144,7 @@ def generateTargetBundle(path: Path): Unit = {
 
   write.over(printing / "10-input.conf", tcpReader)
   write.over(printing / "15-filters-format.conf", logFormat.unframe)
-  write.over(printing / "20-filters.conf", read!(pwd / "conf" / "dcos-marathon-1.4.x-filters.conf"))
+  write.over(printing / "20-filters.conf", read!(pwd / "conf" / "filter-marathon-1.4.x.conf"))
   write.over(printing / "30-output.conf", read!(pwd / "conf" / "output-console.conf"))
 
   unzippedLogLocations.foreach { case (master, logPath) =>
@@ -153,16 +154,18 @@ def generateTargetBundle(path: Path): Unit = {
       "SINCEDB" -> util.escapeString((loading / s"since-db-${master}.db").toString),
       "CODEC" -> logFormat.codec,
       "EXTRA" -> s"""|"add_field" => {
-                     |  "hostname" => ${util.escapeString(master)}
+                     |  "file_host" => ${util.escapeString(master)}
                      |}
                      |""".stripMargin
     )
     write.over(loading / s"10-input-${master}.conf", inputConf)
   }
 
+  write.over(loading / "11-filters-host.conf", read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf"))
   write.over(loading / "15-filters-format.conf", logFormat.unframe)
-  write.over(loading / "20-filters.conf", read!(pwd / "conf" / "dcos-marathon-1.4.x-filters.conf"))
+  write.over(loading / "20-filters.conf", read!(pwd / "conf" / "filter-marathon-1.4.x.conf"))
   write.over(loading / "30-output.conf", read!(pwd / "conf" / "output-elasticsearch.conf"))
+  write.over(target / "data-path.txt", path.toString)
 
   println(s"All Done")
 }
