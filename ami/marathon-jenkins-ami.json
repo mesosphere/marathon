@@ -9,8 +9,6 @@
   },
   "builders": [{
     "type": "amazon-ebs",
-    "access_key": "{{user `aws_access_key`}}",
-    "secret_key": "{{user `aws_secret_key`}}",
     "region": "us-east-1",
     "source_ami": "ami-f6e6948c",
     "instance_type": "m4.xlarge",
@@ -21,7 +19,7 @@
     "ami_name": "{{user `ami_name`}}",
     "ami_users": ["633059600857", "540164828399"],
     "ami_block_device_mappings": [{
-      "device_name": "/dev/xvda",
+      "device_name": "xvda",
       "volume_type": "gp2",
       "volume_size": 40,
       "delete_on_termination": true

@@ -41,6 +41,13 @@ make -j
 sudo make altinstall
 cd ../ && rm -r Python-3.6.2
 
+# Install pip
+wget https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py
+
+# Install falke8
+pip3 install flake8
+
 # Download (but don't install) Mesos and its dependencies.
 # The CI task will install Mesos later.
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
@@ -62,9 +69,6 @@ curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq
 
 # Install Ammonite
 curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm
-
-# Install falke8
-pip3 install flake8
 
 # Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
 # so we need ivy2 cache in `/root`

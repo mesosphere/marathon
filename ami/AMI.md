@@ -8,9 +8,7 @@ Documentation on provisioning new AMI for jenkins: https://wiki.mesosphere.com/d
 Mesos version used by marathon: https://github.com/mesosphere/marathon/blob/master/project/Dependencies.scala#L87
 
 ```bash
-packer build -color \
-    -var 'aws_access_key=%AWS_ACCESS_KEY' \
-    -var 'aws_secret_key=%AWS_SECRET_KEY' \
+AWS_PROFILE=%AWS_PROFILE packer build -color \
     -var 'ami_name=%AMI_NAME' \
     -var 'mesos_version=%MESOS_VERSION' \
     marathon-jenkins-ami.json
