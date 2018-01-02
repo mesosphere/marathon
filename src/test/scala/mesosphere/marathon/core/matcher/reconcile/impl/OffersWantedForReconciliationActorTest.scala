@@ -68,7 +68,6 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
       val app = AppDefinition(
         PathId("/resident"),
         cmd = Some("sleep"),
-        residency = Some(Residency.default),
         container = Some(Container.Mesos(Seq(vol))),
         upgradeStrategy = zero,
         unreachableStrategy = UnreachableDisabled)

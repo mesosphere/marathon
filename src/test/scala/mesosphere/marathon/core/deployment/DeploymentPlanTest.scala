@@ -434,7 +434,6 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
         id = PathId(id),
         cmd = Some("foo"),
         container = Some(Container.Mesos(volumes)),
-        residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)),
         unreachableStrategy = UnreachableDisabled
       )
     }

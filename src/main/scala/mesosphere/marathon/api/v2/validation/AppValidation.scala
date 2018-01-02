@@ -420,7 +420,6 @@ trait AppValidation {
     app must complyWithGpuRules(enabledFeatures)
     app must complyWithMigrationAPI
     app must complyWithReadinessCheckRules
-    app must complyWithResidencyRules
     app must complyWithSingleInstanceLabelRules
     app must complyWithUpgradeStrategyRules
     app must complyWithDockerNetworkingRules
@@ -445,12 +444,6 @@ trait AppValidation {
         _.networks.count(_.mode == NetworkMode.Container) <= 1
       }
     )
-
-  private val complyWithResidencyRules: Validator[App] =
-    isTrue("App must contain persistent volumes and define residency") { app =>
-      val hasPersistentVolumes = app.container.fold(false)(_.volumes.existsAn[AppPersistentVolume])
-      !(app.residency.isDefined ^ hasPersistentVolumes)
-    }
 
   private val complyWithReadinessCheckRules: Validator[App] = validator[App] { app =>
     app.readinessChecks.size should be <= 1

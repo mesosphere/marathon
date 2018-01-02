@@ -72,8 +72,6 @@ case class AppDefinition(
 
     versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
 
-    residency: Option[Residency] = AppDefinition.DefaultResidency,
-
     secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
 
     override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
@@ -114,8 +112,6 @@ case class AppDefinition(
     "bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)")
 
   val portNumbers: Seq[Int] = portDefinitions.map(_.port)
-
-  override val isResident: Boolean = residency.isDefined
 
   override val version: Timestamp = versionInfo.version
 
@@ -204,8 +200,6 @@ case class AppDefinition(
       case _ => // ignore
     }
 
-    residency.foreach { r => builder.setResidency(ResidencySerializer.toProto(r)) }
-
     builder.build
   }
 
@@ -241,8 +235,6 @@ case class AppDefinition(
 
     val networks: Seq[Network] = proto.getNetworksList.flatMap(Network.fromProto)(collection.breakOut)
 
-    val residencyOption = if (proto.hasResidency) Some(ResidencySerializer.fromProto(proto.getResidency)) else None
-
     val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
 
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
@@ -255,7 +247,7 @@ case class AppDefinition(
       if (proto.hasUnreachableStrategy)
         UnreachableStrategy.fromProto(proto.getUnreachableStrategy)
       else
-        UnreachableStrategy.default(residencyOption.isDefined)
+        UnreachableStrategy.default(isResident)
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -293,7 +285,6 @@ case class AppDefinition(
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
       networks = if (networks.isEmpty) AppDefinition.DefaultNetworks else networks,
-      residency = residencyOption,
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
       unreachableStrategy = unreachableStrategy,
       killSelection = KillSelection.fromProto(proto.getKillSelection),
@@ -349,7 +340,6 @@ case class AppDefinition(
           acceptedResourceRoles != to.acceptedResourceRoles ||
           networks != to.networks ||
           readinessChecks != to.readinessChecks ||
-          residency != to.residency ||
           secrets != to.secrets ||
           unreachableStrategy != to.unreachableStrategy ||
           killSelection != to.killSelection ||
@@ -421,6 +411,8 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultLabels = Map.empty[String, String]
 
+  val DefaultIsResident = false
+
   /**
     * This default is only used in tests
     */
@@ -432,8 +424,6 @@ object AppDefinition extends GeneralPurposeCombinators {
     * should be kept in sync with `Apps.DefaultNetworks`
     */
   val DefaultNetworks = Seq[Network](HostNetwork)
-
-  val DefaultResidency = Option.empty[Residency]
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition(id = DefaultId).mergeFromProto(proto)
@@ -480,11 +470,6 @@ object AppDefinition extends GeneralPurposeCombinators {
         val plugins = pluginManager.plugins[RunSpecValidator]
         new And(plugins: _*).apply(app)
       }
-    }
-
-  private val complyWithResidencyRules: Validator[AppDefinition] =
-    isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
-      !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
@@ -580,7 +565,6 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithGpuRules(enabledFeatures)
     appDef must complyWithMigrationAPI
     appDef must complyWithReadinessCheckRules
-    appDef must complyWithResidencyRules
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithUpgradeStrategyRules
     appDef should requireUnreachableDisabledForResidentTasks

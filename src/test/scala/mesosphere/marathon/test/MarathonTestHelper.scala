@@ -438,9 +438,6 @@ object MarathonTestHelper {
   def appWithPersistentVolume(): AppDefinition = {
     MarathonTestHelper.makeBasicApp().copy(
       container = Some(mesosContainerWithPersistentVolume),
-      residency = Some(Residency(
-        Residency.defaultRelaunchEscalationTimeoutSeconds,
-        Residency.defaultTaskLostBehaviour))
     )
   }
 
