@@ -120,6 +120,13 @@ def setupTarget(target: Path): (Path, Path, Path) = {
   (target, printing, loading)
 }
 
+def writeFiles(entries: (Path, String)*): Unit = {
+  entries.foreach { case (path, contents) =>
+    write.over(path, contents)
+    println(s"Wrote ${path}")
+  }
+}
+
 def generateTargetBundle(path: Path): Unit = {
   implicit val as = ActorSystem()
   implicit val mat = ActorMaterializer()
@@ -142,10 +149,11 @@ def generateTargetBundle(path: Path): Unit = {
     pwd / "conf" / "input-tcp.conf.template",
     "CODEC" -> logFormat.codec)
 
-  write.over(printing / "10-input.conf", tcpReader)
-  write.over(printing / "15-filters-format.conf", logFormat.unframe)
-  write.over(printing / "20-filters.conf", read!(pwd / "conf" / "filter-marathon-1.4.x.conf"))
-  write.over(printing / "30-output.conf", read!(pwd / "conf" / "output-console.conf"))
+  writeFiles(
+    printing / "10-input.conf" -> tcpReader,
+    printing / "15-filters-format.conf" -> logFormat.unframe,
+    printing / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    printing / "30-output.conf" -> (read!(pwd / "conf" / "output-console.conf")))
 
   unzippedLogLocations.foreach { case (master, logPath) =>
     val inputConf = renderTemplate(
@@ -161,11 +169,12 @@ def generateTargetBundle(path: Path): Unit = {
     write.over(loading / s"10-input-${master}.conf", inputConf)
   }
 
-  write.over(loading / "11-filters-host.conf", read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf"))
-  write.over(loading / "15-filters-format.conf", logFormat.unframe)
-  write.over(loading / "20-filters.conf", read!(pwd / "conf" / "filter-marathon-1.4.x.conf"))
-  write.over(loading / "30-output.conf", read!(pwd / "conf" / "output-elasticsearch.conf"))
-  write.over(target / "data-path.txt", path.toString)
+  writeFiles(
+    loading / "11-filters-host.conf" -> (read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
+    loading / "15-filters-format.conf" -> logFormat.unframe,
+    loading / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    loading / "30-output.conf" -> (read!(pwd / "conf" / "output-elasticsearch.conf")),
+    target / "data-path.txt" -> path.toString)
 
   println(s"All Done")
 }
