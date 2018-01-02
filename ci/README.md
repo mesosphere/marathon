@@ -64,14 +64,11 @@ There are several targets in `githubClient`:
 
   * `reject`
   * `comment`
-  * `collectTestResults`
   * `reportSuccess`
   * `reportFailure`
 
 Method `reject` and `reportFailure` rejects a GitHub pull request review while `reportSuccess` approves it.
 The `comment` method posts a comment to the pull request.
-`collectTestResults` gathers and returns unit and integration test results. It checks `target/phabricator-test-reports/`
-for JSON files and joins them.
 
 One can comment from the CLI with
 ```

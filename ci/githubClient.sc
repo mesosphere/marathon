@@ -59,33 +59,6 @@ def reject(
 }
 
 /**
- * Collect test results.
- *
- * @return the parsed test results.
- */
-@main
-def collectTestResults(): Js.Arr = {
-
-  try {
-    // Join all results
-    val testResults = ls! pwd / 'target / "phabricator-test-reports" |? ( _.ext == "json")
-    val joinedTestResults: Js.Arr = testResults.view.map(read!)
-      .map(upickle.json.read)
-      .collect { case a: Js.Arr => a }
-      .reduce { (l: Js.Arr, r: Js.Arr) =>
-        val n = l.arr ++ r.arr
-        Js.Arr(n :_*)
-      }
-
-    joinedTestResults
-  } catch {
-    case NonFatal(e) =>
-      utils.printlnWithColor(s"Could not collect test results: ${e.getMessage}", utils.Colors.BrightRed)
-      Js.Arr()
-  }
-}
-
-/**
  * Report success of diff build back to GitHub.
  *
  * @param pullNumber The pull request of the build.
@@ -100,16 +73,11 @@ def reportSuccess(
   buildTag: String,
   maybeArtifact: Option[awsClient.Artifact]): Unit = {
 
-  val testResults = collectTestResults()
-
-  // Collect unsound, i.e. canceled, tests
-  val unsoundTests = testResults.value
-    .collect { case test: Js.Obj if test("result").value == "unsound" => test  }
-  val hasUnsoundTests = unsoundTests.nonEmpty
-
-  // Construct message
   val buildinfoDiff = maybeArtifact.fold(""){ artifact =>
     s"""
+      |You can create a DC/OS with your patched Marathon by creating a new pull
+      |request with the following changes in [buildinfo.json](https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json):
+      |
       |```json
       |"url": "${artifact.downloadUrl}",
       |"sha1": "${artifact.sha1}"
@@ -122,33 +90,14 @@ def reportSuccess(
     |
     |See details at [$buildTag]($buildUrl).
     |
-    |You can create a DC/OS with your patched Marathon by creating a new pull
-    |request with the following changes in [buildinfo.json](https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json):
-    |
     |$buildinfoDiff
     |
     |You can run system integration test changes of this PR against Marathon
     |master by triggering [this Jenkins job](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/build?delay=0sec) with the `Pull_Request_id` `$pullNumber`.
     |The job then reports back to this PR.
     |
+    |**＼\\ ٩( ᐛ )و /／**
     |""".stripMargin
-
-  if (!hasUnsoundTests) {
-    msg += "**＼\\ ٩( ᐛ )و /／**"
-  } else {
-    val unsoundTestsList: String = unsoundTests.foldLeft("") { (msg:String, test: Js.Obj) =>
-      msg + s"""\n- `${test("name").value}`"""
-    }
-
-    msg += s"""
-    |The following tests failed and have been marked as canceled. Are you sure you want to land this patch?
-    | $unsoundTestsList
-    |
-    |Anyhow, check the [skipped tests]($buildUrl/testReport) on Jenkins for details and decide for yourself.
-    |
-    |**¯\\_(ツ)_/¯**
-    |""".stripMargin
-  }
 
   comment(pullNumber, msg, event="APPROVE")
 }

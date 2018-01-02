@@ -25,7 +25,7 @@ import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 private class DeploymentActor(
-    deploymentManager: ActorRef,
+    deploymentManagerActor: ActorRef,
     promise: Promise[Done],
     killService: KillService,
     scheduler: SchedulerActions,
@@ -72,7 +72,7 @@ private class DeploymentActor(
   }
 
   override def postStop(): Unit = {
-    deploymentManager ! DeploymentFinished(plan)
+    deploymentManagerActor ! DeploymentFinished(plan)
   }
 
   def receive: Receive = {
@@ -80,7 +80,7 @@ private class DeploymentActor(
       val step = steps.next()
       currentStepNr += 1
       logger.debug(s"Process next deployment step: stepNumber=$currentStepNr step=$step planId=${plan.id}")
-      deploymentManager ! DeploymentStepInfo(plan, step, currentStepNr)
+      deploymentManagerActor ! DeploymentStepInfo(plan, step, currentStepNr)
 
       performStep(step) onComplete {
         case Success(_) => self ! NextStep
@@ -141,7 +141,7 @@ private class DeploymentActor(
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
     instanceTracker.specInstances(runnableSpec.id).map { instances =>
-      context.actorOf(childSupervisor(AppStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker,
+      context.actorOf(childSupervisor(AppStartActor.props(deploymentManagerActor, status, scheduler, launchQueue, instanceTracker,
         eventBus, readinessCheckExecutor, runnableSpec, scaleTo, instances, promise), s"AppStart-${plan.id}"))
     }
     promise.future
@@ -176,7 +176,7 @@ private class DeploymentActor(
         tasksToStart.fold(Future.successful(Done)) { tasksToStart =>
           logger.debug(s"Start next $tasksToStart tasks")
           val promise = Promise[Unit]()
-          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker, eventBus,
+          context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, scheduler, launchQueue, instanceTracker, eventBus,
             readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
           promise.future.map(_ => Done)
         }
@@ -217,7 +217,7 @@ private class DeploymentActor(
       Future.successful(Done)
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManager, status, killService,
+      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status, killService,
         launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise), s"TaskReplace-${plan.id}"))
       promise.future.map(_ => Done)
     }
@@ -233,7 +233,7 @@ object DeploymentActor {
 
   @SuppressWarnings(Array("MaxParameters"))
   def props(
-    deploymentManager: ActorRef,
+    deploymentManagerActor: ActorRef,
     promise: Promise[Done],
     killService: KillService,
     scheduler: SchedulerActions,
@@ -245,7 +245,7 @@ object DeploymentActor {
     readinessCheckExecutor: ReadinessCheckExecutor): Props = {
 
     Props(new DeploymentActor(
-      deploymentManager,
+      deploymentManagerActor,
       promise,
       killService,
       scheduler,
