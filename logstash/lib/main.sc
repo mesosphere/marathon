@@ -81,11 +81,12 @@ def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): LogFormat 
           FileIO.fromPath(input.toNIO)
             .via(warningLineSplitter(input, 128000))
             .take(100)
+            .map(_.utf8String)
             .runWith(Sink.seq))
 
         val maybeCodec = (for {
           line <- linesSample.take(100)
-          codec <- LogFormat.all if codec.matches(line.utf8String)
+          codec <- LogFormat.all if codec.matches(line)
         } yield codec).headOption
 
         maybeCodec match {
