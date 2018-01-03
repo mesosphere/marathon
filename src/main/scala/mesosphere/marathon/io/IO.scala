@@ -7,7 +7,6 @@ import com.typesafe.scalalogging.StrictLogging
 import org.apache.commons.io.IOUtils
 
 import scala.util.{ Failure, Success, Try }
-import scala.util.control.Breaks.break
 
 object IO extends StrictLogging {
 
@@ -52,14 +51,16 @@ object IO extends StrictLogging {
       case (Some(from), Some(to)) =>
         val buf = createBuffer();
         var total = 0
-        while (true) {
+        var done = false
+        while (!done) {
           val r = from.read(buf)
           if (r == -1) {
-            break
+            done = true
+          } else {
+            to.write(buf, 0, r)
+            to.flush()
+            total += r
           }
-          to.write(buf, 0, r)
-          to.flush()
-          total += r
         }
         total
       case _ =>
