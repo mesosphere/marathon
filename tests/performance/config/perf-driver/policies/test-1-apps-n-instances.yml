@@ -56,12 +56,15 @@ policies:
           pre_value: intertest
 
         events:
-
           # Wait until marathon is started before continuing with the tests
           start: MarathonStartedEvent:single
-
           # We advance to next values every time we receive a deployment completion
           advance: MarathonDeploymentSuccessEvent MarathonDeploymentFailedEvent
+
+        advance_condition:
+          # A deployment of an app shouldn't take more than 30 seconds. We put
+          # the double just to be on the safe side.
+          timeout: 60s
 
 
 # Channel configuration
