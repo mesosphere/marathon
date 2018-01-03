@@ -28,6 +28,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
@@ -191,7 +192,8 @@ object MarathonTestHelper {
 
   def scalarResource(
     name: String, d: Double, role: String = ResourceRole.Unreserved,
-    reservation: Option[ReservationInfo] = None, disk: Option[DiskInfo] = None): Mesos.Resource = {
+    providerId: Option[protos.ResourceProviderID] = None, reservation: Option[ReservationInfo] = None,
+    disk: Option[DiskInfo] = None): Mesos.Resource = {
 
     val builder = Mesos.Resource
       .newBuilder()
@@ -200,6 +202,10 @@ object MarathonTestHelper {
       .setScalar(Value.Scalar.newBuilder().setValue(d))
       .setRole(role)
 
+    providerId.foreach { providerId =>
+      val proto = Mesos.ResourceProviderID.newBuilder().setValue(providerId.value)
+      builder.setProviderId(proto)
+    }
     reservation.foreach(builder.setReservation)
     disk.foreach(builder.setDisk)
 
@@ -432,9 +438,6 @@ object MarathonTestHelper {
   def appWithPersistentVolume(): AppDefinition = {
     MarathonTestHelper.makeBasicApp().copy(
       container = Some(mesosContainerWithPersistentVolume),
-      residency = Some(Residency(
-        Residency.defaultRelaunchEscalationTimeoutSeconds,
-        Residency.defaultTaskLostBehaviour))
     )
   }
 

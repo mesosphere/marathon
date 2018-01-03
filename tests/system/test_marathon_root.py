@@ -12,7 +12,6 @@ import os
 import pytest
 import retrying
 import shakedown
-import time
 import uuid
 
 from dcos import marathon, errors
@@ -159,16 +158,11 @@ def test_marathon_zk_partition_leader_change(marathon_service_name):
 
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
 
-    # blocking zk on marathon leader (not master leader)
-    with shakedown.iptable_rules(original_leader):
-        common.block_port(original_leader, 2181, direction='INPUT')
-        common.block_port(original_leader, 2181, direction='OUTPUT')
-        #  time of the zk block, the duration must be greater than all the default ZK timeout values in Marathon
-        time.sleep(20)
-
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.block_iptable_rules_for_seconds(original_leader, 2181, sleep_seconds=30)
 
     common.marathon_leadership_changed(original_leader)
+    # Make sure marathon is available
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
 
 @shakedown.masters(3)
@@ -177,14 +171,12 @@ def test_marathon_master_partition_leader_change(marathon_service_name):
     original_leader = common.get_marathon_leader_not_on_master_leader_node()
 
     # blocking outbound connection to mesos master
-    with shakedown.iptable_rules(original_leader):
-        common.block_port(original_leader, 5050, direction='OUTPUT')
-        #  time of the master block
-        time.sleep(timedelta(minutes=1.5).total_seconds())
-
-    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
+    common.block_iptable_rules_for_seconds(original_leader, 5050, sleep_seconds=60,
+                                           block_input=False, block_output=True)
 
     common.marathon_leadership_changed(original_leader)
+    # Make sure marathon is available
+    shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
 
 
 @shakedown.public_agents(1)
@@ -361,9 +353,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     # Abdicate the leader with backup
     original_leader = shakedown.marathon_leader_ip()
-    print('leader: {}'.format(original_leader))
     url = 'v2/leader?backup={}'.format(backup_url1)
-    print('DELETE {}'.format(url))
     common.delete_marathon_path(url)
 
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())

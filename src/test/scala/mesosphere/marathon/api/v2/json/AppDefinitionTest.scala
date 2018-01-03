@@ -720,24 +720,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     }
 
-    "Residency serialization (toProto) and deserialization (fromProto)" in {
-      val app = AppDefinition(
-        id = "/test".toRootPath,
-        residency = Some(Residency(
-          relaunchEscalationTimeoutSeconds = 3600,
-          taskLostBehavior = Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER)))
-      val proto = app.toProto
-
-      proto.hasResidency shouldBe true
-      proto.getResidency.getRelaunchEscalationTimeoutSeconds shouldBe 3600
-      proto.getResidency.getTaskLostBehavior shouldBe Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER
-
-      val appAgain = AppDefinition.fromProto(proto)
-      appAgain.residency should not be empty
-      appAgain.residency.get.relaunchEscalationTimeoutSeconds shouldBe 3600
-      appAgain.residency.get.taskLostBehavior shouldBe Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER
-    }
-
     "SerializationRoundtrip preserves secret references in environment variables" in {
       val app3 = raml.App(
         id = "/prod/product/frontend/my-app",

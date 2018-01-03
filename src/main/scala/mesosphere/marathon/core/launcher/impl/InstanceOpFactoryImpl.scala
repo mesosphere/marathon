@@ -19,7 +19,7 @@ import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.{ NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder }
+import mesosphere.mesos.{ DiskResourceMatch, NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => Mesos }
@@ -315,13 +315,14 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
-    val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
+    val localVolumes: Seq[InstanceOpFactory.OfferedVolume] =
       resourceMatch.localVolumes.map {
-        case (source, volume, mount) =>
-          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume, mount), volume, mount))
+        case DiskResourceMatch.ConsumedVolume(providerId, source, VolumeWithMount(volume, mount)) =>
+          val localVolume = Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume, mount), volume, mount)
+          InstanceOpFactory.OfferedVolume(providerId, source, localVolume)
       }
 
-    val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
+    val persistentVolumeIds = localVolumes.map(_.volume.id)
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
       initiated = now,

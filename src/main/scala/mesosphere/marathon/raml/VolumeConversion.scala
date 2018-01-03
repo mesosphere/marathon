@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.state.DiskType
+import mesosphere.marathon.state.{ DiskType, Volume }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{ Protos => Mesos }
@@ -64,7 +64,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       constraints = pv.constraints.toRaml[Set[Seq[String]]])
   }
 
-  implicit val volumeWrites: Writes[state.VolumeWithMount, AppVolume] = Writes { volumeWithMount =>
+  implicit val volumeWrites: Writes[state.VolumeWithMount[Volume], AppVolume] = Writes { volumeWithMount =>
 
     implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes { ev =>
       ExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options)
@@ -92,7 +92,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     }
   }
 
-  implicit val volumeReads: Reads[AppVolume, state.VolumeWithMount] = Reads {
+  implicit val volumeReads: Reads[AppVolume, state.VolumeWithMount[Volume]] = Reads {
     case v: AppExternalVolume => volumeExternalReads.read(v)
     case v: AppPersistentVolume => volumePersistentReads.read(v)
     case v: AppHostVolume => volumeHostReads.read(v)
@@ -100,7 +100,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     case unsupported => throw SerializationFailedException(s"unsupported app volume type $unsupported")
   }
 
-  implicit val volumeExternalReads: Reads[AppExternalVolume, state.VolumeWithMount] = Reads { volumeRaml =>
+  implicit val volumeExternalReads: Reads[AppExternalVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
     val info = state.ExternalVolumeInfo(
       size = volumeRaml.external.size,
       name = volumeRaml.external.name.getOrElse(
@@ -112,7 +112,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     val volume = state.ExternalVolume(name = None, external = info)
     val mount = state.VolumeMount(
       volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
-    state.VolumeWithMount(volume = volume, mount = mount)
+    state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
   implicit val volumeTypeReads: Reads[Option[PersistentVolumeType], DiskType] = Reads {
@@ -139,7 +139,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     }(collection.breakOut)
   }
 
-  implicit val volumePersistentReads: Reads[AppPersistentVolume, state.VolumeWithMount] = Reads { volumeRaml =>
+  implicit val volumePersistentReads: Reads[AppPersistentVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
     val info = state.PersistentVolumeInfo(
       `type` = volumeRaml.persistent.`type`.fromRaml,
       size = volumeRaml.persistent.size,
@@ -150,20 +150,20 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     val volume = state.PersistentVolume(name = None, persistent = info)
     val mount = state.VolumeMount(
       volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
-    state.VolumeWithMount(volume = volume, mount = mount)
+    state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
-  implicit val volumeHostReads: Reads[AppHostVolume, state.VolumeWithMount] = Reads { volumeRaml =>
+  implicit val volumeHostReads: Reads[AppHostVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
     val volume = state.HostVolume(name = None, hostPath = volumeRaml.hostPath)
     val mount = state.VolumeMount(
       volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
-    state.VolumeWithMount(volume = volume, mount = mount)
+    state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
-  implicit val volumeSecretReads: Reads[AppSecretVolume, state.VolumeWithMount] = Reads { volumeRaml =>
+  implicit val volumeSecretReads: Reads[AppSecretVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
     val volume = state.SecretVolume(name = None, secret = volumeRaml.secret)
     val mount = state.VolumeMount(volumeName = None, mountPath = volumeRaml.containerPath, readOnly = true)
-    state.VolumeWithMount(volume = volume, mount = mount)
+    state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
   implicit val appVolumeExternalProtoRamlWriter: Writes[Protos.Volume.ExternalVolumeInfo, ExternalVolumeInfo] =

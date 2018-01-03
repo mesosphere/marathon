@@ -429,12 +429,11 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       mount = VolumeMount(volumeName = None, mountPath = path, readOnly = false))
     val zero = UpgradeStrategy(0, 0)
 
-    def residentApp(id: String, volumes: Seq[VolumeWithMount]): AppDefinition = {
+    def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {
       AppDefinition(
         id = PathId(id),
         cmd = Some("foo"),
         container = Some(Container.Mesos(volumes)),
-        residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)),
         unreachableStrategy = UnreachableDisabled
       )
     }

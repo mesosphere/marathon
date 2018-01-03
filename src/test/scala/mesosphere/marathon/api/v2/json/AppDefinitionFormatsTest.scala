@@ -242,60 +242,6 @@ class AppDefinitionFormatsTest extends UnitTest
       }
     }
 
-    "FromJSON should read the default residency automatically residency " in {
-      withValidationClue {
-        val json = Json.parse(
-          """
-        |{
-        |  "id": "resident",
-        |  "cmd": "foo",
-        |  "container": {
-        |    "type": "MESOS",
-        |    "volumes": [{
-        |      "containerPath": "var",
-        |      "persistent": { "size": 10 },
-        |      "mode": "RW"
-        |    }]
-        |  }
-        |}
-      """.stripMargin)
-        val appDef = normalizeAndConvert(json.as[raml.App])
-        appDef.residency should be(Some(Residency.default))
-      }
-    }
-
-    """FromJSON should parse "residency" """ in {
-      withValidationClue {
-        val appDef = normalizeAndConvert(Json.parse(
-          """{
-        |  "id": "test",
-        |  "cmd": "foo",
-          |  "container": {
-          |    "type": "MESOS",
-          |    "volumes": [{
-          |      "containerPath": "var",
-          |      "persistent": { "size": 10 },
-          |      "mode": "RW"
-          |    }]
-          |  },
-          |  "residency": {
-        |     "relaunchEscalationTimeoutSeconds": 300,
-        |     "taskLostBehavior": "RELAUNCH_AFTER_TIMEOUT"
-        |  }
-        |}""".stripMargin).as[raml.App])
-
-        appDef.residency should equal(Some(Residency(300, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)))
-      }
-    }
-
-    "ToJson should serialize residency" in {
-      import Fixture._
-
-      val json = Json.toJson(a1.copy(residency = Some(Residency(7200, Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER))))
-      (json \ "residency" \ "relaunchEscalationTimeoutSeconds").as[Long] should equal(7200)
-      (json \ "residency" \ "taskLostBehavior").as[String] should equal(Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER.name())
-    }
-
     "AppDefinition JSON includes readinessChecks" in {
       val app = AppDefinition(id = PathId("/test"), cmd = Some("sleep 123"), readinessChecks = Seq(
         ReadinessCheckTestHelper.alternativeHttps

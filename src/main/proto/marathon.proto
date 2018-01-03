@@ -132,7 +132,7 @@ message ServiceDefinition {
   optional int64 last_scaling_at = 23;
   optional int64 last_config_change_at = 24;
   optional ObsoleteIpAddress OBSOLETE_ipAddress = 25; // deprecated since 1.5
-  optional ResidencyDefinition residency = 26;
+  optional ResidencyDefinition residency = 26 [deprecated = true];
   repeated mesos.Port portDefinitions = 27;
   repeated ReadinessCheckDefinition readinessCheckDefinition = 28;
   repeated Secret secrets = 29;

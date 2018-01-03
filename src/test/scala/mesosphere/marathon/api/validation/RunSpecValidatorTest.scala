@@ -440,13 +440,12 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       val f = new Fixture
       val from = f.validResident
 
-      When("Check if only defining residency without persistent volumes is valid")
-      val to1 = from.copy(container = None)
-      Then("Should be invalid")
-      validAppDefinition(to1).isSuccess should be(false)
-
       When("Check if only defining local volumes without residency is valid")
-      val to2 = from.copy(residency = None)
+      val localVolume = VolumeWithMount(
+        volume = HostVolume(name = None, "path"),
+        mount = VolumeMount(volumeName = None, mountPath = "path", readOnly = false)
+      )
+      val to2 = from.copy(container = Some(Container.Docker(volumes = Seq(localVolume))))
       Then("Should be invalid")
       validAppDefinition(to2).isSuccess should be(false)
 
@@ -454,10 +453,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       Then("Should be valid")
       validAppDefinition(from).isSuccess should be(true)
 
-      When("Check if defining no local volumes and no residency is valid")
-      val to3 = from.copy(residency = None, container = None)
-      Then("Should be valid")
-      validAppDefinition(to3).isSuccess should be(true)
     }
 
     "A application with label MARATHON_SINGLE_INSTANCE_APP may not have an instance count > 1" in {
@@ -676,24 +671,24 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       )
 
       // scalastyle:off magic.number
-      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test", readOnly: Boolean = false): VolumeWithMount =
+      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test",
+        readOnly: Boolean = false): VolumeWithMount[HostVolume] =
         VolumeWithMount(
           volume = HostVolume(name = None, hostPath = hostPath),
           mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))
 
-      def persistentVolume(size: Long = 10, mountPath: String = "test", readOnly: Boolean = false): VolumeWithMount =
+      def persistentVolume(size: Long = 10, mountPath: String = "test", readOnly: Boolean = false): VolumeWithMount[PersistentVolume] =
         VolumeWithMount(
           volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size)),
           mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))
 
       val zero = UpgradeStrategy(0, 0)
 
-      def residentApp(id: String, volumes: Seq[VolumeWithMount]): AppDefinition = {
+      def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {
         AppDefinition(
           id = PathId(id),
           cmd = Some("test"),
           container = Some(Container.Mesos(volumes)),
-          residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)),
           portDefinitions = Seq(PortDefinition(0)),
           unreachableStrategy = UnreachableStrategy.default(resident = true)
         )

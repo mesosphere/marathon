@@ -30,6 +30,7 @@ apt-get install -y \
         git \
         openjdk-8-jdk \
         libssl-dev \
+        rpm \
         sbt \
         zlib1g-dev
 
