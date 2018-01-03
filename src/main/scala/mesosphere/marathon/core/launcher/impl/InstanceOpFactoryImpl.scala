@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance._
+import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
@@ -85,7 +85,6 @@ class InstanceOpFactoryImpl(
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, request.offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
 
-        // TODO(jdef) no support for resident tasks inside pods for the MVP
         val agentInfo = Instance.AgentInfo(request.offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
         val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)

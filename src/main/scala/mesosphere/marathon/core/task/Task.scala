@@ -94,17 +94,10 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 
     // case 2: terminal; extractor applies specific logic e.g. when an Unreachable task becomes Gone
     case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
-      val updatedStatus =
-        if (instance.hasReservation) {
-          status.copy(
-            mesosStatus = Some(mesosStatus),
-            // Note the task needs to transition to Reserved, otherwise the instance will not transition to Reserved
-            condition = Condition.Reserved)
-        } else {
-          status.copy(
-            mesosStatus = Some(mesosStatus),
-            condition = newStatus)
-        }
+      // Note the task needs to transition to Reserved if the corresponding instance has a reservation,
+      // otherwise the instance will not transition to Reserved.
+      val newCondition = if (instance.hasReservation) Condition.Reserved else newStatus
+      val updatedStatus = status.copy(mesosStatus = Some(mesosStatus), condition = newCondition)
       val updated = copy(status = updatedStatus)
       TaskUpdateEffect.Update(updated)
 
