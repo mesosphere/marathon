@@ -3,6 +3,7 @@ package integration
 
 import java.util.UUID
 
+import akka.util.ByteString
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
@@ -808,6 +809,37 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForStatusUpdates("TASK_FAILED")
+    }
+
+    "update an app and make sure ports are set correctly" in {
+      Given("an app update app")
+
+      val applicationId = appId(Some("tomcat"))
+
+      val appUpdateJson = """[{
+                            |  "id":"app-tomcat",
+                            |  "mem":512,
+                            |  "cpus":1.0,
+                            |  "instances":1,
+                            |  "container": {
+                            |    "type":"DOCKER",
+                            |    "docker": {
+                            |      "image":"tomcat:8.0",
+                            |      "network":"HOST"
+                            |    }
+                            |  }
+                            |}
+                            |]""".stripMargin
+
+      When("creating an app using PUT")
+      marathon.putAppByteString(applicationId, ByteString.fromString(appUpdateJson))
+
+      Then("port definitions are set correctly")
+      val updatedApp = marathon.app(applicationId)
+      updatedApp.value.app.portDefinitions should not be None
+      val port = updatedApp.value.app.portDefinitions.map(pd => pd.head.port).get
+      port should be >= 10000
+      port should be <= 20000
     }
   }
 

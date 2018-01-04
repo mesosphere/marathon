@@ -15,6 +15,7 @@ import akka.http.scaladsl.unmarshalling.sse.EventStreamUnmarshalling
 import akka.http.scaladsl.unmarshalling.{ Unmarshal => AkkaUnmarshal }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
@@ -202,6 +203,13 @@ class MarathonFacade(
     logger.info(s"put url = $putUrl")
 
     result(requestFor[ITDeploymentResult](Put(putUrl, app)), waitTime)
+  }
+
+  def putAppByteString(id: PathId, app: ByteString): RestResult[ITDeploymentResult] = {
+    val putUrl: String = s"$url/v2/apps"
+    logger.info(s"put url = $putUrl")
+
+    result(requestFor[ITDeploymentResult](Put(putUrl, HttpEntity.Strict(ContentTypes.`application/json`, app))), waitTime)
   }
 
   def patchApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {

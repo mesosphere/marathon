@@ -94,6 +94,15 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     behave like convertToRamlAndBack(hostApp)
     behave like convertToProtobufThenToRAML(hostApp)
 
+    "correctly handle empty port definitions" in {
+      Given("An app definition")
+      val ramlApp = hostApp.copy(portDefinitions = Seq.empty).toRaml[App]
+
+      When("The app definition is converted to an app")
+      Then("Port definitions must be parsed correctly")
+      ramlApp.portDefinitions shouldEqual None
+    }
+
     "convert legacy service definitions to RAML" in {
       val legacy = Protos.ServiceDefinition.newBuilder()
         .setId("/legacy")
