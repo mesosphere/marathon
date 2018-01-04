@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 timeout(120) {
-node('py35') {
+node('py36') {
   wrap([$class: 'MesosSingleUseSlave']) {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
 
@@ -21,6 +21,7 @@ node('py35') {
                 sh """git fetch origin pull/$params.Pull_Request_Id/head:$params.Pull_Request_Id"""
                 sh """git checkout $params.Pull_Request_Id"""
             }
+            sh """pip3 install requests"""
             sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$JOB_URL" \$(git rev-parse HEAD) PENDING"""
 
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""

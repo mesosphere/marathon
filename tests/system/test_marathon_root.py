@@ -22,8 +22,8 @@ import marathon_auth_common_tests
 import marathon_common_tests
 import marathon_pods_tests
 
-from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA
-from fixtures import wait_for_marathon_and_cleanup, events_to_file, user_billy # NOQA
+from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
+from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy # NOQA F401
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*
@@ -196,14 +196,18 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents(), "The application task got started on a private agent"
 
 
-@pytest.mark.skipif("shakedown.ee_version() == 'strict'")
+@pytest.mark.skipif("shakedown.ee_version() == 'strict'") # NOQA F811
 @pytest.mark.skipif('marthon_version_less_than("1.3.9")')
-@pytest.mark.usefixtures("wait_for_marathon_and_cleanup", "events_to_file")
-def test_event_channel():
-    """ Tests the event channel.  The way events are verified is by streaming the events
-        to a events.txt file.   The fixture ensures the file is removed before and after the test.
-        events checked are connecting, deploying a good task and killing a task.
+@pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
+@pytest.mark.asyncio
+async def test_event_channel(sse_events):
+    """ Tests the event channel. The way events are verified is by converting
+        the parsed events to an iterator and asserting the right oder of certain
+        events. Unknown events are skipped.
     """
+
+    await common.assert_event('event_stream_attached', sse_events)
+
     app_def = apps.mesos_app()
     app_id = app_def['id']
 
@@ -211,27 +215,13 @@ def test_event_channel():
     client.add_app(app_def)
     shakedown.deployment_wait(app_id=app_id)
 
-    leader_ip = shakedown.marathon_leader_ip()
+    await common.assert_event('deployment_info', sse_events)
+    await common.assert_event('deployment_step_success', sse_events)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_deployment_message():
-        status, stdout = shakedown.run_command(leader_ip, 'cat events.exitcode')
-        assert str(stdout).strip() == '', "SSE stream disconnected (CURL exit code is {})".format(stdout.strip())
-        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
-        assert 'event_stream_attached' in stdout, "event_stream_attached event has not been found"
-        assert 'deployment_info' in stdout, "deployment_info event has not been found"
-        assert 'deployment_step_success' in stdout, "deployment_step_success has not been found"
-
-    check_deployment_message()
     client.remove_app(app_id, True)
-    shakedown.deployment_wait()
+    shakedown.deployment_wait(app_id=app_id)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_kill_message():
-        status, stdout = shakedown.run_command(leader_ip, 'cat events.txt')
-        assert 'KILLED' in stdout, "KILLED event has not been found"
-
-    check_kill_message()
+    await common.assert_event('app_terminated_event', sse_events)
 
 
 @shakedown.dcos_1_9
