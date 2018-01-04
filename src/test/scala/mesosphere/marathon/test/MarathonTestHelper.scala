@@ -492,11 +492,7 @@ object MarathonTestHelper {
     implicit class TaskImprovements(task: Task) {
       def withNetworkInfo(networkInfo: core.task.state.NetworkInfo): Task = {
         val newStatus = task.status.copy(networkInfo = networkInfo)
-        task match {
-          case launchedEphemeral: Task => launchedEphemeral.copy(status = newStatus)
-          case launchedOnReservation: Task => launchedOnReservation.copy(status = newStatus)
-          case reserved: Task => reserved.copy(status = newStatus)
-        }
+        task.copy(status = newStatus)
       }
 
       def withNetworkInfo(hostName: Option[String] = None, hostPorts: Seq[Int] = Nil, networkInfos: scala.collection.Seq[NetworkInfo] = Nil): Task = {
@@ -521,17 +517,7 @@ object MarathonTestHelper {
         withNetworkInfo(networkInfo).withStatus(_.copy(mesosStatus = taskStatus))
       }
 
-      def withStatus[T <: Task](update: Task.Status => Task.Status): T = task match {
-        case launchedEphemeral: Task =>
-          launchedEphemeral.copy(status = update(launchedEphemeral.status)).asInstanceOf[T]
-
-        case launchedOnReservation: Task =>
-          launchedOnReservation.copy(status = update(launchedOnReservation.status)).asInstanceOf[T]
-
-        case reserved: Task =>
-          throw new scala.RuntimeException("Reserved task cannot have a status")
-      }
-
+      def withStatus(update: Task.Status => Task.Status): Task = task.copy(status = update(task.status))
     }
   }
 
