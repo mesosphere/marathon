@@ -41,7 +41,7 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
   def taskReserved(containerName: Option[String] = None) = {
     val instance = instanceBuilder.getInstance()
     val taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))
-    this.copy(task = Some(TestTaskBuilder.Helper.minimalReservedTask(instance.instanceId.runSpecId, Some(taskId))))
+    this.copy(task = Some(TestTaskBuilder.Helper.residentReservedTask(instance.instanceId.runSpecId, Some(taskId))))
   }
 
   def taskResidentReserved() = {
@@ -265,16 +265,13 @@ object TestTaskBuilder {
       )
     }
 
-    def minimalReservedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
+    def residentReservedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
       val taskId = maybeTaskId.getOrElse(Task.Id.forRunSpec(appId))
       Task(
         taskId = taskId,
         status = Task.Status(Timestamp.now(), condition = Condition.Reserved, networkInfo = NetworkInfoPlaceholder()),
         runSpecVersion = Timestamp.now())
     }
-
-    def residentReservedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None) =
-      minimalReservedTask(appId, maybeTaskId)
 
     def residentLaunchedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None) = {
       val now = Timestamp.now()
