@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-import java.lang.Thread.UncaughtExceptionHandler
 import java.net.URI
 
 import akka.actor.ActorSystem
@@ -31,11 +30,9 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 
   SLF4JBridgeHandler.removeHandlersForRootLogger()
   SLF4JBridgeHandler.install()
-  Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler {
-    override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
-      logger.error(s"Terminating ${cliConf.httpPort()} due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
-      Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
-    }
+  Thread.setDefaultUncaughtExceptionHandler((thread: Thread, throwable: Throwable) => {
+    logger.error(s"Terminating due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
+    Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
   })
 
   private val EnvPrefix = "MARATHON_CMD_"
