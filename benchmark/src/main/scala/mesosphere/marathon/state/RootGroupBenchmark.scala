@@ -4,6 +4,7 @@ package state
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.pod.BridgeNetwork
+import mesosphere.marathon.api.v2.Validation
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -24,7 +25,8 @@ class GroupBenchmark {
         Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
     )
 
-  @Param(value = Array("2", "10", "100", "1000"))
+  //@Param(value = Array("2", "10", "100", "1000"))
+  @Param(value = Array("2", "10", "100"))
   var appsPerGroup: Int = _
   lazy val appIds = 0 until appsPerGroup
 
@@ -76,5 +78,10 @@ class RootGroupBenchmark extends GroupBenchmark {
   def buildRootGroup(hole: Blackhole): Unit = {
     val root = fillRootGroup()
     hole.consume(root)
+  }
+
+  @Benchmark
+  def validateRootGroup(hole: Blackhole): Unit = {
+    Validation.validateOrThrow(rootGroup)(RootGroup.rootGroupValidator(Set.empty))
   }
 }

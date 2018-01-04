@@ -88,6 +88,7 @@ class Group(
     builder ++= transitiveGroups()
     builder.result()
   }
+  lazy val transitiveGroupValues: Iterable[Group] = transitiveGroups().map(_._2).toVector
 
   /** @return true if and only if this group directly or indirectly contains app definitions. */
   def containsApps: Boolean = apps.nonEmpty || groupsById.exists { case (_, group) => group.containsApps }
@@ -152,12 +153,23 @@ object Group extends StrictLogging {
   def validGroup(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
-      group.apps.values as "apps" is every(
-        AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
+      //      group.apps.values as "apps" is every(
+      //        AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
+      group.transitiveApps as "apps" is every(
+        validator[AppDefinition] { app =>
+          group.group(app.id.parent) match {
+            case None => Failure
+            case Some(parentGroup) => validPathWithBase(parentGroup.id).apply(app.id)
+          }
+        })
       group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
       group is noPodsAndGroupsWithSameName
-      group.groupsById.values as "groups" is every(validGroup(group.id.canonicalPath(base), enabledFeatures))
+      //group.groupsById.values as "groups" is every(validGroup(group.id.canonicalPath(base), enabledFeatures))
+      group.transitiveGroupValues as "groups" is every(
+        // TODO: Validate path with base
+        noAppsAndPodsWithSameId and noAppsAndGroupsWithSameName and noPodsAndGroupsWithSameName
+      )
     }
 
   private def noAppsAndPodsWithSameId: Validator[Group] =
@@ -167,8 +179,8 @@ object Group extends StrictLogging {
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
     isTrue("Groups and Applications may not have the same identifier.") { group =>
-      val groupIds = group.groupsById.keySet
-      val clashingIds = groupIds.intersect(group.apps.keySet)
+      val groupIds = group.groupsById.keys
+      val clashingIds = groupIds.filter(group.apps.contains(_))
       if (clashingIds.nonEmpty)
         logger.info(s"Found the following clashingIds in group ${group.id}: ${clashingIds}")
       clashingIds.isEmpty
@@ -176,8 +188,10 @@ object Group extends StrictLogging {
 
   private def noPodsAndGroupsWithSameName: Validator[Group] =
     isTrue("Groups and Pods may not have the same identifier.") { group =>
-      val groupIds = group.groupsById.keySet
-      val clashingIds = groupIds.intersect(group.pods.keySet)
+      val groupIds = group.groupsById.keys
+      val clashingIds = groupIds.filter(group.pods.contains(_))
+      if (clashingIds.nonEmpty)
+        logger.info(s"Found the following clashingIds in group ${group.id}: ${clashingIds}")
       clashingIds.isEmpty
     }
 
