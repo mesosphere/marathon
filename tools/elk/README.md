@@ -10,7 +10,7 @@ Elasticsearch. This should enable users to analyze logs with Kibana.
 LogStash config can be generated for a DCOS bundle using the following command:
 
 ```
-bin/target.sc <path-to-diagnostic-bundle>
+bin/target bundle <path-to-diagnostic-bundle>
 ```
 
 Command will attempt to detect log line format (include date, etc.), and generate the appropriate LogStash input
@@ -45,7 +45,7 @@ Open a browser to http://localhost:5601 to use Kibana
 
 ## Clearing data
 
-You can purge the logs from ElasticSearch using this command:
+You can purge the data loaded via logstash from ElasticSearch using this command (ElasticSearch must be running):
 
 `bin/clear-indices.sh`
 

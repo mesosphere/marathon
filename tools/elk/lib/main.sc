@@ -68,7 +68,7 @@ def unzipAndStripLogs(masters: Map[String, Path])(implicit mat: Materializer): M
   }
 }
 
-def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): LogFormat = {
+def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): Option[LogFormat] = {
   logFiles
     .filter(_.toIO.exists)
     .toSeq
@@ -84,33 +84,27 @@ def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): LogFormat 
             .map(_.utf8String)
             .runWith(Sink.seq))
 
-        val maybeCodec = (for {
+        val maybeFormat = (for {
           line <- linesSample.take(100)
-          codec <- LogFormat.all if codec.matches(line)
-        } yield codec).headOption
+          format <- LogFormat.all if format.matches(line)
+        } yield format).headOption
 
-        maybeCodec match {
-          case Some(codec) => codec
-          case _ =>
-            println(s"Couldn't find a codec for these lines:")
-            println()
-            linesSample.foreach(println)
-            // sys.exit(1)
-            ???
-        }
+        maybeFormat
       }
       input -> result
     }
     .flatMap {
-      case (_, Success(result)) => Some(result)
+      case (input, Success(Some(format))) =>
+        println(s"""Detected log format in ${input}: "${format.example}"""")
+        Some(format)
+      case (input, Success(None)) =>
+        println(s"Failed to detect format in ${input}")
+        None
       case (input, Failure(ex)) =>
-        println(s"Failed to detect format in ${input}; ${ex}")
+        println(s"Excpetion occurred while detecting format in ${input}: ${ex.getMessage}")
         None
     }
     .headOption
-    .getOrElse {
-      throw new Exception("Couldn't detect log format in any input files")
-    }
 }
 
 def setupTarget(target: Path): (Path, Path, Path) = {
@@ -128,12 +122,17 @@ def writeFiles(entries: (Path, String)*): Unit = {
   }
 }
 
-def generateTargetBundle(path: Path): Unit = {
+/**
+  * Generate logstash config to target a DCOS bundle
+  *
+  * @param path The path to the DCOS bundle
+  */
+def generateTargetBundle(bundlePath: Path): Unit = {
   implicit val as = ActorSystem()
   implicit val mat = ActorMaterializer()
-  println(path)
+  println(s"Generating logstash config for DCOS bundle ${bundlePath}")
 
-  val entries = ls!(path)
+  val entries = ls!(bundlePath)
   val masterPaths = entries.filter(_.last.endsWith("_master"))
   val masters = masterPaths.map { path => path.last.takeWhile(_ != '_') -> path }.toMap
 
@@ -143,7 +142,9 @@ def generateTargetBundle(path: Path): Unit = {
 
   val unzippedLogLocations = unzipAndStripLogs(masters)
 
-  val logFormat = detectLogFormat(unzippedLogLocations.values.toSeq)
+  val logFormat = detectLogFormat(unzippedLogLocations.values.toSeq).getOrElse {
+    throw new Exception("Couldn't detect log format in any input files")
+  }
 
   // Write out the debug template set
   val tcpReader = renderTemplate(
@@ -167,7 +168,7 @@ def generateTargetBundle(path: Path): Unit = {
                      |}
                      |""".stripMargin
     )
-    write.over(loading / s"10-input-${master}.conf", inputConf)
+    writeFiles(loading / s"10-input-${master}.conf" -> inputConf)
   }
 
   writeFiles(
@@ -175,7 +176,7 @@ def generateTargetBundle(path: Path): Unit = {
     loading / "15-filters-format.conf" -> logFormat.unframe,
     loading / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
     loading / "30-output.conf" -> (read!(pwd / "conf" / "output-elasticsearch.conf")),
-    target / "data-path.txt" -> path.toString)
+    target / "data-path.txt" -> bundlePath.toString)
 
   println(s"All Done")
 }
