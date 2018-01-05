@@ -165,7 +165,7 @@ object Group extends StrictLogging {
       group.transitiveGroupValues as "groups" is every(
         noAppsAndPodsWithSameId and noAppsAndGroupsWithSameName and noPodsAndGroupsWithSameName
           and isTrue("Group has to be child of groups with parent id") { childGroup =>
-            if (childGroup.id.parent.isRoot) group.groupsById.contains(childGroup.id)
+            if (childGroup.id.parent == group.id) group.groupsById.contains(childGroup.id)
             else {
               group.group(childGroup.id.parent) match {
                 case None => false
@@ -196,7 +196,7 @@ object Group extends StrictLogging {
 
   private def isChildOfParentId(group: Group): Validator[AppDefinition] = {
     isTrue("App has to be child of group with parent id") { app =>
-      if (app.id.parent.isRoot) group.apps.contains(app.id)
+      if (app.id.parent == group.id) group.apps.contains(app.id)
       else {
         group.group(app.id.parent) match {
           case None => false

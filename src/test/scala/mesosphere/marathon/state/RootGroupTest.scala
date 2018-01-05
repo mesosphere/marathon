@@ -33,11 +33,11 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
     "find an app without a parent" in {
       Given("an existing root group with an app without a parent")
-      val app = AppDefinition("app".toPath, cmd = Some("sleep"))
+      val app = AppDefinition("/app".toPath, cmd = Some("sleep"))
       val current = createRootGroup(apps = Map(app.id -> app))
 
       When("an app with a specific path is requested")
-      val path = PathId("app")
+      val path = PathId("/app")
 
       Then("the group is found")
       current.app(path) should be('defined)

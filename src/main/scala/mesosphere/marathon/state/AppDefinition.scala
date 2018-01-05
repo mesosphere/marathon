@@ -453,17 +453,6 @@ object AppDefinition extends GeneralPurposeCombinators {
       app.dependencies is every(PathId.pathIdValidator)
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
-  /**
-    * Validator for apps, which are being part of a group.
-    *
-    * @param base Path of the parent group.
-    * @return
-    */
-  def validNestedAppDefinition(base: PathId, enabledFeatures: Set[String]): Validator[AppDefinition] =
-    validator[AppDefinition] { app =>
-      app.id is PathId.validPathWithBase(base)
-    } and validBasicAppDefinition(enabledFeatures)
-
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {

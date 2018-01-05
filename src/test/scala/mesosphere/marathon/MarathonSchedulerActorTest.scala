@@ -49,7 +49,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
   "MarathonSchedulerActor" should {
     "RecoversDeploymentsAndReconcilesHealthChecksOnStart" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
@@ -187,13 +187,13 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "ScaleApp" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = "/test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
 
       queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
-      schedulerActor ! ScaleRunSpec("test-app-scale".toPath)
+      schedulerActor ! ScaleRunSpec("/test-app-scale".toPath)
 
       eventually {
         verify(queue).add(app, 1)
