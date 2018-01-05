@@ -297,7 +297,7 @@ class HealthCheckTest extends UnitTest {
       val hostName = "hostName"
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
-        val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(app.id)
+        val t: Task = TestTaskBuilder.Helper.runningTaskForApp(app.id)
         val hostPorts = Seq(4321)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }

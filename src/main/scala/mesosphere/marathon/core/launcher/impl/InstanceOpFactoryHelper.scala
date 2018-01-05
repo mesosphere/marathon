@@ -16,7 +16,7 @@ class InstanceOpFactoryHelper(
 
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
-    newTask: Task.LaunchedEphemeral,
+    newTask: Task,
     instance: Instance): InstanceOp.LaunchTask = {
 
     assume(newTask.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")

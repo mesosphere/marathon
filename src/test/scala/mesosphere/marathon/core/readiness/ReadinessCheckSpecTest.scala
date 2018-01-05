@@ -145,7 +145,7 @@ class ReadinessCheckSpecTest extends UnitTest {
     )
 
     def taskWithPorts = {
-      val task: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
+      val task: Task = TestTaskBuilder.Helper.runningTaskForApp(appId)
       task.copy(status = task.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(80, 81), ipAddresses = Nil)))
     }
   }

@@ -24,9 +24,8 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
         .zip(startTimestamps)
         .map {
           case (task, startTime) =>
-            val ephemeralTask = task.asInstanceOf[Task.LaunchedEphemeral]
-            val newStatus: Task.Status = ephemeralTask.status.copy(startedAt = startTime)
-            task.taskId -> ephemeralTask.copy(status = newStatus)
+            val newStatus: Task.Status = task.status.copy(startedAt = startTime)
+            task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
       val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
@@ -54,9 +53,8 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
         .zip(startTimestamps)
         .map {
           case (task, startTime) =>
-            val ephemeralTask = task.asInstanceOf[Task.LaunchedEphemeral]
-            val newStatus: Task.Status = ephemeralTask.status.copy(startedAt = startTime)
-            task.taskId -> ephemeralTask.copy(status = newStatus)
+            val newStatus: Task.Status = task.status.copy(startedAt = startTime)
+            task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
       val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())
@@ -74,9 +72,8 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
         .zip(startTimestamps)
         .map {
           case (task, startTime) =>
-            val ephemeralTask = task.asInstanceOf[Task.LaunchedEphemeral]
-            val newStatus: Task.Status = ephemeralTask.status.copy(startedAt = startTime)
-            task.taskId -> ephemeralTask.copy(status = newStatus)
+            val newStatus: Task.Status = task.status.copy(startedAt = startTime)
+            task.taskId -> task.copy(status = newStatus)
         }(collection.breakOut)
 
       val state = Instance.InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default())

@@ -244,7 +244,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val runspecId = PathId("/test")
     val instance = TestInstanceBuilder.newBuilder(runspecId).addTaskWithBuilder().taskRunning().build().getInstance()
-    val task: Task.LaunchedEphemeral = instance.appTask
+    val task: Task = instance.appTask
 
     val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).

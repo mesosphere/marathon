@@ -24,7 +24,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
 
       Given("A non-matching task and taskInfo")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId).getInstance()
-      val task: Task.LaunchedEphemeral = instance.appTask
+      val task: Task = instance.appTask
       val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(f.runSpecId)).build()
 
       When("We create a launch operation")
@@ -41,7 +41,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
 
       Given("a task and a taskInfo")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId).getInstance()
-      val task: Task.LaunchedEphemeral = instance.appTask
+      val task: Task = instance.appTask
       val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
 
       When("We create a launch operation")

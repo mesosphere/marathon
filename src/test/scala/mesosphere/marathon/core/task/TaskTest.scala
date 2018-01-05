@@ -4,9 +4,8 @@ package core.task
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestTaskBuilder }
 import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
-import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
@@ -159,16 +158,19 @@ class TaskTest extends UnitTest with Inside {
 
       val condition = Condition.Reserved
       val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
-      val reservation = mock[Task.Reservation]
       val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
-      val task = Task.Reserved(taskId, reservation, status, f.clock.now)
+      val task = Task(taskId, f.clock.now, status)
+      val instance = mock[Instance]
+      instance.hasReservation returns true
 
       val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
       val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
 
-      inside(task.update(op)) {
+      inside(task.update(instance, op)) {
         case effect: TaskUpdateEffect.Update =>
-          effect.newState shouldBe a[Task.LaunchedOnReservation]
+          effect.newState shouldBe a[Task]
+          effect.newState.status.condition shouldBe Condition.Running
+          effect.newState.status.mesosStatus shouldBe Some(op.taskStatus)
       }
     }
 
@@ -177,12 +179,13 @@ class TaskTest extends UnitTest with Inside {
 
       val condition = Condition.Running
       val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
-      val reservation = mock[Task.Reservation]
       val status = Task.Status(
         stagedAt = f.clock.now,
         startedAt = Some(f.clock.now),
         mesosStatus = None, condition, NetworkInfoPlaceholder())
-      val task = Task.LaunchedOnReservation(taskId, f.clock.now, status, reservation)
+      val task = Task(taskId, f.clock.now, status)
+      val instance = mock[Instance]
+      instance.hasReservation returns true
 
       val containerStatus = MarathonTestHelper.containerStatusWithNetworkInfo(f.networkWithOneIp1)
 
@@ -197,7 +200,7 @@ class TaskTest extends UnitTest with Inside {
       task.status.networkInfo.ipAddresses shouldBe Nil
 
       Then("MesosUpdate TASK_RUNNING is applied with containing NetworkInfo")
-      inside(task.update(op)) {
+      inside(task.update(instance, op)) {
         case effect: TaskUpdateEffect.Update =>
           Then("NetworkInfo should be updated")
           effect.newState.status.networkInfo.ipAddresses shouldBe Seq(f.ipAddress1)
@@ -209,12 +212,13 @@ class TaskTest extends UnitTest with Inside {
 
       val condition = Condition.Staging
       val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
-      val reservation = mock[Task.Reservation]
       val status = Task.Status(
         stagedAt = f.clock.now,
         startedAt = None,
         mesosStatus = None, condition, NetworkInfoPlaceholder())
-      val task = Task.LaunchedOnReservation(taskId, f.clock.now, status, reservation)
+      val task = Task(taskId, f.clock.now, status)
+      val instance = mock[Instance]
+      instance.hasReservation returns true
 
       val containerStatus = MarathonTestHelper.containerStatusWithNetworkInfo(f.networkWithOneIp1)
 
@@ -229,7 +233,7 @@ class TaskTest extends UnitTest with Inside {
       task.status.networkInfo.ipAddresses shouldBe Nil
 
       Then("MesosUpdate TASK_RUNNING is applied with containing NetworkInfo")
-      inside(task.update(op)) {
+      inside(task.update(instance, op)) {
         case effect: TaskUpdateEffect.Update =>
           Then("NetworkInfo should be updated")
           effect.newState.status.networkInfo.ipAddresses shouldBe Seq(f.ipAddress1)
@@ -241,14 +245,15 @@ class TaskTest extends UnitTest with Inside {
 
       val condition = Condition.Reserved
       val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
-      val reservation = mock[Task.Reservation]
       val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
-      val task = Task.Reserved(taskId, reservation, status, f.clock.now)
+      val task = Task(taskId, f.clock.now, status)
       val newTaskId = Task.Id.forResidentTask(task.taskId)
+      val instance = mock[Instance]
+      instance.hasReservation returns true
 
       val op = TaskUpdateOperation.LaunchOnReservation(newTaskId, f.clock.now, status)
 
-      val effect = task.update(op)
+      val effect = task.update(instance, op)
 
       effect shouldBe a[TaskUpdateEffect.Update]
     }
@@ -267,38 +272,11 @@ class TaskTest extends UnitTest with Inside {
   }
 
   "json serialization" should {
-    "round trip serialize a LaunchedEphemeral task" in {
+    "round trip serialize a Task" in {
       val f = new Fixture
-      val launchedEphemeral: Task.LaunchedEphemeral = TestTaskBuilder.Helper.minimalRunning(
+      val task: Task = TestTaskBuilder.Helper.minimalRunning(
         f.appWithoutIpAddress.id, Condition.Running, f.clock.now)
-      Json.toJson(launchedEphemeral).as[Task] shouldBe launchedEphemeral
-    }
-
-    "round trip serialize a Reserved task" in {
-      val f = new Fixture
-      val reservedTask: Task.Reserved = TestTaskBuilder.Helper.residentReservedTask(
-        f.appWithoutIpAddress.id,
-        taskReservationState = Task.Reservation.State.New(None),
-        Seq(
-          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
-          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000")
-        )
-      )
-
-      Json.toJson(reservedTask).as[Task] shouldBe reservedTask
-    }
-
-    "round trip serialize a LaunchedOnReservation task" in {
-      val f = new Fixture
-      val launchedTask: Task.LaunchedOnReservation = TestTaskBuilder.Helper.residentLaunchedTask(
-        f.appWithoutIpAddress.id,
-        Seq(
-          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
-          LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000")
-        )
-      )
-
-      Json.toJson(launchedTask).as[Task] shouldBe launchedTask
+      Json.toJson(task).as[Task] shouldBe task
     }
   }
 
