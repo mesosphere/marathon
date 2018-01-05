@@ -153,8 +153,7 @@ object Group extends StrictLogging {
   def validGroup(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
-      //      group.apps.values as "apps" is every(
-      //        AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
+
       group.transitiveApps as "apps" is every(
         validator[AppDefinition] { app =>
           group.group(app.id.parent) match {
@@ -162,6 +161,7 @@ object Group extends StrictLogging {
             case Some(parentGroup) => validPathWithBase(parentGroup.id).apply(app.id)
           }
         })
+
       group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
       group is noPodsAndGroupsWithSameName

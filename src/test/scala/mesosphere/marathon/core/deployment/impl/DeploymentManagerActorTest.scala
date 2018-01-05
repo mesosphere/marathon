@@ -30,11 +30,14 @@ import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   "DeploymentManager" should {
     "Deployment" in {
