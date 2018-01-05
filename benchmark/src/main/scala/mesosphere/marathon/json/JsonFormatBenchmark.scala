@@ -88,7 +88,9 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
               zone = None,
               attributes = Seq.empty
             ),
-            healthCheckResults = Seq.empty
+            healthCheckResults = Seq.empty,
+            servicePorts = Seq.empty,
+            reservation = None
           )
         )
       )

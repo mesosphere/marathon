@@ -147,9 +147,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       appInfo should be(AppInfo(app, maybeTasks = Some(
         Seq(
-          EnrichedTask(app.id, running1.appTask, running1.agentInfo, Seq.empty, reservation = running1.reservation),
-          EnrichedTask(app.id, running2.appTask, running2.agentInfo, Seq(alive), reservation = running2.reservation),
-          EnrichedTask(app.id, running3.appTask, running3.agentInfo, Seq(unhealthy), reservation = running3.reservation)
+          EnrichedTask(running1, running1.appTask, Nil),
+          EnrichedTask(running2, running2.appTask, Seq(alive)),
+          EnrichedTask(running3, running3.appTask, Seq(unhealthy))
         )
       )))
 

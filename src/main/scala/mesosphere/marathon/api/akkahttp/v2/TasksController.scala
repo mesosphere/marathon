@@ -175,14 +175,10 @@ class TasksController(
         case (appId, instance) => isAuthorized(appId) && isInterestingInstance(instance.state.condition)
       }
       .flatMap {
-        case (appId, instance) => instance.tasksMap.values.map(t => EnrichedTask(
-          appId,
-          t,
-          instance.agentInfo,
-          instancesHealth.getOrElse(instance.instanceId, Nil),
-          appToPorts.getOrElse(appId, Nil),
-          reservation = instance.reservation
-        ))
+        case (appId, instance) => instance.tasksMap.values.map { task =>
+          EnrichedTask(instance, task, instancesHealth.getOrElse(instance.instanceId, Nil),
+            appToPorts.getOrElse(appId, Nil))
+        }
       }.to[Seq]
   }
 
@@ -211,9 +207,7 @@ class TasksController(
       .flatten
 
     killedTasks.flatMap { instance =>
-      instance.tasksMap.valuesIterator.map { task =>
-        EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty, reservation = instance.reservation)
-      }
+      instance.tasksMap.valuesIterator.map { task => EnrichedTask(instance, task, Nil) }
     }.to[Seq]
   }
 
