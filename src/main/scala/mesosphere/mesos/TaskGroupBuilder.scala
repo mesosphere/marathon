@@ -225,25 +225,6 @@ object TaskGroupBuilder extends StrictLogging {
         .setType(mesos.ContainerInfo.Type.MESOS)
 
       mesosNetworks.foreach(containerInfo.addNetworkInfos)
-
-      podDefinition.volumes.collect {
-        // see the related code in computeContainerInfo
-        case e: EphemeralVolume =>
-          val volumeName = e.name.getOrElse(
-            throw new IllegalStateException("failed to retrieve an ephemeral volume name"))
-          val volumePath = ephemeralVolumePathPrefix + volumeName
-          mesos.Volume.newBuilder()
-            .setContainerPath(volumePath)
-            .setMode(mesos.Volume.Mode.RW) // if not RW, then how do containers plan to share anything?
-            .setSource(mesos.Volume.Source.newBuilder()
-              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
-              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
-                .setType(mesos.Volume.Source.SandboxPath.Type.SELF)
-                .setPath(volumePath))) // matches the path in computeContainerInfo
-      }.foreach {
-        volume => containerInfo.addVolumes(volume)
-      }
-
       volumeMatchOption.foreach(_.persistentVolumeResources.foreach(executorInfo.addResources))
       executorInfo.setContainer(containerInfo)
     }
@@ -351,7 +332,6 @@ object TaskGroupBuilder extends StrictLogging {
           containerInfo.addVolumes(volume)
 
         case _: EphemeralVolume =>
-          // see the related code in computeExecutorInfo
           val volume = mesos.Volume.newBuilder()
             .setMode(mode)
             .setContainerPath(volumeMount.mountPath)
