@@ -11,7 +11,7 @@ case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume, mo
 
 case class LocalVolumeId(runSpecId: PathId, name: String, uuid: String) {
   import LocalVolumeId.delimiter
-  lazy val idString = runSpecId.safePath + delimiter + name + delimiter + uuid
+  lazy val idString: String = runSpecId.safePath + delimiter + name + delimiter + uuid
 
   override def toString: String = s"LocalVolume [$idString]"
 }
@@ -31,13 +31,13 @@ object LocalVolumeId {
     case _ => None
   }
 
-  implicit val localVolumeIdReader = (
+  implicit val localVolumeIdReader: Reads[LocalVolumeId] = (
     (__ \ "runSpecId").read[PathId] and
     (__ \ "containerPath").read[String] and
     (__ \ "uuid").read[String]
   )((id, path, uuid) => LocalVolumeId(id, path, uuid))
 
-  implicit val localVolumeIdWriter = Writes[LocalVolumeId] { localVolumeId =>
+  implicit val localVolumeIdWriter: Writes[LocalVolumeId] = Writes[LocalVolumeId] { localVolumeId =>
     JsObject(Seq(
       "runSpecId" -> Json.toJson(localVolumeId.runSpecId),
       "containerPath" -> Json.toJson(localVolumeId.name),

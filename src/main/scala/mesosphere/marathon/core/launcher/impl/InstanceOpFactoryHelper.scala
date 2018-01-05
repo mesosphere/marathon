@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.launcher.impl
 
-import mesosphere.marathon.core.instance.{ Instance, LocalVolume }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory

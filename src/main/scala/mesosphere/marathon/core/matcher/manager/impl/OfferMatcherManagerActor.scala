@@ -167,17 +167,17 @@ private[impl] class OfferMatcherManagerActor private (
   def updateOffersWanted(): Unit = offersWantedObserver.onNext(offersWanted)
 
   def offerMatchers(offer: Offer): Queue[OfferMatcher] = {
-    //the persistence id of a volume encodes the app id
-    //we use this information as filter criteria
+    // the persistence id of a volume encodes the app id
+    // we use this information as filter criteria
     val reservations: Set[PathId] = offer.getResourcesList.view
       .filter(r => r.hasDisk && r.getDisk.hasPersistence && r.getDisk.getPersistence.hasId)
       .map(_.getDisk.getPersistence.getId)
       .collect { case LocalVolumeId(volumeId) => volumeId.runSpecId }
       .toSet
     val (reserved, normal) = matchers.toSeq.partition(_.precedenceFor.exists(reservations))
-    //1 give the offer to the matcher waiting for a reservation
-    //2 give the offer to anybody else
-    //3 randomize both lists to be fair
+    // 1. give the offer to the matcher waiting for a reservation
+    // 2. give the offer to anybody else
+    // 3. randomize both lists to be fair
     (random.shuffle(reserved) ++ random.shuffle(normal)).to[Queue]
   }
 

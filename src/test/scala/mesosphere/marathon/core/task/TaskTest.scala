@@ -169,6 +169,8 @@ class TaskTest extends UnitTest with Inside {
       inside(task.update(instance, op)) {
         case effect: TaskUpdateEffect.Update =>
           effect.newState shouldBe a[Task]
+          effect.newState.status.condition shouldBe Condition.Running
+          effect.newState.status.mesosStatus shouldBe Some(op.taskStatus)
       }
     }
 

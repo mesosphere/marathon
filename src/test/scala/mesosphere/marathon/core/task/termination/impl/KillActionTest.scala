@@ -18,7 +18,7 @@ class KillActionTest extends UnitTest with TableDrivenPropertyChecks {
     getInstance()
 
   lazy val residentUnreachableInstance: Instance = TestInstanceBuilder.newBuilder(appId).
-    addTaskResidentUnreachable(Seq(localVolumeId)).
+    addTaskUnreachable(Seq(localVolumeId)).
     getInstance()
 
   lazy val unreachableInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()

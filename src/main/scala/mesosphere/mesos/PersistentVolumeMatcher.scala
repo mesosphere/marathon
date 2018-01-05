@@ -26,7 +26,6 @@ object PersistentVolumeMatcher {
 
     waitingInstances.toStream
       .flatMap { instance =>
-        // Note this only supports AppDefinition instances with exactly one task
         instance.reservation.flatMap { reservation =>
           resourcesForReservation(reservation).flatMap(rs => Some(VolumeMatch(instance, rs)))
         }

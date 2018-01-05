@@ -6,7 +6,7 @@ import mesosphere.marathon.state.Timestamp
 import play.api.libs.json._
 
 /**
-  * Represents a reservation for all resources that are needed for launching a task
+  * Represents a reservation for all resources that are needed for launching an instance
   * and associated persistent local volumes.
   */
 case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
@@ -24,7 +24,7 @@ object Reservation {
   object Timeout {
     sealed trait Reason
     object Reason {
-      /** A timeout because the task could not be relaunched */
+      /** A timeout because the instance could not be relaunched */
       case object RelaunchEscalationTimeout extends Reason
       /** A timeout because we got no ack for reserved resources or persistent volumes */
       case object ReservationTimeout extends Reason
@@ -52,17 +52,17 @@ object Reservation {
   }
 
   object State {
-    /** A newly reserved resident task */
+    /** A newly reserved resident instance */
     case class New(timeout: Option[Timeout]) extends State
-    /** A launched resident task, never has a timeout */
+    /** A launched resident instance, never has a timeout */
     case object Launched extends State {
       override def timeout: Option[Timeout] = None
     }
-    /** A resident task that has been running before but terminated and can be relaunched */
+    /** A resident instance that has been running before but terminated and can be relaunched */
     case class Suspended(timeout: Option[Timeout]) extends State
-    /** A resident task whose reservation and persistent volumes are being destroyed */
+    /** A resident instance whose reservation and persistent volumes are being destroyed */
     case class Garbage(timeout: Option[Timeout]) extends State
-    /** An unknown resident task created because of unknown reservations/persistent volumes */
+    /** An unknown resident instance created because of unknown reservations/persistent volumes */
     case class Unknown(timeout: Option[Timeout]) extends State
 
     implicit object StateFormat extends Format[State] {
@@ -92,5 +92,5 @@ object Reservation {
     }
   }
 
-  implicit val reservationFormat = Json.format[Reservation]
+  implicit val reservationFormat: OFormat[Reservation] = Json.format[Reservation]
 }

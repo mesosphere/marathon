@@ -23,6 +23,8 @@ import play.api.libs.json._
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
+  * Here a task is Reserved or LaunchedOnReservation only if the corresponding instance has a reservation.
+  * Similarly, a task is LaunchedEphemeral, only if the corresponding instance has no reservation.
   *
   * <pre>
   * +-----------------------+ +---------------------------------------+
@@ -56,7 +58,7 @@ import play.api.libs.json._
   * </pre>
   *
   * Note on wiping reserved tasks: It is not fully implemented right now so that
-  * LaunchedOnReservation tasks might get immediately expunged right now.
+  * launched-on-reservation tasks might get immediately expunged right now.
   * Marathon will notice spurious tasks in the offer and create the appropriate
   * unreserve operations. See https://github.com/mesosphere/marathon/issues/3223
   */
@@ -71,13 +73,12 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
   /** apply the given operation to a task */
   def update(instance: Instance, op: TaskUpdateOperation): TaskUpdateEffect = op match {
 
-    // exceptional case: the task is already terminal. Don't transition in this case.
+    // case 0 (a.k.a. exceptional case): the task is already terminal. Don't transition in this case.
     // This might be because the task terminated (e.g. finished) before Marathon issues a kill Request
     // to Mesos. Mesos will likely send back a TASK_LOST status update, because the task is no longer
     // known in Mesos. We'll never want to transition from one terminal state to another as a terminal
     // state should already be distinct enough.
     // related to https://github.com/mesosphere/marathon/pull/4531
-
     case op: TaskUpdateOperation if this.isTerminal =>
       log.warn(s"received $op for terminal $taskId, ignoring")
       TaskUpdateEffect.Noop
@@ -101,9 +102,10 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
       val updated = copy(status = updatedStatus)
       TaskUpdateEffect.Update(updated)
 
+    // case 3: there are small edge cases in which Marathon thinks a resident task is reserved
+    // but it is actually running (restore ZK backup, for example).
+    // If Mesos says that it's running, then transition accordingly
     case update: TaskUpdateOperation.MesosUpdate if status.condition == Condition.Reserved =>
-      // There are small edge cases in which Marathon thinks a resident task is reserved but it is actually running
-      // (restore ZK backup, for example). If Mesos says that it's running, then transition accordingly
       if (update.condition.isActive) {
         val updatedStatus = status.copy(startedAt = Some(update.now), mesosStatus = Some(update.taskStatus))
         val updatedTask = Task(taskId = taskId, status = updatedStatus, runSpecVersion = runSpecVersion)
@@ -112,7 +114,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
         TaskUpdateEffect.Noop
       }
 
-    // case 3: health or state updated
+    // case 4: health or state updated
     case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus, _) =>
       // TODO(PODS): strange to use Condition here
       updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
@@ -128,6 +130,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
         TaskUpdateEffect.Noop
       }
 
+    // case 5: launch a task once resources are reserved
     case TaskUpdateOperation.LaunchOnReservation(newTaskId, newRunSpecVersion, taskStatus) =>
       val updatedTask = Task(taskId = newTaskId, runSpecVersion = newRunSpecVersion, status = taskStatus)
       TaskUpdateEffect.Update(updatedTask)
@@ -141,20 +144,14 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
       case Some(current) =>
         val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
         val changed = healthy || current.getState != update.getState
-        if (changed) {
-          Some(update)
-        } else {
-          None
-        }
+        if (changed) Some(update) else None
       case None => Some(update)
     }
   }
 
-  def launchedMesosId: Option[MesosProtos.TaskID] = if (status.condition.isActive) {
-    // it doesn't make sense for an inactive task
-    Some(taskId.mesosTaskId)
-  } else {
-    None
+  def launchedMesosId: Option[MesosProtos.TaskID] = {
+    // it doesn't make sense to return a Mesos task ID for an inactive task
+    if (status.condition.isActive) Some(taskId.mesosTaskId) else None
   }
 
   /**
