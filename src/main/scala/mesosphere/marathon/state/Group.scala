@@ -161,7 +161,7 @@ object Group extends StrictLogging {
       group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
       group is noPodsAndGroupsWithSameName
-      
+
       group.transitiveGroupValues as "groups" is every(
         noAppsAndPodsWithSameId and noAppsAndGroupsWithSameName and noPodsAndGroupsWithSameName
           and isTrue("Group has to be child of groups with parent id") { childGroup =>

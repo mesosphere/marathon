@@ -90,14 +90,6 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
       validate(rootGroup)(RootGroup.rootGroupValidator(Set())) should haveViolations(
         "/apps//test/group1/invalid" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
       )
-      /*
-      match {
-        case Success => fail()
-        case f: Failure =>
-          val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]
-          errors should have size 1
-          (errors.head \ "path").as[String] should be("/groups(0)/groups(0)/apps(1)")
-      }*/
     }
 
     "PortDefinition should be allowed to contain tcp and udp as protocol." in {
