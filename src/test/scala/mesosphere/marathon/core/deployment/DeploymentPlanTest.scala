@@ -96,12 +96,12 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
     }
 
     "start from running group" in {
-      val app1 = AppDefinition("app".toPath, Some("sleep 10"))
-      val app2 = AppDefinition("app2".toPath, Some("cmd2"))
-      val app3 = AppDefinition("app3".toPath, Some("cmd3"))
-      val updatedApp1 = AppDefinition("app".toPath, Some("sleep 30"))
-      val updatedApp2 = AppDefinition("app2".toPath, Some("cmd2"), instances = 10)
-      val app4 = AppDefinition("app4".toPath, Some("cmd4"))
+      val app1 = AppDefinition("/group/app".toPath, Some("sleep 10"))
+      val app2 = AppDefinition("/group/app2".toPath, Some("cmd2"))
+      val app3 = AppDefinition("/group/app3".toPath, Some("cmd3"))
+      val updatedApp1 = AppDefinition("/group/app".toPath, Some("sleep 30"))
+      val updatedApp2 = AppDefinition("/group/app2".toPath, Some("cmd2"), instances = 10)
+      val app4 = AppDefinition("/group/app4".toPath, Some("cmd4"))
       val apps = Map(app1.id -> app1, app2.id -> app2, app3.id -> app3)
       val update = Map(updatedApp1.id -> updatedApp1, updatedApp2.id -> updatedApp2, app4.id -> app4)
 

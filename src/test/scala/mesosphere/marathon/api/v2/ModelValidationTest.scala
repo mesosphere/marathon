@@ -3,7 +3,7 @@ package api.v2
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.UnitTest
+import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.pod.BridgeNetwork
 import mesosphere.marathon.raml.GroupUpdate
@@ -37,7 +37,7 @@ object ModelValidationTest {
     )
 }
 
-class ModelValidationTest extends UnitTest with GroupCreation {
+class ModelValidationTest extends UnitTest with GroupCreation with ValidationTestLike {
 
   import ModelValidationTest._
 
@@ -87,13 +87,17 @@ class ModelValidationTest extends UnitTest with GroupCreation {
         validate = false
       )
 
-      validate(rootGroup)(RootGroup.rootGroupValidator(Set())) match {
+      validate(rootGroup)(RootGroup.rootGroupValidator(Set())) should haveViolations(
+        "/apps//test/group1/invalid" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
+      )
+      /*
+      match {
         case Success => fail()
         case f: Failure =>
           val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]
           errors should have size 1
           (errors.head \ "path").as[String] should be("/groups(0)/groups(0)/apps(1)")
-      }
+      }*/
     }
 
     "PortDefinition should be allowed to contain tcp and udp as protocol." in {
