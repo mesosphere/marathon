@@ -1,0 +1,3 @@
+output {
+  stdout { codec => rubydebug }
+}
