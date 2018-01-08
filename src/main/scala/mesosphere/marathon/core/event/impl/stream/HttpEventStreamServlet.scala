@@ -25,10 +25,12 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 
   lazy val id: String = UUID.randomUUID().toString
 
+
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
+  private val subscribedTaskIds = request.getParameterMap.getOrDefault("task_id", Array.empty).toSet
 
   def subscribedForEventType(eventType: String): Boolean = subscribedEventTypes.isEmpty || subscribedEventTypes.contains(eventType)
-  def subscribedForTaskId(taskId: String): Boolean       = subscribedEventTypes.isEmpty || subscribedEventTypes.contains(task_id)
+  def subscribedForTaskId(taskId: String): Boolean       = subscribedEventTypes.isEmpty || subscribedTaskIds.contains(taskId)
 
   override def remoteAddress: String = request.getRemoteAddr
 
