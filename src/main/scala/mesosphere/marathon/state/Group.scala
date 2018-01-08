@@ -194,13 +194,19 @@ object Group extends StrictLogging {
     }
   }
 
+  /**
+    * An app validator to verify that the app is in a proper child group of group.
+    *
+    * @param group The parent group for all sub groups to check.
+    * @return The validator.
+    */
   private def isChildOfParentId(group: Group): Validator[AppDefinition] = {
     isTrue("App has to be child of group with parent id") { app =>
       if (app.id.parent == group.id) group.apps.contains(app.id)
       else {
         group.group(app.id.parent) match {
           case None => false
-          case Some(parentGroup) => parentGroup.apps.contains(app.id)
+          case Some(childGroup) => childGroup.apps.contains(app.id)
         }
       }
     }
