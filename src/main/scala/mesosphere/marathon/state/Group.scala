@@ -3,14 +3,15 @@ package state
 
 import java.util.Objects
 
+import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{ Group => IGroup }
-import mesosphere.marathon.state.Group._
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.Group.{ defaultApps, defaultPods, defaultGroups, defaultDependencies, defaultVersion }
+import mesosphere.marathon.state.PathId.{ validPathWithBase, StringPathId }
 import mesosphere.marathon.stream._
 
 class Group(
@@ -84,10 +85,28 @@ class Group(
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
-  override def toString = s"Group($id, ${apps.values}, ${pods.values}, ${groupsById.values}, $dependencies, $version, ${transitiveAppsById}, ${transitivePodsById})"
+  private def summarize[T](iterator: Iterator[T]): String = {
+    val s = new StringBuilder
+    s ++= "Seq("
+    s ++= iterator.take(3).toSeq.mkString(", ")
+    if (iterator.hasNext)
+      s ++= s", ... ${iterator.length} more"
+    s ++= ")"
+    s.toString
+  }
+  override def toString = {
+    val summarizedApps = summarize(apps.valuesIterator.map(_.id))
+    val summarizedPods = summarize(pods.valuesIterator.map(_.id))
+    val summarizedGroups = summarize(groupsById.valuesIterator.map(_.id))
+    val summarizedDependencies = summarize(dependencies.iterator)
+    val summarizedTransitiveApps = summarize(transitiveAppsById.iterator)
+    val summarizedTransitivePods = summarize(transitivePodsById.iterator)
+
+    s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version, transitiveAppsById = $summarizedTransitiveApps, transitivePodsById = $summarizedTransitivePods)"
+  }
 }
 
-object Group {
+object Group extends StrictLogging {
   type GroupKey = PathId
 
   def apply(
@@ -153,6 +172,8 @@ object Group {
     isTrue("Groups and Applications may not have the same identifier.") { group =>
       val groupIds = group.groupsById.keySet
       val clashingIds = groupIds.intersect(group.apps.keySet)
+      if (clashingIds.nonEmpty)
+        logger.info(s"Found the following clashingIds in group ${group.id}: ${clashingIds}")
       clashingIds.isEmpty
     }
 
