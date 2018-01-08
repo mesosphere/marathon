@@ -5,13 +5,11 @@ import java.io.{ Closeable, File, FileNotFoundException, InputStream, OutputStre
 
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.commons.io.IOUtils
+import scala.annotation.tailrec
 
 import scala.util.{ Failure, Success, Try }
-import scala.util.control.Breaks.break
 
 object IO extends StrictLogging {
-
-  def createBuffer() = new Array[Byte](8192)
 
   def listFiles(file: String): Array[File] = listFiles(new File(file))
   def listFiles(file: File): Array[File] = {
@@ -47,21 +45,19 @@ object IO extends StrictLogging {
     * @param mabyeTo Outputstream to copy to.
     * @return
     */
-  def transfer(maybeFrom: Option[InputStream], mabyeTo: Option[OutputStream]): Long = {
-    (maybeFrom, mabyeTo) match {
+  def transfer(maybeFrom: Option[InputStream], maybeTo: Option[OutputStream]): Long = {
+    (maybeFrom, maybeTo) match {
       case (Some(from), Some(to)) =>
-        val buf = createBuffer();
-        var total = 0
-        while (true) {
-          val r = from.read(buf)
-          if (r == -1) {
-            break
+        @tailrec def iter(buf: Array[Byte], total: Long): Long =
+          from.read(buf) match {
+            case -1 => total
+            case r =>
+              to.write(buf, 0, r)
+              to.flush()
+              iter(buf, total + r)
           }
-          to.write(buf, 0, r)
-          to.flush()
-          total += r
-        }
-        total
+
+        iter(new Array[Byte](8192), 0L)
       case _ =>
         logger.debug("Did not copy any data.")
         0
