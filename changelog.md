@@ -6,6 +6,22 @@
 
 The Sentry Raven log appender has been updated to version 8.0.x. Users that have enabled the Sentry Raven appender will need to update their configuration according to the [sentry migration guide](https://docs.sentry.io/clients/java/migration/).
 
+### Deprecations
+
+#### /v2/schema route is Deprecated
+
+The /v2/schema route, and JSON Schema definitions, are deprecated in favor of RAML. They will not be kept up-to-date. The endpoint will be disabled in Marathon 1.7.0 (can be re-enabled via an extended grace-period deprecation flag), and then completely removed in Marathon 1.8.0. The extended grace-deprecation flag will be documented in 1.7.0 and mentioned in the release notes. You can watch [MARATHON-7981](https://jira.mesosphere.com/browse/MARATHON-7981) for more details.
+
+#### Marathon Health Checks Deprecation Schedule Update
+
+[Marathon Health Checks](https://mesosphere.github.io/marathon/docs/health-checks.html#marathon-level-health-checks) will continue functioning, but are not actively supported. You should migrate to [Mesos Health checks](https://mesosphere.github.io/marathon/docs/health-checks.html#mesos-level-health-checks) as soon as possible.
+
+In Marathon 1.8.0, we will start logging warning each time an app/pod references a Marathon health check.
+
+In Marathon 1.9.0, if you upgrade and have app definitions with Marathon Health Checks, then Marathon will refuse to start. You will be able to temporarily re-enable them via an extended grace-period flag.
+
+Marathon Health Checks will be completely removed in Marathon 1.10.0, and Marathon will refuse to start if the extended grace-period deprecation flag is specified.
+
 ## Changes from 1.5.1 to 1.5.2
 Bugfix release
 
