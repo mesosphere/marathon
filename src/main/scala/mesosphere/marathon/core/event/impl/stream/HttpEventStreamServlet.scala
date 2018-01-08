@@ -25,21 +25,19 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 
   lazy val id: String = UUID.randomUUID().toString
 
-
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
   private val subscribedTaskIds = request.getParameterMap.getOrDefault("task_id", Array.empty).toSet
 
   def subscribedForEventType(eventType: String): Boolean = subscribedEventTypes.isEmpty || subscribedEventTypes.contains(eventType)
-  def subscribedForTaskId(taskId: String): Boolean       = subscribedEventTypes.isEmpty || subscribedTaskIds.contains(taskId)
+  def subscribedForTaskId(taskId: String): Boolean = subscribedEventTypes.isEmpty || subscribedTaskIds.contains(taskId)
 
   override def remoteAddress: String = request.getRemoteAddr
 
   override def close(): Unit = emitter.close()
 
   override def sendEvent(event: MarathonEvent): Unit = {
-  	if subscribedForEventType(event.eventType)) && subscribedForTaskId(event.taskId)) blocking(emitter.event(event.eventType, event.jsonString))
-  	if subscribedForEventType(event.eventType)) blocking(emitter.event(event.eventType, event.jsonString))
-	if subscribedForTaskId(event.taskId)) blocking(emitter.event(event.taskId, event.jsonString))
+    if (subscribedForEventType(event.eventType)) blocking(emitter.event(event.eventType, event.jsonString))
+    /*if (subscribedForTaskId(event.taskId)) blocking(emitter.event(event.taskId, event.jsonString))*/
   }
 
   override def toString: String = s"HttpEventSSEHandle($id on $remoteAddress on event types from $subscribedEventTypes)"
