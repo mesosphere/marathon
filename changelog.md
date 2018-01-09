@@ -9,7 +9,7 @@
 
 ### Fixed issues
 
-- [MARATHON-7974](https://jira.mesosphere.com/browse/MARATHON-7974) - Fixes a security concern for a non super user. It was discovered that permissions for GroupResources was not honored and it is now resolved.
+- [MARATHON-7974](https://jira.mesosphere.com/browse/MARATHON-7974) - Fixes a security concern for a non super user. It was discovered that permissions for GroupResources were not honored in a few places. Specifically, if the user is NOT super user and HAS access, access would be refused anyway. It is now resolved.
 - [MARATHON-7962](https://jira.mesosphere.com/browse/MARATHON-7962) - Enable killGracePeriodSeconds for Pods.
 - [MARATHON_EE-1770](https://jira.mesosphere.com/browse/MARATHON_EE-1770) - Optimized port assignments and performance enhancements.
 - [MARATHON_EE-1764](https://jira.mesosphere.com/browse/MARATHON_EE-1764) - Optimized port assignments and performance enhancements.
