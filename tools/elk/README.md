@@ -26,6 +26,11 @@ brew install kibana
 brew install logstash
 ```
 
+You will also need Ammonite REPL installed. If you don't have that, use Homebrew again:
+```
+brew install ammonite-repl
+```
+
 ## Running Elasticsearch, Kibana, and Logstash
 
 In a separate terminal EACH, run the following commands, in this order:
@@ -42,6 +47,11 @@ Logstash will begin populating Elasticsearch with your bundles log data.
 
 Open a browser to http://localhost:5601 to use Kibana
 
+If this is first time you are using Kibana, you need to set up an index patterns. On main page click on "Setup index patterns". Then write "logstash-*" and proceed to the next step and select "@timestamp" as time filter field name.
+
+Next you can start exploring logs in the "Discover" page. You might need to switch to a different time window in the top right corner of the UI - by default it is showing data from the last 15 minutes. You need to select e.g. last 30 days to find the window in which your diagnostics bundle was created.
+
+For a video demo you can watch [this Youtube video](https://www.youtube.com/watch?v=lEJb9WQj9bo)
 
 ## Clearing data
 
