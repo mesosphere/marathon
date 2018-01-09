@@ -48,9 +48,9 @@ function download-diagnostics-bundle {
 }
 
 # Launch cluster and run tests if launch was successful.
-DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT")
+DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
-export DCOS_URL=$(tail -1 "$DCOS_URL")
+export DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
