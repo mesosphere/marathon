@@ -31,11 +31,7 @@ class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: P
 object MigrationTo160 extends StrictLogging {
   def migrateReservations(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit env: Environment, ctx: ExecutionContext, mat: Materializer): Future[Done] = {
 
-    logger.info("Starting unreachable strategy migration to 1.6.0")
-
-    val migrateUnreachableStrategyWanted = env.vars.getOrElse(MigrationTo146.MigrateUnreachableStrategyEnvVar, "false")
-
-    if (migrateUnreachableStrategyWanted == "true") {
+    logger.info("Starting reservations migration to 1.6.0")
 
       val store: ZkPersistenceStore = {
         persistenceStore match {
@@ -93,9 +89,5 @@ object MigrationTo160 extends StrictLogging {
             instanceRepository.store(updatedInstance)
         }
         .runWith(Sink.ignore)
-    } else {
-      logger.info("No unreachable strategy migration to 1.6.0 wanted")
-      Future.successful(Done)
-    }
   }
 }
