@@ -56,9 +56,9 @@ case $CLUSTER_LAUNCH_CODE in
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
       (cd tests && make init test)
       SI_CODE=$?
-      if [ ${SI_CODE} -gt 0 ]; then
-        download-diagnostics-bundle
-      fi
+      # if [ ${SI_CODE} -gt 0 ]; then
+      #  download-diagnostics-bundle
+      # fi
       ./dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;
