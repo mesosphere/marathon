@@ -33,11 +33,11 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
     "find an app without a parent" in {
       Given("an existing root group with an app without a parent")
-      val app = AppDefinition("app".toPath, cmd = Some("sleep"))
+      val app = AppDefinition("/app".toPath, cmd = Some("sleep"))
       val current = createRootGroup(apps = Map(app.id -> app))
 
       When("an app with a specific path is requested")
-      val path = PathId("app")
+      val path = PathId("/app")
 
       Then("the group is found")
       current.app(path) should be('defined)
@@ -491,7 +491,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
     "relative dependencies should be resolvable" in {
       Given("a group with an app having relative dependency")
-      val app1 = AppDefinition("app1".toPath, cmd = Some("foo"))
+      val app1 = AppDefinition("/group/app1".toPath, cmd = Some("foo"))
       val app2 = AppDefinition("/group/subgroup/app2".toPath, cmd = Some("bar"), dependencies = Set("../app1".toPath))
       val rootGroup = createRootGroup(groups = Set(
         createGroup("/group".toPath, apps = Map(app1.id -> app1),

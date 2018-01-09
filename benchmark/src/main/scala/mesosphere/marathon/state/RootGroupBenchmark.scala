@@ -4,6 +4,7 @@ package state
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.pod.BridgeNetwork
+import mesosphere.marathon.api.v2.Validation
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -76,5 +77,10 @@ class RootGroupBenchmark extends GroupBenchmark {
   def buildRootGroup(hole: Blackhole): Unit = {
     val root = fillRootGroup()
     hole.consume(root)
+  }
+
+  @Benchmark
+  def validateRootGroup(hole: Blackhole): Unit = {
+    Validation.validateOrThrow(rootGroup)(RootGroup.rootGroupValidator(Set.empty))
   }
 }
