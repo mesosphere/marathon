@@ -1,6 +1,24 @@
+## Changes from 1.4.10 to 1.4.11
+
+### Fixed issues
+
+- [MARATHON-7992](https://jira.mesosphere.com/browse/MARATHON-7992) - Validation errors on root group in large clusters can lead Marathon to crash.
+
+
+## Changes from 1.4.9 to 1.4.10
+
+### Fixed issues
+
+- [MARATHON-7974](https://jira.mesosphere.com/browse/MARATHON-7974) - If a non-super-user was explicitly given access to some resource, such as GroupResources, they were denied. This has been resolved.
+- [MARATHON-7962](https://jira.mesosphere.com/browse/MARATHON-7962) - Enable killGracePeriodSeconds for Pods.
+- [MARATHON_EE-1770](https://jira.mesosphere.com/browse/MARATHON_EE-1770) - Optimized port assignments and performance enhancements.
+- [MARATHON_EE-1764](https://jira.mesosphere.com/browse/MARATHON_EE-1764) - Optimized port assignments and performance enhancements.
+
+
 ## Changes from 1.4.8 to 1.4.9
 
 ### Fixed issues
+
 - [MARATHON-7790](https://jira.mesosphere.com/browse/MARATHON-7790) Migrate UnreachableStrategy Saved in Instances
 
 ### 1.4.9 New Behavior
