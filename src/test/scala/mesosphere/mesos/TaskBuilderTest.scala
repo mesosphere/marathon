@@ -21,6 +21,7 @@ import mesosphere.mesos.protos.{ Resource, _ }
 import org.apache.mesos.Protos.TaskInfo
 import org.apache.mesos.{ Protos => MesosProtos }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskBuilderTest extends UnitTest {
@@ -1625,6 +1626,35 @@ class TaskBuilderTest extends UnitTest {
       assert("1001" == env("PORT_8081"))
       assert("1000" == env("PORT_HTTP"))
       assert("1001" == env("PORT_JABBER"))
+    }
+
+    // Regression COPS-2072
+    "PortsEnvWithOnlyMappingsAndUserNetworking" in {
+      val command =
+        TaskBuilder.commandInfo(
+          runSpec = AppDefinition(
+            id = runSpecId,
+            networks = Seq(ContainerNetwork("dcos")), container = Some(Docker(
+
+              portMappings = Seq(
+                PortMapping(containerPort = 8080, hostPort = None, servicePort = 9000, protocol = "tcp", name = Some("http")),
+                PortMapping(containerPort = 8081, hostPort = None, servicePort = 9001, protocol = "tcp", name = Some("jabber"))
+              )
+            ))
+          ),
+          taskId = Some(Task.Id("task-123")),
+          host = Some("host.mega.corp"),
+          hostPorts = Seq(None, None),
+          envPrefix = None
+        )
+
+      val env: Map[String, String] =
+        command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+
+      assert("8080" == env("PORT_8080"))
+      assert("8081" == env("PORT_8081"))
+      assert("8080" == env("PORT_HTTP"))
+      assert("8081" == env("PORT_JABBER"))
     }
 
     "PortsEnvWithBothPortsAndMappings" in {
