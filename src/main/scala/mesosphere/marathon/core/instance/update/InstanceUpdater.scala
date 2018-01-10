@@ -3,7 +3,7 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, Reservation }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{ LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
@@ -45,7 +45,13 @@ object InstanceUpdater extends StrictLogging {
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
           } else {
-            InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
+            if (updatedTask.status.condition == Condition.Reserved) {
+              val suspendedState = Reservation.State.Suspended(timeout = None)
+              val suspended = updated.copy(reservation = updated.reservation.map(_.copy(state = suspendedState)))
+              InstanceUpdateEffect.Update(suspended, oldState = Some(instance), events)
+            } else {
+              InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
+            }
           }
 
         // We might still become UnreachableInactive.
