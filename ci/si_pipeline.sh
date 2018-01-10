@@ -58,8 +58,6 @@ export CLI_TEST_SSH_KEY
 DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 export DCOS_URL
-./dcos-launch delete
-exit $?
 case $CLUSTER_LAUNCH_CODE in
   0)
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
