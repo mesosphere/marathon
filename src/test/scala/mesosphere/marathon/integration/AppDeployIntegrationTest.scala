@@ -6,11 +6,12 @@ import java.util.UUID
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
+import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol }
+import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, CommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -120,12 +121,13 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
 
       And("our app gets a backoff delay")
+      val patienceConfig: WaitTestSupport.PatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Millis))
       WaitTestSupport.waitUntil("queue item") {
         val queue: List[ITQueueItem] = marathon.launchQueue().value.queue
         queue should have size 1
         queue.map(_.delay.overdue) should contain(false)
         true
-      }
+      }(patienceConfig)
       app
     }
 
