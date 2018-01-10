@@ -35,7 +35,7 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
   run("sbt", "clean", "test", "integration:test", "scapegoat")
 
   // Compile other projects.
-  run("true")
+  //test
   run("sbt", "benchmark/compile")
   run("sbt", "mesos-simulation/compile")
   run("sbt", "plugin-interface/compile")
