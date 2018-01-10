@@ -4,6 +4,7 @@ package util
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
 
+import akka.Done
 import com.twitter.util.CountDownLatch
 import mesosphere.UnitTest
 import org.scalatest.Inside
@@ -17,7 +18,7 @@ class WorkQueueTest extends UnitTest with Inside {
   "WorkQueue" should {
     "return a failure if the Future returning thunk throws an exception" in {
       val queue = WorkQueue("test", maxConcurrent = 1, maxQueueLength = Int.MaxValue)
-      val r = queue {
+      val r: Future[Done] = queue {
         throw new RuntimeException("le failure")
       }
       inside(Try(r.futureValue)) {

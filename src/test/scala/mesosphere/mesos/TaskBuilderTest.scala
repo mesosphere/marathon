@@ -3,24 +3,25 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.Container.{ Docker, PortMapping }
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
+import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
 import mesosphere.marathon._
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.mesos.protos.{ Resource, _ }
+import mesosphere.marathon.test.{MarathonSpec, MarathonTestHelper}
+import mesosphere.mesos.protos.{Resource, _}
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.{ Protos => MesosProtos }
-import org.joda.time.{ DateTime, DateTimeZone }
+import org.apache.mesos.{Protos => MesosProtos}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.Matchers
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskBuilderTest extends MarathonSpec with Matchers {
@@ -1612,6 +1613,36 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert("1001" == env("PORT_8081"))
     assert("1000" == env("PORT_HTTP"))
     assert("1001" == env("PORT_JABBER"))
+  }
+
+  // Regression COPS-2072
+  test("PortsEnvWithOnlyMappingsAndUserNetworking") {
+    val command =
+      TaskBuilder.commandInfo(
+        runSpec = AppDefinition(
+          id = runSpecId,
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.USER),
+            portMappings = Seq(
+              PortMapping(containerPort = 8080, hostPort = None, servicePort = 9000, protocol = "tcp", name = Some("http")),
+              PortMapping(containerPort = 8081, hostPort = None, servicePort = 9001, protocol = "tcp", name = Some("jabber"))
+            )
+          )),
+          ipAddress = Some(IpAddress(networkName = Some("dcos"))),
+          portDefinitions = Seq.empty
+        ),
+        taskId = Some(Task.Id("task-123")),
+        host = None,
+        hostPorts = Seq(None, None),
+        envPrefix = None
+      )
+    val env: Map[String, String] =
+      command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+
+    assert("8080" == env("PORT_8080"))
+    assert("8081" == env("PORT_8081"))
+    assert("8080" == env("PORT_HTTP"))
+    assert("8081" == env("PORT_JABBER"))
   }
 
   test("PortsEnvWithBothPortsAndMappings") {
