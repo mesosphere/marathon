@@ -8,18 +8,18 @@ title: A container orchestration platform for Mesos and DC/OS
     A container orchestration platform for Mesos and DC/OS
   </p>
   <p>
-    <a href="https://downloads.mesosphere.com/marathon/releases/1.5.2/marathon-1.5.2.tgz"
+    <a href="https://downloads.mesosphere.com/marathon/releases/1.5.5/marathon-1.5.5.tgz"
         class="btn btn-lg btn-primary">
-      Download Marathon v1.5.2
+      Download Marathon v1.5.5
     </a>
   </p>
   <a class="btn btn-link"
-      href="https://downloads.mesosphere.com/marathon/releases/1.5.2/marathon-1.5.2.tgz.sha1">
-    v1.5.2 SHA Checksum
+      href="https://downloads.mesosphere.com/marathon/releases/1.5.5/marathon-1.5.5.tgz.sha1">
+    v1.5.5 SHA Checksum
   </a> &middot;
   <a class="btn btn-link"
-      href="https://github.com/mesosphere/marathon/releases/tag/v1.5.2">
-    v1.5.2 Release Notes
+      href="https://github.com/mesosphere/marathon/releases/tag/v1.5.5">
+    v1.5.5 Release Notes
   </a>
 </div>
 
