@@ -3,23 +3,23 @@ package storage.migration
 
 import java.time.OffsetDateTime
 
-import akka.{Done, NotUsed}
+import akka.{ Done, NotUsed }
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.MigrationCancelledException
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.instance.{Instance, Reservation}
+import mesosphere.marathon.core.instance.{ Instance, Reservation }
 import mesosphere.marathon.core.instance.Instance.Id
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
-import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkPersistenceStore, ZkSerialized }
 import mesosphere.marathon.storage.migration.MigrationTo146.Environment
 import mesosphere.marathon.storage.repository.InstanceRepository
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{ JsValue, Json }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
 class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit ctx: ExecutionContext, mat: Materializer) extends StrictLogging {
@@ -34,12 +34,12 @@ object MigrationTo160 extends StrictLogging {
 
     logger.info("Starting reservations migration to 1.6.0")
 
-    val store: ZkPersistenceStore = {
+    val maybeStore: Option[ZkPersistenceStore] = {
 
-      def findZkStore(ps: PersistenceStore[_, _, _]): ZkPersistenceStore = {
+      def findZkStore(ps: PersistenceStore[_, _, _]): Option[ZkPersistenceStore] = {
         ps match {
           case zk: ZkPersistenceStore =>
-            zk
+            Some(zk)
           case lcps: LazyCachingPersistenceStore[_, _, _] =>
             findZkStore(lcps.store)
           case lvcps: LazyVersionCachingPersistentStore[_, _, _] =>
@@ -47,7 +47,7 @@ object MigrationTo160 extends StrictLogging {
           case ltcps: LoadTimeCachingPersistenceStore[_, _, _] =>
             findZkStore(ltcps.store)
           case other =>
-            throw MigrationCancelledException(s"expected ZK persistent store, but found ${other.getClass.getName}", new RuntimeException)
+            None
         }
       }
 
@@ -77,29 +77,33 @@ object MigrationTo160 extends StrictLogging {
     import Reservation.reservationFormat
     import Instance.instanceJsonReads
 
-    instanceRepository
-      .ids()
-      .mapAsync(1) { instanceId =>
-        store.get(instanceId)
-      }
-      .mapConcat {
-        case Some(jsValue) =>
-          val instance = jsValue.as[Instance]
-          val maybeReservationJson = (jsValue \ "tasksMap" \\ "reservation").headOption
+    maybeStore.map { store =>
+      instanceRepository
+        .ids()
+        .mapAsync(1) { instanceId =>
+          store.get(instanceId)
+        }
+        .mapConcat {
+          case Some(jsValue) =>
+            val instance = jsValue.as[Instance]
+            val maybeReservationJson = (jsValue \ "tasksMap" \\ "reservation").headOption
 
-          maybeReservationJson.map { reservationJson =>
-            reservationJson.as[Reservation] -> instance :: Nil
-          } getOrElse {
-            Nil
-          }
+            maybeReservationJson.map { reservationJson =>
+              reservationJson.as[Reservation] -> instance :: Nil
+            } getOrElse {
+              Nil
+            }
 
-        case _ => Nil
-      }
-      .mapAsync(1) {
-        case (reservation, instance) =>
-          val updatedInstance = instance.copy(reservation = Some(reservation))
-          instanceRepository.store(updatedInstance)
-      }
-      .runWith(Sink.ignore)
+          case _ => Nil
+        }
+        .mapAsync(1) {
+          case (reservation, instance) =>
+            val updatedInstance = instance.copy(reservation = Some(reservation))
+            instanceRepository.store(updatedInstance)
+        }
+        .runWith(Sink.ignore)
+    } getOrElse {
+      Future.successful(Done)
+    }
   }
 }

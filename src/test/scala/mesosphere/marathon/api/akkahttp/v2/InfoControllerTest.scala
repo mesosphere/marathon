@@ -34,7 +34,7 @@ class InfoControllerTest extends UnitTest with ScalatestRouteTest with Inside wi
         val expected =
           """{
             |  "name" : "unknown",
-            |  "version" : "1.5.0-SNAPSHOT",
+            |  "version" : "1.6.0-SNAPSHOT",
             |  "buildref" : "unknown",
             |  "elected" : false,
             |  "leader" : "80",
