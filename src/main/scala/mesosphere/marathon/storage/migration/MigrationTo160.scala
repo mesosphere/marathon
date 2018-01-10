@@ -45,7 +45,7 @@ object MigrationTo160 extends StrictLogging {
           case lvcps: LazyVersionCachingPersistentStore[_, _, _] =>
             findZkStore(lvcps.store)
           case ltcps: LoadTimeCachingPersistenceStore[_, _, _] =>
-            findZkStore(ltcps)
+            findZkStore(ltcps.store)
           case other =>
             throw MigrationCancelledException(s"expected ZK persistent store, but found ${other.getClass.getName}", new RuntimeException)
         }
