@@ -20,7 +20,6 @@ build:
 	flake8 --count --max-line-length=120 system
 
 test:
-	cat "$(CLI_TEST_SSH_KEY)"
 	pipenv run shakedown \
       --stdout all \
       --stdout-inline \
