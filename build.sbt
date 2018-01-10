@@ -30,6 +30,7 @@ lazy val formatSettings = Seq(
     .setPreference(PreserveSpaceBeforeArguments, true)
 )
 
+println("debug logging")
 lazy val testSettings =
   inConfig(IntegrationTest)(Defaults.testTasks) ++
   Seq(
