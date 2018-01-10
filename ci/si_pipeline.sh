@@ -48,6 +48,8 @@ function download-diagnostics-bundle {
 }
 
 # Launch cluster and run tests if launch was successful.
+CLI_TEST_SSH_KEY="$DEPLOYMENT_NAME.pem"
+export CLI_TEST_SSH_KEY
 DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
 CLUSTER_LAUNCH_CODE=$?
 export DCOS_URL
