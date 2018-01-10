@@ -12,9 +12,6 @@ fi
 CHANNEL="$1"
 VARIANT="$2"
 
-JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
-DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$(date +%s)"
-
 if [ "$VARIANT" == "open" ]; then
   TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/multi-master.cloudformation.json"
 else

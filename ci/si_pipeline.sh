@@ -12,6 +12,11 @@ fi
 CHANNEL="$1"
 VARIANT="$2"
 
+JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
+DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$(date +%s)"
+export DEPLOYMENT_NAME
+
+
 function create-junit-xml {
     local testsuite_name=$1
     local testcase_name=$2
