@@ -270,7 +270,7 @@ def test_run_app_with_non_existing_user():
         app = client.get_app(app_def["id"])
         message = app['lastTaskFailure']['message']
         error = "No such user 'bad'"
-        assert error in message, f"Did not receive expected error messsage \"{error}\" but \"{message}\""
+        assert error in message, f"Did not receive expected error messsage \"{error}\" but \"{message}\"" # noqa E999
 
     check_failure_message()
 
