@@ -1,5 +1,7 @@
 package mesosphere.mesos
 
+import java.time.{ OffsetDateTime, ZoneOffset }
+
 import com.google.protobuf.TextFormat
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
@@ -17,8 +19,7 @@ import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.{Protos, _}
 import mesosphere.mesos.protos.{Resource, _}
 import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.{Protos => MesosProtos}
-import org.joda.time.{DateTime, DateTimeZone}
+import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -1371,7 +1372,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "TaskContextEnv empty when no taskId given" in {
-      val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpec = AppDefinition(
         id = PathId("/app"),
         versionInfo = version
@@ -1382,7 +1383,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "TaskContextEnv minimal" in {
-      val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpec = AppDefinition(
         id = PathId("/app"),
         versionInfo = version
@@ -1404,7 +1405,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "TaskContextEnv all fields" in {
-      val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpecId = PathId("/app")
       val runSpec = AppDefinition(
         id = runSpecId,
