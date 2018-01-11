@@ -486,9 +486,9 @@ def test_pod_health_failed_check():
 
     tasks = common.get_pod_tasks(pod_id)
     for new_task in tasks:
-        task_id = new_task['id']
-        assert task_id != initial_id1, f"Task {task_id} has not been restarted"
-        assert task_id != initial_id2, f"Task {task_id} has not been restarted"
+        new_task_id = new_task['id']
+        assert new_task_id != initial_id1, f"Task {task_id} has not been restarted"
+        assert new_task_id != initial_id2, f"Task {task_id} has not been restarted"
 
 
 @common.marathon_1_6
