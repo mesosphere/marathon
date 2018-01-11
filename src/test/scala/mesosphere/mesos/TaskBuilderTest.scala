@@ -1638,7 +1638,7 @@ class TaskBuilderTest extends UnitTest {
 
               portMappings = Seq(
                 PortMapping(containerPort = 8080, hostPort = None, servicePort = 9000, protocol = "tcp", name = Some("http")),
-                PortMapping(containerPort = 8081, hostPort = None, servicePort = 9001, protocol = "tcp", name = Some("jabber"))
+                PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp", name = Some("jabber"))
               )
             ))
           ),
@@ -1652,9 +1652,11 @@ class TaskBuilderTest extends UnitTest {
         command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
 
       assert("8080" == env("PORT_8080"))
-      assert("8081" == env("PORT_8081"))
       assert("8080" == env("PORT_HTTP"))
-      assert("8081" == env("PORT_JABBER"))
+
+      val port1 = env("PORT1")
+      assert(port1 == env(s"PORT_${port1}"))
+      assert(port1 == env("PORT_JABBER"))
     }
 
     "PortsEnvWithBothPortsAndMappings" in {
