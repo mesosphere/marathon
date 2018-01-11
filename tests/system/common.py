@@ -244,8 +244,9 @@ def block_iptable_rules_for_seconds(host, port_number, sleep_seconds, block_inpu
 
 def iptables_block_string(block_input, block_output, port):
     """ Produces a string of iptables blocking command that can be executed on an agent. """
-    str = "sudo iptables -I INPUT -p tcp --dport {} -j DROP;".format(port) if block_input else ""
-    return str + "sudo iptables -I OUTPUT -p tcp --dport {} -j DROP;".format(port) if block_output else ""
+    block_input_str = "sudo iptables -I INPUT -p tcp --dport {} -j DROP;".format(port) if block_input else ""
+    block_output_str = "sudo iptables -I OUTPUT -p tcp --dport {} -j DROP;".format(port) if block_output else ""
+    return block_input_str + block_output_str
 
 
 def wait_for_task(service, task, timeout_sec=120):
