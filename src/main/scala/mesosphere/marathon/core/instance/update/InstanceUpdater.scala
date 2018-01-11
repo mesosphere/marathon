@@ -3,7 +3,7 @@ package core.instance.update
 
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, Reservation }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{ LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
@@ -42,10 +42,20 @@ object InstanceUpdater extends StrictLogging {
           val updated: Instance = updatedInstance(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.state.condition))
           if (updated.tasksMap.values.forall(_.isTerminal)) {
+            // all task can be terminal only if the instance doesn't have any persistent volumes
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
           } else {
-            InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
+            // If the updated task is Reserved, it means that the real task reached a Terminal state,
+            // which in turn means that the task managed to get up and running, which means that
+            // its persistent volume(s) had been created, and therefore they must never be destroyed/unreserved.
+            if (updatedTask.status.condition == Condition.Reserved) {
+              val suspendedState = Reservation.State.Suspended(timeout = None)
+              val suspended = updated.copy(reservation = updated.reservation.map(_.copy(state = suspendedState)))
+              InstanceUpdateEffect.Update(suspended, oldState = Some(instance), events)
+            } else {
+              InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
+            }
           }
 
         // We might still become UnreachableInactive.
