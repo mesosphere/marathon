@@ -42,6 +42,7 @@ object InstanceUpdater extends StrictLogging {
           val updated: Instance = updatedInstance(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(instance.state.condition))
           if (updated.tasksMap.values.forall(_.isTerminal)) {
+            // all task can be terminal only if the instance doesn't have any persistent volumes
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
           } else {
