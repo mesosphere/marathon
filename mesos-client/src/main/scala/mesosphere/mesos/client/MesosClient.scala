@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.MediaType.Compressible
 import akka.http.scaladsl.model._
 import akka.stream._
 import akka.stream.alpakka.recordio.scaladsl.RecordIOFraming
@@ -13,18 +14,15 @@ import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.google.protobuf
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.mesos.client.MesosClient.MesosRedicrectException
-import mesosphere.mesos.client.MesosStreamSupport._
-import mesosphere.mesos.conf.MesosConf
+import mesosphere.mesos.client.MesosClient.{ MesosRedicrectException, ProtobufMediaType, MesosStreamIdHeaderName }
+import mesosphere.mesos.conf.MesosClientConf
 import org.apache.mesos.v1.mesos._
 import org.apache.mesos.v1.scheduler.scheduler.Call.{Accept, Acknowledge, Decline, Kill, Message, Reconcile, Revive}
 import org.apache.mesos.v1.scheduler.scheduler.{Call, Event}
-
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class MesosClient(
-    conf: MesosConf,
+    conf: MesosClientConf,
     frameworkInfo: FrameworkInfo)(
     implicit val system: ActorSystem,
     implicit val materializer: ActorMaterializer,
@@ -33,11 +31,11 @@ class MesosClient(
 
   private val overflowStrategy = akka.stream.OverflowStrategy.backpressure
 
-  val context = new AtomicReference[ConnectionContext](ConnectionContext(conf))
-  val contextPromise = Promise[ConnectionContext]()
+  val context = new AtomicReference[MesosConnectionContext](MesosConnectionContext(conf))
+  val contextPromise = Promise[MesosConnectionContext]()
 
   /**
-    Mesos source is an akka-stream `Source[Event, NotUsed]` that frameworks can attach to, to receive mesos event.
+    Mesos source is an akka-stream `Source[Event, UniqueKillSwitch]` that frameworks can attach to, to receive mesos event.
     Basic flow visualized looks like following
 
      ------------
@@ -48,7 +46,7 @@ class MesosClient(
           v
      ------------
     | Connection | (2)
-    | Handler    |     -> updates connection context
+    | Handler    |     -> updates connection context with mesos streamId
      ------------
           |
           v
@@ -71,16 +69,12 @@ class MesosClient(
           |
           v
      --------------
-    | Subscribed   | (6)  -> updates connection context
+    | Subscribed   | (6)  -> updates connection context with frameworkId
     | Handler      |
      --------------
           |
           v
-     --------------
-    | BroadcastHub | (7)
-     --------------
-      |  |  |  |  |
-      v  v  v  v  v
+
 
     1. Http Connection mesos-v1-client uses akka-http low-level `Http.outgoingConnection()` to `POST` a
        [SUBSCRIBE](http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1) request to mesos `api/v1/scheduler`
@@ -101,8 +95,6 @@ class MesosClient(
        [scalapb](https://scalapb.github.io/) library to parse the extracted RecordIO frame from the previous stage into a mesos
        [Event](https://github.com/apache/mesos/blob/master/include/mesos/scheduler/scheduler.proto#L36)
     6. Subscribed Handler parses the `SUBSCRIBED` event and updates the connection context with the returned `frameworkId`.
-    7. BroadcastHub ad the end the flow is going through a broadcast hub. This allows for a dynamic "fan-out" streaming of events and avoids
-       making multiple upstream connections to mesos when the source is materialized by multiple event consumers.
 
     Note: _Connection Handler_ updates the _connection context_ object with current mesos leader `host` and `port` along with `Mesos-Stream-Id`
     header value. These settings are used by mesos sink when sending calls to mesos. The same applies to _Subscribed Handler_ which saves
@@ -112,7 +104,7 @@ class MesosClient(
     */
   def log[T](prefix: String): Flow[T, T, NotUsed] = Flow[T].map{ e => logger.info(s"$prefix$e"); e }
 
-  lazy val source: Source[Event, NotUsed] = {
+  val mesosSource: Source[Event, UniqueKillSwitch] = {
 
     val body = subscribe(frameworkInfo).toByteArray
 
@@ -137,16 +129,18 @@ class MesosClient(
 
           // At this point we successfully connected to mesos leader so context should have correct leader's host
           // and port either from the config or set on the redirect.
-          context.updateAndGet(c => c.copy(mesosStreamId = Some(streamId.value())))
+          context.updateAndGet(c => c.copy(streamId = Some(streamId.value())))
           response
         case StatusCodes.TemporaryRedirect =>
           val leader = new URI(response.header[headers.Location].get.value())
           logger.warn(s"New mesos leader available at $leader")
           // Update the context with the new leader's host and port and throw an exception that is handled in the
           // next `recoverWith` stage.
-          context.updateAndGet(c => c.copy(host = leader.getHost, port = leader.getPort))
+          context.updateAndGet(c => c.copy(url = leader))
+          response.discardEntityBytes()
           throw new MesosRedicrectException(leader)
         case _ =>
+          response.discardEntityBytes()
           throw new IllegalArgumentException(s"Mesos server error: $response")
       }
     }
@@ -158,7 +152,7 @@ class MesosClient(
     val subscribedHandler: Flow[Event, Event, NotUsed] = Flow[Event].map { event =>
       if (event.subscribed.isDefined) {
         val ctx = context.updateAndGet(c => c.copy(frameworkId = Some(event.subscribed.get.frameworkId)))
-        // We save `frameworkId` in the context and successfully complete the promise, meaning the calls in sink
+        // We save `frameworkId` in the context and successfully complete the promise, meaning the calls in sink can now be sent
         contextPromise.success(ctx)
       }
       event
@@ -171,28 +165,26 @@ class MesosClient(
       .via(log("HttpResponse: "))
       .via(connectionHandler)
 
-    connectionSource(context.get().host, context.get().port)
-      .recoverWithRetries(conf.redirectRetires(), {
+    val source = connectionSource(context.get().host, context.get().port)
+      .recoverWithRetries(conf.redirectRetires, {
         case MesosRedicrectException(_) => connectionSource(context.get().host, context.get().port)
       })
-      .idleTimeout(conf.idleTimeout().seconds)
-      .buffer(conf.sourceBufferSize(), overflowStrategy)
+      .buffer(conf.sourceBufferSize, overflowStrategy)
       .via(dataBytesExtractor)
       .via(recordIoScanner)
       .via(eventDeserializer)
       .via(subscribedHandler)
       .via(log("Received mesos Event: "))
-  }
+      .idleTimeout(conf.idleTimeout)
+      .viaMat(KillSwitches.single)(Keep.right)
 
-  override lazy val (killSwitch: UniqueKillSwitch, mesosSource: Source[Event, NotUsed]) = source
-    .viaMat(KillSwitches.single)(Keep.right)
-    .toMat(BroadcastHub.sink)(Keep.both)
-    .run()
+    source
+  }
 
 
   /**
-  Mesos sink is an akka-stream `Sink[Call, Notused]` that sends calls to mesos. Every call is send via a new (and pooled) connection.
-  The flow visualized:
+  Mesos sink is an akka-stream `Sink[Call, Notused]` that sends calls to mesos. Every call is sent via the same long-living
+  connection to mesos. This way we save resources and guarantee message order delivery. The flow visualized:
 
        |  |  |
        v  v  v
@@ -203,7 +195,7 @@ class MesosClient(
           v
      ------------
     | Call       |
-    | Enhancer   | (2)
+    | Enhancer   | (2)  <-- reads frameworkId from connection context
      ------------
           |
           v
@@ -215,57 +207,84 @@ class MesosClient(
           v
      ------------
     | Request    |
-    | Builder    | (4)
+    | Builder    | (4)  <-- reads mesosStreamId and from connection context
      ------------
           |
           v
      ------------
-    | Http Sink  | (5)
+    | Http       |
+    | Connection | (5)  <-- reads mesos url from connection context
+     ------------
+          |
+          v
+     ------------
+    | Response   |
+    | Handler    | (6)
      ------------
 
     1. MergeHub allows dynamic "fan-in" junction point for mesos calls from multiple producers.
     2. Call Enhancer updates the call with the framework Id from the connection context
     3. Event Serializer serializes calls to byte array
     4. Build a HTTP request from the data using `mesosStreamId` header from the context
-    5. Http Sink creates a new connection using akka's `Http().singleRequest` and sends the data
+    5. Http connection uses akka's `Http().outgoingConnection` to sends the data to mesos. Note that all calls are sent
+       through one long-living connection.
+    6. Response handler will discard response entity or throw an exception on non-2xx response code
 
     Note: Merge hub will wait for the _connection context_ object to be fully initialized first meaning that we have current leader's
     `host`, `port` and `Mesos-Stream-Id` to send the events to.
     */
-  private val sink: Sink[(ConnectionContext, HttpRequest), Future[Done]] = Sink.foreach[(ConnectionContext, HttpRequest)]{
-    case (_, request) =>
-      Http().singleRequest(request).map { response =>
-          logger.info(s"Response: $response")
-          response.discardEntityBytes()
+
+  // Initially `Http().singleRequest` was used to send calls. However when calls are fired at a high-speed rate,
+  // it might quickly overflow small http pool (the pool is shared for the entire actor system). Backpressure is not
+  // applied here.
+  //
+  // `Http().superPool()` or `Http.cachedHostConnectionPool()` are an alternative. However it may happen there that the requests
+  // sent could arrive at mesos out of sent order! The native scheduler driver guarantees that the events will be received by
+  // mesos in the same order they were sent.
+  //
+  // `Http().outgoingConnection` will create one long-living connection and use it to send events to mesos. Backpressure is applied
+  // automatically when mesos is slow and events are in order.
+  private val httpConnection: Flow[HttpRequest, HttpResponse, NotUsed] = Flow[HttpRequest]
+      .via(Http().outgoingConnection(context.get().host, context.get().port))
+
+  private val responseHandler: Sink[HttpResponse, Future[Done]] = Sink.foreach[HttpResponse] { response =>
+    response status match {
+      case status if status.isFailure() =>
+        logger.info(s"A request to mesos failed with response: ${response}")
+        response.discardEntityBytes()
+        throw new IllegalStateException(s"Failed to send a call to mesos")
+      case _ =>
+        logger.debug(s"Mesos call response: $response")
+        response.discardEntityBytes()
     }
   }
 
-  private val eventSerializer: Flow[(ConnectionContext, Call), (ConnectionContext, Array[Byte]), NotUsed] = Flow[(ConnectionContext, Call)]
-    .map { case (ctx, call) => (ctx, call.toByteArray) }
+  private val eventSerializer: Flow[Call, Array[Byte], NotUsed] = Flow[Call]
+    .map(call => call.toByteArray)
 
-  private val requestBuilder: Flow[(ConnectionContext, Array[Byte]), (ConnectionContext, HttpRequest), NotUsed] = Flow[(ConnectionContext, Array[Byte])]
-    .map { case (ctx, bytes) => (ctx, HttpRequest(
-                                        HttpMethods.POST,
-                                        uri = Uri(s"http://${ctx.url}/api/v1/scheduler"),
-                                        entity = HttpEntity(ProtobufMediaType, bytes),
-                                        headers = List(MesosStreamIdHeader(ctx.mesosStreamId.getOrElse(throw new IllegalStateException("MesosStreamId not set."))))))
-    }
+  private val requestBuilder: Flow[Array[Byte], HttpRequest, NotUsed] = Flow[Array[Byte]]
+    .map(bytes => HttpRequest(HttpMethods.POST,
+                              uri = Uri(s"${context.get().url}/api/v1/scheduler"),
+                              entity = HttpEntity(ProtobufMediaType, bytes),
+                              headers = List(MesosClient.MesosStreamIdHeader(context.get().streamId.getOrElse(throw new IllegalStateException("MesosStreamId not set.")))))
+    )
 
-  private val callEnhancer: Flow[(ConnectionContext, Call), (ConnectionContext, Call), NotUsed] = Flow[(ConnectionContext, Call)]
-    .map { case (ctx, call) =>
-      (ctx, call.update(
-        _.optionalFrameworkId := Some(ctx.frameworkId.getOrElse(throw new IllegalStateException("FrameworkID not set"))))
+  private val callEnhancer: Flow[Call, Call, NotUsed] = Flow[Call]
+    .map { call =>
+      call.update(
+        _.optionalFrameworkId := Some(context.get().frameworkId.getOrElse(throw new IllegalStateException("FrameworkID not set")))
       )
     }
 
   private val sinkHub: RunnableGraph[Sink[Call, NotUsed]] =
     MergeHub.source[Call](perProducerBufferSize = 16)
-      .mapAsync(1)(event => contextPromise.future.map(ctx => (ctx, event)))
+      .mapAsync(1)(event => contextPromise.future.map(_ => event))
       .via(callEnhancer)
       .via(log("Sending "))
       .via(eventSerializer)
       .via(requestBuilder)
-      .to(sink)
+      .via(httpConnection)
+      .to(responseHandler)
 
   // By running/materializing the consumer we get back a Sink, and hence now have access to feed elements into it.
   // This Sink can be materialized any number of times, and every element that enters the Sink will be consumed by
@@ -276,7 +295,7 @@ class MesosClient(
 trait MesosApi {
 
   /**
-    * First call to this method will initialize the connection to mesos and return a `Source[String, NotUser]` with
+    * First call to this method will initialize the connection to mesos and return a `Source[String, NotUsed]` with
     * mesos `Event`s. All subsequent calls will return the previously created event source.
     * The connection is initialized with a `POST /api/v1/scheduler` with the framework info in the body. The request
     * is answered by a `SUBSCRIBED` event which contains `MesosStreamId` header. This is reused by all later calls to
@@ -291,12 +310,17 @@ trait MesosApi {
     * ```
     *
     * http://mesos.apache.org/documentation/latest/scheduler-http-api/#subscribe-1
+    *
+    * A materialized value of the source is a kill switch. Calling shutdown()` or `abort()` on it will close the connection to mesos.
+    * Note that depending on `failoverTimeout` provided with SUBSCRIBED call mesos could start killing tasks and
+    * executors started by the framework. Make sure to set `failoverTimeout` appropriately. See `teardown()` method
+    * for another way to shutdown a framework.
     */
-  def mesosSource: Source[Event, NotUsed]
+  def mesosSource: Source[Event, UniqueKillSwitch]
 
   /**
-    * Sink for mesos calls. Multiple publishers can materialize this sink to send mesos `Call`s. Every `Call` is sent
-    * using a new HTTP connection.
+    * Sink for mesos calls. Multiple publishers can materialize this sink to send mesos `Call`s. Every `Call` Every call is
+    * sent via one long-living connection to mesos.
     * Note: a scheduler can't send calls to mesos without subscribing first (see [MesosClient.source] method). Calls
     * published to sink without a successful subscription will be buffered and will have to wait for subscription
     * connection. Always call `source()` first.
@@ -305,13 +329,6 @@ trait MesosApi {
     */
   def mesosSink: Sink[Call, NotUsed]
 
-  /**
-    * A kill switch for the mesos source. Calling `shutdown()` or `abort()` on it will close the connection to mesos.
-    * Note that depending on `failoverTimeout` provided with SUBSCRIBED call mesos could start killing tasks and
-    * executors started by the framework. Make sure to set `failoverTimeout` appropriately. See `teardown()` method
-    * for another way to shutdown a framework.
-    */
-  val killSwitch: UniqueKillSwitch
 
   /** ***************************************************************************
     * Helper methods to create mesos `Call`s
@@ -511,4 +528,8 @@ trait MesosApi {
 
 object MesosClient {
   case class MesosRedicrectException(leader: URI) extends Exception(s"New mesos leader available at $leader")
+
+  val MesosStreamIdHeaderName = "Mesos-Stream-Id"
+  def MesosStreamIdHeader(streamId: String) = headers.RawHeader("Mesos-Stream-Id", streamId)
+  val ProtobufMediaType: MediaType.Binary = MediaType.applicationBinary("x-protobuf", Compressible)
 }

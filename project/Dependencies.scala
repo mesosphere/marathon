@@ -116,6 +116,7 @@ object Dependency {
     val ScalaLogging = "3.7.2"
     val Raven = "8.0.3"
     val JacksonVersion = "2.8.9"
+    val ScalaPb = "0.6.6"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -124,7 +125,6 @@ object Dependency {
     val JUnitBenchmarks = "0.7.2"
     val JMH = "1.19"
     val ScalaCheck = "1.13.5"
-    val ScalaPb = "0.6.6"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
