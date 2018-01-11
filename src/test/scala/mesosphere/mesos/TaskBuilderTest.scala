@@ -1639,7 +1639,6 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val env: Map[String, String] =
       command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
 
-    logger.info(env.mkString("\n"))
     assert("8080" == env("PORT_8080"))
     assert("8080" == env("PORT_HTTP"))
 
