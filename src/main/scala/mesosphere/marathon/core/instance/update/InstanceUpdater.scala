@@ -45,6 +45,9 @@ object InstanceUpdater extends StrictLogging {
             logger.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
           } else {
+            // If the updated task is Reserved, it means that the real task reached a Terminal state,
+            // which in turn means that the task managed to get up and running, which means that
+            // its persistent volume(s) had been created, and therefore they must never be destroyed/unreserved.
             if (updatedTask.status.condition == Condition.Reserved) {
               val suspendedState = Reservation.State.Suspended(timeout = None)
               val suspended = updated.copy(reservation = updated.reservation.map(_.copy(state = suspendedState)))
