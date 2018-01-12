@@ -18,3 +18,4 @@ start.sh
 *.iws
 __pycache__
 .history
+.python-version

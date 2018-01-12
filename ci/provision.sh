@@ -14,7 +14,7 @@ echo "deb http://repos.mesosphere.com/$(lsb_release -is | tr '[:upper:]' '[:lowe
 sudo apt-get -y update
 
 # Install dependencies.
-sudo apt-get install -y --force-yes --no-install-recommends curl sbt
+sudo apt-get install -y --force-yes --no-install-recommends bc curl sbt
 
 MESOS_VERSION=$(sed -n 's/^.*MesosDebian = "\(.*\)"/\1/p' < "$WORKSPACE/project/Dependencies.scala")
 if [[ -z $MESOS_VERSION ]]; then
