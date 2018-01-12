@@ -17,7 +17,6 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.migration.MigrationTo146.Environment
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.test.GroupCreation
 import org.apache.mesos
@@ -27,18 +26,14 @@ import play.api.libs.json._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContextExecutor, Future }
+import scala.util.Try
 
 class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogging {
 
   "Migration to 1.6.0" should {
-    "do nothing if env var is not configured" in new Fixture {
-      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(env, ctx, mat).futureValue
-      verify(instanceRepository, never).all()
-      verify(instanceRepository, never).store(_: Instance)
-    }
-
-    "do migration if env var is configured" in new Fixture(Map(MigrationTo146.MigrateUnreachableStrategyEnvVar -> "true")) {
-      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(env, ctx, mat).futureValue
+    "do migration for instances with tasks with reservations" in new Fixture {
+      initMocks()
+      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance3 = instance3.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
@@ -49,9 +44,26 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
       verify(instanceRepository, once).store(targetInstance2)
       verify(instanceRepository, once).store(targetInstance3)
     }
+
+    "don't change instances without reservations" in new Fixture {
+      override val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(tasksMap = Map.empty)
+      initMocks()
+      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
+      val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
+      val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
+      val targetInstance3 = instance3
+
+      logger.info(s"Migration instances ($instance, $instance2, $instance3) ")
+      verify(instanceRepository, once).ids()
+      verify(instanceRepository, once).store(targetInstance)
+      verify(instanceRepository, once).store(targetInstance2)
+      verify(instanceRepository, never).store(targetInstance3)
+    }
   }
 
-  private class Fixture(val environment: Map[String, String] = Map.empty) {
+  private class Fixture {
+
+    val now = Timestamp.now()
 
     implicit val instanceResolver: IdResolver[Instance.Id, JsValue, String, ZkId] =
       new IdResolver[Instance.Id, JsValue, String, ZkId] {
@@ -74,7 +86,6 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
 
     val instanceRepository: InstanceRepository = mock[InstanceRepository]
     val persistenceStore: ZkPersistenceStore = mock[ZkPersistenceStore]
-    implicit lazy val env = Environment(environment)
     implicit lazy val mat: Materializer = ActorMaterializer()
     implicit lazy val ctx: ExecutionContextExecutor = system.dispatcher
     val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
@@ -116,14 +127,17 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
       res
     }
 
-    val instance = TestInstanceBuilder.emptyInstance(instanceId = instanceId1).copy(tasksMap = taskMap)
-    val instance2 = TestInstanceBuilder.emptyInstance(instanceId = instanceId2).copy(tasksMap = taskMap)
-    val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(tasksMap = taskMap)
-    instanceRepository.ids() returns Source(List(instance, instance2, instance3).map(_.instanceId))
-    persistenceStore.get[Instance.Id, JsValue](equalTo(instance.instanceId))(any, any) returns Future(Some(legacyInstanceJson(instance)))
-    persistenceStore.get[Instance.Id, JsValue](equalTo(instance2.instanceId))(any, any) returns Future(Some(legacyInstanceJson(instance2)))
-    persistenceStore.get[Instance.Id, JsValue](equalTo(instance3.instanceId))(any, any) returns Future(Some(legacyInstanceJson(instance3)))
-    instanceRepository.store(any) returns Future.successful(Done)
+    def instance = TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId1).copy(tasksMap = taskMap)
+    def instance2 = TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId2).copy(tasksMap = taskMap)
+    def instance3 = TestInstanceBuilder.emptyInstance(now = now, instanceId = instanceId3).copy(tasksMap = taskMap)
+
+    def initMocks() = {
+      instanceRepository.ids() returns Source(List(instance, instance2, instance3).map(_.instanceId))
+      persistenceStore.get[Instance.Id, JsValue](equalTo(instance.instanceId))(any, any) returns Future(Some(legacyInstanceJson(instance)))
+      persistenceStore.get[Instance.Id, JsValue](equalTo(instance2.instanceId))(any, any) returns Future(Some(legacyInstanceJson(instance2)))
+      persistenceStore.get[Instance.Id, JsValue](equalTo(instance3.instanceId))(any, any) returns Future(Some(legacyInstanceJson(instance3)))
+      instanceRepository.store(any) returns Future.successful(Done)
+    }
   }
 
 }
