@@ -83,7 +83,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with Embedd
 
     // the task_killed event should occur instantly or at least smaller as taskKillGracePeriod,
     // because the app terminates shortly
-    waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis withClue s"the task kill event took longer than the task kill grace period"
+    waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis withClue "the task kill event took longer than the task kill grace period"
   }
 
   def healthCheck = MarathonHttpHealthCheck(
