@@ -1656,6 +1656,7 @@ class TaskBuilderTest extends UnitTest {
       assert("8080" == env("PORT_HTTP"))
 
       val port1 = env("PORT1")
+      assert(port1.toInt > 0)
       assert(port1 == env(s"PORT_${port1}"))
       assert(port1 == env("PORT_JABBER"))
     }
