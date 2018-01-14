@@ -13,8 +13,19 @@ Logstash config can be generated for a DCOS bundle using the following command:
 bin/target bundle <path-to-diagnostic-bundle>
 ```
 
-Command will attempt to detect log line format (include date, etc.), and generate the appropriate Logstash input
-directives such that the hostname field will be populated in Elasticsearch.
+Command will detect masters in the bundle, attempt to detect log line format (include date, etc.), and generate the
+appropriate Logstash input directives such that the hostname field will be populated in Elasticsearch.
+
+### Single file
+
+Logstash config can be generate for a single log file using the following command:
+
+```
+bin/target file <path-to-logfile>
+```
+
+Command will attempt to detect log line format (include date, etc.), potentially find the hostname, and generate the
+appropriate Logstash input directives such that the hostname field will be populated in Elasticsearch.
 
 ## Installing Elasticsearch, Kibana, and Logstash
 
