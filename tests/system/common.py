@@ -727,8 +727,8 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
         We have to retry because mesosDNS checks for changes only every 30s.
     """
     current_leader = shakedown.marathon_leader_ip()
-    print(f'leader according to MesosDNS: {current_leader}, original leader: {original_leader}')
-    error = f'Current leader did not change: original={original_leader}, current={current_leader}'
+    print(f'leader according to MesosDNS: {current_leader}, original leader: {original_leader}') # NOQA E999
+    error = f'Current leader did not change: original={original_leader}, current={current_leader}' # NOQA E999
     assert original_leader != current_leader, error
 
 
