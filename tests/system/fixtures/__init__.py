@@ -46,7 +46,7 @@ def get_ssl_context():
     """
     cafile = Path(fixtures_dir(), 'dcos-ca.crt')
     if cafile.is_file():
-        print(f'Provide certificate {cafile}')
+        print(f'Provide certificate {cafile}') # NOQA E999
         ssl_context = ssl.create_default_context(cafile=cafile)
         return ssl_context
     else:
