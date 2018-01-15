@@ -51,4 +51,4 @@ fi
 jq -r .ssh_private_key cluster_info.json > "$CLI_TEST_SSH_KEY"
 
 # Return dcos_url
-echo "http://$(./dcos-launch describe | jq -r ".masters[0].public_ip")/"
+echo "$(./dcos-launch describe | jq -r ".masters[0].public_ip")"
