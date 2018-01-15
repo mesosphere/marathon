@@ -28,21 +28,15 @@ class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: P
 
 object MigrationTo160 extends StrictLogging {
   /**
-    * This function traverse all the instances in the ZK, and moves reservation from task to the instance level
-    *
-    * @param instanceRepository
-    * @param persistenceStore
-    * @param ctx
-    * @param mat
-    * @return
+    * This function traverses all instances in ZK, and moves reservation objects from tasks to the instance level.
     */
   def migrateReservations(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
 
     logger.info("Starting reservations migration to 1.6.0")
 
     /**
-      * We're trying to find if we have a zookeeper store to make sure that migration will run in production environment
-      * and will be skipped in a unit test.
+      * We're trying to find if we have a ZooKeeper store because it provides objects as byte arrays and this
+      * makes serialization into json easier.
       */
     val maybeStore: Option[ZkPersistenceStore] = {
 
@@ -96,11 +90,12 @@ object MigrationTo160 extends StrictLogging {
         .mapConcat {
           case Some(jsValue) =>
             val instance = jsValue.as[Instance]
-            //prior to 1.6.0, only PVs are supported only with apps,
-            // therefore reservation can only appear in app instances,
-            // and in such of apps, taskMap has only one KV pair.
+            // Prior to Marathon 1.6.0, persistent volumes are supported only with apps,
+            // therefore reservation objects can only appear in app instances, and since
+            // an app has only one task by definition, there is only one KV pair in a taskMap
+            // object.
             //
-            // We still use .headOption here to handle the case with empty reservation
+            // We use .headOption here to handle the case of apps with no persistent volumes.
             val maybeReservationJson = (jsValue \ "tasksMap" \\ "reservation").headOption
 
             maybeReservationJson.map { reservationJson =>
