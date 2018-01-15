@@ -52,6 +52,7 @@ def get_ssl_context():
     else:
         return None
 
+
 @pytest.fixture
 async def sse_events():
     url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
