@@ -365,7 +365,8 @@ def install_enterprise_cli_package():
        command to create secrets, manage service accounts etc.
     """
     print('Installing dcos-enterprise-cli package')
-    stdout, stderr, return_code = shakedown.run_dcos_command('package install dcos-enterprise-cli --cli --yes', raise_on_error=True)
+    cmd = 'package install dcos-enterprise-cli --cli --yes'
+    stdout, stderr, return_code = shakedown.run_dcos_command(cmd, raise_on_error=True)
 
 
 def is_enterprise_cli_package_installed():
@@ -727,7 +728,8 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
     """
     current_leader = shakedown.marathon_leader_ip()
     print(f'leader according to MesosDNS: {current_leader}, original leader: {original_leader}')
-    assert original_leader != current_leader, f'Current leader did not change: original={original_leader}, current={current_leader}'
+    error = f'Current leader did not change: original={original_leader}, current={current_leader}'
+    assert original_leader != current_leader, error
 
 
 @retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=30000, retry_on_exception=ignore_exception)
