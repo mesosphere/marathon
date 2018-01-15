@@ -40,7 +40,7 @@ async def sse_events():
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
     async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get(url) as response:
+        async with session.get(url, verify_ssl=False) as response:
             async def internal_generator():
                 client = SSEClient(response.content)
                 async for event in client.events():
