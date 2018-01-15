@@ -3,22 +3,22 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.Container.{Docker, PortMapping}
+import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
+import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
 import mesosphere.marathon._
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.{MarathonSpec, MarathonTestHelper}
-import mesosphere.mesos.protos.{Resource, _}
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.mesos.protos.{ Resource, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.Protos.TaskInfo
-import org.apache.mesos.{Protos => MesosProtos}
-import org.joda.time.{DateTime, DateTimeZone}
+import org.apache.mesos.{ Protos => MesosProtos }
+import org.joda.time.{ DateTime, DateTimeZone }
 import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
