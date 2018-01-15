@@ -25,8 +25,13 @@ class MigrationTo142Test extends AkkaUnitTest with GroupCreation {
     "fix wrong UnreachableStrategy for resident apps" in {
       val badApp = AppDefinition(
         id = PathId("/badApp"),
-        residency = Some(Residency(23L, TaskLostBehavior.WAIT_FOREVER)),
-        unreachableStrategy = UnreachableStrategy.default(resident = false))
+        unreachableStrategy = UnreachableStrategy.default(resident = false),
+        container = Some(Container.MesosDocker(volumes = Seq(VolumeWithMount(
+          volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
+          mount = VolumeMount(volumeName = None, mountPath = "path")
+        ))
+        ))
+      )
       val goodApp = AppDefinition(id = PathId("/goodApp"))
       val fixedApp = badApp.copy(unreachableStrategy = UnreachableDisabled)
 

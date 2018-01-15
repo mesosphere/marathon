@@ -31,11 +31,14 @@ types:
         format: int64
         minimum: 0
         default: 3600
-        description: |
+        description:
+          This property is deprecated and it has no effect.
           When a task using persistent local volumes cannot be restarted on the
           agent it's been pinned to, Marathon will try to launch this task on
           another node after this timeout. Defaults to 3600 (one hour).",
       taskLostBehavior:
+        description:
+          This property is deprecated and it has no effect.
         type: strings.TaskLostBehavior
         default: WAIT_FOREVER
   UpgradeStrategy:
@@ -263,7 +266,10 @@ types:
       readinessChecks?:
         type: readiness.ReadinessCheck[]
         (pragma.omitEmpty):
-      residency?: AppResidency
+      residency?:
+        type: AppResidency
+        description:
+          This property is deprecated and it has no effect.
       requirePorts?:
         type: boolean
         description: |

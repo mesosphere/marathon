@@ -12,9 +12,6 @@ fi
 CHANNEL="$1"
 VARIANT="$2"
 
-JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
-DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$(date +%s)"
-
 if [ "$VARIANT" == "open" ]; then
   TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/multi-master.cloudformation.json"
 else
@@ -35,9 +32,9 @@ template_url: $TEMPLATE
 deployment_name: $DEPLOYMENT_NAME
 provider: aws
 aws_region: us-west-2
+key_helper: true
 template_parameters:
     DefaultInstanceType: m4.large
-    KeyName: default
     AdminLocation: 0.0.0.0/0
     PublicSlaveInstanceCount: 1
     SlaveInstanceCount: 5
@@ -49,6 +46,9 @@ fi
 if ! ./dcos-launch wait; then
   exit 3
 fi
+
+# Extract SSH key
+jq -r .ssh_private_key cluster_info.json > "$CLI_TEST_SSH_KEY"
 
 # Return dcos_url
 echo "http://$(./dcos-launch describe | jq -r ".masters[0].public_ip")/"

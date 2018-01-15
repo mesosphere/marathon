@@ -17,7 +17,7 @@ class ResourceMatchTest extends UnitTest {
         scalarMatches = Seq(
           GeneralScalarMatch(
             "mem", 128.0,
-            consumed = Seq(GeneralScalarMatch.Consumption(128.0, "role1", reservation = Some(memReservation))),
+            consumed = Seq(GeneralScalarMatch.Consumption(128.0, "role1", None, reservation = Some(memReservation))),
             scope = ScalarMatchResult.Scope.NoneDisk
           )
         ),

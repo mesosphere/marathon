@@ -1,0 +1,9 @@
+input {
+  file {
+    path => %FILE%
+    start_position => "beginning"
+    sincedb_path => %SINCEDB%
+    codec => %CODEC%
+    %EXTRA%
+  }
+}

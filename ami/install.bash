@@ -1,46 +1,53 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Enable Jessie backports to install the latest Java JRE.
-cat <<EOF >>/etc/apt/sources.list
-
-# Debian backports
-deb http://httpredir.debian.org/debian jessie-backports main
-EOF
+apt-get install -y dirmngr
 
 # Add sbt repo.
 echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
 
 # Add Docker repo.
-echo "deb https://apt.dockerproject.org/repo debian-jessie main" | tee -a /etc/apt/sources.list.d/docker.list
+echo "deb https://apt.dockerproject.org/repo debian-stretch main" | tee -a /etc/apt/sources.list.d/docker.list
 apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
 
 # Add Mesos repo.
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
-  echo "deb http://repos.mesosphere.com/debian jessie-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
-  echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
-  echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
-
-  apt-get -y update
+  echo "deb http://repos.mesosphere.com/debian stretch-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+  echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+  echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list
+apt-get -y update
 
 # Add github.com to known hosts
 ssh-keyscan github.com >> /home/admin/.ssh/known_hosts
 ssh-keyscan github.com >> /root/.ssh/known_hosts
 
 # Install dependencies
-apt install -t jessie-backports -y openjdk-8-jdk
-update-java-alternatives -s java-1.8.0-openjdk-amd64
-
 apt-get install -y \
         build-essential \
         curl \
         docker-engine \
         git \
-        npm \
-        python3-pip \
+        openjdk-8-jdk \
+        libssl-dev \
         rpm \
-        sbt
+        sbt \
+        zlib1g-dev
+
+# Download, compile and install Python 3.6.2
+wget https://www.python.org/ftp/python/3.6.2/Python-3.6.2.tgz
+tar xvf Python-3.6.2.tgz && cd Python-3.6.2/
+./configure --enable-optimizations
+make -j
+sudo make altinstall
+cd ../ && rm -r Python-3.6.2
+
+# Install pip
+wget https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py
+
+# Install falke8
+pip3 install flake8
 
 # Download (but don't install) Mesos and its dependencies.
 # The CI task will install Mesos later.
@@ -63,9 +70,6 @@ curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq
 
 # Install Ammonite
 curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm
-
-# Install falke8
-pip3 install flake8
 
 # Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
 # so we need ivy2 cache in `/root`

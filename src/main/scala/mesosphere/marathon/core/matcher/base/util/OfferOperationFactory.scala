@@ -1,10 +1,11 @@
 package mesosphere.marathon
 package core.matcher.base.util
 
+import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.ReservationLabels
-import mesosphere.marathon.core.task.Task.LocalVolume
-import mesosphere.marathon.state.{ DiskSource, VolumeMount }
+import mesosphere.marathon.state.VolumeMount
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.mesos.protos.ResourceProviderID
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -47,78 +48,91 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(reservationLabels: ReservationLabels, resources: Seq[Mesos.Resource]): Mesos.Offer.Operation = {
-    val reservedResources = resources.map { resource =>
+  def reserve(reservationLabels: ReservationLabels, resources: Seq[Mesos.Resource]): Seq[Mesos.Offer.Operation] = {
 
-      val reservation = ReservationInfo.newBuilder()
-        .setLabels(reservationLabels.mesosLabels)
-        .setPrincipal(principal)
+    // Mesos requires that there is an operation per each resource provider ID
+    resources.groupBy(ResourceProviderID.fromResourceProto).values.map { resources =>
+      val reservedResources = resources.map { resource =>
 
-      Mesos.Resource.newBuilder(resource)
-        .setRole(role)
-        .setReservation(reservation)
+        val reservation = ReservationInfo.newBuilder()
+          .setLabels(reservationLabels.mesosLabels)
+          .setPrincipal(principal)
+
+        Mesos.Resource.newBuilder(resource)
+          .setRole(role)
+          .setReservation(reservation)
+          .build()
+      }
+
+      val reserve = Mesos.Offer.Operation.Reserve.newBuilder()
+        .addAllResources(reservedResources.asJava)
         .build()
-    }
 
-    val reserve = Mesos.Offer.Operation.Reserve.newBuilder()
-      .addAllResources(reservedResources.asJava)
-      .build()
-
-    Mesos.Offer.Operation.newBuilder()
-      .setType(Mesos.Offer.Operation.Type.RESERVE)
-      .setReserve(reserve)
-      .build()
+      Mesos.Offer.Operation.newBuilder()
+        .setType(Mesos.Offer.Operation.Type.RESERVE)
+        .setReserve(reserve)
+        .build()
+    }.to[Seq]
   }
 
   def createVolumes(
     reservationLabels: ReservationLabels,
-    localVolumes: Seq[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
+    localVolumes: Seq[InstanceOpFactory.OfferedVolume]): Seq[Mesos.Offer.Operation] = {
 
-    val volumes: Seq[Mesos.Resource] = localVolumes.map {
-      case (source, vol) =>
-        val disk = {
-          val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)
-          principalOpt.foreach(persistence.setPrincipal)
+    // Mesos requires that there is an operation per each resource provider ID
+    localVolumes.groupBy(_.providerId).values.map { localVolumes =>
+      val volumes: Seq[Mesos.Resource] = localVolumes.map {
+        case InstanceOpFactory.OfferedVolume(providerId, source, vol) =>
+          val disk = {
+            val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)
+            principalOpt.foreach(persistence.setPrincipal)
 
-          // Pod volumes have names, whereas app volumes do not. Since pod persistent volumes are created
-          // in the executor container, a persistent volume name is used as its name on the Mesos end. In this case
-          // all the corresponding volume mounts refer to the volume by its name. On the other hand, in case of apps,
-          // volumes do not have names, and since persistent volumes are not shared in this case, the mount path
-          // is used instead.
-          val name = vol.persistentVolume.name.getOrElse(vol.mount.mountPath)
+            // Pod volumes have names, whereas app volumes do not. Since pod persistent volumes are created
+            // in the executor container, a persistent volume name is used as its name on the Mesos end. In this case
+            // all the corresponding volume mounts refer to the volume by its name. On the other hand, in case of apps,
+            // volumes do not have names, and since persistent volumes are not shared in this case, the mount path
+            // is used instead.
+            val name = vol.persistentVolume.name.getOrElse(vol.mount.mountPath)
 
-          val mode = VolumeMount.readOnlyToProto(vol.mount.readOnly)
-          val volume = Mesos.Volume.newBuilder()
-            .setContainerPath(name)
-            .setMode(mode)
+            val mode = VolumeMount.readOnlyToProto(vol.mount.readOnly)
+            val volume = Mesos.Volume.newBuilder()
+              .setContainerPath(name)
+              .setMode(mode)
 
-          val builder = Mesos.Resource.DiskInfo.newBuilder()
-            .setPersistence(persistence)
-            .setVolume(volume)
-          source.asMesos.foreach(builder.setSource)
-          builder
-        }
+            val builder = Mesos.Resource.DiskInfo.newBuilder()
+              .setPersistence(persistence)
+              .setVolume(volume)
+            source.asMesos.foreach(builder.setSource)
+            builder
+          }
 
-        val reservation = Mesos.Resource.ReservationInfo.newBuilder()
-          .setLabels(reservationLabels.mesosLabels)
-        principalOpt.foreach(reservation.setPrincipal)
+          val reservation = Mesos.Resource.ReservationInfo.newBuilder()
+            .setLabels(reservationLabels.mesosLabels)
+          principalOpt.foreach(reservation.setPrincipal)
 
-        Mesos.Resource.newBuilder()
-          .setName("disk")
-          .setType(Mesos.Value.Type.SCALAR)
-          .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
-          .setRole(role)
-          .setReservation(reservation)
-          .setDisk(disk)
-          .build()
-    }
+          val builder = Mesos.Resource.newBuilder()
+            .setName("disk")
+            .setType(Mesos.Value.Type.SCALAR)
+            .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
+            .setRole(role)
+            .setReservation(reservation)
+            .setDisk(disk)
 
-    val create = Mesos.Offer.Operation.Create.newBuilder()
-      .addAllVolumes(volumes.asJava)
+          providerId.foreach { providerId =>
+            val providerIdProto = Mesos.ResourceProviderID.newBuilder().setValue(providerId.value).build()
+            builder.setProviderId(providerIdProto)
+          }
 
-    Mesos.Offer.Operation.newBuilder()
-      .setType(Mesos.Offer.Operation.Type.CREATE)
-      .setCreate(create)
-      .build()
+          builder.build()
+      }
+
+      val create = Mesos.Offer.Operation.Create.newBuilder()
+        .addAllVolumes(volumes.asJava)
+
+      Mesos.Offer.Operation.newBuilder()
+        .setType(Mesos.Offer.Operation.Type.CREATE)
+        .setCreate(create)
+        .build()
+    }.to[Seq]
   }
 }

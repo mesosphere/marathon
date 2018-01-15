@@ -56,6 +56,7 @@ class QueueInfoConversionTest extends UnitTest {
         DeclinedOfferStep("UnfulfilledRole", 0, 123),
         DeclinedOfferStep("UnfulfilledConstraint", 0, 123),
         DeclinedOfferStep("NoCorrespondingReservationFound", 0, 123),
+        DeclinedOfferStep("AgentMaintenance", 0, 123),
         DeclinedOfferStep("InsufficientCpus", 75, 123), // 123 - 75 = 48
         DeclinedOfferStep("InsufficientMemory", 15, 48), // 48 - 15 = 33
         DeclinedOfferStep("InsufficientDisk", 10, 33), // 33 - 10 = 23
@@ -66,6 +67,7 @@ class QueueInfoConversionTest extends UnitTest {
         DeclinedOfferStep("UnfulfilledRole", 0, 4),
         DeclinedOfferStep("UnfulfilledConstraint", 0, 4),
         DeclinedOfferStep("NoCorrespondingReservationFound", 0, 4),
+        DeclinedOfferStep("AgentMaintenance", 0, 4),
         DeclinedOfferStep("InsufficientCpus", 3, 4), // 4 - 3 = 1
         DeclinedOfferStep("InsufficientMemory", 1, 1), // 1 - 1 = 0
         DeclinedOfferStep("InsufficientDisk", 0, 0),

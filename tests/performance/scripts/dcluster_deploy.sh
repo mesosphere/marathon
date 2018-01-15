@@ -20,8 +20,9 @@ if [ -z "$CLUSTER_CONFIG" ]; then
   exit 253
 fi
 
-# Launch a cluster
-marathon-dcluster \
+# Launch a cluster (we use `eval` to expand $DCLUSTER_ARGS)
+eval marathon-dcluster \
   --detach $CLUSTER_CONFIG \
   --marathon $MARATHON_VERSION \
-  --marathon_image $MARATHON_IMAGE
+  --marathon_image $MARATHON_IMAGE \
+  $DCLUSTER_ARGS

@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance }
+import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, LocalVolume, LocalVolumeId, Reservation }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
@@ -19,7 +19,7 @@ import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.{ NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder }
+import mesosphere.mesos.{ DiskResourceMatch, NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => Mesos }
@@ -85,7 +85,6 @@ class InstanceOpFactoryImpl(
         val (executorInfo, groupInfo, hostPorts) = TaskGroupBuilder.build(pod, request.offer,
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
 
-        // TODO(jdef) no support for resident tasks inside pods for the MVP
         val agentInfo = Instance.AgentInfo(request.offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id(t.getTaskId) }(collection.breakOut)
         val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)
@@ -107,7 +106,7 @@ class InstanceOpFactoryImpl(
         val taskId = Task.Id.forRunSpec(app.id)
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
         val (taskInfo, networkInfo) = taskBuilder.build(request.offer, matches.resourceMatch, None)
-        val task = Task.LaunchedEphemeral(
+        val task = Task(
           taskId = Task.Id(taskInfo.getTaskId),
           runSpecVersion = runSpec.version,
           status = Task.Status(
@@ -315,19 +314,21 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
-    val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
+    val localVolumes: Seq[InstanceOpFactory.OfferedVolume] =
       resourceMatch.localVolumes.map {
-        case (source, volume, mount) =>
-          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume, mount), volume, mount))
+        case DiskResourceMatch.ConsumedVolume(providerId, source, VolumeWithMount(volume, mount)) =>
+          val localVolume = LocalVolume(LocalVolumeId(runSpec.id, volume, mount), volume, mount)
+          InstanceOpFactory.OfferedVolume(providerId, source, localVolume)
       }
 
-    val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
+    val persistentVolumeIds = localVolumes.map(_.volume.id)
     val now = clock.now()
-    val timeout = Task.Reservation.Timeout(
+    val timeout = Reservation.Timeout(
       initiated = now,
       deadline = now + config.taskReservationTimeout().millis,
-      reason = Task.Reservation.Timeout.Reason.ReservationTimeout
-    )
+      reason = Reservation.Timeout.Reason.ReservationTimeout)
+    val state = Reservation.State.New(timeout = Some(timeout))
+    val reservation = Reservation(persistentVolumeIds, state)
     val agentInfo = Instance.AgentInfo(offer)
 
     val (reservationLabels, stateOp) = runSpec match {
@@ -341,10 +342,8 @@ class InstanceOpFactoryImpl(
         // there was always a 1:1 correlation from reservation to taskId)
         val taskId = Task.Id.forRunSpec(runSpec.id)
         val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
-        val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
-        val task = Task.Reserved(
+        val task = Task(
           taskId = taskId,
-          reservation = reservation,
           status = Task.Status(
             stagedAt = now,
             condition = Condition.Reserved,
@@ -352,6 +351,7 @@ class InstanceOpFactoryImpl(
           ),
           runSpecVersion = runSpec.version
         )
+
         val instance = Instance(
           instanceId = task.taskId.instanceId,
           agentInfo = agentInfo,
@@ -363,7 +363,8 @@ class InstanceOpFactoryImpl(
           ),
           tasksMap = Map(task.taskId -> task),
           runSpecVersion = runSpec.version,
-          unreachableStrategy = runSpec.unreachableStrategy
+          unreachableStrategy = runSpec.unreachableStrategy,
+          reservation = Some(reservation)
         )
         val stateOp = InstanceUpdateOperation.Reserve(instance)
         (reservationLabels, stateOp)
@@ -378,12 +379,10 @@ class InstanceOpFactoryImpl(
         val reservationLabels = TaskLabels.labelsForTask(
           frameworkId,
           taskIds.headOption.getOrElse(throw new IllegalStateException("pod does not have any container")))
-        val reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
 
         val tasks = taskIds.map { taskId =>
-          Task.Reserved(
+          Task(
             taskId = taskId,
-            reservation = reservation,
             status = Task.Status(
               stagedAt = now,
               condition = Condition.Reserved,
@@ -393,6 +392,7 @@ class InstanceOpFactoryImpl(
             runSpecVersion = runSpec.version
           )
         }
+
         val instance = Instance(
           instanceId = instanceId,
           agentInfo = agentInfo,
@@ -404,7 +404,8 @@ class InstanceOpFactoryImpl(
           ),
           tasksMap = tasks.map(t => t.taskId -> t)(collection.breakOut),
           runSpecVersion = runSpec.version,
-          unreachableStrategy = runSpec.unreachableStrategy
+          unreachableStrategy = runSpec.unreachableStrategy,
+          reservation = Some(reservation)
         )
         val stateOp = InstanceUpdateOperation.Reserve(instance)
         (reservationLabels, stateOp)
@@ -477,7 +478,7 @@ object InstanceOpFactoryImpl {
         val networkInfo = taskNetworkInfos.getOrElse(
           taskId,
           throw new IllegalStateException("failed to retrieve a task network info"))
-        val task = Task.LaunchedEphemeral(
+        val task = Task(
           taskId = taskId,
           runSpecVersion = pod.version,
           status = Task.Status(stagedAt = since, condition = Condition.Created, networkInfo = networkInfo)
@@ -485,7 +486,8 @@ object InstanceOpFactoryImpl {
         task.taskId -> task
       }(collection.breakOut),
       runSpecVersion = pod.version,
-      unreachableStrategy = pod.unreachableStrategy
+      unreachableStrategy = pod.unreachableStrategy,
+      reservation = None
     )
   }
 }
