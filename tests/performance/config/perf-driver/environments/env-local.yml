@@ -1,0 +1,15 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Local Environment                  #
+# ----------------------------------------------------------- #
+# This fragment instructs the driver to report to files,      #
+# using the raw and plot reporters.
+# ----------------------------------------------------------- #
+
+# Fragments to include
+# ===========================
+include:
+
+  # Create the following reports
+  - ../reporters/report-raw.yml
+  - ../reporters/report-csv.yml
+  - ../reporters/report-plot.yml

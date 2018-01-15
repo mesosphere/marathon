@@ -1,5 +1,5 @@
 # ----------------------------------------------------------- #
-# Configuration Fragment : Cluster Environment                #
+# Configuration Fragment : Open-Source DC/OS Cluster Target   #
 # ----------------------------------------------------------- #
 # This fragment instructs the driver to use the marathon      #
 # exposed from an enterprise cluster. As part of it's setup   #

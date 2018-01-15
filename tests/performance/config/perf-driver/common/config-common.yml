@@ -17,4 +17,4 @@ config:
 define:
 
   # The version specification we are using when writing the reponrts
-  versionspec: "{{meta:ref|date(%Y%m%d)}}-{{meta:version|safepath(meta:branch)|'unversioned'}}-{{meta:env}}-{{meta:test}}"
+  versionspec: "{{meta:ref|date(%Y%m%d%H%M)}}-{{meta:version|safepath(meta:branch)|'unversioned'}}-{{meta:env}}-{{meta:test}}"
