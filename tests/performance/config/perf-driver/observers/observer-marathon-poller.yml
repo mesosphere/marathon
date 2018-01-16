@@ -1,0 +1,16 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : Server-Side-Events Observer        #
+# ----------------------------------------------------------- #
+# This fragment installs a poller observer that is checking   #
+# the status of the deployed applications and creates         #
+# synthetic deployment events if something changes.           #
+# ----------------------------------------------------------- #
+
+# Observer configuration
+# ===========================
+observers:
+
+  # The events observer is subscribing to the
+  - class: observer.MarathonPollerObserver
+    url: "{{marathon_url}}"
+

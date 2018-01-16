@@ -11,6 +11,7 @@ import mesosphere.marathon.raml
 import mesosphere.marathon.raml.{ Endpoint, Resources, Lifecycle }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.state
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
 import mesosphere.marathon.AllConf
@@ -433,11 +434,11 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
             volumeMounts = Seq(
-              VolumeMount(
+              state.VolumeMount(
                 volumeName = Some("volume1"),
                 mountPath = "/mnt/path1"
               ),
-              VolumeMount(
+              state.VolumeMount(
                 volumeName = Some("volume2"),
                 mountPath = "/mnt/path2",
                 readOnly = true
@@ -448,7 +449,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             name = "Foo2",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
             volumeMounts = Seq(
-              VolumeMount(
+              state.VolumeMount(
                 volumeName = Some("volume1"),
                 mountPath = "/mnt/path2",
                 readOnly = false
@@ -457,11 +458,11 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
           )
         ),
         volumes = Seq(
-          HostVolume(
+          state.HostVolume(
             name = Some("volume1"),
             hostPath = "/mnt/path1"
           ),
-          EphemeralVolume(
+          state.EphemeralVolume(
             name = Some("volume2")
           )
         )

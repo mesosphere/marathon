@@ -360,6 +360,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       Given("a leader")
       WaitTestSupport.waitUntil("a leader has been elected") { firstRunningProcess.client.leader().code == 200 }
 
+      // *** 1. Leader ***
       // pick the leader to communicate with because it's the only known survivor
       val leader = firstRunningProcess.client.leader().value
       val leadingProcess: LocalMarathon = leadingServerProcess(leader.leader)
@@ -367,10 +368,10 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
 
       When("Creating an app")
       val app = App("/delete-app-and-backup-integration-test", cmd = Some("sleep 1000"))
-      val result = marathon.createAppV2(app)
-      result should be(Created)
-      extractDeploymentIds(result) should have size 1 withClue "Deployment was not triggered"
-      waitForDeployment(result)
+      val create = marathon.createAppV2(app)
+      create should be(Created)
+      extractDeploymentIds(create) should have size 1 withClue "Deployment was not triggered"
+      waitForDeployment(create)
       val oldInstances = client.tasks(app.id.toPath).value
       oldInstances should have size 1 withClue "Required instance was not started"
 
@@ -393,6 +394,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
         result.code == 200 && result.value != leader
       }
 
+      // *** 2. Leader ***
       val leader2 = firstRunningProcess.client.leader().value
       val leadingProcess2: LocalMarathon = leadingServerProcess(leader2.leader)
       val client2 = leadingProcess2.client
@@ -401,6 +403,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       And("delete the app")
       val delete = client2.deleteApp(app.id.toPath)
       delete should be(OK)
+      waitForDeployment(delete)
 
       When("calling DELETE /v2/leader with backups again")
       val tmpBackupFile2 = File.createTempFile("marathon", "DeleteAppAndBackupIntegrationTest")
@@ -412,17 +415,16 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       (abdicateResult2.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")
-      WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) {
-        !leadingProcess2.isRunning()
-      }
+      WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess2.isRunning() }
       leadingProcess2.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
       WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
         val result = firstRunningProcess.client.leader()
-        result.code == 200 && result.value != leader
+        result.code == 200 && result.value != leader2
       }
 
+      // *** 3. Leader ***
       val leader3 = firstRunningProcess.client.leader().value
       val leadingProcess3: LocalMarathon = leadingServerProcess(leader3.leader)
       val client3 = leadingProcess3.client

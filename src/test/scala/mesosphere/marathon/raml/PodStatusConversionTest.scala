@@ -479,7 +479,7 @@ object PodStatusConversionTest {
         activeSince = if (condition == core.condition.Condition.Created) None else Some(since),
         healthy = None),
       tasksMap = Seq[core.task.Task](
-        core.task.Task.LaunchedEphemeral(
+        core.task.Task(
           taskIds.head,
           since,
           core.task.Task.Status(
@@ -492,7 +492,8 @@ object PodStatusConversionTest {
         )
       ).map(t => t.taskId -> t)(collection.breakOut),
       runSpecVersion = pod.version,
-      unreachableStrategy = state.UnreachableStrategy.default()
+      unreachableStrategy = state.UnreachableStrategy.default(),
+      reservation = None
     )
 
     InstanceFixture(since, agentInfo, taskIds, instance)
@@ -500,7 +501,7 @@ object PodStatusConversionTest {
 
   def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
     val taskId = core.task.Task.Id.forRunSpec(PathId.empty)
-    core.task.Task.LaunchedEphemeral(
+    core.task.Task(
       taskId = taskId,
       status = core.task.Task.Status(
         stagedAt = Timestamp.zero,

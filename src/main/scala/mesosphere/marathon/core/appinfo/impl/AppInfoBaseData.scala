@@ -147,7 +147,7 @@ class AppInfoBaseData(
       log.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         instances.map { instance =>
-          EnrichedTask(app.id, instance.appTask, instance.agentInfo, statuses.getOrElse(instance.instanceId, Seq.empty[Health]).to[Seq])
+          EnrichedTask(instance, instance.appTask, statuses.getOrElse(instance.instanceId, Nil).to[Seq])
         }
       }
 

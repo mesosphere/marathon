@@ -6,29 +6,6 @@ uses:
 
 types:
 
-  Timeout:
-    type: object
-    properties:
-      initiated: datetime
-      deadline: datetime
-      reason:
-        type: string
-        enum:
-          - RelaunchEscalationTimeout
-          - ReservationTimeout
-
-  State:
-    type: object
-    properties:
-      name: string
-      timeout?: Timeout
-
-  Reservation:
-    type: object
-    properties:
-      volumeIds: LocalVolumeId[]
-      state: State
-
   NetworkInfoIPAddress:
     type: object
     properties:

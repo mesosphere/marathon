@@ -1,9 +1,9 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume, VolumeMount }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.mesos.protos.{ Resource, ScalarResource }
+import mesosphere.mesos.protos.{ Resource, ResourceProviderID, ScalarResource }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 
@@ -74,9 +74,13 @@ case class GeneralScalarMatch(
 
   def consumedResources: Seq[Protos.Resource] = {
     consumed.map {
-      case GeneralScalarMatch.Consumption(value, role, reservation) =>
+      case GeneralScalarMatch.Consumption(value, role, providerId, reservation) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
+        providerId.foreach { providerId =>
+          val providerIdProto = Protos.ResourceProviderID.newBuilder().setValue(providerId.value).build()
+          builder.setProviderId(providerIdProto)
+        }
         reservation.foreach(builder.setReservation)
         builder.build()
     }
@@ -94,7 +98,7 @@ case class GeneralScalarMatch(
 object GeneralScalarMatch {
   /** A (potentially partial) consumption of a scalar resource. */
   case class Consumption(consumedValue: Double, role: String,
-      reservation: Option[ReservationInfo]) extends ScalarMatchResult.Consumption
+      providerId: Option[ResourceProviderID], reservation: Option[ReservationInfo]) extends ScalarMatchResult.Consumption
 }
 
 case class DiskResourceMatch(
@@ -109,9 +113,13 @@ case class DiskResourceMatch(
 
   def consumedResources: Seq[Protos.Resource] = {
     consumed.map {
-      case DiskResourceMatch.Consumption(value, role, reservation, source, _, _) =>
+      case DiskResourceMatch.Consumption(value, role, providerId, reservation, source, _) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
+        providerId.foreach { providerId =>
+          val providerIdProto = Protos.ResourceProviderID.newBuilder().setValue(providerId.value).build()
+          builder.setProviderId(providerIdProto)
+        }
         reservation.foreach(builder.setReservation)
         source.asMesos.foreach { s =>
           builder.setDisk(DiskInfo.newBuilder.setSource(s))
@@ -126,9 +134,10 @@ case class DiskResourceMatch(
     * return all volumes for this disk resource match
     * Distinct because a persistentVolume may be associated with multiple resources.
     */
-  def volumes: Seq[(DiskSource, PersistentVolume, VolumeMount)] =
+  def volumes: Seq[DiskResourceMatch.ConsumedVolume] =
     consumed.collect {
-      case d @ DiskResourceMatch.Consumption(_, _, _, _, Some(volume), Some(mount)) => (d.source, volume, mount)
+      case d @ DiskResourceMatch.Consumption(_, _, _, _, _, Some(volumeWithMount)) =>
+        DiskResourceMatch.ConsumedVolume(d.providerId, d.source, volumeWithMount)
     }.toList.distinct
 
   override def toString: String = {
@@ -139,44 +148,47 @@ case class DiskResourceMatch(
 object DiskResourceMatch {
   /** A (potentially partial) consumption of a scalar resource. */
   case class Consumption(consumedValue: Double, role: String,
-      reservation: Option[ReservationInfo], source: DiskSource,
-      persistentVolume: Option[PersistentVolume],
-      volumeMount: Option[VolumeMount]) extends ScalarMatchResult.Consumption {
+      providerId: Option[ResourceProviderID], reservation: Option[ReservationInfo], source: DiskSource,
+      persistentVolumeWithMount: Option[VolumeWithMount[PersistentVolume]]) extends ScalarMatchResult.Consumption {
 
-    def requested: Either[Double, PersistentVolume] =
-      persistentVolume.map(Right(_)).getOrElse(Left(consumedValue))
+    def requested: Either[Double, VolumeWithMount[PersistentVolume]] =
+      persistentVolumeWithMount.map(Right(_)).getOrElse(Left(consumedValue))
   }
-  type ApplyFn = ((Double, String, Option[ReservationInfo], DiskSource, Option[PersistentVolume], Option[VolumeMount]) => Consumption)
+  type ApplyFn = ((Double, String, Option[ResourceProviderID], Option[ReservationInfo], DiskSource, Option[VolumeWithMount[PersistentVolume]]) => Consumption)
   object Consumption extends ApplyFn {
     def apply(
       c: GeneralScalarMatch.Consumption,
       source: Option[DiskInfo.Source],
-      persistentVolume: Option[PersistentVolume],
-      volumeMount: Option[VolumeMount]): Consumption = {
-      Consumption(c.consumedValue, c.role, c.reservation, DiskSource.fromMesos(source), persistentVolume, volumeMount)
+      persistentVolumeWithMount: Option[VolumeWithMount[PersistentVolume]]): Consumption = {
+      Consumption(c.consumedValue, c.role, c.providerId, c.reservation, DiskSource.fromMesos(source), persistentVolumeWithMount)
     }
   }
 
+  case class ConsumedVolume(
+      providerId: Option[ResourceProviderID],
+      source: DiskSource,
+      volume: VolumeWithMount[PersistentVolume])
 }
 
 case class DiskResourceNoMatch(
     consumed: Seq[DiskResourceMatch.Consumption],
     resourcesRemaining: Seq[Protos.Resource],
-    failedWith: Either[Double, PersistentVolume],
+    failedWith: Either[Double, VolumeWithMount[PersistentVolume]],
     scope: ScalarMatchResult.Scope) extends ScalarMatchResult {
 
   import ResourceUtil.RichResource
 
   def resourceName: String = Resource.DISK
   def requiredValue: Double = {
-    failedWith.right.map(_.persistent.size.toDouble).merge + consumed.foldLeft(0.0)(_ + _.consumedValue)
+    failedWith.right.map(_.volume.persistent.size.toDouble).merge + consumed.foldLeft(0.0)(_ + _.consumedValue)
   }
 
-  def requestedStringification(requested: Either[Double, PersistentVolume]): String = requested match {
-    case Left(value) => s"disk:root:${value}"
-    case Right(vol) =>
-      val constraintsJson: Seq[Seq[String]] = vol.persistent.constraints.map(_.toRaml[Seq[String]])(collection.breakOut)
-      s"disk:${vol.persistent.`type`.toString}:${vol.persistent.size}:[${constraintsJson.mkString(",")}]"
+  def requestedStringification(requested: Either[Double, VolumeWithMount[PersistentVolume]]): String = requested match {
+    case Left(value) => s"disk:root:$value"
+    case Right(vm) =>
+      val constraintsJson: Seq[Seq[String]] =
+        vm.volume.persistent.constraints.map(_.toRaml[Seq[String]])(collection.breakOut)
+      s"disk:${vm.volume.persistent.`type`.toString}:${vm.volume.persistent.size}:[${constraintsJson.mkString(",")}]"
   }
 
   def matches: Boolean = false

@@ -167,6 +167,11 @@
             "processed": 246
           },
           {
+            "reason": "AgentMaintenance",
+            "declined": 0,
+            "processed": 246
+          },
+          {
             "reason": "InsufficientCpus",
             "declined": 150,
             "processed": 246

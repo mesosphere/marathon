@@ -2,11 +2,14 @@ package mesosphere.marathon
 package core.matcher.base.util
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.instance.{ LocalVolume, LocalVolumeId }
+import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.mesos.protos.ResourceProviderID
 import org.apache.mesos.{ Protos => Mesos }
 
 class OfferOperationFactoryTest extends UnitTest {
@@ -50,9 +53,11 @@ class OfferOperationFactoryTest extends UnitTest {
       val task = MarathonTestHelper.makeOneCPUTask(f.taskId)
 
       When("We create a reserve operation")
-      val operation = factory.reserve(f.reservationLabels, task.getResourcesList.to[Seq])
+      val operations = factory.reserve(f.reservationLabels, task.getResourcesList.to[Seq])
 
       Then("The operation is as expected")
+      operations.length shouldEqual 1
+      val operation = operations.head
       operation.getType shouldEqual Mesos.Offer.Operation.Type.RESERVE
       operation.hasReserve shouldEqual true
       operation.getReserve.getResourcesCount shouldEqual task.getResourcesCount
@@ -72,32 +77,64 @@ class OfferOperationFactoryTest extends UnitTest {
 
       Given("a factory without principal")
       val factory = new OfferOperationFactory(Some("principal"), Some("role"))
-      val task = MarathonTestHelper.makeOneCPUTask(f.taskId)
-      val volumes = Seq(f.localVolume("mount"))
-      val resource = MarathonTestHelper.scalarResource("disk", 1024)
+      val volume1 = f.localVolume("mount1")
+      val volume2 = f.localVolume("mount2")
+      val volumes = Seq(volume1, volume2)
 
       When("We create a reserve operation")
-      val operation = factory.createVolumes(f.reservationLabels, volumes.map(v => (DiskSource.root, v)))
+      val offeredVolume1 = InstanceOpFactory.OfferedVolume(None, DiskSource.root, volume1)
+      val offeredVolume2 =
+        InstanceOpFactory.OfferedVolume(Some(ResourceProviderID("pID")), DiskSource.root, volume2)
+      val offeredVolumes = Seq(offeredVolume1, offeredVolume2)
+      val operations = factory.createVolumes(f.reservationLabels, offeredVolumes)
 
       Then("The operation is as expected")
-      operation.getType shouldEqual Mesos.Offer.Operation.Type.CREATE
-      operation.hasCreate shouldEqual true
-      operation.getCreate.getVolumesCount shouldEqual volumes.size
+      operations.length shouldEqual 2
+
+      val (operationWithProviderId, operationWithoutProviderId) =
+        if (operations.head.getCreate.getVolumesList.exists(_.hasProviderId)) {
+          (operations.head, operations.last)
+        } else {
+          (operations.last, operations.head)
+        }
+
+      operationWithProviderId.getType shouldEqual Mesos.Offer.Operation.Type.CREATE
+      operationWithProviderId.hasCreate shouldEqual true
+      operationWithProviderId.getCreate.getVolumesCount shouldEqual 1
+      operationWithProviderId.getCreate.getVolumesList.exists(_.hasProviderId) shouldEqual true
+
+      operationWithoutProviderId.getType shouldEqual Mesos.Offer.Operation.Type.CREATE
+      operationWithoutProviderId.hasCreate shouldEqual true
+      operationWithoutProviderId.getCreate.getVolumesCount shouldEqual 1
+      operationWithoutProviderId.getCreate.getVolumesList.exists(_.hasProviderId) shouldEqual false
 
       And("The volumes are correct")
-      val volume = operation.getCreate.getVolumes(0)
-      val originalVolume = volumes.head
-      volume.getName shouldEqual "disk"
-      volume.getRole shouldEqual "role"
-      volume.getScalar.getValue shouldEqual 10
-      volume.hasReservation shouldEqual true
-      volume.getReservation.getPrincipal shouldEqual "principal"
-      volume.hasDisk shouldEqual true
-      volume.getDisk.hasPersistence shouldEqual true
-      volume.getDisk.getPersistence.getId shouldEqual originalVolume.id.idString
-      volume.getDisk.hasVolume shouldEqual true
-      volume.getDisk.getVolume.getContainerPath shouldEqual originalVolume.mount.mountPath
-      volume.getDisk.getVolume.getMode shouldEqual Mesos.Volume.Mode.RW
+      val volumeWithProviderId = operationWithProviderId.getCreate.getVolumes(0)
+      val originalVolume = volume2
+      volumeWithProviderId.getName shouldEqual "disk"
+      volumeWithProviderId.getRole shouldEqual "role"
+      volumeWithProviderId.getScalar.getValue shouldEqual 10
+      volumeWithProviderId.hasReservation shouldEqual true
+      volumeWithProviderId.getReservation.getPrincipal shouldEqual "principal"
+      volumeWithProviderId.hasDisk shouldEqual true
+      volumeWithProviderId.getDisk.hasPersistence shouldEqual true
+      volumeWithProviderId.getDisk.getPersistence.getId shouldEqual volume2.id.idString
+      volumeWithProviderId.getDisk.hasVolume shouldEqual true
+      volumeWithProviderId.getDisk.getVolume.getContainerPath shouldEqual volume2.mount.mountPath
+      volumeWithProviderId.getDisk.getVolume.getMode shouldEqual Mesos.Volume.Mode.RW
+
+      val volumeWithoutProviderId = operationWithoutProviderId.getCreate.getVolumes(0)
+      volumeWithoutProviderId.getName shouldEqual "disk"
+      volumeWithoutProviderId.getRole shouldEqual "role"
+      volumeWithoutProviderId.getScalar.getValue shouldEqual 10
+      volumeWithoutProviderId.hasReservation shouldEqual true
+      volumeWithoutProviderId.getReservation.getPrincipal shouldEqual "principal"
+      volumeWithoutProviderId.hasDisk shouldEqual true
+      volumeWithoutProviderId.getDisk.hasPersistence shouldEqual true
+      volumeWithoutProviderId.getDisk.getPersistence.getId shouldEqual volume1.id.idString
+      volumeWithoutProviderId.getDisk.hasVolume shouldEqual true
+      volumeWithoutProviderId.getDisk.getVolume.getContainerPath shouldEqual volume1.mount.mountPath
+      volumeWithoutProviderId.getDisk.getVolume.getMode shouldEqual Mesos.Volume.Mode.RW
     }
   }
   class Fixture {
@@ -109,10 +146,10 @@ class OfferOperationFactoryTest extends UnitTest {
     val role = Some("role")
     val factory = new OfferOperationFactory(principal, role)
 
-    def localVolume(mountPath: String): Task.LocalVolume = {
+    def localVolume(mountPath: String): LocalVolume = {
       val pv = PersistentVolume(None, PersistentVolumeInfo(size = 10))
       val mount = VolumeMount(None, mountPath)
-      Task.LocalVolume(Task.LocalVolumeId(runSpecId, pv, mount), pv, mount)
+      LocalVolume(LocalVolumeId(runSpecId, pv, mount), pv, mount)
     }
   }
 }

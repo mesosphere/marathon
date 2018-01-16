@@ -1,7 +1,7 @@
 import java.time.{LocalDate, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
-import com.amazonaws.auth.{EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
+import com.amazonaws.auth.{AWSCredentialsProviderChain, EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
@@ -38,7 +38,6 @@ lazy val testSettings =
   (coverageMinimum in IntegrationTest) := 58,
   testWithCoverageReport in IntegrationTest := TestWithCoveragePlugin.runTestsWithCoverage(IntegrationTest).value,
 
-  testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"),
@@ -107,10 +106,12 @@ lazy val commonSettings = testSettings ++
     "Mesosphere Public Repo (S3)",
     s3("downloads.mesosphere.io/maven")
   )),
-  s3credentials := new EnvironmentVariableCredentialsProvider() | InstanceProfileCredentialsProvider.getInstance(),
+  s3credentials := new AWSCredentialsProviderChain(
+    new EnvironmentVariableCredentialsProvider(),
+    InstanceProfileCredentialsProvider.getInstance()),
   s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
 
-  scapegoatVersion := "1.3.0",
+  (scapegoatVersion in ThisBuild) := "1.3.0",
 
   coverageMinimum := 70,
   coverageFailOnMinimum := true,

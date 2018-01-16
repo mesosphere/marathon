@@ -49,7 +49,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
   "MarathonSchedulerActor" should {
     "RecoversDeploymentsAndReconcilesHealthChecksOnStart" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
@@ -187,13 +187,13 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "ScaleApp" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = "/test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
 
       queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       schedulerActor ! LeadershipTransition.ElectedAsLeaderAndReady
-      schedulerActor ! ScaleRunSpec("test-app-scale".toPath)
+      schedulerActor ! ScaleRunSpec("/test-app-scale".toPath)
 
       eventually {
         verify(queue).add(app, 1)
@@ -255,7 +255,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment" in withFixture() { f =>
       import f._
       val app = AppDefinition(
-        id = PathId("app1"),
+        id = PathId("/foo/app1"),
         cmd = Some("cmd"),
         instances = 2,
         upgradeStrategy = UpgradeStrategy(0.5),
@@ -321,7 +321,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment fail to acquire lock" in withFixture() { f =>
       import f._
       val app = AppDefinition(
-        id = PathId("app1"),
+        id = PathId("/foo/app1"),
         cmd = Some("cmd"),
         instances = 2,
         upgradeStrategy = UpgradeStrategy(0.5),
@@ -349,7 +349,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Restart deployments after failover" in withFixture() { f =>
       import f._
       val app = AppDefinition(
-        id = PathId("app1"),
+        id = PathId("/foo/app1"),
         cmd = Some("cmd"),
         instances = 2,
         upgradeStrategy = UpgradeStrategy(0.5),
@@ -375,7 +375,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Forced deployment" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
+      val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
       val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))

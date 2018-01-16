@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import pytest
@@ -225,19 +226,27 @@ def systemctl_master(command='restart'):
     shakedown.run_command_on_master('sudo systemctl {} dcos-mesos-master'.format(command))
 
 
-def save_iptables(host):
-    shakedown.run_command_on_agent(
-        host,
-        'if [ ! -e iptables.rules ] ; then sudo iptables -L > /dev/null && sudo iptables-save > iptables.rules ; fi')
+def block_iptable_rules_for_seconds(host, port_number, sleep_seconds, block_input=True, block_output=True):
+    """ For testing network partitions we alter iptables rules to block ports for some time.
+        We do that as a single SSH command because otherwise it makes it hard to ensure that iptable rules are restored.
+    """
+    filename = 'iptables-{}.rules'.format(uuid.uuid4().hex)
+    cmd = """
+          if [ ! -e {backup} ] ; then sudo iptables-save > {backup} ; fi;
+          {block}
+          sleep {seconds};
+          if [ -e {backup} ]; then sudo iptables-restore < {backup} && sudo rm {backup} ; fi
+        """.format(backup=filename, seconds=sleep_seconds,
+                   block=iptables_block_string(block_input, block_output, port_number))
+
+    shakedown.run_command_on_agent(host, cmd)
 
 
-def restore_iptables(host):
-    shakedown.run_command_on_agent(
-        host, 'if [ -e iptables.rules ]; then sudo iptables-restore < iptables.rules && rm iptables.rules ; fi')
-
-
-def block_port(host, port, direction='INPUT'):
-    shakedown.run_command_on_agent(host, 'sudo iptables -I {} -p tcp --dport {} -j DROP'.format(direction, port))
+def iptables_block_string(block_input, block_output, port):
+    """ Produces a string of iptables blocking command that can be executed on an agent. """
+    block_input_str = "sudo iptables -I INPUT -p tcp --dport {} -j DROP;".format(port) if block_input else ""
+    block_output_str = "sudo iptables -I OUTPUT -p tcp --dport {} -j DROP;".format(port) if block_output else ""
+    return block_input_str + block_output_str
 
 
 def wait_for_task(service, task, timeout_sec=120):
@@ -356,8 +365,8 @@ def install_enterprise_cli_package():
        command to create secrets, manage service accounts etc.
     """
     print('Installing dcos-enterprise-cli package')
-    stdout, stderr, return_code = shakedown.run_dcos_command('package install dcos-enterprise-cli --cli --yes')
-    assert return_code == 0, "Failed to install dcos-enterprise-cli package"
+    cmd = 'package install dcos-enterprise-cli --cli --yes'
+    stdout, stderr, return_code = shakedown.run_dcos_command(cmd, raise_on_error=True)
 
 
 def is_enterprise_cli_package_installed():
@@ -718,8 +727,9 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
         We have to retry because mesosDNS checks for changes only every 30s.
     """
     current_leader = shakedown.marathon_leader_ip()
-    print('leader according to MesosDNS: {}'.format(current_leader))
-    assert original_leader != current_leader
+    print(f'leader according to MesosDNS: {current_leader}, original leader: {original_leader}') # NOQA E999
+    error = f'Current leader did not change: original={original_leader}, current={current_leader}' # NOQA E999
+    assert original_leader != current_leader, error
 
 
 @retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=30000, retry_on_exception=ignore_exception)
@@ -764,3 +774,14 @@ def task_by_name(tasks, name):
             return task
 
     assert False, "Did not find task with name %s in this list of tasks: %s" % (name, tasks,)
+
+
+async def find_event(event_type, event_stream):
+    async for event in event_stream:
+        print('Check event: {}'.format(event))
+        if event['eventType'] == event_type:
+            return event
+
+
+async def assert_event(event_type, event_stream, within=10):
+    await asyncio.wait_for(find_event(event_type, event_stream), within)

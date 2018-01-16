@@ -36,14 +36,13 @@ object AppHelpers {
     * "update" operation into a "create" operation. This helper func facilitates that.
     */
   def withoutPriorAppDefinition(update: raml.AppUpdate, appId: PathId): raml.App = {
-    val selectedStrategy = AppConversion.ResidencyAndUpgradeStrategy(
-      residency = update.residency.map(Raml.fromRaml(_)),
+    val selectedStrategy = AppConversion.UpgradeStrategyConverter(
       upgradeStrategy = update.upgradeStrategy.map(Raml.fromRaml(_)),
       hasPersistentVolumes = update.container.exists(_.volumes.existsAn[AppPersistentVolume]),
       hasExternalVolumes = update.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
     val template = AppDefinition(
-      appId, residency = selectedStrategy.residency, upgradeStrategy = selectedStrategy.upgradeStrategy)
+      appId, upgradeStrategy = selectedStrategy)
     Raml.fromRaml(update -> template)
   }
 

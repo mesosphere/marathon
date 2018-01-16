@@ -72,6 +72,12 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
       waitForDeployment(result)
 
+      And("default residency values are set")
+      val deployedApp = marathon.app(PathId(app.id))
+      val residency = deployedApp.value.app.residency.get
+      residency.taskLostBehavior shouldEqual raml.TaskLostBehavior.WaitForever
+      residency.relaunchEscalationTimeoutSeconds shouldEqual 3600L
+
       When("the app is suspended")
       suspendSuccessfully(PathId(app.id))
 
@@ -141,7 +147,8 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       scaleToSuccessfully(PathId(app.id), 5)
 
       Then("exactly 5 tasks have been created")
-      launchedTasks(PathId(app.id)).size shouldBe 5
+      val all = allTasks(PathId(app.id))
+      all.count(_.launched) shouldBe 5 withClue (s"Found ${all.size}/5 tasks: ${all}")
     }
 
     "Scale Down" in new Fixture {
@@ -155,9 +162,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
       Then("all tasks are suspended")
       val all = allTasks(PathId(app.id))
-      all.size shouldBe 5
-      all.count(_.launched) shouldBe 0
-      all.count(_.suspended) shouldBe 5
+      all.size shouldBe 5 withClue (s"Found ${all.size}/5 tasks: ${all}")
+      all.count(_.launched) shouldBe 0 withClue (s"${all.count(_.launched)} launched tasks (should be 0)")
+      all.count(_.suspended) shouldBe 5 withClue (s"${all.count(_.suspended)} suspended tasks (should be 5)")
     }
 
     "Restart" in new Fixture {
@@ -176,13 +183,13 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       logger.info("tasks after relaunch: {}", all.mkString(";"))
 
       Then("no extra task was created")
-      all.size shouldBe 5
+      all.size shouldBe 5 withClue (s"Found ${all.size}/5 tasks: ${all}")
 
       And("exactly 5 instances are running")
-      all.count(_.launched) shouldBe 5
+      all.count(_.launched) shouldBe 5 withClue (s"${all.count(_.launched)} launched tasks (should be 5)")
 
       And("all 5 tasks are restarted and of the new version")
-      all.map(_.version).forall(_.contains(newVersion)) shouldBe true
+      all.map(_.version).forall(_.contains(newVersion)) shouldBe true withClue (s"5 launched tasks should have new version ${newVersion}: ${all}")
     }
 
     "Config Change" in new Fixture {

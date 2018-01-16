@@ -6,6 +6,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.tasks.ResourceUtil.RichResource
+import mesosphere.mesos.protos.ResourceProviderID
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
@@ -86,36 +87,39 @@ object InstanceOp {
         resourceBuilder.build()
       }
 
-      val maybeDestroyVolumes: Option[MesosProtos.Offer.Operation] =
-        if (withDisk.nonEmpty) {
+      val maybeDestroyVolumes: Seq[MesosProtos.Offer.Operation] = {
+        // Mesos requires that there is an operation per each resource provider ID
+        val volumesToDestroyGroupedByProviderId = withDisk.groupBy(ResourceProviderID.fromResourceProto).values
+        volumesToDestroyGroupedByProviderId.map { withDiskResources =>
           val destroyOp =
             MesosProtos.Offer.Operation.Destroy.newBuilder()
-              .addAllVolumes(withDisk.asJava)
+              .addAllVolumes(withDiskResources.asJava)
 
-          val op =
-            MesosProtos.Offer.Operation.newBuilder()
-              .setType(MesosProtos.Offer.Operation.Type.DESTROY)
-              .setDestroy(destroyOp)
+          MesosProtos.Offer.Operation.newBuilder()
+            .setType(MesosProtos.Offer.Operation.Type.DESTROY)
+            .setDestroy(destroyOp)
+            .build()
+        }.to[Seq]
+      }
+
+      val maybeUnreserve: Seq[MesosProtos.Offer.Operation] =
+        if (withDisk.nonEmpty || reservationsForDisks.nonEmpty) {
+          // Mesos requires that there is an operation per each resource provider ID
+          val resourcesToUnreserveGroupedByProviderId =
+            (withoutDisk ++ reservationsForDisks).groupBy(ResourceProviderID.fromResourceProto).values
+          resourcesToUnreserveGroupedByProviderId.map { resources =>
+            val unreserveOp = MesosProtos.Offer.Operation.Unreserve.newBuilder()
+              .addAllResources(resources.asJava)
               .build()
 
-          Some(op)
-        } else None
-
-      val maybeUnreserve: Option[MesosProtos.Offer.Operation] =
-        if (withDisk.nonEmpty || reservationsForDisks.nonEmpty) {
-          val unreserveOp = MesosProtos.Offer.Operation.Unreserve.newBuilder()
-            .addAllResources(withoutDisk.asJava)
-            .addAllResources(reservationsForDisks.asJava)
-            .build()
-          val op =
             MesosProtos.Offer.Operation.newBuilder()
               .setType(MesosProtos.Offer.Operation.Type.UNRESERVE)
               .setUnreserve(unreserveOp)
               .build()
-          Some(op)
-        } else None
+          }.to[Seq]
+        } else Seq.empty
 
-      Seq(maybeDestroyVolumes, maybeUnreserve).flatten
+      maybeDestroyVolumes ++ maybeUnreserve
     }
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer =

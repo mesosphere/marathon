@@ -110,7 +110,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), healthy = None)
     val instance = Instance(
       Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map.empty, clock.now(),
-      UnreachableStrategy.default()
+      UnreachableStrategy.default(), None
     )
     val eventStream = mock[EventStream]
 

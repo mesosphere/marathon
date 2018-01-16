@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.UnitTest
 import mesosphere.marathon._
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream.Implicits._
@@ -19,7 +19,7 @@ class PersistentVolumeMatcherTest extends UnitTest {
 
       TestInstanceBuilder.newBuilder(app.id).addTaskReserved()
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(
-        Task.LocalVolumeId(app.id, "persistent-volume", "uuid"))
+        Seq(LocalVolumeId(app.id, "persistent-volume", "uuid")))
         .getInstance()
       val instances: Seq[Instance] = Seq(instance)
 
@@ -35,8 +35,8 @@ class PersistentVolumeMatcherTest extends UnitTest {
 
       Given("a resident app with persistent volumes and an offer with matching persistent volumes")
       val app = f.appWithPersistentVolume()
-      val localVolumeId = Task.LocalVolumeId(app.id, "persistent-volume", "uuid")
-      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(localVolumeId).getInstance()
+      val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(Seq(localVolumeId)).getInstance()
 
       val instances: Seq[Instance] = Seq(instance)
       val offer = f.offerWithVolumes(instances.head, localVolumeId)
@@ -56,14 +56,15 @@ class PersistentVolumeMatcherTest extends UnitTest {
 
       Given("a resident app with 2 instances and an offer with 3 persistent volumes")
       val app = f.appWithPersistentVolume()
-      val localVolumeId1 = Task.LocalVolumeId(app.id, "persistent-volume", "uuid1")
-      val localVolumeId2 = Task.LocalVolumeId(app.id, "persistent-volume", "uuid2")
-      val localVolumeId3 = Task.LocalVolumeId(app.id, "persistent-volume", "uuid3")
+      val localVolumeId1 = LocalVolumeId(app.id, "persistent-volume", "uuid1")
+      val localVolumeId2 = LocalVolumeId(app.id, "persistent-volume", "uuid2")
+      val localVolumeId3 = LocalVolumeId(app.id, "persistent-volume", "uuid3")
       val instances = IndexedSeq(
-        TestInstanceBuilder.newBuilder(app.id).addTaskReserved(localVolumeId2).getInstance(),
-        TestInstanceBuilder.newBuilder(app.id).addTaskReserved(localVolumeId3).getInstance()
+        TestInstanceBuilder.newBuilder(app.id).addTaskReserved(Seq(localVolumeId2)).getInstance(),
+        TestInstanceBuilder.newBuilder(app.id).addTaskReserved(Seq(localVolumeId3)).getInstance()
       )
-      val unknownInstance = TestInstanceBuilder.newBuilder(PathId("/unknown")).addTaskReserved(localVolumeId2).getInstance()
+      val unknownInstance = TestInstanceBuilder.newBuilder(PathId("/unknown"))
+        .addTaskReserved(Seq(localVolumeId2)).getInstance()
       val offer =
         f.offerWithVolumes(unknownInstance, localVolumeId1)
           .toBuilder
@@ -86,9 +87,10 @@ class PersistentVolumeMatcherTest extends UnitTest {
 
       Given("a resident app with persistent volumes and an offer with matching persistent volumes")
       val app = f.appWithPersistentVolume()
-      val localVolumeId = Task.LocalVolumeId(app.id, "persistent-volume", "uuid")
+      val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
       val instances = Seq(
-        TestInstanceBuilder.newBuilder(app.id).addTaskReserved(Task.LocalVolumeId(app.id, "other-container", "uuid")).getInstance())
+        TestInstanceBuilder.newBuilder(app.id)
+          .addTaskReserved(Seq(LocalVolumeId(app.id, "other-container", "uuid"))).getInstance())
       val offer = f.offerWithVolumes(instances.head, localVolumeId)
 
       When("We ask for a volume match")
@@ -99,7 +101,7 @@ class PersistentVolumeMatcherTest extends UnitTest {
     }
   }
   class Fixture {
-    def offerWithVolumes(instance: Instance, localVolumeIds: Task.LocalVolumeId*) = {
+    def offerWithVolumes(instance: Instance, localVolumeIds: LocalVolumeId*) = {
       val taskId = instance.appTask.taskId
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)
     }

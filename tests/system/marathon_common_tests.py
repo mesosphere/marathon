@@ -269,8 +269,8 @@ def test_run_app_with_non_existing_user():
     def check_failure_message():
         app = client.get_app(app_def["id"])
         message = app['lastTaskFailure']['message']
-        error = "Failed to get user information for 'bad'"
-        assert error in message, "Launched an app with a non-existing user: {}".format(app['user'])
+        error = "No such user 'bad'"
+        assert error in message, f"Did not receive expected error messsage \"{error}\" but \"{message}\"" # noqa E999
 
     check_failure_message()
 
@@ -533,9 +533,7 @@ def test_task_gets_restarted_due_to_network_split():
     port = tasks[0]['ports'][0]
 
     # introduce a network partition
-    with shakedown.iptable_rules(host):
-        common.block_port(host, port)
-        time.sleep(10)
+    common.block_iptable_rules_for_seconds(host, port, sleep_seconds=10, block_input=True, block_output=False)
 
     shakedown.deployment_wait()
 
@@ -863,9 +861,7 @@ def test_marathon_when_disconnected_from_zk():
     tasks = client.get_tasks(app_def["id"])
     original_task_id = tasks[0]['id']
 
-    with shakedown.iptable_rules(host):
-        common.block_port(host, 2181)
-        time.sleep(10)
+    common.block_iptable_rules_for_seconds(host, 2181, sleep_seconds=10, block_input=True, block_output=False)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_task_is_back():

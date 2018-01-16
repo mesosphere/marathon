@@ -310,34 +310,6 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       )))
     }
 
-    "empty app residency on persistent volumes" in {
-      val json =
-        """
-      {
-        "cmd": "sleep 1000",
-        "container": {
-          "type": "MESOS",
-          "volumes": [
-            {
-              "containerPath": "home",
-              "mode": "RW",
-              "persistent": {
-                "size": 100
-                }
-              }]
-        },
-        "upgradeStrategy": {
-          "minimumHealthCapacity": 0.2,
-          "maximumOverCapacity": 0
-        }
-      }
-      """
-
-      val update = fromJsonString(json)
-      val residency = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "foo".toPath)).residency
-      assert(residency.contains(Residency.default))
-    }
-
     "empty app updateStrategy" in {
       val json =
         """
@@ -408,40 +380,6 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       )), createdViaUpdate.container)
     }
 
-    "empty app persists existing residency" in {
-      val json =
-        """
-        {
-          "id": "/app",
-          "args": [],
-          "container": {
-            "type": "DOCKER",
-            "volumes": [
-              {
-                "containerPath": "data",
-                "mode": "RW",
-                "persistent": {
-                  "size": 100
-                }
-              }
-            ],
-            "docker": {
-              "image": "anImage"
-            }
-          },
-          "residency": {
-            "taskLostBehavior": "WAIT_FOREVER",
-            "relaunchEscalationTimeoutSeconds": 1234
-          }
-        }
-      """
-
-      val update = fromJsonString(json)
-      val create = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/app".toPath))
-      assert(update.residency.isDefined)
-      assert(update.residency.map(Raml.fromRaml(_)) == create.residency)
-    }
-
     "empty app persists existing upgradeStrategy" in {
       val json =
         """
@@ -480,32 +418,37 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       assert(update.upgradeStrategy.map(Raml.fromRaml(_)).contains(create.upgradeStrategy))
     }
 
-    "empty app residency" in {
-      val json =
-        """
-      {
-        "cmd": "sleep 1000",
-        "container": {
-          "type": "MESOS",
-          "volumes": [
-            {
-              "containerPath": "home",
-              "mode": "RW",
-              "persistent": {
-                "size": 100
+    "empty app persists existing residency" in {
+
+      val json = """
+        {
+          "id": "/app",
+          "args": [],
+          "container": {
+            "type": "DOCKER",
+            "volumes": [
+              {
+                "containerPath": "data",
+                "mode": "RW",
+                "persistent": {
+                  "size": 100
                 }
-              }]
-        },
-        "upgradeStrategy": {
-          "minimumHealthCapacity": 0.2,
-          "maximumOverCapacity": 0
+              }
+            ],
+            "docker": {
+              "image": "anImage"
+            }
+          },
+          "residency": {
+            "taskLostBehavior": "WAIT_FOREVER",
+            "relaunchEscalationTimeoutSeconds": 1234
+          }
         }
-      }
       """
 
       val update = fromJsonString(json)
-      val residency = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "foo".toPath)).residency
-      assert(residency.contains(Residency.default))
+      Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/app".toPath))
+      assert(update.residency.isDefined)
     }
 
     "empty app update strategy on external volumes" in {

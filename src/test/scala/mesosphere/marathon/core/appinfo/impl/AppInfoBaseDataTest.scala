@@ -147,9 +147,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       appInfo should be(AppInfo(app, maybeTasks = Some(
         Seq(
-          EnrichedTask(app.id, running1.appTask, running1.agentInfo, Seq.empty),
-          EnrichedTask(app.id, running2.appTask, running2.agentInfo, Seq(alive)),
-          EnrichedTask(app.id, running3.appTask, running3.agentInfo, Seq(unhealthy))
+          EnrichedTask(running1, running1.appTask, Nil),
+          EnrichedTask(running2, running2.appTask, Seq(alive)),
+          EnrichedTask(running3, running3.appTask, Seq(unhealthy))
         )
       )))
 
@@ -400,7 +400,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val instanceId = Instance.Id.forRunSpec(pod.id)
       val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
         val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
-        taskId -> Task.LaunchedEphemeral(
+        taskId -> Task(
           taskId = taskId,
           runSpecVersion = pod.version,
           status = Task.Status.apply(
@@ -417,7 +417,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         state = InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default()),
         tasksMap = tasks,
         runSpecVersion = pod.version,
-        unreachableStrategy = UnreachableStrategy.default()
+        unreachableStrategy = UnreachableStrategy.default(),
+        None
       )
     }
 

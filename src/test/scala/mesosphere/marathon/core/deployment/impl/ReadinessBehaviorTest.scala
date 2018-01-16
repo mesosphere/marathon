@@ -221,7 +221,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       val task = mockTask
       val instance = Instance(
         instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true)),
-        Map(task.taskId -> task), runSpecVersion = version, UnreachableStrategy.default())
+        Map(task.taskId -> task), runSpecVersion = version, UnreachableStrategy.default(), None)
       tracker.instance(any) returns Future.successful(Some(instance))
       instance
     }
@@ -243,7 +243,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
           system.eventStream.subscribe(self, classOf[InstanceHealthChanged])
         }
         override def runSpec: RunSpec = spec
-        override def deploymentManager: ActorRef = deploymentManagerProbe.ref
+        override def deploymentManagerActor: ActorRef = deploymentManagerProbe.ref
         override def status: DeploymentStatus = deploymentStatus
         override def readinessCheckExecutor: ReadinessCheckExecutor = executor
         override def instanceTracker: InstanceTracker = tracker

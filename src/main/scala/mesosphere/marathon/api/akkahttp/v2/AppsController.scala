@@ -308,7 +308,9 @@ class AppsController(
         val healthStatuses = await(healthCheckManager.statuses(appId))
         instances.flatMap { instance =>
           val health = healthStatuses.getOrElse(instance.instanceId, Nil)
-          instance.tasksMap.values.map { task => EnrichedTask(appId, task, instance.agentInfo, health) }
+          instance.tasksMap.values.map { task =>
+            EnrichedTask(instance, task, health)
+          }
         }
       }
     }
@@ -333,7 +335,7 @@ class AppsController(
             val killInstances = async {
               val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
               instances.map { instance =>
-                EnrichedTask(appId, instance.appTask, instance.agentInfo, Nil)
+                EnrichedTask(instance, instance.appTask, Nil)
               }
             }
 
@@ -344,7 +346,7 @@ class AppsController(
             val killInstances = async {
               val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
               instances.map { instance =>
-                EnrichedTask(appId, instance.appTask, instance.agentInfo, Nil)
+                EnrichedTask(instance, instance.appTask, Nil)
               }
             }
 
@@ -380,7 +382,7 @@ class AppsController(
               val instances = await(taskKiller.kill(appId, findToKill, wipe = true))
               val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.headOption.map { instance =>
-                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+                EnrichedTask(instance, instance.appTask, healthStatuses.getOrElse(instance.instanceId, Nil))
               }
             }
 
@@ -395,7 +397,7 @@ class AppsController(
               val instances = await(taskKiller.kill(appId, findToKill, wipe = false))
               val healthStatuses = await(healthCheckManager.statuses(appId))
               instances.headOption.map { instance =>
-                EnrichedTask(appId, instance.appTask, instance.agentInfo, healthStatuses.getOrElse(instance.instanceId, Nil))
+                EnrichedTask(instance, instance.appTask, healthStatuses.getOrElse(instance.instanceId, Nil))
               }
             }
 
