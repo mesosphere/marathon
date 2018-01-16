@@ -28,12 +28,15 @@ case class Instance(
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
-    unreachableStrategy: UnreachableStrategy) extends MarathonState[Protos.Json, Instance] with Placed {
+    unreachableStrategy: UnreachableStrategy,
+    reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] with Placed {
 
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = state.condition.isActive
 
-  def isReserved: Boolean = state.condition == Condition.Reserved
+  // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
+  def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
+
   def isCreated: Boolean = state.condition == Condition.Created
   def isError: Boolean = state.condition == Condition.Error
   def isFailed: Boolean = state.condition == Condition.Failed
@@ -50,11 +53,7 @@ case class Instance(
   def isDropped: Boolean = state.condition == Condition.Dropped
   def isTerminated: Boolean = state.condition.isTerminal
   def isActive: Boolean = state.condition.isActive
-  def hasReservation =
-    tasksMap.values.exists {
-      case _: Task.ReservedTask => true
-      case _ => false
-    }
+  def hasReservation: Boolean = reservation.isDefined
 
   override def mergeFromProto(message: Protos.Json): Instance = {
     Json.parse(message.getJson).as[Instance]
@@ -339,6 +338,7 @@ object Instance {
   implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]
   implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
+  implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
 
   implicit val instanceJsonWrites: Writes[Instance] = {
     (
@@ -347,22 +347,27 @@ object Instance {
       (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").write[Timestamp] ~
       (__ \ "state").write[InstanceState] ~
-      (__ \ "unreachableStrategy").write[raml.UnreachableStrategy]
-    ) { (i) => (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, Raml.toRaml(i.unreachableStrategy)) }
+      (__ \ "unreachableStrategy").write[raml.UnreachableStrategy] ~
+      (__ \ "reservation").writeNullable[Reservation]
+    ) { (i) =>
+        val unreachableStrategy = Raml.toRaml(i.unreachableStrategy)
+        (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, unreachableStrategy, i.reservation)
+      }
   }
 
-  implicit val unreachableStrategyReads: Reads[Instance] = {
+  implicit val instanceJsonReads: Reads[Instance] = {
     (
       (__ \ "instanceId").read[Instance.Id] ~
       (__ \ "agentInfo").read[AgentInfo] ~
       (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState] ~
-      (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy) =>
+      (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
+      (__ \ "reservation").readNullable[Reservation]
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy, reservation) =>
         val unreachableStrategy = maybeUnreachableStrategy.
           map(Raml.fromRaml(_)).getOrElse(UnreachableStrategy.default())
-        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, unreachableStrategy)
+        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, unreachableStrategy, reservation)
       }
   }
 
@@ -399,6 +404,6 @@ object LegacyAppInstance {
     val tasksMap = Map(task.taskId -> task)
     val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
 
-    new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy)
+    new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }
 }

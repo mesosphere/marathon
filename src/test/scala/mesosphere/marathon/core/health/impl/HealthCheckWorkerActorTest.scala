@@ -34,7 +34,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
-        val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
+        val t: Task = TestTaskBuilder.Helper.runningTaskForApp(appId)
         val hostPorts = Seq(socketPort)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }
@@ -64,7 +64,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
-        val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
+        val t: Task = TestTaskBuilder.Helper.runningTaskForApp(appId)
         val hostPorts = Seq(socketPort)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }

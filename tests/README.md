@@ -61,7 +61,15 @@ The tests are run with
 make test
 ```
 
-To start a shell in the environment call `pipenv shell`.
+To start a shell in the environment call `pipenv shell`. E.g. to authenticate
+and run a specific test call
+
+```
+pipenv shell
+dcos config set core.dcos_url <dcos url>
+dcos auth login
+shakedown test_marathon_root.py::<test name>
+```
 
 For more details checkout the [shakedown site](https://github.com/dcos/shakedown).
 The tests are written under the project [test/system](system/README.md).

@@ -9,7 +9,7 @@ import sbt.Keys._
 import org.raml.v2.api.RamlModelBuilder
 import org.yaml.snakeyaml.Yaml
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.annotation.tailrec
 
@@ -63,7 +63,7 @@ object RamlGeneratorPlugin extends AutoPlugin {
       val yaml = (new Yaml()).loadAs(contents.replaceAll("!include", "include"), classOf[java.util.Map[_, _]])
       val uses = Option(yaml.get("uses"))
         .collect { case m: java.util.Map[_, _] =>
-          m.values().iterator.collect { case fileName: String => fileName }.toSeq
+          m.values().asScala.iterator.collect { case fileName: String => fileName }.toSeq
         }
         .getOrElse(Nil)
 
@@ -107,7 +107,7 @@ object RamlGeneratorPlugin extends AutoPlugin {
       val models = ramlFiles.map { file =>
         val model = new RamlModelBuilder().buildApi(file)
         if (model.hasErrors) {
-          model.getValidationResults.foreach { error =>
+          model.getValidationResults.asScala.foreach { error =>
             sys.error(error.toString)
           }
         }

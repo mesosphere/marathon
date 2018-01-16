@@ -112,10 +112,6 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
             )
           )
         )
-        .setResidency(Protos.ResidencyDefinition.newBuilder()
-          .setRelaunchEscalationTimeoutSeconds(33)
-          .setTaskLostBehavior(Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)
-        )
         .setLastScalingAt(0)
         .setLastConfigChangeAt(0)
         .setExecutor("//cmd")
@@ -135,10 +131,6 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
           groups = Set("group1", "group2"),
           labels = Map("try" -> "me"),
           networkName = Option("fubar")
-        )),
-        residency = Option(AppResidency(
-          relaunchEscalationTimeoutSeconds = 33,
-          taskLostBehavior = TaskLostBehavior.RelaunchAfterTimeout
         )),
         versionInfo = Option(VersionInfo(
           lastScalingAt = Timestamp.zero.toOffsetDateTime,

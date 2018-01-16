@@ -27,9 +27,9 @@ Prefer:
 * Explicit passing over implicit
 
 
-For our case, if implicits don't help improve the design of code, we don't use them. We don't use implicit conversions. We don't do multi-priority implicits. When type classes help improve the design of code, we use implicits for type classes (IE serialization logic).
+For our case, if implicits don't help improve the design of code, we don't use them. We avoid implicit conversions. We also avoid multi-priority implicits. When type classes help improve the design of code, we use implicits for type classes (IE serialization logic).
 
-We prefer implicits to be used contextual values, such as execution contexts. However, we prefer to be conservative, and pass the value explicitly for things like validators, authenticators, and normalizers.
+We prefer implicits to be used for contextual values such as execution contexts or the actor system. However, we prefer to be conservative, and pass the value explicitly for things like validators, authenticators, and normalizers.
 
 ### On Type Inference
 
@@ -44,7 +44,7 @@ groups.map { group: Group =>
     .map { case (image: String, apps: Seq[App]) =>
       image -> apps.length
     }
-    }
+  }
 ```
 
 Over:
@@ -103,13 +103,15 @@ $ echo '<? print(strftime("%Y-%m-%d",strtotime("lol"))) ?>' | php
 1970-01-01
 ```
 
+Another non-example is found in Marathon's history. At one point in time, the storage layer would swallow the exception and return `None` if it could not deserialize some entity successfully, and this led to data loss.
+
 We are strict in what we accept, and in what we emit. If input is not what we expect, don't be fancy.
 
 Fail loudly. Fail proudly.
 
 ## Let it Crash
 
-We prefer to focus on state recovery, and not graceful tear down. We'd prefer to just crash and restart, rather than implement many complex special error handlers.
+We prefer to focus on state recovery, and not graceful tear down. We'd prefer to just crash and restart, rather than implement many complex error recovery handlers.
 
 ## Don't Panic
 
@@ -117,5 +119,5 @@ We prefer to that Exceptions are thrown only when something goes unexpectedly wr
 
 For example:
 
-* A validation function will return errors for invalid input.
-* If we are reading from the storage layer, and the connection is not available, throw an exception.
+* A validation function should return validation errors, not throw them.
+* A storage module will throw an exception if a connection is unavailable.

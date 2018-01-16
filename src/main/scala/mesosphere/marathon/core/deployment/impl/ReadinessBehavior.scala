@@ -29,7 +29,7 @@ trait ReadinessBehavior { this: Actor =>
   //dependencies
   def runSpec: RunSpec
   def readinessCheckExecutor: ReadinessCheckExecutor
-  def deploymentManager: ActorRef
+  def deploymentManagerActor: ActorRef
   def instanceTracker: InstanceTracker
   def status: DeploymentStatus
 
@@ -167,7 +167,7 @@ trait ReadinessBehavior { this: Actor =>
     def readinessCheckBehavior: Receive = {
       case result: ReadinessCheckResult =>
         log.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
-        deploymentManager ! ReadinessCheckUpdate(status.plan.id, result)
+        deploymentManagerActor ! ReadinessCheckUpdate(status.plan.id, result)
         //TODO(MV): this code assumes only one readiness check per run spec (validation rules enforce this)
         if (result.ready) {
           log.info(s"Task ${result.taskId} now ready for app ${runSpec.id.toString}")

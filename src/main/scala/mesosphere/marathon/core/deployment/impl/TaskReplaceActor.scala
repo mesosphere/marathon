@@ -21,7 +21,7 @@ import scala.collection.{ SortedSet, mutable }
 import scala.concurrent.{ Future, Promise }
 
 class TaskReplaceActor(
-    val deploymentManager: ActorRef,
+    val deploymentManagerActor: ActorRef,
     val status: DeploymentStatus,
     val killService: KillService,
     val launchQueue: LaunchQueue,
@@ -176,7 +176,7 @@ object TaskReplaceActor extends StrictLogging {
 
   //scalastyle:off
   def props(
-    deploymentManager: ActorRef,
+    deploymentManagerActor: ActorRef,
     status: DeploymentStatus,
     killService: KillService,
     launchQueue: LaunchQueue,
@@ -185,7 +185,7 @@ object TaskReplaceActor extends StrictLogging {
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: RunSpec,
     promise: Promise[Unit]): Props = Props(
-    new TaskReplaceActor(deploymentManager, status, killService, launchQueue, instanceTracker, eventBus,
+    new TaskReplaceActor(deploymentManagerActor, status, killService, launchQueue, instanceTracker, eventBus,
       readinessCheckExecutor, app, promise)
   )
 

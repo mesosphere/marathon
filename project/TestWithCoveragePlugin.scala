@@ -1,6 +1,5 @@
 import java.time.{ ZonedDateTime, ZoneId }
 import java.time.format.DateTimeFormatter
-import play.api.libs.json.Json
 import sbt._
 import sbt.Keys._
 import sbt.plugins.JvmPlugin
@@ -79,47 +78,6 @@ object TestWithCoveragePlugin extends AutoPlugin {
     IO.write(file, csv.mkString("\n"))
   }
 
-  case class HMTest(name: String, coverage: Map[String, String], result: String = "pass")
-  implicit val hmtestFormat = Json.format[HMTest]
-
-  /**
-    * Convert test coverage data into the format that Phabricator/Harbormaster understands which is actually a
-    * 'fake' unit test.
-    *
-    * {{{
-    * {
-    *    "name": "Test Coverage"
-    *    "result": "pass"
-    *    "coverage": {
-    *       "file": "NNUCCC"
-    *    }
-    * }
-    * }}}
-    *
-    * N = Not Executable
-    * U = Not Covered
-    * C = Covered
-    */
-  def writePhabricator(file: File, name: String, baseDir: File, coverage: Coverage): Unit = {
-    val fileLineCoverage: Map[String, Map[Int, Int]] = coverage.statements.groupBy(_.source).map { case (sourceFile, statements) =>
-      val lineCoverage = statements.groupBy(_.line).map { case (line, lineStatements) =>
-        line -> lineStatements.map(_.count).sum
-      }
-      (new File(sourceFile)).getAbsolutePath.replaceAll(s"${baseDir.getAbsolutePath}/", "") -> lineCoverage
-    }
-    val phabCoverage: Map[String, String] = fileLineCoverage.map { case (file, lineData) =>
-      file -> 1.to(lineData.keys.max).map { lineNo =>
-        lineData.get(lineNo) match {
-          case None => "N"
-          case Some(x) if x < 1 => "U"
-          case Some(x) => "C"
-        }
-      }.mkString("")
-    }(collection.breakOut)
-
-    IO.write(file, Json.stringify(Json.toJson(Seq(HMTest(s"$name Coverage", phabCoverage)))))
-  }
-
   def writeCoverageReport(name: String, sourceDirs: Seq[File], coverage: Coverage, outputDir: File, target: File, baseDir: File, log: Logger): Unit = {
     log.info(s"Generating scoverage reports")
     outputDir.mkdirs()
@@ -127,8 +85,6 @@ object TestWithCoveragePlugin extends AutoPlugin {
     coberturaDir.mkdirs()
     val reportDir = outputDir / "scoverage-report"
     reportDir.mkdirs()
-
-    val phabricatorFile = target / "phabricator-test-reports" / s"$name-coverage.json"
 
     log.info(s"Writing Cobertura report to ${coberturaDir / "cobertura.xml"}")
     new CoberturaXmlWriter(sourceDirs, coberturaDir).write(coverage)
@@ -141,9 +97,6 @@ object TestWithCoveragePlugin extends AutoPlugin {
 
     log.info(s"Writing CSV coverage report to ${reportDir / "scoverage.csv" }")
     writeCsv(reportDir / "scoverage.csv", name, baseDir, coverage)
-
-    log.info(s"Writing Phabricator coverage report to $phabricatorFile")
-    writePhabricator(phabricatorFile, name, baseDir, coverage)
 
     log.info(s"Statement coverage.: ${coverage.statementCoverageFormatted}%")
     log.info(s"Branch coverage...: ${coverage.branchCoverageFormatted}%")

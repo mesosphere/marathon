@@ -1,0 +1,6 @@
+input {
+  tcp {
+    port => 8000
+    codec => %CODEC%
+  }
+}

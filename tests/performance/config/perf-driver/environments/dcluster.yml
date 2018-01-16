@@ -19,3 +19,6 @@ define:
   # We are going to launch marathon ourselves, therefore we are defining
   # `marathon_url` to point to localhost
   marathon_url: http://127.0.0.1:8080
+
+  # The host name where to connect for the JMX endpoint
+  jmx_host: 127.0.0.1

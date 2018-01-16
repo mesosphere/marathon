@@ -12,7 +12,7 @@ object NoOfferMatchReason {
   case object InsufficientPorts extends NoOfferMatchReason
   case object UnfulfilledRole extends NoOfferMatchReason
   case object UnfulfilledConstraint extends NoOfferMatchReason
-  case object AgentUnavailable extends NoOfferMatchReason
+  case object AgentMaintenance extends NoOfferMatchReason
   case object NoCorrespondingReservationFound extends NoOfferMatchReason
 
   /**
@@ -24,6 +24,7 @@ object NoOfferMatchReason {
     UnfulfilledRole,
     UnfulfilledConstraint,
     NoCorrespondingReservationFound,
+    AgentMaintenance,
     InsufficientCpus,
     InsufficientMemory,
     InsufficientDisk,

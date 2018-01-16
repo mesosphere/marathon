@@ -5,11 +5,11 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{ LocalVolumeId, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.SchedulerDriver
 
@@ -257,8 +257,8 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     // TODO: it should be up to the Task.update function to determine whether the received update makes sense
     "receiving an update for known reserved task" in new Fixture {
       val appId = PathId("/app")
-      val localVolumeId = Task.LocalVolumeId(appId, "persistent-volume", "uuid")
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(localVolumeId).getInstance()
+      val localVolumeId = LocalVolumeId(appId, "persistent-volume", "uuid")
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Seq(localVolumeId)).getInstance()
       val status = MesosTaskStatusTestHelper.finished(instance.appTask.taskId)
 
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
@@ -296,7 +296,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
 
     "kill the orphaned task when receiving an running update for the known instance but unknown task" in new Fixture {
       val appId = PathId("/app")
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched().getInstance()
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq.empty).getInstance()
       val incrementedTaskId = Task.Id.forResidentTask(Task.Id(instance.instanceId.idString))
       val status = MesosTaskStatusTestHelper.running(incrementedTaskId)
 

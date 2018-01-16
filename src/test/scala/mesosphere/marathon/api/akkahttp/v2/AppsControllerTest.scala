@@ -31,8 +31,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity }
 import mesosphere.marathon.raml.Raml
-//import mesosphere.marathon.raml.{, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork,
-//, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode,
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -98,7 +96,8 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       Instance.InstanceState(Condition.Running, clock.now(), None, None),
       Map.empty,
       clock.now(),
-      UnreachableDisabled
+      UnreachableDisabled,
+      None
     )
 
     implicit val rejectionHandler: RejectionHandler = AkkaHttpMarathonService.rejectionHandler

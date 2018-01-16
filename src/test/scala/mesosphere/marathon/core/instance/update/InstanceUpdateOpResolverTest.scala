@@ -397,12 +397,13 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     lazy val appId = PathId("/app")
     lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-    lazy val existingTask: Task.LaunchedEphemeral = existingInstance.appTask
+    lazy val existingTask: Task = existingInstance.appTask
 
     lazy val reservedInstance = TestInstanceBuilder.newBuilder(appId).addTaskReserved().getInstance()
-    lazy val existingReservedTask: Task.Reserved = reservedInstance.appTask
+    lazy val existingReservedTask: Task = reservedInstance.appTask
 
-    lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched().getInstance()
+    lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.
+      newBuilder(appId).addTaskResidentLaunched(Seq.empty).getInstance()
 
     lazy val notExistingInstanceId = Instance.Id.forRunSpec(appId)
     lazy val unreachableInstance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()

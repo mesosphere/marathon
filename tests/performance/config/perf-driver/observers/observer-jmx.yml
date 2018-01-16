@@ -24,7 +24,7 @@ observers:
   # The events observer is subscribing to the
   - class: observer.JMXObserver
     connect:
-      host: 127.0.0.1
+      host: "{{jmx_host}}"
       port: "{{jmx_port}}"
 
     # Extract the specified values from the specified MBeans

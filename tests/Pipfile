@@ -7,12 +7,14 @@ verify_ssl = true
 
 [requires]
 
-python_version = "3.5"
+python_version = "3.6"
 
 
 [packages]
 
 shakedown = {git = "https://github.com/dcos/shakedown.git", ref = "1.4.11"}
+aiohttp = "*"
+pytest-asyncio = "*"
 
 
 [dev-packages]

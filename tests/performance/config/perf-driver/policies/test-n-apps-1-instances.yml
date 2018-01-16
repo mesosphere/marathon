@@ -63,6 +63,10 @@ policies:
         advance_condition:
           events: "apps"
 
+          # It shouldn't take more than 100 seconds to deploy worst case of apps
+          # so we are using the double just to be on the safe side.
+          timeout: 200s
+
         tasks:
           pre_value: intertest
 

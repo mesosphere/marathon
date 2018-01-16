@@ -12,9 +12,9 @@ import scala.concurrent.duration._
 private[launchqueue] object RateLimiterActor {
   def props(
     rateLimiter: RateLimiter,
-    launchQueueRef: ActorRef): Props =
+    launchQueueActor: ActorRef): Props =
     Props(new RateLimiterActor(
-      rateLimiter, launchQueueRef
+      rateLimiter, launchQueueActor
     ))
 
   case class DelayUpdate(runSpec: RunSpec, delayUntil: Timestamp)
@@ -30,7 +30,7 @@ private[launchqueue] object RateLimiterActor {
 
 private class RateLimiterActor private (
     rateLimiter: RateLimiter,
-    launchQueueRef: ActorRef) extends Actor with StrictLogging {
+    launchQueueActor: ActorRef) extends Actor with StrictLogging {
   var cleanup: Cancellable = _
 
   override def preStart(): Unit = {
@@ -66,16 +66,16 @@ private class RateLimiterActor private (
 
     case AddDelay(runSpec) =>
       rateLimiter.addDelay(runSpec)
-      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
+      launchQueueActor ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
 
     case DecreaseDelay(_) => // ignore for now
 
     case AdvanceDelay(runSpec) =>
       rateLimiter.advanceDelay(runSpec)
-      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
+      launchQueueActor ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
 
     case ResetDelay(runSpec) =>
       rateLimiter.resetDelay(runSpec)
-      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
+      launchQueueActor ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
   }
 }
