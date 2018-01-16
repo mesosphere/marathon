@@ -87,10 +87,13 @@ object EnvironmentHelper {
           env += (s"PORT_$generatedPort" -> generatedPort.toString)
       }
 
-      requestedPorts.map(_.name).zip(effectivePorts).foreach {
-        case (Some(portName), Some(effectivePort)) =>
+      requestedPorts.zip(effectivePorts).zipWithIndex.foreach {
+        case ((PortRequest(Some(portName), _), Some(effectivePort)), _) =>
           env += (s"PORT_${portName.toUpperCase}" -> effectivePort.toString)
-        // TODO(jdef) port name envvars for generated container ports
+        case ((PortRequest(Some(portName), port), None), _) if port != AppDefinition.RandomPortValue =>
+          env += (s"PORT_${portName.toUpperCase}" -> port.toString)
+        case ((PortRequest(Some(portName), port), None), portIndex) if port == AppDefinition.RandomPortValue =>
+          env += (s"PORT_${portName.toUpperCase}" -> generatedPorts(portIndex).toString)
         case _ =>
       }
 

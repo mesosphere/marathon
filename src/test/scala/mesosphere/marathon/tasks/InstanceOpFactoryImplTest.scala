@@ -5,11 +5,10 @@ import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.{ AgentTestDefaults, NetworkInfo }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -47,7 +46,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       }
 
       val (expectedTaskId, _) = matched.instanceOp.stateOp.possibleNewState.get.tasksMap.head
-      val expectedTask = Task.LaunchedEphemeral(
+      val expectedTask = Task(
         taskId = expectedTaskId,
         runSpecVersion = app.version,
         status = Task.Status(
@@ -70,7 +69,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
       val expectedInstance = Instance(
         expectedTaskId.instanceId, expectedAgentInfo, instance.state, Map(expectedTaskId -> expectedTask),
-        runSpecVersion = app.version, app.unreachableStrategy)
+        runSpecVersion = app.version, app.unreachableStrategy, None)
       assert(matched.instanceOp.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
     }
 
@@ -250,8 +249,10 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def residentReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved(volumeIds: _*).getInstance()
-    def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(volumeIds: _*).getInstance()
+    def residentReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
+      TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved(Seq(volumeIds: _*)).getInstance()
+    def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
+      TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq(volumeIds: _*)).getInstance()
     def offer = MTH.makeBasicOffer().build()
     def offerWithSpaceForLocalVolume = MTH.makeBasicOffer(disk = 1025).build()
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()

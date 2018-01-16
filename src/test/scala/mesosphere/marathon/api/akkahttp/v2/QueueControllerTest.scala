@@ -97,6 +97,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "declined" : 0,
             |        "processed" : 1
             |      }, {
+            |        "reason" : "AgentMaintenance",
+            |        "declined" : 0,
+            |        "processed" : 1
+            |      }, {
             |        "reason" : "InsufficientCpus",
             |        "declined" : 1,
             |        "processed" : 1
@@ -127,6 +131,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "processed" : 3
             |      }, {
             |        "reason" : "NoCorrespondingReservationFound",
+            |        "declined" : 0,
+            |        "processed" : 3
+            |      }, {
+            |        "reason" : "AgentMaintenance",
             |        "declined" : 0,
             |        "processed" : 3
             |      }, {
@@ -228,6 +236,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "declined" : 0,
             |        "processed" : 1
             |      }, {
+            |        "reason" : "AgentMaintenance",
+            |        "declined" : 0,
+            |        "processed" : 1
+            |      }, {
             |        "reason" : "InsufficientCpus",
             |        "declined" : 1,
             |        "processed" : 1
@@ -258,6 +270,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "processed" : 3
             |      }, {
             |        "reason" : "NoCorrespondingReservationFound",
+            |        "declined" : 0,
+            |        "processed" : 3
+            |      }, {
+            |        "reason" : "AgentMaintenance",
             |        "declined" : 0,
             |        "processed" : 3
             |      }, {

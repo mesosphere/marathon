@@ -4,7 +4,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon._
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, LocalVolumeId, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
 import mesosphere.marathon.core.task.Task
@@ -825,8 +825,8 @@ class ResourceMatcherTest extends UnitTest with Inside {
           volumes = List(volume))))
 
       // Since offer matcher checks the instance version it's should be >= app.version
-      val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskReserved(
-        Task.LocalVolumeId(app.id, persistentVolume, mount))
+      val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version)
+        .addTaskReserved(Seq(LocalVolumeId(app.id, persistentVolume, mount)))
         .getInstance()
 
       val response = ResourceMatcher.matchResources(
@@ -855,8 +855,8 @@ class ResourceMatcherTest extends UnitTest with Inside {
           volumes = List(volume))))
 
       // Since offer matcher checks the instance version it's should be >= app.version
-      val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskReserved(
-        Task.LocalVolumeId(app.id, persistentVolume, mount))
+      val instance = TestInstanceBuilder.newBuilder(app.id, version = app.version)
+        .addTaskReserved(Seq(LocalVolumeId(app.id, persistentVolume, mount)))
         .getInstance()
 
       val response = ResourceMatcher.matchResources(

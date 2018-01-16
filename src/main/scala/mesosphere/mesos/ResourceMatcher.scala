@@ -228,7 +228,7 @@ object ResourceMatcher extends StrictLogging {
         val result = Availability.offerAvailable(offer, conf.drainingTime)
         noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
         // Add unavailability to noOfferMatchReasons
-        noOfferMatchReasons += NoOfferMatchReason.AgentUnavailable
+        noOfferMatchReasons += NoOfferMatchReason.AgentMaintenance
         logger.info(
           s"Offer [${offer.getId.getValue}]. Agent [${offer.getSlaveId}] on host [${offer.getHostname}] unavailable.\n"
         )

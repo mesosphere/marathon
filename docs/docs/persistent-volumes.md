@@ -44,15 +44,17 @@ Configure a persistent volume with the following options:
 - `mode`: The access mode of the volume. Currently, `"RW"` is the only possible value and will let your application read from and write to the volume.
 - `persistent.type`: The type of mesos disk resource to use; the valid options are `root`, `path`, and `mount`, corresponding to the [valid mesos multi-disk resource types](http://mesos.apache.org/documentation/latest/multiple-disk/).
 - `persistent.size`: The size of the persistent volume in MiBs.
+- `persistent.profileName`: (not seen above) The storage volume profile. Only volumes with the specified profile are used to launch an application. It this option is not given, any volume (with or without a profile) will be used for launching.
 - `persistent.maxSize`: (not seen above) For `root` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
 - `persistent.constraints`: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.
 
-You also need to set the `residency` node in order to tell Marathon to setup a stateful application. Currently, the only valid option for this is:
+Next, we also need to disable `unreachableStrategy` in order to tell Marathon to setup a stateful app:
+
 ```
-"residency": {
-  "taskLostBehavior": "WAIT_FOREVER"
-}
+"unreachableStrategy": "disabled",
 ```
+Unreachable strategy must be set to `disabled`, otherwise marathon will complain.
+
 
 ### Scaling stateful applications
 
@@ -68,6 +70,57 @@ Since all the resources your application needs are still reserved when a volume 
 The default `UpgradeStrategy` for a stateful application is a `minimumHealthCapacity` of `0.5` and a `maximumOverCapacity` of `0`. If you override this default, your definition must stay below these values in order to pass validation. The `UpgradeStrategy` must stay below these values because Marathon needs to be able to kill old tasks before starting new ones so that the new versions can take over reservations and volumes and Marathon cannot create additional tasks (as a `maximumOverCapacity > 0` would induce) in order to prevent additional volume creation.
 
 **Note:** For a stateful application, Marathon will never start more instances than specified in the `UpgradeStrategy`, and will kill old instances rather than create new ones during an upgrade or restart.
+
+## Creating a pod with local persistent volumes
+
+### Configuration options
+
+Let's configure a persistent volume with the following options:
+
+```json
+"volumes": [
+  {
+    "name": "pst",
+    "persistent": {
+      "type": "root",
+      "size": 10,
+      "constraints": []
+    }
+  }
+]
+```
+
+- `name`: Name of the pod level volume
+- `persistent.type`: The type of mesos disk resource to use; the valid options are `root`, `path`, and `mount`, corresponding to the [valid mesos multi-disk resource types](http://mesos.apache.org/documentation/latest/multiple-disk/).
+- `persistent.size`: The size of the persistent volume in MiBs.
+- `persistent.maxSize`: (not seen above) For `root` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
+- `persistent.profileName`: (not seen above) The storage volume profile. Only volumes with the specified profile are used to launch an application. It this option is not given, any volume (with or without a profile) will be used for launching.
+- `persistent.constraints`: Constraints restricting where new persistent volumes should be created. Currently, it is only possible to constrain the path of the disk resource by regular expression.
+
+
+Next, we also need to disable `unreachableStrategy` in order to tell Marathon to setup a stateful pod:
+
+```
+"unreachableStrategy": "disabled",
+```
+Unreachable strategy must be set to `disabled`, otherwise marathon will complain.
+
+Finally, we have to specify volume mount parameter:
+
+```
+"volumeMounts": [
+  {
+    "name": "pst",
+    "mountPath": "pst1",
+    "readOnly": false
+  }
+]
+```
+
+- `name`: The name of the volume to reference.
+- `mountPath`: The path inside the container at which the volume is mounted.
+- `readOnly`: If the volume is mounted as read-only or not.
+
 
 ## Under the Hood
 
@@ -176,9 +229,6 @@ A model app definition for PostgreSQL on Marathon would look like this. Note tha
     "POSTGRES_PASSWORD": "password",
     "PGDATA": "pgdata"
   },
-  "residency": {
-    "taskLostBehavior": "WAIT_FOREVER"
-  },
   "upgradeStrategy": {
     "maximumOverCapacity": 0,
     "minimumHealthCapacity": 0
@@ -263,6 +313,106 @@ The complete JSON application definition reads as follows:
     "minimumHealthCapacity": 0,
     "maximumOverCapacity": 0
   }
+}
+```
+
+### Creating a pod with persistent volume
+
+Following example will create a pod with 2 containers and one shared persistent volume.
+
+```json
+{
+  "id": "/persistent-volume-pod",
+  "volumes": [
+    {
+      "name": "pst",
+      "persistent": {
+        "type": "root",
+        "size": 10,
+        "constraints": []
+      }
+    }
+  ],
+  "scaling": {
+    "kind": "fixed",
+    "instances": 1
+  },
+  "scheduling": {
+    "unreachableStrategy": "disabled",
+    "upgrade": {
+      "minimumHealthCapacity": 0,
+      "maximumOverCapacity": 0
+    }
+  },
+  "containers": [
+    {
+      "name": "container1",
+      "exec": {
+        "command": {
+          "shell": "cd $MESOS_SANDBOX && echo 'hello' >> pst1/foo && /opt/mesosphere/bin/python -m http.server $EP_HOST_HTTPCT1"
+        }
+      },
+      "resources": {
+        "cpus": 0.1,
+        "mem": 128
+      },
+      "endpoints": [
+        {
+          "name": "httpct1",
+          "hostPort": 0,
+          "protocol": [
+            "tcp"
+          ]
+        }
+      ],
+      "volumeMounts": [
+        {
+          "name": "pst",
+          "mountPath": "pst1",
+          "readOnly": false
+        }
+      ],
+      "lifecycle": {
+        "killGracePeriodSeconds": 60
+      }
+    },
+    {
+      "name": "container2",
+      "exec": {
+        "command": {
+          "shell": "cd $MESOS_SANDBOX && /opt/mesosphere/bin/python -m http.server $EP_HOST_HTTPCT2"
+        }
+      },
+      "resources": {
+        "cpus": 0.1,
+        "mem": 128
+      },
+      "endpoints": [
+        {
+          "name": "httpct2",
+          "hostPort": 0,
+          "protocol": [
+            "tcp"
+          ]
+        }
+      ],
+      "volumeMounts": [
+        {
+          "name": "pst",
+          "mountPath": "pst2",
+          "readOnly": false
+        }
+      ],
+      "lifecycle": {
+        "killGracePeriodSeconds": 60
+      }
+    }
+  ],
+  "networks": [
+    {
+      "mode": "host"
+    }
+  ]
 }
 ```
 

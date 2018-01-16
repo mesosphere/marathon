@@ -481,16 +481,14 @@ def test_pod_health_failed_check():
     container1 = pod['instances'][0]['containers'][0]
     port = container1['endpoints'][0]['allocatedHostPort']
 
-    common.save_iptables(host)
-    common.block_port(host, port)
-    time.sleep(7)
-    common.restore_iptables(host)
+    common.block_iptable_rules_for_seconds(host, port, 7, block_input=True, block_output=False)
     common.deployment_wait(service_id=pod_id)
 
     tasks = common.get_pod_tasks(pod_id)
-    for task in tasks:
-        assert task['id'] != initial_id1, "One of the tasks has not been restarted"
-        assert task['id'] != initial_id2, "One of the tasks has not been restarted"
+    for new_task in tasks:
+        new_task_id = new_task['id']
+        assert new_task_id != initial_id1, f"Task {new_task_id} has not been restarted" # NOQA E999
+        assert new_task_id != initial_id2, f"Task {new_task_id} has not been restarted"
 
 
 @common.marathon_1_6

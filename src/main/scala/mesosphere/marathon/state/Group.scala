@@ -10,8 +10,8 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{ Group => IGroup }
-import mesosphere.marathon.state.Group.{ defaultApps, defaultPods, defaultGroups, defaultDependencies, defaultVersion }
-import mesosphere.marathon.state.PathId.{ validPathWithBase, StringPathId }
+import mesosphere.marathon.state.Group.{ defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion }
+import mesosphere.marathon.state.PathId.{ StringPathId, validPathWithBase }
 
 class Group(
     val id: PathId,
@@ -88,6 +88,7 @@ class Group(
     builder ++= transitiveGroups()
     builder.result()
   }
+  lazy val transitiveGroupValues: Iterable[Group] = transitiveGroups().map(_._2).toVector
 
   /** @return true if and only if this group directly or indirectly contains app definitions. */
   def containsApps: Boolean = apps.nonEmpty || groupsById.exists { case (_, group) => group.containsApps }
@@ -152,13 +153,64 @@ object Group extends StrictLogging {
   def validGroup(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
-      group.apps.values as "apps" is every(
-        AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
+
+      group.transitiveApps as "apps" is everyApp(
+        AppDefinition.validBasicAppDefinition(enabledFeatures) and isChildOfParentId(group)
+      )
+
       group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
       group is noPodsAndGroupsWithSameName
-      group.groupsById.values as "groups" is every(validGroup(group.id.canonicalPath(base), enabledFeatures))
+
+      group.transitiveGroupValues as "groups" is every(
+        noAppsAndPodsWithSameId and noAppsAndGroupsWithSameName and noPodsAndGroupsWithSameName
+          and isTrue("Group has to be child of groups with parent id") { childGroup =>
+            if (childGroup.id.parent == group.id) group.groupsById.contains(childGroup.id)
+            else {
+              group.group(childGroup.id.parent) match {
+                case None => false
+                case Some(parentGroup) => parentGroup.groupsById.contains(childGroup.id)
+              }
+            }
+          }
+      )
     }
+
+  implicit def everyApp(validator: Validator[AppDefinition]): Validator[Iterable[AppDefinition]] = {
+    new Validator[Iterable[AppDefinition]] {
+      override def apply(seq: Iterable[AppDefinition]): Result = {
+        seq.foldLeft[Result](Success) {
+          case (accum, (app)) =>
+            validator(app) match {
+              case Success => accum
+              case Failure(violations) =>
+                val scopedViolations = violations.map { violation =>
+                  violation.withPath(Descriptions.Explicit(app.id.toString))
+                }
+                accum.and(Failure(scopedViolations))
+            }
+        }
+      }
+    }
+  }
+
+  /**
+    * An app validator to verify that the app is in a proper child group of group.
+    *
+    * @param group The parent group for all sub groups to check.
+    * @return The validator.
+    */
+  private def isChildOfParentId(group: Group): Validator[AppDefinition] = {
+    isTrue("App has to be child of group with parent id") { app =>
+      if (app.id.parent == group.id) group.apps.contains(app.id)
+      else {
+        group.group(app.id.parent) match {
+          case None => false
+          case Some(childGroup) => childGroup.apps.contains(app.id)
+        }
+      }
+    }
+  }
 
   private def noAppsAndPodsWithSameId: Validator[Group] =
     isTrue("Applications and Pods may not share the same id") { group =>
@@ -167,8 +219,8 @@ object Group extends StrictLogging {
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
     isTrue("Groups and Applications may not have the same identifier.") { group =>
-      val groupIds = group.groupsById.keySet
-      val clashingIds = groupIds.intersect(group.apps.keySet)
+      val childGroupIds = group.groupsById.keys
+      val clashingIds = childGroupIds.filter(group.apps.contains(_))
       if (clashingIds.nonEmpty)
         logger.info(s"Found the following clashingIds in group ${group.id}: ${clashingIds}")
       clashingIds.isEmpty
@@ -176,8 +228,10 @@ object Group extends StrictLogging {
 
   private def noPodsAndGroupsWithSameName: Validator[Group] =
     isTrue("Groups and Pods may not have the same identifier.") { group =>
-      val groupIds = group.groupsById.keySet
-      val clashingIds = groupIds.intersect(group.pods.keySet)
+      val childGroupIds = group.groupsById.keys
+      val clashingIds = childGroupIds.filter(group.pods.contains(_))
+      if (clashingIds.nonEmpty)
+        logger.info(s"Found the following clashingIds in group ${group.id}: ${clashingIds}")
       clashingIds.isEmpty
     }
 

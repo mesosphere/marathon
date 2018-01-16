@@ -670,7 +670,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
             InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None),
             Map.empty,
             runSpecVersion = Timestamp.now(),
-            unreachableStrategy = UnreachableStrategy.default()
+            unreachableStrategy = UnreachableStrategy.default(),
+            None
           )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = f.podsResource.killInstance("/id", instance.instanceId.toString, f.auth.request)
@@ -686,12 +687,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
               runSpecVersion = Timestamp.now(),
-              unreachableStrategy = UnreachableStrategy.default()
+              unreachableStrategy = UnreachableStrategy.default(),
+              None
             ),
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, None, None, Nil),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
               runSpecVersion = Timestamp.now(),
-              unreachableStrategy = UnreachableStrategy.default()))
+              unreachableStrategy = UnreachableStrategy.default(),
+              None))
 
           val f = Fixture()
 

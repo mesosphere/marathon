@@ -244,8 +244,9 @@ def block_iptable_rules_for_seconds(host, port_number, sleep_seconds, block_inpu
 
 def iptables_block_string(block_input, block_output, port):
     """ Produces a string of iptables blocking command that can be executed on an agent. """
-    str = "sudo iptables -I INPUT -p tcp --dport {} -j DROP;".format(port) if block_input else ""
-    return str + "sudo iptables -I OUTPUT -p tcp --dport {} -j DROP;".format(port) if block_output else ""
+    block_input_str = "sudo iptables -I INPUT -p tcp --dport {} -j DROP;".format(port) if block_input else ""
+    block_output_str = "sudo iptables -I OUTPUT -p tcp --dport {} -j DROP;".format(port) if block_output else ""
+    return block_input_str + block_output_str
 
 
 def wait_for_task(service, task, timeout_sec=120):
@@ -364,8 +365,8 @@ def install_enterprise_cli_package():
        command to create secrets, manage service accounts etc.
     """
     print('Installing dcos-enterprise-cli package')
-    stdout, stderr, return_code = shakedown.run_dcos_command('package install dcos-enterprise-cli --cli --yes')
-    assert return_code == 0, "Failed to install dcos-enterprise-cli package"
+    cmd = 'package install dcos-enterprise-cli --cli --yes'
+    stdout, stderr, return_code = shakedown.run_dcos_command(cmd, raise_on_error=True)
 
 
 def is_enterprise_cli_package_installed():
@@ -726,8 +727,9 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
         We have to retry because mesosDNS checks for changes only every 30s.
     """
     current_leader = shakedown.marathon_leader_ip()
-    print('leader according to MesosDNS: {}'.format(current_leader))
-    assert original_leader != current_leader
+    print(f'leader according to MesosDNS: {current_leader}, original leader: {original_leader}') # NOQA E999
+    error = f'Current leader did not change: original={original_leader}, current={current_leader}' # NOQA E999
+    assert original_leader != current_leader, error
 
 
 @retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=30000, retry_on_exception=ignore_exception)

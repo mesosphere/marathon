@@ -12,6 +12,11 @@ fi
 CHANNEL="$1"
 VARIANT="$2"
 
+JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
+DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$BUILD_NUMBER"
+export DEPLOYMENT_NAME
+
+
 function create-junit-xml {
     local testsuite_name=$1
     local testcase_name=$2
@@ -48,16 +53,26 @@ function download-diagnostics-bundle {
 }
 
 # Launch cluster and run tests if launch was successful.
-export DCOS_URL=$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )
+CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
+export CLI_TEST_SSH_KEY
+
+if [ "$VARIANT" == "strict" ]; then
+  DCOS_URL="https://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )"
+  wget --no-check-certificate -O tests/system/fixtures/dcos-ca.crt $DCOS_URL/ca/dcos-ca.crt
+else
+  DCOS_URL="http://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )"
+fi
+
 CLUSTER_LAUNCH_CODE=$?
+export DCOS_URL
 case $CLUSTER_LAUNCH_CODE in
   0)
       cp -f "$DOT_SHAKEDOWN" "$HOME/.shakedown"
       (cd tests && make init test)
       SI_CODE=$?
-      if [ ${SI_CODE} -gt 0 ]; then
-        download-diagnostics-bundle
-      fi
+      # if [ ${SI_CODE} -gt 0 ]; then
+      #  download-diagnostics-bundle
+      # fi
       ./dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;

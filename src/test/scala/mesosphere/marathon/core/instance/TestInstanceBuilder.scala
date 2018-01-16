@@ -13,9 +13,7 @@ import org.apache.mesos
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-case class TestInstanceBuilder(
-    instance: Instance, now: Timestamp = Timestamp.now()
-) {
+case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
 
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLaunched(container).build()
@@ -23,27 +21,34 @@ case class TestInstanceBuilder(
   def addTaskReserved(containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskReserved(containerName).build()
 
-  def addTaskReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentReserved(localVolumeIds: _*).build()
+  def addTaskReserved(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
 
-  def addTaskResidentReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentReserved(localVolumeIds: _*).build()
+  def addTaskResidentReserved(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds).addTaskWithBuilder().taskResidentReserved().build()
 
-  def addTaskResidentLaunched(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentLaunched(localVolumeIds: _*).build()
+  def addTaskResidentReserved(state: Reservation.State): TestInstanceBuilder =
+    withReservation(state).addTaskWithBuilder().taskResidentReserved().build()
 
-  def addTaskResidentUnreachable(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
-    addTaskWithBuilder().taskResidentUnreachable(localVolumeIds: _*).build()
+  def addTaskResidentLaunched(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds).addTaskWithBuilder().taskResidentLaunched().build()
 
-  def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
+  def addTaskUnreachable(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds).addTaskWithBuilder().taskUnreachable().build()
+
+  def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now,
+    startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(containerName, stagedAt, startedAt).build()
 
   def addTaskLost(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLost(since, containerName).build()
 
-  def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None, unreachableStrategy: UnreachableStrategy = UnreachableEnabled()): TestInstanceBuilder =
-    this.copy(instance = instance.copy(unreachableStrategy = unreachableStrategy)) // we need to update the unreachable strategy first before adding an unreachable task
+  def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None,
+    unreachableStrategy: UnreachableStrategy = UnreachableEnabled()): TestInstanceBuilder = {
+    // we need to update the unreachable strategy first before adding an unreachable task
+    this.copy(instance = instance.copy(unreachableStrategy = unreachableStrategy))
       .addTaskWithBuilder().taskUnreachable(since, containerName).build()
+  }
 
   def addTaskUnreachableInactive(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskUnreachableInactive(since, containerName).build()
@@ -81,7 +86,8 @@ case class TestInstanceBuilder(
   def addTaskStarting(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskStarting(since, containerName).build()
 
-  def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None, containerName: Option[String] = None): TestInstanceBuilder =
+  def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None,
+    containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskStaged(containerName, stagedAt, version).build()
 
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
@@ -90,7 +96,7 @@ case class TestInstanceBuilder(
     this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
   }
 
-  def getInstance() = instance
+  def getInstance(): Instance = instance
 
   def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
 
@@ -106,12 +112,26 @@ case class TestInstanceBuilder(
       host = hostName.getOrElse(instance.agentInfo.host),
       region = region.orElse(instance.agentInfo.region),
       zone = zone.orElse(instance.agentInfo.zone),
-      attributes = attributes.getOrElse(instance.agentInfo.attributes)
-    )))
+      attributes = attributes.getOrElse(instance.agentInfo.attributes))))
+
+  def withReservation(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
+    withReservation(volumeIds, reservationStateNew)
+
+  def withReservation(state: Reservation.State): TestInstanceBuilder =
+    withReservation(Seq.empty, state)
+
+  def withReservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State): TestInstanceBuilder =
+    withReservation(Reservation(volumeIds, state))
+
+  def withReservation(reservation: Reservation): TestInstanceBuilder =
+    copy(instance = instance.copy(reservation = Some(reservation)))
+
+  def reservationStateNew = Reservation.State.New(timeout = None)
 
   def stateOpLaunch() = InstanceUpdateOperation.LaunchEphemeral(instance)
 
-  def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) = InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
+  def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) =
+    InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
 
   def taskLaunchedOp(): InstanceUpdateOperation.LaunchOnReservation = {
     val taskId = instance.appTask.taskId
@@ -134,24 +154,32 @@ case class TestInstanceBuilder(
 
 object TestInstanceBuilder {
 
-  def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero, instanceId: Instance.Id): Instance = Instance(
+  def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
+    instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
     state = InstanceState(Condition.Created, now, None, healthy = None),
     tasksMap = Map.empty,
     runSpecVersion = version,
-    UnreachableStrategy.default()
+    UnreachableStrategy.default(),
+    None
   )
 
   private val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 
-  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = newBuilderWithInstanceId(Instance.Id.forRunSpec(runSpecId), now, version)
+  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(),
+    version: Timestamp = Timestamp.zero): TestInstanceBuilder =
+    newBuilderWithInstanceId(Instance.Id.forRunSpec(runSpecId), now, version)
 
-  def newBuilderWithInstanceId(instanceId: Instance.Id, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = TestInstanceBuilder(emptyInstance(now, version, instanceId), now)
+  def newBuilderWithInstanceId(instanceId: Instance.Id, now: Timestamp = Timestamp.now(),
+    version: Timestamp = Timestamp.zero): TestInstanceBuilder =
+    TestInstanceBuilder(emptyInstance(now, version, instanceId), now)
 
-  def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = newBuilder(runSpecId, now, version).addTaskLaunched()
+  def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(),
+    version: Timestamp = Timestamp.zero): TestInstanceBuilder =
+    newBuilder(runSpecId, now, version).addTaskLaunched()
 
   @SuppressWarnings(Array("AsInstanceOf"))
   implicit class EnhancedLegacyInstanceImprovement(val instance: Instance) extends AnyVal {

@@ -26,8 +26,8 @@ PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
 
 DEFAULT_MOM_IMAGES = {
-    'MOM_EE_1.5': 'v1.5.1_1.10.0',
-    'MOM_EE_1.4': 'v1.4.7_1.9.8',
+    'MOM_EE_1.5': 'v1.5.5_1.10.2',
+    'MOM_EE_1.4': 'v1.4.11_1.9.9',
     'MOM_EE_1.3': '1.3.13_1.1.5'
 }
 

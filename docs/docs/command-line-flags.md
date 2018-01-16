@@ -16,7 +16,9 @@ These flags control the core functionality of the Marathon server.
 
 ### Note - Command Line Flags May Be Specified Using Environment Variables
 
-The core functionality flags can be also set by environment variable `MARATHON_OPTION_NAME` (the option name with a `MARATHON_` prefix added to it), for example `MARATHON_MASTER` for `--master` option.  Please note that command line options precede environment variables.  This means that if the `MARATHON_MASTER` environment variable is set and `--master` is supplied on the command line, then the environment variable is ignored.
+The core functionality flags can be also set by environment variable `MARATHON_CMD_OPTION_NAME` (the option name with a `MARATHON_CMD_` prefix added to it), for example `MARATHON_CMD_MASTER` for `--master` option.  Please note that command line options precede environment variables.  This means that if the `MARATHON_CMD_MASTER` environment variable is set and `--master` is supplied on the command line, then the environment variable is ignored. 
+
+For versions of Marathon prior to 1.4 the prefix for option name was just `MARATHON_`. In newer versions that is not supported anymore.
 
 ### Required Flags
 
@@ -172,7 +174,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     - S3 provider (experimental): s3://bucket-name/key-in-bucket?access_key=xxx&secret_key=xxx&region=eu-central-1
       Please note: access_key and secret_key are optional.
       If not provided, the [AWS default credentials provider chain](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used to look up aws credentials.
-* <span class="label label-default">v1.5.0</span>`--draining_seconds` (Optional. Default: 0):
+* <span class="label label-default">v1.6.0</span>`--draining_seconds` (Optional. Default: 0):
     Time (in seconds) when marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
     **Note:** In order to activate the `--draining_seconds` configuration, you must add `maintenance_mode` to the set of `--enable_features`.
 

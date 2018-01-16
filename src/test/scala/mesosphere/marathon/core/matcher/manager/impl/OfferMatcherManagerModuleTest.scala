@@ -45,7 +45,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val launch = new InstanceOpFactoryHelper(
       Some("principal"),
-      Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral, _: Instance)
+      Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task, _: Instance)
   }
 
   class Fixture {
@@ -82,7 +82,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
       val opsWithSources = matchTasks(offer).map { taskInfo =>
         val instance = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
-        val task: Task.LaunchedEphemeral = instance.appTask
+        val task: Task = instance.appTask
         val launch = F.launch(taskInfo, task.copy(taskId = Task.Id(taskInfo.getTaskId)), instance)
         InstanceOpWithSource(Source, launch)
       }(collection.breakOut)

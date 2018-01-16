@@ -39,5 +39,4 @@ object TaskLabels {
   }
 
   def labelKeysForReservations: Set[String] = Set(FRAMEWORK_ID_LABEL, TASK_ID_LABEL)
-
 }

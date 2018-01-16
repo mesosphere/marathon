@@ -8,7 +8,7 @@ import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{ LaunchedOnReservation, Reservation, Status }
+import mesosphere.marathon.core.task.Task.Status
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, EnvVarString, PathId, Timestamp }
 import org.openjdk.jmh.annotations._
@@ -66,7 +66,7 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
         Seq(
           EnrichedTask(
             appId,
-            task = LaunchedOnReservation(
+            task = Task(
               taskId = Task.Id("benchmark_app_definition.2e251a11-af74-11e7-8e35-12ebe3d150b4"),
               runSpecVersion = Timestamp.now(),
               status = Status(
@@ -79,10 +79,6 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
                   hostPorts = Seq(30000),
                   ipAddresses = Seq.empty
                 )
-              ),
-              reservation = Reservation(
-                volumeIds = Seq.empty,
-                state = Reservation.State.Launched
               )
             ),
             agentInfo = AgentInfo(
@@ -92,7 +88,9 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
               zone = None,
               attributes = Seq.empty
             ),
-            healthCheckResults = Seq.empty
+            healthCheckResults = Seq.empty,
+            servicePorts = Seq.empty,
+            reservation = None
           )
         )
       )
