@@ -81,6 +81,35 @@ object MigrationTo160 extends StrictLogging {
     import Reservation.reservationFormat
     import Instance.instanceJsonReads
 
+    def extractInstanceAndReservationsFromJson(jsValue: JsValue): Option[(Reservation, Instance)] = {
+      val instance = jsValue.as[Instance]
+      // Prior to Marathon 1.6.0, persistent volumes are supported only with apps,
+      // therefore reservation objects can only appear in app instances, and since
+      // an app has only one task by definition, there is only one KV pair in a taskMap
+      // object.
+      //
+      // We use .headOption here to handle the case of apps with no persistent volumes.
+      val maybeReservationJson = (jsValue \ "tasksMap" \\ "reservation").headOption
+
+      maybeReservationJson.map { reservationJson =>
+        Some(reservationJson.as[Reservation] -> instance)
+      } getOrElse {
+        None
+      }
+    }
+
+    def checkExistingReservationAndUpdate(reservation: Reservation, instance: Instance): Option[Instance] = {
+      instance.reservation match {
+        case Some(_) =>
+          //do nothing in case instance already contains some reservations, we don't want to not overwrite existing data
+          None
+        case None =>
+          //no reservation on the instance level, updating instance with provided reservation
+          val updatedInstance = instance.copy(reservation = Some(reservation))
+          Some(updatedInstance)
+      }
+    }
+
     maybeStore.map { store =>
       instanceRepository
         .ids()
@@ -89,33 +118,13 @@ object MigrationTo160 extends StrictLogging {
         }
         .mapConcat {
           case Some(jsValue) =>
-            val instance = jsValue.as[Instance]
-            // Prior to Marathon 1.6.0, persistent volumes are supported only with apps,
-            // therefore reservation objects can only appear in app instances, and since
-            // an app has only one task by definition, there is only one KV pair in a taskMap
-            // object.
-            //
-            // We use .headOption here to handle the case of apps with no persistent volumes.
-            val maybeReservationJson = (jsValue \ "tasksMap" \\ "reservation").headOption
-
-            maybeReservationJson.map { reservationJson =>
-              reservationJson.as[Reservation] -> instance :: Nil
-            } getOrElse {
-              Nil
-            }
-
-          case _ => Nil
+            extractInstanceAndReservationsFromJson(jsValue).toList
+          case _ =>
+            Nil
         }
         .mapConcat {
           case (reservation, instance) =>
-            instance.reservation.map { reservation =>
-              //do nothing in case instance already contains some reservations, we don't want to not overwrite existing data
-              Nil
-            } getOrElse {
-              //no reservation on the instance level, updating instance with provided reservation
-              val updatedInstance = instance.copy(reservation = Some(reservation))
-              updatedInstance :: Nil
-            }
+            checkExistingReservationAndUpdate(reservation, instance).toList
         }
         .mapAsync(1) { updatedInstance =>
           instanceRepository.store(updatedInstance)
