@@ -1,14 +1,14 @@
 {
   "id": "/test-ipv6",
   "instances": 1,
-  "cmd": "python3 -m http.server 8080",
+  "cmd": "nc -kl -p 8080 -e sh -c $'sleep 1; echo -e \"HTTP/1.1 200 OK\\r\\nContent-Length: 3\\r\\n\\r\\nHi\"'",
   "cpus": 0.5,
   "mem": 32.0,
   "networks": [ { "mode": "container", "name": "mesos-docker-ipv6-test" } ],
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "python:3"
+      "image": "alpine"
     },
     "portMappings": [
       { "containerPort": 8080, "hostPort": 0 }
