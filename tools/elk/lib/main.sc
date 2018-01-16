@@ -4,17 +4,19 @@ import $file.dependencies
 import $file.util
 import $file.logformat
 
-import logformat.LogFormat
+import logformat.{LogFormat}
 import scala.annotation.tailrec
 import akka.actor.ActorSystem
 import akka.stream.{ ActorMaterializer, Materializer }
 import akka.stream.IOResult
 import akka.util.ByteString
+import akka.NotUsed
 import akka.stream.scaladsl._
 import ammonite.ops._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.{Try, Success, Failure}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @tailrec def await[T](f: Future[T]): T = f.value match {
   case None =>
@@ -30,7 +32,15 @@ def renderTemplate(template: Path, vars: (String, String)*): String =
   }
 
 def gzipSource(input: Path, maxChunkSize: Int = 1024): Source[ByteString, Future[IOResult]] = {
-  FileIO.fromPath(input.toNIO).via(Compression.gunzip(maxChunkSize))
+  FileIO.fromPath(input.toNIO)
+    .via(Compression.gunzip(maxChunkSize))
+    .mapMaterializedValue { resultF =>
+      resultF.andThen { case Success(result) =>
+        if (!result.wasSuccessful) {
+          println(s"WARNING! Error extracting ${input}; ${result.status}. ${result.count} bytes were written.")
+        }
+      }
+    }
 }
 
 def bundleLogGzipped(masterPath: Path) =
@@ -46,7 +56,13 @@ def warningLineSplitter(file: Path, warnLength: Int) =
     line
   }
 
-def unzipAndStripLogs(masters: Map[String, Path])(implicit mat: Materializer): Map[String, Path] = {
+def stripAnsiFlow(inputPath: Path): Flow[ByteString, ByteString, NotUsed] =
+  Flow[ByteString]
+    .via(warningLineSplitter(inputPath, 128000))
+    .map { bytes => ByteString(util.stripAnsi(bytes.utf8String)) }
+    .intersperse(ByteString("\n"))
+
+def unzipAndStripBundleLogs(masters: Map[String, Path])(implicit mat: Materializer): Map[String, Path] = {
   masters.map { case (master, masterPath) =>
     val gunzippedFilePath = bundleLogGunzipped(masterPath)
     if (!gunzippedFilePath.toIO.exists) {
@@ -55,13 +71,8 @@ def unzipAndStripLogs(masters: Map[String, Path])(implicit mat: Materializer): M
       println(s"Extracting ${gzippedFilePath} to ${gunzippedFilePath}")
       val result = await {
         gzipSource(gzippedFilePath)
-          .via(warningLineSplitter(gzippedFilePath, 128000))
-          .map { bytes => ByteString(util.stripAnsi(bytes.utf8String)) }
-          .intersperse(ByteString("\n"))
+          .via(stripAnsiFlow(gzippedFilePath))
           .runWith(FileIO.toPath(gunzippedFilePath.toNIO))
-      }
-      if (!result.wasSuccessful) {
-        println(s"WARNING! Error extracting ${gzippedFilePath}; ${result.status}. ${result.count} bytes were written.")
       }
     }
     master -> gunzippedFilePath
@@ -86,7 +97,7 @@ def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): Option[Log
 
         val maybeFormat = (for {
           line <- linesSample.take(100)
-          format <- LogFormat.all if format.matches(line)
+          format <- LogFormat.tryMatch(line)
         } yield format).headOption
 
         maybeFormat
@@ -122,6 +133,42 @@ def writeFiles(entries: (Path, String)*): Unit = {
   }
 }
 
+def generateLogstashConfig(inputPath: Path, logFormat: LogFormat, files: Map[String, Path]) = {
+  val (target, printing, loading) = setupTarget(pwd / 'target)
+
+  // Write out the debug template set
+  val tcpReader = renderTemplate(
+    pwd / "conf" / "input-tcp.conf.template",
+    "CODEC" -> logFormat.codec)
+
+  writeFiles(
+    printing / "10-input.conf" -> tcpReader,
+    printing / "15-filters-format.conf" -> logFormat.unframe,
+    printing / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    printing / "30-output.conf" -> (read!(pwd / "conf" / "output-console.conf")))
+
+  files.foreach { case (host, logPath) =>
+    val inputConf = renderTemplate(
+      pwd / "conf" / "input-file.conf.template",
+      "FILE" -> util.escapeString(logPath.toString),
+      "SINCEDB" -> util.escapeString((loading / s"since-db-${host}.db").toString),
+      "CODEC" -> logFormat.codec,
+      "EXTRA" -> s"""|"add_field" => {
+                     |  "file_host" => ${util.escapeString(host)}
+                     |}
+                     |""".stripMargin
+    )
+    writeFiles(loading / s"10-input-${host}.conf" -> inputConf)
+  }
+
+  writeFiles(
+    loading / "11-filters-host.conf" -> (read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
+    loading / "15-filters-format.conf" -> logFormat.unframe,
+    loading / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    loading / "30-output.conf" -> (read!(pwd / "conf" / "output-elasticsearch.conf")),
+    target / "data-path.txt" -> inputPath.toString)
+}
+
 /**
   * Generate logstash config to target a DCOS bundle
   *
@@ -138,9 +185,7 @@ def generateTargetBundle(bundlePath: Path): Unit = {
 
   println(s"${masters.size} masters discovered: ${masters.keys.mkString(", ")}")
 
-  val (target, printing, loading) = setupTarget(pwd / 'target)
-
-  val unzippedLogLocations = unzipAndStripLogs(masters)
+  val unzippedLogLocations = unzipAndStripBundleLogs(masters)
 
   val logFormat = detectLogFormat(unzippedLogLocations.values.toSeq).getOrElse {
     throw new Exception("Couldn't detect log format in any input files")
@@ -151,32 +196,42 @@ def generateTargetBundle(bundlePath: Path): Unit = {
     pwd / "conf" / "input-tcp.conf.template",
     "CODEC" -> logFormat.codec)
 
-  writeFiles(
-    printing / "10-input.conf" -> tcpReader,
-    printing / "15-filters-format.conf" -> logFormat.unframe,
-    printing / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
-    printing / "30-output.conf" -> (read!(pwd / "conf" / "output-console.conf")))
+  generateLogstashConfig(bundlePath, logFormat, unzippedLogLocations)
 
-  unzippedLogLocations.foreach { case (master, logPath) =>
-    val inputConf = renderTemplate(
-      pwd / "conf" / "input-file.conf.template",
-      "FILE" -> util.escapeString(logPath.toString),
-      "SINCEDB" -> util.escapeString((loading / s"since-db-${master}.db").toString),
-      "CODEC" -> logFormat.codec,
-      "EXTRA" -> s"""|"add_field" => {
-                     |  "file_host" => ${util.escapeString(master)}
-                     |}
-                     |""".stripMargin
-    )
-    writeFiles(loading / s"10-input-${master}.conf" -> inputConf)
+  println(s"All Done")
+}
+
+
+def generateTargetFile(input: Path): Unit = {
+  implicit val as = ActorSystem()
+  implicit val mat = ActorMaterializer()
+  println(s"Generating logstash config for file ${input}")
+
+  val strippedPath = input / up / (input.last.split('.').head + ".stripped")
+
+  if (!strippedPath.toIO.exists) {
+    val isGzip = input.last.split('.').last == "gz"
+
+    val source = if (isGzip)
+      gzipSource(input)
+    else
+      FileIO.fromPath(input.toNIO)
+
+    println(s"Stripping ansi and writing to ${strippedPath}")
+    val result = await {
+      source
+        .via(stripAnsiFlow(input))
+        .runWith(FileIO.toPath(strippedPath.toNIO))
+    }
   }
 
-  writeFiles(
-    loading / "11-filters-host.conf" -> (read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
-    loading / "15-filters-format.conf" -> logFormat.unframe,
-    loading / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
-    loading / "30-output.conf" -> (read!(pwd / "conf" / "output-elasticsearch.conf")),
-    target / "data-path.txt" -> bundlePath.toString)
+  val logFormat = detectLogFormat(Seq(strippedPath)).getOrElse {
+    throw new Exception("Couldn't detect log format in ${strippedPath}")
+  }
+
+  val host = logFormat.host.getOrElse { input.last.split('.').head }
+
+  generateLogstashConfig(input, logFormat, Map(host -> strippedPath))
 
   println(s"All Done")
 }
@@ -185,5 +240,7 @@ def generateTargetBundle(bundlePath: Path): Unit = {
   kind match {
     case "bundle" =>
       generateTargetBundle(path)
+    case "file" =>
+      generateTargetFile(path)
   }
 }
