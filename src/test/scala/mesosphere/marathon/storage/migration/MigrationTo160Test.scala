@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package storage.migration
 
-import java.time.OffsetDateTime
+import java.time.{ OffsetDateTime, ZoneOffset }
 
 import akka.Done
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -59,30 +59,27 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
       verify(instanceRepository, once).store(targetInstance2)
       verify(instanceRepository, never).store(targetInstance3)
     }
+
+    "don't change instances if reservation is already there" in new Fixture {
+      override val instance = TestInstanceBuilder.emptyInstance(instanceId = instanceId1).copy(tasksMap = Map.empty, reservation = Some(Reservation(Nil, Reservation.State.New(None))))
+      override val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(reservation = Some(Reservation(Nil, Reservation.State.New(None))))
+      initMocks()
+      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
+      val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.New(None))))
+      val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
+      val targetInstance3 = instance3
+
+      logger.info(s"Migration instances ($instance, $instance2, $instance3) ")
+      verify(instanceRepository, once).ids()
+      verify(instanceRepository, never).store(targetInstance)
+      verify(instanceRepository, once).store(targetInstance2)
+      verify(instanceRepository, never).store(targetInstance3)
+    }
   }
 
   private class Fixture {
 
-    val now = Timestamp.now()
-
-    implicit val instanceResolver: IdResolver[Instance.Id, JsValue, String, ZkId] =
-      new IdResolver[Instance.Id, JsValue, String, ZkId] {
-        override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
-          ZkId(category, id.idString, version)
-        override val category: String = "instance"
-        override def fromStorageId(key: ZkId): Id = Instance.Id(key.id)
-        override val hasVersions: Boolean = false
-        override def version(v: JsValue): OffsetDateTime = OffsetDateTime.MIN
-      }
-
-    implicit val instanceJsonUnmarshaller: Unmarshaller[ZkSerialized, JsValue] =
-      Unmarshaller.strict {
-        case ZkSerialized(byteString) =>
-          Json.parse(byteString.utf8String)
-      }
-
-    import Reservation.reservationFormat
-    import Instance.instanceJsonReads
+    val now = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
     val instanceRepository: InstanceRepository = mock[InstanceRepository]
     val persistenceStore: ZkPersistenceStore = mock[ZkPersistenceStore]

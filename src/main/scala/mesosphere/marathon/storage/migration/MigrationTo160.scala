@@ -106,15 +106,16 @@ object MigrationTo160 extends StrictLogging {
 
           case _ => Nil
         }
-        .mapConcat { case (reservation, instance) =>
-          instance.reservation.map { reservation =>
-            //do nothing in case instance already contains some reservations, we don't want to not overwrite existing data
-            Nil
-          } getOrElse {
-            //no reservation on the instance level, updating instance with provided reservation
-            val updatedInstance = instance.copy(reservation = Some(reservation))
-            updatedInstance :: Nil
-          }
+        .mapConcat {
+          case (reservation, instance) =>
+            instance.reservation.map { reservation =>
+              //do nothing in case instance already contains some reservations, we don't want to not overwrite existing data
+              Nil
+            } getOrElse {
+              //no reservation on the instance level, updating instance with provided reservation
+              val updatedInstance = instance.copy(reservation = Some(reservation))
+              updatedInstance :: Nil
+            }
         }
         .mapAsync(1) { updatedInstance =>
           instanceRepository.store(updatedInstance)
