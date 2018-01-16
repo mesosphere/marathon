@@ -22,7 +22,7 @@ class SimulatedScheduler(clock: SettableClock) extends Scheduler {
   override def maxFrequency = 0.0
   private[this] val nextId = new AtomicLong
   private[this] val scheduledTasks = scala.collection.mutable.Map.empty[Long, ScheduledTask]
-  private case class ScheduledTask(action: () => Unit, var time: Long)
+  private case class ScheduledTask(id: Long, runnable: Runnable, repeat: Option[FiniteDuration], time: Long, executor: ExecutionContext)
   private class ScheduledTaskCancellable(id: Long) extends Cancellable {
     override def cancel() = {
       doCancel(id)
@@ -34,10 +34,23 @@ class SimulatedScheduler(clock: SettableClock) extends Scheduler {
   clock.onChange { () => poll() }
 
   private[this] def doCancel(id: Long) = synchronized { scheduledTasks -= id }
-  private[this] def poll(): Unit = synchronized {
-    val now = clock.instant.toEpochMilli
-    scheduledTasks.values.foreach { task =>
-      if (task.time <= now) task.action()
+  private[this] def poll(): Unit = {
+    val readyTasks = synchronized {
+      val now = clock.instant.toEpochMilli
+      val readyTasks = scheduledTasks.values.filter(_.time <= now)
+      readyTasks.foreach { task =>
+        task.repeat match {
+          case None =>
+            doCancel(task.id)
+          case Some(interval) =>
+            scheduledTasks(task.id) = task.copy(time = now + interval.toMillis)
+        }
+      }
+      readyTasks
+    }
+    // do this outside of synchronized to prevent potential deadlocks if a same-thread executor is used
+    readyTasks.foreach { task =>
+      task.executor.execute(task.runnable)
     }
   }
 
@@ -47,11 +60,11 @@ class SimulatedScheduler(clock: SettableClock) extends Scheduler {
     val id = nextId.getAndIncrement
     val cancellable = new ScheduledTaskCancellable(id)
     scheduledTasks(id) = ScheduledTask(
+      id = id,
       time = clock.instant.toEpochMilli + delay.toMillis,
-      action = () => {
-        cancellable.cancel()
-        executor.execute(runnable)
-      }
+      repeat = None,
+      runnable = runnable,
+      executor = executor
     )
     poll()
     cancellable
@@ -64,11 +77,11 @@ class SimulatedScheduler(clock: SettableClock) extends Scheduler {
     val id = nextId.getAndIncrement
     val cancellable = new ScheduledTaskCancellable(id)
     scheduledTasks(id) = ScheduledTask(
+      id = id,
       time = clock.instant.toEpochMilli + initialDelay.toMillis,
-      action = () => {
-        scheduledTasks(id).time = clock.instant.toEpochMilli + interval.toMillis
-        executor.execute(runnable)
-      }
+      repeat = Some(interval),
+      runnable = runnable,
+      executor = executor
     )
     poll()
     cancellable
