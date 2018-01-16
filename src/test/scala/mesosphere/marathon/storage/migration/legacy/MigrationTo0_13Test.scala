@@ -163,6 +163,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     val maxVersions = 25
     lazy val config = LegacyInMemConfig(maxVersions)
     lazy val state = config.store
+    state.markOpen()
     implicit lazy val metrics = new Metrics(new MetricRegistry)
     lazy val legacyTaskStore = new LegacyTaskStore(state)
     lazy val taskRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])

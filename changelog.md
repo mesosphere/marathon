@@ -1,3 +1,51 @@
+## Changes from 1.4.10 to 1.4.11
+
+### Fixed issues
+
+- [MARATHON-7992](https://jira.mesosphere.com/browse/MARATHON-7992) - Validation errors on root group in large clusters can lead Marathon to crash.
+
+
+## Changes from 1.4.9 to 1.4.10
+
+### Fixed issues
+
+- [MARATHON-7974](https://jira.mesosphere.com/browse/MARATHON-7974) - If a non-super-user was explicitly given access to some resource, such as GroupResources, they were denied. This has been resolved.
+- [MARATHON-7962](https://jira.mesosphere.com/browse/MARATHON-7962) - Enable killGracePeriodSeconds for Pods.
+- [MARATHON_EE-1770](https://jira.mesosphere.com/browse/MARATHON_EE-1770) - Optimized port assignments and performance enhancements.
+- [MARATHON_EE-1764](https://jira.mesosphere.com/browse/MARATHON_EE-1764) - Optimized port assignments and performance enhancements.
+
+
+## Changes from 1.4.8 to 1.4.9
+
+### Fixed issues
+
+- [MARATHON-7790](https://jira.mesosphere.com/browse/MARATHON-7790) Migrate UnreachableStrategy Saved in Instances
+
+### 1.4.9 New Behavior
+#### Migrating unreachableStrategy - running instances
+
+If you already migrated your apps and pods to the new default behavior for `UnreachableStrategy`, you also should consider to migrate the running instances as well.
+
+To change the `unreachableStrategy` of all running instances, set the environment variable `MIGRATION_1_4_6_UNREACHABLE_STRATEGY` to `true`, which leads to the following behavior during migration:
+
+When opting in to the unreachable migration step
+1) all instances that had a config of `UnreachableStrategy(300 seconds, 600 seconds)` (previous default) are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+2) all instances that had a config of `UnreachableStrategy(1 second, x seconds)` are migrated to have `UnreachableStrategy(0 seconds, x seconds)`
+3) all instances that had a config of `UnreachableStrategy(1 second, 2 seconds)` are migrated to have `UnreachableStrategy(0 seconds, 0 seconds)`
+
+**Note**: If you set this variable after upgrading to 1.4.9, it will have no effect.
+
+
+## Changes from 1.4.7 to 1.4.8
+
+### Fixed issues
+
+* [MARATHON-7697](https://jira.mesosphere.com/browse/MARATHON-7697) - CLUSTER constraint doesn't require a value.
+* [MARATHON-7724](https://jira.mesosphere.com/browse/MARATHON-7724) - Better error handling around proxy leader failure.
+* [MARATHON-7728](https://jira.mesosphere.com/browse/MARATHON-7728) - Always log exceptions when performing migration.
+* [MARATHON-7696](https://jira.mesosphere.com/browse/MARATHON-7696) - Do a better job at maintaining task failure rate limiting values per RunSpec.
+
+
 ## Changes from 1.4.6 to 1.4.7
 
 ### Fixed issues

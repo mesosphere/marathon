@@ -23,14 +23,14 @@ class UnreachableReservedOfferMonitorTest extends AkkaUnitTest with Inside {
   val appId = "/test".toRootPath
   val agentInfo = AgentInfo("host", Some("deadbeef-S01"), Nil)
 
-  def reservationFor(instance: Instance, frameworkId: FrameworkId = myFrameworkId) = {
+  def reservationFor(instance: Instance) = {
     val labels = TaskLabels.labelsForTask(myFrameworkId, instance.tasksMap.values.head.taskId).labels
     MarathonTestHelper.reservation(principal = "marathon", labels)
   }
 
-  def reservedResource(instance: Instance, frameworkId: FrameworkId = myFrameworkId) = {
+  def reservedResource(instance: Instance) = {
     MarathonTestHelper.scalarResource(
-      "disk", 2, role = "marathon", reservation = Some(reservationFor(instance, frameworkId)))
+      "disk", 2, role = "marathon", reservation = Some(reservationFor(instance)))
   }
 
   def lookupForInstances(instances: Seq[Instance]) =

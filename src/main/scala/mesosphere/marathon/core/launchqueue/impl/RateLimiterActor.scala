@@ -2,15 +2,7 @@ package mesosphere.marathon.core.launchqueue.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.LoggingReceive
-import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor.{
-  AddDelay,
-  CleanupOverdueDelays,
-  DecreaseDelay,
-  DelayUpdate,
-  GetDelay,
-  ResetDelay,
-  ResetDelayResponse
-}
+import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor._
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 
 import scala.concurrent.duration._
@@ -26,11 +18,10 @@ private[launchqueue] object RateLimiterActor {
   case class DelayUpdate(runSpec: RunSpec, delayUntil: Timestamp)
 
   case class ResetDelay(runSpec: RunSpec)
-  case object ResetDelayResponse
-
   case class GetDelay(runSpec: RunSpec)
   private[impl] case class AddDelay(runSpec: RunSpec)
   private[impl] case class DecreaseDelay(runSpec: RunSpec)
+  private[impl] case class AdvanceDelay(runSpec: RunSpec)
 
   private case object CleanupOverdueDelays
 }
@@ -60,24 +51,27 @@ private class RateLimiterActor private (
   private[this] def receiveCleanup: Receive = {
     case CleanupOverdueDelays =>
       // If a run spec gets removed or updated, the delay should be reset.
-      // Still, we can remove overdue delays before that and also make leaks less likely
+      // In addition to that we remove overdue delays to ensure there are no leaks,
       // by calling this periodically.
       rateLimiter.cleanUpOverdueDelays()
   }
 
   private[this] def receiveDelayOps: Receive = {
     case GetDelay(runSpec) =>
-      sender() ! DelayUpdate(runSpec, rateLimiter.getDelay(runSpec))
+      sender() ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
 
     case AddDelay(runSpec) =>
       rateLimiter.addDelay(runSpec)
-      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDelay(runSpec))
+      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
 
-    case DecreaseDelay(runSpec) => // ignore for now
+    case DecreaseDelay(_) => // ignore for now
+
+    case AdvanceDelay(runSpec) =>
+      rateLimiter.advanceDelay(runSpec)
+      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
 
     case ResetDelay(runSpec) =>
       rateLimiter.resetDelay(runSpec)
-      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDelay(runSpec))
-      sender() ! ResetDelayResponse
+      launchQueueRef ! DelayUpdate(runSpec, rateLimiter.getDeadline(runSpec))
   }
 }

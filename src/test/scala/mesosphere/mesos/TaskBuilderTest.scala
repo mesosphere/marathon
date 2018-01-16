@@ -21,6 +21,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import org.joda.time.{ DateTime, DateTimeZone }
 import org.scalatest.Matchers
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskBuilderTest extends MarathonSpec with Matchers {
@@ -1612,6 +1613,39 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert("1001" == env("PORT_8081"))
     assert("1000" == env("PORT_HTTP"))
     assert("1001" == env("PORT_JABBER"))
+  }
+
+  // Regression COPS-2072
+  test("PortsEnvWithOnlyMappingsAndUserNetworking") {
+    val command =
+      TaskBuilder.commandInfo(
+        runSpec = AppDefinition(
+          id = runSpecId,
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.USER),
+            portMappings = Seq(
+              PortMapping(containerPort = 8080, hostPort = None, servicePort = 9000, protocol = "tcp", name = Some("http")),
+              PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp", name = Some("jabber"))
+            )
+          )),
+          ipAddress = Some(IpAddress(networkName = Some("dcos"))),
+          portDefinitions = Seq.empty
+        ),
+        taskId = Some(Task.Id("task-123")),
+        host = None,
+        hostPorts = Seq(None, None),
+        envPrefix = None
+      )
+    val env: Map[String, String] =
+      command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+
+    assert("8080" == env("PORT_8080"))
+    assert("8080" == env("PORT_HTTP"))
+
+    val port1 = env("PORT1")
+    assert(port1.toInt > 0)
+    assert(port1 == env(s"PORT_${port1}"))
+    assert(port1 == env("PORT_JABBER"))
   }
 
   test("PortsEnvWithBothPortsAndMappings") {

@@ -9,12 +9,14 @@ import akka.event.EventStream
 import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
+import com.codahale.metrics.Gauge
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PortDefinition, _ }
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
@@ -24,7 +26,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success }
 
 private[group] object GroupManagerActor {
@@ -65,14 +67,16 @@ private[group] object GroupManagerActor {
     groupRepo: GroupRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream)(implicit mat: Materializer): Props = {
+    eventBus: EventStream,
+    metrics: Metrics)(implicit mat: Materializer): Props = {
     Props(new GroupManagerActor(
       serializeUpdates,
       scheduler,
       groupRepo,
       storage,
       config,
-      eventBus))
+      eventBus,
+      metrics))
   }
 }
 
@@ -84,7 +88,8 @@ private[impl] class GroupManagerActor(
     groupRepo: GroupRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream)(implicit mat: Materializer) extends Actor with PathFun {
+    eventBus: EventStream,
+    metrics: Metrics)(implicit mat: Materializer) extends Actor with PathFun {
   import GroupManagerActor._
   import context.dispatcher
 
@@ -94,6 +99,18 @@ private[impl] class GroupManagerActor(
   override def preStart(): Unit = {
     super.preStart()
     scheduler = schedulerProvider.get()
+
+    metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
+      override def getValue: Int = {
+        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveApps.size
+      }
+    })
+
+    metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
+      override def getValue: Int = {
+        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveGroupsById.size
+      }
+    })
   }
 
   override def receive: Receive = {
@@ -144,9 +161,10 @@ private[impl] class GroupManagerActor(
       val deployment = for {
         from <- groupRepo.root()
         (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
-        to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
-        _ = validateOrThrow(to)(RootGroup.valid(config.availableFeatures))
-        plan = DeploymentPlan(from, to, resolve, version, toKill)
+        withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
+        withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
+        _ = validateOrThrow(withVersionedAppsPods)(RootGroup.valid(config.availableFeatures))
+        plan = DeploymentPlan(from, withVersionedAppsPods, resolve, version, toKill)
         _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
         _ = log.info(s"Computed new deployment plan:\n$plan")
         _ <- groupRepo.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods)
@@ -206,6 +224,17 @@ private[impl] class GroupManagerActor(
       }
   }
 
+  /**
+    * Checks whether newApp is new or changed.
+    *
+    * @param originalApps A map of the original apps form before the update.
+    * @param newApp       The new app that is tested.
+    * @return true if app is new or an updated, false otherwise.
+    */
+  def changedOrNew(originalApps: Map[AppDefinition.AppKey, AppDefinition], newApp: AppDefinition): Boolean = {
+    originalApps.get(newApp.id).forall { _.isUpgrade(newApp) }
+  }
+
   private[impl] def assignDynamicServicePorts(from: RootGroup, to: RootGroup): RootGroup = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
@@ -230,12 +259,12 @@ private[impl] class GroupManagerActor(
         }
       else Seq.empty
 
-    def assignPorts(app: AppDefinition): AppDefinition = {
+    def assignPorts(newApp: AppDefinition): AppDefinition = {
       //all ports that are already assigned in old app definition, but not used in the new definition
       //if the app uses dynamic ports (0), it will get always the same ports assigned
       val assignedAndAvailable = mutable.Queue(
-        from.app(app.id)
-          .map(_.servicePorts.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
+        from.app(newApp.id)
+          .map { oldApp => oldApp.servicePorts.filter(p => portRange.contains(p) && !newApp.servicePorts.contains(p)) }
           .getOrElse(Nil): _*
       )
 
@@ -243,13 +272,13 @@ private[impl] class GroupManagerActor(
         if (assignedAndAvailable.nonEmpty) assignedAndAvailable.dequeue()
         else nextGlobalFreePort
 
-      val servicePorts: Seq[Int] = app.servicePorts.map { port =>
+      val servicePorts: Seq[Int] = newApp.servicePorts.map { port =>
         if (port == 0) nextFreeServicePort else port
       }
 
       // TODO(portMappings) this should apply for multiple container types
       // defined only if there are port mappings
-      val newContainer = app.container.flatMap { container =>
+      val newContainer = newApp.container.flatMap { container =>
         container.docker.map { docker =>
           val newMappings = docker.portMappings.zip(servicePorts).map {
             case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
@@ -258,22 +287,25 @@ private[impl] class GroupManagerActor(
         }
       }
 
-      app.copy(
-        portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, servicePorts),
-        container = newContainer.orElse(app.container)
+      newApp.copy(
+        portDefinitions = mergeServicePortsAndPortDefinitions(newApp.portDefinitions, servicePorts),
+        container = newContainer.orElse(newApp.container)
       )
     }
 
-    val dynamicApps: Set[AppDefinition] =
-      to.transitiveApps.map {
-        // assign values for service ports that the user has left "blank" (set to zero)
-        case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
-        case app: AppDefinition =>
-          // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-          app.copy(
-            portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
-          )
-      }
+    val dynamicApps: Iterator[AppDefinition] =
+      to.transitiveApps
+        .iterator
+        .filter { newApp => changedOrNew(from.transitiveAppsById, newApp) }
+        .map {
+          // assign values for service ports that the user has left "blank" (set to zero)
+          case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
+          case app: AppDefinition =>
+            // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
+            app.copy(
+              portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
+            )
+        }
 
     dynamicApps.foldLeft(to) { (rootGroup, app) =>
       rootGroup.updateApp(app.id, _ => app, app.version)

@@ -23,7 +23,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{ NetworkMode, Pod, Raml }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json.Json
 
@@ -70,7 +70,7 @@ class PodsResource @Inject() (
 
   // If we can normalize using the internal model, do that instead.
   // The version of the pod is changed here to make sure, the user has not send a version.
-  private def normalize(pod: PodDefinition): PodDefinition = pod.copy(version = clock.now())
+  private def normalize(pod: PodDefinition): PodDefinition = pod.copy(versionInfo = VersionInfo.OnlyVersion(clock.now()))
 
   private def marshal(pod: Pod): String = Json.stringify(Json.toJson(pod))
 

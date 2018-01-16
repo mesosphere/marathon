@@ -47,16 +47,8 @@ node('JenkinsMarathonCI-Debian8') {
             sh "bin/kill-stale-test-processes"
         }
         stage("Provision Jenkins Node") {
-            sh "sudo apt-get -y clean"
-            sh "sudo apt-get -y update"
-            sh "sudo apt-get install -y --force-yes --no-install-recommends curl"
-            sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
-        MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
-      else
-        MESOS_VERSION=\$(sed -n 's/^.*mesos=\\(.*\\)&&.*/\\1/p' <\$WORKSPACE/Dockerfile)
-      fi
-      sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
-      """
+            sh "sudo -E ci/provision.sh"
+            sh "sudo -E ci/set_port_range.sh"
         }
         stageWithCommitStatus("1. Compile") {
           try {
@@ -81,7 +73,7 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stageWithCommitStatus("3. Test Integration") {
           try {
-              timeout(time: 20, unit: 'MINUTES') {
+              timeout(time: 40, unit: 'MINUTES') {
                 withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                    sh "sudo -E sbt -Dsbt.log.format=false coverage integration:test mesos-simulation/integration:test coverageReport"
                 }

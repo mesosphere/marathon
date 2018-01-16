@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration.setup
 
+import java.net.BindException
 import java.util.UUID
 import javax.inject.{ Inject, Named }
 import javax.ws.rs.core.Response
@@ -64,6 +65,7 @@ class ForwarderService {
   }
 
   private def start(trustStore: Seq[String] = Nil, args: Seq[String] = Nil): Unit = {
+    logger.info(s"Starting forwarder '${args.mkString(" ")}'")
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val uuid = UUID.randomUUID().toString
@@ -73,8 +75,12 @@ class ForwarderService {
     val log = new ProcessLogger {
       def checkUp(s: String) = {
         logger.info(s)
-        if (!up.isCompleted && s.contains("ServerConnector@")) {
-          up.trySuccess(Done)
+        if (!up.isCompleted) {
+          if (s.contains("Started ServerConnector@")) {
+            up.trySuccess(Done)
+          } else if (s.contains("java.net.BindException: Address already in use")) {
+            up.tryFailure(new BindException("Address already in use"))
+          }
         }
       }
       override def out(s: => String): Unit = checkUp(s)
@@ -84,7 +90,7 @@ class ForwarderService {
       override def buffer[T](f: => T): T = f
     }
     val process = Process(cmd).run(log)
-    Await.result(up.future, 30.seconds)
+    Await.result(up.future, 60.seconds)
     children(_ += process)
   }
 }
@@ -120,7 +126,7 @@ object ForwarderService {
         override def leaderHostPort: Option[String] = leader
 
         def offerLeadership(candidate: ElectionCandidate): Unit = ???
-        def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = ???
+        def abdicateLeadership(): Unit = ???
 
         override def subscribe(self: ActorRef): Unit = ???
         override def unsubscribe(self: ActorRef): Unit = ???
@@ -150,11 +156,13 @@ object ForwarderService {
   class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf
 
   def main(args: Array[String]): Unit = {
-    val service = args(0) match {
-      case "helloApp" =>
-        createHelloApp(args.tail: _*)
-      case "forwarder" =>
-        createForwarder(forwardToPort = args(1).toInt, args.drop(2): _*)
+    val service = args.toList match {
+      case "helloApp" :: tail =>
+        createHelloApp(tail: _*)
+      case "forwarder" :: port :: tail =>
+        createForwarder(forwardToPort = port.toInt, tail: _*)
+      case _ =>
+        throw new RuntimeException(s"Invlaid argumsents: ${args.mkString(" ")}")
     }
     service.startAsync().awaitRunning()
     service.awaitTerminated()
@@ -168,7 +176,7 @@ object ForwarderService {
 
   private def createForwarder(forwardToPort: Int, args: String*): Service = {
     val conf = createConf(args: _*)
-    log.info(s"Start forwarder on port  ${conf.httpPort()}, forwarding to $forwardToPort")
+    log.info(s"Start forwarder on port ${conf.httpPort()}, forwarding to $forwardToPort")
     startImpl(conf, new LeaderInfoModule(elected = false, leaderHostPort = Some(s"localhost:$forwardToPort")))
   }
 

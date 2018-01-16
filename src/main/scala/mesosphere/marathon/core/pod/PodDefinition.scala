@@ -23,7 +23,7 @@ case class PodDefinition(
     containers: Seq[MesosContainer] = PodDefinition.DefaultContainers,
     instances: Int = PodDefinition.DefaultInstances,
     constraints: Set[Protos.Constraint] = PodDefinition.DefaultConstraints,
-    version: Timestamp = PodDefinition.DefaultVersion,
+    versionInfo: VersionInfo = VersionInfo.OnlyVersion(PodDefinition.DefaultVersion),
     podVolumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
@@ -80,8 +80,7 @@ case class PodDefinition(
     case _ => throw new IllegalStateException("Can't change pod to app")
   }
 
-  // TODO(PODS) versionInfo
-  override val versionInfo: VersionInfo = VersionInfo.OnlyVersion(version)
+  override val version: Timestamp = versionInfo.version
 
   override def mergeFromProto(message: Protos.Json): PodDefinition = {
     Raml.fromRaml(Json.parse(message.getJson).as[Pod])

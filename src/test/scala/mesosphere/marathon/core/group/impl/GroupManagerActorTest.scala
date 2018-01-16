@@ -381,7 +381,8 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec with
       groupRepo,
       provider,
       config,
-      eventBus)
+      eventBus,
+      metrics)
 
     lazy val manager = system.actorOf(props)
   }

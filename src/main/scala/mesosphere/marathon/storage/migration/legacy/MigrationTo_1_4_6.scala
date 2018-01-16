@@ -6,6 +6,7 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ AppRepository, PodRepository }
 
 import scala.concurrent.duration._
@@ -44,7 +45,7 @@ object MigrationTo_1_4_6 extends StrictLogging {
     *
     * @return migrated app
     */
-  private def changeUnreachableStrategy(unreachableStrategy: UnreachableStrategy): UnreachableStrategy = {
+  private[migration] def changeUnreachableStrategy(unreachableStrategy: UnreachableStrategy): UnreachableStrategy = {
     unreachableStrategy match {
       // migrate previous `hack` to achieve fastest replacement - case 3
       case UnreachableEnabled(inactiveAfter, expungeAfter) if inactiveAfter == 1.seconds && expungeAfter == 2.seconds =>
@@ -55,7 +56,7 @@ object MigrationTo_1_4_6 extends StrictLogging {
         UnreachableEnabled(0.seconds, expungeAfter)
 
       // migrate previous default - case 1
-      case UnreachableEnabled(inactiveAfter, expungeAfter) if inactiveAfter == UnreachableEnabled.DefaultInactiveAfter && expungeAfter == UnreachableEnabled.DefaultExpungeAfter =>
+      case UnreachableEnabled(inactiveAfter, expungeAfter) if inactiveAfter == 5.minutes && expungeAfter == 10.minutes =>
         UnreachableEnabled(0.seconds, 0.seconds)
     }
   }
@@ -63,12 +64,12 @@ object MigrationTo_1_4_6 extends StrictLogging {
   def migrateUnreachableApps(appRepository: AppRepository, podRepository: PodRepository)(implicit env: Environment, ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     val appSink =
       Flow[AppDefinition]
-        .mapAsync(Int.MaxValue)(appRepository.store)
+        .mapAsync(Migration.maxConcurrency)(appRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     val podSink =
       Flow[PodDefinition]
-        .mapAsync(Int.MaxValue)(podRepository.store)
+        .mapAsync(Migration.maxConcurrency)(podRepository.store)
         .toMat(Sink.ignore)(Keep.right)
 
     val migrateUnreachableStrategyWanted = env.vars.getOrElse(MigrationTo_1_4_6.MigrateUnreachableStrategyEnvVar, "false")

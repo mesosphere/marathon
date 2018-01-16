@@ -2,6 +2,7 @@ package mesosphere.marathon.core.condition
 
 import play.api.libs.json.Json
 import org.apache.mesos.Protos.{ TaskState => MesosTaskState }
+import scala.collection.breakOut
 
 /**
   * To define the status of an Instance, this trait is used and stored for each Task in Task.Status.
@@ -115,6 +116,13 @@ object Condition {
       Unknown -> MesosTaskState.TASK_UNKNOWN)
   }
 
+  val all = Seq(Reserved, Created, Error, Failed, Finished, Killed, Killing, Running, Staging, Starting, Unreachable,
+    UnreachableInactive, Gone, Dropped, Unknown)
+
+  private val lowerCaseStringToCondition: Map[String, Condition] = all.map { c =>
+    c.toString.toLowerCase -> c
+  }(breakOut)
+
   /** Converts the Condition to a mesos task state where such a conversion is possible */
   def toMesosTaskState(condition: Condition): Option[MesosTaskState] =
     conditionToMesosTaskState.get(condition)
@@ -126,23 +134,8 @@ object Condition {
   def toMesosTaskStateOrStaging(condition: Condition): MesosTaskState =
     conditionToMesosTaskState.getOrElse(condition, MesosTaskState.TASK_STAGING)
 
-  // scalastyle:off
-  def apply(str: String): Condition = str.toLowerCase match {
-    case "reserved" => Reserved
-    case "created" => Created
-    case "error" => Error
-    case "failed" => Failed
-    case "killed" => Killed
-    case "killing" => Killing
-    case "running" => Running
-    case "staging" => Staging
-    case "starting" => Starting
-    case "unreachable" => Unreachable
-    case "gone" => Gone
-    case "dropped" => Dropped
-    case _ => Unknown
-  }
-  // scalastyle:on
+  def apply(str: String): Condition =
+    lowerCaseStringToCondition.getOrElse(str.toLowerCase, Unknown)
 
   def unapply(condition: Condition): Option[String] = Some(condition.toString.toLowerCase)
 

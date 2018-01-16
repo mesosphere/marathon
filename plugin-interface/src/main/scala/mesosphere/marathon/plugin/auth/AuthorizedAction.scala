@@ -8,7 +8,7 @@ import mesosphere.marathon.plugin.{ Group, RunSpec }
   *
   * @tparam R the type of the resource.
   */
-sealed trait AuthorizedAction[+R]
+sealed trait AuthorizedAction[-R]
 
 /**
   * The following objects will be passed to the Authorizer when an action affects an application, in order to identify
@@ -35,4 +35,3 @@ case object CreateResource extends AuthorizedAction[AuthorizedResource]
 case object UpdateResource extends AuthorizedAction[AuthorizedResource]
 case object DeleteResource extends AuthorizedAction[AuthorizedResource]
 case object ViewResource extends AuthorizedAction[AuthorizedResource]
-

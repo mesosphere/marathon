@@ -39,7 +39,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with Embedd
 
     When("a task of an app is killed")
     val taskKillSentTimestamp = Timestamp.now()
-    marathon.killTask(app.id, taskId).code should be (200)
+    marathon.killTask(app.id, taskId, scale = true).code should be (200)
 
     val taskKilledEvent = waitForEventWith(
       "status_update_event",
@@ -70,7 +70,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with Embedd
     val taskId = marathon.tasks(app.id).value.head.id
 
     When("a task of an app is killed")
-    marathon.killTask(app.id, taskId).code should be (200)
+    marathon.killTask(app.id, taskId, scale = true).code should be (200)
     val taskKillSentTimestamp = Timestamp.now()
 
     val taskKilledEvent = waitForEventWith(
@@ -83,7 +83,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with Embedd
 
     // the task_killed event should occur instantly or at least smaller as taskKillGracePeriod,
     // because the app terminates shortly
-    waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis withClue s"the task kill event took longer than the task kill grace period"
+    waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis withClue "the task kill event took longer than the task kill grace period"
   }
 
   def healthCheck = MarathonHttpHealthCheck(

@@ -26,5 +26,9 @@ class InMemoryPersistenceStoreTest extends AkkaUnitTest with PersistenceStoreTes
 
   implicit val metrics = new Metrics(new MetricRegistry)
 
-  behave like basicPersistenceStore("InMemoryPersistenceStore", new InMemoryPersistenceStore())
+  behave like basicPersistenceStore("InMemoryPersistenceStore", {
+    val store = new InMemoryPersistenceStore()
+    store.markOpen()
+    store
+  })
 }

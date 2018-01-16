@@ -24,6 +24,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     implicit lazy val metrics = new Metrics(new MetricRegistry)
     lazy val config = LegacyInMemConfig(25)
     lazy val store = config.store
+    store.markOpen()
     lazy val taskRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
 
     lazy val migration = new MigrationTo1_2(Some(config))

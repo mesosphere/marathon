@@ -6,6 +6,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.AppRepository
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -18,7 +19,7 @@ class MigrationTo_1_4_2(appRepository: AppRepository)(implicit
   import MigrationTo_1_4_2.migrationFlow
   val sink =
     Flow[AppDefinition]
-      .mapAsync(Int.MaxValue)(appRepository.store)
+      .mapAsync(Migration.maxConcurrency)(appRepository.store)
       .toMat(Sink.ignore)(Keep.right)
 
   def migrate(): Future[Done] = {

@@ -10,12 +10,12 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.stream.Sink
@@ -65,6 +65,7 @@ trait DeploymentService {
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
+  persistenceStore: Option[PersistenceStore[_, _, _]],
   leadershipCoordinator: LeadershipCoordinator,
   config: MarathonConf,
   electionService: ElectionService,
@@ -172,7 +173,7 @@ class MarathonSchedulerService @Inject() (
   override def triggerShutdown(): Unit = synchronized {
     log.info("Shutdown triggered")
 
-    electionService.abdicateLeadership(reoffer = false)
+    electionService.abdicateLeadership()
     stopDriver()
 
     log.info("Cancelling timer")
@@ -203,6 +204,9 @@ class MarathonSchedulerService @Inject() (
 
   override def startLeadership(): Unit = synchronized {
     log.info("As new leader running the driver")
+
+    // allow interactions with the persistence store
+    persistenceStore.foreach(_.markOpen())
 
     // GroupRepository is holding in memory caches of the root group. The cache is loaded when it is accessed the first time.
     // Actually this is really bad, because each marathon will log the amount of groups during startup through metrics.
@@ -255,8 +259,7 @@ class MarathonSchedulerService @Inject() (
         //   1. we're being terminated (and have already abdicated)
         //   2. we've lost leadership (no need to abdicate if we've already lost)
         driver.foreach { _ =>
-          // tell leader election that we step back, but want to be re-elected if isRunning is true.
-          electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
+          electionService.abdicateLeadership()
         }
 
         driver = None
@@ -272,6 +275,9 @@ class MarathonSchedulerService @Inject() (
     // invoked by election service upon loss of leadership (state transitioned to Idle)
     log.info("Lost leadership")
 
+    // disallow any interaction with the persistence storage
+    persistenceStore.foreach(_.markClosed())
+
     leadershipCoordinator.stop()
 
     val oldTimer = timer
@@ -283,9 +289,6 @@ class MarathonSchedulerService @Inject() (
       // Our leadership has been defeated. Thus, stop the driver.
       stopDriver()
     }
-
-    log.error("Terminating after loss of leadership")
-    Runtime.getRuntime.asyncExit()
   }
 
   //End ElectionDelegate interface

@@ -128,14 +128,17 @@ case class LocalMarathon(
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
-  private def create(): Process = {
-    processBuilder.run(ProcessOutputToLogStream(s"$suiteName-LocalMarathon-$httpPort"))
+  def create(): Process = {
+    marathon.getOrElse {
+      val process = processBuilder.run(ProcessOutputToLogStream(s"$suiteName-LocalMarathon-$httpPort"))
+      marathon = Some(process)
+      process
+    }
   }
 
   def start(): Future[Done] = {
-    if (marathon.isEmpty) {
-      marathon = Some(create())
-    }
+    create()
+
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
     val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 90.seconds) {
       async {
@@ -261,6 +264,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       }
     }
     val port = PortAllocator.ephemeralPort()
+    logger.info(s"Starting health check endpoint on port $port.")
     val server = Http().bindAndHandle(route, "localhost", port).futureValue
     logger.info(s"Listening for health events on $port")
     server
@@ -316,7 +320,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
 
-    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
+    val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
       s"""$$PORT0 $appId $versionId http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$appId/$versionId""")
 
     AppDefinition(
