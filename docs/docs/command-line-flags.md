@@ -20,6 +20,10 @@ The core functionality flags can be also set by environment variable `MARATHON_C
 
 For versions of Marathon prior to 1.4 the prefix for option name was just `MARATHON_`. In newer versions that is not supported anymore.
 
+For boolean values you should set the environment variable with empty value. For example, use `MARATHON_HA=` to enable --ha or `MARATHON_DISABLE_HA=` for `--disable_ha`.
+
+When using Debian packages, these environment variables should be defined in `/etc/default/marathon` file.
+
 ### Required Flags
 
 * `--master` (Required): The URL of the Mesos master. The format is a
