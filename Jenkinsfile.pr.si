@@ -21,7 +21,7 @@ node('py36') {
                 sh """git checkout $params.Pull_Request_Id"""
             }
             sh """pip3 install requests"""
-            sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$JOB_URL" \$(git rev-parse HEAD) PENDING"""
+            sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) PENDING"""
 
             sh """./ci/si_pipeline.sh $params.Channel $params.Variant"""
           }
@@ -30,7 +30,7 @@ node('py36') {
             archive includes: "diagnostics.zip"
 
             withCredentials([usernamePassword(credentialsId:'a7ac7f84-64ea-4483-8e66-bb204484e58f',passwordVariable:'GIT_PASSWORD', usernameVariable: 'GIT_USER')]) {
-                sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$JOB_URL" \$(git rev-parse HEAD) $currentBuild.result"""
+                sh """python3 ./ci/github_status.py "$JOB_NAME/${params.Variant}" "$BUILD_URL" \$(git rev-parse HEAD) $currentBuild.result"""
             }
         }
     }
