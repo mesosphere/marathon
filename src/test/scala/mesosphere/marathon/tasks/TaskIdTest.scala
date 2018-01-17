@@ -73,14 +73,14 @@ class TaskIdTest extends UnitTest {
       originalId.instanceId shouldEqual newTaskId.instanceId
     }
 
-    "TaskId.reservationId returns the same value for an id w/o attempt counter" in {
+    "TaskId.reservationId is the same as task id when task id is without attempt counter" in {
       val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
       val reservationId = Task.Id.reservationId(originalId.idString)
 
       reservationId shouldEqual originalId.idString
     }
 
-    "TaskId.reservationId returns the base value w/o attempt for an app task id including the attempt" in {
+    "TaskId.reservationId removes attempt from app task id" in {
       val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
       val reservationIdFromOriginal = Task.Id.reservationId(originalId.idString)
 
@@ -93,7 +93,7 @@ class TaskIdTest extends UnitTest {
       Task.Id.reservationId(anotherResidentTaskId.idString) shouldEqual reservationIdFromOriginal
     }
 
-    "TaskId.reservationId returns the base value w/o container and attempt for a pod task id including container and attempt" in {
+    "TaskId.reservationId removes attempt and container name from pod task id" in {
       val originalId = Task.Id.forInstanceId(Instance.Id.forRunSpec(PathId("/app/test/23")), None)
 
       val residentTaskId = Task.Id.forResidentTask(originalId)
@@ -105,15 +105,15 @@ class TaskIdTest extends UnitTest {
       Task.Id.reservationId(anotherResidentTaskId.idString) shouldEqual reservationId
     }
 
-    "TaskId.reservationId works as expected in case of apps" in {
+    "TaskId.reservationId works as expected for all types of task ids" in {
       val appTaskId = "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
       Task.Id.reservationId(appTaskId) shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
-      val appResidentTaskId = "app.4455cb85-0c16-490d-b84e-481f8321ff0a.1"
-      Task.Id.reservationId(appResidentTaskId) shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
-      val podTaskId = "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct"
-      Task.Id.reservationId(podTaskId) shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
-      val podResidentTaskId = "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1"
-      Task.Id.reservationId(podResidentTaskId) shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
+      val appResidentTaskIdWithAttempt = "app.4455cb85-0c16-490d-b84e-481f8321ff0a.1"
+      Task.Id.reservationId(appResidentTaskIdWithAttempt) shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
+      val podTaskIdWithContainerName = "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct"
+      Task.Id.reservationId(podTaskIdWithContainerName) shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
+      val podTaskIdWithContainerNameAndAttempt = "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1"
+      Task.Id.reservationId(podTaskIdWithContainerNameAndAttempt) shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
     }
   }
 }
