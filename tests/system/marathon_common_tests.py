@@ -700,18 +700,23 @@ def test_restart_container_with_persistent_volume():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
 
-    port = tasks[0]['ports'][0]
     host = tasks[0]['host']
+    port = tasks[0]['ports'][0]
     cmd = "curl {}:{}/data/foo".format(host, port)
-    run, data = shakedown.run_command_on_master(cmd)
 
-    assert run, "{} did not succeed".format(cmd)
-    assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_task(cmd, target_data):
+        run, data = shakedown.run_command_on_master(cmd)
+
+        assert run, "{} did not succeed".format(cmd)
+        assert data == target_data, "'{}' was not equal to {}".format(data, target_data)
+
+    check_task(cmd, target_data='hello\n')
 
     client.restart_app(app_id)
     shakedown.deployment_wait()
@@ -726,10 +731,8 @@ def test_restart_container_with_persistent_volume():
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
     cmd = "curl {}:{}/data/foo".format(host, port)
-    run, data = shakedown.run_command_on_master(cmd)
 
-    assert run, "{} did not succeed".format(cmd)
-    assert data == 'hello\nhello\n', "'{}' was not equal to hello\\nhello\\n".format(data)
+    check_task(cmd, target_data='hello\nhello\n')
 
 
 @shakedown.dcos_1_8
