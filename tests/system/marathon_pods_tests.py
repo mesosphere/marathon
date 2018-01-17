@@ -5,6 +5,7 @@ import json
 import os
 import pods
 import pytest
+import retrying
 import shakedown
 import time
 
@@ -505,18 +506,52 @@ def test_pod_with_persistent_volume():
     host = common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address']
     port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
-    dir1 = tasks[0]['container']['volumes'][0]['container_path']
-    dir2 = tasks[1]['container']['volumes'][0]['container_path']
-    print(host, port1, port2, dir1, dir2)
+    path1 = tasks[0]['container']['volumes'][0]['container_path']
+    path2 = tasks[1]['container']['volumes'][0]['container_path']
+    print(host, port1, port2, path1, path2)
 
-    time.sleep(1)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_http_endpoint(port, path):
+        cmd = "curl {}:{}/{}/foo".format(host, port, path)
+        run, data = shakedown.run_command_on_master(cmd)
+        assert run, "{} did not succeed".format(cmd)
+        assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
 
-    cmd = "curl {}:{}/{}/foo".format(host, port1, dir1)
-    run, data = shakedown.run_command_on_master(cmd)
-    assert run, "{} did not succeed".format(cmd)
-    assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
+    check_http_endpoint(port1, path1)
+    check_http_endpoint(port2, path2)
 
-    cmd = "curl {}:{}/{}/foo".format(host, port2, dir2)
-    run, data = shakedown.run_command_on_master(cmd)
-    assert run, "{} did not succeed".format(cmd)
-    assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
+
+@common.marathon_1_6
+def test_pod_with_persistent_volume_restarts():
+    pod_def = pods.persistent_volume_pod()
+    pod_id = pod_def['id']
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    common.deployment_wait(service_id=pod_id)
+
+    tasks = common.get_pod_tasks(pod_id)
+    host = common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address']
+
+    shakedown.kill_process_on_host(host, '[h]ttp.server')
+    common.deployment_wait(service_id=pod_id)
+
+    assert host == common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address'], \
+        "the pod has been restarted on another host"
+
+    tasks = common.get_pod_tasks(pod_id)
+    port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
+    port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
+    path1 = tasks[0]['container']['volumes'][0]['container_path']
+    path2 = tasks[1]['container']['volumes'][0]['container_path']
+    print(host, port1, port2, path1, path2)
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_http_endpoint(port, path):
+        cmd = "curl {}:{}/{}/foo".format(host, port, path)
+        run, data = shakedown.run_command_on_master(cmd)
+        assert run, "{} did not succeed".format(cmd)
+        assert data == 'hello\nhello\n', "'{}' was not equal to hello\\n".format(data)
+
+    check_http_endpoint(port1, path1)
+    check_http_endpoint(port2, path2)

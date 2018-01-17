@@ -732,6 +732,50 @@ def test_restart_container_with_persistent_volume():
     assert data == 'hello\nhello\n', "'{}' was not equal to hello\\nhello\\n".format(data)
 
 
+@shakedown.dcos_1_8
+def test_app_with_persistent_volume_recovers():
+    """Tests that when an app task with a persistent volume gets killed,
+       it recovers on the node it was launched on, and it gets attached
+       to the same persistent-volume."""
+
+    app_def = apps.persistent_volume_app()
+    app_id = app_def['id']
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
+
+    port = tasks[0]['ports'][0]
+    host = tasks[0]['host']
+    cmd = "curl {}:{}/data/foo".format(host, port)
+    run, data = shakedown.run_command_on_master(cmd)
+
+    assert run, "{} did not succeed".format(cmd)
+    assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
+
+    shakedown.kill_process_on_host(host, '[h]ttp.server')
+    shakedown.deployment_wait()
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_task_recovery():
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 1, "The number of tasks is {} after recovery, but 1 was expected".format(len(tasks))
+
+    check_task_recovery()
+
+    port = tasks[0]['ports'][0]
+    host = tasks[0]['host']
+    cmd = "curl {}:{}/data/foo".format(host, port)
+    run, data = shakedown.run_command_on_master(cmd)
+
+    assert run, "{} did not succeed".format(cmd)
+    assert data == 'hello\nhello\n', "'{}' was not equal to hello\\nhello\\n".format(data)
+
+
 def test_app_update():
     """Tests that an app gets successfully updated."""
 
