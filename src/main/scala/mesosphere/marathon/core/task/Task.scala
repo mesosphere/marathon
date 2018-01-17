@@ -6,7 +6,7 @@ import java.util.Base64
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, Reservation }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
@@ -234,6 +234,16 @@ object Task {
         case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) => Some(attempt.toLong)
         case ResidentTaskIdRegex(runSpecId, _, uuid, _, attempt) => Some(attempt.toLong)
         case _ => None
+      }
+    }
+
+    def reservationId(taskId: String): String = {
+      taskId match {
+        case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
+          Reservation.Id(runSpecId, ".", Some(prefix), uuid).toString
+        case ResidentTaskIdRegex(runSpecId, separator, uuid, _, attempt) =>
+          Reservation.Id(runSpecId, separator, None, uuid).toString
+        case _ => taskId
       }
     }
 
