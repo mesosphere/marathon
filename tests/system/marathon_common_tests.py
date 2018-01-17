@@ -1158,5 +1158,5 @@ def test_ipv6_healthcheck():
         "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], target_instances_count)
 
     client.remove_app(app['id'], True)
-    # for agent in agents:
-    #     shakedown.run_command_on_agent(agent, "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test")
+    for agent in agents:
+        shakedown.run_command_on_agent(agent, "sudo docker network rm mesos-docker-ipv6-test")
