@@ -179,7 +179,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
       Post(Uri./.withPath(Path("/newgroup")), entity) ~> f.groupsController.route ~> check {
         responseAs[String] should be ("""{
                                         |  "deploymentId" : "plan",
-                                        |  "version" : "1970-01-01T00:00:00Z"
+                                        |  "version" : "1970-01-01T00:00:00.000Z"
                                         |}""".stripMargin)
       }
     }
@@ -194,7 +194,7 @@ class GroupsControllerTest extends UnitTest with ScalatestRouteTest with Inside 
         header[Headers.`Marathon-Deployment-Id`] should be(Some(Headers.`Marathon-Deployment-Id`("plan")))
         responseAs[String] should be ("""{
                                         |  "deploymentId" : "plan",
-                                        |  "version" : "1970-01-01T00:00:00Z"
+                                        |  "version" : "1970-01-01T00:00:00.000Z"
                                         |}""".stripMargin)
       }
     }

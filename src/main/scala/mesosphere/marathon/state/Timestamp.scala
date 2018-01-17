@@ -104,5 +104,5 @@ object Timestamp {
   /*
    * .toString in java.time is truncating zeros in millis part, so we use custom formatter to keep them
    */
-  private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
+  val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 }
