@@ -14,6 +14,12 @@ class ReservationIdTest extends UnitTest {
       reservationIdThree.toString shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
     }
 
+    "have apply(String) working properly" in {
+      Reservation.Id("app.4455cb85-0c16-490d-b84e-481f8321ff0a").toString shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
+      Reservation.Id("app.marathon-4455cb85-0c16-490d-b84e-481f8321ff0a").toString shouldEqual "app.marathon-4455cb85-0c16-490d-b84e-481f8321ff0a"
+      Reservation.Id("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a").toString shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
+    }
+
     "have .instanceId working properly" in {
       val reservationId = Reservation.Id("app", ".", None, "4455cb85-0c16-490d-b84e-481f8321ff0a")
       reservationId.instanceId.idString shouldEqual "app.marathon-4455cb85-0c16-490d-b84e-481f8321ff0a"

@@ -241,8 +241,12 @@ object Task {
       taskId match {
         case ResidentTaskIdWithInstanceIdRegex(runSpecId, prefix, uuid, container, attempt) =>
           Reservation.Id(runSpecId, ".", Some(prefix), uuid).toString
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
+          Reservation.Id(runSpecId, ".", Some(prefix), instanceUuid).toString
         case ResidentTaskIdRegex(runSpecId, separator, uuid, _, attempt) =>
           Reservation.Id(runSpecId, separator, None, uuid).toString
+        case LegacyTaskIdRegex(runSpecId, uuid) =>
+          Reservation.Id(runSpecId, ".", None, uuid).toString
         case _ => taskId
       }
     }

@@ -106,8 +106,12 @@ class TaskIdTest extends UnitTest {
     }
 
     "TaskId.reservationId works as expected in case of apps" in {
+      val appTaskId = "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
+      Task.Id.reservationId(appTaskId) shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
       val appResidentTaskId = "app.4455cb85-0c16-490d-b84e-481f8321ff0a.1"
       Task.Id.reservationId(appResidentTaskId) shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
+      val podTaskId = "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct"
+      Task.Id.reservationId(podTaskId) shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
       val podResidentTaskId = "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1"
       Task.Id.reservationId(podResidentTaskId) shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
     }

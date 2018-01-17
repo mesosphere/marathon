@@ -29,14 +29,14 @@ object Reservation {
   }
 
   object Id {
-    private val ReservationIdRegex = """^(.+)([\._])([^_\.]+)$""".r
     private val ReservationIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)$""".r
+    private val ReservationIdRegex = """^(.+)([\._])([^_\.]+)$""".r
 
     def apply(reservationId: String): Reservation.Id = reservationId match {
-      case ReservationIdRegex(runSpecId, separator, uuid) =>
-        Reservation.Id(runSpecId, separator, None, uuid)
       case ReservationIdWithInstanceIdRegex(runSpecId, prefix, uuid) =>
         Reservation.Id(runSpecId, ".", Some(prefix), uuid)
+      case ReservationIdRegex(runSpecId, separator, uuid) =>
+        Reservation.Id(runSpecId, separator, None, uuid)
     }
   }
 
