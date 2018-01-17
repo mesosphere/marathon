@@ -1134,15 +1134,16 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
 
     http_output_check()
 
-# @shakedown.dcos_1_11
+
+@shakedown.dcos_1_11
 def test_ipv6_healthcheck():
     """ There is new feature in DC/OS 1.11 that allows containers running on IPv6 network to be healthchecked from
         Marathon. This tests verifies executing such healthcheck.
     """
     agents = shakedown.get_agents()
+    network_cmd = "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
     for agent in agents:
-        shakedown.run_command_on_agent(agent,
-            "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test")
+        shakedown.run_command_on_agent(agent, network_cmd)
 
     app_def = apps.ipv6_healthcheck()
     client = marathon.create_client()
