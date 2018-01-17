@@ -237,7 +237,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -459,7 +459,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -532,7 +532,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -646,7 +646,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -716,7 +716,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -788,7 +788,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -874,7 +874,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -966,7 +966,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -1101,7 +1101,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -1196,7 +1196,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,
@@ -1346,7 +1346,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
                          |    "maximumOverCapacity" : 1,
                          |    "minimumHealthCapacity" : 1
                          |  },
-                         |  "version" : "2015-04-09T12:30:05Z",
+                         |  "version" : "2015-04-09T12:30:05.000Z",
                          |  "killSelection" : "YOUNGEST_FIRST",
                          |  "unreachableStrategy" : {
                          |    "inactiveAfterSeconds" : 0,

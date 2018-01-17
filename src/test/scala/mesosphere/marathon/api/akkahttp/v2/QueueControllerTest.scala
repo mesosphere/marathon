@@ -80,7 +80,7 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |      "timeLeftSeconds" : 100,
             |      "overdue" : false
             |    },
-            |    "since" : "2015-04-09T12:30:00Z",
+            |    "since" : "2015-04-09T12:30:00.000Z",
             |    "processedOffersSummary" : {
             |      "processedOffersCount" : 3,
             |      "unusedOffersCount" : 1,
@@ -181,10 +181,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "maximumOverCapacity" : 1,
             |        "minimumHealthCapacity" : 1
             |      },
-            |      "version" : "2015-04-09T12:30:00Z",
+            |      "version" : "2015-04-09T12:30:00.000Z",
             |      "versionInfo" : {
-            |        "lastScalingAt" : "2015-04-09T12:30:00Z",
-            |        "lastConfigChangeAt" : "2015-04-09T12:30:00Z"
+            |        "lastScalingAt" : "2015-04-09T12:30:00.000Z",
+            |        "lastConfigChangeAt" : "2015-04-09T12:30:00.000Z"
             |      },
             |      "killSelection" : "YOUNGEST_FIRST",
             |      "unreachableStrategy" : {
@@ -219,7 +219,7 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |      "timeLeftSeconds" : 100,
             |      "overdue" : false
             |    },
-            |    "since" : "2015-04-09T12:30:00Z",
+            |    "since" : "2015-04-09T12:30:00.000Z",
             |    "processedOffersSummary" : {
             |      "processedOffersCount" : 3,
             |      "unusedOffersCount" : 1,
@@ -330,7 +330,7 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "attributes" : [ ]
             |      },
             |      "reason" : [ "InsufficientCpus" ],
-            |      "timestamp" : "2015-04-09T12:30:00Z"
+            |      "timestamp" : "2015-04-09T12:30:00.000Z"
             |    } ],
             |    "app" : {
             |      "id" : "/app",
@@ -354,10 +354,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "maximumOverCapacity" : 1,
             |        "minimumHealthCapacity" : 1
             |      },
-            |      "version" : "2015-04-09T12:30:00Z",
+            |      "version" : "2015-04-09T12:30:00.000Z",
             |      "versionInfo" : {
-            |        "lastScalingAt" : "2015-04-09T12:30:00Z",
-            |        "lastConfigChangeAt" : "2015-04-09T12:30:00Z"
+            |        "lastScalingAt" : "2015-04-09T12:30:00.000Z",
+            |        "lastConfigChangeAt" : "2015-04-09T12:30:00.000Z"
             |      },
             |      "killSelection" : "YOUNGEST_FIRST",
             |      "unreachableStrategy" : {

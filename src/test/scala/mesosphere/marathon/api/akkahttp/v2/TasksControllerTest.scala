@@ -266,7 +266,7 @@ class TasksControllerTest extends UnitTest with ScalatestRouteTest with Inside w
         And("Should create a deployment")
         responseAs[String] should be ("""{
                                         |  "deploymentId" : "plan",
-                                        |  "version" : "1970-01-01T00:00:00Z"
+                                        |  "version" : "1970-01-01T00:00:00.000Z"
                                         |}""".stripMargin)
 
         And("app1 and app2 is killed with force")

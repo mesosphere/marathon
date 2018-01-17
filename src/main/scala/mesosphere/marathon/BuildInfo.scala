@@ -9,7 +9,7 @@ import mesosphere.marathon.io.IO
 case object BuildInfo {
   private val marathonJar = "\\bmesosphere\\.marathon\\.marathon-[0-9.]+".r
   lazy val DefaultMajor = 1
-  lazy val DefaultMinor = 5
+  lazy val DefaultMinor = 6
   lazy val DefaultPatch = 0
 
   lazy val DefaultBuildVersion = s"$DefaultMajor.$DefaultMinor.$DefaultPatch-SNAPSHOT"
