@@ -522,7 +522,7 @@ def test_pod_with_persistent_volume():
 
 
 @common.marathon_1_6
-def test_pod_with_persistent_volume_restarts():
+def test_pod_with_persistent_volume_recovers():
     pod_def = pods.persistent_volume_pod()
     pod_id = pod_def['id']
 
@@ -547,11 +547,11 @@ def test_pod_with_persistent_volume_restarts():
     print(host, port1, port2, path1, path2)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_http_endpoint(port, path):
+    def check_data(port, path):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = shakedown.run_command_on_master(cmd)
         assert run, "{} did not succeed".format(cmd)
-        assert data == 'hello\nhello\n', "'{}' was not equal to hello\\n".format(data)
+        assert 'hello\nhello\n' in data, "'hello\nhello\n' not found in '{}'n".format(data)
 
-    check_http_endpoint(port1, path1)
-    check_http_endpoint(port2, path2)
+    check_data(port1, path1)
+    check_data(port2, path2)

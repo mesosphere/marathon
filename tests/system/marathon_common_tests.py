@@ -761,7 +761,7 @@ def test_app_with_persistent_volume_recovers():
         run, data = shakedown.run_command_on_master(cmd)
 
         assert run, "{} did not succeed".format(cmd)
-        assert data == target_data, "'{}' was not equal to {}".format(data, target_data)
+        assert target_data in data, "'{}' not found in {}".format(target_data, data)
 
     check_task(cmd, target_data='hello\n')
 
@@ -775,7 +775,6 @@ def test_app_with_persistent_volume_recovers():
 
     check_task_recovery()
 
-    tasks = client.get_tasks(app_id)
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
     cmd = "curl {}:{}/data/foo".format(host, port)
