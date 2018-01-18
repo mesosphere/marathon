@@ -146,4 +146,36 @@ trait ResponseMatchers { this: UnitTest =>
       HavePropertyMatchResult(matches, "podScalingPolicy", Some(instances), maybeScalingPolicy)
     }
   }
+
+  /**
+    * Have property matcher for a pod volume.
+    * @param volumeIndex an index into a volume array
+    * @param expectedVolume an expected pod volume
+    * @return Match result
+    */
+  def podVolume(volumeIndex: Int, expectedVolume: raml.PodVolume) =
+    new HavePropertyMatcher[JsValue, Option[raml.PodVolume]] {
+      override def apply(actual: JsValue) = {
+        val maybeActualVolume = (actual \ "volumes" \ volumeIndex).asOpt[raml.PodVolume]
+        val matches = maybeActualVolume.contains(expectedVolume)
+        HavePropertyMatchResult(matches, "podVolume", Some(expectedVolume), maybeActualVolume)
+      }
+    }
+
+  /**
+    * Have property matcher for a pod volume mount.
+    * @param containerIndex an index into a container array
+    * @param volumeMountIndex an index into a container's volume mount array
+    * @param expectedVolumeMount an expected pod volume mount
+    * @return Match result
+    */
+  def podVolumeMount(containerIndex: Int, volumeMountIndex: Int, expectedVolumeMount: raml.VolumeMount) =
+    new HavePropertyMatcher[JsValue, Option[raml.VolumeMount]] {
+      override def apply(actual: JsValue) = {
+        val maybeActualVolumeMount =
+          (actual \ "containers" \ containerIndex \ "volumeMounts" \ volumeMountIndex).asOpt[raml.VolumeMount]
+        val matches = maybeActualVolumeMount.contains(expectedVolumeMount)
+        HavePropertyMatchResult(matches, "podVolumeMount", Some(expectedVolumeMount), maybeActualVolumeMount)
+      }
+    }
 }

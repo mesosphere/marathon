@@ -2,19 +2,9 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.core.condition
-import mesosphere.marathon.core.instance
+import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
 
 object TaskConversion extends HealthConversion with DefaultConversions {
-
-  implicit val localVolumeIdWrites: Writes[instance.LocalVolumeId, LocalVolumeId] = Writes { localVolumeId =>
-    LocalVolumeId(
-      runSpecId = localVolumeId.runSpecId.toRaml,
-      containerPath = localVolumeId.name,
-      uuid = localVolumeId.uuid,
-      persistenceId = localVolumeId.idString
-    )
-  }
-
   implicit val enrichedTaskRamlWrite: Writes[core.appinfo.EnrichedTask, Task] = Writes { enrichedTask =>
     val task: core.task.Task = enrichedTask.task
 
