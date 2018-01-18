@@ -1140,26 +1140,18 @@ def test_ipv6_healthcheck():
     """ There is new feature in DC/OS 1.11 that allows containers running on IPv6 network to be healthchecked from
         Marathon. This tests verifies executing such healthcheck.
     """
-    agents = shakedown.get_agents()
-    # to test ipv6 healthcheck we need ipv6 network before launching the container
-    # the container launch then uses this network in the app definition json
-    network_cmd = "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
-    for agent in agents:
-        shakedown.run_command_on_agent(agent, network_cmd)
+    with common.docker_ipv6_network("mesos-docker-ipv6-test"):
+        app_def = apps.ipv6_healthcheck()
+        client = marathon.create_client()
+        target_instances_count = app_def['instances']
+        client.add_app(app_def)
 
-    app_def = apps.ipv6_healthcheck()
-    client = marathon.create_client()
-    target_instances_count = app_def['instances']
-    client.add_app(app_def)
+        shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
 
-    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+        app = client.get_app(app_def["id"])
+        assert app['tasksRunning'] == target_instances_count, \
+            "The number of running tasks is {}, but {} was expected".format(app['tasksRunning'], target_instances_count)
+        assert app['tasksHealthy'] == target_instances_count, \
+            "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], target_instances_count)
 
-    app = client.get_app(app_def["id"])
-    assert app['tasksRunning'] == target_instances_count, \
-        "The number of running tasks is {}, but {} was expected".format(app['tasksRunning'], target_instances_count)
-    assert app['tasksHealthy'] == target_instances_count, \
-        "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], target_instances_count)
-
-    client.remove_app(app['id'], True)
-    for agent in agents:
-        shakedown.run_command_on_agent(agent, "sudo docker network rm mesos-docker-ipv6-test")
+        client.remove_app(app['id'], True)
