@@ -1135,23 +1135,22 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
     http_output_check()
 
 
-@shakedown.dcos_1_11
-def test_ipv6_healthcheck():
+# @shakedown.dcos_1_11
+def test_ipv6_healthcheck(docker_ipv6_network_fixture):
     """ There is new feature in DC/OS 1.11 that allows containers running on IPv6 network to be healthchecked from
         Marathon. This tests verifies executing such healthcheck.
     """
-    with common.docker_ipv6_network("mesos-docker-ipv6-test"):
-        app_def = apps.ipv6_healthcheck()
-        client = marathon.create_client()
-        target_instances_count = app_def['instances']
-        client.add_app(app_def)
+    app_def = apps.ipv6_healthcheck()
+    client = marathon.create_client()
+    target_instances_count = app_def['instances']
+    client.add_app(app_def)
 
-        shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
 
-        app = client.get_app(app_def["id"])
-        assert app['tasksRunning'] == target_instances_count, \
-            "The number of running tasks is {}, but {} was expected".format(app['tasksRunning'], target_instances_count)
-        assert app['tasksHealthy'] == target_instances_count, \
-            "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], target_instances_count)
+    app = client.get_app(app_def["id"])
+    assert app['tasksRunning'] == target_instances_count, \
+        "The number of running tasks is {}, but {} was expected".format(app['tasksRunning'], target_instances_count)
+    assert app['tasksHealthy'] == target_instances_count, \
+        "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], target_instances_count)
 
-        client.remove_app(app['id'], True)
+    client.remove_app(app['id'], True)

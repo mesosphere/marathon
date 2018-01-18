@@ -789,7 +789,7 @@ async def assert_event(event_type, event_stream, within=10):
 
 
 @contextlib.contextmanager
-def docker_ipv6_network(network_name):
+def docker_ipv6_network_fixture(network_name):
     agents = shakedown.get_agents()
     network_cmd = f"sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 {network_name}"
     for agent in agents:
