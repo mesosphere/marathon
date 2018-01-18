@@ -21,7 +21,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, PodSecretVolume, Raml, Resources }
+import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, Raml, Resources, VolumeMount }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy, VersionInfo }
 import mesosphere.marathon.test.{ Mockito, SettableClock }
@@ -369,6 +369,42 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         podOption.get.scaling should not be None
         podOption.get.scaling.get shouldBe a[FixedPodScalingPolicy]
         podOption.get.scaling.get.asInstanceOf[FixedPodScalingPolicy].instances should be (2)
+      }
+    }
+
+    "create a pod with a persistent volume" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/mypod",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request)
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_OK)
+
+        val jsonResponse = Json.parse(response.getEntity.asInstanceOf[String])
+        val pod = jsonResponse.as[Pod]
+        val volumeInfo = PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), size = 10)
+        val volume = PodPersistentVolume(name = "pst", persistent = volumeInfo)
+        val volumeMount = VolumeMount(name = "pst", mountPath = "pst1", readOnly = Some(false))
+        pod.volumes.head shouldBe volume
+        pod.containers.head.volumeMounts.head shouldBe volumeMount
       }
     }
 
