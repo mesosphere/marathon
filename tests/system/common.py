@@ -797,4 +797,3 @@ def docker_ipv6_network(network_name):
     yield
     for agent in agents:
         shakedown.run_command_on_agent(agent, f"sudo docker network rm {network_name}")
-
