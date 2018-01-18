@@ -1141,6 +1141,8 @@ def test_ipv6_healthcheck():
         Marathon. This tests verifies executing such healthcheck.
     """
     agents = shakedown.get_agents()
+    # to test ipv6 healthcheck we need ipv6 network before launching the container
+    # the container launch then uses this network in the app definition json
     network_cmd = "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
     for agent in agents:
         shakedown.run_command_on_agent(agent, network_cmd)
