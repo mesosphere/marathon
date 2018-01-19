@@ -739,7 +739,7 @@ def __marathon_leadership_changed_in_marathon_api(original_leader):
         not be aware of the new leader being elected resulting in HTTP 502.
     """
     # Leader is returned like this 10.0.6.88:8080 - we want just the IP
-    current_leader = marathon.create_client().get_leader().split(':', 1)
+    current_leader = marathon.create_client().get_leader().split(':', 1)[0]
     print('leader according to marathon API: {}'.format(current_leader))
     assert original_leader != current_leader
     return current_leader
