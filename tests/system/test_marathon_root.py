@@ -111,6 +111,7 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
 
     # wait until leader changed
     common.assert_marathon_leadership_changed(original_leader)
+    original_leader = shakedown.marathon_leader_ip()
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_app_existence(expected_instances):
