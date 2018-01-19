@@ -4,14 +4,16 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.mesos.client.MesosClient
+import mesosphere.mesos.client.{ MesosClient, StrictLoggingFlow }
 import mesosphere.mesos.conf.MesosClientConf
 import org.apache.mesos.v1.mesos.{ Filters, FrameworkInfo }
 import org.apache.mesos.v1.scheduler.scheduler.Event
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import scala.util.{ Failure, Success }
 
-object UselessFramework extends App with StrictLogging {
+object UselessFramework extends App with StrictLoggingFlow {
 
   /**
     * Run Foo framework that:
@@ -34,7 +36,7 @@ object UselessFramework extends App with StrictLogging {
     )
 
     val conf = new MesosClientConf(master = s"127.0.0.1:5050")
-    val client = new MesosClient(conf, frameworkInfo)
+    val client = Await.result(MesosClient.connect(conf, frameworkInfo), 10.seconds)
 
     client.mesosSource.runWith(Sink.foreach { event =>
 
@@ -45,7 +47,7 @@ object UselessFramework extends App with StrictLogging {
         val offerIds = event.offers.get.offers.map(_.id).toList
 
         Source(offerIds)
-          .via{ client.log(s"Declining offer with id = ") } // Decline all offers
+          .via(log(s"Declining offer with id = ")) // Decline all offers
           .map(oId => client.decline(
             offerIds = Seq(oId),
             filters = Some(Filters(Some(5.0f)))
