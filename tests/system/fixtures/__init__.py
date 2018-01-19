@@ -4,7 +4,9 @@ import json
 import os.path
 import pytest
 import shakedown
+import ssl
 from datetime import timedelta
+from pathlib import Path
 from sseclient.async import SSEClient
 from urllib.parse import urljoin
 
@@ -34,13 +36,33 @@ def wait_for_marathon_user_and_cleanup():
     print("exiting wait_for_marathon_user_and_cleanup fixture")
 
 
+def get_ssl_context():
+    """Looks for the DC/OS certificate in the fixtures folder.
+
+    Returns:
+        None if ca file does not exist.
+        SSLContext with file.
+
+    """
+    cafile = Path(fixtures_dir(), 'dcos-ca.crt')
+    if cafile.is_file():
+        print(f'Provide certificate {cafile}') # NOQA E999
+        ssl_context = ssl.create_default_context(cafile=cafile)
+        return ssl_context
+    else:
+        return None
+
+
 @pytest.fixture
 async def sse_events():
     url = urljoin(shakedown.dcos_url(), 'service/marathon/v2/events')
     headers = {'Authorization': 'token={}'.format(shakedown.dcos_acs_token()),
                'Accept': 'text/event-stream'}
+
+    ssl_context = get_ssl_context()
+    verify_ssl = ssl_context is not None
     async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get(url) as response:
+        async with session.get(url, verify_ssl=verify_ssl, ssl_context=ssl_context) as response:
             async def internal_generator():
                 client = SSEClient(response.content)
                 async for event in client.events():
