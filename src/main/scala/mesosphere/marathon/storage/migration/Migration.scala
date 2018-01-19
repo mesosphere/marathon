@@ -69,6 +69,9 @@ class Migration(
       ),
       StorageVersions(1, 5, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> (() =>
         new MigrationTo152(instanceRepo).migrate()
+      ),
+      StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> (() =>
+        new MigrationTo160(instanceRepo, persistenceStore).migrate()
       )
     )
 

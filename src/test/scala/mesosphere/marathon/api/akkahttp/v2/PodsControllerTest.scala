@@ -24,7 +24,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.core.pod.PodManager
-import mesosphere.marathon.raml.FixedPodScalingPolicy
+import mesosphere.marathon.raml.{ FixedPodScalingPolicy, LocalVolumeId, PersistentVolumeInfo, PersistentVolumeType, PodPersistentVolume, VolumeMount }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
@@ -429,6 +429,49 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
         val jsonResponse = Json.parse(responseAs[String])
 
         jsonResponse should have(executorResources(cpus = 100.0, mem = 100.0, disk = 10.0))
+      }
+    }
+
+    "create a pod with a persistent volume" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/mypod",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithPersistentVolume).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        response.header[Location].value.value() should be("/mypod")
+
+        val jsonResponse = Json.parse(responseAs[String])
+
+        val volumeInfo = PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), size = 10)
+        val volume = PodPersistentVolume(name = "pst", persistent = volumeInfo)
+        val volumeMount = VolumeMount(name = "pst", mountPath = "pst1", readOnly = Some(false))
+        jsonResponse should have(
+          podVolume(0, volume),
+          podVolumeMount(0, 0, volumeMount))
       }
     }
 

@@ -4,12 +4,14 @@ uses:
   container: podContainer.raml
   env: environmentVariable.raml
   label: label.raml
+  localVolumes: localVolumes.raml
   net: network.raml
   numbers: numberTypes.raml
   pod: pod.raml
   resources: resources.raml
   strings: stringTypes.raml
   volumes: volumes.raml
+
 types:
   StatusCondition:
     type: object
@@ -171,6 +173,8 @@ types:
         type: strings.Uri
         description: |
           Location of the version of the pod specification this instance was created from.
+      localVolumes?:
+        type: localVolumes.LocalVolumeId[]
       lastUpdated:
         type: datetime
         description: |

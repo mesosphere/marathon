@@ -4,6 +4,8 @@ package raml
 import java.util
 
 import mesosphere.UnitTest
+import mesosphere.marathon.state.Timestamp
+import play.api.libs.json.Json
 
 class DefaultConversionsTest extends UnitTest with DefaultConversions {
 
@@ -33,6 +35,11 @@ class DefaultConversionsTest extends UnitTest with DefaultConversions {
 
     "A map conversion is applied automatically" in {
       Map(1 -> 1, 2 -> 2).toRaml[Map[String, String]] should be (Map("1" -> "1", "2" -> "2"))
+    }
+
+    "serialize versions in the same way" in {
+      val timestamp = Timestamp("2018-01-05T18:27:50.690Z")
+      Json.toJson(timestamp.toRaml) should be (Json.toJson(timestamp.toOffsetDateTime))
     }
   }
 }

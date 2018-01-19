@@ -17,7 +17,7 @@ private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillS
   override def killInstances(instances: Seq[Instance], reason: KillReason): Future[Done] = {
     logger.info(
       s"Killing ${instances.size} tasks for reason: $reason (ids: {} ...)",
-      instances.take(3).map(_.instanceId).mkString(","))
+      instances.take(5).map(_.instanceId).mkString(","))
 
     val promise = Promise[Done]
     actorRef ! KillInstances(instances, promise)
