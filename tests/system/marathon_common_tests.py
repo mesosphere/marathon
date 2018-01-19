@@ -719,7 +719,7 @@ def test_restart_container_with_persistent_volume():
     check_task(cmd, target_data='hello\n')
 
     client.restart_app(app_id)
-    shakedown.deployment_wait()
+    common.deployment_wait(service_id=app_id)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_task_recovery():
@@ -728,8 +728,8 @@ def test_restart_container_with_persistent_volume():
 
     check_task_recovery()
 
-    port = tasks[0]['ports'][0]
     host = tasks[0]['host']
+    port = tasks[0]['ports'][0]
     cmd = "curl {}:{}/data/foo".format(host, port)
 
     check_task(cmd, target_data='hello\nhello\n')
@@ -752,6 +752,7 @@ def test_app_with_persistent_volume_recovers():
     tasks = client.get_tasks(app_id)
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
 
+    task_id = tasks[0]['id']
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
     cmd = "curl {}:{}/data/foo".format(host, port)
@@ -766,12 +767,14 @@ def test_app_with_persistent_volume_recovers():
     check_task(cmd, target_data='hello\n')
 
     shakedown.kill_process_on_host(host, '[h]ttp.server')
-    common.deployment_wait(service_id=app_id)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_task_recovery():
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1, "The number of tasks is {} after recovery, but 1 was expected".format(len(tasks))
+
+        new_task_id = tasks[0]['id']
+        assert task_id != new_task_id, "The task ID has not changed, and is still {}".format(task_id)
 
     check_task_recovery()
 

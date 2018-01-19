@@ -510,7 +510,7 @@ def test_pod_with_persistent_volume():
     path2 = tasks[1]['container']['volumes'][0]['container_path']
     print(host, port1, port2, path1, path2)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
     def check_http_endpoint(port, path):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = shakedown.run_command_on_master(cmd)
@@ -531,15 +531,41 @@ def test_pod_with_persistent_volume_recovers():
     common.deployment_wait(service_id=pod_id)
 
     tasks = common.get_pod_tasks(pod_id)
+    assert len(tasks) == 2, "The number of pod tasks is {}, but is expected to be 2".format(len(tasks))
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def wait_for_status_network_info():
+        # the following command throws exceptions if there are no tasks in TASK_RUNNING state
+        common.running_status_network_info(tasks[0]['statuses'])
+
+    wait_for_status_network_info()
     host = common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address']
 
-    shakedown.kill_process_on_host(host, '[h]ttp.server')
-    common.deployment_wait(service_id=pod_id)
+    task_id1 = tasks[0]['id']
+    task_id2 = tasks[1]['id']
 
+    shakedown.kill_process_on_host(host, '[h]ttp.server')
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_pod_recovery():
+        tasks = common.get_pod_tasks(pod_id)
+        assert len(tasks) == 2, "The number of tasks is {} after recovery, but 2 was expected".format(len(tasks))
+
+        old_task_ids = [task_id1, task_id2]
+        new_task_id1 = tasks[0]['id']
+        new_task_id2 = tasks[1]['id']
+
+        assert new_task_id1 not in old_task_ids, \
+            "The task ID has not changed, and is still {}".format(new_task_id1)
+        assert new_task_id2 not in old_task_ids, \
+            "The task ID has not changed, and is still {}".format(new_task_id2)
+
+    wait_for_status_network_info()
+
+    tasks = common.get_pod_tasks(pod_id)
     assert host == common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address'], \
         "the pod has been restarted on another host"
 
-    tasks = common.get_pod_tasks(pod_id)
     port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
     path1 = tasks[0]['container']['volumes'][0]['container_path']
