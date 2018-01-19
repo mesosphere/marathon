@@ -81,3 +81,11 @@ def fake_framework():
 
 def external_volume_mesos_app():
     return load_app('external-volume-mesos-app')
+
+
+def ipv6_healthcheck():
+    """ The app uses netcat to listen on port. It uses alpine image which has netcat with ipv6 support by default.
+        It uses command nc (shortcut for netcat) that runs for every new connection an echo command in shell.
+        For more information about the nc options just run `docker run alpine nc --help`
+    """
+    return load_app('ipv6-healthcheck')
