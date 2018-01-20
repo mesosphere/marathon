@@ -20,9 +20,11 @@ object MultiTimer {
     }
 
     def duration(): Option[FiniteDuration] = {
-      end.flatMap { endTime =>
-        start.map(endTime - _)
-      }.map(FiniteDuration(_, TimeUnit.NANOSECONDS))
+      (end, start) match {
+        case (Some(endTime), Some(startTime)) =>
+          Some(FiniteDuration(endTime - startTime, TimeUnit.NANOSECONDS))
+        case _ => None
+      }
     }
 
     override def toString: String = duration().fold(s"$label=N/A"){ d => s"$label=${d.toMillis}ms" }
@@ -34,8 +36,9 @@ class MultiTimer {
 
   val subTimers: ArrayBuffer[MultiTimer.Timer] = ArrayBuffer.empty
 
-  def subTimer(label: String): MultiTimer.Timer = {
+  def startSubTimer(label: String): MultiTimer.Timer = {
     val timer = new metrics.MultiTimer.Timer(label)
+    timer.begin()
     subTimers += timer
     return timer
   }

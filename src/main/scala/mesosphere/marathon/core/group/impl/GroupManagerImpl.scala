@@ -2,8 +2,7 @@ package mesosphere.marathon
 package core.group.impl
 
 import java.time.OffsetDateTime
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.{ AtomicBoolean, AtomicInteger }
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Provider
 
 import akka.event.EventStream
@@ -105,9 +104,6 @@ class GroupManagerImpl(
 
   override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
 
-  val updateRequests = new AtomicInteger(0) // DEBUG
-  val updateResponses = new AtomicInteger(0)
-
   @SuppressWarnings(Array("all")) /* async/await */
   override def updateRootEither[T](
     id: PathId,
@@ -123,32 +119,32 @@ class GroupManagerImpl(
       val from = rootGroup()
       async {
 
-        val changedGroupTimer = timers.subTimer("ChangeRootGroup")
+        val changedGroupTimer = timers.startSubTimer("ChangeRootGroup")
         val changedGroup = await(change(from))
         changedGroupTimer.stop()
-        
+
         changedGroup match {
           case Left(left) =>
             Left(left)
           case Right(changed) =>
 
-            val assignDynamicServicePortsTimer = timers.subTimer("AssignDynamicServicePorts")
+            val assignDynamicServicePortsTimer = timers.startSubTimer("AssignDynamicServicePorts")
             val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
               from,
               changed)
             assignDynamicServicePortsTimer.stop()
 
-            val updateVersionInfoTimer = timers.subTimer("UpdateVersionInfo")
+            val updateVersionInfoTimer = timers.startSubTimer("UpdateVersionInfo")
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
             updateVersionInfoTimer.stop()
 
-            val validateGroupTimer = timers.subTimer("ValidateRootGroup")
+            val validateGroupTimer = timers.startSubTimer("ValidateRootGroup")
             Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config.availableFeatures))
             validateGroupTimer.stop()
 
-            val deploymentPlanCreationTimer = timers.subTimer("MakeDeploymentPlan")
+            val deploymentPlanCreationTimer = timers.startSubTimer("MakeDeploymentPlan")
             val plan = DeploymentPlan(from, withVersionedAppsPods, version, toKill)
             Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
             deploymentPlanCreationTimer.stop()
@@ -158,7 +154,7 @@ class GroupManagerImpl(
 
             await(deploymentService.get().deploy(plan, force))
 
-            val storeRootGroupVersionTimer = timers.subTimer("StoreRootGroup")
+            val storeRootGroupVersionTimer = timers.startSubTimer("StoreRootGroup")
             await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
             storeRootGroupVersionTimer.stop()
 
@@ -173,9 +169,6 @@ class GroupManagerImpl(
 
     maybeDeploymentPlan.onComplete {
       case Success(Right(plan)) =>
-        logger.info(s">>> UpdateResponsesNum ${updateResponses.incrementAndGet()}")
-        logger.info(s">>> SerializedUpdatesQueueSizeOnSuccess (queueSize,slotsNum) ${serializeUpdates.stats()}")
-        logger.info(s">>> TotalTimeToDeploy ${version.until(Timestamp.now()).toMillis}")
 
         logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.targetIdsString} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
