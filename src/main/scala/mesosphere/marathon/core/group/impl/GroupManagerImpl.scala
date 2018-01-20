@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.group.impl
 
 import java.time.OffsetDateTime
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.{ AtomicBoolean, AtomicInteger }
 import javax.inject.Provider
 
@@ -16,6 +17,7 @@ import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.metrics.MultiTimer
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.upgrade.GroupVersioningUtil
@@ -23,6 +25,7 @@ import mesosphere.marathon.util.{ LockedVar, WorkQueue }
 
 import scala.async.Async._
 import scala.collection.immutable.Seq
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
@@ -111,78 +114,56 @@ class GroupManagerImpl(
     change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
-    val atSerializedUpdates = Timestamp.now()
-    logger.info(s">>> CreateResource ${version.until(atSerializedUpdates).toMillis}")
-
-    logger.info(s">>> UpdateRequestsNum ${updateRequests.incrementAndGet()}")
-    logger.info(s">>> SerializedUpdatesQueueSize (queueSize,slotsNum) ${serializeUpdates.stats()}")
+    val timers = new MultiTimer()
 
     // All updates to the root go through the work queue.
     val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
       logger.info(s"Upgrade root group version:$version with force:$force")
 
-      val atReadRootGroup = Timestamp.now() // DEBUG
-      logger.info(s">>> SerializedUpdates ${atSerializedUpdates.until(atReadRootGroup).toMillis}")
-
       val from = rootGroup()
       async {
-        val atChangedGroup = Timestamp.now() // DEBUG
-        logger.info(s">>> ReadRootGroup ${atReadRootGroup.until(atChangedGroup).toMillis}")
 
+        val changedGroupTimer = timers.subTimer("ChangeRootGroup")
         val changedGroup = await(change(from))
+        changedGroupTimer.stop()
+        
         changedGroup match {
           case Left(left) =>
             Left(left)
           case Right(changed) =>
-            val atAssignDynamicPorts = Timestamp.now() // DEBUG
-            logger.info(s">>> ChangeRootGroup ${atChangedGroup.until(atAssignDynamicPorts).toMillis}")
 
+            val assignDynamicServicePortsTimer = timers.subTimer("AssignDynamicServicePorts")
             val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
               from,
               changed)
+            assignDynamicServicePortsTimer.stop()
 
-            val atUpdateVersionInfo = Timestamp.now() // DEBUG
-            logger.info(s">>> AssignDynamicServicePorts ${atAssignDynamicPorts.until(atUpdateVersionInfo).toMillis}")
-
+            val updateVersionInfoTimer = timers.subTimer("UpdateVersionInfo")
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
+            updateVersionInfoTimer.stop()
 
-            val atValidateRootGroup = Timestamp.now() // DEBUG
-            logger.info(s">>> UpdateVersionInfo ${atUpdateVersionInfo.until(atValidateRootGroup).toMillis}")
-
+            val validateGroupTimer = timers.subTimer("ValidateRootGroup")
             Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config.availableFeatures))
+            validateGroupTimer.stop()
 
-            val atMakeDeploymentPlan = Timestamp.now() // DEBUG
-            logger.info(s">>> ValidateRootGroup ${atValidateRootGroup.until(atMakeDeploymentPlan).toMillis}")
-
+            val deploymentPlanCreationTimer = timers.subTimer("MakeDeploymentPlan")
             val plan = DeploymentPlan(from, withVersionedAppsPods, version, toKill)
-
-            val atValidateDeploymentPlan = Timestamp.now() // DEBUG
-            logger.info(s">>> MakeDeploymentPlan ${atMakeDeploymentPlan.until(atValidateDeploymentPlan).toMillis}")
-
             Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
-
-            val atStoreRootGroupVersion = Timestamp.now() // DEBUG
-            logger.info(s">>> ValidateDeploymentPlan ${atValidateDeploymentPlan.until(atStoreRootGroupVersion).toMillis}")
+            deploymentPlanCreationTimer.stop()
 
             logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")
             await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
 
-            val atDeploymentService = Timestamp.now() // DEBUG
-            logger.info(s">>> StoreRootGroupVersion ${atStoreRootGroupVersion.until(atDeploymentService).toMillis}")
-
             await(deploymentService.get().deploy(plan, force))
 
-            val atStoreRootGroup = Timestamp.now() // DEBUG
-            logger.info(s">>> DeploymentServiceDeploy ${atDeploymentService.until(atStoreRootGroup).toMillis}")
-
+            val storeRootGroupVersionTimer = timers.subTimer("StoreRootGroup")
             await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
-
-            val atReturnDeploymentPlan = Timestamp.now() // DEBUG
-            logger.info(s">>> StoreRootGroup ${atStoreRootGroup.until(atReturnDeploymentPlan).toMillis}")
+            storeRootGroupVersionTimer.stop()
 
             logger.info(s"Updated groups/apps/pods according to plan ${plan.id} for ${plan.targetIdsString}")
+            logger.info(s"DeploymentPlanId=${plan.id} $timers")
             // finally update the root under the write lock.
             root := Option(plan.target)
             Right(plan)
