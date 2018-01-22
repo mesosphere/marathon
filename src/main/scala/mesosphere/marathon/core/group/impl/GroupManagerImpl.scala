@@ -150,13 +150,15 @@ class GroupManagerImpl(
             deploymentPlanCreationTimer.stop()
 
             logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")
+            val storeRootGroupVersionTimer = timers.startSubTimer("StoreRootGroup")
             await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
+            storeRootGroupVersionTimer.stop()
 
             await(deploymentService.get().deploy(plan, force))
 
-            val storeRootGroupVersionTimer = timers.startSubTimer("StoreRootGroup")
+            val storeRootGroupTimer = timers.startSubTimer("StoreRootGroup")
             await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
-            storeRootGroupVersionTimer.stop()
+            storeRootGroupTimer.stop()
 
             logger.info(s"Updated groups/apps/pods according to plan ${plan.id} for ${plan.targetIdsString}")
             logger.info(s"DeploymentPlanId=${plan.id} $timers")
