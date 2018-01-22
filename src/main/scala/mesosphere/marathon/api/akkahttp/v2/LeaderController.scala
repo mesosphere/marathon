@@ -53,7 +53,7 @@ case class LeaderController(
                   scheduler.scheduleOnce(LeaderResource.abdicationDelay) {
                     electionService.abdicateLeadership()
                   }
-                  raml.Message(s"Leadership abdicated")
+                  raml.Message("Leadership abdicated")
                 }
               }
             }

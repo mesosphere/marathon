@@ -59,7 +59,7 @@ class LeaderResource @Inject() (
 
           scheduler.scheduleOnce(LeaderResource.abdicationDelay) { electionService.abdicateLeadership() }
 
-          ok(jsonObjString("message" -> s"Leadership abdicated"))
+          ok(jsonObjString("message" -> "Leadership abdicated"))
         }
       } else {
         notFound("There is no leader")

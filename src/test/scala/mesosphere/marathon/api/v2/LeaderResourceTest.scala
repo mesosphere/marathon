@@ -27,7 +27,7 @@ class LeaderResourceTest extends UnitTest {
       index.getStatus should be(f.auth.NotAuthenticatedStatus)
 
       When("we try to delete the current leader")
-      val delete = resource.delete(null, null, 0, f.auth.request)
+      val delete = resource.delete(null, null, f.auth.request)
       Then("we receive a NotAuthenticated response")
       delete.getStatus should be(f.auth.NotAuthenticatedStatus)
     }
@@ -45,7 +45,7 @@ class LeaderResourceTest extends UnitTest {
       index.getStatus should be(f.auth.UnauthorizedStatus)
 
       When("we try to delete the current leader")
-      val delete = resource.delete(null, null, 0, f.auth.request)
+      val delete = resource.delete(null, null, f.auth.request)
       Then("we receive a Unauthorized response")
       delete.getStatus should be(f.auth.UnauthorizedStatus)
     }
@@ -60,7 +60,7 @@ class LeaderResourceTest extends UnitTest {
       f.runtimeRepo.store(any).returns(Future.successful(Done))
 
       When("we try to delete the current leader")
-      val delete = resource.delete(null, null, 0, f.auth.request)
+      val delete = resource.delete(null, null, f.auth.request)
       Then("we receive a authorized response")
       delete.getStatus should be(200)
       verify(f.electionService, times(0)).abdicateLeadership()

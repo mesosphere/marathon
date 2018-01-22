@@ -4,6 +4,7 @@ package api.akkahttp.v2
 import akka.Done
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import mesosphere.marathon.api.v2.LeaderResource
 import mesosphere.marathon.test.{ SettableClock, SimulatedScheduler }
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
@@ -18,7 +19,7 @@ import scala.concurrent.duration._
 
 class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike with RouteBehaviours {
 
-  "LeaderResource" should {
+  "LeaderController" should {
 
     // Unauthenticated access test cases
     {
@@ -146,7 +147,7 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
         Then("we receive a 200 response")
         status should be(StatusCodes.OK)
         verify(f.electionService, times(0)).abdicateLeadership()
-        f.clock += 500.millis
+        f.clock += LeaderResource.abdicationDelay
         verify(f.electionService, times(1)).abdicateLeadership()
       }
     }
