@@ -15,6 +15,7 @@ from datetime import timedelta
 from dcos import http, marathon
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
+
 def test_launch_mesos_container():
     """Launches a Mesos container with a simple command."""
 
@@ -1134,17 +1135,6 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
     http_output_check()
 
 
-@pytest.fixture(scope="function")
-def docker_ipv6_network_fixture():
-    agents = shakedown.get_agents()
-    network_cmd = f"sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
-    for agent in agents:
-        shakedown.run_command_on_agent(agent, network_cmd)
-    yield
-    for agent in agents:
-        shakedown.run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
-
-
 # @shakedown.dcos_1_11
 def test_ipv6_healthcheck(docker_ipv6_network_fixture):
     """ There is new feature in DC/OS 1.11 that allows containers running on IPv6 network to be healthchecked from
@@ -1164,4 +1154,3 @@ def test_ipv6_healthcheck(docker_ipv6_network_fixture):
         "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], target_instances_count)
 
     client.remove_app(app['id'], True)
-

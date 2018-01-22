@@ -82,3 +82,14 @@ def user_billy():
     shakedown.remove_user_permission(rid='dcos:service:marathon:marathon:services:/', uid='billy', action='full')
     shakedown.remove_user('billy')
     print("exiting user_billy fixture")
+
+
+@pytest.fixture(scope="function")
+def docker_ipv6_network_fixture():
+    agents = shakedown.get_agents()
+    network_cmd = f"sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
+    for agent in agents:
+        shakedown.run_command_on_agent(agent, network_cmd)
+    yield
+    for agent in agents:
+        shakedown.run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")

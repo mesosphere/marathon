@@ -23,7 +23,7 @@ import marathon_common_tests
 import marathon_pods_tests
 
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_masters, required_public_agents # NOQA F401
-from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy # NOQA F401
+from fixtures import sse_events, wait_for_marathon_and_cleanup, user_billy, docker_ipv6_network_fixture # NOQA F401
 
 # the following lines essentially do:
 #     from dcos_service_marathon_tests import test_*

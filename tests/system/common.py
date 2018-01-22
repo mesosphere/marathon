@@ -790,4 +790,3 @@ async def find_event(event_type, event_stream):
 
 async def assert_event(event_type, event_stream, within=10):
     await asyncio.wait_for(find_event(event_type, event_stream), within)
-
