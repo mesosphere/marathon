@@ -10,6 +10,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.util.summarize
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersionedRepository
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
@@ -316,16 +317,19 @@ class StoredGroupRepositoryImpl[K, C, S](
               revertRoot(ex)
           }
         case (Failure(ex), Success(_)) =>
-          logger.error("Unable to store updated apps or pods: " +
-            s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
+          val summarizedApps = summarize(updatedApps.toIterator.map(_.id))
+          val summarizedPods = summarize(updatedPods.toIterator.map(_.id))
+          logger.error(s"Unable to store updated apps or pods: $summarizedApps $summarizedPods", ex)
           revertRoot(ex)
         case (Success(_), Failure(ex)) =>
-          logger.error("Unable to store updated apps or pods: " +
-            s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
+          val summarizedApps = summarize(updatedApps.toIterator.map(_.id))
+          val summarizedPods = summarize(updatedPods.toIterator.map(_.id))
+          logger.error(s"Unable to store updated apps or pods: $summarizedApps $summarizedPods", ex)
           revertRoot(ex)
         case (Failure(ex), Failure(_)) =>
-          logger.error("Unable to store updated apps or pods: " +
-            s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
+          val summarizedApps = summarize(updatedApps.toIterator.map(_.id))
+          val summarizedPods = summarize(updatedPods.toIterator.map(_.id))
+          logger.error(s"Unable to store updated apps or pods: $summarizedApps $summarizedPods", ex)
           revertRoot(ex)
       }
     }
@@ -356,7 +360,9 @@ class StoredGroupRepositoryImpl[K, C, S](
               throw ex
           }
         case Failure(ex) =>
-          logger.error(s"Unable to store updated apps/pods ${Seq(updatedApps, updatedPods).flatten.map(_.id).mkString}", ex)
+          val summarizedApps = summarize(updatedApps.toIterator.map(_.id))
+          val summarizedPods = summarize(updatedPods.toIterator.map(_.id))
+          logger.error(s"Unable to store updated apps or pods: $summarizedApps $summarizedPods", ex)
           throw ex
       }
     }

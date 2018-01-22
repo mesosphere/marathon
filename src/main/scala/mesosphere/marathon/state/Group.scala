@@ -6,6 +6,7 @@ import java.util.Objects
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
+import mesosphere.util.summarize
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
@@ -110,15 +111,6 @@ class Group(
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
-  private def summarize[T](iterator: Iterator[T]): String = {
-    val s = new StringBuilder
-    s ++= "Seq("
-    s ++= iterator.take(3).toSeq.mkString(", ")
-    if (iterator.hasNext)
-      s ++= s", ... ${iterator.length} more"
-    s ++= ")"
-    s.toString
-  }
   override def toString = {
     val summarizedApps = summarize(apps.valuesIterator.map(_.id))
     val summarizedPods = summarize(pods.valuesIterator.map(_.id))
