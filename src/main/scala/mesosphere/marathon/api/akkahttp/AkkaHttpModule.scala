@@ -78,7 +78,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
       electionService.leadershipTransitionEvents)
     val infoController = InfoController(mesosLeaderInfo, storageModule.frameworkIdRepository, conf)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
-    val leaderController = LeaderController(electionService, storageModule.runtimeConfigurationRepository)
+    val leaderController = LeaderController(electionService, storageModule.runtimeConfigurationRepository, actorSystem.scheduler)
     val queueController = new QueueController(clock, launchQueue, electionService)
     val tasksController = new TasksController(instanceTracker, groupManager, healthCheckManager, taskKiller, electionService)
     val groupsController = new GroupsController(electionService, groupInfoService, groupManager, groupApiService, conf)
