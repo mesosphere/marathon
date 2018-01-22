@@ -50,10 +50,6 @@ delete:
       required: false
       description: URI to restore zk state.
       example: file:///var/backup/marathon/backup
-    delay?:
-      required: false
-      description: Delay, in milliseconds, after which to abdicate leadership (default: 500)
-      example: "1000"
   responses:
     200:
       description: The abdication message from the current leader.
@@ -61,7 +57,7 @@ delete:
         application/json:
           example: |
             {
-                "message": "Leadership will be abdicated in 500ms"
+                "message": "Leadership abdicated"
             }
     404:
       description: If there is no current leader.
