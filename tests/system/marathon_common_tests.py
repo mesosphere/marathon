@@ -1135,7 +1135,7 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
     http_output_check()
 
 
-# @shakedown.dcos_1_11
+@shakedown.dcos_1_11
 def test_ipv6_healthcheck(docker_ipv6_network_fixture):
     """ There is new feature in DC/OS 1.11 that allows containers running on IPv6 network to be healthchecked from
         Marathon. This tests verifies executing such healthcheck.
