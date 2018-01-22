@@ -1,11 +1,16 @@
 package mesosphere.marathon
 package api.v2
 
+import akka.Done
 import akka.actor.ActorSystem
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
+import mesosphere.marathon.test.{ SettableClock, SimulatedScheduler }
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class LeaderResourceTest extends UnitTest {
 
@@ -22,7 +27,7 @@ class LeaderResourceTest extends UnitTest {
       index.getStatus should be(f.auth.NotAuthenticatedStatus)
 
       When("we try to delete the current leader")
-      val delete = resource.delete(null, null, f.auth.request)
+      val delete = resource.delete(null, null, 0, f.auth.request)
       Then("we receive a NotAuthenticated response")
       delete.getStatus should be(f.auth.NotAuthenticatedStatus)
     }
@@ -40,9 +45,27 @@ class LeaderResourceTest extends UnitTest {
       index.getStatus should be(f.auth.UnauthorizedStatus)
 
       When("we try to delete the current leader")
-      val delete = resource.delete(null, null, f.auth.request)
+      val delete = resource.delete(null, null, 0, f.auth.request)
       Then("we receive a Unauthorized response")
       delete.getStatus should be(f.auth.UnauthorizedStatus)
+    }
+
+    "should abdicate after 500ms if authorized" in {
+      Given("An unauthenticated request")
+      val f = new Fixture
+      val resource = f.leaderResource()
+      f.auth.authenticated = true
+      f.auth.authorized = true
+      f.electionService.isLeader.returns(true)
+      f.runtimeRepo.store(any).returns(Future.successful(Done))
+
+      When("we try to delete the current leader")
+      val delete = resource.delete(null, null, 0, f.auth.request)
+      Then("we receive a authorized response")
+      delete.getStatus should be(200)
+      verify(f.electionService, times(0)).abdicateLeadership()
+      f.clock += 500.millis
+      verify(f.electionService, times(1)).abdicateLeadership()
     }
   }
 
@@ -53,7 +76,11 @@ class LeaderResourceTest extends UnitTest {
     val runtimeRepo = mock[RuntimeConfigurationRepository]
     val auth = new TestAuthFixture
     val config = AllConf.withTestConfig()
-    def leaderResource() = new LeaderResource(electionService, config, runtimeRepo, auth.auth, auth.auth)
+    val executionContext = ExecutionContexts.callerThread
+    val clock = new SettableClock()
+    val scheduler = new SimulatedScheduler(clock)
+    def leaderResource() = new LeaderResource(electionService, config, runtimeRepo, auth.auth, auth.auth, scheduler)(
+      executionContext)
   }
 }
 

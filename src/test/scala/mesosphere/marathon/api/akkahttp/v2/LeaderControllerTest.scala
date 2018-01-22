@@ -4,16 +4,17 @@ package api.akkahttp.v2
 import akka.Done
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import mesosphere.marathon.test.{ SettableClock, SimulatedScheduler }
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.LeaderDirectives.{ NoLeader, ProxyToLeader }
-import mesosphere.marathon.api.akkahttp.Rejections.EntityNotFound
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import org.scalatest.Inside
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike with RouteBehaviours {
 
@@ -133,6 +134,22 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
         }
       }
     }
+
+    "should abdicate after 500ms" in {
+      Given("the instance is not the leader")
+      val f = Fixture()
+      f.runtimeRepo.store(any).returns(Future.successful(Done))
+      val controller = f.controller()
+
+      When("we try to abdicate")
+      Delete(Uri./) ~> controller.route ~> check {
+        Then("we receive a 200 response")
+        status should be(StatusCodes.OK)
+        verify(f.electionService, times(0)).abdicateLeadership()
+        f.clock += 500.millis
+        verify(f.electionService, times(1)).abdicateLeadership()
+      }
+    }
   }
 
   case class Fixture(authenticated: Boolean = true, authorized: Boolean = true, isLeader: Boolean = true) {
@@ -145,9 +162,11 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     implicit val authenticator = auth.auth
 
     val config = AllConf.withTestConfig()
+    val clock = new SettableClock()
+    val scheduler = new SimulatedScheduler(clock)
 
     electionService.isLeader returns (isLeader)
 
-    def controller() = new LeaderController(electionService, runtimeRepo)
+    def controller() = new LeaderController(electionService, runtimeRepo, scheduler)
   }
 }
