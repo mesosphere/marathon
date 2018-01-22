@@ -8,7 +8,6 @@ import time
 import uuid
 import sys
 import retrying
-import contextlib
 
 from datetime import timedelta
 from dcos import http, mesos
@@ -791,14 +790,3 @@ async def find_event(event_type, event_stream):
 
 async def assert_event(event_type, event_stream, within=10):
     await asyncio.wait_for(find_event(event_type, event_stream), within)
-
-
-@contextlib.contextmanager
-def docker_ipv6_network_fixture(network_name):
-    agents = shakedown.get_agents()
-    network_cmd = f"sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 {network_name}"
-    for agent in agents:
-        shakedown.run_command_on_agent(agent, network_cmd)
-    yield
-    for agent in agents:
-        shakedown.run_command_on_agent(agent, f"sudo docker network rm {network_name}")
