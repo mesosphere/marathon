@@ -2,11 +2,13 @@
 
 import common
 import pytest
+import retrying
 import shakedown
 import time
 
 from datetime import timedelta
 from dcos import packagemanager, marathon, cosmos
+from dcos.errors import DCOSException
 
 
 PACKAGE_NAME = 'marathon'
@@ -34,18 +36,20 @@ def test_install_marathon():
     """
 
     # Install
-    shakedown.install_package_and_wait(PACKAGE_NAME)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=DCOSException)
+    def install_marathon():
+        shakedown.install_package_and_wait(PACKAGE_NAME)
+
+    install_marathon()
     assert shakedown.package_installed(PACKAGE_NAME), 'Package failed to install'
 
-    end_time = time.time() + WAIT_TIME_IN_SECS
-    found = False
-    while time.time() < end_time:
-        found = shakedown.get_service(PACKAGE_NAME) is not None
-        if found and shakedown.service_healthy(SERVICE_NAME):
-            break
-        time.sleep(1)
+    # 5000ms = 5 seconds, 5 seconds * 60 attempts = 300 seconds = WAIT_TIME_IN_SECS
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=60, retry_on_exception=DCOSException)
+    def assert_service_registration(package, service):
+        found = shakedown.get_service(package) is not None
+        assert found and shakedown.service_healthy(service), f"Service {package} did not register with DCOS" # NOQA E999
 
-    assert found, 'Service did not register with DCOS'
+    assert_service_registration(PACKAGE_NAME, SERVICE_NAME)
     shakedown.deployment_wait()
 
     # Uninstall
