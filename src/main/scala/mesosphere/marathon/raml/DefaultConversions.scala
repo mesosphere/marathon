@@ -1,7 +1,11 @@
 package mesosphere.marathon
 package raml
 
+import java.time.OffsetDateTime
+
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream.Implicits._
+import play.api.libs.json.JsString
 
 /**
   * All conversions for standard scala types.
@@ -15,6 +19,8 @@ trait DefaultConversions {
   implicit val doubleIdentityWrites: Writes[Double, Double] = identityConversion[Double]
   implicit val stringIdentityWrites: Writes[String, String] = identityConversion[String]
   implicit val booleanIdentityWrites: Writes[Boolean, Boolean] = identityConversion[Boolean]
+
+  implicit val timestampWrites: Writes[Timestamp, String] = Writes { _.toString }
 
   implicit def optionConversion[A, B](implicit writer: Writes[A, B]): Writes[Option[A], Option[B]] = Writes { option =>
     option.map(writer.write)
@@ -36,5 +42,8 @@ trait DefaultConversions {
     map.map {
       case (k, v) => key.write(k) -> value.write(v)
     }
+  }
+  implicit object OffsetDateTimeWrite extends play.api.libs.json.Writes[OffsetDateTime] {
+    def writes(o: OffsetDateTime) = JsString(o.format(Timestamp.formatter))
   }
 }
