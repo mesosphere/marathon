@@ -4,7 +4,7 @@ package api.akkahttp.v2
 import akka.actor.Scheduler
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.api.v2.{ LeaderResource, Validation }
 import mesosphere.marathon.api.akkahttp.{ Controller, Rejections }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
@@ -50,10 +50,10 @@ case class LeaderController(
               complete {
                 async {
                   await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
-                  scheduler.scheduleOnce(delay.millis) {
+                  scheduler.scheduleOnce(LeaderResource.abdicationDelay) {
                     electionService.abdicateLeadership()
                   }
-                  raml.Message(s"Leadership will be abdicated in ${delay}ms")
+                  raml.Message(s"Leadership abdicated")
                 }
               }
             }

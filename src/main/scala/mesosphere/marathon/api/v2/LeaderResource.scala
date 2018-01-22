@@ -18,6 +18,10 @@ import mesosphere.marathon.stream.UriIO
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+object LeaderResource {
+  val abdicationDelay = 500.millis
+}
+
 @Path("v2/leader")
 class LeaderResource @Inject() (
     electionService: ElectionService,
@@ -45,19 +49,17 @@ class LeaderResource @Inject() (
   def delete(
     @QueryParam("backup") backupNullable: String,
     @QueryParam("restore") restoreNullable: String,
-    @QueryParam("delay") delayOrDefault: Long,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(UpdateResource, AuthorizedResource.Leader) {
       if (electionService.isLeader) {
         assumeValid {
-          val delay = if (delayOrDefault == 0) 500.millis else delayOrDefault.millis
           val backup = validateOrThrow(Option(backupNullable))(optional(UriIO.valid))
           val restore = validateOrThrow(Option(restoreNullable))(optional(UriIO.valid))
           result(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
 
-          scheduler.scheduleOnce(delay) { electionService.abdicateLeadership() }
+          scheduler.scheduleOnce(LeaderResource.abdicationDelay) { electionService.abdicateLeadership() }
 
-          ok(jsonObjString("message" -> s"Leadership will be abdicated in ${delay}ms"))
+          ok(jsonObjString("message" -> s"Leadership abdicated"))
         }
       } else {
         notFound("There is no leader")
