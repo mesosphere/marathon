@@ -1,0 +1,53 @@
+@startuml
+
+package Marathon {
+  object RunSpec {
+    id: String
+    version: String
+  }
+
+  object DeploymentPolicy {
+    id: String
+    placement
+    recovery
+    schedule
+  }
+
+  object Deployment {
+    upgradePolicy
+    instances
+    appVersion
+    ...
+  }
+
+  object Instance {
+    goal
+    agentId
+    taskId
+    runSpecVersion
+  }
+}
+
+package Mesos {
+  object Agent {
+  }
+
+  object Task {
+  }
+}
+
+/' Deployment policy... blue green? Different attributes for instances '/
+RunSpec "1" -- "*" Instance
+RunSpec "1" -- "*" DeploymentPolicy
+DeploymentPolicy "*" -- "1" Deployment
+
+
+Agent "1" -- "*" Task
+
+Instance "1" -- "*" Task
+
+Instance "1" -- "0..1" Agent
+
+Instance "1" -- "0..1" DeploymentPolicy
+
+@enduml

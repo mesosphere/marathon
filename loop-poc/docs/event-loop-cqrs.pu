@@ -1,0 +1,26 @@
+@startuml
+scale 600 width
+
+[*] -> Client
+
+Client --> API
+API: Accepts HTTP requests
+state SchedulerLoop {
+  state Orchestrator
+}
+
+API --> Client
+
+API --> StateUpdater
+StateUpdater -> API
+state Storage
+
+StateUpdater --> Storage: Put version
+Storage --> StateUpdater: Ack version
+
+StateUpdater --> SchedulerLoop
+
+SchedulerLoop --> MesosDriver
+MesosDriver --> SchedulerLoop
+Orchestrator --> StateUpdater
+@enduml
