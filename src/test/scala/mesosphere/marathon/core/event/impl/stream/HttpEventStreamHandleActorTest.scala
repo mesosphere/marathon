@@ -9,7 +9,6 @@ import akka.event.EventStream
 import akka.testkit.{ EventFilter, ImplicitSender, TestActorRef }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor.SerializedMarathonEvent
-import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, Subscribe }
 
 import scala.concurrent.duration._
 
@@ -20,6 +19,10 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
     val handleActor: TestActorRef[HttpEventStreamHandleActor] = TestActorRef(Props(
       new HttpEventStreamHandleActor(handle, stream, 1)
     ))
+
+    val eventStreamAttached = SerializedMarathonEvent("event_stream_attached", """{"remoteAddress": "remote"}""")
+    val eventStreamDetached = SerializedMarathonEvent("event_stream_detached", """{"remoteAddress": "remote"}""")
+    val eventStreamSubscribe = SerializedMarathonEvent("subscribe_event", "{}")
   }
   "HttpEventStreamHandleActor" should {
     "A message send to the handle actor will be transferred to the stream handle" in new Fixture {
@@ -28,7 +31,7 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       handle.sendEvent(any[SerializedMarathonEvent]) answers (_ => latch.countDown())
 
       When("The event is send to the actor, the outstanding messages is 1")
-      handleActor ! EventStreamAttached("remote")
+      handleActor ! eventStreamAttached
 
       Then("We need to wait for the future to succeed")
       awaitCond(latch.getCount == 0)
@@ -42,9 +45,9 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       val filter = EventFilter(pattern = "Ignore event.*", occurrences = 1)
 
       When("More than the max size of outstanding events is send to the actor")
-      handleActor ! EventStreamAttached("remote") // linter:ignore:IdenticalStatements //send immediately
-      handleActor ! EventStreamAttached("remote") //put to queue
-      handleActor ! EventStreamAttached("remote") //drop event
+      handleActor ! eventStreamAttached // linter:ignore:IdenticalStatements //send immediately
+      handleActor ! eventStreamAttached //put to queue
+      handleActor ! eventStreamAttached //drop event
 
       Then("Only one message is send to the handler")
       latch.countDown()
@@ -57,13 +60,15 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       val filter = EventFilter(pattern = "Received EOF.*", occurrences = 1)
 
       When("An event is send to actor")
-      handleActor ! EventStreamAttached("remote")
+      handleActor ! eventStreamAttached
 
       Then("The actor does not understand any messages")
       filter.awaitDone(1.second)
     }
 
     "Multiple messages are send in order" in {
+      val f = new Fixture()
+
       Given("A handler that will postpone the sending")
       val latch = new CountDownLatch(1)
       var events = List.empty[String]
@@ -73,9 +78,9 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       val handleActor: TestActorRef[HttpEventStreamHandleActor] = TestActorRef(Props(
         new HttpEventStreamHandleActor(handle, stream, 50)
       ))
-      val attached = EventStreamAttached("remote")
-      val detached = EventStreamDetached("remote")
-      val subscribe = Subscribe("ip", "url")
+      val attached = f.eventStreamAttached
+      val detached = f.eventStreamDetached
+      val subscribe = f.eventStreamSubscribe
 
       When("One message is send directly and 2 are queued for later delivery")
       handleActor ! attached

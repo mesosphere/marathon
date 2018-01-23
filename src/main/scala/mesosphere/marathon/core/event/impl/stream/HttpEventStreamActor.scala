@@ -21,6 +21,7 @@ trait HttpEventStreamHandle {
   def remoteAddress: String
   def sendEvent(event: SerializedMarathonEvent): Unit
   def close(): Unit
+  val useLightWeightEvents: Boolean
 }
 
 class HttpEventStreamActorMetrics() {
@@ -134,11 +135,19 @@ class HttpEventStreamActor(
 
   def handleEvents: Receive = {
     case event: MarathonEvent =>
-      logger.info(s"### handle $event")
       // Broadcast events to all handle actors.
-      val payload = Json.stringify(eventToJson(event, false))
-      streamHandleActors.valuesIterator.foreach { actor: ActorRef =>
-        actor ! SerializedMarathonEvent(event.eventType, payload)
+      val fullEvent = {
+        val payload = Json.stringify(eventToJson(event, false))
+        SerializedMarathonEvent(event.eventType, payload)
+      }
+      val lightEvent = {
+        val payload = Json.stringify(eventToJson(event, true))
+        SerializedMarathonEvent(event.eventType, payload)
+      }
+      streamHandleActors.foreach {
+        case (handle, actor) =>
+          if (handle.useLightWeightEvents) actor ! lightEvent
+          else actor ! fullEvent
       }
   }
 

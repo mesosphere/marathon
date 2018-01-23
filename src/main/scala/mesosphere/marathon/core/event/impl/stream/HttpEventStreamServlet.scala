@@ -27,7 +27,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
 
-  private val useLightWeightEvents = request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
+  override val useLightWeightEvents = request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
 
   def subscribed(eventType: String): Boolean = {
     subscribedEventTypes.isEmpty || subscribedEventTypes.contains(eventType)

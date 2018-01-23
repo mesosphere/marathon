@@ -4,12 +4,9 @@ package api.akkahttp
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.model.Uri.{ Path, Query }
 import akka.http.scaladsl.server.MalformedQueryParamRejection
-import akka.http.scaladsl.server.PathMatcher.{ Matched, Unmatched }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.GroupCreation
 
 class AppsDirectivesTest extends UnitTest with ScalatestRouteTest {
   import AppsDirectives._
