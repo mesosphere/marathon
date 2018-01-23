@@ -32,6 +32,7 @@ class EventModule(
       Props(
         new HttpEventStreamActor(
           electionService,
+          eventBus,
           new HttpEventStreamActorMetrics(),
           handleStreamProps)
       ),

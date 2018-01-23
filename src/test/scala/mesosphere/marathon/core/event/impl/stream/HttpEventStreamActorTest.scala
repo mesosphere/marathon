@@ -19,7 +19,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender {
       metrics: HttpEventStreamActorMetrics = new HttpEventStreamActorMetrics()) {
     def handleStreamProps(handle: HttpEventStreamHandle) = Props(new HttpEventStreamHandleActor(handle, stream, 1))
     val streamActor: TestActorRef[HttpEventStreamActor] = TestActorRef(Props(
-      new HttpEventStreamActor(electionService, metrics, handleStreamProps)
+      new HttpEventStreamActor(electionService, stream, metrics, handleStreamProps)
     ))
   }
 

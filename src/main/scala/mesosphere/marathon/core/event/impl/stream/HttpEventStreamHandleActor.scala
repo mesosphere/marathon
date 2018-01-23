@@ -23,13 +23,11 @@ class HttpEventStreamHandleActor(
   private[impl] var outstanding = Seq.empty[MarathonEvent]
 
   override def preStart(): Unit = {
-    stream.subscribe(self, classOf[MarathonEvent])
     stream.publish(EventStreamAttached(handle.remoteAddress))
   }
 
   override def postStop(): Unit = {
     logger.info(s"Stop actor $handle")
-    stream.unsubscribe(self)
     stream.publish(EventStreamDetached(handle.remoteAddress))
     Try(handle.close()) //ignore, if this fails
   }
