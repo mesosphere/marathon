@@ -7,8 +7,9 @@ import akka.actor.{ Actor, Status }
 import akka.event.EventStream
 import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor.SerializedMarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamHandleActor._
-import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent }
+import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached }
 import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future
@@ -20,7 +21,7 @@ class HttpEventStreamHandleActor(
     stream: EventStream,
     maxOutStanding: Int) extends Actor with StrictLogging {
 
-  private[impl] var outstanding = Seq.empty[MarathonEvent]
+  private[impl] var outstanding = Seq.empty[SerializedMarathonEvent]
 
   override def preStart(): Unit = {
     stream.publish(EventStreamAttached(handle.remoteAddress))
@@ -35,14 +36,14 @@ class HttpEventStreamHandleActor(
   override def receive: Receive = waitForEvent
 
   def waitForEvent: Receive = {
-    case event: MarathonEvent =>
+    case event: SerializedMarathonEvent =>
       outstanding = event +: outstanding
       sendAllMessages()
   }
 
   def stashEvents: Receive = handleWorkDone orElse {
-    case event: MarathonEvent if outstanding.size >= maxOutStanding => dropEvent(event)
-    case event: MarathonEvent => outstanding = event +: outstanding
+    case event: SerializedMarathonEvent if outstanding.size >= maxOutStanding => dropEvent(event)
+    case event: SerializedMarathonEvent => outstanding = event +: outstanding
   }
 
   def handleWorkDone: Receive = {
@@ -55,7 +56,7 @@ class HttpEventStreamHandleActor(
   private[this] def sendAllMessages(): Unit = {
     if (outstanding.nonEmpty) {
       val toSend = outstanding.reverse
-      outstanding = List.empty[MarathonEvent]
+      outstanding = List.empty[SerializedMarathonEvent]
       context.become(stashEvents)
       val sendFuture = Future {
         toSend.foreach(event => handle.sendEvent(event))
@@ -79,7 +80,7 @@ class HttpEventStreamHandleActor(
       logger.warn(s"Could not send message to $handle reason:", e)
   }
 
-  private[this] def dropEvent(event: MarathonEvent): Unit = {
+  private[this] def dropEvent(event: SerializedMarathonEvent): Unit = {
     logger.warn(s"Ignore event $event for handle $handle (slow consumer)")
   }
 }

@@ -4,10 +4,12 @@ package core.event.impl.stream
 import akka.actor._
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.v2.json.Formats.eventToJson
 import mesosphere.marathon.core.election.{ ElectionService, LeadershipTransition }
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.{ ApiMetric, Metrics, SettableGauge }
+import play.api.libs.json.Json
 
 import scala.util.Try
 
@@ -17,7 +19,7 @@ import scala.util.Try
 trait HttpEventStreamHandle {
   def id: String
   def remoteAddress: String
-  def sendEvent(event: MarathonEvent): Unit
+  def sendEvent(event: SerializedMarathonEvent): Unit
   def close(): Unit
 }
 
@@ -134,8 +136,9 @@ class HttpEventStreamActor(
     case event: MarathonEvent =>
       logger.info(s"### handle $event")
       // Broadcast events to all handle actors.
+      val payload = Json.stringify(eventToJson(event, false))
       streamHandleActors.valuesIterator.foreach { actor: ActorRef =>
-        actor ! event
+        actor ! SerializedMarathonEvent(event.eventType, payload)
       }
   }
 
@@ -147,4 +150,6 @@ class HttpEventStreamActor(
 object HttpEventStreamActor {
   case class HttpEventStreamConnectionOpen(handler: HttpEventStreamHandle)
   case class HttpEventStreamConnectionClosed(handle: HttpEventStreamHandle)
+
+  case class SerializedMarathonEvent(eventType: String, payload: String)
 }
