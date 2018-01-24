@@ -460,6 +460,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       val f = Fixture()
 
       podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+
       val response = f.podsResource.status("/mypod", f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
@@ -477,6 +478,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.ids().returns(Set(PathId("mypod")))
       podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+
       val response = f.podsResource.allStatus(f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
