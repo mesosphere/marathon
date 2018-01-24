@@ -33,6 +33,8 @@ deployment_name: $DEPLOYMENT_NAME
 provider: aws
 aws_region: us-west-2
 key_helper: true
+dcos_config:
+    license_key_contents: $DCOS_LICENSE
 template_parameters:
     DefaultInstanceType: m4.large
     AdminLocation: 0.0.0.0/0
