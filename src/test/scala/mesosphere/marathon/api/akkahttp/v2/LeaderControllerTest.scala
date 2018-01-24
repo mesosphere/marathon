@@ -15,7 +15,6 @@ import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import org.scalatest.Inside
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike with RouteBehaviours {
 
@@ -71,8 +70,10 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
       When("we try to abdicate")
       Delete("/?backup=s3://mybucket/foo") ~> controller.route ~> check {
-        Then("we abdicate")
-        verify(f.electionService, once).abdicateLeadership()
+        Then("we abdicate in 500ms")
+        verify(f.electionService, times(0)).abdicateLeadership()
+        f.clock += LeaderResource.abdicationDelay
+        verify(f.electionService, times(1)).abdicateLeadership()
 
         And("receive HTTP ok")
         status should be(StatusCodes.OK)
@@ -133,22 +134,6 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
             leaderHost should be("awesome.leader.com")
             localHostPort should be("localhost:8080")
         }
-      }
-    }
-
-    "should abdicate after 500ms" in {
-      Given("the instance is not the leader")
-      val f = Fixture()
-      f.runtimeRepo.store(any).returns(Future.successful(Done))
-      val controller = f.controller()
-
-      When("we try to abdicate")
-      Delete(Uri./) ~> controller.route ~> check {
-        Then("we receive a 200 response")
-        status should be(StatusCodes.OK)
-        verify(f.electionService, times(0)).abdicateLeadership()
-        f.clock += LeaderResource.abdicationDelay
-        verify(f.electionService, times(1)).abdicateLeadership()
       }
     }
   }
