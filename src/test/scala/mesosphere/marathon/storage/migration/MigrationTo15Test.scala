@@ -55,10 +55,11 @@ class MigrationTo15Test extends AkkaUnitTest with RecoverMethods with GroupCreat
       }
 
       "without cmd and container but with args defined" in new Fixture {
-        val basicArgsService = basicCommandApp.copy(cmd = None, args = Seq("sleep", "42")).toProto
+        val basicArgsApp = basicCommandApp.copy(cmd = None, args = Seq("sleep", "42"))
+        val basicArgsService = basicArgsApp.toProto
 
         val migratedApp = migrateSingleApp(basicArgsService)
-        migratedApp should be(basicCommandApp)
+        migratedApp should be(basicArgsApp)
       }
 
       "mesos container, host networking" in new Fixture {
