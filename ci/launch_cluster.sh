@@ -42,7 +42,9 @@ template_parameters:
     SlaveInstanceCount: 5
 EOF
 
-if ! ./dcos-launch create -L debug; then
+./dcos-launch create -L debug
+if [ $? -ne 0 ]; then
+  echo "Failed to launch a cluster via dcos-launch"
   exit 2
 fi
 if ! ./dcos-launch wait; then
