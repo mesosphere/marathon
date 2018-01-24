@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import akka.actor.Scheduler
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.{ Context, Response }
 import javax.ws.rs._
@@ -14,6 +15,12 @@ import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import mesosphere.marathon.raml.RuntimeConfiguration
 import Validation._
 import mesosphere.marathon.stream.UriIO
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+
+object LeaderResource {
+  val abdicationDelay = 500.millis
+}
 
 @Path("v2/leader")
 class LeaderResource @Inject() (
@@ -21,7 +28,8 @@ class LeaderResource @Inject() (
     val config: MarathonConf with HttpConf,
     val runtimeConfigRepo: RuntimeConfigurationRepository,
     val authenticator: Authenticator,
-    val authorizer: Authorizer)
+    val authorizer: Authorizer,
+    val scheduler: Scheduler)(implicit executionContext: ExecutionContext)
   extends RestResource with AuthResource {
 
   @GET
@@ -49,7 +57,8 @@ class LeaderResource @Inject() (
           val restore = validateOrThrow(Option(restoreNullable))(optional(UriIO.valid))
           result(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
 
-          electionService.abdicateLeadership()
+          scheduler.scheduleOnce(LeaderResource.abdicationDelay) { electionService.abdicateLeadership() }
+
           ok(jsonObjString("message" -> "Leadership abdicated"))
         }
       } else {
