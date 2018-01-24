@@ -41,7 +41,7 @@ template_parameters:
     LicenseKey: $DCOS_LICENSE
 EOF
 
-./dcos-launch create -L debug
+./dcos-launch create
 if [ $? -ne 0 ]; then
   echo "Failed to launch a cluster via dcos-launch"
   exit 2
