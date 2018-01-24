@@ -41,6 +41,11 @@ template_parameters:
     LicenseKey: $DCOS_LICENSE
 EOF
 
+if [[ -z `curl $TEMPLATE | grep 'LicenseKey'` ]]; then
+    sed -i '/LicenseKey/d' 'config.yaml'
+    echo 'Removed LicenseKey parameter as it was not in template'
+fi
+
 ./dcos-launch create
 if [ $? -ne 0 ]; then
   echo "Failed to launch a cluster via dcos-launch"
