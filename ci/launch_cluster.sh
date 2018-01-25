@@ -20,8 +20,13 @@ fi
 
 echo "Workspace: ${WORKSPACE}"
 echo "Using: ${TEMPLATE}"
+PLATFORM=`uname`
+if [ "$PLATFORM" == 'Darwin' ]; then
+    brew install gettext
+else
+    apt-get update && apt-get install -y -t jessie-backports gettext-base wget
+fi
 
-apt-get update && apt-get install -y -t jessie-backports gettext-base wget
 wget 'https://downloads.dcos.io/dcos-test-utils/bin/linux/dcos-launch' && chmod +x dcos-launch
 
 
@@ -59,4 +64,4 @@ fi
 jq -r .ssh_private_key cluster_info.json > "$CLI_TEST_SSH_KEY"
 
 # Return dcos_url
-echo "$(./dcos-launch describe | jq -r ".masters[0].public_ip")"
+export LAUNCHED_CLUSTER_URL="$(./dcos-launch describe | jq -r ".masters[0].public_ip")"

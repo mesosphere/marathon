@@ -56,11 +56,13 @@ function download-diagnostics-bundle {
 CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
 export CLI_TEST_SSH_KEY
 
+./ci/launch_cluster.sh "$CHANNEL" "$VARIANT"
+
 if [ "$VARIANT" == "strict" ]; then
-  DCOS_URL="https://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )"
+  DCOS_URL="https://${LAUNCHED_CLUSTER_URL}"
   wget --no-check-certificate -O tests/system/fixtures/dcos-ca.crt $DCOS_URL/ca/dcos-ca.crt
 else
-  DCOS_URL="http://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )"
+  DCOS_URL="http://${LAUNCHED_CLUSTER_URL}"
 fi
 
 CLUSTER_LAUNCH_CODE=$?
