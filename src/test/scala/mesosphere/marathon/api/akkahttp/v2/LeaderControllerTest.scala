@@ -4,19 +4,20 @@ package api.akkahttp.v2
 import java.util.concurrent
 
 import akka.Done
-import akka.http.scaladsl.model.{ StatusCodes, Uri }
+import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.v2.LeaderResource
-import mesosphere.marathon.test.{ SettableClock, SimulatedScheduler }
-import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
+import mesosphere.marathon.test.{SettableClock, SimulatedScheduler}
+import mesosphere.{UnitTest, ValidationTestLike}
+import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
-import mesosphere.marathon.api.akkahttp.LeaderDirectives.{ NoLeader, ProxyToLeader }
+import mesosphere.marathon.api.akkahttp.LeaderDirectives.{NoLeader, ProxyToLeader}
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import org.scalatest.Inside
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike with RouteBehaviours {
 
@@ -154,12 +155,8 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     electionService.isLeader returns (isLeader)
 
-    val currentThreadExecutionContext = ExecutionContext.fromExecutor(
-      new concurrent.Executor {
-        override def execute(command: Runnable): Unit = command.run()
-      }
-    )
+    val executionContext = ExecutionContexts.callerThread
 
-    def controller() = new LeaderController(electionService, runtimeRepo, scheduler)(auth.auth, auth.auth, currentThreadExecutionContext)
+    def controller() = new LeaderController(electionService, runtimeRepo, scheduler)(auth.auth, auth.auth, executionContext)
   }
 }
