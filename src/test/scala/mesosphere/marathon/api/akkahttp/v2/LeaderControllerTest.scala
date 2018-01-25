@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
+import java.util.concurrent
+
 import akka.Done
 import akka.http.scaladsl.model.{ StatusCodes, Uri }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
@@ -14,7 +16,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import org.scalatest.Inside
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike with RouteBehaviours {
 
@@ -145,7 +147,6 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     val auth = new TestAuthFixture()
     auth.authenticated = authenticated
     auth.authorized = authorized
-    implicit val authenticator = auth.auth
 
     val config = AllConf.withTestConfig()
     val clock = new SettableClock()
@@ -153,6 +154,12 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     electionService.isLeader returns (isLeader)
 
-    def controller() = new LeaderController(electionService, runtimeRepo, scheduler)
+    val currentThreadExecutionContext = ExecutionContext.fromExecutor(
+      new concurrent.Executor {
+        override def execute(command: Runnable): Unit = command.run()
+      }
+    )
+
+    def controller() = new LeaderController(electionService, runtimeRepo, scheduler)(auth.auth, auth.auth, currentThreadExecutionContext)
   }
 }
