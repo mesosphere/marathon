@@ -138,8 +138,6 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
             localHostPort should be("localhost:8080")
         }
       }
-
-      1 shouldBe 2
     }
   }
 
