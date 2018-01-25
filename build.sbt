@@ -12,9 +12,6 @@ import scalariform.formatter.preferences._
 
 lazy val IntegrationTest = config("integration") extend Test
 
-// Pass arguments to Scalatest runner:
-// http://www.scalatest.org/user_guide/using_the_runner
-
 credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
 
@@ -31,6 +28,8 @@ lazy val formatSettings = Seq(
     .setPreference(PreserveSpaceBeforeArguments, true)
 )
 
+// Pass arguments to Scalatest runner:
+// http://www.scalatest.org/user_guide/using_the_runner
 lazy val testSettings =
   inConfig(IntegrationTest)(Defaults.testTasks) ++
   Seq(
