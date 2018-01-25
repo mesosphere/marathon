@@ -43,8 +43,6 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
       val allEventsResult = allEvents.futureValue
       filteredEvent.futureValue shouldBe "deployment_success"
       allEventsResult.length should be > 1
-
-      1 shouldBe 2
     }
   }
 }
