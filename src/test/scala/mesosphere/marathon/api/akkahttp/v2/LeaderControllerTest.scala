@@ -1,20 +1,23 @@
 package mesosphere.marathon
 package api.akkahttp.v2
 
+import java.util.concurrent
+
 import akka.Done
-import akka.http.scaladsl.model.{ StatusCodes, Uri }
+import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.marathon.api.v2.LeaderResource
-import mesosphere.marathon.test.{ SettableClock, SimulatedScheduler }
-import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
+import mesosphere.marathon.test.{SettableClock, SimulatedScheduler}
+import mesosphere.{UnitTest, ValidationTestLike}
+import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
-import mesosphere.marathon.api.akkahttp.LeaderDirectives.{ NoLeader, ProxyToLeader }
+import mesosphere.marathon.api.akkahttp.LeaderDirectives.{NoLeader, ProxyToLeader}
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import org.scalatest.Inside
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside with ValidationTestLike with RouteBehaviours {
 
@@ -145,7 +148,6 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
     val auth = new TestAuthFixture()
     auth.authenticated = authenticated
     auth.authorized = authorized
-    implicit val authenticator = auth.auth
 
     val config = AllConf.withTestConfig()
     val clock = new SettableClock()
@@ -153,6 +155,8 @@ class LeaderControllerTest extends UnitTest with ScalatestRouteTest with Inside 
 
     electionService.isLeader returns (isLeader)
 
-    def controller() = new LeaderController(electionService, runtimeRepo, scheduler)
+    val executionContext = ExecutionContexts.callerThread
+
+    def controller() = new LeaderController(electionService, runtimeRepo, scheduler)(auth.auth, auth.auth, executionContext)
   }
 }
