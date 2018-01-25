@@ -6,6 +6,7 @@ import akka.pattern._
 import akka.actor.{ Actor, Status }
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.condition.Condition.Finished
 import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.deployment.impl.StartingBehavior.{ PostStart, Sync }
 import mesosphere.marathon.core.event.{ InstanceChanged, InstanceHealthChanged }
@@ -46,11 +47,12 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
   @SuppressWarnings(Array("all")) // async/await
   def commonBehavior: Receive = {
+    case InstanceChanged(_, _, _, Finished, _) if runSpec.oneTime =>
     case InstanceChanged(id, `version`, `pathId`, _: Terminal, _) =>
       logger.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
       launchQueue.addAsync(runSpec, 1).pipeTo(self)
-
+    case Sync if runSpec.oneTime =>
     case Sync => async {
       val launchedInstances = await(instanceTracker.countLaunchedSpecInstances(runSpec.id))
       val actualSize = await(launchQueue.getAsync(runSpec.id)).fold(launchedInstances)(_.finalInstanceCount)
@@ -85,7 +87,7 @@ trait StartingBehavior extends ReadinessBehavior with StrictLogging { this: Acto
 
   def checkFinished(): Unit = {
     nrToStart.foreach{ n =>
-      if (targetCountReached(n)) success()
+      if (targetCountReached(n) || runSpec.oneTime) success()
     }
   }
 

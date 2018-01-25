@@ -469,8 +469,9 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     holder.driver = Some(driver)
     val taskFailureEventRepository: TaskFailureRepository = mock[TaskFailureRepository]
     val electionService: ElectionService = mock[ElectionService]
+    val taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository]
     val schedulerActions: SchedulerActions = new SchedulerActions(
-      groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(system.dispatcher)
+      groupRepo, hcManager, instanceTracker, queue, new EventStream(system), taskFailureRepository, killService)(system.dispatcher)
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
 

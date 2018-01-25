@@ -18,7 +18,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ PathId, RunSpec }
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
+import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Constraints
 import org.apache.mesos
@@ -370,6 +370,7 @@ class SchedulerActions(
     instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
+    taskFailureRepository: TaskFailureRepository,
     val killService: KillService)(implicit ec: ExecutionContext) extends StrictLogging {
 
   // TODO move stuff below out of the scheduler
@@ -439,8 +440,16 @@ class SchedulerActions(
 
     val targetCount = runSpec.instances
 
-    val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
+    var ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
       runningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
+
+    if (runSpec.oneTime) {
+      val failure = await(taskFailureRepository.get(runSpec.id))
+      failure match {
+        case Some(taskFailure) if taskFailure.state == TaskState.TASK_FAILED =>
+        case _ => instancesToStart = Some(0)
+      }
+    }
 
     instancesToKill.foreach { instances: Seq[Instance] =>
       logger.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")

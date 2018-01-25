@@ -63,4 +63,6 @@ trait RunSpec extends plugin.RunSpec {
   val unreachableStrategy: UnreachableStrategy
   val killSelection: KillSelection
   val networks: Seq[Network]
+
+  val oneTime: Boolean = labels.contains("ONE_TIME")
 }

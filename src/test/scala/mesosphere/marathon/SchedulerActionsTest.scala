@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
 import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup, Timestamp }
-import mesosphere.marathon.storage.repository.GroupRepository
+import mesosphere.marathon.storage.repository.{ GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
@@ -278,6 +278,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val groupRepo = mock[GroupRepository]
       val instanceTracker = mock[InstanceTracker]
       val driver = mock[SchedulerDriver]
+      val taskFailureRepository = mock[TaskFailureRepository]
       val killService = mock[KillService]
       val clock = new SettableClock()
 
@@ -287,6 +288,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         instanceTracker,
         queue,
         system.eventStream,
+        taskFailureRepository,
         killService
       )
     }

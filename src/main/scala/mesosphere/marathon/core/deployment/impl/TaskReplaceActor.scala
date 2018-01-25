@@ -7,6 +7,7 @@ import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.async.ExecutionContexts.global
+import mesosphere.marathon.core.condition.Condition.Finished
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
@@ -93,6 +94,8 @@ class TaskReplaceActor(
   override def receive: Receive = readinessBehavior orElse replaceBehavior
 
   def replaceBehavior: Receive = {
+    case InstanceChanged(_, _, _, Finished, _) if runSpec.oneTime =>
+
     // New instance failed to start, restart it
     case InstanceChanged(id, `version`, `pathId`, condition, instance) if !oldInstanceIds(id) && considerTerminal(condition) =>
       logger.error(s"New instance $id failed on agent ${instance.agentInfo.agentId} during app $pathId restart")

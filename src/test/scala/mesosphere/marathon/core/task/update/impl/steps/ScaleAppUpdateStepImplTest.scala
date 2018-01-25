@@ -5,11 +5,16 @@ import akka.actor.ActorRef
 import com.google.inject.Provider
 import mesosphere.UnitTest
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceUpdated
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, RootGroup, RunSpec, Timestamp }
+import mesosphere.marathon.storage.repository.GroupRepository
+import org.mockito.Mockito
+
+import scala.concurrent.Future
 
 class ScaleAppUpdateStepImplTest extends UnitTest {
 
@@ -130,9 +135,26 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
 
   class Fixture {
     private[this] val schedulerActorProvider = mock[Provider[ActorRef]]
+    private[this] lazy val groupRepository: GroupRepository = {
+      val runSpec: RunSpec = mock[RunSpec]
+      Mockito.when(runSpec.oneTime).thenReturn(false)
+
+      val rootGroup: RootGroup = mock[RootGroup]
+      Mockito.when(rootGroup.runSpec(any[PathId])).thenReturn(Some(runSpec))
+
+      val rootGroupFuture: Future[RootGroup] = Future { rootGroup } (ExecutionContexts.callerThread)
+
+      val groupRepository: GroupRepository = mock[GroupRepository]
+      Mockito.when(groupRepository.root()).thenReturn(rootGroupFuture)
+
+      groupRepository
+    }
+    private[this] val groupRepositoryProvider = new Provider[GroupRepository] {
+      override def get(): GroupRepository = groupRepository
+    }
     def makeFailedUpdateOp(instance: Instance, lastCondition: Option[Condition], newCondition: Condition) =
       InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(Timestamp.now()), Some(true))), Seq.empty[MarathonEvent])
 
-    val step = new ScaleAppUpdateStepImpl(schedulerActorProvider)
+    val step = new ScaleAppUpdateStepImpl(schedulerActorProvider, groupRepositoryProvider)
   }
 }
