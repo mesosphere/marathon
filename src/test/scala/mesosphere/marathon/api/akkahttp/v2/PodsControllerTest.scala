@@ -24,7 +24,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.core.pod.PodManager
-import mesosphere.marathon.raml.{ FixedPodScalingPolicy, LocalVolumeId, PersistentVolumeInfo, PersistentVolumeType, PodPersistentVolume, VolumeMount }
+import mesosphere.marathon.raml.{ PersistentVolumeInfo, PersistentVolumeType, PodPersistentVolume, VolumeMount }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion

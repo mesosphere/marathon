@@ -5,7 +5,7 @@ import java.util.Collections
 import javax.servlet.http.HttpServletRequest
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.event.{ Subscribe, Unsubscribe }
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor.SerializedMarathonEvent
 import mesosphere.marathon.stream.Implicits._
 import org.eclipse.jetty.servlets.EventSource.Emitter
 
@@ -59,6 +59,6 @@ class HttpEventSSEHandleTest extends UnitTest {
     }
   }
 
-  val subscribed = Subscribe("client IP", "callback URL")
-  val unsubscribe = Unsubscribe("client IP", "callback URL")
+  val subscribed = SerializedMarathonEvent(eventType = "subscribe_event", payload = "{}")
+  val unsubscribe = SerializedMarathonEvent(eventType = "unsubscribed_event", payload = "{}")
 }

@@ -6,14 +6,12 @@ import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
 
 import akka.actor.ActorRef
 import mesosphere.marathon.api.RequestFacade
-import mesosphere.marathon.api.v2.json.Formats.{ eventToJson }
-import mesosphere.marathon.core.event.{ EventConf, MarathonEvent }
+import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.eclipse.jetty.servlets.{ EventSource, EventSourceServlet }
-import play.api.libs.json.Json
 
 import scala.concurrent.{ Await, blocking }
 
@@ -29,7 +27,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 
   private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
 
-  private val useLightWeightEvents = request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
+  override val useLightWeightEvents = request.getParameterMap.getOrDefault("plan-format", Array.empty).contains("light")
 
   def subscribed(eventType: String): Boolean = {
     subscribedEventTypes.isEmpty || subscribedEventTypes.contains(eventType)
@@ -39,10 +37,8 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 
   override def close(): Unit = emitter.close()
 
-  override def sendEvent(event: MarathonEvent): Unit = {
-    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, Json.stringify(
-      eventToJson(event, useLightWeightEvents)
-    )))
+  override def sendEvent(event: SerializedMarathonEvent): Unit = {
+    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, event.payload))
   }
 
   override def toString: String = s"HttpEventSSEHandle($id on $remoteAddress on event types from $subscribedEventTypes)"
