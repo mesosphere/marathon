@@ -128,6 +128,7 @@ class Migration(
   def migrate(): Seq[StorageVersion] =
     Await.result(migrateAsync(), Duration.Inf)
 
+  @SuppressWarnings(Array("all")) // async/await
   def runMigrations(version: Protos.StorageVersion, backupCreated: Boolean = false): Future[Seq[StorageVersion]] =
     async {
       if (!backupCreated && config.backupLocation.isDefined) {
