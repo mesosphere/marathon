@@ -41,13 +41,16 @@ lazy val testSettings =
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   testOptions in Test := Seq(
-    Tests.Argument("-l", "mesosphere.marathon.IntegrationTest",
+    Tests.Argument(
+      "-o", "-eDFG",
+      "-l", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   fork in Test := true,
 
   fork in IntegrationTest := true,
   testOptions in IntegrationTest := Seq(
     Tests.Argument(
+      "-o", "-eDFG",
       "-n", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in IntegrationTest := true,
