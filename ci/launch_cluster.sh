@@ -21,7 +21,12 @@ fi
 echo "Workspace: ${WORKSPACE}"
 echo "Using: ${TEMPLATE}"
 
-apt-get update && apt-get install -y -t jessie-backports gettext-base wget
+PLATFORM=`uname`
+if [ "$PLATFORM" == 'Darwin' ]; then
+    brew install gettext
+else
+    apt-get update && apt-get install -y -t jessie-backports gettext-base wget
+fi
 wget 'https://downloads.dcos.io/dcos-test-utils/bin/linux/dcos-launch' && chmod +x dcos-launch
 
 
