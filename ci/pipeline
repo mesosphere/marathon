@@ -2,6 +2,7 @@
 
 // Get a logging backend into classpath.
 import $ivy.`org.slf4j:slf4j-simple:1.7.25`
+import $ivy.`com.github.scopt::scopt:3.7.0`
 
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
@@ -162,30 +163,33 @@ def provisionHost(): Unit = utils.stage("Provision") {
 /**
  * Run the main build pipeline.
  *
- * @return Version of Marathon build.
+ * @return Version of Marathon build (without leading v)
  */
 @main
-def build(): String = {
-  provisionHost()
-
-  val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
-  try {
-    compileAndTest(logFileName)
-  } finally {
-    zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
+def build(runTests: Boolean = true): String = {
+  if (runTests) {
+    val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
+    try {
+      compileAndTest(logFileName)
+    } finally {
+      zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
+    }
   }
 
-  val version = createTarballPackages()
-  version
+  createTarballPackages()
 }
 
 /**
   * Builds docker and linux native packages, then runs the tests in tests/package/test.sc
   */
-def buildAndTestDockerAndLinuxPackages(): Unit = {
+def buildDockerAndLinuxPackages(): Unit = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
     %('sbt, "docker:publishLocal", "packageLinux")
+  }
+}
 
+def testDockerAndLinuxPackages(): Unit = {
+  utils.stage("Testing Docker Image, Debian and RedHat Packages") {
     // create test-bed docker images and run the package tests
     val testPath = pwd/'tests/'package
     %('make, "test")(testPath)
@@ -197,8 +201,11 @@ def buildAndTestDockerAndLinuxPackages(): Unit = {
  */
 @main
 def master(): Unit = {
+  provisionHost()
+
   val version = build()
-  buildAndTestDockerAndLinuxPackages()
+  buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
 
   // Uploads
   uploadTarballPackagesToS3(version, "builds")
@@ -209,6 +216,7 @@ def master(): Unit = {
  */
 @main
 def pr(): Unit = asPullRequest {
+  provisionHost()
   val version = build()
 
   // Uploads
@@ -221,6 +229,7 @@ def pr(): Unit = asPullRequest {
  */
 @main
 def loop(): Unit = {
+  provisionHost()
   build()
 }
 
@@ -235,6 +244,30 @@ def jenkins(): Unit = {
   else master()
 }
 
+sealed trait ReleaseTarget {
+  val name: String
+}
+
+object ReleaseTarget {
+  case object DockerTag extends ReleaseTarget {
+    val name = "docker-tag"
+  }
+  case object DockerLatest extends ReleaseTarget {
+    val name = "docker-latest"
+  }
+  case object LinuxPackages extends ReleaseTarget {
+    val name = "linux-packages"
+  }
+  case object JARArtifact extends ReleaseTarget {
+    val name = "jar-artifact"
+  }
+  case object S3Package extends ReleaseTarget {
+    val name = "s3-package"
+  }
+
+  val all = Seq(DockerTag, DockerLatest, S3Package, LinuxPackages, JARArtifact)
+}
+
 /**
  * Executes the Community Release which includes:
  *  1. tarball with version details
@@ -246,36 +279,78 @@ def jenkins(): Unit = {
  * @return Version and artifact description of Marathon build.
  */
 @main
-def release(requestVersion: String, gitSha: String, latest: Boolean = false): Unit = {
-  val releaseVersion = withoutVersionPrefix(requestVersion)
-  val tagVersion = s"v$releaseVersion"
+def release(args: String*): Unit = {
+  case class Config(
+    targets: List[ReleaseTarget] = Nil,
+    runTests: Boolean = true,
+    checkout: Option[String] = None)
 
-  require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
-    s"tagName should match regex ${ValidVersionRegex}")
-
-  (tagVersion, requestVersion)
-
-  println(s"Releasing version: $releaseVersion")
-  %('git, "checkout", gitSha)
-
-  %('git, "tag", "-a", tagVersion, "-m", tagVersion)
-  val version = build()
-
-  buildAndTestDockerAndLinuxPackages()
-  uploadLinuxPackagesToRepos(tagVersion)
-  uploadTarballPackagesToS3(version, s"releases/$releaseVersion")
-
-  %('docker, "push", s"mesosphere/marathon:$tagVersion")
-
-  if (latest) {
-    %('docker, "tag", s"mesosphere/marathon:$tagVersion", "mesosphere/marathon:latest")
-    %('docker, "push", "mesosphere/marathon:latest")
-  } else {
-    println("Docker image mesosphere/marathon:latest NOT updated")
+  val parser = new scopt.OptionParser[Config]("scopt") {
+    head("pipeline release")
+    opt[Boolean]("run-tests").required().action { (runTests, c) =>
+      c.copy(runTests = runTests)
+    }
+    opt[String]("checkout").action {
+      case ("", c) => c.copy(checkout = None)
+      case (checkout, c) => c.copy(checkout = Some(checkout))
+    }
+    arg[String]("targets...").unbounded.action { (target, c) =>
+      ReleaseTarget.all.find(_.name == target) match {
+        case Some(rt) => c.copy(targets = rt :: c.targets)
+        case None =>
+          throw new RuntimeException(s"${target} is not a known release target; valid options are:\n* ${ReleaseTarget.all.map(_.name).mkString("\n* ")}")
+      }
+    }
   }
 
-  // publishing to the nexus repository.  This artifact is used by metronome.
-  %('sbt, "publish")
+  val config = parser.parse(args, Config()).getOrElse {
+    sys.exit(1)
+    ???
+  }
+
+  config.checkout.foreach { gitSha =>
+    %('git, "checkout", gitSha)
+  }
+
+  // if (pushTag) {
+  //   val requestVersion = sys.env.get("MARATHON_VERSION").getOrElse {
+  //     throw new RuntimeException("pushTag is specified and MARATHON_VERSION is not")
+  //   }
+  //   val releaseVersion = withoutVersionPrefix(requestVersion)
+  //   val tagVersion = s"v$releaseVersion"
+
+  //   require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
+  //     s"tagName should match regex ${ValidVersionRegex}")
+
+  //   println(s"Tagging version: $releaseVersion")
+  //   %('git, "tag", "-a", tagVersion, "-m", tagVersion)
+  // }
+
+  val version = build(config.runTests)
+  println(s"Built version ${version}; releasing")
+
+  buildDockerAndLinuxPackages()
+  if (config.runTests)
+    testDockerAndLinuxPackages()
+
+  if (config.targets.contains(ReleaseTarget.LinuxPackages))
+    uploadLinuxPackagesToRepos(s"v{version}")
+
+  if (config.targets.contains(ReleaseTarget.S3Package))
+    uploadTarballPackagesToS3(version, s"releases/v${version}")
+
+  if (config.targets.contains(ReleaseTarget.DockerTag))
+    %('docker, "push", s"mesosphere/marathon:v${version}")
+
+  if (config.targets.contains(ReleaseTarget.DockerLatest)) {
+    %('docker, "tag", s"mesosphere/marathon:v${version}", "mesosphere/marathon:latest")
+    %('docker, "push", "mesosphere/marathon:latest")
+  }
+
+  if (config.targets.contains(ReleaseTarget.JARArtifact)) {
+    // publishing to the nexus repository.  This artifact is used by metronome.
+    %('sbt, "publish")
+  }
 
   // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
   // %('git, "push", "--tags")
