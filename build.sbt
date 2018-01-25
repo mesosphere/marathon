@@ -12,7 +12,8 @@ import scalariform.formatter.preferences._
 
 lazy val IntegrationTest = config("integration") extend Test
 
-def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
+// Pass arguments to Scalatest runner:
+// http://www.scalatest.org/user_guide/using_the_runner
 
 credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
@@ -40,13 +41,13 @@ lazy val testSettings =
 
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"),
+  testOptions in Test := Seq(
     Tests.Argument("-l", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   fork in Test := true,
 
   fork in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
+  testOptions in IntegrationTest := Seq(
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
