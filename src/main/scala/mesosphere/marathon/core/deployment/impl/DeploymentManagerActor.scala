@@ -150,7 +150,7 @@ class DeploymentManagerActor(
       runningDeployments.remove(plan.id).map { deploymentInfo =>
         logger.info(s"Removing ${plan.id} for ${plan.targetIdsString} from list of running deployments")
         deploymentStatus -= plan.id
-        deploymentRepository.delete(plan.id) // TODO: wait for future?
+        deploymentRepository.delete(plan.id)
         deploymentInfo.promise.complete(result)
       }
 
