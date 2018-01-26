@@ -428,6 +428,36 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     validate(plan2)(f.validator).isSuccess should be(false)
   }
 
+  test("Deployment plan treats app conf update and scale down to 0 instances as scale-only change") {
+    Given("An application update with command and scale changes")
+    val mongoId = "/test/database/mongo".toPath
+    val strategy = UpgradeStrategy(0.75)
+
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
+    val mongo: (AppDefinition, AppDefinition) =
+      AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
+        AppDefinition(mongoId, Some("mng2"), instances = 0, upgradeStrategy = strategy, versionInfo = versionInfo)
+
+    val from = createRootGroup(groups = Set(createGroup(
+      id = "/test".toPath,
+      groups = Set(
+        createGroup("/test/database".toPath, Map(mongo._1.id -> mongo._1))
+      )
+    )
+    ))
+
+    val to = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+      createGroup("/test/database".toPath, Map(mongo._2.id -> mongo._2))
+    ))))
+
+    When("the deployment plan is computed")
+    val plan = DeploymentPlan(from, to)
+
+    Then("the deployment steps are correct")
+    plan.steps should have size 1
+    plan.steps(0).actions.toSet should equal(Set(ScaleApplication(mongo._2, 0)))
+  }
+
   test("Deployment plan validation fails if the deployment plan is too big") {
     Given("All options are supplied and we have a valid group change, but the deployment plan size limit is small")
     val f = new Fixture()
