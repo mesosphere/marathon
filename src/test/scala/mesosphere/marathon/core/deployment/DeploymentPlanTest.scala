@@ -423,7 +423,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       validate(plan2)(f.validator).isSuccess should be(false)
     }
 
-    "Deployment plan treats change with 0 instances as scale-only change" in {
+    "Deployment plan treats app conf update and scale down to 0 instances as scale-only change" in {
       Given("An application update with command and scale changes")
       val mongoId = "/test/database/mongo".toPath
       val strategy = UpgradeStrategy(0.75)
