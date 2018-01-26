@@ -12,8 +12,6 @@ import scalariform.formatter.preferences._
 
 lazy val IntegrationTest = config("integration") extend Test
 
-def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
-
 credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
 
@@ -43,6 +41,8 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     .setPreference(SpacesWithinPatternBinders, true)
 )
 
+// Pass arguments to Scalatest runner:
+// http://www.scalatest.org/user_guide/using_the_runner
 lazy val testSettings =
   inConfig(IntegrationTest)(Defaults.testTasks) ++
   Seq(
@@ -54,14 +54,17 @@ lazy val testSettings =
   testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"),
-    Tests.Argument("-l", "mesosphere.marathon.IntegrationTest",
+  testOptions in Test := Seq(
+    Tests.Argument(
+      "-o", "-eDFG",
+      "-l", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   fork in Test := true,
 
   fork in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
+  testOptions in IntegrationTest := Seq(
     Tests.Argument(
+      "-o", "-eDFG",
       "-n", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in IntegrationTest := true,
