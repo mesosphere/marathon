@@ -40,9 +40,10 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
   override def close(): Unit = emitter.close()
 
   override def sendEvent(event: MarathonEvent): Unit = {
-    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, Json.stringify(
-      eventToJson(event, useLightWeightEvents)
-    )))
+    if (subscribed(event.eventType)) {
+      if (useLightWeightEvents) blocking(emitter.event(event.eventType, event.lightJsonString))
+      else blocking(emitter.event(event.eventType, event.fullJsonString))
+    }
   }
 
   override def toString: String = s"HttpEventSSEHandle($id on $remoteAddress on event types from $subscribedEventTypes)"
