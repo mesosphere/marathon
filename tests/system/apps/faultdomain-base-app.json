@@ -1,0 +1,8 @@
+{
+  "id": "/fault-domain",
+  "cmd": "sleep 1200",
+  "instances": 1,
+  "cpus": 0.01,
+  "mem": 32,
+  "constraints": []
+}
