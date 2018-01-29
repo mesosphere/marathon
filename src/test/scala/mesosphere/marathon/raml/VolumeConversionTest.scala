@@ -3,7 +3,7 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
-import mesosphere.marathon.state.{ Volume, VolumeMount }
+import mesosphere.marathon.state.{ PersistentVolumeInfo, Volume, VolumeMount }
 
 class VolumeConversionTest extends UnitTest {
 
@@ -152,11 +152,41 @@ class VolumeConversionTest extends UnitTest {
       }
     }
 
+    "converting PersistentVolume to RAML" should {
+      val persistentVolume = state.PersistentVolume(
+        Some("/container"),
+        state.PersistentVolumeInfo(size = 123L, maxSize = Some(1234L), profileName = Some("ssd-fast"),
+          constraints = Set.empty))
+      val ramlVolume = Some(persistentVolume.asInstanceOf[Volume].toRaml[PodVolume])
+        .collect { case pv @ PodPersistentVolume(_, _) => pv }
+        .getOrElse(fail("expected PodPersistentVolume"))
+      "convert all fields to core" in {
+        persistentVolume.name should be(Some(ramlVolume.name))
+        val info = persistentVolume.persistent
+        info.`type` should be(state.DiskType.Root)
+        info.size should be(ramlVolume.persistent.size)
+        info.maxSize should be(ramlVolume.persistent.maxSize)
+        info.profileName should be(ramlVolume.persistent.profileName)
+        info.constraints should be(Set.empty)
+      }
+    }
+
     "converting EphemeralVolume from RAML" should {
       val ramlVolume = PodEphemeralVolume("/container")
       val ephemeralVolume = Some(ramlVolume.asInstanceOf[PodVolume].fromRaml)
         .collect { case ev @ state.EphemeralVolume(_) => ev }
         .getOrElse(fail("expected EphemeralVolume"))
+
+      "convert all fields to core" in {
+        ephemeralVolume.name should be(Some(ramlVolume.name))
+      }
+    }
+
+    "converting EphemeralVolume to RAML" should {
+      val ephemeralVolume = state.EphemeralVolume(Some("/container"))
+      val ramlVolume = Some(ephemeralVolume.asInstanceOf[Volume].toRaml[PodVolume])
+        .collect { case ev @ PodEphemeralVolume(_) => ev }
+        .getOrElse(fail("expected PodEphemeralVolume"))
 
       "convert all fields to core" in {
         ephemeralVolume.name should be(Some(ramlVolume.name))
@@ -175,15 +205,39 @@ class VolumeConversionTest extends UnitTest {
       }
     }
 
+    "converting HostVolume to RAML" should {
+      val hostVolume = state.HostVolume(Some("/container"), "/path")
+      val ramlVolume = Some(hostVolume.asInstanceOf[Volume].toRaml[PodVolume])
+        .collect { case hv @ PodHostVolume(_, _) => hv }
+        .getOrElse(fail("expected PodHostVolume"))
+
+      "convert all fields to core" in {
+        hostVolume.name should be(Some(ramlVolume.name))
+        hostVolume.hostPath should be(ramlVolume.host)
+      }
+    }
+
     "converting SecretVolume from RAML" should {
       val ramlVolume = PodSecretVolume("/container", "secret")
-      val hostVolume = Some(ramlVolume.asInstanceOf[PodVolume].fromRaml)
+      val secretVolume = Some(ramlVolume.asInstanceOf[PodVolume].fromRaml)
         .collect { case hv @ state.SecretVolume(_, _) => hv }
         .getOrElse(fail("expected SecretVolume"))
 
       "convert all fields to core" in {
-        hostVolume.name should be(Some(ramlVolume.name))
-        hostVolume.secret should be(ramlVolume.secret)
+        secretVolume.name should be(Some(ramlVolume.name))
+        secretVolume.secret should be(ramlVolume.secret)
+      }
+    }
+
+    "converting SecretVolume to RAML" should {
+      val secretVolume = state.SecretVolume(Some("/container"), "secret")
+      val ramlVolume = Some(secretVolume.asInstanceOf[Volume].toRaml[PodVolume])
+        .collect { case sv @ PodSecretVolume(_, _) => sv }
+        .getOrElse(fail("expected PodSecretVolume"))
+
+      "convert all fields to core" in {
+        secretVolume.name should be(Some(ramlVolume.name))
+        secretVolume.secret should be(ramlVolume.secret)
       }
     }
   }
