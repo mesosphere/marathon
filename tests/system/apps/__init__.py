@@ -93,3 +93,34 @@ def ipv6_healthcheck():
         For more information about the nc options just run `docker run alpine nc --help`
     """
     return load_app('ipv6-healthcheck')
+
+def faultdomain_app(region=None, zone=None, instances=1, constraints=[]):
+    """
+    This is a dynamic app definition based on the faultdomain-base-app. It modifies it by appending
+    the name, zone and region configuration as given
+
+    :param region: The region to start this app in
+    :param zone: The zone to start this app in
+    :param instances: The number of instances in this app
+    :param constraints: Other constraints to append
+    :return: Returns the App Definition
+    """
+    app = load_app('faultdomain-base-app')
+    app['instances'] = instances
+
+    # Append region constraint
+    if not region is None:
+        app['constraints'] += [
+            ["@region", "IS", str(region)]
+        ]
+
+    # Append zone constraint
+    if not zone is None:
+        app['constraints'] += [
+            ["@zone", "IS", str(zone)]
+        ]
+
+    # Append misc constraints
+    app['constraints'] += constraints
+
+    return app
