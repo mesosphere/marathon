@@ -5,6 +5,7 @@ import json
 import os
 import pods
 import pytest
+import retrying
 import shakedown
 import time
 
@@ -509,14 +510,13 @@ def test_pod_with_persistent_volume():
     dir2 = tasks[1]['container']['volumes'][0]['container_path']
     print(host, port1, port2, dir1, dir2)
 
-    time.sleep(1)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def assert_volume_content(host, port, directory):
+        cmd = "curl {}:{}/{}/foo".format(host, port, directory)
+        run, data = shakedown.run_command_on_master(cmd)
+        assert run, "{} did not succeed".format(cmd)
+        assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
 
-    cmd = "curl {}:{}/{}/foo".format(host, port1, dir1)
-    run, data = shakedown.run_command_on_master(cmd)
-    assert run, "{} did not succeed".format(cmd)
-    assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
 
-    cmd = "curl {}:{}/{}/foo".format(host, port2, dir2)
-    run, data = shakedown.run_command_on_master(cmd)
-    assert run, "{} did not succeed".format(cmd)
-    assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
+    assert_volume_content(host, port1, dir1)
+    assert_volume_content(host, port2, dir2)
