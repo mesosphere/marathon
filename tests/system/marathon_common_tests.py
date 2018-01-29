@@ -14,7 +14,8 @@ import time
 from datetime import timedelta
 from dcos import http, marathon
 from utils import get_cluster_local_domain, count_agents_in_faultdomains, get_biggest_cluster_region, get_app_domains, \
-    get_used_regions_and_zones
+    get_used_regions_and_zones, get_all_cluster_regions
+
 from shakedown import dcos_version_less_than, marthon_version_less_than, required_private_agents # NOQA
 
 
@@ -1336,28 +1337,21 @@ def test_faultdomains_region_and_zone():
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
-def test_faultdomains_distribute():
-    """Tests if the applications with a `region` and ["@zone", "GROUP_BY", "n"] specified are correctly
-       distributed evenly across "n" zones
+def test_faultdomains_region_unique():
+    """Tests if the applications with a ["@region", "UNIQUE"] constraint correctly starts the apps
+       across all regions in the cluster
     """
 
-    # Find out the biggest region in the cluster
-    (region, zones) = get_biggest_cluster_region()
+    # Find out all the regions in the cluster
+    regions = set(get_all_cluster_regions().keys())
 
-    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region (%s)" % (
-        region,
-    )
+    assert len(regions) > 1, "The tests require at least 2 regions in the cluster"
 
-    # Pick a number smaller than the total number of zones
-    group_num = round(len(zones) / 2)
-
-    # Create an app pinned on the given region, yet grouping by the number above
-    # We are also using instances 4 * group_num, effectively having 4 apps running in each of the above zones
-    # and therefore increase the chance of something going wrong.
+    # Create an app that should be deployed on a unique region
+    # The number of instances should be the number of regions available in the system
     app_def = apps.faultdomain_app(
-        region=region,
-        instances=group_num * 4,
-        constraints=[["@zone", "GROUP_BY", str(group_num)]]
+        instances=len(regions),
+        constraints=[["@region", "UNIQUE"]]
     )
     client = marathon.create_client()
     client.add_app(app_def)
@@ -1367,13 +1361,51 @@ def test_faultdomains_distribute():
 
     # Check if the application was launched correctly
     app = client.get_app(app_def['id'])
-    (regions, zones) = get_used_regions_and_zones(get_app_domains(app))
+    (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
 
-    assert regions == set([region]), "App %s was launced in the wrong region(s): %s instead of %s" % (
-            app['id'], ', '.join(regions), region
+    assert used_regions == set(regions), "App %s was not launched in all regions: %s instead of %s" % (
+            app['id'], ', '.join(used_regions), ', '.join(regions)
         )
-    assert len(zones) == group_num, "App %s was launced more zones than expected: %d (%s) instead of %d" % (
-        app['id'], len(zones), ', '.join(zones), group_num
+
+    # Remove app
+    client.remove_app(app['id'], True)
+
+@shakedown.dcos_1_11
+@pytest.mark.skipif("shakedown.ee_version() is None")
+def test_faultdomains_zone_unique():
+    """Tests if the applications with a region fixed and a ["@zone", "UNIQUE"] constraint correctly starts
+       the apps across all zones in the given region
+    """
+
+    # Find out the biggest region in the cluster
+    (region, zones) = get_biggest_cluster_region()
+
+    assert len(zones) > 1, "The tests require at least 2 zones in the biggest region (%s)" % (
+        region,
+    )
+
+    # Create an app that should be deployed on a unique region
+    # The number of instances should be the number of regions available in the system
+    app_def = apps.faultdomain_app(
+        region=region,
+        instances=len(zones),
+        constraints=[["@zone", "UNIQUE"]]
+    )
+    client = marathon.create_client()
+    client.add_app(app_def)
+
+    # Wait for the app to be deployed
+    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+
+    # Check if the application was launched correctly
+    app = client.get_app(app_def['id'])
+    (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
+
+    assert used_regions == set([region]), "App %s was not launched in the expected region(s): %s instead of %s" % (
+        app['id'], ', '.join(used_regions), region
+    )
+    assert used_zones == set(zones), "App %s was not launched in all zones: %s instead of %s" % (
+        app['id'], ', '.join(used_zones), ', '.join(zones)
     )
 
     # Remove app
