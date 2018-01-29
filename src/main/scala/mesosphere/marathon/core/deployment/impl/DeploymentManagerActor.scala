@@ -20,6 +20,7 @@ import mesosphere.marathon.storage.repository.DeploymentRepository
 import scala.async.Async.{ async, await }
 import scala.collection.mutable
 import scala.concurrent.{ Future, Promise }
+import scala.util.Try
 import scala.util.control.NonFatal
 
 // format: OFF
@@ -130,7 +131,7 @@ class DeploymentManagerActor(
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, Promise[Done], KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) extends Actor with StrictLogging {
+    deploymentActorProps: (ActorRef, KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) extends Actor with StrictLogging {
   import context.dispatcher
 
   val runningDeployments: mutable.Map[String, DeploymentInfo] = mutable.Map.empty
@@ -145,11 +146,12 @@ class DeploymentManagerActor(
     case CancelDeployment(plan) =>
       sender() ! cancelDeployment(plan.id)
 
-    case DeploymentFinished(plan) =>
-      runningDeployments.remove(plan.id).map { _ =>
+    case DeploymentFinished(plan, result) =>
+      runningDeployments.remove(plan.id).map { deploymentInfo =>
         logger.info(s"Removing ${plan.id} from list of running deployments")
         deploymentStatus -= plan.id
         deploymentRepository.delete(plan.id)
+        deploymentInfo.promise.complete(result)
       }
 
     case LaunchDeploymentActor(plan) if isScheduledDeployment(plan.id) =>
@@ -316,7 +318,6 @@ class DeploymentManagerActor(
     val ref = context.actorOf(
       deploymentActorProps(
         self,
-        info.promise,
         killService,
         scheduler,
         plan,
@@ -371,7 +372,7 @@ object DeploymentManagerActor {
   case object ListRunningDeployments
   case class WaitForCanceledConflicts(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo])
   case class CancelDeletedConflicts(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo], origSender: ActorRef)
-  case class DeploymentFinished(plan: DeploymentPlan)
+  case class DeploymentFinished(plan: DeploymentPlan, result: Try[Done])
   case class ReadinessCheckUpdate(deploymentId: String, result: ReadinessCheckResult)
   case class LaunchDeploymentActor(plan: DeploymentPlan)
   case class FailedRepositoryOperation(plan: DeploymentPlan, reason: Throwable)
@@ -400,7 +401,7 @@ object DeploymentManagerActor {
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, Promise[Done], KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit mat: Materializer): Props = {
+    deploymentActorProps: (ActorRef, KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit mat: Materializer): Props = {
     Props(new DeploymentManagerActor(taskTracker, killService, launchQueue,
       scheduler, healthCheckManager, eventBus, readinessCheckExecutor, deploymentRepository, deploymentActorProps))
   }
