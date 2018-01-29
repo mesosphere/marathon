@@ -514,9 +514,8 @@ def test_pod_with_persistent_volume():
     def assert_volume_content(host, port, directory):
         cmd = "curl {}:{}/{}/foo".format(host, port, directory)
         run, data = shakedown.run_command_on_master(cmd)
-        assert run, "{} did not succeed".format(cmd)
+        assert run, "{} did not succeed on {}:{}".format(cmd, host, port)
         assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
-
 
     assert_volume_content(host, port1, dir1)
     assert_volume_content(host, port2, dir2)
