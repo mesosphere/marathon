@@ -19,14 +19,14 @@ import play.api.libs.json.{ JsValue, Json }
 import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit ctx: ExecutionContext, mat: Materializer) extends StrictLogging {
+class MigrationTo200(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
-  def migrate(): Future[Done] = {
-    MigrationTo160.migrateReservations(instanceRepository, persistenceStore)
+  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+    MigrationTo200.migrateReservations(instanceRepository, persistenceStore)
   }
 }
 
-object MigrationTo160 extends StrictLogging {
+object MigrationTo200 extends StrictLogging {
   /**
     * This function traverses all instances in ZK, and moves reservation objects from tasks to the instance level.
     */

@@ -13,9 +13,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo146(appRepository: AppRepository, podRepository: PodRepository)(implicit ctx: ExecutionContext, mat: Materializer) extends StrictLogging {
+class MigrationTo146(appRepository: AppRepository, podRepository: PodRepository) extends MigrationStep with StrictLogging {
 
-  def migrate(): Future[Done] = {
+  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     import MigrationTo146.Environment
 
     MigrationTo146.migrateUnreachableApps(appRepository, podRepository)(Environment(sys.env), ctx, mat)

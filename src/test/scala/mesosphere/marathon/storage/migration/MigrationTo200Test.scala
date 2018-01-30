@@ -28,12 +28,12 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContextExecutor, Future }
 import scala.util.Try
 
-class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogging {
+class MigrationTo200Test extends AkkaUnitTest with GroupCreation with StrictLogging {
 
   "Migration to 1.6.0" should {
     "do migration for instances with tasks with reservations" in new Fixture {
       initMocks()
-      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
+      MigrationTo200.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance3 = instance3.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
@@ -48,7 +48,7 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
     "don't change instances without reservations" in new Fixture {
       override val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(tasksMap = Map.empty)
       initMocks()
-      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
+      MigrationTo200.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance3 = instance3
@@ -64,7 +64,7 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
       override val instance = TestInstanceBuilder.emptyInstance(instanceId = instanceId1).copy(tasksMap = Map.empty, reservation = Some(Reservation(Nil, Reservation.State.New(None))))
       override val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(reservation = Some(Reservation(Nil, Reservation.State.New(None))))
       initMocks()
-      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
+      MigrationTo200.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.New(None))))
       val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance3 = instance3

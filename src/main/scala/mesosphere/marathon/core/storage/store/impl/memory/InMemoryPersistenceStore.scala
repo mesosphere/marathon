@@ -30,7 +30,7 @@ class InMemoryPersistenceStore(implicit
   extends BasePersistenceStore[RamId, String, Identity] {
 
   val entries = TrieMap[RamId, Identity]()
-  val version = Lock(StorageVersions.current.toBuilder)
+  val version = Lock(StorageVersions(Migration.steps).toBuilder)
 
   override def storageVersion(): Future[Option[StorageVersion]] = {
     require(isOpen, "the store must be opened before it can be used")
