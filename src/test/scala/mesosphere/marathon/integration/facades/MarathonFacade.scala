@@ -56,7 +56,9 @@ case class ITEnrichedTask(
     startedAt: Option[Date],
     stagedAt: Option[Date],
     state: String,
-    version: Option[String]) {
+    version: Option[String],
+    region: Option[String],
+    zone: Option[String]) {
 
   def launched: Boolean = startedAt.nonEmpty
   def suspended: Boolean = startedAt.isEmpty
@@ -124,8 +126,10 @@ class MarathonFacade(
     (__ \ "startedAt").formatNullable[Date] ~
     (__ \ "stagedAt").formatNullable[Date] ~
     (__ \ "state").format[String] ~
-    (__ \ "version").formatNullable[String]
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+    (__ \ "version").formatNullable[String] ~
+    (__ \ "region").formatNullable[String] ~
+    (__ \ "zone").formatNullable[String]
+  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)

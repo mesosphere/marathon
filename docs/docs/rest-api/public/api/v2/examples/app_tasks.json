@@ -11,7 +11,9 @@
       "stagedAt": "2015-08-26T20:23:39.463Z",
       "startedAt": "2015-08-26T20:23:44.678Z",
       "version": "2015-04-17T04:00:14.171Z",
-      "state" : "TASK_STAGING"
+      "state" : "TASK_STAGING",
+      "region": "primary",
+      "zone" : "a"
     }
   ]
 }

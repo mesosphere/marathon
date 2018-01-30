@@ -55,13 +55,10 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
-      val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
-      val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
-
-      inside(agentRegion) {
-        case ITResourceStringValue(value) => value shouldEqual f.homeRegion.value
-      }
+      val task = marathon.tasks(applicationId).value.head
+      task.region shouldBe Some(f.homeRegion.value)
     }
+
     "Launch an instance of the app in the specified region" in {
       val applicationId = appId("must-be-placed-in-remote-region")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints =
@@ -74,13 +71,10 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       result should be(Created)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
-      val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
-      val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
-
-      inside(agentRegion) {
-        case ITResourceStringValue(value) => value shouldEqual f.remoteRegion.value
-      }
+      val task = marathon.tasks(applicationId).value.head
+      task.region shouldBe Some(f.remoteRegion.value)
     }
+
     "Launch an instance of the app in the specified region and zone" in {
       val applicationId = appId("must-be-placed-in-remote-region-and-zone")
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(
@@ -95,16 +89,9 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       result should be(Created)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
-      val slaveId = marathon.tasks(applicationId).value.head.slaveId.get
-      val agentRegion = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_region")
-      val agentZone = mesos.state.value.agents.find(_.id == slaveId).get.attributes.attributes("fault_domain_zone")
-
-      inside(agentRegion) {
-        case ITResourceStringValue(value) => value shouldEqual f.remoteRegion.value
-      }
-      inside(agentZone) {
-        case ITResourceStringValue(value) => value shouldEqual f.remoteZone2.value
-      }
+      val task = marathon.tasks(applicationId).value.head
+      task.region shouldBe Some(f.remoteRegion.value)
+      task.zone shouldBe Some(f.remoteZone2.value)
     }
   }
 
