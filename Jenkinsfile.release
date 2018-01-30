@@ -42,6 +42,7 @@ ansiColor('xterm') {
             sh """echo "${PKG_SSH_HOST} ${PKG_SSH_HOSTKEY_TYPE} ${PKG_SSH_HOSTKEY}" | sudo -E tee -a /etc/ssh/ssh_known_hosts"""
 
             withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
+              # Once MARATHON-7986 is done and we update the Jenkins node to a version that has Ammonite 1.x.x or later, we can get rid of this line
               sh """if [ \$(md5sum /usr/local/bin/amm | awk '{print \$1}') = '07143cdf89e94b0a957f5656193d88d7' ]; then sudo curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/1.0.3/2.12-1.0.3 && sudo chmod +x /usr/local/bin/amm; fi"""
 
               if (params.dryRun == false)
