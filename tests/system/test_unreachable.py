@@ -42,7 +42,8 @@ def teardown_module(module):
   (60, 60),
   (360, 360),
   (60, 360),
-  (600, 600)])
+  (600, 600),
+  (1200, 1200)])
 def test_unreachable_within_inactive_time(inactive_sec, expunge_sec):
 
     common.clean_up_marathon()
