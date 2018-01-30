@@ -107,6 +107,10 @@ def command_health_check(command='true', failures=1, timeout=2):
         'maxConsecutiveFailures': failures
     }
 
+def unreachableStrategy(app_def, inactive=100, expunge=200):
+    app_def['unreachableStrategy']['inactiveAfterSeconds'] = inactive
+    app_def['unreachableStrategy']['expungeAfterSeconds'] = expunge
+    return app_def
 
 def cluster_info(mom_name='marathon-user'):
     print("DC/OS: {}, in {} mode".format(shakedown.dcos_version(), shakedown.ee_version()))
@@ -769,6 +773,35 @@ def running_task_status(task_statuses):
             return task_status
 
     assert False, "Did not find a TASK_RUNNING status in task statuses: %s" % (task_statuses,)
+
+
+def unreachable_tasks(framework_name='marathon'):
+    """ Returns the unreachable tasks for a given framework.
+    """
+    client = mesos.DCOSClient()
+    frameworks = client.get_master_state()['frameworks']
+    for framework in frameworks:
+        if framework["name"] == framework_name:
+            return framework['unreachable_tasks']
+    return []
+
+
+def unreachable_task_predicate(service):
+    return len(unreachable_tasks(service)) > 0
+
+
+def wait_for_unreachable_task(service='marathon', timeout_sec=10*60, inverse=False):
+    return shakedown.time_wait(lambda:unreachable_task_predicate(service), timeout_seconds=timeout_sec, inverse_predicate=inverse, sleep_seconds=1)
+
+
+def marathon_task_predicate(service, app_id, count):
+    client = marathon.create_client()
+    tasks = client.get_tasks(app_id)
+    return len(tasks) == count
+
+
+def wait_for_marathon_task(service, app_id, count=1, timeout_sec=6*60):
+    return shakedown.time_wait(lambda:marathon_task_predicate(service, app_id, count), timeout_seconds=timeout_sec)
 
 
 def task_by_name(tasks, name):
