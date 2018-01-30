@@ -47,6 +47,7 @@ trait RunSpec extends plugin.RunSpec {
   def isUpgrade(to: RunSpec): Boolean
   def needsRestart(to: RunSpec): Boolean
   def isOnlyScaleChange(to: RunSpec): Boolean
+  def isScaledToZero: Boolean = instances == 0
   val versionInfo: VersionInfo
   val container = Option.empty[Container]
   val cmd = Option.empty[String]

@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import akka.Done
 import akka.actor.{ ActorRef, Props }
-import akka.event.EventStream
+import akka.event.{ EventStream, Logging }
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
@@ -442,8 +442,16 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val schedulerActor = createActor()
 
+    val probe = TestProbe("election")
+
+    system.eventStream.subscribe(probe.ref, classOf[Logging.Info])
+
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      probe.fishForMessage(){
+        case i: Logging.Info => i.message == "Scheduler actor ready"
+        case _ => false
+      }
       schedulerActor ! Deploy(plan)
 
       // This indicates that the deployment is already running,
@@ -452,6 +460,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       answer.cmd should equal(Deploy(plan))
       answer.reason.isInstanceOf[AppLockedException] should be(true)
     } finally {
+      system.eventStream.unsubscribe(probe.ref)
       stopActor(schedulerActor)
     }
   }
