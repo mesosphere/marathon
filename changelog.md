@@ -1,3 +1,33 @@
+## Changes from 1.5.5 to 1.5.6
+Bugfix release
+
+### Fixed issues
+
+- [MARATHON-7990](https://jira.mesosphere.com/browse/MARATHON-7990) Ease up on the `toString` for Group and log clashing ids. (#5857)
+- [COPS-2072](https://jira.mesosphere.com/browse/COPS-2072) Expose `containerPort` as `$PORT_NAME` in environment variables. (#5892)
+- [MARATHON-7914](https://jira.mesosphere.com/browse/MARATHON-7914) Migration from joda-time to java.time. (#5886)
+- [MARATHON-8005](https://jira.mesosphere.com/browse/MARATHON-8005) Fixing OffsetDateTime json serialization that was different form Timestamp serialization. (#5917)
+- [MARATHON-8015](https://jira.mesosphere.com/browse/MARATHON-8015) Fixes v1.5 migration issue with args only apps (#5925) (#5934)
+- [MARATHON-8011](https://jira.mesosphere.com/browse/MARATHON-8011) Scaling to zero takes too much time in case of non-scaling related runspec changes (#5940)
+
+
+## Changes from 1.5.4 to 1.5.5
+Bugfix release
+
+### Fixed issues
+
+- [MARATHON-7974](https://jira.mesosphere.com/browse/MARATHON-7974) Fixes a security concern for a non super user. It was discovered that permissions for GroupResources was not honored and is now resolved.
+- [MARATHON-7919](https://jira.mesosphere.com/browse/MARATHON-7919) Fix byte stream blocking on proxy of non-leader buffers.
+
+
+## Changes from 1.5.3 to 1.5.4
+Bugfix release
+
+### Fixed issues
+
+- [MARATHON_EE-1773](https://jira.mesosphere.com/browse/MARATHON_EE-1773) Enable killGracePeriodSeconds for Pods
+
+
 ## Changes from 1.5.2 to 1.5.3
 Bugfix release
 
