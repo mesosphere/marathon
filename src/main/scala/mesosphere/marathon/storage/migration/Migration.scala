@@ -155,9 +155,6 @@ class Migration(
       // it is better to be safe than sorry.
       await(Future.sequence(persistenceStore.map(_.sync()).toList))
 
-      // mark migration as started
-      await(Future.sequence(persistenceStore.map(_.startMigration()).toList))
-
       // invalidate group cache before migration
       await(groupRepository.invalidateGroupCache())
 
@@ -181,24 +178,34 @@ class Migration(
             s" than ${StorageVersions.current.str}."
           throw new MigrationFailedException(msg)
         case (Some(version), newStore) if version < currentBuildVersion =>
+          // mark migration as started
+          await(Future.sequence(persistenceStore.map(_.startMigration()).toList))
+
+          // perform migration steps
           val result = await(applyMigrationSteps(version))
           await(storeCurrentVersion())
+
+          // mark migration as completed
+          await(Future.sequence(persistenceStore.map(_.endMigration()).toList))
           result
         case (Some(version), _) if version == currentBuildVersion =>
           logger.info("No migration necessary, already at the current version")
           Nil
         case _ =>
           logger.info("No migration necessary, no version stored")
+          // mark migration as started
+          await(Future.sequence(persistenceStore.map(_.startMigration()).toList))
+
           await(storeCurrentVersion())
+
+          // mark migration as completed
+          await(Future.sequence(persistenceStore.map(_.endMigration()).toList))
           Nil
       }
       await(closeLegacyStore)
 
       // invalidate group cache after migration
       await(groupRepository.invalidateGroupCache())
-
-      // mark migration as completed
-      await(Future.sequence(persistenceStore.map(_.endMigration()).toList))
 
       migrations
     }.recover {

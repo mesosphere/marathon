@@ -111,17 +111,12 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
       val currentPersistenceVersion =
         StorageVersions.current.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
-
-      mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(Some(currentPersistenceVersion))
-      mockedStore.endMigration() returns Future.successful(Done)
 
       migrate.migrate()
 
-      verify(mockedStore).startMigration()
       verify(mockedStore).sync()
       verify(mockedStore).storageVersion()
-      verify(mockedStore).endMigration()
       noMoreInteractions(mockedStore)
     }
 
@@ -253,8 +248,8 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
     "throw an error if migration is in progress already" in {
       val mockedStore = mockPersistenceStore()
-
       mockedStore.startMigration() throws new StoreCommandFailedException("Migration is already in progress")
+      mockedStore.storageVersion() returns Future.successful(Some(currentVersion))
 
       val migrate = migration(persistenceStore = Some(mockedStore))
 
@@ -263,6 +258,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       thrown.getCause.getMessage should equal("Migration is already in progress")
 
       verify(mockedStore).sync()
+      verify(mockedStore).storageVersion()
       verify(mockedStore).startMigration()
       noMoreInteractions(mockedStore)
     }
