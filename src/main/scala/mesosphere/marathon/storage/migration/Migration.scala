@@ -132,9 +132,10 @@ class Migration(
   def runMigrations(version: Protos.StorageVersion, backupCreated: Boolean = false): Future[Seq[StorageVersion]] =
     async {
       if (!backupCreated && config.backupLocation.isDefined) {
-        logger.info("Backup current state")
+        logger.info("Making a backup of the current state")
         await(backup.backup(config.backupLocation.get))
-        logger.info("Backup finished. Apply migration.")
+        logger.info(s"The backup has been saved to ${config.backupLocation}")
+        logger.info("Going to apply the migration steps.")
       }
       val result = await(applyMigrationSteps(version))
       await(storeCurrentVersion())
