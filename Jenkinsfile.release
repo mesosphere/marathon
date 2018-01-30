@@ -20,6 +20,10 @@ ansiColor('xterm') {
         booleanParam(name: 'latest',
           defaultValue: false,
           description: 'True if docker mesosphere/marathon:latest should be pushed'
+        ),
+        booleanParam(name: 'dryRun',
+          defaultValue: false,
+          description: 'Set to true to only run the compile phase.'
         )
       ])
     ])
@@ -39,7 +43,9 @@ ansiColor('xterm') {
 
             withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
               sh """if [ \$(md5sum /usr/local/bin/amm | awk '{print \$1}') = '07143cdf89e94b0a957f5656193d88d7' ]; then sudo curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/1.0.3/2.12-1.0.3 && sudo chmod +x /usr/local/bin/amm; fi"""
-              sh """sudo -E env MARATHON_VERSION=$params.version ci/pipeline release --checkout $params.ref --run-tests=$params.runTests docker-tag linux-packages jar-artifact s3-package """ + (params.latest ? "docker-latest" : "")
+
+              if (params.dryRun == false)
+                sh """sudo -E env MARATHON_VERSION=$params.version ci/pipeline release --checkout $params.ref --run-tests=$params.runTests docker-tag linux-packages jar-artifact s3-package """ + (params.latest ? "docker-latest" : "")
             }
           }
         }
