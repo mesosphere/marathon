@@ -292,14 +292,6 @@ lazy val marathon = (project in file("."))
   .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
-    version := {
-      val v = sys.env.get("MARATHON_VERSION").filter(_ != "git").getOrElse(version.value)
-      if (!('0' to '9').contains(v.head))
-        throw new RuntimeException("Version must start with number")
-      v
-    },
-
-
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,

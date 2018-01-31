@@ -11,7 +11,7 @@ ansiColor('xterm') {
         ),
         string(name: 'version',
           defaultValue: '',
-          description: 'Version that should be released. You will need to tag and push a tag after this job succeeds. MUST start with a number. If unspecified, version is inferred from ref.'
+          description: 'Community Release Version (ex. 1.5.2). Version that should be released. You will need to tag and push a tag after this job succeeds. Must start with a number.'
         ),
         booleanParam(name: 'runTests',
           description: 'Whether unit/integration and package tests should be run',
@@ -45,8 +45,14 @@ ansiColor('xterm') {
               # Once MARATHON-7986 is done and we update the Jenkins node to a version that has Ammonite 1.x.x or later, we can get rid of this line
               sh """if [ \$(md5sum /usr/local/bin/amm | awk '{print \$1}') = '07143cdf89e94b0a957f5656193d88d7' ]; then sudo curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/1.0.3/2.12-1.0.3 && sudo chmod +x /usr/local/bin/amm; fi"""
 
+              targets = if (params.dryRun == false) {
+                "docker-tag linux-packages jar-artifact s3-package """ + (params.latest ? "docker-latest" : "")
+              } else {
+                ""
+              }
+
               if (params.dryRun == false)
-                sh """sudo -E env MARATHON_VERSION=$params.version ci/pipeline release --checkout $params.ref --run-tests=$params.runTests docker-tag linux-packages jar-artifact s3-package """ + (params.latest ? "docker-latest" : "")
+                sh """sudo -E env MARATHON_VERSION=$params.version ci/pipeline release --checkout $params.ref --run-tests=$params.runTests $targets"""
             }
           }
         }

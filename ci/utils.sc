@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
+import scala.util.Try
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -135,4 +136,64 @@ def priorPatchVersion(tag: String): Option[String] = {
 def escapeCmdArg(cmd: String): String = {
   val subbed = cmd.replace("'", "\\'").replace("\n", "\\n")
   s"""$$'${subbed}'"""
+}
+
+case class SemVer(pieces: Seq[String], extension: Option[String]) {
+  require(pieces.nonEmpty, "SemVer cannot be empty")
+  require(Try(pieces.head.toInt).isSuccess, s"First digit of version ${pieces.mkString(",")} is not numeric")
+
+  /**
+    * Outputs string representation of SemVer; does not prefix with a 'v'
+    *
+    * IE:
+    * - 1.5.4
+    * - 1.5.4-beta3
+    */
+  override def toString(): String = {
+    val e = extension.map { "-" + _ } getOrElse ""
+    s"${pieces.mkString(".")}${e}"
+  }
+
+  def toTagString(): String = s"v${toString()}"
+}
+
+object SemVer {
+  val empty = SemVer(Nil, None)
+  def apply(version: String): SemVer = {
+    val (piecesStr, extension) = version.split("-", 2) match {
+      case Array(pieces) =>
+        (pieces, None)
+      case Array(pieces, extension) =>
+        (pieces, Some(extension))
+    }
+
+    new SemVer(piecesStr.split('.').toList, extension)
+  }
+
+  private val numbers = '0' to '9'
+  val compareVersionString: Ordering[String] = new Ordering[String] {
+    def parts(versionString: String): (String, Int) = {
+      val stringPart = versionString.takeWhile { c => ! numbers.contains(c) }
+      val numberPart = versionString.drop(stringPart.length).takeWhile { numbers.contains(_) }
+      (stringPart, Try(numberPart.toInt).getOrElse(0))
+    }
+
+    def compare(a: String, b: String): Int =
+      Ordering[(String, Int)].compare(parts(a), parts(b))
+  }
+
+  implicit val ordering: Ordering[SemVer] = new Ordering[SemVer] {
+    def compare(a: SemVer, b: SemVer): Int = {
+
+      val pieceComparison: Stream[Int] = a.pieces.toStream.zip(b.pieces.toStream)
+        .map { case (a, b) => compareVersionString.compare(a, b) }
+
+      (pieceComparison :+
+        Ordering[Int].compare(a.pieces.length, b.pieces.length) :+
+        Ordering.Option(compareVersionString).compare(a.extension, b.extension))
+        .dropWhile(_ == 0)
+        .headOption
+        .getOrElse(0)
+    }
+  }
 }
