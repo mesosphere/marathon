@@ -337,7 +337,7 @@ def release(args: String*): Unit = {
     uploadLinuxPackagesToRepos(s"v{version}")
 
   if (config.targets.contains(ReleaseTarget.S3Package))
-    uploadTarballPackagesToS3(version, s"releases/v${version}")
+    uploadTarballPackagesToS3(version, s"releases/${version}")
 
   if (config.targets.contains(ReleaseTarget.DockerTag))
     %('docker, "push", s"mesosphere/marathon:v${version}")
