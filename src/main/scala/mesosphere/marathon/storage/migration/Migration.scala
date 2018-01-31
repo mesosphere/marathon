@@ -33,8 +33,6 @@ trait MigrationStep {
   /**
     * Apply migration step.
     *
-    * @param ctx
-    * @param mat
     * @return Future for the running migration.
     */
   def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done]
@@ -115,31 +113,28 @@ class Migration(
     // step 2: restore state from given backup
     await(config.restore.map(uri => backup.restore(new URI(uri))).getOrElse(Future.successful(Done)))
 
-    // mark migration as started
-    await(persistenceStore.startMigration())
-
-    // run the migration, to ensure we can operate on the zk state
-    await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined).asTry) match {
-      case Success(result) =>
-        // mark migration as completed
-        await(persistenceStore.endMigration())
-
-        logger.info(s"Migration successfully applied for version ${targetVersion.str}")
-        result
-      case Failure(ex: MigrationCancelledException) =>
-        logger.error(ex.getMessage)
-
-        // mark migration as completed
-        await(persistenceStore.endMigration())
-
-        throw new MigrationFailedException("Migration cancelled", ex.getCause)
-      case Failure(ex) =>
-        throw ex
-    }
+    // last step: run the migration, to ensure we can operate on the zk state
+    val result = await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined))
+    logger.info(s"Migration successfully applied for version ${targetVersion.str}")
+    result
   }
 
   def migrate(): Seq[StorageVersion] =
     Await.result(migrateAsync(), Duration.Inf)
+
+  @SuppressWarnings(Array("all")) // async/await
+  def runMigrations(version: Protos.StorageVersion, backupCreated: Boolean = false): Future[Seq[StorageVersion]] =
+    async {
+      if (!backupCreated && config.backupLocation.isDefined) {
+        logger.info("Making a backup of the current state")
+        await(backup.backup(config.backupLocation.get))
+        logger.info(s"The backup has been saved to ${config.backupLocation}")
+        logger.info("Going to apply the migration steps.")
+      }
+      val result = await(applyMigrationSteps(version))
+      await(storeCurrentVersion())
+      result
+    }
 
   @SuppressWarnings(Array("all")) // async/await
   def migrateStorage(backupCreated: Boolean = false): Future[Seq[StorageVersion]] = {
@@ -154,20 +149,30 @@ class Migration(
           val msg = s"Migration from ${version.str} is not supported as it is newer than ${targetVersion.str}."
           throw new MigrationFailedException(msg)
         case Some(version) if version < targetVersion =>
-          if (!backupCreated && config.backupLocation.isDefined) {
-            logger.info("Backup current state")
-            await(backup.backup(config.backupLocation.get))
-            logger.info("Backup finished. Apply migration.")
+          // mark migration as started
+          await(persistenceStore.startMigration())
+          await(runMigrations(version, backupCreated).asTry) match {
+            case Success(result) =>
+              // mark migration as completed
+              await(persistenceStore.endMigration())
+              result
+            case Failure(ex: MigrationCancelledException) =>
+              // mark migration as completed
+              await(persistenceStore.endMigration())
+              throw ex
+            case Failure(ex) =>
+              throw ex
           }
-          val result = await(applyMigrationSteps(version))
-          await(storeCurrentVersion())
-          result
         case Some(version) if version == targetVersion =>
-          logger.info("No migration necessary, already at the current version")
+          logger.info("No migration necessary, already at the target version")
           Nil
         case _ =>
           logger.info("No migration necessary, no version stored")
+          // mark migration as started
+          await(persistenceStore.startMigration())
           await(storeCurrentVersion())
+          // mark migration as completed
+          await(persistenceStore.endMigration())
           Nil
       }
       migrations
@@ -191,8 +196,8 @@ object Migration {
   val maxConcurrency = 8
   val statusLoggingInterval = 10.seconds
 
-  type MigrationFactory = Migration => MigrationStep
-  type MigrationAction = (StorageVersion, MigrationFactory)
+  type MigrationStepFactory = Migration => MigrationStep
+  type MigrationAction = (StorageVersion, MigrationStepFactory)
 
   /**
     * All the migration steps, that have to be applied.
@@ -212,10 +217,11 @@ object Migration {
       StorageVersions(1, 5, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
         new MigrationTo152(migration.instanceRepo)
       },
-      // From here onwards we are not bound to the build version anymore.
-      StorageVersions(200) -> { (migration) =>
-        new MigrationTo200(migration.instanceRepo, migration.persistenceStore)
+      StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { (migration) =>
+        new MigrationTo160(migration.instanceRepo, migration.persistenceStore)
       }
+    // From here onwards we are not bound to the build version anymore.
+    //StorageVersions(200) -> { (migration) => new MigrationTo200(...) }
     )
 }
 
@@ -235,7 +241,7 @@ object StorageVersions {
   /**
     * Get the migration target version from a list of migration steps.
     *
-    * @param steps
+    * @param steps The steps of a a migration.
     * @return The target version of the migration steps.
     */
   def apply(steps: List[MigrationAction]): StorageVersion = steps.map(action => action._1).max
