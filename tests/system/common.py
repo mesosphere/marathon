@@ -794,14 +794,37 @@ def wait_for_unreachable_task(service='marathon', timeout_sec=10*60, inverse=Fal
     return shakedown.time_wait(lambda:unreachable_task_predicate(service), timeout_seconds=timeout_sec, inverse_predicate=inverse, sleep_seconds=1)
 
 
-def marathon_task_predicate(service, app_id, count):
+def marathon_task_predicate(app_id, task_id):
+    """ Returns true if there is a task that is NOT the task_id
+    """
     client = marathon.create_client()
     tasks = client.get_tasks(app_id)
-    return len(tasks) == count
+    task = task_other_than_task_id(tasks, task_id)
+    return task is not None
 
 
-def wait_for_marathon_task(service, app_id, count=1, timeout_sec=6*60):
-    return shakedown.time_wait(lambda:marathon_task_predicate(service, app_id, count), timeout_seconds=timeout_sec)
+def task_other_than_task_id(tasks, task_id):
+    for task in tasks:
+        if task['id'] != task_id:
+            return task
+    return None
+
+
+def wait_for_marathon_task(app_id, task_id, timeout_sec=6*60):
+    return shakedown.time_wait(lambda:marathon_task_predicate(app_id, task_id), timeout_seconds=timeout_sec)
+
+
+def task_remove_predicate(app_id, task_id):
+    client = marathon.create_client()
+    tasks = client.get_tasks(app_id)
+    for task in tasks:
+        if task['id'] == task_id:
+            return True
+    return False
+
+
+def wait_for_unreachable_task_kill(app_id, task_id, timeout_sec=6*60):
+    return shakedown.time_wait(lambda:task_remove_predicate(app_id, task_id), timeout_seconds=timeout_sec)
 
 
 def task_by_name(tasks, name):
