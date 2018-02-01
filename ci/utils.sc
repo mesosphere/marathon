@@ -158,7 +158,7 @@ case class SemVer(pieces: Seq[String], extension: Option[String]) {
 }
 
 object SemVer {
-  val empty = SemVer(Nil, None)
+  val empty = SemVer(Seq("0"), None)
   def apply(version: String): SemVer = {
     val (piecesStr, extension) = version.split("-", 2) match {
       case Array(pieces) =>

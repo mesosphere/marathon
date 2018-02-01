@@ -49,7 +49,7 @@ ansiColor('xterm') {
               if (params.dryRun == false)
                 targets = 'docker-tag linux-packages jar-artifact s3-package ' + (params.latest ? 'docker-latest' : '')
 
-              sh """sudo -E env MARATHON_VERSION=$params.version ci/pipeline release --checkout $params.ref --run-tests=$params.runTests $targets"""
+              sh """sudo -E env ci/pipeline release --version $params.version --checkout $params.ref --run-tests=$params.runTests $targets"""
             }
           }
         }

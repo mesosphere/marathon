@@ -291,17 +291,17 @@ def release(args: String*): Unit = {
 
   val parser = new scopt.OptionParser[Config]("scopt") {
     head("pipeline release")
-    opt[SemVer]("version").required().action { (v, c) =>
+    opt[SemVer]("version").required.action { (v, c) =>
       c.copy(version = v)
     }
-    opt[Boolean]("run-tests").required().action { (runTests, c) =>
+    opt[Boolean]("run-tests").required.action { (runTests, c) =>
       c.copy(runTests = runTests)
     }
     opt[String]("checkout").action {
       case ("", c) => c.copy(checkout = None)
       case (checkout, c) => c.copy(checkout = Some(checkout))
     }
-    arg[String]("targets...").unbounded.action { (target, c) =>
+    arg[String]("targets...").unbounded.optional.action { (target, c) =>
       ReleaseTarget.all.find(_.name == target) match {
         case Some(rt) => c.copy(targets = rt :: c.targets)
         case None =>
