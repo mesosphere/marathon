@@ -77,29 +77,32 @@ class Migration(
   }
 
   def applyMigrationSteps(from: StorageVersion): Future[Seq[StorageVersion]] = {
-    steps.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(Seq.empty[StorageVersion])) {
-      case (resultsFuture, (migrateVersion, change)) => resultsFuture.flatMap { res =>
-        logger.info(
-          s"Migration for storage: ${from.str} to target: ${targetVersion.str}: apply change for version: ${migrateVersion.str} "
-        )
+    steps
+      .filter { case (version, _) => version > from }
+      .sortBy { case (version, _) => version }
+      .foldLeft(Future.successful(Seq.empty[StorageVersion])) {
+        case (resultsFuture, (migrateVersion, change)) => resultsFuture.flatMap { res =>
+          logger.info(
+            s"Migration for storage: ${from.str} to target: ${targetVersion.str}: apply change for version: ${migrateVersion.str} "
+          )
 
-        val migrationInProgressNotification = scheduler.schedule(statusLoggingInterval, statusLoggingInterval) {
-          notifyMigrationInProgress(from, migrateVersion)
-        }
+          val migrationInProgressNotification = scheduler.schedule(statusLoggingInterval, statusLoggingInterval) {
+            notifyMigrationInProgress(from, migrateVersion)
+          }
 
-        val step = change.apply(this)
-        step.migrate().recover {
-          case e: MigrationCancelledException => throw e
-          case NonFatal(e) =>
-            throw new MigrationFailedException(s"while migrating storage to $migrateVersion", e)
-        }.map { _ =>
-          res :+ migrateVersion
-        }.andThen {
-          case _ =>
-            migrationInProgressNotification.cancel()
+          val step = change.apply(this)
+          step.migrate().recover {
+            case e: MigrationCancelledException => throw e
+            case NonFatal(e) =>
+              throw new MigrationFailedException(s"while migrating storage to $migrateVersion", e)
+          }.map { _ =>
+            res :+ migrateVersion
+          }.andThen {
+            case _ =>
+              migrationInProgressNotification.cancel()
+          }
         }
       }
-    }
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -164,7 +167,7 @@ class Migration(
               throw ex
           }
         case Some(version) if version == targetVersion =>
-          logger.info("No migration necessary, already at the target version")
+          logger.info(s"No migration necessary, already at the target version ${targetVersion.str}")
           Nil
         case _ =>
           logger.info("No migration necessary, no version stored")
@@ -244,7 +247,7 @@ object StorageVersions {
     * @param steps The steps of a a migration.
     * @return The target version of the migration steps.
     */
-  def apply(steps: List[MigrationAction]): StorageVersion = steps.map(action => action._1).max
+  def apply(steps: List[MigrationAction]): StorageVersion = steps.map { case (version, _) => version }.max
 
   implicit class OrderedStorageVersion(val version: StorageVersion) extends AnyVal with Ordered[StorageVersion] {
     override def compare(that: StorageVersion): Int = {
