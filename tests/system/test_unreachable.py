@@ -53,6 +53,7 @@ def teardown_module(module):
   (60, 60),
   (360, 360),
   (60, 360),
+  (60, 600),
   (600, 600),
   (1200, 1200)])
 def test_unreachable_within_inactive_time(inactive_sec, expunge_sec):
@@ -80,6 +81,7 @@ def test_unreachable_within_inactive_time(inactive_sec, expunge_sec):
     start = time.time()
     # losing an agent
     shakedown.stop_agent(original_host)
+    print("Sleeping for {}".format(initial_unreachable_delay()))
     time.sleep(initial_unreachable_delay())
     # mesos unreachable event effected by 1) DCOS_AGENT_UNREACHABLE_TIME and 2) node rate limiting
     # this test ignores node rate limiting
@@ -90,6 +92,8 @@ def test_unreachable_within_inactive_time(inactive_sec, expunge_sec):
 
     # recovery based on inactive time (len(tasks) goes from 1 to 0 based on unreachable.  now we wait for 1.)
     # task recovery is dependent on inactive_sec and the reconcilation time window
+    print("Sleeping for {}".format(inactive_sec*0.7))
+    time.sleep(inactive_sec*0.7)
     common.wait_for_marathon_task(app_id=app_id, task_id=original_task_id, timeout_sec=inactive_sec+MARATHON_RECONCILATION_INTERNAL)
     shakedown.deployment_wait()
     tasks = client.get_tasks(app_id)
@@ -105,10 +109,15 @@ def test_unreachable_within_inactive_time(inactive_sec, expunge_sec):
     # first the unreachables go away (because they become reachable)
     # this will result in the app indicating 2 of 1 until the unreachable is killed
     common.wait_for_unreachable_task(inverse=True)
-    common.wait_for_unreachable_task_kill(app_id=app_id, task_id=original_task_id, timeout_sec=expunge_sec+MARATHON_RECONCILATION_INTERNAL)
+    print("Time to recover unreachable: {} seconds".format(elapse_time(inactive_time, time.time())))
+    # now wait until the *new* task is no longer there
+    common.wait_for_unreachable_task_kill(app_id=app_id, task_id=new_task_id, timeout_sec=expunge_sec+MARATHON_RECONCILATION_INTERNAL)
     expunge_time = time.time()
     print("Expunge Time from start: {} seconds".format(elapse_time(start, expunge_time)))
     print("Expunge Time from unreachable: {} seconds".format(elapse_time(unreachable_time, expunge_time)))
+    tasks = client.get_tasks(app_id)
+    task_remaining = tasks[0]['id']
+    print("Remaining task id: {}".format(task_remaining))
 
 
 def initial_unreachable_delay():

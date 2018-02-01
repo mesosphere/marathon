@@ -785,6 +785,14 @@ def unreachable_tasks(framework_name='marathon'):
             return framework['unreachable_tasks']
     return []
 
+def mesos_tasks(framework_name='marathon'):
+    client = mesos.DCOSClient()
+    frameworks = client.get_master_state()['frameworks']
+    for framework in frameworks:
+        if framework["name"] == framework_name:
+            return framework['tasks']
+    return []
+
 
 def unreachable_task_predicate(service):
     return len(unreachable_tasks(service)) > 0
@@ -815,12 +823,12 @@ def wait_for_marathon_task(app_id, task_id, timeout_sec=6*60):
 
 
 def task_remove_predicate(app_id, task_id):
-    client = marathon.create_client()
-    tasks = client.get_tasks(app_id)
-    for task in tasks:
-        if task['id'] == task_id:
-            return True
-    return False
+    tasks = mesos_tasks()
+    return len(tasks) == 1
+    # for task in tasks:
+    #     if task['id'] == task_id:
+    #         return False
+    # return True
 
 
 def wait_for_unreachable_task_kill(app_id, task_id, timeout_sec=6*60):
