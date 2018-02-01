@@ -89,7 +89,7 @@ def createTarballPackages(): utils.SemVer = utils.stage("Package Tarballs") {
   val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball")
 
   val version = %%("./version").out.string.trim
-  val gitSha = %%('git, "rev-parse", "--short", "HEAD").out.string
+  val gitSha = %%('git, "rev-parse", "--short", "HEAD").out.string.take(7)
 
   println(s"Built tarballs for Marathon $version.")
   utils.SemVer(version, gitSha)
