@@ -24,7 +24,7 @@ If you have slow-running Docker applications or deployments due to DC/OS upgrade
 
 In special cases, you may want to change Mesos agent configuration to not use strict CFS CPU limitations. Consider this if the majority of your applications have a CPU peak during startup and a lower consumption afterwards, or you have other advanced CPU loads. You should only change the default behavior if you do not need strict CPU separation.
 
-You will need to change the configurations for your Mesos (or DC.OS) installation by changing your Mesos agent configuration.
+You will need to change the configurations for your Mesos (or DC/OS) installation by changing your Mesos agent configuration.
 
 **Note:** If you are considering changing this configuration, consult the [Mesos oversubscription](http://mesos.apache.org/documentation/latest/oversubscription/) documentation for additional considerations and configuration options.
 
