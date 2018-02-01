@@ -33,3 +33,5 @@ You will need to change the configurations for your Mesos (or DC.OS) installatio
 1. Create or modify the file `/var/lib/dcos/mesos-slave-common` on each agent node; Add or set the line `MESOS_CGROUPS_ENABLE_CFS=false`.
 
 1. Restart the Mesos agent process with `sudo systemctl restart dcos-mesos-slave`. Note, if this is done prior to installing the Mesos agent it will pick up the configuration automatically.
+
+1. After restarting all of the Mesos agents, restart all tasks. Restarting the agent won’t cause the tasks to restart but they also won’t pick up the new setting so need to be restarted.
