@@ -166,7 +166,7 @@ def provisionHost(): Unit = utils.stage("Provision") {
 /**
  * Run the main build pipeline.
  *
- * @return Version of Marathon build (without leading v)
+ * @return Version of Marathon build
  */
 @main
 def build(runTests: Boolean = true): SemVer = {
