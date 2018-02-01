@@ -20,26 +20,18 @@ Your apps or deployments are likely running slowly because they require more CPU
 
 If you have slow-running Docker applications or deployments due to DC/OS upgrade or configuring `MESOS_CGROUPS_ENABLE_CFS=true`, increase the required CPU amount in your Marathon app definition. Change the `"cpus"` property of your app definition to a higher value and test if this change solves your issues. 
 
-### Change Mesos agent configuration
+## Change Mesos agent configuration
 
 In special cases, you may want to change Mesos agent configuration to not use strict CFS CPU limitations. Consider this if the majority of your applications have a CPU peak during startup and a lower consumption afterwards, or you have other advanced CPU loads. You should only change the default behavior if you do not need strict CPU separation.
 
-You will need to change the configurations for your DC/OS installation (if you are running DC/OS) or change your Mesos agent configurations. If you are not using DC/OS, you will need to change your Mesos agent configurations.
+You will need to change the configurations for your Mesos (or DC/OS) installation by changing your Mesos agent configuration.
 
 **Note:** If you are considering changing this configuration, consult the [Mesos oversubscription](http://mesos.apache.org/documentation/latest/oversubscription/) documentation for additional considerations and configuration options.
 
-#### DC/OS users
+### Configuration change
 
-1. Change this line in your [dcos-config.yaml]( https://github.com/dcos/dcos/blob/a7a30779663081198649caecb4d27165836e73ae/gen/dcos-config.yaml#L431) to `MESOS_CGROUPS_ENABLE_CFS=false`.
+1. Create or modify the file `/var/lib/dcos/mesos-slave-common` on each agent node; Add or set the line `MESOS_CGROUPS_ENABLE_CFS=false`.
 
-1. [Reinstall DC/OS](https://dcos.io/docs/1.10/installing/).
+1. Restart the Mesos agent process with `sudo systemctl restart dcos-mesos-slave`. Note, if this is done prior to installing the Mesos agent it will pick up the configuration automatically.
 
-1. Alternatively, you can follow the instructions for non-DC/OS users, below.
-
-#### Non-DC/OS users
-
-1. SSH to each Mesos agent node.
-
-1. On each node, change the configuration in `/opt/mesosphere/etc/mesos-slave-common` to `MESOS_CGROUPS_ENABLE_CFS=false`
-
-1. Restart the Mesos agent process with `sudo systemctl restart dcos-mesos-slave`.
+1. After restarting all of the Mesos agents, restart all tasks. Restarting the agent won’t cause the tasks to restart but they also won’t pick up the new setting so need to be restarted.
