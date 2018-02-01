@@ -88,26 +88,9 @@ def uploadTarballPackagesToS3(version: String, buildLocation: String): Option[aw
  */
 @main
 def createTarballPackages(): String = utils.stage("Package Tarballs") {
-  val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball", "version")
+  val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball")
 
-  // Regex is for version:
-  // starting with random chars, match $number$dot$number$dot$number followed by optional alpha numberic chars plus `-`
-  // ending with random characters
-  // we need to regex this string because we do have colored output in the `sbt version` command
-  val VersionLineRegex = "^.*(\\d+\\.\\d+\\.\\d+[-A-Za-z\\d]+).*$".r
-  // release version example v1.5.2
-  val ReleaseVersionLineRegex = "^.*(\\d+\\.\\d+\\.\\d+).*$".r
-
-  // Nothing is what it seems. This is a poor man's way to extract the version
-  // from sbt's console output until we run our Ammonite scripts in sbt.
-  val lastLine = result.out.lines.last
-  val version = lastLine match {
-    case VersionLineRegex(v) => v
-    case ReleaseVersionLineRegex(v) => v
-    case _ =>
-        val commit = %%('git, "log", "--pretty=format:%h", "-n1").out.lines.last
-        s"unknown version in commit $commit with version: $lastLine"
-  }
+  val version = %%("./version").out.string.trim
   println(s"Built tarballs for Marathon $version.")
   version
 }

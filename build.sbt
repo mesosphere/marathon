@@ -131,9 +131,6 @@ lazy val commonSettings = testSettings ++
   javacOptions in Compile += "-g",
   javaOptions in run ++= (aspectjWeaverOptions in Aspectj).value,
   javaOptions in Test ++= (aspectjWeaverOptions in Aspectj).value,
-  git.useGitDescribe := true,
-  // TODO: There appears to be a bug where uncommitted changes is true even if nothing is committed.
-  git.uncommittedSignifier := None
 )
 
 
@@ -213,16 +210,12 @@ lazy val packagingSettings = Seq(
   rpmLicense := Some("Apache 2"),
   daemonStdoutLogFile := Some("marathon"),
   version in Rpm := {
-    // Matches e.g. 1.5.1
-    val releasePattern = """^(\d+)\.(\d+)\.(\d+)$""".r
-    // Matches e.g. 1.5.1-pre-42-gdeadbeef and 1.6.0-pre-42-gdeadbeef
-    val snapshotPattern = """^(\d+)\.(\d+)\.(\d+)(?:-SNAPSHOT|-pre)?-\d+-g(\w+)""".r
+    // Matches e.g. 1.5.1-deadbeef
+    val versionPattern = """^(\d+)\.(\d+)\.(\d+)-(\w+)$""".r
     version.value match {
-      case releasePattern(major, minor, patch) => s"$major.$minor.$patch"
-      case snapshotPattern(major, minor, patch, commit) => s"$major.$minor.$patch${LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE)}git$commit"
+      case versionPattern(major, minor, build_number, commit) => s"$major.$minor.$build_number"
       case v =>
-
-        System.err.println(s"Version '$v' is not fully supported, please update the git tags.")
+        System.err.println(s"Version '$v' is not fully supported, please check the version file.")
         v
     }
   },
@@ -282,6 +275,10 @@ lazy val marathon = (project in file("."))
   .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
+    version := {
+      import sys.process._
+      ("./version" !!).trim
+    },
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
