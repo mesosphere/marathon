@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Version script for Marathon.
+#
+# Change MINOR to x+1 and BRANCH_POINT to commit hash of common ancestor of master and releases/1.x
+# after a releases/1.x was cut
 MAJOR=1
 MINOR=6
 BRANCH_POINT=aa89e89
@@ -7,7 +11,6 @@ BRANCH_POINT=aa89e89
 # Infer version
 # Number of commits since branch point
 BUILD_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..HEAD)"
-COMMIT_HASH="$(git rev-parse --short HEAD)"
 
-# E.g. 1.7.42-deadbeef
-echo "$MAJOR.$MINOR.$BUILD_NUMBER-$COMMIT_HASH"
+# E.g. 1.7.42
+echo "$MAJOR.$MINOR.$BUILD_NUMBER"

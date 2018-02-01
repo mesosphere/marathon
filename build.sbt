@@ -150,10 +150,28 @@ lazy val packagingSettings = Seq(
   mappings in (Compile, packageDoc) := Seq(),
   debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
 
+  (packageName in Universal) := {
+    git.gitHeadCommit.value match {
+      case Some(commit) =>
+        val shortCommit = commit.take(7)
+        s"${packageName.value}-${version.value}-${shortCommit}"
+      case None =>
+        s"${packageName.value}-${version.value}"
+    }
+  },
+
   /* Universal packaging (docs) - http://sbt-native-packager.readthedocs.io/en/latest/formats/universal.html
    */
   universalArchiveOptions in (UniversalDocs, packageZipTarball) := Seq("-pcvf"), // Remove this line once fix for https://github.com/sbt/sbt-native-packager/issues/1019 is released
-  (packageName in UniversalDocs) := { packageName.value + "-docs" + "-" + version.value },
+  (packageName in UniversalDocs) := {
+    git.gitHeadCommit.value match {
+      case Some(commit) =>
+        val shortCommit = commit.take(7)
+        s"${packageName.value}-docs-${version.value}-${shortCommit}"
+      case None =>
+        s"${packageName.value}-docs-${version.value}"
+    }
+  },
   (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
   mappings in UniversalDocs ++= directory("docs/docs"),
 
@@ -210,11 +228,14 @@ lazy val packagingSettings = Seq(
   rpmLicense := Some("Apache 2"),
   daemonStdoutLogFile := Some("marathon"),
   version in Rpm := {
-    // Matches e.g. 1.5.1-deadbeef
-    val versionPattern = """^(\d+)\.(\d+)\.(\d+)-(\w+)$""".r
-    version.value match {
-      case versionPattern(major, minor, build_number, commit) => s"$major.$minor.$build_number"
-      case v =>
+    // Matches e.g. 1.7.42
+    val versionPattern = """^(\d+)\.(\d+)\.(\d+)$""".r
+    (version.value, git.gitHeadCommit.value) match {
+      case (versionPattern(major, minor, build_number), Some(commit)) =>
+        s"$major.$minor.$build_number-$commit"
+      case (versionPattern(major, minor, build_number), None) =>
+        s"$major.$minor.$build_number"
+      case (v, _) =>
         System.err.println(s"Version '$v' is not fully supported, please check the version file.")
         v
     }
