@@ -60,7 +60,6 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
-@main
 /**
  * Upload Marathon tgz tarballs, its sha1 checksum and docs to S3.
  *
@@ -68,11 +67,11 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
  * @param buildLocation subfolder location to upload tarball to. Example: "builds"
  * @return Artifact description if it was uploaded.
  */
-def uploadTarballPackagesToS3(version: String, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
+def uploadTarballPackagesToS3(version: utils.SemVer, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
   import scala.collection.breakOut
 
   // Upload docs
-  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
+  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-${version.toStringtWithCommit}.tgz"
   awsClient.upload(docsPath, awsClient.s3PathFor(buildLocation))
 
   // Upload Marathon
@@ -86,20 +85,21 @@ def uploadTarballPackagesToS3(version: String, buildLocation: String): Option[aw
  *
  * @return version of build.
  */
-@main
-def createTarballPackages(): String = utils.stage("Package Tarballs") {
+def createTarballPackages(): utils.SemVer = utils.stage("Package Tarballs") {
   val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball")
 
   val version = %%("./version").out.string.trim
+  val gitSha = %%('git, "rev-parse", "--short", "HEAD").out.string
+
   println(s"Built tarballs for Marathon $version.")
-  version
+  utils.SemVer(version, gitSha)
 }
 
 /**
  * The pipeline target for GitHub pull request builds. It wraps other targets
  * and does some additional reporting to GitHub.
  */
-def asPullRequest(run: => (String, Option[awsClient.Artifact])): Unit = {
+def asPullRequest(run: => (utils.SemVer, Option[awsClient.Artifact])): Unit = {
   val pullNumber: String = sys.env.getOrElse("CHANGE_ID", throw new IllegalArgumentException("No CHANGE_ID was defined."))
   val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
@@ -122,8 +122,7 @@ def asPullRequest(run: => (String, Option[awsClient.Artifact])): Unit = {
  * @param artifactUrl Url for the saved Marathon artifact.
  * @param sha1 The sah1 checksum of the artifact.
  */
-@main
-def updateDcosImage(version: String, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
+def updateDcosImage(version: utils.SemVer, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
   upgrade.updateMarathon(artifactUrl, sha1, s"Update Marathon to $version")
   upgrade.updateMarathonEE(artifactUrl, sha1, s"Update Marathon to $version")
 }
@@ -145,7 +144,7 @@ def provisionHost(): Unit = utils.stage("Provision") {
  * @return Version of Marathon build.
  */
 @main
-def build(): String = {
+def build(): utils.SemVer = {
   provisionHost()
 
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
@@ -169,32 +168,6 @@ def buildAndTestDockerAndLinuxPackages(): Unit = {
     // create test-bed docker images and run the package tests
     val testPath = pwd/'tests/'package
     %('make, "test")(testPath)
-  }
-}
-
-/**
-  * Given tagName v1.5.1, and rev DEADBEEF, we would assert that v1.5.0 is a direct ancestor of rev DEADBEEF
-  * this ensures that a v1.5.1 release can NOT happen on a branch that had a v1.6.0 release.
-  *
-  * Also, we assert that rev contains new commits since the last release. If the proposal is to tag v1.5.1 with same
-  * revision as v1.5.0, then we fail, saying that there v1.5.0 points to the commit porposed for v1.5.1
-  *
-  * @param tagName The tag name / version we are going to tag. eg v1.5.1
-  * @param gitSha The commit sha / rev that will be tagged.
-  */
-def assertPriorVersionIsAncestor(tagName: String, gitSha: String): Unit = {
-  utils.priorPatchVersion(tagName).foreach { prior =>
-    val revs = %%("git", "rev-list", "--format=oneline", s"${gitSha}..${prior}").out.string
-    if(revs.trim.nonEmpty) {
-      println(s"Error! ${prior} is not a direct ancestor of proposed commit ${gitSha} for ${tagName}!")
-      sys.exit(1)
-    }
-
-    val commitsSinceLast = %%("git", "rev-list", "--format=oneline", s"${prior}..${gitSha}").out.string
-    if(commitsSinceLast.trim.isEmpty) {
-      println(s"Error! ${prior} points to proposed commit ${gitSha} for ${tagName}!")
-      sys.exit(1)
-    }
   }
 }
 
@@ -263,7 +236,7 @@ def master(): Unit = {
   buildAndTestDockerAndLinuxPackages()
 
   // Uploads
-  val maybeArtifact = uploadTarballPackagesToS3(version, "builds")
+  val maybeArtifact = uploadTarballPackagesToS3(version, "builds/${version.toStringtWithCommit}")
   maybeArtifact.foreach { artifact =>
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
@@ -313,18 +286,16 @@ def jenkins(): Unit = {
 @main
 def release(requestVersion: String, gitSha: String, latest: Boolean = false): Unit = {
   val releaseVersion = withoutVersionPrefix(requestVersion)
-  val tagVersion = s"v$releaseVersion"
-
-  require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
-    s"tagName should match regex ${ValidVersionRegex}")
-
-  (tagVersion, requestVersion)
 
   println(s"Releasing version: $releaseVersion")
   %('git, "checkout", gitSha)
 
-  %('git, "tag", "-a", tagVersion, "-m", tagVersion)
   val version = build()
+  val tagVersion = version.toTagString
+  %('git, "tag", "-a", tagVersion, "-m", tagVersion)
+
+  require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
+    s"tagName should match regex ${ValidVersionRegex}")
 
   buildAndTestDockerAndLinuxPackages()
   uploadLinuxPackagesToRepos(tagVersion)
