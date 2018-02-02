@@ -70,6 +70,7 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
 def uploadTarballPackagesToS3(version: utils.SemVer, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
   import scala.collection.breakOut
 
+
   // Upload docs
   val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-${version.toStringtWithCommit}.tgz"
   awsClient.upload(docsPath, awsClient.s3PathFor(buildLocation))
@@ -148,11 +149,12 @@ def build(): utils.SemVer = {
   provisionHost()
 
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
-  try {
-    compileAndTest(logFileName)
-  } finally {
-    zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
-  }
+// Fast iteration.
+//  try {
+//    compileAndTest(logFileName)
+//  } finally {
+//    zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
+//  }
 
   val version = createTarballPackages()
   version
@@ -248,9 +250,10 @@ def master(): Unit = {
 @main
 def pr(): Unit = asPullRequest {
   val version = build()
+  buildAndTestDockerAndLinuxPackages()
 
   // Uploads
-  val artifact = uploadTarballPackagesToS3(version, "builds")
+  val artifact = uploadTarballPackagesToS3(version, "builds/${version.toStringtWithCommit()}")
   (version, artifact)
 }
 
