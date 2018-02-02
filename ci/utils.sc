@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
+import scala.util.Try
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

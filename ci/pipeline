@@ -17,10 +17,14 @@ import $file.provision
 import $file.upgrade
 import $file.utils
 
+import utils.SemVer
+
+
+implicit val SemVerRead: scopt.Read[SemVer] =
+  scopt.Read.reads(SemVer(_))
 
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
-val ValidVersionRegex = "^v[0-9]+(\\.[0-9]+){2,3}(-(rc|pre|m)[0-9-]+)?$".r
 
 /**
  * Compile Marathon and run unit and integration tests followed by scapegoat.
@@ -67,7 +71,7 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
  * @param buildLocation subfolder location to upload tarball to. Example: "builds"
  * @return Artifact description if it was uploaded.
  */
-def uploadTarballPackagesToS3(version: utils.SemVer, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
+def uploadTarballPackagesToS3(version: SemVer, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
   import scala.collection.breakOut
 
   // Upload docs
@@ -85,21 +89,21 @@ def uploadTarballPackagesToS3(version: utils.SemVer, buildLocation: String): Opt
  *
  * @return version of build.
  */
-def createTarballPackages(): utils.SemVer = utils.stage("Package Tarballs") {
+def createTarballPackages(): SemVer = utils.stage("Package Tarballs") {
   val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball")
 
   val version = %%("./version").out.string.trim
   val gitSha = %%("./version", "commit").out.string.trim
 
   println(s"Built tarballs for Marathon $version.")
-  utils.SemVer(version, gitSha)
+  SemVer(version, gitSha)
 }
 
 /**
  * The pipeline target for GitHub pull request builds. It wraps other targets
  * and does some additional reporting to GitHub.
  */
-def asPullRequest(run: => (utils.SemVer, Option[awsClient.Artifact])): Unit = {
+def asPullRequest(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
   val pullNumber: String = sys.env.getOrElse("CHANGE_ID", throw new IllegalArgumentException("No CHANGE_ID was defined."))
   val buildUrl: String = sys.env.getOrElse("BUILD_URL", throw new IllegalArgumentException("No BUILD_URL was defined."))
   val buildTag: String = sys.env.getOrElse("BUILD_TAG", "here")
@@ -122,7 +126,8 @@ def asPullRequest(run: => (utils.SemVer, Option[awsClient.Artifact])): Unit = {
  * @param artifactUrl Url for the saved Marathon artifact.
  * @param sha1 The sah1 checksum of the artifact.
  */
-def updateDcosImage(version: utils.SemVer, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
+@main
+def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
   upgrade.updateMarathon(artifactUrl, sha1, s"Update Marathon to $version")
   upgrade.updateMarathonEE(artifactUrl, sha1, s"Update Marathon to $version")
 }
@@ -138,12 +143,15 @@ def provisionHost(): Unit = utils.stage("Provision") {
   provision.installMesos()
 }
 
+//////////////////// MAIN TARGETS ////////////////////
+
 /**
  * Run the main build pipeline.
  *
- * @return Version of Marathon build.
+ * @return Version of Marathon build
  */
 @main
+<<<<<<< HEAD
 def build(): utils.SemVer = {
   provisionHost()
 
@@ -152,30 +160,244 @@ def build(): utils.SemVer = {
     compileAndTest(logFileName)
   } finally {
     zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
+=======
+def build(runTests: Boolean = true): SemVer = {
+  if (runTests) {
+    val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
+    try {
+      compileAndTest(logFileName)
+    } finally {
+      zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
+    }
+>>>>>>> Fix package uploading and improvements to release pipeline (#5953)
   }
 
-  val version = createTarballPackages()
-  version
+  createTarballPackages()
 }
 
 /**
   * Builds docker and linux native packages, then runs the tests in tests/package/test.sc
   */
-def buildAndTestDockerAndLinuxPackages(): Unit = {
+def buildDockerAndLinuxPackages(): Unit = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
     %('sbt, "docker:publishLocal", "packageLinux")
+  }
+}
 
+def testDockerAndLinuxPackages(): Unit = {
+  utils.stage("Testing Docker Image, Debian and RedHat Packages") {
     // create test-bed docker images and run the package tests
     val testPath = pwd/'tests/'package
     %('make, "test")(testPath)
   }
 }
 
-def withoutVersionPrefix(releaseVersion: String): String = {
-    if(releaseVersion.toLowerCase.startsWith("v"))
-      releaseVersion.substring(1)
-    else
-      releaseVersion
+/*******************************************************************************
+ *******************************  BUILD TARGETS  *******************************
+ ******************************************************************************/
+
+/**
+ * Build target for master and potential release branches.
+ */
+@main
+def master(): Unit = {
+  provisionHost()
+
+  val version = build()
+  buildDockerAndLinuxPackages()
+  testDockerAndLinuxPackages()
+
+  // Uploads
+  val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
+  maybeArtifact.foreach { artifact =>
+    updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
+  }
+}
+
+/**
+ * Build target for pull request builds.
+ */
+@main
+def pr(): Unit = asPullRequest {
+  provisionHost()
+  val version = build()
+
+  // Uploads
+  val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
+  (version, artifact)
+}
+
+/**
+ * Build target for our build loop.
+ */
+@main
+def loop(): Unit = {
+  provisionHost()
+  build()
+}
+
+/**
+ * The main pipeline target for builds on Jenkins.
+ *
+ * @return Version and artifact description of Marathon build.
+ */
+@main
+def jenkins(): Unit = {
+  if(utils.isPullRequest) pr()
+  else master()
+}
+
+sealed trait ReleaseTarget {
+  val name: String
+}
+
+object ReleaseTarget {
+  case object DockerTag extends ReleaseTarget {
+    val name = "docker-tag"
+  }
+  case object DockerLatest extends ReleaseTarget {
+    val name = "docker-latest"
+  }
+  case object LinuxPackages extends ReleaseTarget {
+    val name = "linux-packages"
+  }
+  case object JARArtifact extends ReleaseTarget {
+    val name = "jar-artifact"
+  }
+  case object S3Package extends ReleaseTarget {
+    val name = "s3-package"
+  }
+
+  case object PluginInterface extends ReleaseTarget {
+    val name = "plugin-interface"
+  }
+
+  val all = Seq(DockerTag, DockerLatest, S3Package, LinuxPackages, JARArtifact, PluginInterface)
+}
+
+/**
+ * Executes the Community Release which includes:
+ *
+ *  1. tarball with version details
+ *  2. release of docker with that version
+ *  3. git tag of version (pushed to server)
+ *
+ * @param requestVersion The version attempting to be released v1.4.6
+ * @param gitSha The git commit sha.  This can be shorthand (ex. 0e1)
+ * @param latest Boolean to indicat if the Docker latest should be updated to this version.
+ * @return Version and artifact description of Marathon build.
+ */
+@main
+<<<<<<< HEAD
+def release(requestVersion: String, gitSha: String, latest: Boolean = false): Unit = {
+  val releaseVersion = withoutVersionPrefix(requestVersion)
+=======
+def release(args: String*): Unit = {
+  case class Config(
+    version: SemVer = SemVer.empty,
+    targets: List[ReleaseTarget] = Nil,
+    runTests: Boolean = true,
+    checkout: Option[String] = None)
+
+  val parser = new scopt.OptionParser[Config]("scopt") {
+    head("pipeline release")
+    opt[SemVer]("version").required.action { (v, c) =>
+      c.copy(version = v)
+    }
+    opt[Boolean]("run-tests").required.action { (runTests, c) =>
+      c.copy(runTests = runTests)
+    }
+    opt[String]("checkout").action {
+      case ("", c) => c.copy(checkout = None)
+      case (checkout, c) => c.copy(checkout = Some(checkout))
+    }
+    arg[String]("targets...").unbounded.optional.action { (target, c) =>
+      ReleaseTarget.all.find(_.name == target) match {
+        case Some(rt) => c.copy(targets = rt :: c.targets)
+        case None =>
+          throw new RuntimeException(s"${target} is not a known release target; valid options are:\n* ${ReleaseTarget.all.map(_.name).mkString("\n* ")}")
+      }
+    }
+  }
+
+  val config = parser.parse(args, Config()).getOrElse {
+    sys.exit(1)
+    ???
+  }
+
+  config.checkout.foreach { gitSha =>
+    %('git, "checkout", gitSha)
+  }
+>>>>>>> Fix package uploading and improvements to release pipeline (#5953)
+
+  %('git, "tag",
+    "-a", config.version.toTagString,
+    "-m", config.version.toTagString)
+  val builtVersion = build(config.runTests)
+  assert(builtVersion == config.version,
+    "Specified version did not match built version! ${builtVersion} != ${config.version}")
+  println(s"Built version ${builtVersion}; releasing")
+
+  buildDockerAndLinuxPackages()
+  if (config.runTests)
+    testDockerAndLinuxPackages()
+
+  config.targets.distinct.foreach {
+    case ReleaseTarget.LinuxPackages =>
+      uploadLinuxPackagesToRepos(s"v{config.version}")
+    case ReleaseTarget.S3Package =>
+      uploadTarballPackagesToS3(config.version, s"releases/${config.version}")
+    case ReleaseTarget.DockerTag =>
+      %('docker, "push", s"mesosphere/marathon:${config.version.toTagString}")
+    case ReleaseTarget.DockerLatest =>
+      %('docker, "tag", s"mesosphere/marathon:${config.version.toTagString}", "mesosphere/marathon:latest")
+      %('docker, "push", "mesosphere/marathon:latest")
+    case ReleaseTarget.JARArtifact =>
+      // publishing to the nexus repository.  This artifact is used by metronome.
+      %('sbt, "publish")
+    case ReleaseTarget.PluginInterface =>
+      %('sbt, "project plugin-interface", "publish")
+  }
+
+<<<<<<< HEAD
+  val version = build()
+  val tagVersion = version.toTagString
+  %('git, "tag", "-a", tagVersion, "-m", tagVersion)
+
+  require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
+    s"tagName should match regex ${ValidVersionRegex}")
+=======
+  // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
+  // %('git, "push", "--tags")
+>>>>>>> Fix package uploading and improvements to release pipeline (#5953)
+
+  // TODO: Publish swagger files.
+}
+
+/**
+  * Given tagName v1.5.1, and rev DEADBEEF, we would assert that v1.5.0 is a direct ancestor of rev DEADBEEF
+  * this ensures that a v1.5.1 release can NOT happen on a branch that had a v1.6.0 release.
+  *
+  * Also, we assert that rev contains new commits since the last release. If the proposal is to tag v1.5.1 with same
+  * revision as v1.5.0, then we fail, saying that there v1.5.0 points to the commit porposed for v1.5.1
+  *
+  * @param tagName The tag name / version we are going to tag. eg v1.5.1
+  * @param gitSha The commit sha / rev that will be tagged.
+  */
+def assertPriorVersionIsAncestor(tagName: String, gitSha: String): Unit = {
+  utils.priorPatchVersion(tagName).foreach { prior =>
+    val revs = %%("git", "rev-list", "--format=oneline", s"${gitSha}..${prior}").out.string
+    if(revs.trim.nonEmpty) {
+      println(s"Error! ${prior} is not a direct ancestor of proposed commit ${gitSha} for ${tagName}!")
+      sys.exit(1)
+    }
+
+    val commitsSinceLast = %%("git", "rev-list", "--format=oneline", s"${prior}..${gitSha}").out.string
+    if(commitsSinceLast.trim.isEmpty) {
+      println(s"Error! ${prior} points to proposed commit ${gitSha} for ${tagName}!")
+      sys.exit(1)
+    }
+  }
 }
 
 def uploadLinuxPackagesToRepos(tagName: String): Unit = {
@@ -221,101 +443,4 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
       s"rm -rf $$HOME/repo/incoming/marathon-${tagName}").mkString("\n")))
 
   utils.printStageTitle("All done")
-}
-
-/*******************************************************************************
- *******************************  BUILD TARGETS  *******************************
- ******************************************************************************/
-
-/**
- * Build target for master and potential release branches.
- */
-@main
-def master(): Unit = {
-  val version = build()
-  buildAndTestDockerAndLinuxPackages()
-
-  // Uploads
-  val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
-  maybeArtifact.foreach { artifact =>
-    updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
-  }
-}
-
-/**
- * Build target for pull request builds.
- */
-@main
-def pr(): Unit = asPullRequest {
-  val version = build()
-
-  // Uploads
-  val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
-  (version, artifact)
-}
-
-/**
- * Build target for our build loop.
- */
-@main
-def loop(): Unit = {
-  build()
-}
-
-/**
- * The main pipeline target for builds on Jenkins.
- */
-@main
-def jenkins(): Unit = {
-  if(utils.isPullRequest) pr()
-  else master()
-}
-
-/**
- * Executes the Community Release which includes:
- *
- *  1. tarball with version details
- *  2. release of docker with that version
- *  3. git tag of version (pushed to server)
- *
- * @param requestVersion The version attempting to be released v1.4.6
- * @param gitSha The git commit sha.  This can be shorthand (ex. 0e1)
- * @param latest Boolean to indicat if the Docker latest should be updated to this version.
- * @return Version and artifact description of Marathon build.
- */
-@main
-def release(requestVersion: String, gitSha: String, latest: Boolean = false): Unit = {
-  val releaseVersion = withoutVersionPrefix(requestVersion)
-
-  println(s"Releasing version: $releaseVersion")
-  %('git, "checkout", gitSha)
-
-  val version = build()
-  val tagVersion = version.toTagString
-  %('git, "tag", "-a", tagVersion, "-m", tagVersion)
-
-  require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
-    s"tagName should match regex ${ValidVersionRegex}")
-
-  buildAndTestDockerAndLinuxPackages()
-  uploadLinuxPackagesToRepos(tagVersion)
-  uploadTarballPackagesToS3(version, s"releases/$releaseVersion")
-
-  %('docker, "push", s"mesosphere/marathon:$tagVersion")
-
-  if (latest) {
-    %('docker, "tag", s"mesosphere/marathon:$tagVersion", "mesosphere/marathon:latest")
-    %('docker, "push", "mesosphere/marathon:latest")
-  } else {
-    println("Docker image mesosphere/marathon:latest NOT updated")
-  }
-
-  // publishing to the nexus repository.  This artifact is used by metronome.
-  %('sbt, "publish")
-
-  %('sbt, "project plugin-interface", "publish")
-  // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
-  // %('git, "push", "--tags")
-
-  // TODO: Publish swagger files.
 }
