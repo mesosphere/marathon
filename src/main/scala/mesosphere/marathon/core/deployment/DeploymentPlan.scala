@@ -246,7 +246,7 @@ object DeploymentPlan {
             Some(ScaleApplication(newSpec, newSpec.instances))
 
           // Scale-only change.
-          case Some(oldSpec) if oldSpec.isOnlyScaleChange(newSpec) =>
+          case Some(oldSpec) if oldSpec.isOnlyScaleChange(newSpec) || newSpec.isScaledToZero =>
             Some(ScaleApplication(newSpec, newSpec.instances, toKill.get(newSpec.id)))
 
           // Update or restart an existing run spec.

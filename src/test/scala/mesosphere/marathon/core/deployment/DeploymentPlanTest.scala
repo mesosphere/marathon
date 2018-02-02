@@ -424,6 +424,36 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       Then("The deployment is not valid")
       validate(plan2)(f.validator).isSuccess should be(false)
     }
+
+    "Deployment plan treats app conf update and scale down to 0 instances as scale-only change" in {
+      Given("An application update with command and scale changes")
+      val mongoId = "/test/database/mongo".toPath
+      val strategy = UpgradeStrategy(0.75)
+
+      val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
+      val mongo: (AppDefinition, AppDefinition) =
+        AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
+          AppDefinition(mongoId, Some("mng2"), instances = 0, upgradeStrategy = strategy, versionInfo = versionInfo)
+
+      val from = createRootGroup(groups = Set(createGroup(
+        id = "/test".toPath,
+        groups = Set(
+          createGroup("/test/database".toPath, Map(mongo._1.id -> mongo._1))
+        )
+      )
+      ))
+
+      val to = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+        createGroup("/test/database".toPath, Map(mongo._2.id -> mongo._2))
+      ))))
+
+      When("the deployment plan is computed")
+      val plan = DeploymentPlan(from, to)
+
+      Then("the deployment steps are correct")
+      plan.steps should have size 1
+      plan.steps(0).actions.toSet should equal(Set(ScaleApplication(mongo._2, 0)))
+    }
   }
   class Fixture {
     def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
