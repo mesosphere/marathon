@@ -232,7 +232,7 @@ lazy val packagingSettings = Seq(
     val versionPattern = """^(\d+)\.(\d+)\.(\d+)$""".r
     (version.value, git.gitHeadCommit.value) match {
       case (versionPattern(major, minor, build_number), Some(commit)) =>
-        s"$major.$minor.$build_number-$commit"
+        s"$major.$minor.$build_number.${commit.take(7)}"
       case (versionPattern(major, minor, build_number), None) =>
         s"$major.$minor.$build_number"
       case (v, _) =>
