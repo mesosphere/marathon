@@ -96,9 +96,9 @@ def upgradeDCOS(git: Git, remoteName: String)(implicit creds: CredentialsProvide
  * @param fileName Name of marathon's buildinfo file.
  */
 @main
-def updateBuildInfo(url: String, sha1: String, repoPath: Path, fileName: String): Unit = {
+def updateBuildInfo(url: String, sha1: String, repoPath: Path, fileName: String, serviceName: String): Unit = {
   // Load
-  val buildInfoPath = repoPath / 'packages / 'marathon / fileName
+  val buildInfoPath = repoPath / 'packages / serviceName / fileName
   val buildInfoData = read(buildInfoPath)
 
   val buildInfo = Json.parse(buildInfoData).as[BuildInfo]
@@ -122,16 +122,16 @@ def updateBuildInfo(url: String, sha1: String, repoPath: Path, fileName: String)
   * @param fileName Name of marathon's buildinfo file.
   */
 @main
-def updateEeBuildInfo(url: String, sha1: String, repoPath: Path, fileName: String): Unit = {
+def updateEeBuildInfo(url: String, sha1: String, repoPath: Path, fileName: String, serviceName: String): Unit = {
   // Load
-  val buildInfoPath = repoPath / 'packages / 'marathon / fileName
+  val buildInfoPath = repoPath / 'packages / serviceName / fileName
   val buildInfoData = read(buildInfoPath)
 
   val buildInfo = Json.parse(buildInfoData).as[EeBuildInfo]
 
   // Modify
   val updatedBuildInfo = buildInfo.copy(
-    sources = buildInfo.sources.updated("marathon", buildInfo.sources("marathon").copy(url = url, sha1 = sha1))
+    sources = buildInfo.sources.updated(serviceName, buildInfo.sources(serviceName).copy(url = url, sha1 = sha1))
   )
 
   // Save again.
@@ -207,6 +207,67 @@ def push(git: Git, commitRev: RevCommit, destination: String)(implicit creds: Cr
 }
 
 /**
+  * Checks out a DC/OS repository and updates the Marathon package buildinfo.json
+  * to the passed url and sha1.
+  *
+  * @param url The URL to the new Marathon artifact.
+  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param message The commit message for the change.
+  */
+@main
+def updateMetronome(url: String, sha1: String, message: String): Unit = {
+  updateDcosService(url, sha1, message, "Metronome", "metronome/latest")
+}
+
+/**
+  * Checks out a DC/OS repository and updates the Marathon package buildinfo.json
+  * to the passed url and sha1.
+  *
+  * @param url The URL to the new Marathon artifact.
+  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param message The commit message for the change.
+  */
+@main
+def updateMetronomeEE(url: String, sha1: String, message: String): Unit = {
+  updateDcosService(url, sha1, message, "Metronome", "metronome/latest")
+}
+
+/**
+  * Checks out a DC/OS repository and updates the service's package buildinfo.json
+  * to the passed url and sha1.
+  *
+  * @param url The URL to the new Marathon artifact.
+  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param message The commit message for the change.
+  */
+def updateDcosService(url: String, sha1: String, message: String, serviceName: String, branchName: String): Unit = {
+
+  // Authentication
+  val user = sys.env("GIT_USER")
+  val password = sys.env("GIT_PASSWORD")
+  implicit val credentials = new UsernamePasswordCredentialsProvider(user, password)
+
+  println(s"Updating $serviceName to $url in DC/OS.")
+
+  // Checkout the branch, merge master into it, update the ee.buildinfo and commit
+  val repoPath = pwd / 'dcos
+  withRepository("https://github.com/mesosphere/dcos.git", branchName, repoPath) { git =>
+    // Add dcos remote
+    val remoteAdd = git.remoteAdd()
+    remoteAdd.setName("dcos")
+    remoteAdd.setUri(new URIish("https://github.com/dcos/dcos.git"))
+    remoteAdd.call()
+
+    upgradeDCOS(git, remoteName = "dcos")
+
+    updateBuildInfo(url, sha1, repoPath, "buildinfo.json", serviceName.toLowerCase())
+
+    val commitRev = commit(git, message)
+    push(git, commitRev, destination = s"refs/heads/$branchName")
+  }
+}
+
+/**
  * Checks out a DC/OS repository and updates the Marathon package buildinfo.json
  * to the passed url and sha1.
  *
@@ -216,29 +277,35 @@ def push(git: Git, commitRev: RevCommit, destination: String)(implicit creds: Cr
  */
 @main
 def updateMarathon(url: String, sha1: String, message: String): Unit = {
+  updateDcosService(url, sha1, message, "Marathon", "marathon/latest")
+}
+
+/**
+  * Checks out a DC/OS Enterprise repository and updates the service's package ee.buildinfo.json
+  * to the passed url and sha1.
+  *
+  * @param url The URL to the new Marathon artifact.
+  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param message The commit message for the change.
+  */
+def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName: String, prNumber: Int): Unit = {
 
   // Authentication
   val user = sys.env("GIT_USER")
   val password = sys.env("GIT_PASSWORD")
   implicit val credentials = new UsernamePasswordCredentialsProvider(user, password)
 
-  println(s"Updating Marathon to $url in DC/OS.")
+  println(s"Updating $serviceName to $url in DC/OS Enterprise.")
 
   // Checkout the branch, merge master into it, update the ee.buildinfo and commit
-  val repoPath = pwd / 'dcos
-  withRepository("https://github.com/mesosphere/dcos.git", "marathon/latest", repoPath) { git =>
-    // Add dcos remote
-    val remoteAdd = git.remoteAdd()
-    remoteAdd.setName("dcos")
-    remoteAdd.setUri(new URIish("https://github.com/dcos/dcos.git"))
-    remoteAdd.call()
+  val repoPath = pwd / "dcos-enterprise"
+  withRepository("https://github.com/mesosphere/dcos-enterprise.git", s"mergebot/dcos/master/$prNumber", repoPath) { git =>
+    upgradeDCOS(git, remoteName = "mesosphere")
 
-    upgradeDCOS(git, remoteName = "dcos")
-
-    updateBuildInfo(url, sha1, repoPath, "buildinfo.json")
+    updateEeBuildInfo(url, sha1, repoPath, "ee.buildinfo.json", serviceName.toLowerCase())
 
     val commitRev = commit(git, message)
-    push(git, commitRev, destination = "refs/heads/marathon/latest")
+    push(git, commitRev, destination = "refs/heads/mergebot/dcos/master/1739")
   }
 }
 
@@ -253,22 +320,5 @@ def updateMarathon(url: String, sha1: String, message: String): Unit = {
   */
 @main
 def updateMarathonEE(url: String, sha1: String, message: String): Unit = {
-
-  // Authentication
-  val user = sys.env("GIT_USER")
-  val password = sys.env("GIT_PASSWORD")
-  implicit val credentials = new UsernamePasswordCredentialsProvider(user, password)
-
-  println(s"Updating Marathon to $url in DC/OS Enterprise.")
-
-  // Checkout the branch, merge master into it, update the ee.buildinfo and commit
-  val repoPath = pwd / "dcos-enterprise"
-  withRepository("https://github.com/mesosphere/dcos-enterprise.git", "mergebot/dcos/master/1739", repoPath) { git =>
-    upgradeDCOS(git, remoteName = "mesosphere")
-
-    updateEeBuildInfo(url, sha1, repoPath, "ee.buildinfo.json")
-
-    val commitRev = commit(git, message)
-    push(git, commitRev, destination = "refs/heads/mergebot/dcos/master/1739")
-  }
+  updateDcosServiceEE(url, sha1, message, "Marathon", 2359)
 }
