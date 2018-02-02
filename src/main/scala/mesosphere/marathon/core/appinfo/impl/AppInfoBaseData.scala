@@ -68,6 +68,7 @@ class AppInfoBaseData(
     instanceTracker.instancesBySpec()
   }
 
+  @SuppressWarnings(Array("OptionGet", "TryGet"))
   def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[AppInfo] = async {
     val appData = new AppData(app)
 
