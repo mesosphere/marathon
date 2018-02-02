@@ -115,31 +115,28 @@ class Migration(
     // step 2: restore state from given backup
     await(config.restore.map(uri => backup.restore(new URI(uri))).getOrElse(Future.successful(Done)))
 
-    // mark migration as started
-    await(persistenceStore.startMigration())
-
-    // run the migration, to ensure we can operate on the zk state
-    await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined).asTry) match {
-      case Success(result) =>
-        // mark migration as completed
-        await(persistenceStore.endMigration())
-
-        logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
-        result
-      case Failure(ex: MigrationCancelledException) =>
-        logger.error(ex.getMessage)
-
-        // mark migration as completed
-        await(persistenceStore.endMigration())
-
-        throw new MigrationFailedException("Migration cancelled", ex.getCause)
-      case Failure(ex) =>
-        throw ex
-    }
+    // last step: run the migration, to ensure we can operate on the zk state
+    val result = await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined))
+    logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
+    result
   }
 
   def migrate(): Seq[StorageVersion] =
     Await.result(migrateAsync(), Duration.Inf)
+
+  @SuppressWarnings(Array("all")) // async/await
+  def runMigrations(version: Protos.StorageVersion, backupCreated: Boolean = false): Future[Seq[StorageVersion]] =
+    async {
+      if (!backupCreated && config.backupLocation.isDefined) {
+        logger.info("Making a backup of the current state")
+        await(backup.backup(config.backupLocation.get))
+        logger.info(s"The backup has been saved to ${config.backupLocation}")
+        logger.info("Going to apply the migration steps.")
+      }
+      val result = await(applyMigrationSteps(version))
+      await(storeCurrentVersion())
+      result
+    }
 
   @SuppressWarnings(Array("all")) // async/await
   def migrateStorage(backupCreated: Boolean = false): Future[Seq[StorageVersion]] = {
@@ -157,20 +154,30 @@ class Migration(
             s" than ${StorageVersions.current.str}."
           throw new MigrationFailedException(msg)
         case Some(version) if version < currentBuildVersion =>
-          if (!backupCreated && config.backupLocation.isDefined) {
-            logger.info("Backup current state")
-            await(backup.backup(config.backupLocation.get))
-            logger.info("Backup finished. Apply migration.")
+          // mark migration as started
+          await(persistenceStore.startMigration())
+          await(runMigrations(version, backupCreated).asTry) match {
+            case Success(result) =>
+              // mark migration as completed
+              await(persistenceStore.endMigration())
+              result
+            case Failure(ex: MigrationCancelledException) =>
+              // mark migration as completed
+              await(persistenceStore.endMigration())
+              throw ex
+            case Failure(ex) =>
+              throw ex
           }
-          val result = await(applyMigrationSteps(version))
-          await(storeCurrentVersion())
-          result
         case Some(version) if version == currentBuildVersion =>
           logger.info("No migration necessary, already at the current version")
           Nil
         case _ =>
           logger.info("No migration necessary, no version stored")
+          // mark migration as started
+          await(persistenceStore.startMigration())
           await(storeCurrentVersion())
+          // mark migration as completed
+          await(persistenceStore.endMigration())
           Nil
       }
       migrations
