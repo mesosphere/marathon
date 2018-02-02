@@ -229,7 +229,7 @@ def updateMetronome(url: String, sha1: String, message: String): Unit = {
   */
 @main
 def updateMetronomeEE(url: String, sha1: String, message: String): Unit = {
-  updateDcosService(url, sha1, message, "Metronome", "metronome/latest")
+  updateDcosServiceEE(url, sha1, message, "Metronome", 2359)
 }
 
 /**
@@ -320,5 +320,5 @@ def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName:
   */
 @main
 def updateMarathonEE(url: String, sha1: String, message: String): Unit = {
-  updateDcosServiceEE(url, sha1, message, "Marathon", 2359)
+  updateDcosServiceEE(url, sha1, message, "Marathon", 1739)
 }
