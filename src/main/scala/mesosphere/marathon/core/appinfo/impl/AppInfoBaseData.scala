@@ -3,6 +3,7 @@ package core.appinfo.impl
 
 import java.time.Clock
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStepInfo }
 import mesosphere.marathon.core.group.GroupManager
@@ -14,7 +15,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{ PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.{ Map, Seq }
@@ -28,11 +28,9 @@ class AppInfoBaseData(
     healthCheckManager: HealthCheckManager,
     deploymentService: DeploymentService,
     taskFailureRepository: TaskFailureRepository,
-    groupManager: GroupManager)(implicit ec: ExecutionContext) {
+    groupManager: GroupManager)(implicit ec: ExecutionContext) extends StrictLogging {
 
-  import AppInfoBaseData._
-
-  if (log.isDebugEnabled) log.debug(s"new AppInfoBaseData $this")
+  logger.debug(s"new AppInfoBaseData $this")
 
   lazy val runningDeployments: Future[Seq[DeploymentStepInfo]] = deploymentService.listRunningDeployments()
 
@@ -47,7 +45,7 @@ class AppInfoBaseData(
   }
 
   lazy val runningDeploymentsByAppFuture: Future[Map[PathId, Seq[Identifiable]]] = {
-    log.debug("Retrieving running deployments")
+    logger.debug("Retrieving running deployments")
 
     val allRunningDeploymentsFuture: Future[Seq[DeploymentPlan]] = runningDeployments.map(_.map(_.plan))
 
@@ -66,7 +64,7 @@ class AppInfoBaseData(
   }
 
   lazy val instancesByRunSpecFuture: Future[InstanceTracker.InstancesBySpec] = {
-    log.debug("Retrieve tasks")
+    logger.debug("Retrieve tasks")
     instanceTracker.instancesBySpec()
   }
 
@@ -105,7 +103,7 @@ class AppInfoBaseData(
       .map(_.specInstances(app.id).toVector)
 
     lazy val healthByInstanceIdFuture: Future[Map[Instance.Id, Seq[Health]]] = {
-      log.debug(s"retrieving health counts for app [${app.id}]")
+      logger.debug(s"retrieving health counts for app [${app.id}]")
       healthCheckManager.statuses(app.id)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while retrieving health counts for app [${app.id}]", e)
@@ -121,7 +119,7 @@ class AppInfoBaseData(
     }
 
     lazy val taskCountsFuture: Future[TaskCounts] = {
-      log.debug(s"calculating task counts for app [${app.id}]")
+      logger.debug(s"calculating task counts for app [${app.id}]")
       for {
         tasks <- tasksForStats
       } yield TaskCounts(tasks)
@@ -130,14 +128,14 @@ class AppInfoBaseData(
     }
 
     lazy val taskStatsFuture: Future[TaskStatsByVersion] = {
-      log.debug(s"calculating task stats for app [${app.id}]")
+      logger.debug(s"calculating task stats for app [${app.id}]")
       for {
         tasks <- tasksForStats
       } yield TaskStatsByVersion(app.versionInfo, tasks)
     }
 
     lazy val enrichedTasksFuture: Future[Seq[EnrichedTask]] = {
-      log.debug(s"assembling rich tasks for app [${app.id}]")
+      logger.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         instances.map { instance =>
           EnrichedTask(instance, instance.appTask, statuses.getOrElse(instance.instanceId, Nil).to[Seq])
@@ -153,7 +151,7 @@ class AppInfoBaseData(
     }
 
     lazy val maybeLastTaskFailureFuture: Future[Option[TaskFailure]] = {
-      log.debug(s"retrieving last task failure for app [${app.id}]")
+      logger.debug(s"retrieving last task failure for app [${app.id}]")
       taskFailureRepository.get(app.id)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while retrieving last task failure for app [${app.id}]", e)
@@ -161,37 +159,36 @@ class AppInfoBaseData(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def podStatus(podDef: PodDefinition): Future[PodStatus] =
-    async { // linter:ignore UnnecessaryElseBranch
-      val now = clock.now().toOffsetDateTime
-      val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
-      val specByVersion: Map[Timestamp, Option[PodDefinition]] = await(Future.sequence(
-        // TODO(jdef) if repositories ever support a bulk-load interface, use it here
-        instances.map(_.runSpecVersion).distinct.map { version =>
-          groupManager.podVersion(podDef.id, version.toOffsetDateTime).map(version -> _)
-        }
-      )).toMap
-      val instanceStatus = instances.flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
-      val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
-      val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
+  def podStatus(podDef: PodDefinition): Future[PodStatus] = async { // linter:ignore UnnecessaryElseBranch
+    val now = clock.now().toOffsetDateTime
+    val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
+    val specByVersion: Map[Timestamp, Option[PodDefinition]] = await(Future.sequence(
+      // TODO(jdef) if repositories ever support a bulk-load interface, use it here
+      instances.map(_.runSpecVersion).distinct.map { version =>
+        groupManager.podVersion(podDef.id, version.toOffsetDateTime).map(version -> _)
+      }
+    )).toMap
+    val instanceStatus = instances.flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
+    val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
+    val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
-      // TODO(jdef) pods need termination history
-      PodStatus(
-        id = podDef.id.toString,
-        spec = Raml.toRaml(podDef),
-        instances = instanceStatus,
-        status = state,
-        statusSince = statusSince,
-        lastUpdated = now,
-        lastChanged = statusSince
-      )
-    }
+    // TODO(jdef) pods need termination history
+    PodStatus(
+      id = podDef.id.toString,
+      spec = Raml.toRaml(podDef),
+      instances = instanceStatus,
+      status = state,
+      statusSince = statusSince,
+      lastUpdated = now,
+      lastChanged = statusSince
+    )
+  }
 
   def podInstanceStatus(instance: Instance)(f: Timestamp => Option[PodDefinition]): Option[PodInstanceStatus] = {
     val maybePodSpec: Option[PodDefinition] = f(instance.runSpecVersion)
 
     if (maybePodSpec.isEmpty)
-      log.warn(s"failed to generate pod instance status for instance ${instance.instanceId}, " +
+      logger.warn(s"failed to generate pod instance status for instance ${instance.instanceId}, " +
         s"pod version ${instance.runSpecVersion} failed to load from persistent store")
 
     maybePodSpec.map { pod => Raml.toRaml(pod -> instance) }
@@ -220,8 +217,4 @@ class AppInfoBaseData(
       }
       state
     }
-}
-
-object AppInfoBaseData {
-  private val log = LoggerFactory.getLogger(getClass)
 }

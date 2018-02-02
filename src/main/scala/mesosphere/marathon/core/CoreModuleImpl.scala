@@ -81,7 +81,7 @@ class CoreModuleImpl @Inject() (
   )
 
   // TASKS
-
+  val storageExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(8))
   override lazy val taskTrackerModule =
     new InstanceTrackerModule(clock, marathonConf, leadershipModule,
       storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
@@ -90,7 +90,7 @@ class CoreModuleImpl @Inject() (
     marathonConf,
     lifecycleState)(
     actorsModule.materializer,
-    ExecutionContexts.global,
+    storageExecutionContext,
     actorSystem.scheduler,
     actorSystem)
 
@@ -199,10 +199,11 @@ class CoreModuleImpl @Inject() (
 
   // GROUP MANAGER
 
+  val groupManagerExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(8))
   override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
     marathonConf,
     scheduler,
-    storageModule.groupRepository)(ExecutionContexts.global, eventStream, authModule.authorizer)
+    storageModule.groupRepository)(groupManagerExecutionContext, eventStream, authModule.authorizer)
 
   // PODS
 
@@ -259,13 +260,15 @@ class CoreModuleImpl @Inject() (
   //    to inject it in provideSchedulerActor(...) method.
   //
   // TODO: this can be removed when MarathonSchedulerActor becomes a core component
+
+  val schedulerActionsExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(8))
   override lazy val schedulerActions: SchedulerActions = new SchedulerActions(
     storageModule.groupRepository,
     healthModule.healthCheckManager,
     taskTrackerModule.instanceTracker,
     appOfferMatcherModule.launchQueue,
     eventStream,
-    taskTerminationModule.taskKillService)(ExecutionContexts.global)
+    taskTerminationModule.taskKillService)(schedulerActionsExecutionContext)
 
   override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository, mesosLeaderInfo, marathonConf)
 
