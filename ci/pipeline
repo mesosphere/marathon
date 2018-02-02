@@ -149,11 +149,13 @@ def build(): utils.SemVer = {
   provisionHost()
 
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
+  /*
   try {
     compileAndTest(logFileName)
   } finally {
     zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
   }
+  */
 
   val version = createTarballPackages()
   version
@@ -249,6 +251,8 @@ def master(): Unit = {
 @main
 def pr(): Unit = asPullRequest {
   val version = build()
+  // TODO: Remove after fast iterations.
+  buildAndTestDockerAndLinuxPackages()
 
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/${version.toStringtWithCommit()}")
