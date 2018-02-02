@@ -26,7 +26,6 @@ import scala.util.{ Failure, Success }
 
 private class DeploymentActor(
     deploymentManagerActor: ActorRef,
-    promise: Promise[Done],
     killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
@@ -71,10 +70,6 @@ private class DeploymentActor(
     self ! NextStep
   }
 
-  override def postStop(): Unit = {
-    deploymentManagerActor ! DeploymentFinished(plan)
-  }
-
   def receive: Receive = {
     case NextStep if steps.hasNext =>
       val step = steps.next()
@@ -90,16 +85,16 @@ private class DeploymentActor(
     case NextStep =>
       // no more steps, we're done
       logger.debug(s"No more deployment steps to process: planId=${plan.id}")
-      promise.success(Done)
+      deploymentManagerActor ! DeploymentFinished(plan, Success(Done))
       context.stop(self)
 
     case Cancel(t) =>
-      promise.failure(t)
+      deploymentManagerActor ! DeploymentFinished(plan, Failure(t))
       context.stop(self)
 
     case Fail(t) =>
       logger.debug(s"Deployment failed: planId=${plan.id}", t)
-      promise.failure(t)
+      deploymentManagerActor ! DeploymentFinished(plan, Failure(t))
       context.stop(self)
   }
 
@@ -234,7 +229,6 @@ object DeploymentActor {
   @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManagerActor: ActorRef,
-    promise: Promise[Done],
     killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
@@ -246,7 +240,6 @@ object DeploymentActor {
 
     Props(new DeploymentActor(
       deploymentManagerActor,
-      promise,
       killService,
       scheduler,
       plan,
