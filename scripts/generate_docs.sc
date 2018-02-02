@@ -28,10 +28,6 @@ val buildDir = makeTmpDir()
 
 val docsDir = pwd/up/"docs"
 
-%ls docsDir
-
-%git('checkout, "master")
-
 def generateDocsForVersion(docsPath: Path, version: String, outputPath: String = "_site"): Unit = {
   %('bundle, "exec", s"jekyll build --config _config.yml,_config.$version.yml -d $outputPath/$version/")(docsPath)
 }
@@ -40,8 +36,6 @@ def branchNameForVersion(version: String) = {
   s"releases/$version"
 }
 
-
-println(buildDir)
 
 // step 1: copy docs/docs to the respective dirs
 
