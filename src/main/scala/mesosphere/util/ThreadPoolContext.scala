@@ -1,7 +1,8 @@
 package mesosphere.util
 
-import java.util.concurrent.Executors
+import java.util.concurrent.{ ExecutorService, Executors, ThreadFactory }
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mesosphere.marathon.core.async.ContextPropagatingExecutionContextWrapper
 
 import scala.concurrent.ExecutionContext
@@ -18,5 +19,21 @@ object ThreadPoolContext {
   implicit lazy val ioContext = ContextPropagatingExecutionContextWrapper(
     ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(numberOfThreads))
   )
+}
 
+object NamedExecutionContext {
+
+  /**
+    * Returns an execution context backed by a fixed thread pool. All threads in the pool are prefixed with `namePrefix`
+    * e.g. `slow-io-pool-thread-1`.
+    *
+    * @param numThreads number of threads in the pol
+    * @param namePrefix thread name prefix
+    * @return execution context
+    */
+  def fixedThreadPoolExecutionContext(numThreads: Int, namePrefix: String): ExecutionContext = {
+    val factory: ThreadFactory = new ThreadFactoryBuilder().setNameFormat(s"$namePrefix-thread-%d").build()
+    val executorService: ExecutorService = Executors.newFixedThreadPool(numThreads, factory)
+    ExecutionContext.fromExecutorService(executorService)
+  }
 }

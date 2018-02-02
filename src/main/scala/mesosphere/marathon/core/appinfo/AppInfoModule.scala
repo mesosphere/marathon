@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.appinfo
 
 import java.time.Clock
-import java.util.concurrent.Executors
 
 import com.google.inject.Inject
 import mesosphere.marathon.core.appinfo.impl.{ AppInfoBaseData, DefaultInfoService }
@@ -10,8 +9,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-
-import scala.concurrent.ExecutionContext
+import mesosphere.util.NamedExecutionContext
 
 /**
   * Provides a service to query information related to apps.
@@ -24,7 +22,7 @@ class AppInfoModule @Inject() (
     marathonSchedulerService: MarathonSchedulerService,
     taskFailureRepository: TaskFailureRepository) {
 
-  val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(32))
+  val ec = NamedExecutionContext.fixedThreadPoolExecutionContext(32, "app-info-module")
 
   private[this] val appInfoBaseData = () => new AppInfoBaseData(
     clock, taskTracker, healthCheckManager, marathonSchedulerService, taskFailureRepository, groupManager)(ec)
