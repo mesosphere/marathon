@@ -237,7 +237,7 @@ def master(): Unit = {
   buildAndTestDockerAndLinuxPackages()
 
   // Uploads
-  val maybeArtifact = uploadTarballPackagesToS3(version, "builds/${version.toStringtWithCommit}")
+  val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/${version.toStringtWithCommit}")
   maybeArtifact.foreach { artifact =>
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
@@ -251,7 +251,7 @@ def pr(): Unit = asPullRequest {
   val version = build()
 
   // Uploads
-  val artifact = uploadTarballPackagesToS3(version, "builds/${version.toStringtWithCommit()}")
+  val artifact = uploadTarballPackagesToS3(version, s"builds/${version.toStringtWithCommit()}")
   (version, artifact)
 }
 
