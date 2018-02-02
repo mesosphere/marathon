@@ -207,11 +207,11 @@ def push(git: Git, commitRev: RevCommit, destination: String)(implicit creds: Cr
 }
 
 /**
-  * Checks out a DC/OS repository and updates the Marathon package buildinfo.json
+  * Checks out a DC/OS repository and updates the Metronome package buildinfo.json
   * to the passed url and sha1.
   *
-  * @param url The URL to the new Marathon artifact.
-  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param url The URL to the new Metronome artifact.
+  * @param sha1 The sha1 checksum of the Metronome artifact.
   * @param message The commit message for the change.
   */
 @main
@@ -220,11 +220,11 @@ def updateMetronome(url: String, sha1: String, message: String): Unit = {
 }
 
 /**
-  * Checks out a DC/OS repository and updates the Marathon package buildinfo.json
+  * Checks out a DC/OS repository and updates the Metronome package buildinfo.json
   * to the passed url and sha1.
   *
-  * @param url The URL to the new Marathon artifact.
-  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param url The URL to the new Metronome artifact.
+  * @param sha1 The sha1 checksum of the Metronome artifact.
   * @param message The commit message for the change.
   */
 @main
@@ -236,8 +236,8 @@ def updateMetronomeEE(url: String, sha1: String, message: String): Unit = {
   * Checks out a DC/OS repository and updates the service's package buildinfo.json
   * to the passed url and sha1.
   *
-  * @param url The URL to the new Marathon artifact.
-  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param url The URL to the new service artifact.
+  * @param sha1 The sha1 checksum of the service artifact.
   * @param message The commit message for the change.
   */
 def updateDcosService(url: String, sha1: String, message: String, serviceName: String, branchName: String): Unit = {
@@ -284,8 +284,8 @@ def updateMarathon(url: String, sha1: String, message: String): Unit = {
   * Checks out a DC/OS Enterprise repository and updates the service's package ee.buildinfo.json
   * to the passed url and sha1.
   *
-  * @param url The URL to the new Marathon artifact.
-  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param url The URL to the new service artifact.
+  * @param sha1 The sha1 checksum of the service artifact.
   * @param message The commit message for the change.
   */
 def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName: String, prNumber: Int): Unit = {
