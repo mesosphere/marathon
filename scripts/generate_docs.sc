@@ -22,7 +22,7 @@ def makeTmpDir(): Path = {
 
 val latestReleaseVersion = "1.5"
 
-val marathonVersions = List("1.1", "1.3", "1.4", latestReleaseVersion)
+val marathonVersions = List("1.3", "1.4", latestReleaseVersion)
 
 val buildDir = makeTmpDir()
 
