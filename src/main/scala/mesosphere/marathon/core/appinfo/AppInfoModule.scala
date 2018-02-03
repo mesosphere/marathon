@@ -22,7 +22,7 @@ class AppInfoModule @Inject() (
     marathonSchedulerService: MarathonSchedulerService,
     taskFailureRepository: TaskFailureRepository) {
 
-  val ec = NamedExecutionContext.fixedThreadPoolExecutionContext(32, "app-info-module")
+  val ec = NamedExecutionContext.fixedThreadPoolExecutionContext(8, "app-info-module")
 
   private[this] val appInfoBaseData = () => new AppInfoBaseData(
     clock, taskTracker, healthCheckManager, marathonSchedulerService, taskFailureRepository, groupManager)(ec)

@@ -20,7 +20,7 @@ private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
     newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
 
-  implicit val ec = NamedExecutionContext.fixedThreadPoolExecutionContext(16, "default-info-service")
+  implicit val ec = NamedExecutionContext.fixedThreadPoolExecutionContext(8, "default-info-service")
 
   @SuppressWarnings(Array("all")) // async/await
   override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
@@ -164,7 +164,7 @@ private[appinfo] class DefaultInfoService(
 
   private[this] def resolvePodInfos(
     specs: Seq[RunSpec],
-    baseData: AppInfoBaseData = newBaseData()): Future[Seq[PodStatus]] = Future.sequence(specs.collect {
+    baseData: AppInfoBaseData): Future[Seq[PodStatus]] = Future.sequence(specs.collect {
     case pod: PodDefinition =>
       baseData.podStatus(pod)
   })
