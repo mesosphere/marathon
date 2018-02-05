@@ -4,6 +4,10 @@ set -x +e -o pipefail
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of four custer variants: open, strict, permissive and disabled
+#
+# Also, when non-open variants are selected, the following environment variables must
+# be available: DCOS_INSTALLER_TEMPLATE and DCOS_LICENSE
+#
 if [ "$#" -ne 2 ]; then
     echo "Expected 2 parameters: <channel> and <variant> e.g. si.sh testing/pull/1739 open"
     exit 1

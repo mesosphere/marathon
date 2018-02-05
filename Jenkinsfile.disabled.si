@@ -27,7 +27,8 @@ node('py36') {
             [$class: 'FileBinding', credentialsId: '11fcc957-5156-4470-ae34-d433da88248a', variable: 'DOT_SHAKEDOWN'],
             [$class: 'StringBinding', credentialsId: 'ca159ad3-7323-4564-818c-46a8f03e1389', variable: 'DCOS_LICENSE'],
             [$class: 'StringBinding', credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'],
-            [$class: 'StringBinding', credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD']
+            [$class: 'StringBinding', credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD'],
+            [$class: 'StringBinding', credentialsId: '9982e9d5-da28-4c64-a48a-8d9e62a96d1a', variable: 'DCOS_INSTALLER_TEMPLATE']
           ]) {
             sh """./ci/si_pipeline.sh $params.channel disabled"""
           }
