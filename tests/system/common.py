@@ -802,17 +802,15 @@ def assert_app_in_all_domains(app, regions=None, zones=None):
     assert len(slave_domains) > 0, "Did not find any agents in the DC/OS cluster" % (app['id'],)
 
     if not regions is None:
-        slave_regions = set(map(lambda x: x.region, slave_domains.values()))
-        for _region in regions:
-            if not _region in slave_regions:
-                assert False, "Region %s was not found in the cluster (expecting one of %s)" \
-                              % (_region, ', '.join(slave_regions))
+        slave_regions = set([x.region for x in slave_domains.values()])
+        unknown_regions = set(regions) - slave_regions
+        assert len(unknown_regions) == 0, "Region(s) %s was not found in the cluster (expecting one of %s)" \
+                              % (', '.join(unknown_regions), ', '.join(slave_regions))
     if not zones is None:
         slave_zones = set(map(lambda x: x.zone, slave_domains.values()))
-        for _zone in zones:
-            if not _zone in slave_zones:
-                assert False, "Zone %s was not found in the cluster (expecting one of %s)" \
-                              % (_zone, ', '.join(slave_zones))
+        unknown_zones = set(zones) - slave_zones
+        assert len(unknown_zones) == 0, "Zone(s) %s was not found in the cluster (expecting one of %s)" \
+                                             % (', '.join(unknown_zones), ', '.join(slave_zones))
 
     # Check if regions and/or zones overlap completely
 
