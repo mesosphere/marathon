@@ -20,9 +20,23 @@ def makeTmpDir(): Path = {
   path
 }
 
-val latestReleaseVersion = "1.5"
+val ignoredVersions = Set("1.6.0")
 
-val marathonVersions = List("1.3", "1.4", latestReleaseVersion)
+/**
+  * getting 3 latest releases tags to build docs for
+  */
+val docsTargetVersions = %%('git, "tag", "-l", "--sort=version:refname").out.lines.filter(_.matches("""v[1-9]+\.\d+\.\d+""")).groupBy(v => v.drop(1).takeWhile {
+  var reachedMinorVersion = false
+  elem => elem match {
+    case c if c.isDigit => true
+    case c if c == '.' && !reachedMinorVersion =>
+      reachedMinorVersion = true
+      true
+    case _ => false
+  }
+}).mapValues{ tags => tags.last.drop(1)}.toList.sortBy(_._1).map(_._2).filterNot(v => ignoredVersions.contains(v)).reverse.take(3).reverse
+
+val latestReleaseVersion = docsTargetVersions.last
 
 val buildDir = makeTmpDir()
 
@@ -32,35 +46,35 @@ def generateDocsForVersion(docsPath: Path, version: String, outputPath: String =
   %('bundle, "exec", s"jekyll build --config _config.yml,_config.$version.yml -d $outputPath/$version/")(docsPath)
 }
 
-def branchNameForVersion(version: String) = {
-  s"releases/$version"
+def tagNameForVersion(version: String) = {
+  s"tags/v$version"
 }
 
 
 // step 1: copy docs/docs to the respective dirs
 
-marathonVersions foreach { version =>
-  val branchName = branchNameForVersion(version)
+docsTargetVersions foreach { version =>
+  val tagName = tagNameForVersion(version)
 
-  %git('checkout, s"$branchName")
+  %git('checkout, s"$tagName")
 
-  val branchBuildDir = buildDir/version
+  val tagBuildDir = buildDir/version
 
-  mkdir! branchBuildDir
+  mkdir! tagBuildDir
 
-  println(s"Copying $version docs to: $branchBuildDir")
+  println(s"Copying $version docs to: $tagBuildDir")
 
-  cp.into(docsDir/'docs, branchBuildDir)
+  cp.into(docsDir/'docs, tagBuildDir)
 
-  cp.into(docsDir/'_layouts/"docs.html", branchBuildDir)
+  cp.into(docsDir/'_layouts/"docs.html", tagBuildDir)
 
-  println(s"Docs folder for $version is copied to ${branchBuildDir / "docs"}")
+  println(s"Docs folder for $version is copied to ${tagBuildDir / "docs"}")
 
 }
 
 // step 2: generate the default version (latest release)
 
-%git('checkout, branchNameForVersion(latestReleaseVersion))
+%git('checkout, tagNameForVersion(latestReleaseVersion))
 
 
 println(s"Copying docs for $latestReleaseVersion into $buildDir")
@@ -78,8 +92,8 @@ println(s"Generating root docs for $latestReleaseVersion")
 
 
 // step 3: generate docs for other versions
-println(s"Generating docs for versions ${marathonVersions.mkString(", ")}")
-marathonVersions foreach { version =>
+println(s"Generating docs for versions ${docsTargetVersions.mkString(", ")}")
+docsTargetVersions foreach { version =>
 
   println("Cleaning docs/docs")
   rm! rootDocsDir / 'docs
