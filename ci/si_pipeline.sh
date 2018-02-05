@@ -3,13 +3,19 @@ set -x +e -o pipefail
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of four custer variants: open, strict, permissive and disabled
-if [ "$#" -ne 2 ]; then
+if [ "$#" -lt 2 ]; then
     echo "Expected 2 parameters: <channel> and <variant> e.g. si.sh testing/pull/1739 open"
     exit 1
 fi
 
 CHANNEL="$1"
 VARIANT="$2"
+
+EXPIRATION="2hours"
+# A third parameter is allowed which allows the setting of expiration for the cluster.
+if [ "$#" -eq 3 ]; then
+  EXPIRATION="$3"
+fi
 
 JOB_NAME_SANITIZED=$(echo "$JOB_NAME" | tr -c '[:alnum:]-' '-')
 DEPLOYMENT_NAME="$JOB_NAME_SANITIZED-$BUILD_NUMBER"
@@ -58,10 +64,10 @@ CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
 export CLI_TEST_SSH_KEY
 
 if [ "$VARIANT" == "strict" ]; then
-  DCOS_URL="https://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="https://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" "$EXPIRATION" | tail -1 )"
   wget --no-check-certificate -O tests/system/fixtures/dcos-ca.crt "$DCOS_URL/ca/dcos-ca.crt"
 else
-  DCOS_URL="http://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
+  DCOS_URL="http://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" "$EXPIRATION" | tail -1 )"
 fi
 
 CLUSTER_LAUNCH_CODE=$?
