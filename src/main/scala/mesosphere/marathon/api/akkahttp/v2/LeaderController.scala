@@ -31,7 +31,7 @@ case class LeaderController(
 
   def leaderInfo(): Route =
     authenticated.apply { implicit identity =>
-      authorized(ViewResource, AuthorizedResource.SystemConfig).apply {
+      authorized(ViewResource, AuthorizedResource.Leader).apply {
         electionService.leaderHostPort match {
           case None => reject(Rejections.EntityNotFound.noLeader())
           case Some(leader) => complete(raml.LeaderInfo(leader))
@@ -43,7 +43,7 @@ case class LeaderController(
   def deleteLeader(): Route =
     asLeader(electionService) {
       authenticated.apply { implicit identity =>
-        authorized(UpdateResource, AuthorizedResource.SystemConfig).apply {
+        authorized(UpdateResource, AuthorizedResource.Leader).apply {
           parameters(('backup.?, 'restore.?, 'delay.as[Long] ? 500L)) { (backup: Option[String], restore: Option[String], delay: Long) =>
             val validate = optional(UriIO.valid)
             assumeValid(validate(backup) and validate(restore)) {
