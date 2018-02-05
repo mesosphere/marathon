@@ -105,13 +105,13 @@ def faultdomain_app(region=None, zone=None, instances=1, constraints=[]):
     app['instances'] = instances
 
     # Append region constraint
-    if not region is None:
+    if region is not None:
         app['constraints'] += [
             ["@region", "IS", str(region)]
         ]
 
     # Append zone constraint
-    if not zone is None:
+    if zone is not None:
         app['constraints'] += [
             ["@zone", "IS", str(zone)]
         ]
