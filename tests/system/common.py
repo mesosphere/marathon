@@ -801,12 +801,12 @@ def assert_app_in_all_domains(app, regions=None, zones=None):
 
     assert len(slave_domains) > 0, "Did not find any agents in the DC/OS cluster" % (app['id'],)
 
-    if not regions is None:
+    if regions is not None:
         slave_regions = set([x.region for x in slave_domains.values()])
         unknown_regions = set(regions) - slave_regions
         assert len(unknown_regions) == 0, "Region(s) %s was not found in the cluster (expecting one of %s)" \
                               % (', '.join(unknown_regions), ', '.join(slave_regions))
-    if not zones is None:
+    if zones is not None:
         slave_zones = set(map(lambda x: x.zone, slave_domains.values()))
         unknown_zones = set(zones) - slave_zones
         assert len(unknown_zones) == 0, "Zone(s) %s was not found in the cluster (expecting one of %s)" \
@@ -816,13 +816,13 @@ def assert_app_in_all_domains(app, regions=None, zones=None):
 
     (used_regions, used_zones) = get_used_regions_and_zones(get_app_domains(app))
 
-    if not regions is None:
+    if regions is not None:
         assert used_regions == set(regions), \
             "Application %s is not running on all the exepected regions ({%s} instead of {%s})" % (
                 app['id'], ', '.join(used_regions), ', '.join(regions)
             )
 
-    if not zones is None:
+    if zones is not None:
         assert used_zones == set(zones), \
             "Application %s is not running on all the exepected zones ({%s} instead of {%s})" % (
                 app['id'], ', '.join(used_zones), ', '.join(zones)
