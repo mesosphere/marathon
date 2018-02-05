@@ -16,6 +16,7 @@ from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
+from contextlib import contextmanager
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -107,10 +108,12 @@ def command_health_check(command='true', failures=1, timeout=2):
         'maxConsecutiveFailures': failures
     }
 
+
 def unreachableStrategy(app_def, inactive=100, expunge=200):
     app_def['unreachableStrategy']['inactiveAfterSeconds'] = inactive
     app_def['unreachableStrategy']['expungeAfterSeconds'] = expunge
     return app_def
+
 
 def cluster_info(mom_name='marathon-user'):
     print("DC/OS: {}, in {} mode".format(shakedown.dcos_version(), shakedown.ee_version()))
@@ -798,8 +801,26 @@ def unreachable_task_predicate(service):
     return len(unreachable_tasks(service)) > 0
 
 
+def elapse_time(start, end, precision=0):
+    return round(end - start, precision)
+
+
 def wait_for_unreachable_task(service='marathon', timeout_sec=10*60, inverse=False):
-    return shakedown.time_wait(lambda:unreachable_task_predicate(service), timeout_seconds=timeout_sec, inverse_predicate=inverse, sleep_seconds=1)
+
+    report_freq = 5 if timeout_sec < 600 else 15
+    print("Starting wait for unreachable tasks")
+    @retrying.retry(wait_fixed=1000, stop_max_delay=timeout_sec*1000)
+    def __wait_for_unreachable_task(start=time.time(), msg='unreachable tasks'):
+        elapsed = elapse_time(start, time.time())
+        if (elapsed % report_freq == 0):
+            print("Waiting on {} at {}s".format(msg, elapsed))
+
+        if inverse:
+            assert not unreachable_task_predicate(service)
+        else:
+            assert unreachable_task_predicate(service)
+
+    __wait_for_unreachable_task()
 
 
 def marathon_task_predicate(app_id, task_id):
@@ -819,20 +840,35 @@ def task_other_than_task_id(tasks, task_id):
 
 
 def wait_for_marathon_task(app_id, task_id, timeout_sec=6*60):
-    return shakedown.time_wait(lambda:marathon_task_predicate(app_id, task_id), timeout_seconds=timeout_sec)
+
+    print("Starting wait for marathon task for {} which is not task: {}".format(app_id, task_id))
+    @retrying.retry(wait_fixed=1000, stop_max_delay=timeout_sec*1000)
+    def __wait_for_marathon_task(start=time.time(), msg='marathon task'):
+        elapsed = elapse_time(start, time.time())
+        if (elapsed % 5 == 0):
+            print("Waiting on {} at {}s".format(msg, elapsed))
+
+        assert marathon_task_predicate(app_id, task_id)
+
+    __wait_for_marathon_task()
 
 
 def task_remove_predicate(app_id, task_id):
     tasks = mesos_tasks()
     return len(tasks) == 1
-    # for task in tasks:
-    #     if task['id'] == task_id:
-    #         return False
-    # return True
 
 
 def wait_for_unreachable_task_kill(app_id, task_id, timeout_sec=6*60):
-    return shakedown.time_wait(lambda:task_remove_predicate(app_id, task_id), timeout_seconds=timeout_sec)
+    print("Starting wait for expunge of task")
+    @retrying.retry(wait_fixed=1000, stop_max_delay=timeout_sec*1000)
+    def __wait_for_unreachable_task_kill(start=time.time(), msg='expunge of task'):
+        elapsed = elapse_time(start, time.time())
+        if (elapsed % 5 == 0):
+            print("Waiting on {} at {}s".format(msg, elapsed))
+
+        assert task_remove_predicate(app_id, task_id)
+
+    __wait_for_unreachable_task_kill()
 
 
 def task_by_name(tasks, name):
@@ -872,3 +908,14 @@ def kill_process_on_host(hostname, pattern):
     else:
         print("Killed no pids")
     return pids
+
+@contextmanager
+def agents_shutdown(agents):
+    for agent in agents:
+        shakedown.stop_agent(agent)
+
+    try:
+        yield
+    finally:
+        for agent in agents:
+            shakedown.start_agent(agent)
