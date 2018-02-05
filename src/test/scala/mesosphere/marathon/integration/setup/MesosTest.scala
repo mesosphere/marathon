@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration.setup
 
 import java.io.File
+import java.nio.charset.Charset
 import java.nio.file.{ Files, Paths }
 
 import akka.Done
@@ -169,19 +170,11 @@ case class MesosCluster(
     agents.foreach(_.stop())
   }
 
-  private def defaultContainerizers: String = {
-    if (sys.env.getOrElse("RUN_DOCKER_INTEGRATION_TESTS", "true") == "true") {
-      "docker,mesos"
-    } else {
-      "mesos"
-    }
-  }
-
   private def mesosEnv(mesosWorkDir: File): Seq[(String, String)] = {
     def write(dir: File, fileName: String, content: String): String = {
       val file = File.createTempFile(fileName, "", dir)
       file.deleteOnExit()
-      FileUtils.write(file, content)
+      FileUtils.write(file, content, Charset.defaultCharset)
       file.setReadable(true)
       file.getAbsolutePath
     }
@@ -347,7 +340,7 @@ object MesosTest {
   def clean(client: MesosFacade, cleanTimeout: Duration = 5.minutes)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
     def teardown: Future[Done] =
       Retry("teardown marathon", maxDuration = cleanTimeout, minDelay = 0.25.second, maxDelay = 2.second) {
-        Future.fold(client.frameworkIds().value.map(client.teardown(_).map { response =>
+        Future.foldLeft(client.frameworkIds().value.map(client.teardown(_).map { response =>
           val status = response.status.intValue
           if (status == 200) Done
           else throw new IllegalStateException(s"server returned status $status")

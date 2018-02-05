@@ -4,17 +4,15 @@ package api.akkahttp.v2
 import java.net.InetAddress
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.Uri.{ Path, Query }
+import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
-import mesosphere.{ UnitTest, ValidationTestLike }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -22,14 +20,12 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.core.pod.PodManager
-import mesosphere.marathon.raml.{ FixedPodScalingPolicy, LocalVolumeId, PersistentVolumeInfo, PersistentVolumeType, PodPersistentVolume, VolumeMount }
+import mesosphere.marathon.raml.{ PersistentVolumeInfo, PersistentVolumeType, PodPersistentVolume, VolumeMount }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
-import play.api.libs.json._
-import play.api.libs.json.Json
+import mesosphere.{ UnitTest, ValidationTestLike }
+import play.api.libs.json.{ Json, _ }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -623,7 +619,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     }
 
     "update a simple single-container pod from docker image w/ shell command" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
       val controller = f.controller()
 
@@ -656,7 +651,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     }
 
     "do not update if we have concurrent change error" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
       val controller = f.controller()
 

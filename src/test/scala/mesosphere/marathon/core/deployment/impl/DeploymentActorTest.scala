@@ -153,7 +153,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
     "Restart app" in new Fixture {
       val managerProbe = TestProbe()
-      val promise = Promise[Done]()
       val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 

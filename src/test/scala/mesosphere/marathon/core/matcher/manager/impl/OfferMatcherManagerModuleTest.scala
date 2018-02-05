@@ -4,7 +4,6 @@ package core.matcher.manager.impl
 import java.util.UUID
 import java.time.Clock
 
-import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -177,7 +176,6 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val task2: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
-      val now = clock.now()
       val matchedTasksFuture: Future[MatchedInstanceOps] =
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))

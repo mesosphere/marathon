@@ -1,20 +1,13 @@
 package mesosphere.marathon
 package integration
 
-import java.util.UUID
-
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.facades.ITEnrichedTask
-import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds
 import mesosphere.marathon.integration.facades.MesosFacade.ITResourceStringValue
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.{ FaultDomain, PathId, Region, Zone }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ FaultDomain, PathId, Region, Zone }
 import mesosphere.mesos.Constraints
 import org.scalatest.Inside
-
-import scala.concurrent.duration._
 
 @IntegrationTest
 class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {

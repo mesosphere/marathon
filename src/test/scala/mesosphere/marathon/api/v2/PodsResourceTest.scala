@@ -12,7 +12,6 @@ import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager

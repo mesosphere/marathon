@@ -6,7 +6,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse }
 import akka.http.scaladsl.server.{ Route, _ }
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.ActorMaterializer
 import com.google.common.util.concurrent.AbstractIdleService
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.chaos.http.HttpConf
@@ -73,7 +73,7 @@ class AkkaHttpMarathonService(
       async {
         val oldHandler = await(oldHandlerF)
         logger.info(s"Shutting down Akka HTTP service on ${config.httpPort()}")
-        val unbound = await(oldHandler.unbind())
+        val _ = await(oldHandler.unbind())
         logger.info(s"Akka HTTP service on ${config.httpPort()} is stopped")
       }
     }
@@ -87,10 +87,9 @@ object AkkaHttpMarathonService {
   /**
     * Top level rejection handler for all routes
     * @param actorSystem
-    * @param materializer
     * @return
     */
-  def rejectionHandler(implicit actorSystem: ActorSystem, materializer: Materializer): RejectionHandler =
+  def rejectionHandler(implicit actorSystem: ActorSystem): RejectionHandler =
     RejectionHandler.newBuilder()
       .handle(LeaderDirectives.handleNonLeader)
       .handle(EntityMarshallers.handleNonValid)

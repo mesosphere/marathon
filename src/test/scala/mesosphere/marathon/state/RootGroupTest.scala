@@ -443,7 +443,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       current.hasNonCyclicDependencies should equal(true)
 
       When("the dependency graph is calculated")
-      val dependencyGraph = current.dependencyGraph
+      current.dependencyGraph
 
       Then("the dependency graph is correct")
       current.runSpecsWithNoDependencies should have size 8

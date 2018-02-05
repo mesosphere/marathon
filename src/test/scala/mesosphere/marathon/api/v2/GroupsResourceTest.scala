@@ -77,8 +77,6 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
 
     "dry run update on an existing group" in new FixtureWithRealGroupManager {
       Given("A real Group Manager with no groups")
-      val rootGroup = createRootGroup().makeGroup(PathId("/foo/bla"))
-
       val app = App(id = "/foo/bla/app", cmd = Some("test cmd"))
       val update = GroupUpdate(id = Some("/foo/bla"), apps = Some(Set(app)))
 
@@ -150,10 +148,6 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
     }
 
     "access without authorization is denied if the resource exists" in new FixtureWithRealGroupManager {
-      Given("A real group manager with one app")
-      val app = AppDefinition("/a".toRootPath, cmd = Some("sleep"))
-      val rootGroup = createRootGroup(apps = Map(app.id -> app))
-
       Given("An unauthorized request")
       auth.authenticated = true
       auth.authorized = false
@@ -265,10 +259,6 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation {
 
     "Creation of a group with same path as an existing group should be prohibited" in
       new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/group".toRootPath)))) {
-        Given("A real group manager with one app")
-
-        val rootGroup = createRootGroup(groups = Set(createGroup("/group".toRootPath)))
-
         When("creating a group with the same path existing app")
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group"))))
 

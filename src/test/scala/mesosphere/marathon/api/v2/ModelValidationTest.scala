@@ -4,7 +4,6 @@ package api.v2
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.pod.BridgeNetwork
 import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.state.Container._

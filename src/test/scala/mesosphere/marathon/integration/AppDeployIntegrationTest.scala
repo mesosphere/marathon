@@ -54,7 +54,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are reset on configuration changes" in {
-      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-with-backoff-dealays-is-reset-on-conf-changes"))
+      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-with-backoff-dealays-is-reset-on-conf-changes")
 
       When("we force deploy a working configuration")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(cmd = Some("sleep 120; true")), force = true)
@@ -68,7 +68,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "backoff delays are NOT reset on scaling changes" in {
-      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-with-backoff-delays-is-not-reset-on-scheduling-changes"))
+      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-with-backoff-delays-is-not-reset-on-scheduling-changes")
 
       When("we force deploy a scale change")
       val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(instances = Some(3)), force = true)
@@ -83,7 +83,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "restarting an app with backoff delay starts immediately" in {
-      val app: App = createAFailingAppResultingInBackOff(Some(testBasePath / "app-restart-with-backoff"))
+      val app: App = createAFailingAppResultingInBackOff(testBasePath / "app-restart-with-backoff")
 
       When("we force a restart")
       val deployment2 = marathon.restartApp(app.id.toPath, force = true)
@@ -95,10 +95,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
     }
 
-    def createAFailingAppResultingInBackOff(id: Option[PathId] = None): App = {
+    def createAFailingAppResultingInBackOff(id: PathId): App = {
       Given("a new app")
       val app =
-        appProxy(id.getOrElse(appId()), "v1", instances = 1, healthCheck = None)
+        appProxy(id, "v1", instances = 1, healthCheck = None)
           .copy(
             cmd = Some("false"),
             backoffSeconds = 1.hour.toSeconds.toInt,

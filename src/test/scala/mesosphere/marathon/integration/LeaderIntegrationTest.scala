@@ -79,7 +79,8 @@ class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with 
       WaitTestSupport.waitUntil("a leader has been elected") {
         f.marathon.leader().code == 200
       }
-      val leader = f.marathon.leader().value
+
+      f.marathon.leader().value
 
       When("calling DELETE /v2/leader")
       val result = f.marathon.abdicate()

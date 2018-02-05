@@ -2,12 +2,12 @@ package mesosphere.marathon
 package core.task
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, LocalVolumeId, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.state.PathId
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.TaskState
 
 import scala.concurrent.duration._

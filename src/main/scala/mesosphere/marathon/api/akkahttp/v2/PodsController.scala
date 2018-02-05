@@ -120,6 +120,7 @@ class PodsController(
                     complete((StatusCodes.OK, Seq(Headers.`Marathon-Deployment-Id`(plan.id)), ramlPod))
                   case Failure(e: ConflictingChangeException) =>
                     reject(ConflictingChange(Message(e.msg)))
+                  case Failure(e) => failWith(e)
                 }
               }
             }

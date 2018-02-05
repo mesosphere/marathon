@@ -29,14 +29,13 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.Task.{ Id => TaskId }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewResource, ViewRunSpec, Authenticator => MarathonAuthenticator }
+import mesosphere.marathon.plugin.auth.{ Authorizer, CreateRunSpec, DeleteRunSpec, Identity, UpdateRunSpec, ViewRunSpec, Authenticator => MarathonAuthenticator }
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.raml.{ AnyToRaml, AppUpdate, DeploymentResult, VersionList }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
 import PathMatchers.forceParameter
-import mesosphere.marathon.plugin.auth.AuthorizedResource.SystemConfig
 
 import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }

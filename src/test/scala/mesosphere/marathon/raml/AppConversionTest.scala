@@ -7,7 +7,6 @@ import mesosphere.marathon.core.pod.{ BridgeNetwork, HostNetwork }
 import mesosphere.marathon.state._
 import mesosphere.{ UnitTest, ValidationTestLike }
 import org.apache.mesos.{ Protos => Mesos }
-import play.api.libs.json.Json
 
 class AppConversionTest extends UnitTest with ValidationTestLike {
   private lazy val dockerBridgeApp = {
