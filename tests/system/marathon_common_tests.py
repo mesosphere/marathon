@@ -1021,13 +1021,12 @@ def test_healtchcheck_and_volume():
     app = client.get_app(app_id)
 
     assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
-    assert app['container']['type'] == 'DOCKER', "The container type is not DOCKER"
     assert len(app['container']['volumes']) == 2, "The container does not have the correct amount of volumes"
 
     # check if app becomes healthy
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_health():
-        app = client.get_app(app_def["id"])
+        app = client.get_app(app_id["id"])
         assert app['tasksHealthy'] == 1, "The app is not healthy"
 
     check_health()
