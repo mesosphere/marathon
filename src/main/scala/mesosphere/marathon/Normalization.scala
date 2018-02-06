@@ -11,7 +11,5 @@ object Normalization {
     def normalize(implicit f: Normalization[T]): T = f.normalized(a)
   }
 
-  def apply[T](f: (T => T)): Normalization[T] = new Normalization[T] {
-    override def normalized(t: T): T = f(t)
-  }
+  def apply[T](f: (T => T)): Normalization[T] = (t: T) => f(t)
 }

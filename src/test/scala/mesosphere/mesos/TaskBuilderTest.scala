@@ -983,7 +983,35 @@ class TaskBuilderTest extends UnitTest {
       val cmd = taskInfo.getExecutor.getCommand
 
       assert(!taskInfo.hasCommand)
+      assert(taskInfo.getExecutor.getResourcesList.isEmpty)
       assert(cmd.getValue == "chmod ug+rx '/custom/executor' && exec '/custom/executor' a b c")
+    }
+
+    "BuildIfMatchesWithExecutorResources" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
+        offer,
+        AppDefinition(
+          id = "/testApp".toPath,
+          resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+          args = Seq("a", "b", "c"),
+          portDefinitions = PortDefinitions(8080, 8081),
+          executor = "/custom/executor",
+          executorResources = Some(Resources(cpus = 0.1, mem = 32.0, disk = 10))
+        )
+      )
+
+      assert(task.isDefined)
+
+      val (taskInfo: TaskInfo, _) = task.get
+
+      assert(taskInfo.hasExecutor)
+      assert(taskInfo.getExecutor.getResourcesList == Seq(
+        ScalarResource.cpus(0.1),
+        ScalarResource.memory(32.0),
+        ScalarResource.disk(10.0)
+      ).map(resourceToProto).asJava)
     }
 
     "BuildIfMatchesWithRole" in {

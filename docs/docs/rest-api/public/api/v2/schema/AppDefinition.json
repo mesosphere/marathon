@@ -396,6 +396,24 @@
       "description": "The executor to use to launch this application. Different executors are available. The simplest one (and the default if none is given) is //cmd, which takes the cmd and executes that on the shell level.",
       "pattern": "^(|\\/\\/cmd|\\/?[^\\/]+(\\/[^\\/]+)*)$"
     },
+    "executorResources": {
+      "type": "object",
+      "cpus": {
+        "type": "number",
+        "description": "The number of CPU shares this executor needs per instance. This number does not have to be integer, but can be a fraction.",
+        "minimum": 0
+      },
+      "mem": {
+        "type": "number",
+        "description": "The amount of memory in MB that is needed for the executor per instance.",
+        "minimum": 0
+      },
+      "disk": {
+        "type": "number",
+        "description": "How much disk space in MB is needed for the executor. This number does not have to be an integer, but can be a fraction.",
+        "minimum": 0
+      }
+    },
     "fetch": {
       "type": "array",
       "description": "Provided URIs are passed to Mesos fetcher module and resolved in runtime.",

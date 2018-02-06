@@ -2296,7 +2296,7 @@
               Object.keys(securitySchemes).map(function(key) {
                 if (securitySchemes[key].type === $scope.currentSchemeType) {
                   scheme = securitySchemes && securitySchemes[key];
-                  return;
+
                 }
               });
 
@@ -4702,7 +4702,7 @@ RAML.Inspector = (function() {
   NamedParameters.prototype.remove = function(name) {
     delete this.plain[name];
     delete this.values[name];
-    return;
+
   };
 
   NamedParameters.prototype.data = function() {
@@ -5737,7 +5737,7 @@ RAML.Inspector = (function() {
    */
   var returnValue = function (value) {
     return value;
-  }
+  };
 
   var toUnion = function (value, key, object, configs) {
     var any = null;
@@ -5748,7 +5748,7 @@ RAML.Inspector = (function() {
     });
 
     return any;
-  }
+  };
 
   function isNativeType(typeName) {
     typeName = typeName.replace('[]', '');

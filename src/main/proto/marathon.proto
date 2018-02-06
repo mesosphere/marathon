@@ -142,6 +142,7 @@ message ServiceDefinition {
   optional KillSelection killSelection = 33 [ default = YoungestFirst ];
   repeated NetworkDefinition networks = 34; // supersedes ObsoleteIpAddress
   optional mesos.TTYInfo tty = 35;
+  repeated mesos.Resource executorResources = 36;
 }
 
 enum KillSelection {
