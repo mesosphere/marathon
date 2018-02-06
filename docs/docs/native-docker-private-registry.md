@@ -5,7 +5,7 @@ title: Using a Private Docker Registry
 # Using a Private Docker Registry
 
 This document describes how to initiate a [Docker](https://docker.com/) pull from
-an authenticated private registry.
+an authenticated private registry. If you want to learn how to configure credentials to pull images from the Amazon Elastic Container Registry (AWS ECR) please refer to [this blog post](https://aws.amazon.com/blogs/apn/automating-ecr-authentication-on-marathon-with-the-amazon-ecr-credential-helper/).
 
 ## Registry  1.0 - Docker pre 1.6 
 To supply credentials to pull from a private registry, add a `.dockercfg` to
