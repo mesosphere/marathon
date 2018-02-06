@@ -34,7 +34,9 @@ object TaskConversion extends HealthConversion with DefaultConversions {
       stagedAt = stagedAt.toRaml,
       startedAt = startedAt.toRaml,
       version = version.toRaml,
-      localVolumes = localVolumes
+      localVolumes = localVolumes,
+      region = enrichedTask.agentInfo.region,
+      zone = enrichedTask.agentInfo.zone
     )
   }
 }
