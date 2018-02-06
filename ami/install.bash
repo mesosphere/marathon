@@ -77,7 +77,9 @@ git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
 cd /home/admin/marathon
 sbt update
 git checkout origin/releases/1.5
+rm -rf $(find . -name target -type d)
 sbt update
 git checkout origin/releases/1.4
+rm -rf $(find . -name target -type d)
 sbt update
 rm -rf /home/admin/marathon
