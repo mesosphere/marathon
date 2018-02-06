@@ -41,6 +41,7 @@ object MesosFacade {
       val attributes: Map[String, ITResourceValue] = vals.map {
         case (id, value: Double) => id -> ITResourceScalarValue(value)
         case (id, value: String) => id -> ITResourceStringValue(value)
+        case (id, value: Any) => throw new IllegalArgumentException(s"Unexpected attribute id=$id value=$value")
       }(collection.breakOut)
       ITAttributes(attributes)
     }

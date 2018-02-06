@@ -14,7 +14,6 @@ import mesosphere.marathon.stream.UriIO
 
 import scala.async.Async._
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 case class LeaderController(
     val electionService: ElectionService,

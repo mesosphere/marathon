@@ -47,7 +47,6 @@ class TarFlowTest extends AkkaUnitTest {
     val bytes = new ByteArrayInputStream(tarredBytes.toArray)
     val tar = new TarArchiveInputStream(bytes)
 
-    var entries = List.empty[TarEntry]
     @tailrec def readEntries(tar: TarArchiveInputStream, entries: List[TarEntry] = Nil): List[TarEntry] = {
       val entry = tar.getNextTarEntry
       if (entry == null)

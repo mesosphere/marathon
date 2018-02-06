@@ -3,8 +3,6 @@ package storage.migration
 
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
-import mesosphere.marathon.Seq
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.GroupCreation

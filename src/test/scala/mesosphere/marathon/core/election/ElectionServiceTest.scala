@@ -2,13 +2,13 @@ package mesosphere.marathon
 package core.election
 
 import akka.Done
-import akka.actor.{ Cancellable, PoisonPill }
+import akka.actor.Cancellable
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{ BroadcastHub, Keep, Sink, Source }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.util.CancellableOnce
-import org.scalatest.concurrent.Eventually
 import mesosphere.marathon.test.TestCrashStrategy
+import org.scalatest.concurrent.Eventually
+
 import scala.concurrent.duration._
 
 class ElectionServiceTest extends AkkaUnitTest with Eventually {

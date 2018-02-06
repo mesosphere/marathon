@@ -83,7 +83,6 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       reason <- TaskConditionMapping.Unreachable
     ) {
       s"TASK_LOST update with $reason indicating a TemporarilyUnreachable" in new Fixture {
-        val f = new Fixture
         instanceTracker.instance(existingInstance.instanceId) returns Future.successful(Some(existingInstance))
         val operation = TaskStatusUpdateTestHelper.lost(reason, existingInstance).operation
         val effect = updateOpResolver.resolve(operation).futureValue

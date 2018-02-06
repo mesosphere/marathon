@@ -16,10 +16,10 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkPersistenceStore
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{ JsValue, Json }
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit ctx: ExecutionContext, mat: Materializer) extends StrictLogging {
+class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer) extends StrictLogging {
 
   def migrate(): Future[Done] = {
     MigrationTo160.migrateReservations(instanceRepository, persistenceStore)
@@ -30,7 +30,7 @@ object MigrationTo160 extends StrictLogging {
   /**
     * This function traverses all instances in ZK, and moves reservation objects from tasks to the instance level.
     */
-  def migrateReservations(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migrateReservations(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
 
     logger.info("Starting reservations migration to 1.6.0")
 

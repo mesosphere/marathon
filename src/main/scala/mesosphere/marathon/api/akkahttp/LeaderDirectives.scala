@@ -6,7 +6,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ HttpRequest, StatusCodes }
 import akka.http.scaladsl.server.Directives.{ extractRequest, pass, reject }
 import akka.http.scaladsl.server._
-import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.akkahttp.Headers._
 import mesosphere.marathon.core.election.ElectionServiceLeaderInfo
@@ -47,7 +46,7 @@ object LeaderDirectives extends StrictLogging {
   case object NoLeader extends Rejection
   case object ProxyLoop extends Rejection
 
-  def handleNonLeader(implicit actorSystem: ActorSystem, materializer: Materializer): PartialFunction[Rejection, Route] = {
+  def handleNonLeader(implicit actorSystem: ActorSystem): PartialFunction[Rejection, Route] = {
     case ProxyLoop => complete(StatusCodes.BadGateway -> "Detected proxy loop")
     case NoLeader => complete(StatusCodes.ServiceUnavailable -> "Leader Currently not available")
     case ProxyToLeader(request, localHostPort, leaderHostPort @ HostPort(host, port)) =>

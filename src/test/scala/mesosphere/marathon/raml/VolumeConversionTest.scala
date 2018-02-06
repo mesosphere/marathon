@@ -3,7 +3,7 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
-import mesosphere.marathon.state.{ PersistentVolumeInfo, Volume, VolumeMount }
+import mesosphere.marathon.state.Volume
 
 class VolumeConversionTest extends UnitTest {
 

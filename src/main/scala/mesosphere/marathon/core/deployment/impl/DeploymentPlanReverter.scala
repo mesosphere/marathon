@@ -53,7 +53,7 @@ private[deployment] object DeploymentPlanReverter {
     * because groups are not locked by deployments and concurrent changes are allowed.
     */
   private[this] def revertGroupChanges(
-    version: Timestamp = Group.defaultVersion,
+    version: Timestamp,
     groupChanges: Seq[(Option[Group], Option[Group])])(rootGroup: RootGroup): RootGroup = {
 
     def revertGroupRemoval(oldGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {

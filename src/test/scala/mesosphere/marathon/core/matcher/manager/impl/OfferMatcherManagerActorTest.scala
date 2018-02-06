@@ -207,7 +207,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     }
     val offerMatcherManager = TestActorRef[OfferMatcherManagerActor](OfferMatcherManagerActor.props(metrics, random, clock, Config, observer))
 
-    def matcher(precedence: Option[PathId] = None, isInterestedIn: Boolean = true): OfferMatcher = {
+    def matcher(precedence: Option[PathId] = None): OfferMatcher = {
       val matcher = mock[OfferMatcher]
       val promise = Promise[OfferMatcher.MatchedInstanceOps]
       matcher.precedenceFor returns precedence

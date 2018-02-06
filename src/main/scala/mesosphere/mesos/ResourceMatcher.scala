@@ -329,7 +329,7 @@ object ResourceMatcher extends StrictLogging {
     runSpec: RunSpec,
     scratchDisk: Double,
     volumesWithMounts: Seq[VolumeWithMount[PersistentVolume]],
-    scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): Seq[ScalarMatchResult] = {
+    scope: ScalarMatchResult.Scope): Seq[ScalarMatchResult] = {
 
     def matchesProfileName(profileName: Option[String], resource: Protos.Resource): Boolean = {
       profileName.forall { specifiedProfileName =>
@@ -464,7 +464,7 @@ object ResourceMatcher extends StrictLogging {
   private[this] def matchScalarResource(
     groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
     name: String, requiredValue: Double,
-    scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): ScalarMatchResult = {
+    scope: ScalarMatchResult.Scope): ScalarMatchResult = {
 
     require(scope == ScalarMatchResult.Scope.NoneDisk || name == Resource.DISK)
 

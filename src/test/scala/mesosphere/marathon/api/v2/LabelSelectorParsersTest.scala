@@ -35,7 +35,6 @@ class LabelSelectorParsersTest extends UnitTest {
     "A valid label not equals query can be parsed" in {
       val parser = new LabelSelectorParsers
       val in = parser.parsed("foo != one")
-      val in2 = parser.parsed("foo!=one")
 
       in.selectors should have size 1
       in.selectors.head.key should be("foo")

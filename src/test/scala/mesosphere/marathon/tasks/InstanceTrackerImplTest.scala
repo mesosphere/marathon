@@ -108,15 +108,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       assert(testAppTasks.size == 3)
     }
 
-    def testCount(count: (InstanceTracker, PathId) => Int)(implicit stateOpProcessor: InstanceStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
-      val task1 = makeSampleInstance(TEST_APP_NAME / "a")
-
-      stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
-
-      count(instanceTracker, TEST_APP_NAME / "a") should be(1)
-      count(instanceTracker, TEST_APP_NAME / "b") should be(0)
-    }
-
     "Contains" in new Fixture {
       testContains(_.hasSpecInstancesSync(_))
     }

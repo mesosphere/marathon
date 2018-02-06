@@ -92,7 +92,6 @@ class InstanceOpProcessorImplTest extends AkkaUnitTest {
       val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
       val instance = builder.getInstance()
       val stateOp = builder.stateOpUpdate(MesosTaskStatusTestHelper.runningHealthy())
-      val mesosStatus = stateOp.mesosStatus
       val expectedEffect = InstanceUpdateEffect.Update(instance, Some(instance), events = Nil)
       val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedEffect)
       f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)

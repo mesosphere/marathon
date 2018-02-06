@@ -20,6 +20,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
+import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{ AkkaHttpResponse, RestResult }
 import mesosphere.marathon.raml.{ App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml }
@@ -431,7 +432,7 @@ class MarathonFacade(
 }
 
 object MarathonFacade {
-  def extractDeploymentIds(app: RestResult[App]): Seq[String] = {
+  def extractDeploymentIds(app: RestResult[App]): IndexedSeq[String] = {
     try {
       for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
         yield (deployment \ "id").as[String]
@@ -439,5 +440,5 @@ object MarathonFacade {
       case NonFatal(e) =>
         throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
     }
-  }.toIndexedSeq
+  }.to[marathon.IndexedSeq]
 }
