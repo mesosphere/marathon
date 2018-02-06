@@ -1,0 +1,43 @@
+{
+  "id": "healthcheck-and-volume",
+  "cpus": 0.5,
+  "mem": 512,
+  "instances": 1,
+  "disk": 500,
+  "container": {
+    "type": "DOCKER",
+    "volumes": [
+      {
+        "containerPath": "home",
+        "mode": "RW",
+        "persistent": {
+          "type": "root",
+          "size": 500
+        }
+      },
+      {
+        "containerPath": "/home",
+        "hostPath": "home",
+        "mode": "RW"
+      }
+    ],
+    "docker": {
+      "image": "nginx",
+      "network": "USER"
+    }
+  },
+  "ipAddress": {
+    "networkName": "dcos"
+  },
+  "healthChecks": [
+    {
+      "protocol": "HTTP",
+      "path": "/",
+      "port": 80,
+      "timeoutSeconds": 10,
+      "gracePeriodSeconds": 30,
+      "intervalSeconds": 10,
+      "maxConsecutiveFailures": 10
+    }
+  ]
+}
