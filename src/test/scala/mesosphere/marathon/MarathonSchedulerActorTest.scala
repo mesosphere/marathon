@@ -445,16 +445,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
 
-      // should fail...
-      val answer2 = expectMsgType[DeploymentStarted]
-      //      answer2.cmd should equal(Deploy(plan))
-      //      answer2.reason.isInstanceOf[AppLockedException] should be(true)
-
       schedulerActor ! Deploy(plan)
 
       // This indicates that the deployment is already running,
       // which means it has successfully been restarted
-      val answer = expectMsgType[CommandFailed]
+      val answer = expectMsgType[CommandFailed](30.seconds)
       answer.cmd should equal(Deploy(plan))
       answer.reason.isInstanceOf[AppLockedException] should be(true)
     } finally {
