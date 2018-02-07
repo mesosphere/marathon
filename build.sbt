@@ -91,7 +91,7 @@ lazy val commonSettings = testSettings ++
     "-Ywarn-nullary-override",
     "-Ywarn-nullary-unit",
     //"-Ywarn-unused", We should turn this one on soon
-    "-Ywarn-unused-import"
+    "-Ywarn-unused:-locals,imports",
     //"-Ywarn-value-discard", We should turn this one on soon.
   ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.

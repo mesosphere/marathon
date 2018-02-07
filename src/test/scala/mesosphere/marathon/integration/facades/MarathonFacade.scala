@@ -20,6 +20,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
+import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{ AkkaHttpResponse, RestResult }
 import mesosphere.marathon.raml.{ App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml }
@@ -56,7 +57,9 @@ case class ITEnrichedTask(
     startedAt: Option[Date],
     stagedAt: Option[Date],
     state: String,
-    version: Option[String]) {
+    version: Option[String],
+    region: Option[String],
+    zone: Option[String]) {
 
   def launched: Boolean = startedAt.nonEmpty
   def suspended: Boolean = startedAt.isEmpty
@@ -124,8 +127,10 @@ class MarathonFacade(
     (__ \ "startedAt").formatNullable[Date] ~
     (__ \ "stagedAt").formatNullable[Date] ~
     (__ \ "state").format[String] ~
-    (__ \ "version").formatNullable[String]
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+    (__ \ "version").formatNullable[String] ~
+    (__ \ "region").formatNullable[String] ~
+    (__ \ "zone").formatNullable[String]
+  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)
@@ -431,7 +436,7 @@ class MarathonFacade(
 }
 
 object MarathonFacade {
-  def extractDeploymentIds(app: RestResult[App]): Seq[String] = {
+  def extractDeploymentIds(app: RestResult[App]): IndexedSeq[String] = {
     try {
       for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
         yield (deployment \ "id").as[String]
@@ -439,5 +444,5 @@ object MarathonFacade {
       case NonFatal(e) =>
         throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
     }
-  }.toIndexedSeq
+  }.to[marathon.IndexedSeq]
 }

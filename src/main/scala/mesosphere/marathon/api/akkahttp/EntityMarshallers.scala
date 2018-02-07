@@ -207,6 +207,8 @@ object EntityMarshallers {
       complete(StatusCodes.UnprocessableEntity -> failure)
   }
 
+  import scala.language.implicitConversions
+
   implicit def entityUnmarshallerToMessageUnmarshaller[T](um: FromEntityUnmarshaller[T]): FromMessageUnmarshaller[T] =
     Unmarshaller.withMaterializer { implicit ec ⇒ implicit mat ⇒ request ⇒ um(request.entity) }
 }

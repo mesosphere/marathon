@@ -8,7 +8,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
-import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Seq
 
@@ -59,7 +58,6 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val cId = "/c".toPath
       val dId = "/d".toPath
       val eId = "/e".toPath
-      val fId = "/f".toPath
 
       val a = AppDefinition(aId, dependencies = Set(bId, cId), cmd = Some("sleep"))
       val b = AppDefinition(bId, dependencies = Set(cId), cmd = Some("sleep"))
@@ -109,12 +107,11 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val to = createRootGroup(groups = Set(createGroup("/group".toPath, update)))
       val plan = DeploymentPlan(from, to)
 
-      /*
-    plan.toStart should have size 1
-    plan.toRestart should have size 1
-    plan.toScale should have size 1
-    plan.toStop should have size 1
-    */
+      val actions = plan.steps.flatMap(s => s.actions)
+      actions.collect{ case s: StartApplication => s } should have size 1
+      actions.collect{ case s: RestartApplication => s } should have size 1
+      actions.collect{ case s: ScaleApplication => s } should have size 2
+      actions.collect{ case s: StopApplication => s } should have size 1
     }
 
     "can compute affected app ids" in {

@@ -111,7 +111,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
     }
   }
 
-  private[this] def changeGroupDependencies(groupId: String, add: Seq[String] = Seq.empty, remove: Seq[String] = Seq.empty) = {
+  private[this] def changeGroupDependencies(groupId: String, add: Seq[String], remove: Seq[String] = Seq.empty) = {
     val addedIds = add.map(_.toRootPath)
     val removedIds = remove.map(_.toRootPath)
 

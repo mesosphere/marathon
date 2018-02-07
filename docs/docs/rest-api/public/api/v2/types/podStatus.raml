@@ -156,6 +156,14 @@ types:
         type: string
         description: |
           The Mesos-generated ID of the agent upon which the instance was launched.
+      agentRegion?:
+        type: string
+        description:
+          The @region property of the agent.
+      agentZone?:
+        type: string
+        description:
+          The @zone property of the agent.
       resources?:
         type: resources.Resources
         description: |

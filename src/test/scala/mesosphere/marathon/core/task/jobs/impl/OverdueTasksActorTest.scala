@@ -9,7 +9,6 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, Reservation, TestInstanceBuilder }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceStateOpProcessor, InstanceTracker }
@@ -90,9 +89,6 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     // sounds strange, but this is how it currently works: determineOverdueTasks will consider a missing startedAt to
     // determine whether a task is in staging and might need to be killed if it exceeded the taskLaunchTimeout
     "ensure that check kills tasks disregarding the stagedAt property" in new Fixture {
-      import scala.language.implicitConversions
-      implicit def toMillis(timestamp: Timestamp): Long = timestamp.millis
-
       val now = clock.now()
 
       val appId = PathId("/ignored")

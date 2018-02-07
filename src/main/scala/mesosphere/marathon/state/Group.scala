@@ -159,14 +159,13 @@ object Group extends StrictLogging {
           and isTrue("Group has to be child of groups with parent id") { childGroup =>
             if (childGroup.id.parent == group.id) group.groupsById.contains(childGroup.id)
             else {
-              group.group(childGroup.id.parent) match {
-                case None => false
-                case Some(parentGroup) => parentGroup.groupsById.contains(childGroup.id)
-              }
+              group.group(childGroup.id.parent).exists(parent => parent.groupsById.contains(childGroup.id))
             }
           }
       )
     }
+
+  import scala.language.implicitConversions
 
   implicit def everyApp(validator: Validator[AppDefinition]): Validator[Iterable[AppDefinition]] = {
     new Validator[Iterable[AppDefinition]] {
@@ -196,10 +195,7 @@ object Group extends StrictLogging {
     isTrue("App has to be child of group with parent id") { app =>
       if (app.id.parent == group.id) group.apps.contains(app.id)
       else {
-        group.group(app.id.parent) match {
-          case None => false
-          case Some(childGroup) => childGroup.apps.contains(app.id)
-        }
+        group.group(app.id.parent).exists(child => child.apps.contains(app.id))
       }
     }
   }

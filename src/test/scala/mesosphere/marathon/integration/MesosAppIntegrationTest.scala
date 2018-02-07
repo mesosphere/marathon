@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
@@ -50,7 +49,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new Docker app")
       val app = App(
-        id = (testBasePath / s"mesos-simple-docker-app").toString,
+        id = (testBasePath / "mesos-simple-docker-app").toString,
         cmd = Some("sleep 600"),
         container = Some(Container(`type` = EngineType.Mesos, docker = Some(DockerContainer(image = "busybox")))),
         cpus = 0.2,
@@ -71,7 +70,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     "deploy a simple Docker app that uses Entrypoint/Cmd using the Mesos containerizer" taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new Docker app the uses 'Cmd' in its Dockerfile")
       val app = raml.App(
-        id = (testBasePath / s"mesos-docker-app-with-entrypoint").toString,
+        id = (testBasePath / "mesos-docker-app-with-entrypoint").toString,
         container = Some(raml.Container(`type` = raml.EngineType.Mesos, docker = Some(raml.DockerContainer(
           image = "hello-world")))),
         cpus = 0.1, mem = 32.0,

@@ -11,7 +11,6 @@ import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import org.apache.mesos.{ Protos => mesos }
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 

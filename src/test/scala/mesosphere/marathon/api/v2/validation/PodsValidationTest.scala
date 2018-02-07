@@ -153,7 +153,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
   "network validation" when {
     implicit val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"))
 
-    def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint] = Nil) =
+    def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint]) =
       PodContainer(
         name = name,
         resources = resources,
