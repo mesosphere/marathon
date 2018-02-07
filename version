@@ -10,7 +10,15 @@ BRANCH_POINT=aa89e89
 
 # Infer version
 # Number of commits since branch point
-BUILD_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..HEAD)"
+COMMIT_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..HEAD)"
+COMMIT_HASH=$(git rev-parse --short HEAD)
 
+# Echo commit hash
+if [ "$#" -eq 1 ] && [ "$1" == "commit" ]; then
+    echo "$COMMIT_HASH"
+    exit 0
+fi
+
+# Echo verion
 # E.g. 1.7.42
-echo "$MAJOR.$MINOR.$BUILD_NUMBER"
+echo "$MAJOR.$MINOR.$COMMIT_NUMBER"

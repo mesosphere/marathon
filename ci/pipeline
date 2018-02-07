@@ -72,7 +72,7 @@ def uploadTarballPackagesToS3(version: utils.SemVer, buildLocation: String): Opt
 
 
   // Upload docs
-  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-${version.toStringtWithCommit}.tgz"
+  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
   awsClient.upload(docsPath, awsClient.s3PathFor(buildLocation))
 
   // Upload Marathon

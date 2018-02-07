@@ -138,7 +138,7 @@ def escapeCmdArg(cmd: String): String = {
 }
 
 case class SemVer(major: Int, minor: Int, build: Int, commit: String) {
-  def toStringtWithCommit(): String = s"$major.$minor.$build-$commit"
+  override def toString(): String = s"$major.$minor.$build-$commit"
   def toTagString(): String = s"v$major.$minor.$build"
 }
 
