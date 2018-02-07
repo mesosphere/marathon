@@ -78,12 +78,16 @@ def branchForTag(version: String) = {
 }
 
 
+%git 'fetch
+
 // step 1: copy docs/docs to the respective dirs
 
 docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
   val tagName = branchForTag(tagVersion)
 
   %git('checkout, s"$tagName")
+
+  %git 'pull
 
   val tagBuildDir = buildDir/releaseBranchVersion
 
@@ -99,7 +103,7 @@ docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
 
 }
 
-// step 2: generate the default version (latest release)
+// step 2: generate the default version (latest release tag)
 
 %git('checkout, branchForTag(latestReleaseVersion))
 
