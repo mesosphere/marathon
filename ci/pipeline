@@ -248,8 +248,6 @@ def master(): Unit = {
 @main
 def pr(): Unit = asPullRequest {
   val version = build()
-  // TODO: Remove after fast iterations.
-  buildAndTestDockerAndLinuxPackages()
 
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
