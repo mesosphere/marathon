@@ -20,12 +20,22 @@ def makeTmpDir(): Path = {
   path
 }
 
-val ignoredVersions = Set("1.6.0")
+val ignoredReleaseBranchesVersions = Set("1.6")
+
+def listAllTagsInOrder: Vector[String] = %%('git, "tag", "-l", "--sort=version:refname").out.lines
+
+def isReleaseTag(tag: String) = tag.matches("""v[1-9]+\.\d+\.\d+""")
 
 /**
-  * getting 3 latest releases tags to build docs for
+  * get the major.minor version from a [v]major.minor.patch
+  *
+  * v1.4.11 -> 1.4
+  * 1.45.983 -> 1.45
+  *
+  * @param tag
+  * @return
   */
-val docsTargetVersions = %%('git, "tag", "-l", "--sort=version:refname").out.lines.filter(_.matches("""v[1-9]+\.\d+\.\d+""")).groupBy(v => v.drop(1).takeWhile {
+def releaseBranchVersion(tag: String) = tag.dropWhile(_.isLetter).takeWhile {
   var reachedMinorVersion = false
   elem => elem match {
     case c if c.isDigit => true
@@ -34,7 +44,24 @@ val docsTargetVersions = %%('git, "tag", "-l", "--sort=version:refname").out.lin
       true
     case _ => false
   }
-}).mapValues{ tags => tags.last.drop(1)}.toList.sortBy(_._1).filterNot { case (b, v) => ignoredVersions.contains(v)}.reverse.take(3).reverse
+}
+
+def notIgnoredBranch(branchVersion: String) = !ignoredReleaseBranchesVersions.contains(branchVersion)
+
+def getTheLastTagVersion(tags: Seq[String]) = tags.last.drop(1)
+
+/**
+  * getting 3 latest release versions and corresponding latest tags
+  *
+  * example: List[(String, String)] = List(("1.3", "1.3.14"), ("1.4", "1.4.11"), ("1.5", "1.5.6"))
+  */
+val docsTargetVersions = listAllTagsInOrder
+  .filter(isReleaseTag)
+  .groupBy(releaseBranchVersion)
+  .filterKeys(notIgnoredBranch)
+  .mapValues(getTheLastTagVersion)
+  .toList.sortBy(_._1)
+  .takeRight(3)
 
 val (latestReleaseBranch, latestReleaseVersion) = docsTargetVersions.last
 
