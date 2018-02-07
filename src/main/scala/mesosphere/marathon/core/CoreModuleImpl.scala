@@ -15,7 +15,7 @@ import mesosphere.marathon.core.deployment.DeploymentModule
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.flow.FlowModule
-import mesosphere.marathon.core.group.GroupManagerModule
+import mesosphere.marathon.core.group.{ GroupManagerConfig, GroupManagerModule }
 import mesosphere.marathon.core.health.HealthModule
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.history.HistoryModule
@@ -34,7 +34,7 @@ import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.storage.StorageModule
+import mesosphere.marathon.storage.{ StorageConf, StorageModule }
 import mesosphere.util.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
 
@@ -82,7 +82,7 @@ class CoreModuleImpl @Inject() (
   )
 
   // TASKS
-  val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(8, "storage-module")
+  val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[StorageConf].storageExecutionContextSize(), "storage-module")
   override lazy val taskTrackerModule =
     new InstanceTrackerModule(clock, marathonConf, leadershipModule,
       storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
@@ -200,7 +200,7 @@ class CoreModuleImpl @Inject() (
 
   // GROUP MANAGER
 
-  val groupManagerExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(8, "group-manager-module")
+  val groupManagerExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[GroupManagerConfig].groupManagerExecutionContextSize(), "group-manager-module")
   override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
     marathonConf,
     scheduler,
@@ -262,7 +262,7 @@ class CoreModuleImpl @Inject() (
   //
   // TODO: this can be removed when MarathonSchedulerActor becomes a core component
 
-  val schedulerActionsExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(8, "scheduler-actions")
+  val schedulerActionsExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[MarathonSchedulerServiceConfig].schedulerActionsExecutionContextSize(), "scheduler-actions")
   override lazy val schedulerActions: SchedulerActions = new SchedulerActions(
     storageModule.groupRepository,
     healthModule.healthCheckManager,

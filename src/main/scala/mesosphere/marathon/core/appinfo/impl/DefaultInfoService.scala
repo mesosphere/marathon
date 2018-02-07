@@ -9,18 +9,16 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.util.NamedExecutionContext
 
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
-    newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
-
-  implicit val ec = NamedExecutionContext.fixedThreadPoolExecutionContext(8, "default-info-service")
+    newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
+  extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
 
   @SuppressWarnings(Array("all")) // async/await
   override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =

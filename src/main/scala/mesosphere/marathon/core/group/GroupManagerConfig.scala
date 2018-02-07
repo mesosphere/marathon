@@ -22,6 +22,13 @@ trait GroupManagerConfig extends ScallopConf {
     hidden = true,
     default = Some(10.seconds.toMillis.toInt))
 
+  lazy val groupManagerExecutionContextSize = opt[Int](
+    "group_manager_execution_context_size",
+    default = Some(8),
+    hidden = true,
+    descr = "INTERNAL TUNING PARAMETER: Group manager module's execution context thread pool size"
+  )
+
   def availableFeatures: Set[String]
   def localPortMin: ScallopOption[Int]
   def localPortMax: ScallopOption[Int]

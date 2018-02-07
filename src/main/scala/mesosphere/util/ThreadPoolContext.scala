@@ -27,7 +27,7 @@ object NamedExecutionContext {
     * Returns an execution context backed by a fixed thread pool. All threads in the pool are prefixed with `namePrefix`
     * e.g. `slow-io-pool-thread-1`.
     *
-    * @param numThreads number of threads in the pol
+    * @param numThreads number of threads in the pool
     * @param namePrefix thread name prefix
     * @return execution context
     */
