@@ -227,6 +227,7 @@ lazy val packagingSettings = Seq(
     val shortCommit = ("./version commit" !!).trim
     s"${version.value}.$shortCommit"
   },
+  rpmRelease in Rpm := "1",
 
   packageDebianForLoader := {
     val debianFile = (packageBin in Debian).value
