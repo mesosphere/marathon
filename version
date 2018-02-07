@@ -19,6 +19,12 @@ if [ "$#" -eq 1 ] && [ "$1" == "commit" ]; then
     exit 0
 fi
 
+# Version for Docker image, e.g. v1.7.42
+if [ "$#" -eq 1 ] && [ "$1" == "docker" ]; then
+    echo "v$MAJOR.$MINOR.$COMMIT_NUMBER"
+    exit 0
+fi
+
 # Echo verion
 # E.g. 1.7.42
 echo "$MAJOR.$MINOR.$COMMIT_NUMBER"

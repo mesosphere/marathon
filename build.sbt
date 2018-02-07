@@ -173,7 +173,10 @@ lazy val packagingSettings = Seq(
   dockerBaseImage := Dependency.V.OpenJDK,
   dockerRepository := Some("mesosphere"),
   daemonUser in Docker := "root",
-  version in Docker := { "v" + version.value },
+  version in Docker := {
+    import sys.process._
+    ("./version docker" !!).trim
+  },
   dockerBaseImage := "debian:jessie-slim",
   (defaultLinuxInstallLocation in Docker) := "/marathon",
   dockerCommands := {
