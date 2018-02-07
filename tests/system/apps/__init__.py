@@ -27,6 +27,10 @@ def docker_http_server():
     return load_app('docker-http-server')
 
 
+def healthcheck_and_volume():
+    return load_app('healthcheck-and-volume')
+
+
 def ucr_docker_http_server():
     return load_app('ucr-docker-http-server')
 
