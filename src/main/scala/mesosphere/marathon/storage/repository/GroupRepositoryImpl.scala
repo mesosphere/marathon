@@ -16,7 +16,8 @@ import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersione
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, PathId, Timestamp }
+import mesosphere.marathon.metrics.MultiTimer
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.{ RichLock, toRichFuture }
 
@@ -278,18 +279,25 @@ class StoredGroupRepositoryImpl[K, C, S](
   override def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] =
     async {
+      val timers = new MultiTimer()
+
+      val storedGroupCreation = timers.startSubTimer("CreateStoredGroup")
       val storedGroup = StoredGroup(rootGroup)
       beforeStore match {
         case Some(preStore) =>
           await(preStore(storedGroup))
         case _ =>
       }
+      storedGroupCreation.stop()
+
       val promise = Promise[RootGroup]()
       val oldRootFuture = lock {
         val old = rootFuture
         rootFuture = promise.future
         old
       }
+
+      val storeAndDeleteAppsAndPods = timers.startSubTimer("StoreAndDeleteAppsAndPods")
       val storeAppFutures = updatedApps.map(appRepository.store)
       val storePodFutures = updatedPods.map(podRepository.store)
       val deleteAppFutures = deletedApps.map(appRepository.deleteCurrent)
@@ -298,6 +306,7 @@ class StoredGroupRepositoryImpl[K, C, S](
       val storedPods = await(Future.sequence(storePodFutures).asTry)
       await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
       await(Future.sequence(deletePodFutures).recover { case NonFatal(e) => Done })
+      storeAndDeleteAppsAndPods.stop()
 
       def revertRoot(ex: Throwable): Done = {
         promise.completeWith(oldRootFuture)
@@ -306,7 +315,12 @@ class StoredGroupRepositoryImpl[K, C, S](
 
       (storedApps, storedPods) match {
         case (Success(_), Success(_)) =>
+
+          val storeRoot = timers.startSubTimer("StoreRoot")
           val storedRoot = await(storedRepo.store(storedGroup).asTry)
+          storeRoot.stop()
+          logger.info(s"RootGroupVersion=${rootGroup.version} $timers")
+
           storedRoot match {
             case Success(_) =>
               addToVersionCache(None, rootGroup)
@@ -337,20 +351,31 @@ class StoredGroupRepositoryImpl[K, C, S](
   @SuppressWarnings(Array("all")) // async/await
   override def storeRootVersion(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done] =
     async {
+      val timers = new MultiTimer()
+
+      val storedGroupCreation = timers.startSubTimer("CreateStoredGroup")
       val storedGroup = StoredGroup(rootGroup)
       beforeStore match {
         case Some(preStore) =>
           await(preStore(storedGroup))
         case _ =>
       }
+      storedGroupCreation.stop()
 
+      val storeAppsAndPods = timers.startSubTimer("StoreAppsAndPods")
       val storeAppFutures = updatedApps.map(appRepository.store)
       val storePodFutures = updatedPods.map(podRepository.store)
       val storedApps = await(Future.sequence(Seq(storeAppFutures, storePodFutures).flatten).asTry)
+      storeAppsAndPods.stop()
 
       storedApps match {
         case Success(_) =>
+
+          val storeRoot = timers.startSubTimer("StoreRoot")
           val storedRoot = await(storedRepo.storeVersion(storedGroup).asTry)
+          storeRoot.stop()
+          logger.info(s"RootGroupVersion=${rootGroup.version} $timers")
+
           storedRoot match {
             case Success(_) =>
               addToVersionCache(None, rootGroup)

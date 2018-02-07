@@ -16,6 +16,7 @@ import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.metrics.MultiTimer
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.upgrade.GroupVersioningUtil
@@ -23,6 +24,7 @@ import mesosphere.marathon.util.{ LockedVar, WorkQueue }
 
 import scala.async.Async._
 import scala.collection.immutable.Seq
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
@@ -108,31 +110,58 @@ class GroupManagerImpl(
     change: (RootGroup) => Future[Either[T, RootGroup]],
     version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
+    val timers = new MultiTimer()
+
     // All updates to the root go through the work queue.
     val maybeDeploymentPlan: Future[Either[T, DeploymentPlan]] = serializeUpdates {
       logger.info(s"Upgrade root group version:$version with force:$force")
 
       val from = rootGroup()
       async {
+
+        val changedGroupTimer = timers.startSubTimer("ChangeRootGroup")
         val changedGroup = await(change(from))
+        changedGroupTimer.stop()
+
         changedGroup match {
           case Left(left) =>
             Left(left)
           case Right(changed) =>
+
+            val assignDynamicServicePortsTimer = timers.startSubTimer("AssignDynamicServicePorts")
             val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
               from,
               changed)
+            assignDynamicServicePortsTimer.stop()
+
+            val updateVersionInfoTimer = timers.startSubTimer("UpdateVersionInfo")
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
+            updateVersionInfoTimer.stop()
+
+            val validateGroupTimer = timers.startSubTimer("ValidateRootGroup")
             Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config.availableFeatures))
+            validateGroupTimer.stop()
+
+            val deploymentPlanCreationTimer = timers.startSubTimer("MakeDeploymentPlan")
             val plan = DeploymentPlan(from, withVersionedAppsPods, version, toKill)
             Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
+            deploymentPlanCreationTimer.stop()
+
             logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")
+            val storeRootGroupVersionTimer = timers.startSubTimer("StoreRootGroup")
             await(groupRepository.storeRootVersion(plan.target, plan.createdOrUpdatedApps, plan.createdOrUpdatedPods))
+            storeRootGroupVersionTimer.stop()
+
             await(deploymentService.get().deploy(plan, force))
+
+            val storeRootGroupTimer = timers.startSubTimer("StoreRootGroup")
             await(groupRepository.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods))
+            storeRootGroupTimer.stop()
+
             logger.info(s"Updated groups/apps/pods according to plan ${plan.id} for ${plan.targetIdsString}")
+            logger.info(s"DeploymentPlanId=${plan.id} $timers")
             // finally update the root under the write lock.
             root := Option(plan.target)
             Right(plan)
@@ -142,9 +171,11 @@ class GroupManagerImpl(
 
     maybeDeploymentPlan.onComplete {
       case Success(Right(plan)) =>
+
         logger.info(s"Deployment ${plan.id}:${plan.version} for ${plan.targetIdsString} acknowledged. Waiting to get processed")
         eventStream.publish(GroupChangeSuccess(id, version.toString))
       case Success(Left(_)) =>
+        logger.info(s"No root group update required for ${id}")
         ()
       case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event
