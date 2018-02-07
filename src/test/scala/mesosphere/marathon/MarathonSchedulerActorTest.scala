@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import akka.Done
 import akka.actor.{ ActorRef, Props }
-import akka.event.{ EventStream, Logging }
+import akka.event.{ EventStream }
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
@@ -432,26 +432,24 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     )
     val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(createRootGroup(), rootGroup)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup).copy(id = "restart-deployments-d2")
 
     deploymentRepo.delete(any) returns Future.successful(Done)
-    deploymentRepo.all() returns Source.single(plan)
+    deploymentRepo.all() returns Source.single(plan.copy(id = "restart-deployments-d1"))
     deploymentRepo.store(plan) returns Future.successful(Done)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
     instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
     val schedulerActor = createActor()
 
-    val probe = TestProbe("election")
-
-    system.eventStream.subscribe(probe.ref, classOf[Logging.Info])
-
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      probe.fishForMessage(){
-        case i: Logging.Info => i.message == "Scheduler actor ready"
-        case _ => false
-      }
+
+      // should fail...
+      val answer2 = expectMsgType[DeploymentStarted]
+      //      answer2.cmd should equal(Deploy(plan))
+      //      answer2.reason.isInstanceOf[AppLockedException] should be(true)
+
       schedulerActor ! Deploy(plan)
 
       // This indicates that the deployment is already running,
@@ -460,7 +458,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       answer.cmd should equal(Deploy(plan))
       answer.reason.isInstanceOf[AppLockedException] should be(true)
     } finally {
-      system.eventStream.unsubscribe(probe.ref)
+      //      system.eventStream.unsubscribe(probe.ref)
       stopActor(schedulerActor)
     }
   }
