@@ -148,14 +148,11 @@ def build(): utils.SemVer = {
   provisionHost()
 
   val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
-  // TODO: Enable again.
-  /*
   try {
     compileAndTest(logFileName)
   } finally {
     zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
   }
-  */
 
   val version = createTarballPackages()
   version
