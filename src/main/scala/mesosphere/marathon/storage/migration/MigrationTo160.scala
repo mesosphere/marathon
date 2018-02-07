@@ -16,12 +16,12 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkPersistenceStore
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{ JsValue, Json }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer) extends StrictLogging {
+class MigrationTo160(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
-  def migrate(): Future[Done] = {
+  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     MigrationTo160.migrateReservations(instanceRepository, persistenceStore)
   }
 }
