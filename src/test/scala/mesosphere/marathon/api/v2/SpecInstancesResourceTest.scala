@@ -15,7 +15,6 @@ import mesosphere.marathon.state.{ PathId, _ }
 import mesosphere.marathon.test.{ GroupCreation, SettableClock }
 import org.mockito.Matchers
 import org.mockito.Mockito._
-import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.concurrent.duration._

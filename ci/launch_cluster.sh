@@ -42,7 +42,7 @@ template_parameters:
     DefaultInstanceType: m4.large
     AdminLocation: 0.0.0.0/0
     PublicSlaveInstanceCount: 1
-    SlaveInstanceCount: 5
+    SlaveInstanceCount: 3
     LicenseKey: $DCOS_LICENSE
 EOF
 

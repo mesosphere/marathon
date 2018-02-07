@@ -2,9 +2,9 @@ package mesosphere.marathon
 package api.akkahttp
 
 import akka.http.scaladsl.model.Uri
-import akka.http.scaladsl.model.Uri.{ Path, Query }
-import akka.http.scaladsl.server.MalformedQueryParamRejection
+import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.MalformedQueryParamRejection
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import mesosphere.UnitTest
 

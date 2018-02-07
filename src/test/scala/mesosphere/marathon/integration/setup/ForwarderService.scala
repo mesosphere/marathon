@@ -61,7 +61,7 @@ class ForwarderService extends StrictLogging {
     start(trustStoreArgs, Seq("forwarder", forwardTo.toString, httpArg, port.toString) ++ args).map(_ => port)(CallerThreadExecutionContext.callerThreadExecutionContext)
   }
 
-  private def start(trustStore: Seq[String] = Nil, args: Seq[String] = Nil): Future[Done] = {
+  private def start(trustStore: Seq[String], args: Seq[String]): Future[Done] = {
     logger.info(s"Starting forwarder '${args.mkString(" ")}'")
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
@@ -167,6 +167,7 @@ object ForwarderService extends StrictLogging {
         createHelloApp(tail: _*)
       case "forwarder" :: port :: tail =>
         createForwarder(forwardToPort = port.toInt, tail: _*)
+      case args => throw new IllegalArgumentException(s"Unexpected forwarder args: $args")
     }
     service.startAsync().awaitRunning()
     service.awaitTerminated()

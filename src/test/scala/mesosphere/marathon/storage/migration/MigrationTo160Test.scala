@@ -4,16 +4,13 @@ package storage.migration
 import java.time.{ OffsetDateTime, ZoneOffset }
 
 import akka.Done
-import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Source
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.instance.{ Instance, Reservation, TestInstanceBuilder }
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkPersistenceStore, ZkSerialized }
+import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state._
@@ -21,19 +18,16 @@ import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.test.GroupCreation
 import org.apache.mesos
 import org.apache.mesos.Protos.NetworkInfo.Protocol
-import play.api.libs.json.{ JsValue, Json }
-import play.api.libs.json._
+import play.api.libs.json.{ JsValue, Json, _ }
 
-import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContextExecutor, Future }
-import scala.util.Try
 
 class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogging {
 
   "Migration to 1.6.0" should {
     "do migration for instances with tasks with reservations" in new Fixture {
       initMocks()
-      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
+      MigrationTo160.migrateReservations(instanceRepository, persistenceStore).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance3 = instance3.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
@@ -48,7 +42,7 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
     "don't change instances without reservations" in new Fixture {
       override val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(tasksMap = Map.empty)
       initMocks()
-      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
+      MigrationTo160.migrateReservations(instanceRepository, persistenceStore).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance3 = instance3
@@ -64,7 +58,7 @@ class MigrationTo160Test extends AkkaUnitTest with GroupCreation with StrictLogg
       override val instance = TestInstanceBuilder.emptyInstance(instanceId = instanceId1).copy(tasksMap = Map.empty, reservation = Some(Reservation(Nil, Reservation.State.New(None))))
       override val instance3 = TestInstanceBuilder.emptyInstance(instanceId = instanceId3).copy(reservation = Some(Reservation(Nil, Reservation.State.New(None))))
       initMocks()
-      MigrationTo160.migrateReservations(instanceRepository, persistenceStore)(ctx, mat).futureValue
+      MigrationTo160.migrateReservations(instanceRepository, persistenceStore).futureValue
       val targetInstance = instance.copy(reservation = Some(Reservation(Nil, Reservation.State.New(None))))
       val targetInstance2 = instance2.copy(reservation = Some(Reservation(Nil, Reservation.State.Launched)))
       val targetInstance3 = instance3

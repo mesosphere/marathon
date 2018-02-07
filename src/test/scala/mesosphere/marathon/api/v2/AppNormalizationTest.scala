@@ -103,7 +103,7 @@ class AppNormalizationTest extends UnitTest {
       }
     }
 
-    def updateNormalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
+    def updateNormalizer(defaultNetworkName: Option[String], mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
       val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName)
       Normalization[AppUpdate] { app =>
         AppNormalization.forUpdates(config)

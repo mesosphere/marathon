@@ -30,7 +30,7 @@ object MigrationTo160 extends StrictLogging {
   /**
     * This function traverses all instances in ZK, and moves reservation objects from tasks to the instance level.
     */
-  def migrateReservations(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migrateReservations(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])(implicit mat: Materializer): Future[Done] = {
 
     logger.info("Starting reservations migration to 1.6.0")
 

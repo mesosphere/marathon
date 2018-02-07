@@ -151,21 +151,17 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ```
 
 ### GROUP_BY operator
-**Value** (optional): An integer, for example `"3"`.
+**value** (optional): An integer, indicating how many distinct values can be expected for the given `fieldName`, for example `"3"`.
 
-`GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability.
+`GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability. Be aware that not specifying a value for this operator will lead to non-deterministic results based on the order of offers that Marathon receives. This is because Marathon will only discover distinct values of the provided `fieldName` when it receives offers.
 
-``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
-    "id": "sleep-group-by",
-    "cmd": "sleep 60",
-    "instances": 3,
-    "constraints": [["rack_id", "GROUP_BY"]]
-  }'
-```
+Imagine the following scenario: Marathon is trying to launch 9 tasks and is constrained by `["rack_id", "GROUP_BY"]`, i.e. without a specified value. Now, for some time, Marathon is only receiving offers from agents specifying `"rack_1"` and `"rack_2"` and will evenly distribute 8 tasks over these 2 racks. When Marathon eventually receives an offer from `"rack_3"`, it will place a task there, but the result is obviously not an even distribution. Several things to note here:
 
-Marathon only knows about different values of the attribute (e.g. "`rack_id`") by analyzing incoming offers from Mesos. If tasks are not already spread across all possible values, specify the number of values in constraints. If you don't specify the number of values, you might find that the tasks are only distributed in one value, even though you are using the GROUP_BY constraint. For example, if you are spreading across 3 racks, use:
+1. In the above scenario, Marathon will not kill any task in order to group by the newly discovered third rack.
+2. Specifying the value `"3"` in this case will only place 2 tasks, one on `"rack_1"` and one on `"rack_2"`, and then wait until an offer from a third rack is received.
+3. Specifying a value `"3"` when there's actually 5 racks will not prevent Marathon from placing tasks on additional racks. It only means that Marathon will distribute evenly across at least 3 racks.
 
+Example:
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "id": "sleep-group-by",

@@ -3,6 +3,7 @@ package stream
 
 import java.io.{ File, IOException }
 import java.net.URI
+import java.nio.charset.Charset
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
@@ -29,7 +30,7 @@ class UriIOTest extends AkkaUnitTest {
       val file = File.createTempFile("marathon-file", ".test")
       file.deleteOnExit()
       val content = s"Hello World ${System.currentTimeMillis()}"
-      FileUtils.write(file, content)
+      FileUtils.write(file, content, Charset.defaultCharset)
       UriIO.reader(new URI(s"file://${file.getAbsolutePath}")).runWith(Sink.foreach[ByteString]{ bs =>
         bs.utf8String shouldBe content
       }).futureValue
@@ -41,7 +42,7 @@ class UriIOTest extends AkkaUnitTest {
       file.deleteOnExit()
       val content = s"Hello World ${System.currentTimeMillis()}"
       Source.single(ByteString(content)).runWith(UriIO.writer(new URI(s"file://${file.getAbsolutePath}"))).futureValue
-      FileUtils.readFileToString(file) shouldBe content
+      FileUtils.readFileToString(file, Charset.defaultCharset) shouldBe content
       file.delete()
     }
 

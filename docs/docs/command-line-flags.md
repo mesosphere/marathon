@@ -104,7 +104,7 @@ When using Debian packages, these environment variables should be defined in `/e
     in milliseconds, between application scaling operations.
 * `--task_launch_timeout` (Optional. Default: 300000 (5 minutes)):
     Time, in milliseconds, to wait for a task to enter the `TASK_RUNNING` state
-    before killing it.
+    before killing it. See also `--task_launch_confirm_timeout`.
 * `--zk` (Optional. Default: `zk://localhost:2181/marathon`): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
     - <span class="label label-default">v1.1.2</span> Format: `zk://user@pass:host1:port1,user@pass:host2:port2,.../path`.
@@ -223,7 +223,7 @@ incoming resource offer, i.e. finding suitable tasks to launch for incoming offe
 All launched tasks are stored before launching them. There is also a timeout for this:
 
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 300000 (5 minutes)):
-  Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
+  Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it. Also see `--task_launch_timeout`.
 
 When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
 Marathon can request all available offers from Mesos again -- even those that it has recently rejected. To avoid
@@ -317,6 +317,8 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--leader_proxy_ssl_ignore_hostname` (Optional. Default: false): Do not
     verify that the hostname of the Marathon leader matches the one in the SSL
     certificate when proxying API requests to the current leader.
+* `--[disable_]http_compression` (Optional. Default: enabled): Specifies whether Marathon should compress HTTP responses
+    for clients that support it. Disabling will reduce the CPU burden on Marathon to service API requests.
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
     concurrent HTTP requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.

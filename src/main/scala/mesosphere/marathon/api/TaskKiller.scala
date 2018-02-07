@@ -44,8 +44,8 @@ class TaskKiller @Inject() (
           val launchedInstances = foundInstances.filter(_.isLaunched)
 
           if (wipe) {
-            val done1 = await(expunge(foundInstances))
-            val done2 = await(killService.killInstances(launchedInstances, KillReason.KillingTasksViaApi))
+            val expunged = await(expunge(foundInstances))
+            val killed = await(killService.killInstances(launchedInstances, KillReason.KillingTasksViaApi))
           } else {
             if (launchedInstances.nonEmpty) service.killInstances(runSpecId, launchedInstances)
           }

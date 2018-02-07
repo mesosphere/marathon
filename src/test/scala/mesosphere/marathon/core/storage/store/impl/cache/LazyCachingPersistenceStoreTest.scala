@@ -83,7 +83,6 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
         store.store("task-1", updated).futureValue should be(Done) // redundant store should not lead to dup data
 
         val storageId = ir.toStorageId("task-1", None)
-        val cacheKey = (ir.category, storageId)
 
         store.versionedValueCache.size should be(2)
         store.versionedValueCache((storageId, original.version)) should be(Some(original))
@@ -101,7 +100,6 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
         store.deleteVersion("task-1", original.version).futureValue should be(Done)
 
         val storageId = ir.toStorageId("task-1", None)
-        val cacheKey = (ir.category, storageId)
 
         store.versionCache.size should be(0)
         store.versionedValueCache.size should be(0)

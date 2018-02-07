@@ -1135,7 +1135,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         name = "withTTY",
         resources = Resources(),
         tty = Some(true),
-        lifecycle = Some(Lifecycle(Some(killDuration.toSeconds))))
+        lifecycle = Some(Lifecycle(Some(killDuration.toSeconds.toDouble))))
 
       val podSpec = PodDefinition(id = PathId("/tty"), containers = Seq(container))
       val instanceId = Instance.Id.forRunSpec(podSpec.id)

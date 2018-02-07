@@ -137,7 +137,7 @@ object CuratorElectionStream extends StrictLogging {
         }
       }
 
-      val selfParticipantCount = participants.iterator.filter(_.getId == hostPort).size
+      val selfParticipantCount = participants.iterator.count(_.getId == hostPort)
       if (selfParticipantCount == 1) {
         val element = participants.find(_.isLeader).map(_.getId) match {
           case Some(leader) if leader == hostPort => LeadershipState.ElectedAsLeader
