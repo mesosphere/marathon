@@ -70,10 +70,9 @@ def zipLogs(logFileName: String = "ci.log"): Unit = {
 def uploadTarballPackagesToS3(version: utils.SemVer, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
   import scala.collection.breakOut
 
-
   // Upload docs
-  val docsPath = PACKAGE_DOCS_DIR / s"marathon-docs-$version.tgz"
-  awsClient.upload(docsPath, awsClient.s3PathFor(buildLocation))
+  PACKAGE_DOCS_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
+    .headOption.foreach(file => awsClient.upload(Path(file), awsClient.s3PathFor(buildLocation)))
 
   // Upload Marathon
   PACKAGE_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
@@ -90,7 +89,7 @@ def createTarballPackages(): utils.SemVer = utils.stage("Package Tarballs") {
   val result = %%('sbt, "universal:packageZipTarball", "universal-docs:packageZipTarball")
 
   val version = %%("./version").out.string.trim
-  val gitSha = %%('git, "rev-parse", "--short", "HEAD").out.string.take(7)
+  val gitSha = %%("./version", "commit").out.string.trim
 
   println(s"Built tarballs for Marathon $version.")
   utils.SemVer(version, gitSha)
