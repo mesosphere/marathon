@@ -9,18 +9,22 @@ import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.storage.repository.GroupRepository
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration.DurationInt
 //scalastyle:on
 /**
   * Trigger rescale of affected app if a task died or a reserved task timed out.
   */
 class ScaleAppUpdateStepImpl @Inject() (
-    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends InstanceChangeHandler {
+    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef],
+    groupRepositoryProvider: Provider[GroupRepository]) extends InstanceChangeHandler {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
+  private[this] lazy val groupRepository = groupRepositoryProvider.get()
 
   private[this] def scalingWorthy: Condition => Boolean = {
     case Condition.Reserved | Condition.UnreachableInactive | _: Condition.Terminal => true
@@ -36,7 +40,9 @@ class ScaleAppUpdateStepImpl @Inject() (
   }
 
   def calcScaleEvent(update: InstanceChange): Option[ScaleRunSpec] = {
-    if (scalingWorthy(update.condition) && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
+    val group = Await.result(groupRepository.root(), 100.millis)
+    val isOneTime = group.runSpec(update.runSpecId).exists(_.oneTime)
+    if (!isOneTime && scalingWorthy(update.condition) && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
       val runSpecId = update.runSpecId
       val instanceId = update.id
       val state = update.condition

@@ -77,15 +77,15 @@ class HistoryActorTest extends AkkaUnitTest with ImplicitSender {
       verify(failureRepo).store(TaskFailure.FromMesosStatusUpdateEvent(message).get)
     }
 
-    "Ignore TASK_RUNNING" in new Fixture {
-      val message = statusMessage(TASK_RUNNING)
+    "Store TASK_FINISHED" in new Fixture {
+      val message = statusMessage(TASK_FINISHED)
       historyActor ! message
 
-      verify(failureRepo, times(0)).store(any)
+      verify(failureRepo).store(TaskFailure.FromMesosStatusUpdateEvent(message).get)
     }
 
-    "Ignore TASK_FINISHED" in new Fixture {
-      val message = statusMessage(TASK_FINISHED)
+    "Ignore TASK_RUNNING" in new Fixture {
+      val message = statusMessage(TASK_RUNNING)
       historyActor ! message
 
       verify(failureRepo, times(0)).store(any)
