@@ -153,7 +153,7 @@ lazy val packagingSettings = Seq(
   (packageName in Universal) := {
     import sys.process._
     val shortCommit = ("./version commit" !!).trim
-    s"${packageName.value}-${version.value}-${shortCommit}"
+    s"${packageName.value}-${version.value}-$shortCommit"
   },
 
   /* Universal packaging (docs) - http://sbt-native-packager.readthedocs.io/en/latest/formats/universal.html
@@ -162,7 +162,7 @@ lazy val packagingSettings = Seq(
   (packageName in UniversalDocs) := {
     import sys.process._
     val shortCommit = ("./version commit" !!).trim
-    s"${packageName.value}-docs-${version.value}-${shortCommit}"
+    s"${packageName.value}-docs-${version.value}-$shortCommit"
   },
   (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
   mappings in UniversalDocs ++= directory("docs/docs"),
@@ -222,7 +222,7 @@ lazy val packagingSettings = Seq(
   version in Rpm := {
     import sys.process._
     val shortCommit = ("./version commit" !!).trim
-    s"${version.value}.shortCommit"
+    s"${version.value}.$shortCommit"
   },
 
   packageDebianForLoader := {
