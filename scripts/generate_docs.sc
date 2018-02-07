@@ -34,9 +34,9 @@ val docsTargetVersions = %%('git, "tag", "-l", "--sort=version:refname").out.lin
       true
     case _ => false
   }
-}).mapValues{ tags => tags.last.drop(1)}.toList.sortBy(_._1).map(_._2).filterNot(v => ignoredVersions.contains(v)).reverse.take(3).reverse
+}).mapValues{ tags => tags.last.drop(1)}.toList.sortBy(_._1).filterNot { case (b, v) => ignoredVersions.contains(v)}.reverse.take(3).reverse
 
-val latestReleaseVersion = docsTargetVersions.last
+val (latestReleaseBranch, latestReleaseVersion) = docsTargetVersions.last
 
 val buildDir = makeTmpDir()
 
@@ -46,35 +46,35 @@ def generateDocsForVersion(docsPath: Path, version: String, outputPath: String =
   %('bundle, "exec", s"jekyll build --config _config.yml,_config.$version.yml -d $outputPath/$version/")(docsPath)
 }
 
-def tagNameForVersion(version: String) = {
+def branchForTag(version: String) = {
   s"tags/v$version"
 }
 
 
 // step 1: copy docs/docs to the respective dirs
 
-docsTargetVersions foreach { version =>
-  val tagName = tagNameForVersion(version)
+docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
+  val tagName = branchForTag(tagVersion)
 
   %git('checkout, s"$tagName")
 
-  val tagBuildDir = buildDir/version
+  val tagBuildDir = buildDir/releaseBranchVersion
 
   mkdir! tagBuildDir
 
-  println(s"Copying $version docs to: $tagBuildDir")
+  println(s"Copying $tagVersion docs to: $tagBuildDir")
 
   cp.into(docsDir/'docs, tagBuildDir)
 
   cp.into(docsDir/'_layouts/"docs.html", tagBuildDir)
 
-  println(s"Docs folder for $version is copied to ${tagBuildDir / "docs"}")
+  println(s"Docs folder for $releaseBranchVersion is copied to ${tagBuildDir / "docs"}")
 
 }
 
 // step 2: generate the default version (latest release)
 
-%git('checkout, tagNameForVersion(latestReleaseVersion))
+%git('checkout, branchForTag(latestReleaseVersion))
 
 
 println(s"Copying docs for $latestReleaseVersion into $buildDir")
@@ -92,17 +92,17 @@ println(s"Generating root docs for $latestReleaseVersion")
 
 
 // step 3: generate docs for other versions
-println(s"Generating docs for versions ${docsTargetVersions.mkString(", ")}")
-docsTargetVersions foreach { version =>
+println(s"Generating docs for versions ${docsTargetVersions.map(_._2).mkString(", ")}")
+docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
 
   println("Cleaning docs/docs")
   rm! rootDocsDir / 'docs
-  println(s"Copying docs for $version to the docs/docs folder")
-  cp.into(buildDir/version/'docs, rootDocsDir)
-  cp.over(buildDir/version/"docs.html", rootDocsDir/'_layouts/"docs.html")
-  println(s"Generation docs for $version")
-  write.over(rootDocsDir/s"_config.$version.yml", s"baseurl : /marathon/$version")
-  generateDocsForVersion(rootDocsDir, version)
+  println(s"Copying docs for $tagVersion to the docs/docs folder")
+  cp.into(buildDir/releaseBranchVersion/'docs, rootDocsDir)
+  cp.over(buildDir/releaseBranchVersion/"docs.html", rootDocsDir/'_layouts/"docs.html")
+  println(s"Generation docs for $tagVersion")
+  write.over(rootDocsDir/s"_config.$releaseBranchVersion.yml", s"baseurl : /marathon/$releaseBranchVersion")
+  generateDocsForVersion(rootDocsDir, releaseBranchVersion)
 }
 
 
