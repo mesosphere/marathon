@@ -355,7 +355,7 @@ class UbuntuUpstartTest extends MesosTest {
 
 // Test the sbt-native-packager docker produced image
 class DockerImageTest extends MesosTest {
-  val tag = sys.env.getOrElse("DOCKER_TAG", %%(pwd/up/up/'version).out.string.trim)
+  val tag = sys.env.getOrElse("DOCKER_TAG", "v" + %%(pwd/up/up/'version).out.string.trim)
   val image = s"mesosphere/marathon:${tag}"
 
   var mesos: Container = _
