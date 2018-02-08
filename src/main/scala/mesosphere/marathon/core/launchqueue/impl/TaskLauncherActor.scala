@@ -323,7 +323,7 @@ private class TaskLauncherActor(
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
-      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
+      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.isLost }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>

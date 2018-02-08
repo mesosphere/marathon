@@ -16,7 +16,7 @@ object ScalingProposition {
     scaleTo: Int,
     killSelection: KillSelection): ScalingProposition = {
 
-    val killingTaskCount = runningTasks.count(_.state.condition == Condition.Killing)
+    val killingTaskCount = runningTasks.count(_.isKilling)
 
     val runningTaskMap = Instance.instancesById(runningTasks)
     val toKillMap = Instance.instancesById(toKill.getOrElse(Seq.empty))
@@ -60,16 +60,16 @@ object ScalingProposition {
     * @return true if a comes before b
     */
   def sortByConditionAndDate(select: KillSelection)(a: Instance, b: Instance): Boolean = {
-    val weightA = weight(a.state.condition)
-    val weightB = weight(b.state.condition)
+    val weightA = weight(a)
+    val weightB = weight(b)
 
     if (weightA < weightB) true
     else if (weightA > weightB) false
-    else if (a.state.condition == Condition.Staging && b.state.condition == Condition.Staging) {
+    else if (a.isStaging && b.isStaging) {
       // Both are staging.
       select(stagedAt(a), stagedAt(b))
-    } else if (a.state.condition == Condition.Starting && b.state.condition == Condition.Starting) {
-      select(a.state.since, b.state.since)
+    } else if (a.isStarting && b.isStarting) {
+      select(a.startingSince, b.startingSince)
     } else {
       // Both are assumed to be started.
       // None is actually an error case :/
@@ -84,11 +84,13 @@ object ScalingProposition {
   }
 
   /** tasks with lower weight should be killed first */
-  private val weight: Map[Condition, Int] = Map[Condition, Int](
-    Condition.Unreachable -> 1,
-    Condition.Staging -> 2,
-    Condition.Starting -> 3,
-    Condition.Running -> 4).withDefaultValue(5)
+  private def weight(instance: Instance): Int = {
+    if (instance.isUnreachable) 1
+    else if (instance.isStaging) 2
+    else if (instance.isStarting) 3
+    else if (instance.isRunning) 4
+    else 5
+  }
 
   private def stagedAt(instance: Instance): Timestamp = {
     val stagedTasks = instance.tasksMap.values.map(_.status.stagedAt)

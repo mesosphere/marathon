@@ -32,28 +32,53 @@ case class Instance(
     reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] with Placed {
 
   val runSpecId: PathId = instanceId.runSpecId
-  val isLaunched: Boolean = state.condition.isActive
+
+  def allTasksAre(predicate: Task => Boolean): Boolean = tasksMap.values.forall(predicate)
+  def allTasksAre(condition: Condition): Boolean = allTasksAre(_.status.condition == condition)
+  def someTasksAre(predicate: Task => Boolean): Boolean = tasksMap.values.exists(predicate)
+  def someTasksAre(condition: Condition): Boolean = someTasksAre(_.status.condition == condition)
+  def noTaskIs(predicate: Task => Boolean): Boolean = !tasksMap.values.exists(predicate)
+  def noTaskIs(condition: Condition): Boolean = noTaskIs(_.status.condition == condition)
 
   // An instance has to be considered as Reserved if at least one of its tasks is Reserved.
-  def isReserved: Boolean = tasksMap.values.exists(_.status.condition == Condition.Reserved)
+  def isReserved: Boolean = someTasksAre(Condition.Reserved)
+  def isCreated: Boolean = someTasksAre(Condition.Created)
+  def isStaging: Boolean = someTasksAre(Condition.Staging)
+  def isStarting: Boolean = someTasksAre(Condition.Starting)
+  def isActive: Boolean = someTasksAre(_.status.condition.isActive)
+  def isLaunched: Boolean = isActive
+  def isRunning: Boolean = someTasksAre(Condition.Running)
+  def isKilling: Boolean = someTasksAre(Condition.Killing)
+  def isKilled: Boolean = someTasksAre(Condition.Killed)
+  def isFinished: Boolean = someTasksAre(Condition.Finished)
+  def isTerminated: Boolean = someTasksAre(_.status.condition.isTerminal)
+  def isDropped: Boolean = someTasksAre(Condition.Dropped)
+  def isError: Boolean = someTasksAre(Condition.Error)
+  def isFailed: Boolean = someTasksAre(Condition.Failed)
+  def isUnreachable: Boolean = someTasksAre(Condition.Unreachable)
+  def isLost: Boolean = someTasksAre(_.status.condition.isLost)
+  def isGone: Boolean = someTasksAre(Condition.Gone)
+  def isUnknown: Boolean = someTasksAre(Condition.Unknown)
 
-  def isCreated: Boolean = state.condition == Condition.Created
-  def isError: Boolean = state.condition == Condition.Error
-  def isFailed: Boolean = state.condition == Condition.Failed
-  def isFinished: Boolean = state.condition == Condition.Finished
-  def isKilled: Boolean = state.condition == Condition.Killed
-  def isKilling: Boolean = state.condition == Condition.Killing
-  def isRunning: Boolean = state.condition == Condition.Running
-  def isStaging: Boolean = state.condition == Condition.Staging
-  def isStarting: Boolean = state.condition == Condition.Starting
-  def isUnreachable: Boolean = state.condition == Condition.Unreachable
   def isUnreachableInactive: Boolean = state.condition == Condition.UnreachableInactive
-  def isGone: Boolean = state.condition == Condition.Gone
-  def isUnknown: Boolean = state.condition == Condition.Unknown
-  def isDropped: Boolean = state.condition == Condition.Dropped
-  def isTerminated: Boolean = state.condition.isTerminal
-  def isActive: Boolean = state.condition.isActive
   def hasReservation: Boolean = reservation.isDefined
+
+  def since(condition: Condition): Timestamp = {
+    val filteredTasks = tasksMap.values.filter(_.status.condition == condition).to[Seq]
+    val sinceTimestamps = filteredTasks.flatMap(_.status.since)
+    if (sinceTimestamps.isEmpty) {
+      if (condition == state.condition) {
+        state.since
+      } else {
+        Timestamp.now()
+      }
+    } else {
+      sinceTimestamps.min
+    }
+  }
+
+  def startingSince: Timestamp = since(Condition.Starting)
+  def runningSince: Timestamp = since(Condition.Running)
 
   override def mergeFromProto(message: Protos.Json): Instance = {
     Json.parse(message.getJson).as[Instance]
@@ -128,6 +153,7 @@ object Instance {
       */
     @SuppressWarnings(Array("TraversableHead"))
     def apply(
+      maybeNewCondition: Option[Condition],
       maybeOldState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
@@ -136,7 +162,13 @@ object Instance {
       val tasks = newTaskMap.values
 
       // compute the new instance condition
-      val condition = conditionFromTasks(tasks, now, unreachableStrategy)
+      val computedCondition = maybeNewCondition.getOrElse(conditionFromTasks(tasks, now, unreachableStrategy))
+      val condition =
+        if (computedCondition == Condition.Unreachable && shouldBecomeInactive(tasks, now, unreachableStrategy)) {
+          Condition.UnreachableInactive
+        } else {
+          computedCondition
+        }
 
       val active: Option[Timestamp] = activeSince(tasks)
 
@@ -384,25 +416,23 @@ object Instance {
   )
 }
 
-/**
-  * Represents legacy handling for instances which was started in behalf of an AppDefinition. Take care that you
-  * do not use this for other use cases than the following three:
-  *
-  * - HealthCheckActor (will be changed soon)
-  * - InstanceOpFactoryHelper and InstanceOpFactoryImpl (start resident and ephemeral tasks for an AppDefinition)
-  * - Migration to 1.4
-  *
-  * @param instanceId calculated instanceId based on the taskId
-  * @param agentInfo according agent information of the task
-  * @param state calculated instanceState based on taskState
-  * @param tasksMap a map of one key/value pair consisting of the actual task
-  * @param runSpecVersion the version of the task related runSpec
-  */
 object LegacyAppInstance {
+  /**
+    * Represents legacy handling for instances which was started in behalf of an AppDefinition. Take care that you
+    * do not use this for other use cases than the following three:
+    *
+    * - HealthCheckActor (will be changed soon)
+    * - InstanceOpFactoryHelper and InstanceOpFactoryImpl (start resident and ephemeral tasks for an AppDefinition)
+    * - Migration to 1.4
+    *
+    * @param task a task for which create a legacy app instance
+    * @param agentInfo according agent information of the task
+    * @param unreachableStrategy an unreachable strategy to be applied to an instance
+    */
   def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+    val state = Instance.InstanceState(None, None, tasksMap, since, unreachableStrategy)
 
     new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }

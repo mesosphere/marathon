@@ -8,8 +8,8 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule, InstanceStateOpProcessor }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.core.task.tracker.{ InstanceStateOpProcessor, InstanceTracker, InstanceTrackerModule }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.Sink
@@ -454,6 +454,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     TaskStatus.newBuilder
       .setTaskId(Task.Id.forInstanceId(instance.instanceId, None).mesosTaskId)
       .setState(state)
+      .setTimestamp(Timestamp.now().toInstant.getEpochSecond.toDouble)
       .build
   }
 
@@ -470,7 +471,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
     assert(task.isLaunched)
     assert(
-      task.tasksMap.values.map(_.status.mesosStatus.get).forall(status => status == stateOp.mesosStatus),
+      task.tasksMap.values.map(_.status.mesosStatus.get).forall { status =>
+        status.getState == stateOp.mesosStatus.getState &&
+          status.getTaskId.getValue == stateOp.mesosStatus.getTaskId.getValue
+      },
       s"Should have task status ${stateOp.mesosStatus}")
   }
 

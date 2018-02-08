@@ -167,12 +167,14 @@ class TasksController(
         .runFold(Map[Id, Seq[Health]]())(_ ++ _)
     )
 
-    def isInterestingInstance(condition: Condition) = conditionSet.isEmpty || conditionSet(condition)
-    def isAuthorized(appId: PathId): Boolean = appIdsToApps(appId).fold(false)(id => authorizer.isAuthorized(identity, ViewRunSpec, id))
+    def isInterestingInstance(instance: Instance) =
+      conditionSet.isEmpty || instance.someTasksAre { task => conditionSet.contains(task.status.condition) }
+    def isAuthorized(appId: PathId): Boolean =
+      appIdsToApps(appId).fold(false)(id => authorizer.isAuthorized(identity, ViewRunSpec, id))
 
     instances
       .filter {
-        case (appId, instance) => isAuthorized(appId) && isInterestingInstance(instance.state.condition)
+        case (appId, instance) => isAuthorized(appId) && isInterestingInstance(instance)
       }
       .flatMap {
         case (appId, instance) => instance.tasksMap.values.map { task =>

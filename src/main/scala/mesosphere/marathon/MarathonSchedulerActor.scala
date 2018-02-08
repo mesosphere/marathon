@@ -431,7 +431,7 @@ class SchedulerActions(
   def scale(runSpec: RunSpec): Future[Done] = async {
     logger.debug("Scale for run spec {}", runSpec)
 
-    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.state.condition.isActive)
+    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.isActive)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)

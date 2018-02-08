@@ -152,10 +152,10 @@ private[health] class HealthCheckActor(
   }
 
   def ignoreFailures(instance: Instance, health: Health): Boolean = {
-    // ignore all failures during the grace period aa well as for instances that are not running
+    // ignore all failures during the grace period as well as for instances that are not running
     if (instance.isRunning) {
       // ignore if we haven't had a successful health check yet and are within the grace period
-      health.firstSuccess.isEmpty && instance.state.since + healthCheck.gracePeriod > Timestamp.now()
+      health.firstSuccess.isEmpty && instance.runningSince + healthCheck.gracePeriod > Timestamp.now()
     } else {
       true
     }

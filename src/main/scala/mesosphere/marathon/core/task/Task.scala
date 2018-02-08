@@ -70,6 +70,17 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 
   private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
+  private[this] def timestampMesosStatus(status: TaskStatus): TaskStatus = {
+    if (status.hasTimestamp) {
+      status
+    } else {
+      val now = Timestamp.now()
+      status.toBuilder
+        .setTimestamp(now.toInstant.getEpochSecond.toDouble)
+        .build()
+    }
+  }
+
   /** apply the given operation to a task */
   def update(instance: Instance, op: TaskUpdateOperation): TaskUpdateEffect = op match {
 
@@ -87,7 +98,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
     case TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, now) if !hasStartedRunning =>
       val updatedNetworkInfo = status.networkInfo.update(mesosStatus)
       val updatedTask = copy(status = status.copy(
-        mesosStatus = Some(mesosStatus),
+        mesosStatus = Some(timestampMesosStatus(mesosStatus)),
         condition = Condition.Running,
         startedAt = Some(now),
         networkInfo = updatedNetworkInfo))
@@ -98,7 +109,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
       // Note the task needs to transition to Reserved if the corresponding instance has a reservation,
       // otherwise the instance will not transition to Reserved.
       val newCondition = if (instance.hasReservation) Condition.Reserved else newStatus
-      val updatedStatus = status.copy(mesosStatus = Some(mesosStatus), condition = newCondition)
+      val updatedStatus = status.copy(mesosStatus = Some(timestampMesosStatus(mesosStatus)), condition = newCondition)
       val updated = copy(status = updatedStatus)
       TaskUpdateEffect.Update(updated)
 
@@ -107,7 +118,9 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
     // If Mesos says that it's running, then transition accordingly
     case update: TaskUpdateOperation.MesosUpdate if status.condition == Condition.Reserved =>
       if (update.condition.isActive) {
-        val updatedStatus = status.copy(startedAt = Some(update.now), mesosStatus = Some(update.taskStatus))
+        val updatedStatus = status.copy(
+          startedAt = Some(update.now),
+          mesosStatus = Some(timestampMesosStatus(update.taskStatus)))
         val updatedTask = Task(taskId = taskId, status = updatedStatus, runSpecVersion = runSpecVersion)
         TaskUpdateEffect.Update(updatedTask)
       } else {
@@ -120,7 +133,8 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
       updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
         val updatedNetworkInfo = status.networkInfo.update(mesosStatus)
         val updatedStatus = status.copy(
-          mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
+          mesosStatus = Some(timestampMesosStatus(newTaskStatus)), condition = newStatus,
+          networkInfo = updatedNetworkInfo)
         val updatedTask = copy(status = updatedStatus)
         // TODO(PODS): The instance needs to handle a terminal task via an Update here
         // Or should we use Expunge in case of a terminal update for resident tasks?
@@ -346,6 +360,13 @@ object Task {
       * @return the health status reported by mesos for this task
       */
     def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+
+    /**
+      * @return the timestamp of the last received status update, if there is any
+      */
+    def since: Option[Timestamp] = mesosStatus.withFilter(_.hasTimestamp).map { status =>
+      Timestamp.fromTaskStatus(status)
+    }
   }
 
   object Status {
