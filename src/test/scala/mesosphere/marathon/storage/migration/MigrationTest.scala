@@ -111,16 +111,11 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       mockedStore.isOpen returns true
       val currentPersistenceVersion =
         StorageVersions.current.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
-
-      mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(Some(currentPersistenceVersion))
-      mockedStore.endMigration() returns Future.successful(Done)
 
       migrate.migrate()
 
-      verify(mockedStore).startMigration()
       verify(mockedStore).storageVersion()
-      verify(mockedStore).endMigration()
       noMoreInteractions(mockedStore)
     }
 
@@ -238,13 +233,16 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val mockedStore = mock[PersistenceStore[_, _, _]]
       val f = new Fixture(mockedStore)
       mockedStore.startMigration() throws new StoreCommandFailedException("Migration is already in progress")
+      mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
 
       val migrate = f.migration
 
-      val thrown = the[StoreCommandFailedException] thrownBy migrate.migrate()
-      thrown.getMessage should equal("Migration is already in progress")
+      val thrown = the[MigrationFailedException] thrownBy migrate.migrate()
+      thrown.getMessage should equal("Migration Failed: Migration is already in progress")
+      thrown.getCause shouldBe a[StoreCommandFailedException]
 
       verify(mockedStore).startMigration()
+      verify(mockedStore).storageVersion()
       noMoreInteractions(mockedStore)
     }
 
@@ -262,7 +260,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       val migration = f.migration
 
-      val thrown = the[MigrationFailedException] thrownBy migration.migrate()
+      val thrown = the[MigrationCancelledException] thrownBy migration.migrate()
       thrown.getMessage should equal("Migration cancelled")
       thrown.getCause shouldBe a[Exception]
       thrown.getCause.getMessage should equal("Failed to do something")
