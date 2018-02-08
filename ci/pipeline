@@ -151,16 +151,6 @@ def provisionHost(): Unit = utils.stage("Provision") {
  * @return Version of Marathon build
  */
 @main
-<<<<<<< HEAD
-def build(): utils.SemVer = {
-  provisionHost()
-
-  val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
-  try {
-    compileAndTest(logFileName)
-  } finally {
-    zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
-=======
 def build(runTests: Boolean = true): SemVer = {
   if (runTests) {
     val logFileName = s"ci-${sys.env.getOrElse("BUILD_TAG", "run")}.log"
@@ -169,7 +159,6 @@ def build(runTests: Boolean = true): SemVer = {
     } finally {
       zipLogs(logFileName)    // Try to archive ci and sandbox logs in any case
     }
->>>>>>> Fix package uploading and improvements to release pipeline (#5953)
   }
 
   createTarballPackages()
@@ -288,10 +277,6 @@ object ReleaseTarget {
  * @return Version and artifact description of Marathon build.
  */
 @main
-<<<<<<< HEAD
-def release(requestVersion: String, gitSha: String, latest: Boolean = false): Unit = {
-  val releaseVersion = withoutVersionPrefix(requestVersion)
-=======
 def release(args: String*): Unit = {
   case class Config(
     version: SemVer = SemVer.empty,
@@ -325,11 +310,6 @@ def release(args: String*): Unit = {
     ???
   }
 
-  config.checkout.foreach { gitSha =>
-    %('git, "checkout", gitSha)
-  }
->>>>>>> Fix package uploading and improvements to release pipeline (#5953)
-
   %('git, "tag",
     "-a", config.version.toTagString,
     "-m", config.version.toTagString)
@@ -359,17 +339,8 @@ def release(args: String*): Unit = {
       %('sbt, "project plugin-interface", "publish")
   }
 
-<<<<<<< HEAD
-  val version = build()
-  val tagVersion = version.toTagString
-  %('git, "tag", "-a", tagVersion, "-m", tagVersion)
-
-  require(ValidVersionRegex.findFirstMatchIn(tagVersion).nonEmpty,
-    s"tagName should match regex ${ValidVersionRegex}")
-=======
   // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
   // %('git, "push", "--tags")
->>>>>>> Fix package uploading and improvements to release pipeline (#5953)
 
   // TODO: Publish swagger files.
 }
