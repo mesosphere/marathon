@@ -87,7 +87,7 @@ docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
 
   %git('checkout, s"$tagName")
 
-  %git 'pull
+  %git('pull)
 
   val tagBuildDir = buildDir/releaseBranchVersion
 
