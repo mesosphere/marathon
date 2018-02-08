@@ -310,23 +310,24 @@ def release(args: String*): Unit = {
     ???
   }
 
-  %('git, "tag",
-    "-a", config.version.toTagString,
-    "-m", config.version.toTagString)
-  val builtVersion = build(config.runTests)
-  assert(builtVersion == config.version,
-    "Specified version did not match built version! ${builtVersion} != ${config.version}")
-  println(s"Built version ${builtVersion}; releasing")
+  val version = config.version
+  println(s"Releasing build ${config.version}...")
+  releases.verify(config.version)
 
-  buildDockerAndLinuxPackages()
-  if (config.runTests)
-    testDockerAndLinuxPackages()
+  %('git, "checkout", config.version.commit)
+
+//  buildDockerAndLinuxPackages()
+//  if (config.runTests)
+//    testDockerAndLinuxPackages()
 
   config.targets.distinct.foreach {
-    case ReleaseTarget.LinuxPackages =>
-      uploadLinuxPackagesToRepos(s"v{config.version}")
     case ReleaseTarget.S3Package =>
-      uploadTarballPackagesToS3(config.version, s"releases/${config.version}")
+      releases.copyTarballBuildsToReleases(config.version)
+    case other =>
+      println(s"Target ${other.name} is not supported yet. Skipping...")
+    /*
+    case ReleaseTarget.LinuxPackages =>
+      releases.uploadLinuxPackagesToRepos(config.version.toTagString)
     case ReleaseTarget.DockerTag =>
       %('docker, "push", s"mesosphere/marathon:${config.version.toTagString}")
     case ReleaseTarget.DockerLatest =>
@@ -337,6 +338,7 @@ def release(args: String*): Unit = {
       %('sbt, "publish")
     case ReleaseTarget.PluginInterface =>
       %('sbt, "project plugin-interface", "publish")
+    */
   }
 
   // TODO: git push fails currently b/c jenkins isn't authorized to push to GH
@@ -415,3 +417,10 @@ def uploadLinuxPackagesToRepos(tagName: String): Unit = {
 
   utils.printStageTitle("All done")
 }
+=======
+  val tagVersion = version.toTagString
+  //%('git, "tag", "-a", tagVersion, "-m", tagVersion)
+  //TAG
+}
+
+>>>>>>> Copy tarbals from builds to releases on S3.

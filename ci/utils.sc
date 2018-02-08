@@ -141,6 +141,11 @@ def escapeCmdArg(cmd: String): String = {
 case class SemVer(major: Int, minor: Int, build: Int, commit: String) {
   override def toString(): String = s"$major.$minor.$build-$commit"
   def toTagString(): String = s"v$major.$minor.$build"
+
+  /**
+   * Release bucket keys are not prefixed.
+   */
+  def toReleaseString(): String = s"$major.$minor.$build"
 }
 
 object SemVer {
