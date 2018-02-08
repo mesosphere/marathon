@@ -6,6 +6,10 @@
 
 The Sentry Raven log appender has been updated to version 8.0.x. Users that have enabled the Sentry Raven appender will need to update their configuration according to the [sentry migration guide](https://docs.sentry.io/clients/java/migration/).
 
+#### Scala 2.12
+
+Marathon 1.6.0 is compiled using Scala 2.12. This means that plugins which were compiled using scala 2.11 will fail marathon startup due to binary incompatibility between scala 2.11 and 2.12.
+
 ### Deprecations
 
 #### /v2/schema route is Deprecated
