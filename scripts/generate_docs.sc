@@ -1,5 +1,13 @@
 #!/usr/bin/env amm
 
+/**
+  *
+  * DO NOT RUN THIS SCRIPT FROM THE SHELL!
+  *
+  * run ./doc_generation_launcher.sh instead
+  *
+  */
+
 import java.time.Instant
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
@@ -78,7 +86,6 @@ def branchForTag(version: String) = {
 }
 
 
-%git 'fetch
 
 // step 1: copy docs/docs to the respective dirs
 
@@ -86,8 +93,6 @@ docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
   val tagName = branchForTag(tagVersion)
 
   %git('checkout, s"$tagName")
-
-  %git('pull)
 
   val tagBuildDir = buildDir/releaseBranchVersion
 
