@@ -273,4 +273,6 @@ def release(args: String*): Unit = {
     case other =>
       println(s"Target ${other.name} is not supported yet. Skipping...")
   }
+
+  githubClient.tag(config.version.commit, config.version.toTagString)
 }
