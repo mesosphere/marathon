@@ -102,7 +102,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     in milliseconds, between application scaling operations.
 * `--task_launch_timeout` (Optional. Default: 300000 (5 minutes)):
     Time, in milliseconds, to wait for a task to enter the `TASK_RUNNING` state
-    before killing it.
+    before killing it. See also `--task_launch_confirm_timeout`.
 * `--event_subscriber` (Optional. Default: None): Event subscriber module to
     enable. Currently the only valid value is `http_callback`.
 * `--http_endpoints` (Optional. Default: None): Pre-configured http callback
@@ -217,7 +217,7 @@ If the Mesos master fails over or in other unusual circumstances, a launch task 
 You can configure how long Marathon waits for the first `TASK_STAGING` update.
 
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 300000 (5 minutes)):
-  Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
+  Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it. Also see `--task_launch_timeout`.
 
 When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
 Marathon can request all available offers from Mesos again -- even those that it has recently rejected. To avoid
