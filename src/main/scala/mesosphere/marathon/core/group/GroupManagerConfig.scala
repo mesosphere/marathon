@@ -24,7 +24,7 @@ trait GroupManagerConfig extends ScallopConf {
 
   lazy val groupManagerExecutionContextSize = opt[Int](
     "group_manager_execution_context_size",
-    default = Some(8),
+    default = Some(Runtime.getRuntime().availableProcessors()),
     hidden = true,
     descr = "INTERNAL TUNING PARAMETER: Group manager module's execution context thread pool size"
   )
