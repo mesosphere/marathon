@@ -152,10 +152,16 @@ class VolumeTest extends UnitTest {
       val Some(pathDisk) = DiskSource(DiskType.Path, Some("/path/to/folder"), None, None, None).asMesos
       pathDisk.getPath.getRoot shouldBe "/path/to/folder"
       pathDisk.getType shouldBe Source.Type.PATH
+      pathDisk.hasId shouldBe false
+      pathDisk.hasMetadata shouldBe false
+      pathDisk.hasProfile shouldBe false
 
       val Some(mountDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount"), None, None, None).asMesos
       mountDisk.getMount.getRoot shouldBe "/path/to/mount"
       mountDisk.getType shouldBe Source.Type.MOUNT
+      pathDisk.hasId shouldBe false
+      pathDisk.hasMetadata shouldBe false
+      pathDisk.hasProfile shouldBe false
 
       val Some(pathCsiDisk) = DiskSource(DiskType.Path, Some("/path/to/folder"),
         Some("csiPathDisk"), Some(Map("pathKey" -> "pathValue")), Some("pathProfile")).asMesos
