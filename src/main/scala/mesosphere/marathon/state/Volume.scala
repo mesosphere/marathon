@@ -108,7 +108,7 @@ object HostVolume {
 
 case class DiskSource(
     diskType: DiskType, path: Option[String],
-    id: Option[String], metadata: Map[String, String], profileName: Option[String]) {
+    id: Option[String], metadata: Option[Map[String, String]], profileName: Option[String]) {
   if (diskType == DiskType.Root)
     require(path.isEmpty, "Path is not allowed for diskType")
   else
@@ -136,7 +136,7 @@ case class DiskSource(
       else
         bld.setPath(Source.Path.newBuilder().setRoot(p))
       id.foreach(bld.setId)
-      bld.setMetadata(metadata.toMesosLabels)
+      metadata.foreach(metadata => bld.setMetadata(metadata.toMesosLabels))
       profileName.foreach(bld.setProfile)
       Some(bld.build)
     case (_, _) =>
@@ -145,15 +145,14 @@ case class DiskSource(
 }
 
 object DiskSource {
-  val root = DiskSource(DiskType.Root, None, None, Map.empty, None)
+  val root = DiskSource(DiskType.Root, None, None, None, None)
 
   @SuppressWarnings(Array("OptionGet"))
   def fromMesos(source: Option[Source]): DiskSource = {
     val diskType = DiskType.fromMesosType(source.map(_.getType))
     val id = source.flatMap(s => if (s.hasId) Some(s.getId) else None)
-    val metadata: Map[String, String] = source match {
-      case Some(s) => if (s.hasMetadata) s.getMetadata.fromProto else Map.empty
-      case None => Map.empty
+    val metadata = source.flatMap { source =>
+      if (source.hasMetadata) Some(source.getMetadata.fromProto) else None
     }
     val profileName = source.flatMap(s => if (s.hasProfile) Some(s.getProfile) else None)
     diskType match {
