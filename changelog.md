@@ -8,7 +8,7 @@ The Sentry Raven log appender has been updated to version 8.0.x. Users that have
 
 #### Scala 2.12
 
-Marathon 1.6.0 is compiled using Scala 2.12. This means that plugins which were compiled using scala 2.11 will fail marathon startup due to binary incompatibility between scala 2.11 and 2.12.
+Marathon 1.6.0 is compiled using Scala 2.12. This means that plugins which were compiled using Scala 2.11 will make Marathon failed during startup due to binary incompatibility between Scala 2.11 and 2.12.
 
 ### Deprecations
 
