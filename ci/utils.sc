@@ -136,3 +136,20 @@ def escapeCmdArg(cmd: String): String = {
   val subbed = cmd.replace("'", "\\'").replace("\n", "\\n")
   s"""$$'${subbed}'"""
 }
+
+case class SemVer(major: Int, minor: Int, build: Int, commit: String) {
+  override def toString(): String = s"$major.$minor.$build-$commit"
+  def toTagString(): String = s"v$major.$minor.$build"
+}
+
+object SemVer {
+  // Matches e.g. 1.7.42
+  val versionPattern = """^(\d+)\.(\d+)\.(\d+)$""".r
+  def apply(version: String, commit: String): SemVer =
+    version match {
+      case versionPattern(major, minor, build) =>
+        SemVer(major.toInt, minor.toInt, build.toInt, commit)
+      case _ =>
+        throw new IllegalArgumentException(s"Could not parse version $version.")
+    }
+}

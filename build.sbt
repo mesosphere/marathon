@@ -131,9 +131,6 @@ lazy val commonSettings = testSettings ++
   javacOptions in Compile += "-g",
   javaOptions in run ++= (aspectjWeaverOptions in Aspectj).value,
   javaOptions in Test ++= (aspectjWeaverOptions in Aspectj).value,
-  git.useGitDescribe := true,
-  // TODO: There appears to be a bug where uncommitted changes is true even if nothing is committed.
-  git.uncommittedSignifier := None
 )
 
 
@@ -153,10 +150,20 @@ lazy val packagingSettings = Seq(
   mappings in (Compile, packageDoc) := Seq(),
   debianChangelog in Debian := Some(baseDirectory.value / "changelog.md"),
 
+  (packageName in Universal) := {
+    import sys.process._
+    val shortCommit = ("./version commit" !!).trim
+    s"${packageName.value}-${version.value}-$shortCommit"
+  },
+
   /* Universal packaging (docs) - http://sbt-native-packager.readthedocs.io/en/latest/formats/universal.html
    */
   universalArchiveOptions in (UniversalDocs, packageZipTarball) := Seq("-pcvf"), // Remove this line once fix for https://github.com/sbt/sbt-native-packager/issues/1019 is released
-  (packageName in UniversalDocs) := { packageName.value + "-docs" + "-" + version.value },
+  (packageName in UniversalDocs) := {
+    import sys.process._
+    val shortCommit = ("./version commit" !!).trim
+    s"${packageName.value}-docs-${version.value}-$shortCommit"
+  },
   (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
   mappings in UniversalDocs ++= directory("docs/docs"),
 
@@ -166,7 +173,10 @@ lazy val packagingSettings = Seq(
   dockerBaseImage := Dependency.V.OpenJDK,
   dockerRepository := Some("mesosphere"),
   daemonUser in Docker := "root",
-  version in Docker := { "v" + (version in Compile).value },
+  version in Docker := {
+    import sys.process._
+    ("./version docker" !!).trim
+  },
   dockerBaseImage := "debian:jessie-slim",
   (defaultLinuxInstallLocation in Docker) := "/marathon",
   dockerCommands := {
@@ -213,19 +223,11 @@ lazy val packagingSettings = Seq(
   rpmLicense := Some("Apache 2"),
   daemonStdoutLogFile := Some("marathon"),
   version in Rpm := {
-    // Matches e.g. 1.5.1
-    val releasePattern = """^(\d+)\.(\d+)\.(\d+)$""".r
-    // Matches e.g. 1.5.1-pre-42-gdeadbeef and 1.6.0-pre-42-gdeadbeef
-    val snapshotPattern = """^(\d+)\.(\d+)\.(\d+)(?:-SNAPSHOT|-pre)?-\d+-g(\w+)""".r
-    version.value match {
-      case releasePattern(major, minor, patch) => s"$major.$minor.$patch"
-      case snapshotPattern(major, minor, patch, commit) => s"$major.$minor.$patch${LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE)}git$commit"
-      case v =>
-
-        System.err.println(s"Version '$v' is not fully supported, please update the git tags.")
-        v
-    }
+    import sys.process._
+    val shortCommit = ("./version commit" !!).trim
+    s"${version.value}.$shortCommit"
   },
+  rpmRelease in Rpm := "1",
 
   packageDebianForLoader := {
     val debianFile = (packageBin in Debian).value
@@ -282,6 +284,10 @@ lazy val marathon = (project in file("."))
   .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
+    version := {
+      import sys.process._
+      ("./version" !!).trim
+    },
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
