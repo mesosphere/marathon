@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
@@ -8,24 +9,21 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
-    newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService with PodStatusService {
-  import mesosphere.marathon.core.async.ExecutionContexts.global
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
+    newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
+  extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
 
   @SuppressWarnings(Array("all")) // async/await
   override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
     async { // linter:ignore UnnecessaryElseBranch
-      log.debug(s"query for pod $id")
+      logger.debug(s"query for pod $id")
       val maybePod = groupManager.pod(id)
       maybePod.filter(selector.matches) match {
         case Some(pod) => Some(await(newBaseData().podStatus(pod)))
@@ -34,7 +32,7 @@ private[appinfo] class DefaultInfoService(
     }
 
   override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]] = {
-    log.debug(s"queryForAppId $id")
+    logger.debug(s"queryForAppId $id")
     groupManager.app(id) match {
       case Some(app) if selector.matches(app) => newBaseData().appInfoFuture(app, embed).map(Some(_))
       case None => Future.successful(None)
@@ -44,7 +42,7 @@ private[appinfo] class DefaultInfoService(
   @SuppressWarnings(Array("all")) // async/await
   override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
     async { // linter:ignore UnnecessaryElseBranch
-      log.debug("queryAll")
+      logger.debug("queryAll")
       val rootGroup = groupManager.rootGroup()
       val selectedApps: IndexedSeq[AppDefinition] = rootGroup.transitiveApps.filterAs(selector.matches)(collection.breakOut)
       val infos = await(resolveAppInfos(selectedApps, embed))
@@ -56,7 +54,7 @@ private[appinfo] class DefaultInfoService(
     embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
 
     async { // linter:ignore UnnecessaryElseBranch
-      log.debug(s"queryAllInGroup $groupId")
+      logger.debug(s"queryAllInGroup $groupId")
       val maybeGroup: Option[Group] = groupManager.group(groupId)
       val maybeApps: Option[IndexedSeq[AppDefinition]] =
         maybeGroup.map(_.transitiveApps.filterAs(selector.matches)(collection.breakOut))
@@ -164,7 +162,7 @@ private[appinfo] class DefaultInfoService(
 
   private[this] def resolvePodInfos(
     specs: Seq[RunSpec],
-    baseData: AppInfoBaseData = newBaseData()): Future[Seq[PodStatus]] = Future.sequence(specs.collect {
+    baseData: AppInfoBaseData): Future[Seq[PodStatus]] = Future.sequence(specs.collect {
     case pod: PodDefinition =>
       baseData.podStatus(pod)
   })
