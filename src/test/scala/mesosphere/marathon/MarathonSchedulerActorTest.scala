@@ -453,7 +453,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       answer.cmd should equal(Deploy(plan))
       answer.reason.isInstanceOf[AppLockedException] should be(true)
     } finally {
-      //      system.eventStream.unsubscribe(probe.ref)
       stopActor(schedulerActor)
     }
   }
