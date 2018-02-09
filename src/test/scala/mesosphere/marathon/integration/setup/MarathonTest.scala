@@ -4,6 +4,7 @@ package integration.setup
 import com.typesafe.scalalogging.Logger
 import java.io.File
 import java.net.{ URLDecoder, URLEncoder }
+import java.nio.charset.Charset
 import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -12,8 +13,7 @@ import akka.Done
 import akka.actor.{ ActorSystem, Cancellable, Scheduler }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, StatusCodes }
-import akka.http.scaladsl.unmarshalling.FromRequestUnmarshaller
+import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -23,7 +23,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{ App, AppHostVolume, AppHealthCheck, Network, NetworkMode, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppHostVolume, Network, NetworkMode, PodState, PodStatus, ReadMode }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.{ Lock, Retry, Timeout }
 import mesosphere.util.PortAllocator
@@ -79,7 +79,7 @@ case class LocalMarathon(
   private def write(dir: File, fileName: String, content: String): String = {
     val file = File.createTempFile(fileName, "", dir)
     file.deleteOnExit()
-    FileUtils.write(file, content)
+    FileUtils.write(file, content, Charset.defaultCharset)
     file.setReadable(true)
     file.getAbsolutePath
   }
@@ -224,14 +224,6 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
       import akka.http.scaladsl.server.Directives._
       val mapper = new ObjectMapper() with ScalaObjectMapper
       mapper.registerModule(DefaultScalaModule)
-
-      implicit val unmarshal = new FromRequestUnmarshaller[Map[String, Any]] {
-        override def apply(value: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[Map[String, Any]] = {
-          value.entity.toStrict(patienceConfig.timeout)(materializer).map { entity =>
-            mapper.readValue[Map[String, Any]](entity.data.utf8String)
-          }(ec)
-        }
-      }
 
       get {
         path(Segment / Segment / "health") { (uriEncodedAppId, versionId) =>
@@ -411,7 +403,6 @@ trait MarathonTest extends HealthCheckEndpoint with ScalaFutures with Eventually
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
 
-    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
     val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
       s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 

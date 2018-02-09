@@ -6,14 +6,12 @@ import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
 
 import akka.actor.ActorRef
 import mesosphere.marathon.api.RequestFacade
-import mesosphere.marathon.api.v2.json.Formats.{ eventToJson }
 import mesosphere.marathon.core.event.{ EventConf, MarathonEvent }
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.eclipse.jetty.servlets.{ EventSource, EventSourceServlet }
-import play.api.libs.json.Json
 
 import scala.concurrent.{ Await, blocking }
 
@@ -40,9 +38,10 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
   override def close(): Unit = emitter.close()
 
   override def sendEvent(event: MarathonEvent): Unit = {
-    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, Json.stringify(
-      eventToJson(event, useLightWeightEvents)
-    )))
+    if (subscribed(event.eventType)) {
+      if (useLightWeightEvents) blocking(emitter.event(event.eventType, event.lightJsonString))
+      else blocking(emitter.event(event.eventType, event.fullJsonString))
+    }
   }
 
   override def toString: String = s"HttpEventSSEHandle($id on $remoteAddress on event types from $subscribedEventTypes)"

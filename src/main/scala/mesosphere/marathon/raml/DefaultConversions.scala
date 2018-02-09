@@ -1,10 +1,13 @@
 package mesosphere.marathon
 package raml
 
+import java.time.OffsetDateTime
+
 import mesosphere.marathon.core.instance
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => mesos }
+import play.api.libs.json.JsString
 
 import scala.collection.breakOut
 
@@ -60,4 +63,9 @@ trait DefaultConversions {
       .getOrElse(throw new IllegalArgumentException(s"$name is an unknown protocol"))
     IpAddr(ipAddress.getIpAddress, protocol)
   }
+
+  implicit object OffsetDateTimeWrite extends play.api.libs.json.Writes[OffsetDateTime] {
+    def writes(o: OffsetDateTime) = JsString(o.format(Timestamp.formatter))
+  }
+
 }

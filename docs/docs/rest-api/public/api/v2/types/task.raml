@@ -1,6 +1,7 @@
 #%RAML 1.0 Library
 uses:
   health: healthCheck.raml
+  localVolumes: localVolumes.raml
   numbers: numberTypes.raml
   strings: stringTypes.raml
 
@@ -35,14 +36,6 @@ types:
       ipAddress: string
       protocol: strings.IpProtocol
 
-  LocalVolumeId:
-    type: object
-    properties:
-      runSpecId: strings.PathId
-      containerPath: string
-      uuid: string
-      persistenceId: strings.PersistenceId
-
   Task:
     type: object
     properties:
@@ -58,7 +51,9 @@ types:
       stagedAt?: string
       startedAt?: string
       version?: string
-      localVolumes?: LocalVolumeId[]
+      localVolumes?: localVolumes.LocalVolumeId[]
+      region?: string
+      zone?: string
 
   TaskSingle:
     type: object

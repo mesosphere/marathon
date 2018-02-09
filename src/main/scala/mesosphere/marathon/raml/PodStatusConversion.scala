@@ -8,6 +8,7 @@ import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealt
 import mesosphere.marathon.core.instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task
+import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
 import mesosphere.marathon.stream.Implicits._
 
 trait PodStatusConversion {
@@ -77,6 +78,10 @@ trait PodStatusConversion {
       all.copy(cpus = all.cpus + res.cpus, mem = all.mem + res.mem, disk = all.disk + res.disk, gpus = all.gpus + res.gpus)
     }
 
+    val localVolumes = instance.reservation.fold(Seq.empty[LocalVolumeId]) { reservation =>
+      reservation.volumeIds.toRaml
+    }
+
     // TODO(jdef) message, conditions: for example it would probably be nice to see a "healthy" condition here that
     // summarizes the conditions of the same name for each of the instance's containers.
     PodInstanceStatus(
@@ -85,9 +90,12 @@ trait PodStatusConversion {
       statusSince = instance.state.since.toOffsetDateTime,
       agentId = instance.agentInfo.agentId,
       agentHostname = Some(instance.agentInfo.host),
+      agentRegion = instance.agentInfo.region,
+      agentZone = instance.agentInfo.zone,
       resources = Some(resources),
       networks = networkStatus,
       containers = containerStatus,
+      localVolumes = localVolumes,
       message = message,
       specReference = Some(s"/v2/pods${pod.id}::versions/${instance.runSpecVersion.toOffsetDateTime}"),
       lastUpdated = instance.state.since.toOffsetDateTime, // TODO(jdef) pods we don't actually track lastUpdated yet

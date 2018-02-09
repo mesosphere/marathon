@@ -3,7 +3,6 @@ package metrics
 
 import java.util.concurrent.atomic.AtomicLong
 
-import kamon.Kamon
 import kamon.metric.instrument.UnitOfMeasurement
 
 /**
@@ -12,7 +11,6 @@ import kamon.metric.instrument.UnitOfMeasurement
 case class AtomicGauge(name: String, unitOfMeasurement: UnitOfMeasurement = UnitOfMeasurement.Unknown,
     tags: Map[String, String] = Map.empty) extends SettableGauge {
   private[this] val counter = new AtomicLong()
-  private[this] val gauge = Kamon.metrics.gauge(name, tags, unitOfMeasurement)(counter.get())
 
   def value(): Long = counter.get()
 

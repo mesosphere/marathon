@@ -8,7 +8,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
-import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Seq
 
@@ -59,7 +58,6 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val cId = "/c".toPath
       val dId = "/d".toPath
       val eId = "/e".toPath
-      val fId = "/f".toPath
 
       val a = AppDefinition(aId, dependencies = Set(bId, cId), cmd = Some("sleep"))
       val b = AppDefinition(bId, dependencies = Set(cId), cmd = Some("sleep"))
@@ -109,12 +107,11 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val to = createRootGroup(groups = Set(createGroup("/group".toPath, update)))
       val plan = DeploymentPlan(from, to)
 
-      /*
-    plan.toStart should have size 1
-    plan.toRestart should have size 1
-    plan.toScale should have size 1
-    plan.toStop should have size 1
-    */
+      val actions = plan.steps.flatMap(s => s.actions)
+      actions.collect{ case s: StartApplication => s } should have size 1
+      actions.collect{ case s: RestartApplication => s } should have size 1
+      actions.collect{ case s: ScaleApplication => s } should have size 2
+      actions.collect{ case s: StopApplication => s } should have size 1
     }
 
     "can compute affected app ids" in {
@@ -421,6 +418,36 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
 
       Then("The deployment is not valid")
       validate(plan2)(f.validator).isSuccess should be(false)
+    }
+
+    "Deployment plan treats app conf update and scale down to 0 instances as scale-only change" in {
+      Given("An application update with command and scale changes")
+      val mongoId = "/test/database/mongo".toPath
+      val strategy = UpgradeStrategy(0.75)
+
+      val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
+      val mongo: (AppDefinition, AppDefinition) =
+        AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
+          AppDefinition(mongoId, Some("mng2"), instances = 0, upgradeStrategy = strategy, versionInfo = versionInfo)
+
+      val from = createRootGroup(groups = Set(createGroup(
+        id = "/test".toPath,
+        groups = Set(
+          createGroup("/test/database".toPath, Map(mongo._1.id -> mongo._1))
+        )
+      )
+      ))
+
+      val to = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+        createGroup("/test/database".toPath, Map(mongo._2.id -> mongo._2))
+      ))))
+
+      When("the deployment plan is computed")
+      val plan = DeploymentPlan(from, to)
+
+      Then("the deployment steps are correct")
+      plan.steps should have size 1
+      plan.steps(0).actions.toSet should equal(Set(ScaleApplication(mongo._2, 0)))
     }
   }
   class Fixture {

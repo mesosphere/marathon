@@ -61,13 +61,11 @@ The tests are run with
 make test
 ```
 
-To start a shell in the environment call `pipenv shell`. E.g. to authenticate
-and run a specific test call
+You can also run a specific test module or function with
 
 ```
 pipenv shell
-dcos config set core.dcos_url <dcos url>
-dcos auth login
+dcos cluster setup <dcos ip>
 shakedown test_marathon_root.py::<test name>
 ```
 

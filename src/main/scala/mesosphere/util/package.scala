@@ -6,6 +6,27 @@ import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 
 package object util {
+
+  /**
+    * Truncates the string output of a long list.
+    *
+    * This should be used to reduce the size of logging ids etc.
+    *
+    * @param it The iterable that will be truncated.
+    * @param showFirst The number of items that should be shown in string.
+    * @tparam T
+    * @return String representation of truncated sequence.
+    */
+  def summarize[T](it: Iterator[T], showFirst: Int = 3): String = {
+    val s = new StringBuilder
+    s ++= "Seq("
+    s ++= it.take(showFirst).toSeq.mkString(", ")
+    if (it.hasNext)
+      s ++= s", ... ${it.length} more"
+    s ++= ")"
+    s.toString
+  }
+
   implicit class DurationToHumanReadable(val d: Duration) extends AnyVal {
     def toHumanReadable: String = {
       import TimeUnit._

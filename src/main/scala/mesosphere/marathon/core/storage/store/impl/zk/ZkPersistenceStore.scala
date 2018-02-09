@@ -303,7 +303,7 @@ class ZkPersistenceStore(
       case Some(backupItem) => backupItem
     }.concat {
       Source.fromFuture(storageVersion()).map { storedVersion =>
-        val version = storedVersion.getOrElse(StorageVersions.current)
+        val version = storedVersion.getOrElse(StorageVersions(Migration.steps))
         val name = Migration.StorageVersionName
         BackupItem(name, name, None, ByteString(version.toByteArray))
       }

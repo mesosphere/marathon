@@ -22,7 +22,6 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
     "scale_apps_initial_delay" -> "5000",
     "scale_apps_interval" -> "5000",
     "min_revive_offers_interval" -> "100",
-    "task_lost_expunge_gc" -> "30000",
     "task_lost_expunge_initial_delay" -> "1000",
     "task_lost_expunge_interval" -> "1000"
   )

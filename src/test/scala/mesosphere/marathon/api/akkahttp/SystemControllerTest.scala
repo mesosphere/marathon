@@ -7,12 +7,12 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import ch.qos.logback.classic.{ Level, Logger }
 import com.typesafe.config.Config
 import mesosphere.UnitTest
-import mesosphere.marathon.api.{ JsonTestHelper, TestAuthFixture }
+import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.v2.RouteBehaviours
 import mesosphere.marathon.core.election.ElectionService
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.slf4j.LoggerFactory
-import play.api.libs.json.{ JsDefined, JsObject, JsString, Json }
+import play.api.libs.json.{ JsDefined, JsObject, Json }
 
 class SystemControllerTest extends UnitTest with ScalatestRouteTest with RouteBehaviours with TableDrivenPropertyChecks {
 

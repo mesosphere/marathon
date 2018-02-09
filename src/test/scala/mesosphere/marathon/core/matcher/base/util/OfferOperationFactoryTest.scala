@@ -79,7 +79,6 @@ class OfferOperationFactoryTest extends UnitTest {
       val factory = new OfferOperationFactory(Some("principal"), Some("role"))
       val volume1 = f.localVolume("mount1")
       val volume2 = f.localVolume("mount2")
-      val volumes = Seq(volume1, volume2)
 
       When("We create a reserve operation")
       val offeredVolume1 = InstanceOpFactory.OfferedVolume(None, DiskSource.root, volume1)
@@ -110,7 +109,6 @@ class OfferOperationFactoryTest extends UnitTest {
 
       And("The volumes are correct")
       val volumeWithProviderId = operationWithProviderId.getCreate.getVolumes(0)
-      val originalVolume = volume2
       volumeWithProviderId.getName shouldEqual "disk"
       volumeWithProviderId.getRole shouldEqual "role"
       volumeWithProviderId.getScalar.getValue shouldEqual 10

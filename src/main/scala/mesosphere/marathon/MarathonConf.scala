@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.core.appinfo.AppInfoConfig
 import mesosphere.marathon.core.deployment.DeploymentConfig
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
@@ -36,7 +37,7 @@ trait MarathonConf
   with LeaderProxyConf with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
   with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
   with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf
-  with MatcherConf {
+  with MatcherConf with AppInfoConfig {
 
   lazy val mesosMaster = opt[String](
     "master",

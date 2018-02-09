@@ -6,6 +6,7 @@ import java.util.Objects
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
+import mesosphere.util.summarize
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
@@ -110,15 +111,6 @@ class Group(
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
-  private def summarize[T](iterator: Iterator[T]): String = {
-    val s = new StringBuilder
-    s ++= "Seq("
-    s ++= iterator.take(3).toSeq.mkString(", ")
-    if (iterator.hasNext)
-      s ++= s", ... ${iterator.length} more"
-    s ++= ")"
-    s.toString
-  }
   override def toString = {
     val summarizedApps = summarize(apps.valuesIterator.map(_.id))
     val summarizedPods = summarize(pods.valuesIterator.map(_.id))
@@ -167,14 +159,13 @@ object Group extends StrictLogging {
           and isTrue("Group has to be child of groups with parent id") { childGroup =>
             if (childGroup.id.parent == group.id) group.groupsById.contains(childGroup.id)
             else {
-              group.group(childGroup.id.parent) match {
-                case None => false
-                case Some(parentGroup) => parentGroup.groupsById.contains(childGroup.id)
-              }
+              group.group(childGroup.id.parent).exists(parent => parent.groupsById.contains(childGroup.id))
             }
           }
       )
     }
+
+  import scala.language.implicitConversions
 
   implicit def everyApp(validator: Validator[AppDefinition]): Validator[Iterable[AppDefinition]] = {
     new Validator[Iterable[AppDefinition]] {
@@ -204,10 +195,7 @@ object Group extends StrictLogging {
     isTrue("App has to be child of group with parent id") { app =>
       if (app.id.parent == group.id) group.apps.contains(app.id)
       else {
-        group.group(app.id.parent) match {
-          case None => false
-          case Some(childGroup) => childGroup.apps.contains(app.id)
-        }
+        group.group(app.id.parent).exists(child => child.apps.contains(app.id))
       }
     }
   }

@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.election
 
 import akka.stream.scaladsl.{ Keep, Sink, Source }
-import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ Executors }
 import mesosphere.AkkaUnitTest
@@ -16,7 +15,6 @@ import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.concurrent.duration._
-import scala.util.{ Failure, Try }
 
 @IntegrationTest
 class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperServerTest with Eventually {

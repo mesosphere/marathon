@@ -13,9 +13,9 @@ import mesosphere.marathon.storage.repository.InstanceRepository
 import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo152(instanceRepository: InstanceRepository)(implicit ctx: ExecutionContext, mat: Materializer) extends StrictLogging {
+class MigrationTo152(instanceRepository: InstanceRepository) extends MigrationStep with StrictLogging {
 
-  def migrate(): Future[Done] = {
+  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     MigrationTo152.migrateUnreachableInstances(instanceRepository)(Environment(sys.env), ctx, mat)
   }
 }

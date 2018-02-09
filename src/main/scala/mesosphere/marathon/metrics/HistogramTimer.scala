@@ -75,7 +75,6 @@ private[metrics] case class HistogramTimer(name: String, tags: Map[String, Strin
   }
 
   def forSource[T, M](f: => Source[T, M])(implicit clock: Clock = Clock.systemUTC): Source[T, M] = {
-    val start = System.nanoTime()
     val src = f
     val flow = Flow.fromGraph(new TimedStage[T](histogram, clock))
     val transformed = src.via(flow)

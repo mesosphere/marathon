@@ -5,12 +5,12 @@ import java.time.Clock
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import akka.stream.Materializer
+import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import com.typesafe.config.Config
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{ GroupApiService, MarathonHttpService, TaskKiller }
 import mesosphere.marathon.api.akkahttp.v2._
+import mesosphere.marathon.api.{ GroupApiService, MarathonHttpService, TaskKiller }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -47,7 +47,6 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     marathonScheduler: MarathonScheduler,
     storageModule: StorageModule,
     mesosLeaderInfo: MesosLeaderInfo,
-    appTasksRes: mesosphere.marathon.api.v2.AppTasksResource,
     launchQueue: LaunchQueue)(implicit
     actorSystem: ActorSystem,
     materializer: Materializer,
@@ -56,8 +55,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
     electionService: ElectionService,
     healthCheckManager: HealthCheckManager,
     instanceTracker: InstanceTracker,
-    taskKiller: TaskKiller,
-    groupService: GroupApiService): AkkaHttpMarathonService = {
+    taskKiller: TaskKiller): AkkaHttpMarathonService = {
 
     import actorSystem.dispatcher
     val appsController = new AppsController(
@@ -78,7 +76,7 @@ class AkkaHttpModule(conf: MarathonConf with HttpConf) extends AbstractModule {
       electionService.leadershipTransitionEvents)
     val infoController = InfoController(mesosLeaderInfo, storageModule.frameworkIdRepository, conf)
     val pluginsController = new PluginsController(pluginManager.plugins[HttpRequestHandler], pluginManager.definitions)
-    val leaderController = LeaderController(electionService, storageModule.runtimeConfigurationRepository)
+    val leaderController = LeaderController(electionService, storageModule.runtimeConfigurationRepository, actorSystem.scheduler)
     val queueController = new QueueController(clock, launchQueue, electionService)
     val tasksController = new TasksController(instanceTracker, groupManager, healthCheckManager, taskKiller, electionService)
     val groupsController = new GroupsController(electionService, groupInfoService, groupManager, groupApiService, conf)

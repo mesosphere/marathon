@@ -478,7 +478,7 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
         When("we get a status update about a terminated task")
-        val counts = sendUpdate(launcherRef, update.wrapped)
+        sendUpdate(launcherRef, update.wrapped)
 
         Then("reviveOffers has been called")
         Mockito.verify(offerReviver).reviveOffers()
@@ -504,7 +504,6 @@ class TaskLauncherActorTest extends AkkaUnitTest {
         // wait for startup
         (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
-        val lolo = update
         // task status update
         val counts = sendUpdate(launcherRef, update.wrapped)
 

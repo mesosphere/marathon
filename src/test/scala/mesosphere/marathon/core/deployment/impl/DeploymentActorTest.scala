@@ -25,6 +25,7 @@ import org.mockito.stubbing.Answer
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.util.Success
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current
 // setup which makes the test overly complicated because events etc have to be mocked for these.
@@ -52,10 +53,9 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
-    def deploymentActor(manager: ActorRef, promise: Promise[Done], plan: DeploymentPlan) = system.actorOf(
+    def deploymentActor(manager: ActorRef, plan: DeploymentPlan) = system.actorOf(
       DeploymentActor.props(
         manager,
-        promise,
         killService,
         scheduler,
         plan,
@@ -135,12 +135,12 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         }
       })
 
-      deploymentActor(managerProbe.ref, Promise[Done](), plan)
+      deploymentActor(managerProbe.ref, plan)
       plan.steps.zipWithIndex.foreach {
         case (step, num) => managerProbe.expectMsg(7.seconds, DeploymentStepInfo(plan, step, num + 1))
       }
 
-      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
+      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
 
       withClue(killService.killed.mkString(",")) {
         killService.killed should contain(instance1_2.instanceId) // killed due to scale down
@@ -153,7 +153,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
     "Restart app" in new Fixture {
       val managerProbe = TestProbe()
-      val promise = Promise[Done]()
       val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 
@@ -180,8 +179,11 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         }
       })
 
-      deploymentActor(managerProbe.ref, promise, plan)
-      promise.future.futureValue should be (Done)
+      deploymentActor(managerProbe.ref, plan)
+      plan.steps.zipWithIndex.foreach {
+        case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
+      }
+      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
 
       killService.killed should contain(instance1_1.instanceId)
       killService.killed should contain(instance1_2.instanceId)
@@ -190,7 +192,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
     "Restart suspended app" in new Fixture {
       val managerProbe = TestProbe()
-      val promise = Promise[Done]()
 
       val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 0)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
@@ -204,8 +205,11 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       tracker.specInstancesSync(app.id) returns Seq.empty[Instance]
       queue.addAsync(app, 2) returns Future.successful(Done)
 
-      deploymentActor(managerProbe.ref, promise, plan)
-      promise.future.futureValue should be (Done)
+      deploymentActor(managerProbe.ref, plan)
+      plan.steps.zipWithIndex.foreach {
+        case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
+      }
+      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
     }
 
     "Scale with tasksToKill" in new Fixture {
@@ -226,13 +230,13 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2, instance1_3))
 
-      deploymentActor(managerProbe.ref, Promise[Done](), plan)
+      deploymentActor(managerProbe.ref, plan)
 
       plan.steps.zipWithIndex.foreach {
         case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
       }
 
-      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
+      managerProbe.expectMsg(5.seconds, DeploymentFinished(plan, Success(Done)))
 
       killService.numKilled should be(1)
       killService.killed should contain(instance1_2.instanceId)

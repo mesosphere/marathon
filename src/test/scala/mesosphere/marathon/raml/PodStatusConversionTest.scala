@@ -3,12 +3,11 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
+import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.state
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos
 
@@ -388,6 +387,26 @@ class PodStatusConversionTest extends UnitTest {
         NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
       ))
     }
+
+    "a stateful pod with one container and one persistent volume" in {
+      val localVolumeId = core.instance.LocalVolumeId(
+        PathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
+      val reservation = core.instance.Reservation(
+        volumeIds = Seq(localVolumeId),
+        state = core.instance.Reservation.State.New(timeout = None))
+
+      implicit val clock = new SettableClock()
+      val fixture = fakeInstance(
+        podWithPersistentVolume, core.condition.Condition.Running, core.condition.Condition.Running,
+        maybeReservation = Some(reservation))
+
+      val status = PodStatusConversion.podInstanceStatusRamlWriter((podWithPersistentVolume, fixture.instance))
+      status.localVolumes should be(Seq(
+        LocalVolumeId(
+          "/persistent", "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b",
+          "persistent#volume#5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")))
+    }
+
   }
 }
 
@@ -411,6 +430,19 @@ object PodStatusConversionTest {
     ),
     networks = Seq(ContainerNetwork(name = "dcos"), ContainerNetwork("bigdog"))
   )
+
+  val podWithPersistentVolume = PodDefinition(
+    id = PathId("/persistent"),
+    containers = Seq(
+      MesosContainer(
+        name = "ct1",
+        resources = containerResources,
+        image = Some(Image(kind = ImageType.Docker, id = "busybox")),
+        volumeMounts = Seq(state.VolumeMount(Some("data"), "mountPath")))),
+    volumes = Seq(
+      state.PersistentVolume(
+        name = Some("volume"),
+        persistent = state.PersistentVolumeInfo(10))))
 
   case class InstanceFixture(
       since: Timestamp,
@@ -441,7 +473,8 @@ object PodStatusConversionTest {
     taskStatus: core.condition.Condition,
     maybeTaskState: Option[Protos.TaskState] = None,
     maybeNetworks: Option[Map[String, String]] = None,
-    maybeHealthy: Option[Boolean] = None)(implicit clock: SettableClock): InstanceFixture = {
+    maybeHealthy: Option[Boolean] = None,
+    maybeReservation: Option[Reservation] = None)(implicit clock: SettableClock): InstanceFixture = {
 
     val since = clock.now()
     val agentInfo = core.instance.Instance.AgentInfo("agent1", Some("agentId1"), None, None, Seq.empty)
@@ -493,7 +526,7 @@ object PodStatusConversionTest {
       ).map(t => t.taskId -> t)(collection.breakOut),
       runSpecVersion = pod.version,
       unreachableStrategy = state.UnreachableStrategy.default(),
-      reservation = None
+      reservation = maybeReservation
     )
 
     InstanceFixture(since, agentInfo, taskIds, instance)

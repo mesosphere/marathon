@@ -4,17 +4,15 @@ package api.akkahttp.v2
 import java.net.InetAddress
 
 import akka.event.EventStream
-import akka.http.scaladsl.model.Uri.{ Path, Query }
+import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{ Location, `Remote-Address` }
-import mesosphere.{ UnitTest, ValidationTestLike }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.akkahttp.EntityMarshallers.ValidationFailed
 import mesosphere.marathon.api.akkahttp.{ Headers, Rejections }
-import mesosphere.marathon.api.akkahttp.Rejections.{ EntityNotFound, Message }
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -22,14 +20,12 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.core.pod.PodManager
-import mesosphere.marathon.raml.FixedPodScalingPolicy
+import mesosphere.marathon.raml.{ PersistentVolumeInfo, PersistentVolumeType, PodPersistentVolume, VolumeMount }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.util.SemanticVersion
-import play.api.libs.json._
-import play.api.libs.json.Json
+import mesosphere.{ UnitTest, ValidationTestLike }
+import play.api.libs.json.{ Json, _ }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -432,6 +428,49 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
       }
     }
 
+    "create a pod with a persistent volume" in {
+      val f = Fixture()
+      val controller = f.controller()
+
+      val deploymentPlan = DeploymentPlan.empty
+      f.podManager.create(any, eq(false)).returns(Future.successful(deploymentPlan))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/mypod",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+      val entity = HttpEntity(podSpecJsonWithPersistentVolume).withContentType(ContentTypes.`application/json`)
+      val request = Post(Uri./.withQuery(Query("force" -> "false")))
+        .withEntity(entity)
+        .withHeaders(`Remote-Address`(RemoteAddress(InetAddress.getByName("192.168.3.12"))))
+
+      request ~> controller.route ~> check {
+        response.status should be(StatusCodes.Created)
+        response.header[Headers.`Marathon-Deployment-Id`].value.value() should be(deploymentPlan.id)
+        response.header[Location].value.value() should be("/mypod")
+
+        val jsonResponse = Json.parse(responseAs[String])
+
+        val volumeInfo = PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), size = 10)
+        val volume = PodPersistentVolume(name = "pst", persistent = volumeInfo)
+        val volumeMount = VolumeMount(name = "pst", mountPath = "pst1", readOnly = Some(false))
+        jsonResponse should have(
+          podVolume(0, volume),
+          podVolumeMount(0, 0, volumeMount))
+      }
+    }
+
     "delete a pod" in {
       val f = Fixture()
       val controller = f.controller()
@@ -580,7 +619,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     }
 
     "update a simple single-container pod from docker image w/ shell command" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
       val controller = f.controller()
 
@@ -613,7 +651,6 @@ class PodsControllerTest extends UnitTest with ScalatestRouteTest with RouteBeha
     }
 
     "do not update if we have concurrent change error" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
       val controller = f.controller()
 

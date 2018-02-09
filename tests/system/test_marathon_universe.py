@@ -2,11 +2,13 @@
 
 import common
 import pytest
+import retrying
 import shakedown
 import time
 
 from datetime import timedelta
 from dcos import packagemanager, marathon, cosmos
+from dcos.errors import DCOSException
 
 
 PACKAGE_NAME = 'marathon'
@@ -34,18 +36,20 @@ def test_install_marathon():
     """
 
     # Install
-    shakedown.install_package_and_wait(PACKAGE_NAME)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=DCOSException)
+    def install_marathon():
+        shakedown.install_package_and_wait(PACKAGE_NAME)
+
+    install_marathon()
     assert shakedown.package_installed(PACKAGE_NAME), 'Package failed to install'
 
-    end_time = time.time() + WAIT_TIME_IN_SECS
-    found = False
-    while time.time() < end_time:
-        found = shakedown.get_service(PACKAGE_NAME) is not None
-        if found and shakedown.service_healthy(SERVICE_NAME):
-            break
-        time.sleep(1)
+    # 5000ms = 5 seconds, 5 seconds * 60 attempts = 300 seconds = WAIT_TIME_IN_SECS
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=60, retry_on_exception=DCOSException)
+    def assert_service_registration(package, service):
+        found = shakedown.get_service(package) is not None
+        assert found and shakedown.service_healthy(service), f"Service {package} did not register with DCOS" # NOQA E999
 
-    assert found, 'Service did not register with DCOS'
+    assert_service_registration(PACKAGE_NAME, SERVICE_NAME)
     shakedown.deployment_wait()
 
     # Uninstall
@@ -99,42 +103,6 @@ def test_install_universe_package(package):
 
     shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
     assert shakedown.service_healthy(package)
-
-
-@pytest.fixture(
-    params=[
-        'neo4j',
-    ])
-def neo_package(request):
-    package_name = request.param
-    yield package_name
-    try:
-        shakedown.uninstall_package_and_data(package_name, 'neo4j/core')
-    except Exception as e:
-        # cleanup does NOT fail the test
-        print(e)
-
-
-@shakedown.private_agents(2)
-def test_neo4j_universe_package_install(neo_package):
-    """ Neo4j used to be 1 of the universe packages tested above, largely
-        because there was a bug in marathon for a short period of time
-        which was realized through neo4j.  However neo4j is so strongly different
-        that we can't test it like the other services.  It is NOT a framework
-        so framework health checks do not work with neo4j.
-    """
-    package = neo_package
-    shakedown.install_package(package)
-    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), app_id='neo4j/core')
-
-    assert shakedown.package_installed(package), 'Package failed to install'
-
-    marathon_client = marathon.create_client()
-    tasks = marathon_client.get_tasks('neo4j/core')
-
-    for task in tasks:
-        assert task['healthCheckResults'][0]['lastSuccess'] is not None, 'Healthcheck was not successful'
-        assert task['healthCheckResults'][0]['consecutiveFailures'] == 0, 'Healthcheck had consecutive failures'
 
 
 def uninstall(service, package=PACKAGE_NAME):

@@ -125,6 +125,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   @Singleton
   def provideActorSystem(): ActorSystem = actorSystem
 
+  @Provides
+  @Singleton
+  def provideActorScheduler(): Scheduler = actorSystem.scheduler
+
   /* Reexports the `akka.actor.ActorSystem` as `akka.actor.ActorRefFactory`. It doesn't work automatically. */
   @Provides
   @Singleton

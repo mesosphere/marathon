@@ -14,7 +14,9 @@
       "state": "TASK_RUNNING",
       "servicePorts": [
         10019
-      ]
+      ],
+      "region": "primary",
+      "zone" : "a"
     },
     {
       "id": "tools_docker_registry.002b4d28-46b9-11e5-b731-525400cce7ed",
@@ -30,7 +32,9 @@
       "appId": "/tools/docker/registry",
       "servicePorts": [
         5000
-      ]
+      ],
+      "region": "primary",
+      "zone" : "a"
     }
   ]
 }

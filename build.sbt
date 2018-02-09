@@ -12,8 +12,6 @@ import scalariform.formatter.preferences._
 
 lazy val IntegrationTest = config("integration") extend Test
 
-def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
-
 credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
 
@@ -30,6 +28,8 @@ lazy val formatSettings = Seq(
     .setPreference(PreserveSpaceBeforeArguments, true)
 )
 
+// Pass arguments to Scalatest runner:
+// http://www.scalatest.org/user_guide/using_the_runner
 lazy val testSettings =
   inConfig(IntegrationTest)(Defaults.testTasks) ++
   Seq(
@@ -40,14 +40,17 @@ lazy val testSettings =
 
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"),
-    Tests.Argument("-l", "mesosphere.marathon.IntegrationTest",
+  testOptions in Test := Seq(
+    Tests.Argument(
+      "-o", "-eDFG",
+      "-l", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   fork in Test := true,
 
   fork in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
+  testOptions in IntegrationTest := Seq(
     Tests.Argument(
+      "-o", "-eDFG",
       "-n", "mesosphere.marathon.IntegrationTest",
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in IntegrationTest := true,
@@ -88,7 +91,7 @@ lazy val commonSettings = testSettings ++
     "-Ywarn-nullary-override",
     "-Ywarn-nullary-unit",
     //"-Ywarn-unused", We should turn this one on soon
-    "-Ywarn-unused-import"
+    "-Ywarn-unused:-locals,imports",
     //"-Ywarn-value-discard", We should turn this one on soon.
   ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.

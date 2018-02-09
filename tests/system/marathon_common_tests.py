@@ -1060,6 +1060,31 @@ def test_metric_endpoint(marathon_service_name):
         "service.mesosphere.marathon.app.count is absent"
 
 
+def test_healtchcheck_and_volume():
+    """Launches a Docker container on Marathon."""
+
+    app_def = apps.healthcheck_and_volume()
+    app_id = app_def["id"]
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait(app_id=app_id)
+
+    tasks = client.get_tasks(app_id)
+    app = client.get_app(app_id)
+
+    assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
+    assert len(app['container']['volumes']) == 2, "The container does not have the correct amount of volumes"
+
+    # check if app becomes healthy
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_health():
+        app = client.get_app(app_id)
+        assert app['tasksHealthy'] == 1, "The app is not healthy"
+
+    check_health()
+
+
 @shakedown.dcos_1_9
 def test_vip_mesos_cmd(marathon_service_name):
     """Validates the creation of an app with a VIP label and the accessibility of the service via the VIP."""
@@ -1186,3 +1211,24 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
         assert 'Relay from {}'.format(relay_app["id"]) in output
 
     http_output_check()
+
+
+@shakedown.dcos_1_11
+def test_ipv6_healthcheck(docker_ipv6_network_fixture):
+    """ There is new feature in DC/OS 1.11 that allows containers running on IPv6 network to be healthchecked from
+        Marathon. This tests verifies executing such healthcheck.
+    """
+    app_def = apps.ipv6_healthcheck()
+    client = marathon.create_client()
+    target_instances_count = app_def['instances']
+    client.add_app(app_def)
+
+    shakedown.deployment_wait(timeout=timedelta(minutes=1).total_seconds(), app_id=app_def['id'])
+
+    app = client.get_app(app_def["id"])
+    assert app['tasksRunning'] == target_instances_count, \
+        "The number of running tasks is {}, but {} was expected".format(app['tasksRunning'], target_instances_count)
+    assert app['tasksHealthy'] == target_instances_count, \
+        "The number of healthy tasks is {}, but {} was expected".format(app['tasksHealthy'], target_instances_count)
+
+    client.remove_app(app['id'], True)

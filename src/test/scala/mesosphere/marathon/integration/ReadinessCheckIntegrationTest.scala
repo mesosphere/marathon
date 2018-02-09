@@ -80,7 +80,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
       And("The app is not ready and not healthy")
       //TODO start with state - false
-      val check = registerAppProxyHealthCheck(PathId(app.id), "v1", state = true)
+      registerAppProxyHealthCheck(PathId(app.id), "v1", state = true)
       val readinessCheck = registerProxyReadinessCheck(PathId(app.id), "v1")
       readinessCheck.isReady.set(false)
 
