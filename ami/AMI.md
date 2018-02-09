@@ -7,7 +7,7 @@ Get packer from https://www.packer.io/
 Documentation on provisioning new AMI for jenkins: https://wiki.mesosphere.com/display/MARATHON/Provision+New+AMI+for+Jenkins+Node
 Mesos version used by marathon: https://github.com/mesosphere/marathon/blob/master/project/Dependencies.scala#L87
 
-Here is an example on how to install mesos 1.5.0 using maws (https://github.com/mesosphere/maws#osx--macos) which will result in image named 'JenkinsMarathonCI-Debian8-2018-02-02'
+Here is an example on how to install Mesos 1.5.0 using maws (https://github.com/mesosphere/maws#osx--macos) which will result in image named 'JenkinsMarathonCI-Debian8-2018-02-02'
 
 ```bash
 $(maws login "Team 10")
