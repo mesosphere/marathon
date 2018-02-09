@@ -547,7 +547,7 @@ def test_pod_with_persistent_volume_recovers():
     shakedown.kill_process_on_host(host, '[h]ttp.server')
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_pod_recovery():
+    def wait_for_pod_recovery():
         tasks = common.get_pod_tasks(pod_id)
         assert len(tasks) == 2, "The number of tasks is {} after recovery, but 2 was expected".format(len(tasks))
 
@@ -560,6 +560,7 @@ def test_pod_with_persistent_volume_recovers():
         assert new_task_id2 not in old_task_ids, \
             "The task ID has not changed, and is still {}".format(new_task_id2)
 
+    wait_for_pod_recovery()
     wait_for_status_network_info()
 
     tasks = common.get_pod_tasks(pod_id)
