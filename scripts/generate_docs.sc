@@ -1,10 +1,5 @@
 #!/usr/bin/env amm
 
-/**
-  *
-  *
-  */
-
 import java.time.Instant
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
@@ -19,22 +14,29 @@ import ammonite.ops.ImplicitWd._
   */
 
 @main
-def main(this_script_was_launched_by_launcher: Boolean = false) = {
-  if(!this_script_was_launched_by_launcher) {
-    cp(pwd/"generate_docs.sc", pwd/"generate_docs.temp")
-    %('amm, "generate_docs.temp", "--this_script_was_launched_by_launcher", "true")
+def main(tracked_by_git: Boolean = true) = {
+  if(tracked_by_git) {
+    //If the script is being tracked by git, we should create and run an untracked copy of it in order
+    // to avoid errors during branch checkout
+    cp.over(pwd/"generate_docs.sc", pwd/"generate_docs.temp")
+    %('amm, "generate_docs.temp", "--tracked_by_git", "false")
     rm! pwd/"generate_docs.temp"
-  }
+  } else {
+    //check that repo is clean
+    val possiblyChangedLines: Vector[String] = %%('git, "diff-files", "--name-only").out.lines
+    if (possiblyChangedLines.nonEmpty) {
+      val msg = s"Git repository isn't clean, aborting docs generation. Changed files:\n${possiblyChangedLines.mkString("\n")}"
+      println(msg)
+      exit()
+    }
 
-  //check that repo is clean
-  val possiblyChangedLines: Vector[String] = %%('git, "diff-files", "--name-only").out.lines
-  if (possiblyChangedLines.nonEmpty) {
-    throw new RuntimeException(s"Git repository isn't clean, aborting docs generation. Changed files:\n${possiblyChangedLines.mkString("\n")}")
-  }
+    val buildDir = makeTmpDir()
+    val docsDir = pwd/up/"docs"
 
-  buildDocs()
-  %('git, 'checkout, currentGitBranch)
-  println(s"Success! Docs generated at $rootDocsDir")
+    buildDocs(buildDir, docsDir)
+    %('git, 'checkout, currentGitBranch)
+    println(s"Success! Docs were generated at ${buildDir/'docs/'_site}")
+  }
 }
 
 def makeTmpDir(): Path = {
@@ -91,12 +93,6 @@ val docsTargetVersions = listAllTagsInOrder
 
 val (latestReleaseBranch, latestReleaseVersion) = docsTargetVersions.last
 
-val buildDir = makeTmpDir()
-
-val docsDir = pwd/up/"docs"
-
-val rootDocsDir = buildDir / 'docs
-
 def generateDocsForVersion(docsPath: Path, version: String, outputPath: String = "_site"): Unit = {
   %('bundle, "exec", s"jekyll build --config _config.yml,_config.$version.yml -d $outputPath/$version/")(docsPath)
 }
@@ -107,7 +103,7 @@ def branchForTag(version: String) = {
 
 // step 1: copy docs/docs to the respective dirs
 
-def checkoutDocsToTempFolder() = {
+def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path) = {
   docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
     val tagName = branchForTag(tagVersion)
     %git('checkout, s"$tagName")
@@ -122,7 +118,10 @@ def checkoutDocsToTempFolder() = {
 
 // step 2: generate the default version (latest release tag)
 
-def generateTopLevelDocs() = {
+def generateTopLevelDocs(buildDir: Path, docsDir: Path) = {
+  val rootDocsDir = buildDir / 'docs
+
+
   %git('checkout, branchForTag(latestReleaseVersion))
 
   println(s"Copying docs for $latestReleaseVersion into $buildDir")
@@ -136,7 +135,8 @@ def generateTopLevelDocs() = {
   %('bundle, "exec", s"jekyll build --config _config.yml -d _site")(rootDocsDir)
 }
 // step 3: generate docs for other versions
-def generateVersionedDocs() {
+def generateVersionedDocs(buildDir: Path) {
+  val rootDocsDir = buildDir / 'docs
   println(s"Generating docs for versions ${docsTargetVersions.map(_._2).mkString(", ")}")
   docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
     println("Cleaning docs/docs")
@@ -150,8 +150,8 @@ def generateVersionedDocs() {
   }
 }
 
-def buildDocs() = {
-  checkoutDocsToTempFolder()
-  generateTopLevelDocs()
-  generateVersionedDocs()
+def buildDocs(buildDir: Path, docsDir: Path) = {
+  checkoutDocsToTempFolder(buildDir, docsDir)
+  generateTopLevelDocs(buildDir, docsDir)
+  generateVersionedDocs(buildDir)
 }
