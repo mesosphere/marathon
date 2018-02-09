@@ -230,7 +230,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       reset(instanceTracker, instanceOpFactory)
 
       When("we send a related task change")
-      val notificationAck = launchQueue.notifyOfInstanceUpdate(instanceChange)
+      launchQueue.notifyOfInstanceUpdate(instanceChange).futureValue
 
       Then("there should be no more interactions")
       f.verifyNoMoreInteractions()

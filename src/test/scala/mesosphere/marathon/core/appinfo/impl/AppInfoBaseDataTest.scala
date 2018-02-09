@@ -488,7 +488,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
 
       When("requesting pod status")
-      val status = f.baseData.podStatus(pod).futureValue
+      f.baseData.podStatus(pod).futureValue
 
       Then("no exception was thrown so status was successfully fetched")
     }

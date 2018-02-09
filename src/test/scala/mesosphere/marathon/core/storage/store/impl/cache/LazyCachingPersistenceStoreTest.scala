@@ -99,7 +99,7 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
         store.store("task-1", updated).futureValue should be(Done)
         store.deleteVersion("task-1", original.version).futureValue should be(Done)
 
-        val storageId = ir.toStorageId("task-1", None)
+        ir.toStorageId("task-1", None)
 
         store.versionCache.size should be(0)
         store.versionedValueCache.size should be(0)

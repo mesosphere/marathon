@@ -77,7 +77,7 @@ class InstanceOpProcessorImplTest extends AkkaUnitTest {
     lazy val processor = new InstanceOpProcessorImpl(instanceTrackerProbe.ref, instanceRepository, stateOpResolver, config)
 
     def verifyNoMoreInteractions(): Unit = {
-      instanceTrackerProbe.expectNoMsg(0.seconds)
+      instanceTrackerProbe.expectNoMessage(0.seconds)
       noMoreInteractions(instanceRepository)
       noMoreInteractions(stateOpResolver)
     }

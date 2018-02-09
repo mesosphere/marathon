@@ -9,7 +9,6 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
 import akka.testkit.{ ImplicitSender, TestActor, TestActorRef, TestProbe }
-import akka.util.Timeout
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
 import mesosphere.marathon.core.async.ExecutionContexts
