@@ -535,6 +535,7 @@ def test_pod_with_persistent_volume_recovers():
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def wait_for_status_network_info():
+        tasks = common.get_pod_tasks(pod_id)
         # the following command throws exceptions if there are no tasks in TASK_RUNNING state
         common.running_status_network_info(tasks[0]['statuses'])
 
