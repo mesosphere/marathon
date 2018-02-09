@@ -149,11 +149,29 @@ case class SemVer(major: Int, minor: Int, build: Int, commit: String) {
 }
 
 object SemVer {
+  val empty = SemVer(0, 0, 0, "")
+
   // Matches e.g. 1.7.42
   val versionPattern = """^(\d+)\.(\d+)\.(\d+)$""".r
+  /**
+   * Create SemVer from string which has the form if 1.7.42 and the commit.
+   */
   def apply(version: String, commit: String): SemVer =
     version match {
       case versionPattern(major, minor, build) =>
+        SemVer(major.toInt, minor.toInt, build.toInt, commit)
+      case _ =>
+        throw new IllegalArgumentException(s"Could not parse version $version.")
+    }
+
+  // Matches e.g. 1.7.42-deadbeef
+  val versionCommitPattern = """^(\d+)\.(\d+)\.(\d+)-(\w+)$""".r
+  /**
+   * Create SemVer from string which has the form if 1.7.42-deadbeef.
+   */
+  def apply(version: String): SemVer =
+    version match {
+      case versionCommitPattern(major, minor, build, commit) =>
         SemVer(major.toInt, minor.toInt, build.toInt, commit)
       case _ =>
         throw new IllegalArgumentException(s"Could not parse version $version.")

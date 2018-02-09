@@ -14,9 +14,11 @@ import $file.awsClient
 import $file.fileUtil
 import $file.githubClient
 import $file.provision
+import $file.releases
 import $file.upgrade
 import $file.utils
 
+import releases.ReleaseTarget
 import utils.SemVer
 
 
@@ -236,34 +238,6 @@ def jenkins(): Unit = {
   else master()
 }
 
-sealed trait ReleaseTarget {
-  val name: String
-}
-
-object ReleaseTarget {
-  case object DockerTag extends ReleaseTarget {
-    val name = "docker-tag"
-  }
-  case object DockerLatest extends ReleaseTarget {
-    val name = "docker-latest"
-  }
-  case object LinuxPackages extends ReleaseTarget {
-    val name = "linux-packages"
-  }
-  case object JARArtifact extends ReleaseTarget {
-    val name = "jar-artifact"
-  }
-  case object S3Package extends ReleaseTarget {
-    val name = "s3-package"
-  }
-
-  case object PluginInterface extends ReleaseTarget {
-    val name = "plugin-interface"
-  }
-
-  val all = Seq(DockerTag, DockerLatest, S3Package, LinuxPackages, JARArtifact, PluginInterface)
-}
-
 /**
  * Executes the Community Release which includes:
  *
@@ -278,39 +252,12 @@ object ReleaseTarget {
  */
 @main
 def release(args: String*): Unit = {
-  case class Config(
-    version: SemVer = SemVer.empty,
-    targets: List[ReleaseTarget] = Nil,
-    runTests: Boolean = true,
-    checkout: Option[String] = None)
 
-  val parser = new scopt.OptionParser[Config]("scopt") {
-    head("pipeline release")
-    opt[SemVer]("version").required.action { (v, c) =>
-      c.copy(version = v)
-    }
-    opt[Boolean]("run-tests").required.action { (runTests, c) =>
-      c.copy(runTests = runTests)
-    }
-    opt[String]("checkout").action {
-      case ("", c) => c.copy(checkout = None)
-      case (checkout, c) => c.copy(checkout = Some(checkout))
-    }
-    arg[String]("targets...").unbounded.optional.action { (target, c) =>
-      ReleaseTarget.all.find(_.name == target) match {
-        case Some(rt) => c.copy(targets = rt :: c.targets)
-        case None =>
-          throw new RuntimeException(s"${target} is not a known release target; valid options are:\n* ${ReleaseTarget.all.map(_.name).mkString("\n* ")}")
-      }
-    }
-  }
-
-  val config = parser.parse(args, Config()).getOrElse {
+  val config = releases.parser.parse(args, releases.Config()).getOrElse {
     sys.exit(1)
     ???
   }
 
-  val version = config.version
   println(s"Releasing build ${config.version}...")
   releases.verify(config.version)
 
@@ -326,8 +273,4 @@ def release(args: String*): Unit = {
     case other =>
       println(s"Target ${other.name} is not supported yet. Skipping...")
   }
-
-  val tagVersion = version.toTagString
-  //%('git, "tag", "-a", tagVersion, "-m", tagVersion)
-  //TAG
 }
