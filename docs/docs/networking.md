@@ -8,7 +8,7 @@ This document describes the networking API released as of Marathon 1.5.
 
 While Marathon continues to consume the [legacy ports API](ports.html) that was shipped in versions 1.4.x and prior, all new applications should be declared using the new, non-deprecated networking API fields that are documented here. Applications using the old networking API fields will be automatically migrated to the new networking API in Marathon 1.5.x. As of version 1.5, Marathon will only produce responses in the new 1.5 networking API format.
 
-See the [Migrating to the 1.5 Networking API]({{ site.baseurl }}/docs/upgrade/network-api-migration.html) for more information on changes you may need to make to your applications.
+See the [Migrating to the 1.5 Networking API](upgrade/network-api-migration.html) for more information on changes you may need to make to your applications.
 
 ### VIPs
 
