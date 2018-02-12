@@ -2,7 +2,8 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.{ Failure, Result, Validator }
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, Pod, PodContainer, PodEphemeralVolume, PodSecretVolume, Resources, SecretDef, VolumeMount }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, VolumeMount }
+import mesosphere.marathon.state.PersistentVolume
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.{ UnitTest, ValidationTestLike }
 
@@ -124,6 +125,65 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     }
   }
 
+  "with residency" should {
+    "be invalid if cpu changes" in new Fixture {
+      val pod = validResidentPod.fromRaml
+      val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(cpus = 3))))
+      residentUpdateIsValid(pod)(to) should haveViolations(
+        "/" -> "Resident pods may not change resource requirements!")
+    }
+
+    "be invalid if mem changes" in new Fixture {
+      val pod = validResidentPod.fromRaml
+      val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(mem = 3))))
+      residentUpdateIsValid(pod)(to) should haveViolations(
+        "/" -> "Resident pods may not change resource requirements!")
+    }
+
+    "be invalid if disk changes" in new Fixture {
+      val pod = validResidentPod.fromRaml
+      val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(disk = 3))))
+      residentUpdateIsValid(pod)(to) should haveViolations(
+        "/" -> "Resident pods may not change resource requirements!")
+    }
+
+    "be invalid if gpus change" in new Fixture {
+      val pod = validResidentPod.fromRaml
+      val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(gpus = 3))))
+      residentUpdateIsValid(pod)(to) should haveViolations(
+        "/" -> "Resident pods may not change resource requirements!")
+    }
+
+    "be invalid with default upgrade strategy" in new Fixture {
+      val pod = validResidentPod.fromRaml
+      val to = pod.copy(upgradeStrategy = state.UpgradeStrategy.empty)
+      residentUpdateIsValid(pod)(to) should haveViolations(
+        "/upgradeStrategy/maximumOverCapacity" -> "got 1.0, expected 0.0")
+    }
+
+    "be invalid if persistent volumes change" in new Fixture {
+      val pod = validResidentPod.fromRaml
+      val to = pod.copy(volumes = pod.volumes.map {
+        case vol: PersistentVolume => vol.copy(persistent = vol.persistent.copy(size = 2))
+        case vol => vol
+      })
+      residentUpdateIsValid(pod)(to) should haveViolations(
+        "/" -> "Persistent volumes can not be changed!")
+    }
+
+    "be invalid if ports change" in new Fixture {
+      val pod = validResidentPod.fromRaml
+      val to1 = pod.copy(containers = pod.containers.map(ct => ct.copy(
+        endpoints = ct.endpoints.map(ep => ep.copy(hostPort = None)))))
+      val to2 = pod.copy(containers = pod.containers.map(ct => ct.copy(
+        endpoints = ct.endpoints.map(ep => ep.copy(hostPort = Some(2))))))
+      residentUpdateIsValid(pod)(to1) should haveViolations(
+        "/" -> "Resident pods may not change resource requirements!")
+      residentUpdateIsValid(pod)(to2) should haveViolations(
+        "/" -> "Resident pods may not change resource requirements!")
+    }
+  }
+
   class Fixture(validateSecrets: Boolean = false) {
     val validContainer = PodContainer(
       name = "ct1",
@@ -145,6 +205,14 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       containers = Seq(pullConfigContainer),
       secrets = Map("aSecret" -> SecretDef("/pull/config"))
     )
+
+    def validResidentPod = validPod.copy(
+      containers = Seq(validContainer.copy(
+        endpoints = Seq(Endpoint("ep1", hostPort = Some(1))),
+        volumeMounts = Seq(VolumeMount("vol1", "vol1-mount", Some(false))))),
+      volumes = Seq(PodPersistentVolume("vol1", PersistentVolumeInfo(size = 1))),
+      scheduling = Some(PodSchedulingPolicy(
+        upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)))))
 
     val features: Set[String] = if (validateSecrets) Set(Features.SECRETS) else Set.empty
     implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None)

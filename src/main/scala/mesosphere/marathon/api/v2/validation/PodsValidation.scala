@@ -11,7 +11,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, RootGroup }
 import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 
@@ -239,6 +239,45 @@ trait PodsValidation extends GeneralPurposeCombinators {
         new And(plugins: _*).apply(pod)
       }
     }
+
+  def residentUpdateIsValid(from: PodDefinition): Validator[PodDefinition] = {
+    val changeNoVolumes =
+      isTrue[PodDefinition]("Persistent volumes can not be changed!") { to =>
+        val fromVolumes = from.persistentVolumes
+        val toVolumes = to.persistentVolumes
+        def sameSize = fromVolumes.size == toVolumes.size
+        def noVolumeChange = fromVolumes.forall { fromVolume =>
+          toVolumes.find(_.name == fromVolume.name).contains(fromVolume)
+        }
+        sameSize && noVolumeChange
+      }
+
+    val changeNoResource =
+      isTrue[PodDefinition]("Resident pods may not change resource requirements!") { to =>
+        val fromHostPorts = from.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
+        val toHostPorts = to.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
+        from.resources.cpus == to.resources.cpus &&
+          from.resources.mem == to.resources.mem &&
+          from.resources.disk == to.resources.disk &&
+          from.resources.gpus == to.resources.gpus &&
+          fromHostPorts == toHostPorts
+      }
+
+    validator[PodDefinition] { pod =>
+      pod should changeNoVolumes
+      pod should changeNoResource
+      pod.upgradeStrategy is state.UpgradeStrategy.validForResidentTasks
+    }
+  }
+
+  def updateIsValid(from: RootGroup): Validator[PodDefinition] = new Validator[PodDefinition] {
+    override def apply(pod: PodDefinition): Result = {
+      from.pod(pod.id) match {
+        case (Some(last)) if last.isResident || pod.isResident => residentUpdateIsValid(last)(pod)
+        case _ => Success
+      }
+    }
+  }
 }
 
 object PodsValidation extends PodsValidation {

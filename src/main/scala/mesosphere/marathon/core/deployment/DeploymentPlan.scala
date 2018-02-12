@@ -6,6 +6,7 @@ import java.util.UUID
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.core.deployment.impl.DeploymentPlanReverter
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
@@ -340,6 +341,7 @@ object DeploymentPlan {
   def deploymentPlanValidator(): Validator[DeploymentPlan] = {
     validator[DeploymentPlan] { plan =>
       plan.createdOrUpdatedApps as "app" is every(AppDefinition.updateIsValid(plan.original))
+      plan.createdOrUpdatedPods as "pod" is every(PodsValidation.updateIsValid(plan.original))
     }
   }
 }
