@@ -69,11 +69,17 @@ update-ca-certificates -f
 curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && sudo chmod +x /usr/local/bin/jq
 
 # Install Ammonite
-curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/0.8.2/2.12-0.8.2 && sudo chmod +x /usr/local/bin/amm
+curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/1.0.3/2.12-1.0.3 && sudo chmod +x /usr/local/bin/amm
 
 # Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
 # so we need ivy2 cache in `/root`
 git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
 cd /home/admin/marathon
+sbt update
+git checkout origin/releases/1.5
+rm -rf $(find . -name target -type d)
+sbt update
+git checkout origin/releases/1.4
+rm -rf $(find . -name target -type d)
 sbt update
 rm -rf /home/admin/marathon

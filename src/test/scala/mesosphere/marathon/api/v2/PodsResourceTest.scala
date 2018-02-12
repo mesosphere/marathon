@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import java.time.OffsetDateTime
 import javax.servlet.http.HttpServletResponse
 
 import akka.event.EventStream
@@ -11,7 +12,6 @@ import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
@@ -21,9 +21,9 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, Raml, Resources, VolumeMount }
+import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy, VersionInfo }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy, VersionInfo }
 import mesosphere.marathon.test.{ Mockito, SettableClock }
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -34,8 +34,6 @@ import scala.concurrent.duration._
 
 class PodsResourceTest extends AkkaUnitTest with Mockito {
 
-  // TODO(jdef) test findAll
-  // TODO(jdef) test status
   // TODO(jdef) incorporate checks for firing pod events on C, U, D operations
 
   val podSpecJson = """
@@ -438,6 +436,55 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val body = Option(response.getEntity.asInstanceOf[String])
         body should not be None
         body.foreach(_ should include("mypod does not exist"))
+      }
+    }
+
+    "find all pods" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.findAll(any).returns(List(PodDefinition(), PodDefinition()))
+      val response = f.podsResource.findAll(f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_OK)
+
+        val jsonBody = Json.parse(response.getEntity.asInstanceOf[String])
+        jsonBody.asInstanceOf[JsArray].value.size shouldEqual 2
+      }
+    }
+
+    "get pod status" in {
+      implicit val podStatusService = mock[PodStatusService]
+      val f = Fixture()
+
+      podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+
+      val response = f.podsResource.status("/mypod", f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_OK)
+
+        val jsonBody = Json.parse(response.getEntity.asInstanceOf[String])
+        (jsonBody \ "id").get.asInstanceOf[JsString].value shouldEqual "mypod"
+      }
+    }
+
+    "get all pod statuses" in {
+      implicit val podStatusService = mock[PodStatusService]
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.ids().returns(Set(PathId("mypod")))
+      podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+
+      val response = f.podsResource.allStatus(f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_OK)
+
+        val jsonBody = Json.parse(response.getEntity.asInstanceOf[String])
+        jsonBody.asInstanceOf[JsArray].value.size shouldEqual 1
       }
     }
 

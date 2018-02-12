@@ -4,7 +4,6 @@ package integration
 import akka.http.scaladsl.model.MediaTypes
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
-import org.slf4j.LoggerFactory
 
 /**
   * Integration tests for non-app / non-pod end points such as /ping and /metrics

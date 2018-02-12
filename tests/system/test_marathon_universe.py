@@ -105,42 +105,6 @@ def test_install_universe_package(package):
     assert shakedown.service_healthy(package)
 
 
-@pytest.fixture(
-    params=[
-        'neo4j',
-    ])
-def neo_package(request):
-    package_name = request.param
-    yield package_name
-    try:
-        shakedown.uninstall_package_and_data(package_name, 'neo4j/core')
-    except Exception as e:
-        # cleanup does NOT fail the test
-        print(e)
-
-
-@shakedown.private_agents(2)
-def test_neo4j_universe_package_install(neo_package):
-    """ Neo4j used to be 1 of the universe packages tested above, largely
-        because there was a bug in marathon for a short period of time
-        which was realized through neo4j.  However neo4j is so strongly different
-        that we can't test it like the other services.  It is NOT a framework
-        so framework health checks do not work with neo4j.
-    """
-    package = neo_package
-    shakedown.install_package(package)
-    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds(), app_id='neo4j/core')
-
-    assert shakedown.package_installed(package), 'Package failed to install'
-
-    marathon_client = marathon.create_client()
-    tasks = marathon_client.get_tasks('neo4j/core')
-
-    for task in tasks:
-        assert task['healthCheckResults'][0]['lastSuccess'] is not None, 'Healthcheck was not successful'
-        assert task['healthCheckResults'][0]['consecutiveFailures'] == 0, 'Healthcheck had consecutive failures'
-
-
 def uninstall(service, package=PACKAGE_NAME):
     try:
         task = shakedown.get_service_task(package, service)

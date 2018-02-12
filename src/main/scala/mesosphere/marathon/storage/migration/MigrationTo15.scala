@@ -19,15 +19,12 @@ import mesosphere.marathon.storage.repository.GroupRepository
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
 
-case class MigrationTo15(
-    migration: Migration)(implicit
-    executionContext: ExecutionContext,
-    materializer: Materializer) extends StrictLogging {
+case class MigrationTo15(migration: Migration) extends MigrationStep with StrictLogging {
 
   import MigrationTo15._
 
   @SuppressWarnings(Array("all")) // async/await
-  def migrate(): Future[Done] = async {
+  override def migrate()(implicit executionContext: ExecutionContext, materializer: Materializer): Future[Done] = async {
     implicit val env = Environment(sys.env)
     implicit val appNormalization = appNormalizer(
       migration.availableFeatures, migration.defaultNetworkName, migration.mesosBridgeName)

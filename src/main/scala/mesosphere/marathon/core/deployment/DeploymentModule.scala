@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.deployment
 
-import akka.Done
 import akka.actor.{ ActorRef, Props }
 import akka.event.EventStream
 import akka.stream.Materializer
@@ -13,8 +12,6 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.DeploymentRepository
-
-import scala.concurrent.Promise
 
 /**
   * Provides a [[DeploymentManager]] implementation that can be used to start and cancel a deployment and
@@ -31,7 +28,7 @@ class DeploymentModule(
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
-    deploymentActorProps: (ActorRef, Promise[Done], KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) {
+    deploymentActorProps: (ActorRef, KillService, SchedulerActions, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor) => Props = DeploymentActor.props)(implicit val mat: Materializer) {
 
   private[this] val deploymentManagerActorRef: ActorRef = {
     val props = DeploymentManagerActor.props(

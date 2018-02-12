@@ -17,9 +17,10 @@ import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.test.{ Mockito, SettableClock, SimulatedScheduler }
 import org.scalatest.GivenWhenThen
 import Migration.MigrationAction
+import akka.stream.Materializer
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Eventually {
 
@@ -48,35 +49,31 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     val clock = SettableClock.ofNow()
     implicit val scheduler = new SimulatedScheduler(clock)
     val notificationCounter = new AtomicInteger(0)
+    val migrationSteps = if (fakeMigrations.nonEmpty) fakeMigrations else Migration.steps
     val migration = new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
       instanceRepository, taskFailureRepository, frameworkIdRepository,
-      serviceDefinitionRepository, configurationRepository, backup, config) {
+      serviceDefinitionRepository, configurationRepository, backup, config, migrationSteps) {
 
       override protected def notifyMigrationInProgress(from: StorageVersion, migrateVersion: StorageVersion): Unit =
         notificationCounter.incrementAndGet()
 
-      override def migrations: List[(StorageVersion, () => Future[Any])] = if (fakeMigrations.nonEmpty) {
-        fakeMigrations
-      } else {
-        super.migrations
-      }
     }
   }
 
-  val currentVersion: StorageVersion = StorageVersions.current
+  val currentVersion: StorageVersion = StorageVersions(Migration.steps)
 
   "Migration" should {
     "be filterable by version" in {
       val f = new Fixture
 
       val migrate = f.migration
-      val all = migrate.migrations.filter(_._1 > StorageVersions(0, 0, 0)).sortBy(_._1)
-      all should have size migrate.migrations.size.toLong
+      val all = migrate.steps.filter(_._1 > StorageVersions(0, 0, 0)).sortBy(_._1)
+      all should have size migrate.steps.size.toLong
 
-      val none = migrate.migrations.filter(_._1 > StorageVersions(Int.MaxValue, 0, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
+      val none = migrate.steps.filter(_._1 > StorageVersions(Int.MaxValue, 0, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
       none should be('empty)
 
-      val some = migrate.migrations.filter(_._1 < StorageVersions(1, 5, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
+      val some = migrate.steps.filter(_._1 < StorageVersions(1, 5, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE))
       some should have size 2 // we do have two migrations now, 1.4.2 and 1.4.6
     }
 
@@ -97,7 +94,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       verify(mockedStore).startMigration()
       verify(mockedStore).storageVersion()
-      verify(mockedStore).setStorageVersion(StorageVersions.current)
+      verify(mockedStore).setStorageVersion(StorageVersions(Migration.steps))
       verify(mockedStore).endMigration()
       noMoreInteractions(mockedStore)
     }
@@ -110,17 +107,12 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       mockedStore.isOpen returns true
       val currentPersistenceVersion =
-        StorageVersions.current.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
-
-      mockedStore.startMigration() returns Future.successful(Done)
+        StorageVersions(Migration.steps).toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
       mockedStore.storageVersion() returns Future.successful(Some(currentPersistenceVersion))
-      mockedStore.endMigration() returns Future.successful(Done)
 
       migrate.migrate()
 
-      verify(mockedStore).startMigration()
       verify(mockedStore).storageVersion()
-      verify(mockedStore).endMigration()
       noMoreInteractions(mockedStore)
     }
 
@@ -164,7 +156,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       }
 
       Then("Migration exits with a readable error message")
-      ex.getMessage should equal (s"Migration from ${unsupportedVersion.str} is not supported as it is newer than ${StorageVersions.current.str}.")
+      ex.getMessage should equal (s"Migration from ${unsupportedVersion.str} is not supported as it is newer than ${StorageVersions(Migration.steps).str}.")
     }
 
     "migrations are executed sequentially" in {
@@ -192,7 +184,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       migrate.serviceDefinitionRepo.getVersions(any) returns Source.empty
       val result = migrate.migrate()
       result should be ('nonEmpty)
-      result should contain theSameElementsInOrderAs migrate.migrations.map(_._1)
+      result should contain theSameElementsInOrderAs migrate.steps.map(_._1)
     }
 
     "log periodic messages if migration takes more time than usual" in {
@@ -202,9 +194,13 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val version = StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE)
 
       val migration = List(
-        version -> { () =>
-          started.success(Done)
-          migrationDone.future
+        version -> { _: Migration =>
+          new MigrationStep {
+            override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+              started.success(Done)
+              migrationDone.future
+            }
+          }
         }
       )
       val f = new Fixture(mockedStore, migration)
@@ -236,13 +232,16 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val mockedStore = mock[PersistenceStore[_, _, _]]
       val f = new Fixture(mockedStore)
       mockedStore.startMigration() throws new StoreCommandFailedException("Migration is already in progress")
+      mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
 
       val migrate = f.migration
 
-      val thrown = the[StoreCommandFailedException] thrownBy migrate.migrate()
-      thrown.getMessage should equal("Migration is already in progress")
+      val thrown = the[MigrationFailedException] thrownBy migrate.migrate()
+      thrown.getMessage should equal("Migration Failed: Migration is already in progress")
+      thrown.getCause shouldBe a[StoreCommandFailedException]
 
       verify(mockedStore).startMigration()
+      verify(mockedStore).storageVersion()
       noMoreInteractions(mockedStore)
     }
 
@@ -250,7 +249,13 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val mockedStore = mock[PersistenceStore[_, _, _]]
       val version = StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE)
       val failingMigration: MigrationAction = (version,
-        () => Future.failed(MigrationCancelledException("Migration cancelled", new Exception("Failed to do something"))))
+        { _: Migration =>
+          new MigrationStep {
+            override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+              Future.failed(MigrationCancelledException("Migration cancelled", new Exception("Failed to do something")))
+            }
+          }
+        })
       val f = new Fixture(mockedStore, List(failingMigration))
 
       mockedStore.startMigration() returns Future.successful(Done)
@@ -260,7 +265,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       val migration = f.migration
 
-      val thrown = the[MigrationFailedException] thrownBy migration.migrate()
+      val thrown = the[MigrationCancelledException] thrownBy migration.migrate()
       thrown.getMessage should equal("Migration cancelled")
       thrown.getCause shouldBe a[Exception]
       thrown.getCause.getMessage should equal("Failed to do something")

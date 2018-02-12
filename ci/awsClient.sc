@@ -11,7 +11,7 @@ import com.amazonaws.services.s3._
 import com.amazonaws.auth._
 import com.amazonaws.services.s3.transfer._
 import com.amazonaws.services.s3.transfer.Transfer.TransferState
-import com.amazonaws.services.s3.model.{PutObjectRequest, CannedAccessControlList}
+import com.amazonaws.services.s3.model.{CopyObjectRequest, PutObjectRequest, CannedAccessControlList}
 import scala.collection.JavaConversions._
 
 /**
@@ -127,4 +127,10 @@ def uploadFileToS3(localFile: Path, remotePath: S3Path): Unit = {
   transfer.shutdownNow(true)
   assert(upload.getState() == TransferState.Completed, s"Upload finished with ${upload.getState()}")
   println(s"Uploading ${localFile} -> ${remotePath}: Finished")
+}
+
+def copy(from: S3Path, to: S3Path): Unit = {
+  val client = createS3Client()
+  val request = new CopyObjectRequest(from.bucket, from.key, to.bucket, to.key)
+  client.copyObject(request)
 }

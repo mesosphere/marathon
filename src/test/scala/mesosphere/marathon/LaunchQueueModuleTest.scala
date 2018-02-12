@@ -2,7 +2,6 @@ package mesosphere.marathon
 
 import java.time.Clock
 
-import com.google.inject.Provider
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._

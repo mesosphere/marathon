@@ -87,6 +87,7 @@ object Directives extends AuthDirectives with LeaderDirectives with AkkaDirectiv
             `Cache-Control`(`no-cache`, `no-store`, `must-revalidate`),
             `Expires`(DateTime.now)
           )
+        case p => throw new IllegalArgumentException(s"Unsupported protocol $p")
       }
     }
   }

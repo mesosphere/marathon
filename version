@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Version script for Marathon.
+#
+# Change MINOR to x+1 and BRANCH_POINT to commit hash of common ancestor of master and releases/1.x
+# after a releases/1.x was cut
+MAJOR=1
+MINOR=6
+BRANCH_POINT=aa89e89
+
+# Infer version
+# Number of commits since branch point
+COMMIT_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..HEAD)"
+COMMIT_HASH=$(git rev-parse --short HEAD)
+
+# Echo commit hash
+if [ "$#" -eq 1 ] && [ "$1" == "commit" ]; then
+    echo "$COMMIT_HASH"
+    exit 0
+fi
+
+# Version for Docker image, e.g. v1.7.42
+if [ "$#" -eq 1 ] && [ "$1" == "docker" ]; then
+    echo "v$MAJOR.$MINOR.$COMMIT_NUMBER"
+    exit 0
+fi
+
+# Echo verion
+# E.g. 1.7.42
+echo "$MAJOR.$MINOR.$COMMIT_NUMBER"

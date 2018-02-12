@@ -30,14 +30,12 @@ import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Success
 
 class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
 
   "DeploymentManager" should {
     "Deployment" in {
@@ -69,7 +67,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
       awaitCond(manager.underlyingActor.runningDeployments.contains(plan.id), 5.seconds)
       manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Deploying)
 
-      manager ! DeploymentFinished(plan)
+      manager ! DeploymentFinished(plan, Success(Done))
       awaitCond(manager.underlyingActor.runningDeployments.isEmpty, 5.seconds)
     }
 
@@ -169,7 +167,6 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Cancel deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      implicit val timeout = Timeout(1.minute)
 
       val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
       val oldGroup = createRootGroup()
@@ -206,7 +203,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     // A method that returns dummy props. Used to control the deployments progress. Otherwise the tests become racy
     // and depending on when DeploymentActor sends DeploymentFinished message.
-    val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _, _, _) => TestActor.props(new LinkedBlockingDeque())
+    val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _, _) => TestActor.props(new LinkedBlockingDeque())
 
     def deploymentManager(): TestActorRef[DeploymentManagerActor] = TestActorRef (
       DeploymentManagerActor.props(

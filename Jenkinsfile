@@ -11,7 +11,7 @@ ansiColor('xterm') {
       user_is_authorized(master_branches, '8b793652-f26a-422f-a9ba-0d1e47eb9d89', '#marathon-dev')
     }
   }
-  node('JenkinsMarathonCI-Debian8-2018-01-03') {
+  node('JenkinsMarathonCI-Debian8-2018-02-09') {
     stage("Run Pipeline") {
       try {
         checkout scm
@@ -24,7 +24,6 @@ ansiColor('xterm') {
         }
       } finally {
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
-        junit allowEmptyResults: true, testResults: 'target/test-reports/*integration/*.xml'
         publishHTML([
             allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
             reportDir: 'target/scala-2.12/scapegoat-report', reportFiles: 'scapegoat.html',

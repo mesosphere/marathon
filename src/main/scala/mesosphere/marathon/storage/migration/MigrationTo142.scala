@@ -11,9 +11,7 @@ import mesosphere.marathon.storage.repository.AppRepository
 import scala.concurrent.{ ExecutionContext, Future }
 
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo142(appRepository: AppRepository)(implicit
-    ctx: ExecutionContext,
-    mat: Materializer) extends StrictLogging {
+class MigrationTo142(appRepository: AppRepository) extends MigrationStep with StrictLogging {
 
   import MigrationTo142.migrationFlow
   val sink =
@@ -21,7 +19,7 @@ class MigrationTo142(appRepository: AppRepository)(implicit
       .mapAsync(Migration.maxConcurrency)(appRepository.store)
       .toMat(Sink.ignore)(Keep.right)
 
-  def migrate(): Future[Done] = {
+  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     logger.info("Starting migration to 1.4.2")
 
     appRepository.all()

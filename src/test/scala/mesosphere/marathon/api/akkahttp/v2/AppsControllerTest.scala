@@ -125,7 +125,7 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       (body, plan)
     }
 
-    def createAppWithVolumes(`type`: String, volumes: String, groupManager: GroupManager, auth: TestAuthFixture): HttpEntity.Strict = {
+    def createAppWithVolumes(`type`: String, volumes: String, groupManager: GroupManager): HttpEntity.Strict = {
       val app = raml.App(id = "/app", cmd = Some(
         "foo"))
 
@@ -1456,17 +1456,15 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with broken volume definition fails with readable error message" in new Fixture {
       Given("An app update with an invalid volume (wrong field name)")
-      val entity = createAppWithVolumes(
-        "MESOS",
-        """
-          |    "volumes": [{
-          |      "containerPath": "var",
-          |      "persistent_WRONG_FIELD_NAME": {
-          |        "size": 10
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth)
+      val entity = createAppWithVolumes("MESOS", """
+                |    "volumes": [{
+                |      "containerPath": "var",
+                |      "persistent_WRONG_FIELD_NAME": {
+                |        "size": 10
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
       Post(Uri./, entity) ~> route ~> check {
         Then("The return code indicates that the hostPath of volumes[0] is missing")
         // although the wrong field should fail
@@ -1479,20 +1477,17 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with an external volume for an illegal provider should fail" in new Fixture {
       Given("An app invalid volume (illegal volume provider)")
-      val entity = createAppWithVolumes(
-        "MESOS",
-        """
-          |    "volumes": [{
-          |      "containerPath": "var",
-          |      "external": {
-          |        "size": 10,
-          |        "name": "foo",
-          |        "provider": "acme"
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("MESOS", """
+                |    "volumes": [{
+                |      "containerPath": "var",
+                |      "external": {
+                |        "size": 10,
+                |        "name": "foo",
+                |        "provider": "acme"
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Post(Uri./, entity) ~> route ~> check {
         Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
@@ -1505,18 +1500,15 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     "Creating an app with an external volume with no name orprovider name specified should FAIL provider validation" in new Fixture {
       Given("An app with an unnamed volume provider")
       val entity =
-        createAppWithVolumes(
-          "MESOS",
-          """
-            |    "volumes": [{
-            |      "containerPath": "var",
-            |      "external": {
-            |        "size": 10
-            |      },
-            |      "mode": "RW"
-            |    }]
-          """.stripMargin, groupManager, auth
-        )
+        createAppWithVolumes("MESOS", """
+                    |    "volumes": [{
+                    |      "containerPath": "var",
+                    |      "external": {
+                    |        "size": 10
+                    |      },
+                    |      "mode": "RW"
+                    |    }]
+                  """.stripMargin, groupManager)
 
       Then("The return code indicates create failure")
       Post(Uri./, entity) ~> route ~> check {
@@ -1528,21 +1520,18 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with an external volume w/ MESOS and absolute containerPath should succeed validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "MESOS",
-        """
-          |    "volumes": [{
-          |      "containerPath": "/var",
-          |      "external": {
-          |        "size": 10,
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "bar"}
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("MESOS", """
+                |    "volumes": [{
+                |      "containerPath": "/var",
+                |      "external": {
+                |        "size": 10,
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "bar"}
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
       Post(Uri./, entity) ~> route ~> check {
 
         Then("The return code indicates create success")
@@ -1554,21 +1543,18 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with an external volume w/ MESOS and dotted containerPath should fail validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "MESOS",
-        """
-          |    "volumes": [{
-          |      "containerPath": ".",
-          |      "external": {
-          |        "size": 10,
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "bar"}
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("MESOS", """
+                |    "volumes": [{
+                |      "containerPath": ".",
+                |      "external": {
+                |        "size": 10,
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "bar"}
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Then("The return code indicates create failure")
       Post(Uri./, entity) ~> route ~> check {
@@ -1579,21 +1565,18 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with an external volume w/ MESOS and nested containerPath should fail validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "MESOS",
-        """
-          |    "volumes": [{
-          |      "containerPath": "var/child",
-          |      "external": {
-          |        "size": 10,
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "bar"}
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("MESOS", """
+                |    "volumes": [{
+                |      "containerPath": "var/child",
+                |      "external": {
+                |        "size": 10,
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "bar"}
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Post(Uri./, entity) ~> route ~> check {
         Then("The return code indicates create success")
@@ -1604,21 +1587,18 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with an external volume and MESOS containerizer should pass validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "MESOS",
-        """
-          |    "volumes": [{
-          |      "containerPath": "var",
-          |      "external": {
-          |        "size": 10,
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "bar"}
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("MESOS", """
+                |    "volumes": [{
+                |      "containerPath": "var",
+                |      "external": {
+                |        "size": 10,
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "bar"}
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Then("The return code indicates create success")
       Post(Uri./, entity) ~> route ~> check {
@@ -1630,21 +1610,18 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with an external volume using an invalid rexray option should fail" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "MESOS",
-        """
-          |    "volumes": [{
-          |      "containerPath": "var",
-          |      "external": {
-          |        "size": 10,
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "rexray", "dvdi/iops": "0"}
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("MESOS", """
+                |    "volumes": [{
+                |      "containerPath": "var",
+                |      "external": {
+                |        "size": 10,
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "rexray", "dvdi/iops": "0"}
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Then("The return code indicates validation error")
       Post(Uri./, entity) ~> route ~> check {
@@ -1656,20 +1633,17 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with an external volume w/ relative containerPath DOCKER containerizer should succeed (available with Mesos 1.0)" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "DOCKER",
-        """
-          |    "volumes": [{
-          |      "containerPath": "relative/path",
-          |      "external": {
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "bar"}
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("DOCKER", """
+                |    "volumes": [{
+                |      "containerPath": "relative/path",
+                |      "external": {
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "bar"}
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Then("The return code indicates create success")
       Post(Uri./, entity) ~> route ~> check {
@@ -1680,20 +1654,17 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating an app with an external volume and DOCKER containerizer should pass validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "DOCKER",
-        """
-          |    "volumes": [{
-          |      "containerPath": "/var",
-          |      "external": {
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "bar"}
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("DOCKER", """
+                |    "volumes": [{
+                |      "containerPath": "/var",
+                |      "external": {
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "bar"}
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Then("The return code indicates create success")
       Post(Uri./, entity) ~> route ~> check {
@@ -1705,21 +1676,17 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating a DOCKER app with an external volume without driver option should NOT pass validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "DOCKER",
-
-        """
-            |    "volumes": [{
-            |      "containerPath": "/var",
-            |      "external": {
-            |        "provider": "dvdi",
-            |        "name": "namedfoo",
-            |        "options": {}
-            |      },
-            |      "mode": "RW"
-            |    }]
-          """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("DOCKER", """
+                  |    "volumes": [{
+                  |      "containerPath": "/var",
+                  |      "external": {
+                  |        "provider": "dvdi",
+                  |        "name": "namedfoo",
+                  |        "options": {}
+                  |      },
+                  |      "mode": "RW"
+                  |    }]
+                """.stripMargin, groupManager)
 
       Then("The return code indicates create failure")
 
@@ -1733,23 +1700,20 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
 
     "Creating a Docker app with an external volume with size should fail validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider")
-      val entity = createAppWithVolumes(
-        "DOCKER",
-        """
-          |    "volumes": [{
-          |      "containerPath": "/var",
-          |      "external": {
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "size": 42,
-          |        "options": {
-          |           "dvdi/driver": "rexray"
-          |        }
-          |      },
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("DOCKER", """
+                |    "volumes": [{
+                |      "containerPath": "/var",
+                |      "external": {
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "size": 42,
+                |        "options": {
+                |           "dvdi/driver": "rexray"
+                |        }
+                |      },
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Then("The return code indicates a validation error")
       Post(Uri./, entity) ~> route ~> check {
@@ -1760,24 +1724,21 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
     }
     "Creating an app with an external volume, and docker volume and DOCKER containerizer should pass validation" in new Fixture {
       Given("An app with a named, non-'agent' volume provider and a docker host volume")
-      val entity = createAppWithVolumes(
-        "DOCKER",
-        """
-          |    "volumes": [{
-          |      "containerPath": "/var",
-          |      "external": {
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "bar"}
-          |      },
-          |      "mode": "RW"
-          |    },{
-          |      "hostPath": "/ert",
-          |      "containerPath": "/ert",
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("DOCKER", """
+                |    "volumes": [{
+                |      "containerPath": "/var",
+                |      "external": {
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "bar"}
+                |      },
+                |      "mode": "RW"
+                |    },{
+                |      "hostPath": "/ert",
+                |      "containerPath": "/ert",
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Then("The return code indicates create success")
       Post(Uri./, entity) ~> route ~> check {
@@ -1791,25 +1752,21 @@ class AppsControllerTest extends UnitTest with GroupCreation with ScalatestRoute
       // we'll need to mitigate this with documentation: probably deprecating support for using
       // volume names with non-persistent volumes.
       Given("An app with DOCKER containerizer and multiple references to the same named volume")
-      val entity = createAppWithVolumes(
-        "DOCKER",
-
-        """
-          |    "volumes": [{
-          |      "containerPath": "/var",
-          |      "external": {
-          |        "provider": "dvdi",
-          |        "name": "namedfoo",
-          |        "options": {"dvdi/driver": "bar"}
-          |      },
-          |      "mode": "RW"
-          |    },{
-          |      "hostPath": "namedfoo",
-          |      "containerPath": "/ert",
-          |      "mode": "RW"
-          |    }]
-        """.stripMargin, groupManager, auth
-      )
+      val entity = createAppWithVolumes("DOCKER", """
+                |    "volumes": [{
+                |      "containerPath": "/var",
+                |      "external": {
+                |        "provider": "dvdi",
+                |        "name": "namedfoo",
+                |        "options": {"dvdi/driver": "bar"}
+                |      },
+                |      "mode": "RW"
+                |    },{
+                |      "hostPath": "namedfoo",
+                |      "containerPath": "/ert",
+                |      "mode": "RW"
+                |    }]
+              """.stripMargin, groupManager)
 
       Then("The return code indicates create success")
       Post(Uri./, entity) ~> route ~> check {

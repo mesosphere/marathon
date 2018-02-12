@@ -7,7 +7,6 @@ import mesosphere.marathon.core.pod.{ BridgeNetwork, HostNetwork }
 import mesosphere.marathon.state._
 import mesosphere.{ UnitTest, ValidationTestLike }
 import org.apache.mesos.{ Protos => Mesos }
-import play.api.libs.json.Json
 
 class AppConversionTest extends UnitTest with ValidationTestLike {
   private lazy val dockerBridgeApp = {
@@ -52,6 +51,19 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     portDefinitions = state.PortDefinitions(1, 2, 3),
     unreachableStrategy = state.UnreachableDisabled
   )
+  private lazy val argsOnlyApp = AppDefinition(
+    id = PathId("/args-only-app"),
+    args = Seq("whatever", "one", "two", "three")
+  )
+  private lazy val simpleDockerApp = AppDefinition(
+    id = PathId("/simple-docker-app"),
+    container = Some(state.Container.Docker(image = "foo/bla"))
+  )
+  private lazy val dockerWithArgsApp = AppDefinition(
+    id = PathId("/docker-with-args-app"),
+    args = Seq("whatever", "one", "two", "three"),
+    container = Some(state.Container.Docker(image = "foo/bla"))
+  )
 
   def convertToRamlAndBack(app: AppDefinition): Unit = {
     s"app ${app.id.toString} is written to json and can be read again via formats" in {
@@ -93,6 +105,15 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
 
     behave like convertToRamlAndBack(hostApp)
     behave like convertToProtobufThenToRAML(hostApp)
+
+    behave like convertToRamlAndBack(argsOnlyApp)
+    behave like convertToProtobufThenToRAML(argsOnlyApp)
+
+    behave like convertToRamlAndBack(simpleDockerApp)
+    behave like convertToProtobufThenToRAML(simpleDockerApp)
+
+    behave like convertToRamlAndBack(dockerWithArgsApp)
+    behave like convertToProtobufThenToRAML(dockerWithArgsApp)
 
     "convert legacy service definitions to RAML" in {
       val legacy = Protos.ServiceDefinition.newBuilder()
