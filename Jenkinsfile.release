@@ -5,19 +5,26 @@ ansiColor('xterm') {
 
     properties([
       parameters([
-        string(name: 'gitsha',
-          defaultValue: '',
-          description: 'Git Commit SHA to Build and Release (ex. 167d7fb86 or 167)'
-        ),
         string(name: 'version',
           defaultValue: '',
-          description: 'Community Release Version (ex. v1.5.2)'
+          description: """Community Release Version (ex. 1.5.2).
+                         |Version that should be released. Must start with a
+                         |number and must include commit (ex. 1.5.2/deadbeff).
+                       """.stripMargin()
+        ),
+        booleanParam(name: 'runTests',
+          description: 'Whether unit/integration and package tests should be run',
+          defaultValue: true
         ),
         booleanParam(name: 'latest',
           defaultValue: false,
           description: 'True if docker mesosphere/marathon:latest should be pushed'
-        )]
-      )
+        ),
+        booleanParam(name: 'dryRun',
+          defaultValue: false,
+          description: 'Set to true to only run the compile phase.'
+        )
+      ])
     ])
 
     stage("Run Pipeline") {
@@ -31,10 +38,15 @@ ansiColor('xterm') {
           sshagent (credentials: ['0f7ec9c9-99b2-4797-9ed5-625572d5931d']) {
             // add the ssh host key for the package uploader step
             // These environment variables are defined in the "Properties Content" section for the job.
-            sh """echo "${PKG_SSH_HOST} ${PKG_SSH_HOSTKEY_TYPE} ${PKG_SSH_HOSTKEY}" | sudo -E tee -a sudo -E tee -a /etc/ssh/ssh_known_hosts"""
+            sh """echo "${PKG_SSH_HOST} ${PKG_SSH_HOSTKEY_TYPE} ${PKG_SSH_HOSTKEY}" | sudo -E tee -a /etc/ssh/ssh_known_hosts"""
 
             withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
-              sh """sudo -E ci/pipeline release $params.version $params.gitsha $params.latest"""
+
+              targets = ''
+              if (params.dryRun == false)
+                targets = 'docker-tag linux-packages jar-artifact s3-package plugin-interface' + (params.latest ? 'docker-latest' : '')
+
+              sh """sudo -E env ci/pipeline release --version $params.version --run-tests=$params.runTests $targets"""
             }
           }
         }
