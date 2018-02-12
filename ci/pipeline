@@ -265,13 +265,10 @@ def release(args: String*): Unit = {
 
   val targets = config.targets.toSet
 
-  if (targets.contains(ReleaseTarget.LinuxPackages) ||
-      targets.contains(ReleaseTarget.DockerTag) ||
-      targets.contains(ReleaseTarget.DockerLatest)) {
-      buildDockerAndLinuxPackages()
-      if (config.runTests)
-        testDockerAndLinuxPackages()
-  }
+  build(config.runTests)
+  buildDockerAndLinuxPackages()
+  if (config.runTests)
+    testDockerAndLinuxPackages()
 
   targets.foreach {
     case ReleaseTarget.S3Package =>
