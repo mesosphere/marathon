@@ -47,6 +47,24 @@ def comment(pullNumber: String, msg: String, event: String = "COMMENT"): Unit = 
 }
 
 /**
+ * Creates a lightweight tag for a commit.
+ *
+ * @param commit The commit hash to be tagged.
+ * @param name The name of the tag, e.g. v1.7.42
+ */
+def tag(commit: String, name: String) : Unit = {
+  val fullCommitSha = %%('git, "rev-parse", commit).out.string.trim
+
+  val request = Js.Obj(
+    "ref"  -> Js.Str(s"refs/tags/$name"),
+    "sha" -> Js.Str(fullCommitSha),
+    )
+
+  val path = s"repos/mesosphere/marathon/git/refs"
+  execute(path, request.toString)
+}
+
+/**
  * Reject pull request with pullNumber.
  */
 def reject(
