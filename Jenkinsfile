@@ -11,7 +11,7 @@ ansiColor('xterm') {
       user_is_authorized(master_branches, '8b793652-f26a-422f-a9ba-0d1e47eb9d89', '#marathon-dev')
     }
   }
-  node('JenkinsMarathonCI-Debian8-2018-02-09') {
+  node('JenkinsMarathonCI-Debian9-2018-02-09') {
     stage("Run Pipeline") {
       try {
         checkout scm
