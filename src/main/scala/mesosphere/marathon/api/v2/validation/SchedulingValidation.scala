@@ -150,5 +150,5 @@ object SchedulingValidationMessages {
   val ConstraintGroupByMustBeEmptyOrInt = "GROUP BY must define an integer value or else no value at all"
   val ConstraintUniqueDoesNotAcceptValue = "UNIQUE does not accept a value"
   val IllegalConstraintSpecification = "illegal constraint specification"
-  val ConstraintOperatorInvalid = "operator must be one of the following UNIQUE, CLUSTER, GROUP_BY, LIKE, MAX_PER or UNLIKE"
+  val ConstraintOperatorInvalid = "operator must be one of the following UNIQUE, CLUSTER, GROUP_BY, LIKE, MAX_PER, UNLIKE or IS"
 }
