@@ -122,19 +122,6 @@ def asPullRequest(run: => (SemVer, Option[awsClient.Artifact])): Unit = {
 }
 
 /**
- * Update DC/OS repository and triggers build of update DC/OS image.
- *
- * @param version The newly built Marathon version.
- * @param artifactUrl Url for the saved Marathon artifact.
- * @param sha1 The sah1 checksum of the artifact.
- */
-@main
-def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
-  upgrade.updateMarathon(artifactUrl, sha1, s"Update Marathon to $version")
-  upgrade.updateMarathonEE(artifactUrl, sha1, s"Update Marathon to $version")
-}
-
-/**
  * Provision the build host.
  */
 def provisionHost(): Unit = utils.stage("Provision") {
@@ -181,6 +168,19 @@ def testDockerAndLinuxPackages(): Unit = {
     val testPath = pwd/'tests/'package
     %('make, "test")(testPath)
   }
+}
+
+/**
+ * Update DC/OS repository and triggers build of update DC/OS image.
+ *
+ * @param version The newly built Marathon version.
+ * @param artifactUrl Url for the saved Marathon artifact.
+ * @param sha1 The sah1 checksum of the artifact.
+ */
+@main
+def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
+  upgrade.updateMarathon(artifactUrl, sha1, s"Update Marathon to $version")
+  upgrade.updateMarathonEE(artifactUrl, sha1, s"Update Marathon to $version")
 }
 
 /*******************************************************************************
