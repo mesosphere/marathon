@@ -506,16 +506,80 @@ def test_pod_with_persistent_volume():
     host = common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address']
     port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
-    dir1 = tasks[0]['container']['volumes'][0]['container_path']
-    dir2 = tasks[1]['container']['volumes'][0]['container_path']
-    print(host, port1, port2, dir1, dir2)
+    path1 = tasks[0]['container']['volumes'][0]['container_path']
+    path2 = tasks[1]['container']['volumes'][0]['container_path']
+    print(host, port1, port2, path1, path2)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def assert_volume_content(host, port, directory):
-        cmd = "curl {}:{}/{}/foo".format(host, port, directory)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
+    def check_http_endpoint(port, path):
+        cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = shakedown.run_command_on_master(cmd)
-        assert run, "{} did not succeed on {}:{}".format(cmd, host, port)
+        assert run, "{} did not succeed".format(cmd)
         assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
 
-    assert_volume_content(host, port1, dir1)
-    assert_volume_content(host, port2, dir2)
+    check_http_endpoint(port1, path1)
+    check_http_endpoint(port2, path2)
+
+
+@common.marathon_1_6
+def test_pod_with_persistent_volume_recovers():
+    pod_def = pods.persistent_volume_pod()
+    pod_id = pod_def['id']
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    common.deployment_wait(service_id=pod_id)
+
+    tasks = common.get_pod_tasks(pod_id)
+    assert len(tasks) == 2, "The number of pod tasks is {}, but is expected to be 2".format(len(tasks))
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def wait_for_status_network_info():
+        tasks = common.get_pod_tasks(pod_id)
+        # the following command throws exceptions if there are no tasks in TASK_RUNNING state
+        common.running_status_network_info(tasks[0]['statuses'])
+
+    wait_for_status_network_info()
+    host = common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address']
+
+    task_id1 = tasks[0]['id']
+    task_id2 = tasks[1]['id']
+
+    shakedown.kill_process_on_host(host, '[h]ttp.server')
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def wait_for_pod_recovery():
+        tasks = common.get_pod_tasks(pod_id)
+        assert len(tasks) == 2, "The number of tasks is {} after recovery, but 2 was expected".format(len(tasks))
+
+        old_task_ids = [task_id1, task_id2]
+        new_task_id1 = tasks[0]['id']
+        new_task_id2 = tasks[1]['id']
+
+        assert new_task_id1 not in old_task_ids, \
+            "The task ID has not changed, and is still {}".format(new_task_id1)
+        assert new_task_id2 not in old_task_ids, \
+            "The task ID has not changed, and is still {}".format(new_task_id2)
+
+    wait_for_pod_recovery()
+    wait_for_status_network_info()
+
+    tasks = common.get_pod_tasks(pod_id)
+    assert host == common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address'], \
+        "the pod has been restarted on another host"
+
+    port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
+    port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
+    path1 = tasks[0]['container']['volumes'][0]['container_path']
+    path2 = tasks[1]['container']['volumes'][0]['container_path']
+    print(host, port1, port2, path1, path2)
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_data(port, path):
+        cmd = "curl {}:{}/{}/foo".format(host, port, path)
+        run, data = shakedown.run_command_on_master(cmd)
+        assert run, "{} did not succeed".format(cmd)
+        assert 'hello\nhello\n' in data, "'hello\nhello\n' not found in '{}'n".format(data)
+
+    check_data(port1, path1)
+    check_data(port2, path2)
