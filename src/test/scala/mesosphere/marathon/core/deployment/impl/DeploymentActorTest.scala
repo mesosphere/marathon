@@ -24,7 +24,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Success
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current

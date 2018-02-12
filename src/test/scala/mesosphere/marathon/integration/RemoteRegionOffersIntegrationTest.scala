@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.facades.MesosFacade.ITResourceStringValue
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ FaultDomain, PathId, Region, Zone }
