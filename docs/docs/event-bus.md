@@ -72,7 +72,7 @@ Fired every time Marathon receives an API request that modifies an app (create, 
     "upgradeStrategy": {
         "minimumHealthCapacity": 1.0
     },
-    "uris": [],
+    "fetch": [],
     "user": null,
     "version": "2014-09-09T05:57:50.866Z"
   }
@@ -295,7 +295,7 @@ Fired when a new http callback subscriber is added or removed:
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
           },
-          "uris": [],
+          "fetch": [],
           "user": null,
           "version": "2014-09-09T05:57:50.866Z"
         }
@@ -361,7 +361,7 @@ Fired when a new http callback subscriber is added or removed:
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
           },
-          "uris": [],
+          "fetch": [],
           "user": null,
           "version": "2014-09-09T05:57:50.866Z"
         }
@@ -427,7 +427,7 @@ Fired when a new http callback subscriber is added or removed:
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
           },
-          "uris": [],
+          "fetch": [],
           "user": null,
           "version": "2014-09-09T05:57:50.866Z"
         }
