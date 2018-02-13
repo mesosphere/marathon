@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.{ Failure, Result, Validator }
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, VolumeMount }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount }
 import mesosphere.marathon.state.PersistentVolume
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.{ UnitTest, ValidationTestLike }
@@ -125,7 +125,40 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     }
   }
 
-  "with residency" should {
+  "with persistent volumes" should {
+    "be valid" in new Fixture {
+      val pod = validResidentPod.fromRaml
+      residentValidator(pod) shouldBe aSuccess
+    }
+
+    "be valid if no unreachable strategy is provided" in new Fixture {
+      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
+        unreachableStrategy = None))).fromRaml
+      residentValidator(pod) should haveViolations(
+        "/" -> "unreachableStrategy must be disabled for pods with persistent volumes")
+    }
+
+    "be valid if no upgrade strategy is provided" in new Fixture {
+      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
+        upgrade = None))).fromRaml
+      residentValidator(pod) should haveViolations(
+        "/upgradeStrategy/maximumOverCapacity" -> "got 1.0, expected 0.0")
+    }
+
+    "be invalid if unreachable strategy is enabled" in new Fixture {
+      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
+        unreachableStrategy = Some(UnreachableEnabled())))).fromRaml
+      residentValidator(pod) should haveViolations(
+        "/" -> "unreachableStrategy must be disabled for pods with persistent volumes")
+    }
+
+    "be valid if upgrade strategy has maximumOverCapacity set to non-zero" in new Fixture {
+      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
+        upgrade = Some(PodUpgradeStrategy(maximumOverCapacity = 0.1))))).fromRaml
+      residentValidator(pod) should haveViolations(
+        "/upgradeStrategy/maximumOverCapacity" -> "got 0.1, expected 0.0")
+    }
+
     "be invalid if cpu changes" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(cpus = 3))))
@@ -212,7 +245,8 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         volumeMounts = Seq(VolumeMount("vol1", "vol1-mount", Some(false))))),
       volumes = Seq(PodPersistentVolume("vol1", PersistentVolumeInfo(size = 1))),
       scheduling = Some(PodSchedulingPolicy(
-        upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)))))
+        upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)),
+        unreachableStrategy = Some(UnreachableDisabled()))))
 
     val features: Set[String] = if (validateSecrets) Set(Features.SECRETS) else Set.empty
     implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None)
