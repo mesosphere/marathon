@@ -263,15 +263,26 @@ def release(args: String*): Unit = {
 
   %('git, "checkout", config.version.commit)
 
+  val targets = config.targets.toSet
+
+  build(config.runTests)
   buildDockerAndLinuxPackages()
   if (config.runTests)
     testDockerAndLinuxPackages()
 
-  config.targets.distinct.foreach {
+  targets.foreach {
     case ReleaseTarget.S3Package =>
       releases.copyTarballBuildsToReleases(config.version)
-    case other =>
-      println(s"Target ${other.name} is not supported yet. Skipping...")
+    case ReleaseTarget.LinuxPackages =>
+      releases.uploadLinuxPackagesToRepos(config.version.toTagString)
+    case ReleaseTarget.DockerTag =>
+      %('docker, "push", s"mesosphere/marathon:${config.version.toTagString}")
+    case ReleaseTarget.DockerLatest =>
+      %('docker, "tag", s"mesosphere/marathon:${config.version.toTagString}", "mesosphere/marathon:latest")
+      %('docker, "push", "mesosphere/marathon:latest")
+    case ReleaseTarget.JARArtifact =>
+      // publishing to the nexus repository.  This artifact is used by metronome.
+      %('sbt, "publish")
   }
 
   githubClient.tag(config.version.commit, config.version.toTagString)
