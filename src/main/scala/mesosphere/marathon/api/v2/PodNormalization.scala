@@ -56,7 +56,7 @@ object PodNormalization {
       Some(scheduling.copy(
         upgrade = Some(upgradeStrategy),
         unreachableStrategy = Some(unreachableStrategy)))
-    } else None
+    } else pod.scheduling
   }
 
   def apply(config: Config): Normalization[Pod] = Normalization { pod =>
