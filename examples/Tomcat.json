@@ -4,8 +4,12 @@
   "mem": 512,
   "cpus": 1.0,
   "instances": 1,
-  "uris": [
-    "http://www-us.apache.org/dist/tomcat/tomcat-7/v7.0.69/bin/apache-tomcat-7.0.69.tar.gz",
-    "https://gwt-examples.googlecode.com/files/Calendar.war"
+  "fetch": [
+    {
+      "uri": "https://archive.apache.org/dist/tomcat/tomcat-7/v7.0.69/bin/apache-tomcat-7.0.69.tar.gz"
+    },
+    {
+      "uri": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/gwt-examples/Calendar.war"
+    }
   ]
 }

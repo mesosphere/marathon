@@ -94,7 +94,7 @@ as failing.
 
 #### Staged
 A task is staged when a launch request has been submitted to the cluster, but
-has not been reported as running yet. Fetching the specified "uris" in the app
+has not been reported as running yet. Fetching the specified "fetch" in the app
 definition or the docker images happens before Mesos reports the task as
 running.
 
