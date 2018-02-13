@@ -36,7 +36,7 @@ fi
 echo "Workspace: ${WORKSPACE}"
 echo "Using: ${INSTALLER_URL}"
 
-PLATFORM=`uname`
+PLATFORM=$(uname)
 if [ "$PLATFORM" == 'Darwin' ]; then
     brew install gettext
 else
@@ -77,8 +77,7 @@ dcos_config:
 $EXTRA_DCOS_CONFIG
 EOF
 
-./dcos-launch create
-if [ $? -ne 0 ]; then
+if [ ./dcos-launch create -ne 0 ]
   echo "Failed to launch a cluster via dcos-launch"
   exit 2
 fi
