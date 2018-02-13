@@ -36,6 +36,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
     lazy val taskFailureRepository = mock[TaskFailureRepository]
     lazy val groupManager = mock[GroupManager]
 
+    import mesosphere.marathon.core.async.ExecutionContexts.global
+
     lazy val baseData = new AppInfoBaseData(
       clock,
       instanceTracker,

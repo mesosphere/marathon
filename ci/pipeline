@@ -211,7 +211,7 @@ def master(): Unit = {
   testDockerAndLinuxPackages()
 
   // Uploads
-  uploadTarballPackagesToS3(version, "builds")
+  uploadTarballPackagesToS3(version, s"builds/$version")
 }
 
 /**
@@ -223,7 +223,7 @@ def pr(): Unit = asPullRequest {
   val version = build()
 
   // Uploads
-  val artifact = uploadTarballPackagesToS3(version, "builds")
+  val artifact = uploadTarballPackagesToS3(version, s"builds/$version")
   (version, artifact)
 }
 
