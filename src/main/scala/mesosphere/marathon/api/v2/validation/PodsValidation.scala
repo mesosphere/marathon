@@ -264,7 +264,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def residentUpdateIsValid(from: PodDefinition): Validator[PodDefinition] = {
     val changeNoVolumes =
-      isTrue[PodDefinition]("persistent volumes must not change") { to =>
+      isTrue[PodDefinition]("persistent volumes cannot be updated") { to =>
         val fromVolumes = from.persistentVolumes
         val toVolumes = to.persistentVolumes
         def sameSize = fromVolumes.size == toVolumes.size
@@ -274,20 +274,40 @@ trait PodsValidation extends GeneralPurposeCombinators {
         sameSize && noVolumeChange
       }
 
-    val changeNoResource =
-      isTrue[PodDefinition]("pods with persistent volumes must not have any resource changes") { to =>
+    val changeNoCpuResource =
+      isTrue[PodDefinition]("cpus cannot be updated if a pod has persistent volumes") { to =>
+        from.resources.cpus == to.resources.cpus
+      }
+
+    val changeNoMemResource =
+      isTrue[PodDefinition]("mem cannot be updated if a pod has persistent volumes") { to =>
+        from.resources.mem == to.resources.mem
+      }
+
+    val changeNoDiskResource =
+      isTrue[PodDefinition]("disk cannot be updated if a pod has persistent volumes") { to =>
+        from.resources.disk == to.resources.disk
+      }
+
+    val changeNoGpuResource =
+      isTrue[PodDefinition]("gpus cannot be updated if a pod has persistent volumes") { to =>
+        from.resources.gpus == to.resources.gpus
+      }
+
+    val changeNoHostPort =
+      isTrue[PodDefinition]("host ports cannot be updated if a pod has persistent volumes") { to =>
         val fromHostPorts = from.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
         val toHostPorts = to.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
-        from.resources.cpus == to.resources.cpus &&
-          from.resources.mem == to.resources.mem &&
-          from.resources.disk == to.resources.disk &&
-          from.resources.gpus == to.resources.gpus &&
-          fromHostPorts == toHostPorts
+        fromHostPorts == toHostPorts
       }
 
     validator[PodDefinition] { pod =>
       pod should changeNoVolumes
-      pod should changeNoResource
+      pod should changeNoCpuResource
+      pod should changeNoMemResource
+      pod should changeNoDiskResource
+      pod should changeNoGpuResource
+      pod should changeNoHostPort
       pod.upgradeStrategy is state.UpgradeStrategy.validForResidentTasks
     }
   }

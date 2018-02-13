@@ -43,6 +43,16 @@ object PodNormalization {
     }
   }
 
+  /**
+    * If a pod has one or more persistent volumes, this method ensure that
+    * the pod's upgrade and unreachable strategies have values which make
+    * sense for resident pods: the unreachable strategy should be disabled
+    * and the upgrade strategy has to have maximumOverCapacity set to 0
+    * for such pods.
+    *
+    * @param pod a pod which scheduling policy should be normalized
+    * @return a normalized scheduling policy
+    */
   def normalizeScheduling(pod: Pod): Option[PodSchedulingPolicy] = {
     val hasPersistentVolumes = pod.volumes.existsAn[PodPersistentVolume]
     if (hasPersistentVolumes) {
