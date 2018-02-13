@@ -187,7 +187,8 @@ case class DeploymentFailed(
     id: String,
     plan: DeploymentPlan,
     eventType: String = "deployment_failed",
-    timestamp: String = Timestamp.now().toString) extends UpgradeEvent
+    timestamp: String = Timestamp.now().toString,
+    reason: Option[String] = None) extends UpgradeEvent
 
 case class DeploymentStatus(
     plan: DeploymentPlan,

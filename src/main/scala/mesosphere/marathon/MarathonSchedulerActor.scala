@@ -289,7 +289,7 @@ class MarathonSchedulerActor private (
     logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} failed", reason)
     Future.sequence(plan.affectedRunSpecIds.map(launchQueue.asyncPurge))
       .recover { case NonFatal(error) => logger.warn(s"Error during async purge: planId=${plan.id} for ${plan.targetIdsString}", error); Done }
-      .foreach { _ => eventBus.publish(core.event.DeploymentFailed(plan.id, plan)) }
+      .foreach { _ => eventBus.publish(core.event.DeploymentFailed(plan.id, plan, reason = Some(reason.getMessage()))) }
   }
 }
 
