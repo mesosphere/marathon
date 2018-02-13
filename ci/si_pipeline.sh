@@ -52,7 +52,7 @@ function download-diagnostics-bundle {
 }
 
 # Install dependencies
-sudo ./ci/si_install_deps.sh
+/bin/bash ./ci/si_install_deps.sh
 
 # Launch cluster and run tests if launch was successful.
 CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
