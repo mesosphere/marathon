@@ -35,7 +35,7 @@ function create-junit-xml {
 function exit-as-unstable {
     echo "$1"
     create-junit-xml "dcos-launch" "cluster.create" "$1"
-    ./dcos-launch delete
+    dcos-launch delete
     exit 0
 }
 
@@ -50,6 +50,9 @@ function download-diagnostics-bundle {
 	done
 	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
+
+# Install dependencies
+./ci/si_install_deps.sh
 
 # Launch cluster and run tests if launch was successful.
 CLI_TEST_SSH_KEY="$(pwd)/$DEPLOYMENT_NAME.pem"
@@ -72,7 +75,7 @@ case $CLUSTER_LAUNCH_CODE in
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
       fi
-      ./bin/dcos-launch delete
+      dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;

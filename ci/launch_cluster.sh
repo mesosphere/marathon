@@ -1,17 +1,26 @@
 #!/bin/bash
-
 set -x -e -o pipefail
 
-# Ensure jq is installed.
+# Ensure dependencies are installed.
 if ! command -v jq >/dev/null; then
     echo "jq was not found. Please install it."
+    exit 1
+fi
+if ! command -v envsubst >/dev/null 2>&1; then
+    echo "envsubst was not found. Please install along with gettext."
+    exit 1
+fi
+if ! command -v dcos-launch >/dev/null 2>&1; then
+    echo "dcos-launch was not found."
+    echo "Please install it following the instructions at https://github.com/dcos/dcos-launch#installation."
+    exit 1
 fi
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of four custer variants: open, strict, permissive and disabled
 if [ "$#" -ne 3 ]; then
     echo "Expected 3 parameters: launch_cluster.sh <channel> <variant> <deployment-name>"
-    echo "e.g. CLI_TEST_SSH_KEY="test.pem" launch_cluster.sh testing/pull/1739 open si-testing-open"
+    echo "e.g. CLI_TEST_SSH_KEY='test.pem' launch_cluster.sh 'testing/pull/1739' 'open' 'si-testing-open'"
     exit 1
 fi
 
@@ -26,29 +35,6 @@ else
 fi
 
 echo "Using: ${TEMPLATE}"
-
-# Ensure envsubst is available.
-if ! command -v envsubst >/dev/null 2>&1; then
-    PLATFORM=$(uname)
-    if [ "$PLATFORM" == 'Darwin' ]; then
-        if [ ! -f /usr/local/opt/gettext/bin/envsubst ]; then
-            echo "Installing gettext to get envsubst."
-            brew install gettext
-        fi
-        PATH=$PATH:/usr/local/opt/gettext/bin/
-    else
-        apt-get update && apt-get install -y -t jessie-backports gettext-base wget
-    fi
-fi
-
-# Ensure dcos-launch is available.
-mkdir -p "$(pwd)/bin"
-PATH=$PATH:"$(pwd)/bin"
-if ! command -v dcos-launch >/dev/null 2>&1; then
-    echo "dcos-launch was not found. Downloading '$(pwd)/bin' ..."
-    wget 'https://downloads.dcos.io/dcos-test-utils/bin/linux/dcos-launch' \
-        -P "$(pwd)/bin" && chmod +x "$(pwd)/bin/dcos-launch"
-fi
 
 
 # Create config.yaml for dcos-launch.
