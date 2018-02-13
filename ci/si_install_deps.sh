@@ -17,7 +17,7 @@ fi
 
 # Ensure dcos-launch is available.
 mkdir -p "$(pwd)/bin"
-PATH=$PATH:"$(pwd)/bin"
+PATH="$PATH:$(pwd)/bin"
 if ! command -v dcos-launch >/dev/null 2>&1; then
     echo "dcos-launch was not found. Downloading '$(pwd)/bin' ..."
     if [ "$PLATFORM" == 'Darwin' ]; then
