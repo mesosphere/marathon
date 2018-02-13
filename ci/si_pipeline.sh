@@ -59,7 +59,7 @@ if [ "$VARIANT" == "strict" ]; then
   DCOS_URL="https://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
   wget --no-check-certificate -O tests/system/fixtures/dcos-ca.crt "$DCOS_URL/ca/dcos-ca.crt"
 else
-  DCOS_URL="http://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" | tail -1 )"
+  DCOS_URL="http://$( ./ci/launch_cluster.sh "$CHANNEL" "$VARIANT" "$DEPLOYMENT_NAME" | tail -1 )"
 fi
 
 CLUSTER_LAUNCH_CODE=$?
@@ -72,7 +72,7 @@ case $CLUSTER_LAUNCH_CODE in
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
       fi
-      ./dcos-launch delete
+      ./bin/dcos-launch delete
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
