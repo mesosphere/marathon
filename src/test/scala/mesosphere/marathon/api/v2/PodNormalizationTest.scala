@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.raml.{ Endpoint, Network, NetworkMode, Pod, PodContainer, Resources }
+import mesosphere.marathon.raml.{ Endpoint, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy, Resources, UnreachableDisabled, VolumeMount }
 import Normalization._
 import org.scalatest.Inside
 
@@ -77,6 +77,33 @@ class PodNormalizationTest extends UnitTest with Inside {
         inside(withNetworkName.normalize.networks) {
           case net :: Nil =>
             net.name.value shouldBe "net1"
+        }
+      }
+    }
+
+    "normalizing a pod with a persistent volume" should {
+      val template = Pod(
+        id = "foo",
+        containers = Seq(PodContainer(
+          name = "c", resources = Resources(), volumeMounts = Seq(VolumeMount("foo", "foo")))),
+        volumes = Seq(PodPersistentVolume("foo", PersistentVolumeInfo(size = 1))))
+
+      "return default scheduling for resident pods, if it is not provided" in new Fixture() {
+        inside(template.normalize.scheduling) {
+          case Some(scheduling) =>
+            scheduling.upgrade shouldBe Some(PodUpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0.0))
+            scheduling.unreachableStrategy shouldBe Some(UnreachableDisabled())
+        }
+      }
+
+      "return the passed valid scheduling" in new Fixture() {
+        val pod = template.copy(scheduling = Some(PodSchedulingPolicy(
+          upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0.7, maximumOverCapacity = 0.0)),
+          unreachableStrategy = Some(UnreachableDisabled()))))
+        inside(pod.normalize.scheduling) {
+          case Some(scheduling) =>
+            scheduling.upgrade shouldBe Some(PodUpgradeStrategy(minimumHealthCapacity = 0.7, maximumOverCapacity = 0.0))
+            scheduling.unreachableStrategy shouldBe Some(UnreachableDisabled())
         }
       }
     }

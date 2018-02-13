@@ -588,7 +588,7 @@ object AppDefinition extends GeneralPurposeCombinators {
       }
 
     val changeNoResources =
-      isTrue[AppDefinition]("Resident apps may not change resource requirements!") { to =>
+      isTrue[AppDefinition]("Resident Tasks may not change resource requirements!") { to =>
         from.resources.cpus == to.resources.cpus &&
           from.resources.mem == to.resources.mem &&
           from.resources.disk == to.resources.disk &&

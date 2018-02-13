@@ -130,28 +130,28 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(cpus = 3))))
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "Resident pods may not change resource requirements!")
+        "/" -> "pods with persistent volumes must not have any resource changes")
     }
 
     "be invalid if mem changes" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(mem = 3))))
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "Resident pods may not change resource requirements!")
+        "/" -> "pods with persistent volumes must not have any resource changes")
     }
 
     "be invalid if disk changes" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(disk = 3))))
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "Resident pods may not change resource requirements!")
+        "/" -> "pods with persistent volumes must not have any resource changes")
     }
 
     "be invalid if gpus change" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(gpus = 3))))
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "Resident pods may not change resource requirements!")
+        "/" -> "pods with persistent volumes must not have any resource changes")
     }
 
     "be invalid with default upgrade strategy" in new Fixture {
@@ -168,7 +168,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         case vol => vol
       })
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "Persistent volumes can not be changed!")
+        "/" -> "persistent volumes must not change")
     }
 
     "be invalid if ports change" in new Fixture {
@@ -178,9 +178,9 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       val to2 = pod.copy(containers = pod.containers.map(ct => ct.copy(
         endpoints = ct.endpoints.map(ep => ep.copy(hostPort = Some(2))))))
       residentUpdateIsValid(pod)(to1) should haveViolations(
-        "/" -> "Resident pods may not change resource requirements!")
+        "/" -> "pods with persistent volumes must not have any resource changes")
       residentUpdateIsValid(pod)(to2) should haveViolations(
-        "/" -> "Resident pods may not change resource requirements!")
+        "/" -> "pods with persistent volumes must not have any resource changes")
     }
   }
 

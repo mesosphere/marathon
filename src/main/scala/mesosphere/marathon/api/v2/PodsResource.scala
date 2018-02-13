@@ -90,6 +90,7 @@ class PodsResource @Inject() (
     authenticated(req) { implicit identity =>
       withValid(unmarshal(body)) { podDef =>
         val pod = normalize(Raml.fromRaml(podDef.normalize))
+        validateOrThrow(pod)(PodsValidation.residentValidator)
         validateOrThrow(pod)(PodsValidation.pluginValidators)
 
         withAuthorization(CreateRunSpec, pod) {
@@ -124,6 +125,7 @@ class PodsResource @Inject() (
         ).build()
       } else {
         val pod = normalize(Raml.fromRaml(podDef.normalize))
+        validateOrThrow(pod)(PodsValidation.residentValidator)
         validateOrThrow(pod)(PodsValidation.pluginValidators)
 
         withAuthorization(UpdateRunSpec, pod) {

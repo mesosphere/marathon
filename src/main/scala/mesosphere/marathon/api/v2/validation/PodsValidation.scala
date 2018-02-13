@@ -11,7 +11,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{ PathId, RootGroup }
+import mesosphere.marathon.state.{ PathId, ResourceRole, RootGroup }
 import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 
@@ -201,6 +201,14 @@ trait PodsValidation extends GeneralPurposeCombinators {
   private def podSecretVolumes(pod: Pod) =
     pod.volumes.collect { case sv: PodSecretVolume => sv }
 
+  private val haveUnreachableDisabledForResidentPods =
+    isTrue[PodDefinition]("unreachableStrategy must be disabled for pods with persistent volumes") { pod =>
+      if (pod.isResident)
+        pod.unreachableStrategy == state.UnreachableDisabled
+      else
+        true
+    }
+
   def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
@@ -224,7 +232,13 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
   }
 
-  def volumeNames(volumes: Seq[PodVolume]) = volumes.map(volumeName)
+  lazy val residentValidator: Validator[PodDefinition] = validator[PodDefinition] { pod =>
+    pod should complyWithPodUpgradeStrategyRules
+    pod should haveUnreachableDisabledForResidentPods
+    pod.acceptedResourceRoles is empty or valid(ResourceRole.validAcceptedResourceRoles(pod.isResident))
+  }
+
+  def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)
   def volumeName(volume: PodVolume): String = volume match {
     case PodEphemeralVolume(name) => name
     case PodHostVolume(name, _) => name
@@ -242,7 +256,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def residentUpdateIsValid(from: PodDefinition): Validator[PodDefinition] = {
     val changeNoVolumes =
-      isTrue[PodDefinition]("Persistent volumes can not be changed!") { to =>
+      isTrue[PodDefinition]("persistent volumes must not change") { to =>
         val fromVolumes = from.persistentVolumes
         val toVolumes = to.persistentVolumes
         def sameSize = fromVolumes.size == toVolumes.size
@@ -253,7 +267,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
 
     val changeNoResource =
-      isTrue[PodDefinition]("Resident pods may not change resource requirements!") { to =>
+      isTrue[PodDefinition]("pods with persistent volumes must not have any resource changes") { to =>
         val fromHostPorts = from.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
         val toHostPorts = to.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
         from.resources.cpus == to.resources.cpus &&
