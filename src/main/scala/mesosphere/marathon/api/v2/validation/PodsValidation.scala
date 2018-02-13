@@ -200,14 +200,25 @@ trait PodsValidation extends GeneralPurposeCombinators {
   // When https://github.com/wix/accord/issues/120 is resolved, we can inline this expression again
   private def podSecretVolumes(pod: Pod) =
     pod.volumes.collect { case sv: PodSecretVolume => sv }
+  private def podPersistentVolumes(pod: Pod) =
+    pod.volumes.collect { case pv: PodPersistentVolume => pv }
+  private def podAcceptedResourceRoles(pod: Pod) =
+    pod.scheduling.flatMap(_.placement.map(_.acceptedResourceRoles)).getOrElse(Seq.empty).toSet
 
-  private val haveUnreachableDisabledForResidentPods =
-    isTrue[PodDefinition]("unreachableStrategy must be disabled for pods with persistent volumes") { pod =>
-      if (pod.isResident)
-        pod.unreachableStrategy == state.UnreachableDisabled
-      else
+  val haveUnreachableDisabledForResidentPods: Validator[Pod] =
+    isTrue[Pod]("unreachableStrategy must be disabled for pods with persistent volumes") { pod =>
+      if (podPersistentVolumes(pod).isEmpty)
         true
+      else {
+        val unreachableStrategy = pod.scheduling.flatMap(_.unreachableStrategy)
+        unreachableStrategy.isEmpty || unreachableStrategy == Some(UnreachableDisabled())
+      }
     }
+
+  val haveValidAcceptedResourceRoles: Validator[Pod] = validator[Pod] { pod =>
+    (podAcceptedResourceRoles(pod) as "acceptedResourceRoles"
+      is empty or valid(ResourceRole.validAcceptedResourceRoles(podPersistentVolumes(pod).nonEmpty)))
+  }
 
   def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
@@ -230,12 +241,9 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
-  }
-
-  lazy val residentValidator: Validator[PodDefinition] = validator[PodDefinition] { pod =>
     pod should complyWithPodUpgradeStrategyRules
     pod should haveUnreachableDisabledForResidentPods
-    pod.acceptedResourceRoles is empty or valid(ResourceRole.validAcceptedResourceRoles(pod.isResident))
+    pod should haveValidAcceptedResourceRoles
   }
 
   def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)

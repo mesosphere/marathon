@@ -127,36 +127,34 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
   "with persistent volumes" should {
     "be valid" in new Fixture {
-      val pod = validResidentPod.fromRaml
-      residentValidator(pod) shouldBe aSuccess
+      val pod = validResidentPod
+      validator(pod) should be(aSuccess)
     }
 
     "be valid if no unreachable strategy is provided" in new Fixture {
       val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
-        unreachableStrategy = None))).fromRaml
-      residentValidator(pod) should haveViolations(
-        "/" -> "unreachableStrategy must be disabled for pods with persistent volumes")
+        unreachableStrategy = None)))
+      validator(pod) should be(aSuccess)
     }
 
     "be valid if no upgrade strategy is provided" in new Fixture {
       val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
-        upgrade = None))).fromRaml
-      residentValidator(pod) should haveViolations(
-        "/upgradeStrategy/maximumOverCapacity" -> "got 1.0, expected 0.0")
+        upgrade = None)))
+      validator(pod) should be(aSuccess)
     }
 
     "be invalid if unreachable strategy is enabled" in new Fixture {
       val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
-        unreachableStrategy = Some(UnreachableEnabled())))).fromRaml
-      residentValidator(pod) should haveViolations(
+        unreachableStrategy = Some(UnreachableEnabled()))))
+      validator(pod) should haveViolations(
         "/" -> "unreachableStrategy must be disabled for pods with persistent volumes")
     }
 
-    "be valid if upgrade strategy has maximumOverCapacity set to non-zero" in new Fixture {
+    "be invalid if upgrade strategy has maximumOverCapacity set to non-zero" in new Fixture {
       val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
-        upgrade = Some(PodUpgradeStrategy(maximumOverCapacity = 0.1))))).fromRaml
-      residentValidator(pod) should haveViolations(
-        "/upgradeStrategy/maximumOverCapacity" -> "got 0.1, expected 0.0")
+        upgrade = Some(PodUpgradeStrategy(maximumOverCapacity = 0.1)))))
+      validator(pod) should haveViolations(
+        "/upgrade/maximumOverCapacity" -> "got 0.1, expected 0.0")
     }
 
     "be invalid if cpu changes" in new Fixture {

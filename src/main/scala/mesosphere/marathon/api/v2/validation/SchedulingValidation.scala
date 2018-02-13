@@ -6,8 +6,7 @@ import java.util.regex.Pattern
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.raml.{ App, Apps, Constraint, ConstraintOperator, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, Apps, Constraint, ConstraintOperator, Pod, PodPersistentVolume, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy }
 import mesosphere.marathon.state.ResourceRole
 
 import scala.util.Try
@@ -41,8 +40,16 @@ trait SchedulingValidation {
     app.upgradeStrategy is optional(implied(app.residency.nonEmpty)(validForResidentTasks))
   }
 
-  val complyWithPodUpgradeStrategyRules: Validator[PodDefinition] = validator[PodDefinition] { pod =>
-    pod.upgradeStrategy is implied(pod.isResident)(validForResidentPods)
+  def podUpgradeStrategy(pod: Pod): Option[PodUpgradeStrategy] = {
+    pod.scheduling.flatMap(_.upgrade)
+  }
+
+  def podHasPersistentVolumes(pod: Pod): Boolean = {
+    pod.volumes.exists(_.isInstanceOf[PodPersistentVolume])
+  }
+  val complyWithPodUpgradeStrategyRules: Validator[Pod] = validator[Pod] { pod =>
+    (podUpgradeStrategy(pod) as "upgrade"
+      is optional(implied(podHasPersistentVolumes(pod))(validForResidentPods)))
   }
 
   lazy val validForResidentTasks: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
@@ -50,7 +57,7 @@ trait SchedulingValidation {
     strategy.maximumOverCapacity should be == 0.0
   }
 
-  lazy val validForResidentPods: Validator[state.UpgradeStrategy] = validator[state.UpgradeStrategy] { strategy =>
+  lazy val validForResidentPods: Validator[PodUpgradeStrategy] = validator[PodUpgradeStrategy] { strategy =>
     strategy.minimumHealthCapacity is between(0.0, 1.0)
     strategy.maximumOverCapacity should be == 0.0
   }
