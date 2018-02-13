@@ -170,36 +170,43 @@ lazy val packagingSettings = Seq(
 
   /* Docker config (http://sbt-native-packager.readthedocs.io/en/latest/formats/docker.html)
    */
-  dockerBaseImage := Dependency.V.OpenJDK,
+  dockerBaseImage := "debian:stretch-slim",
   dockerRepository := Some("mesosphere"),
   daemonUser in Docker := "root",
   version in Docker := {
     import sys.process._
     ("./version docker" !!).trim
   },
-  dockerBaseImage := "debian:jessie-slim",
   (defaultLinuxInstallLocation in Docker) := "/marathon",
   dockerCommands := {
     // kind of a work-around; we want our mesos install and jdk install to come earlier so that Docker can cache them
     val (prefixCommands, restCommands) = dockerCommands.value.splitAt(2)
 
+    // Notes on the script below:
+    //
+    // 1) The `stretch-slim` does not contain `gnupg` and therefore `apt-key adv` will fail unless it's installed first
+    // 2) We are creating a dummy `systemctl` binary in order to satisfy mesos post-install script that tries to invoke
+    //   it for registering the systemd task.
+    //
     prefixCommands ++
       Seq(Cmd("RUN",
-        s"""apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\
+        s"""apt-get update && apt-get install -my wget gnupg && \\
+          |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \\
           |apt-get update -y && \\
           |apt-get upgrade -y && \\
-          |echo "deb http://ftp.debian.org/debian jessie-backports main" | tee -a /etc/apt/sources.list && \\
-          |echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
-          |echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
+          |echo "deb http://ftp.debian.org/debian stretch-backports main" | tee -a /etc/apt/sources.list && \\
+          |echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
+          |echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
           |apt-get update && \\
-          |
           |# jdk setup
           |mkdir -p /usr/share/man/man1 && \\
-          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20161107~bpo8+1 && \\
+          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20170531+nmu1 && \\
           |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
-          |
-          |apt-get install --no-install-recommends -y --force-yes mesos=${Dependency.V.MesosDebian} && \\
+          |# mesos setup
+          |echo exit 0 > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \\
+          |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
+          |rm /usr/bin/systemctl && \\
           |apt-get clean""".stripMargin)) ++
       restCommands ++
       Seq(
