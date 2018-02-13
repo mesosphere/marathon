@@ -217,7 +217,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   val haveValidAcceptedResourceRoles: Validator[Pod] = validator[Pod] { pod =>
     (podAcceptedResourceRoles(pod) as "acceptedResourceRoles"
-      is empty or valid(ResourceRole.validAcceptedResourceRoles(podPersistentVolumes(pod).nonEmpty)))
+      is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
   }
 
   def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>

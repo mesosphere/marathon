@@ -319,7 +319,7 @@ trait AppValidation {
       update.fetch is optional(every(valid))
       update.portDefinitions is optional(portDefinitionsValidator)
       update.container is optional(validContainer(enabledFeatures, update.networks.getOrElse(Nil), update.secrets.getOrElse(Map.empty)))
-      update.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(update.residency.isDefined) and notEmpty)
+      update.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles("app", update.residency.isDefined) and notEmpty)
       update.networks is optional(NetworkValidation.defaultNetworkNameValidator(defaultNetworkName))
     },
     isTrue("must not be root")(!_.id.fold(false)(PathId(_).isRoot)),
@@ -415,7 +415,7 @@ trait AppValidation {
     } -> (featureEnabled(enabledFeatures, Features.SECRETS))
     app.secrets is featureEnabledImplies(enabledFeatures, Features.SECRETS)(secretValidator)
     app.env is envValidator(strictNameValidation = false, app.secrets, enabledFeatures)
-    app.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(app.residency.isDefined) and notEmpty)
+    app.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles("app", app.residency.isDefined) and notEmpty)
     app must complyWithGpuRules(enabledFeatures)
     app must complyWithMigrationAPI
     app must complyWithReadinessCheckRules

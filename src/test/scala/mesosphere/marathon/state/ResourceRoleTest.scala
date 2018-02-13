@@ -8,12 +8,12 @@ class ResourceRoleTest extends UnitTest {
 
   "ResourceRole" should {
     "If `acceptedResourceRoles` is not provided, an app should be valid regardless of its residency." in {
-      optional(ResourceRole.validAcceptedResourceRoles(isResident = false))(None).isSuccess shouldBe true
-      optional(ResourceRole.validAcceptedResourceRoles(isResident = true))(None).isSuccess shouldBe true
+      optional(ResourceRole.validAcceptedResourceRoles("app", isResident = false))(None).isSuccess shouldBe true
+      optional(ResourceRole.validAcceptedResourceRoles("app", isResident = true))(None).isSuccess shouldBe true
     }
 
     "If `acceptedResourceRoles` is provided, a non-resident app is valid only if it contains valid role names." in {
-      val validate = ResourceRole.validAcceptedResourceRoles(isResident = false)
+      val validate = ResourceRole.validAcceptedResourceRoles("app", isResident = false)
 
       // Valid cases.
 
@@ -52,7 +52,7 @@ class ResourceRoleTest extends UnitTest {
     }
 
     """If `acceptedResourceRoles` is provided, a resident app is valid only if it is set to ["*"].""" in {
-      val validate = ResourceRole.validAcceptedResourceRoles(isResident = true)
+      val validate = ResourceRole.validAcceptedResourceRoles("app", isResident = true)
 
       // Valid case.
 

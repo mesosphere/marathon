@@ -13,11 +13,11 @@ object ResourceRole {
   //       "A role name must not include a space (\x20) character".
 
   @SuppressWarnings(Array("ComparisonToEmptySet"))
-  def validAcceptedResourceRoles(isResident: Boolean): Validator[Set[String]] =
+  def validAcceptedResourceRoles(runSpecType: String, isResident: Boolean): Validator[Set[String]] =
     validator[Set[String]] { acceptedResourceRoles =>
       acceptedResourceRoles is notEmpty
       acceptedResourceRoles.each is ResourceRole.validResourceRole
-    } and isTrue("""A resident app must have `acceptedResourceRoles = ["*"]`.""") { acceptedResourceRoles =>
+    } and isTrue(s"""A resident $runSpecType must have `acceptedResourceRoles = ["*"]`.""") { acceptedResourceRoles =>
       !isResident || acceptedResourceRoles == Set(ResourceRole.Unreserved)
     }
 

@@ -115,7 +115,7 @@ trait SchedulingValidation {
   }
 
   val placementStrategyValidator = validator[PodPlacementPolicy] { ppp =>
-    ppp.acceptedResourceRoles.toSet is empty or ResourceRole.validAcceptedResourceRoles(false) // TODO(jdef) assumes pods!! change this to properly support apps
+    ppp.acceptedResourceRoles.toSet is empty or ResourceRole.validAcceptedResourceRoles("pod", false) // TODO(jdef) assumes pods!! change this to properly support apps
     ppp.constraints is empty or every(complyWithConstraintRules)
   }
 
