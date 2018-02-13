@@ -180,7 +180,7 @@ Please see the [Authorizer](https://github.com/mesosphere/marathon/blob/master/p
 #### mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 
 This plugin allows for the modification of an app TaskInfo or the pod TaskGroupInfo.  This could be used to modify the runSpec by adding labels or to enforce the use of a custom executor.
-Please see the [RunSpecTaskProcessor]((https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/task/RunSpecTaskProcessor.scala)) trait for documentation  as well as [Example Scala Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/env).
+Please see the [RunSpecTaskProcessor](https://github.com/mesosphere/marathon/blob/master/plugin-interface/src/main/scala/mesosphere/marathon/plugin/task/RunSpecTaskProcessor.scala) trait for documentation  as well as [Example Scala Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/env).
 
 When working with the `RunSpecTaskProcessor` is best to be familiar with [ProtocolBuffers](https://developers.google.com/protocol-buffers/docs/overview) and the Apache Mesos [org.apache.mesos.Protos.TaskInfo](http://mesos.apache.org/api/latest/java/org/apache/mesos/Protos.TaskInfo.html)
 
