@@ -4,6 +4,7 @@ import java.lang.Thread.UncaughtExceptionHandler
 import java.net.URI
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.Uri
 import com.google.common.util.concurrent.ServiceManager
 import com.google.inject.{ Guice, Module }
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -64,11 +65,17 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
         """.stripMargin
       }
       val statsd = cliConf.graphite.get.map { urlStr =>
-        val url = new URI(urlStr)
+        val url = Uri(urlStr)
+
+        if (url.scheme.toLowerCase() != "udp") {
+          logger.warn(s"Graphite reporter protocol ${url.scheme} is not supported; using UDP")
+        }
+        val params = url.query()
         s"""
            |kamon.statsd {
-           |  hostname: ${url.getHost}
-           |  port: ${if (url.getPort == -1) 8125 else url.getPort}
+           |  hostname: ${url.authority.host}
+           |  port: ${if (url.authority.port == 0) 8125 else url.authority.port}
+           |  flush-interval: ${params.collectFirst { case ("interval", iv) => iv.toInt }.getOrElse(10)} seconds
            |}
          """.stripMargin
       }
