@@ -275,27 +275,27 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
 
     val changeNoCpuResource =
-      isTrue[PodDefinition]("cpus cannot be updated if a pod has persistent volumes") { to =>
+      isTrue[PodDefinition](CpusPersistentVolumes) { to =>
         from.resources.cpus == to.resources.cpus
       }
 
     val changeNoMemResource =
-      isTrue[PodDefinition]("mem cannot be updated if a pod has persistent volumes") { to =>
+      isTrue[PodDefinition](MemPersistentVolumes) { to =>
         from.resources.mem == to.resources.mem
       }
 
     val changeNoDiskResource =
-      isTrue[PodDefinition]("disk cannot be updated if a pod has persistent volumes") { to =>
+      isTrue[PodDefinition](DiskPersistentVolumes) { to =>
         from.resources.disk == to.resources.disk
       }
 
     val changeNoGpuResource =
-      isTrue[PodDefinition]("gpus cannot be updated if a pod has persistent volumes") { to =>
+      isTrue[PodDefinition](GpusPersistentVolumes) { to =>
         from.resources.gpus == to.resources.gpus
       }
 
     val changeNoHostPort =
-      isTrue[PodDefinition]("host ports cannot be updated if a pod has persistent volumes") { to =>
+      isTrue[PodDefinition](HostPortsPersistentVolumes) { to =>
         val fromHostPorts = from.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
         val toHostPorts = to.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
         fromHostPorts == toHostPorts
@@ -333,6 +333,11 @@ object PodsValidationMessages {
   val VolumeNamesMustBeUnique = "volume names must be unique"
   val ContainerNamesMustBeUnique = "container names must be unique"
   val SecretVolumeMustReferenceSecret = "volume.secret must refer to an existing secret"
+  val CpusPersistentVolumes = "cpus cannot be updated if a pod has persistent volumes"
+  val MemPersistentVolumes = "mem cannot be updated if a pod has persistent volumes"
+  val DiskPersistentVolumes = "disk cannot be updated if a pod has persistent volumes"
+  val GpusPersistentVolumes = "gpus cannot be updated if a pod has persistent volumes"
+  val HostPortsPersistentVolumes = "host ports cannot be updated if a pod has persistent volumes"
   // Note: we should keep this in sync with AppValidationMessages
   val NetworkNameRequiredForMultipleContainerNetworks =
     "networkNames must be a single item list when hostPort is specified and more than 1 container network is defined"

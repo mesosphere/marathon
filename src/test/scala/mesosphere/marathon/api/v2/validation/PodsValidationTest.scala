@@ -161,28 +161,28 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(cpus = 3))))
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "cpus cannot be updated if a pod has persistent volumes")
+        "/" -> PodsValidationMessages.CpusPersistentVolumes)
     }
 
     "be invalid if mem changes" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(mem = 3))))
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "mem cannot be updated if a pod has persistent volumes")
+        "/" -> PodsValidationMessages.MemPersistentVolumes)
     }
 
     "be invalid if disk changes" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(disk = 3))))
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "disk cannot be updated if a pod has persistent volumes")
+        "/" -> PodsValidationMessages.DiskPersistentVolumes)
     }
 
     "be invalid if gpus change" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(gpus = 3))))
       residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "gpus cannot be updated if a pod has persistent volumes")
+        "/" -> PodsValidationMessages.GpusPersistentVolumes)
     }
 
     "be invalid with default upgrade strategy" in new Fixture {
@@ -209,9 +209,9 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       val to2 = pod.copy(containers = pod.containers.map(ct => ct.copy(
         endpoints = ct.endpoints.map(ep => ep.copy(hostPort = Some(2))))))
       residentUpdateIsValid(pod)(to1) should haveViolations(
-        "/" -> "host ports cannot be updated if a pod has persistent volumes")
+        "/" -> PodsValidationMessages.HostPortsPersistentVolumes)
       residentUpdateIsValid(pod)(to2) should haveViolations(
-        "/" -> "host ports cannot be updated if a pod has persistent volumes")
+        "/" -> PodsValidationMessages.HostPortsPersistentVolumes)
     }
   }
 

@@ -96,7 +96,7 @@ class PodNormalizationTest extends UnitTest with Inside {
         }
       }
 
-      "return the passed valid scheduling" in new Fixture() {
+      "for pods without persistent volume the normalization should return the original pod" in new Fixture() {
         val pod = template.copy(scheduling = Some(PodSchedulingPolicy(
           upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0.7, maximumOverCapacity = 0.0)),
           unreachableStrategy = Some(UnreachableDisabled()))))
