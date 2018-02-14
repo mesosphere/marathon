@@ -58,12 +58,12 @@ installer_url: $INSTALLER_URL
 key_helper: true
 num_masters: 3
 fault_domain_helper:
-  LocalZone:
+  LocalRegion:
     num_zones: 2
     num_public_agents: 1
     num_private_agents: 2
     local: true
-  RemoteZone:
+  RemoteRegion:
     num_zones: 2
     num_private_agents: 2
 dcos_config:
