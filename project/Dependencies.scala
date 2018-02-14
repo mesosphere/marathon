@@ -86,7 +86,6 @@ object Dependency {
     val Mesos = "1.5.0"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.5.0-2.0.1"
-    val OpenJDK = "openjdk:8u121-jdk"
     val Akka = "2.5.7"
     val AkkaHttp = "10.0.11"
     val ApacheCommonsCompress = "1.13"
