@@ -97,7 +97,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     in milliseconds, between application scaling operations.
 * `--task_launch_timeout` (Optional. Default: 300000 (5 minutes)):
     Time, in milliseconds, to wait for a task to enter the `TASK_RUNNING` state
-    before killing it.
+    before killing it. See also `--task_launch_confirm_timeout`.
 * `--zk` (Optional. Default: `zk://localhost:2181/marathon`): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
     - <span class="label label-default">v1.1.2</span> Format: `zk://user@pass:host1:port1,user@pass:host2:port2,.../path`.
@@ -213,7 +213,7 @@ incoming resource offer, i.e. finding suitable tasks to launch for incoming offe
 All launched tasks are stored before launching them. There is also a timeout for this:
 
 * <span class="label label-default">v0.11.0</span> `--task_launch_confirm_timeout` (Optional. Default: 300000 (5 minutes)):
-  Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it.
+  Time, in milliseconds, to wait for a task to enter the `TASK_STAGING` state before killing it. Also see `--task_launch_timeout`.
 
 When the task launch requests in Marathon change because an app definition changes or a backoff delay is overdue,
 Marathon can request all available offers from Mesos again -- even those that it has recently rejected. To avoid
