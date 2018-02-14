@@ -79,7 +79,8 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       versionInfo = app.versionInfo.toRaml,
       unreachableStrategy = Some(app.unreachableStrategy.toRaml),
       killSelection = app.killSelection.toRaml,
-      tty = app.tty
+      tty = app.tty,
+      executorResources = app.executorResources.toRaml
     )
   }
 
@@ -162,7 +163,8 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       secrets = Raml.fromRaml(app.secrets),
       unreachableStrategy = app.unreachableStrategy.map(_.fromRaml).getOrElse(AppDefinition.DefaultUnreachableStrategy),
       killSelection = app.killSelection.fromRaml,
-      tty = app.tty
+      tty = app.tty,
+      executorResources = app.executorResources.map(_.fromRaml)
     )
     result
   }
@@ -210,7 +212,8 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       taskKillGracePeriodSeconds = update.taskKillGracePeriodSeconds.orElse(app.taskKillGracePeriodSeconds),
       unreachableStrategy = update.unreachableStrategy.orElse(app.unreachableStrategy),
       killSelection = update.killSelection.getOrElse(app.killSelection),
-      tty = update.tty.orElse(app.tty)
+      tty = update.tty.orElse(app.tty),
+      executorResources = update.executorResources
     )
   }
 

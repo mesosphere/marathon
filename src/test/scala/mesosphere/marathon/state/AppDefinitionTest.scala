@@ -315,6 +315,47 @@ class AppDefinitionTest extends UnitTest {
       val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
       assert(result == app, s"expected $app instead of $result")
     }
+
+    "Proto round trip for executor resources added" in {
+      val app = AppDefinition(
+        id = runSpecId,
+        cmd = Some("true"),
+        versionInfo = fullVersion,
+        executorResources = Some(Resources(
+          cpus = 0.1, mem = 32.0, disk = 10
+        ))
+      )
+      val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
+      assert(result == app, s"expected $app instead of $result")
+    }
+
+    "Proto round trip for executor resources left untouched" in {
+      val app = AppDefinition(
+        id = runSpecId,
+        executorResources = Some(Resources(
+          cpus = 0.1, mem = 32.0, disk = 10
+        ))
+      )
+      val result = app.mergeFromProto(AppDefinition(id = runSpecId).toProto)
+      assert(result.executorResources == app.executorResources, s"expected $app instead of $result")
+    }
+
+    "Proto round trip for executor resources CPU upgrade" in {
+      val app = AppDefinition(
+        id = runSpecId,
+        executorResources = Some(Resources(
+          cpus = 0.1, mem = 32.0, disk = 10
+        ))
+      )
+      val update = AppDefinition(
+        id = runSpecId,
+        executorResources = Some(Resources(
+          cpus = 0.2
+        ))
+      )
+      val result = app.mergeFromProto(update.toProto)
+      assert(result == update, s"expected $update instead of $result")
+    }
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
