@@ -278,6 +278,10 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
     .settings(
+      version := {
+        import sys.process._
+        ("./version" !!).trim
+      },
       name := "plugin-interface",
       libraryDependencies ++= Dependencies.pluginInterface
     )
