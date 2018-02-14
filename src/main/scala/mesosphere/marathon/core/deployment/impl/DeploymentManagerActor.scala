@@ -147,7 +147,7 @@ class DeploymentManagerActor(
       sender() ! cancelDeployment(plan.id)
 
     case DeploymentFinished(plan, result) =>
-      runningDeployments.remove(plan.id).map { deploymentInfo =>
+      runningDeployments.remove(plan.id).foreach { deploymentInfo =>
         logger.info(s"Removing ${plan.id} for ${plan.targetIdsString} from list of running deployments")
         deploymentStatus -= plan.id
         deploymentRepository.delete(plan.id)
@@ -189,7 +189,7 @@ class DeploymentManagerActor(
       waitForCanceledConflicts(plan, conflicts)
 
     case FailedRepositoryOperation(plan, reason) if isScheduledDeployment(plan.id) =>
-      runningDeployments.remove(plan.id).map(info => info.promise.failure(reason))
+      runningDeployments.remove(plan.id).foreach(info => info.promise.failure(reason))
   }
 
   private def giveUpConflictingDeployment(plan: DeploymentPlan, origSender: ActorRef): Future[Done] = {

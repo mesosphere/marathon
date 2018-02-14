@@ -293,12 +293,19 @@ trait EventFormats {
     )
   }
   implicit lazy val LightDeploymentFailedWrites: Writes[DeploymentFailed] = Writes { event =>
-    Json.obj(
+    val serializedEvent = Json.obj(
       "id" -> event.id,
       "plan" -> LightDeploymentPlanWrites.writes(event.plan),
       "eventType" -> "deployment_failed",
       "timestamp" -> Timestamp.now().toString
     )
+
+    event.reason match {
+      case Some(reason) =>
+        serializedEvent ++ Json.obj("reason" -> reason)
+      case None =>
+        serializedEvent
+    }
   }
   implicit lazy val LightDeploymentStatusWrites: Writes[DeploymentStatus] = Writes { event =>
     Json.obj(
