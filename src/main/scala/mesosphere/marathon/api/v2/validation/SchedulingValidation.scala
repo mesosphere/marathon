@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ App, Apps, Constraint, ConstraintOperator, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy }
+import mesosphere.marathon.raml.{ App, Apps, Constraint, ConstraintOperator, Pod, PodPersistentVolume, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy }
 import mesosphere.marathon.state.ResourceRole
 
 import scala.util.Try
@@ -40,7 +40,24 @@ trait SchedulingValidation {
     app.upgradeStrategy is optional(implied(app.residency.nonEmpty)(validForResidentTasks))
   }
 
+  def podUpgradeStrategy(pod: Pod): Option[PodUpgradeStrategy] = {
+    pod.scheduling.flatMap(_.upgrade)
+  }
+
+  def podHasPersistentVolumes(pod: Pod): Boolean = {
+    pod.volumes.exists(_.isInstanceOf[PodPersistentVolume])
+  }
+  val complyWithPodUpgradeStrategyRules: Validator[Pod] = validator[Pod] { pod =>
+    (podUpgradeStrategy(pod) as "upgrade"
+      is optional(implied(podHasPersistentVolumes(pod))(validForResidentPods)))
+  }
+
   lazy val validForResidentTasks: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
+    strategy.minimumHealthCapacity is between(0.0, 1.0)
+    strategy.maximumOverCapacity should be == 0.0
+  }
+
+  lazy val validForResidentPods: Validator[PodUpgradeStrategy] = validator[PodUpgradeStrategy] { strategy =>
     strategy.minimumHealthCapacity is between(0.0, 1.0)
     strategy.maximumOverCapacity should be == 0.0
   }
@@ -98,7 +115,7 @@ trait SchedulingValidation {
   }
 
   val placementStrategyValidator = validator[PodPlacementPolicy] { ppp =>
-    ppp.acceptedResourceRoles.toSet is empty or ResourceRole.validAcceptedResourceRoles(false) // TODO(jdef) assumes pods!! change this to properly support apps
+    ppp.acceptedResourceRoles.toSet is empty or ResourceRole.validAcceptedResourceRoles("pod", false) // TODO(jdef) assumes pods!! change this to properly support apps
     ppp.constraints is empty or every(complyWithConstraintRules)
   }
 
@@ -151,4 +168,5 @@ object SchedulingValidationMessages {
   val ConstraintUniqueDoesNotAcceptValue = "UNIQUE does not accept a value"
   val IllegalConstraintSpecification = "illegal constraint specification"
   val ConstraintOperatorInvalid = "operator must be one of the following UNIQUE, CLUSTER, GROUP_BY, LIKE, MAX_PER, UNLIKE or IS"
+  val UpgradeStrategyMustBeDefinedWithPersistentVolumes = "upgrade strategy must be defined"
 }

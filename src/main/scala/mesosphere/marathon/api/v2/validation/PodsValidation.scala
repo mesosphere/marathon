@@ -11,7 +11,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, ResourceRole, RootGroup }
 import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 
@@ -200,6 +200,25 @@ trait PodsValidation extends GeneralPurposeCombinators {
   // When https://github.com/wix/accord/issues/120 is resolved, we can inline this expression again
   private def podSecretVolumes(pod: Pod) =
     pod.volumes.collect { case sv: PodSecretVolume => sv }
+  private def podPersistentVolumes(pod: Pod) =
+    pod.volumes.collect { case pv: PodPersistentVolume => pv }
+  private def podAcceptedResourceRoles(pod: Pod) =
+    pod.scheduling.flatMap(_.placement.map(_.acceptedResourceRoles)).getOrElse(Seq.empty).toSet
+
+  val haveUnreachableDisabledForResidentPods: Validator[Pod] =
+    isTrue[Pod]("unreachableStrategy must be disabled for pods with persistent volumes") { pod =>
+      if (podPersistentVolumes(pod).isEmpty)
+        true
+      else {
+        val unreachableStrategy = pod.scheduling.flatMap(_.unreachableStrategy)
+        unreachableStrategy.isEmpty || unreachableStrategy == Some(UnreachableDisabled())
+      }
+    }
+
+  val haveValidAcceptedResourceRoles: Validator[Pod] = validator[Pod] { pod =>
+    (podAcceptedResourceRoles(pod) as "acceptedResourceRoles"
+      is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
+  }
 
   def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
@@ -222,9 +241,12 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
+    pod should complyWithPodUpgradeStrategyRules
+    pod should haveUnreachableDisabledForResidentPods
+    pod should haveValidAcceptedResourceRoles
   }
 
-  def volumeNames(volumes: Seq[PodVolume]) = volumes.map(volumeName)
+  def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)
   def volumeName(volume: PodVolume): String = volume match {
     case PodEphemeralVolume(name) => name
     case PodHostVolume(name, _) => name
@@ -239,6 +261,65 @@ trait PodsValidation extends GeneralPurposeCombinators {
         new And(plugins: _*).apply(pod)
       }
     }
+
+  def residentUpdateIsValid(from: PodDefinition): Validator[PodDefinition] = {
+    val changeNoVolumes =
+      isTrue[PodDefinition]("persistent volumes cannot be updated") { to =>
+        val fromVolumes = from.persistentVolumes
+        val toVolumes = to.persistentVolumes
+        def sameSize = fromVolumes.size == toVolumes.size
+        def noVolumeChange = fromVolumes.forall { fromVolume =>
+          toVolumes.find(_.name == fromVolume.name).contains(fromVolume)
+        }
+        sameSize && noVolumeChange
+      }
+
+    val changeNoCpuResource =
+      isTrue[PodDefinition](CpusPersistentVolumes) { to =>
+        from.resources.cpus == to.resources.cpus
+      }
+
+    val changeNoMemResource =
+      isTrue[PodDefinition](MemPersistentVolumes) { to =>
+        from.resources.mem == to.resources.mem
+      }
+
+    val changeNoDiskResource =
+      isTrue[PodDefinition](DiskPersistentVolumes) { to =>
+        from.resources.disk == to.resources.disk
+      }
+
+    val changeNoGpuResource =
+      isTrue[PodDefinition](GpusPersistentVolumes) { to =>
+        from.resources.gpus == to.resources.gpus
+      }
+
+    val changeNoHostPort =
+      isTrue[PodDefinition](HostPortsPersistentVolumes) { to =>
+        val fromHostPorts = from.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
+        val toHostPorts = to.containers.flatMap(_.endpoints.flatMap(_.hostPort)).toSet
+        fromHostPorts == toHostPorts
+      }
+
+    validator[PodDefinition] { pod =>
+      pod should changeNoVolumes
+      pod should changeNoCpuResource
+      pod should changeNoMemResource
+      pod should changeNoDiskResource
+      pod should changeNoGpuResource
+      pod should changeNoHostPort
+      pod.upgradeStrategy is state.UpgradeStrategy.validForResidentTasks
+    }
+  }
+
+  def updateIsValid(from: RootGroup): Validator[PodDefinition] = new Validator[PodDefinition] {
+    override def apply(pod: PodDefinition): Result = {
+      from.pod(pod.id) match {
+        case (Some(last)) if last.isResident || pod.isResident => residentUpdateIsValid(last)(pod)
+        case _ => Success
+      }
+    }
+  }
 }
 
 object PodsValidation extends PodsValidation {
@@ -252,6 +333,11 @@ object PodsValidationMessages {
   val VolumeNamesMustBeUnique = "volume names must be unique"
   val ContainerNamesMustBeUnique = "container names must be unique"
   val SecretVolumeMustReferenceSecret = "volume.secret must refer to an existing secret"
+  val CpusPersistentVolumes = "cpus cannot be updated if a pod has persistent volumes"
+  val MemPersistentVolumes = "mem cannot be updated if a pod has persistent volumes"
+  val DiskPersistentVolumes = "disk cannot be updated if a pod has persistent volumes"
+  val GpusPersistentVolumes = "gpus cannot be updated if a pod has persistent volumes"
+  val HostPortsPersistentVolumes = "host ports cannot be updated if a pod has persistent volumes"
   // Note: we should keep this in sync with AppValidationMessages
   val NetworkNameRequiredForMultipleContainerNetworks =
     "networkNames must be a single item list when hostPort is specified and more than 1 container network is defined"

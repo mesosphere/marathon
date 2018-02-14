@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package api.v2
 
-import mesosphere.marathon.raml.{ Endpoint, Network, NetworkMode, Pod, PodContainer }
+import mesosphere.marathon.raml.{ AnyToRaml, Endpoint, Network, NetworkMode, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy }
+import mesosphere.marathon.stream.Implicits._
 
 object PodNormalization {
 
@@ -42,10 +43,37 @@ object PodNormalization {
     }
   }
 
+  /**
+    * If a pod has one or more persistent volumes, this method ensure that
+    * the pod's upgrade and unreachable strategies have values which make
+    * sense for resident pods: the unreachable strategy should be disabled
+    * and the upgrade strategy has to have maximumOverCapacity set to 0
+    * for such pods.
+    *
+    * @param pod a pod which scheduling policy should be normalized
+    * @return a normalized scheduling policy
+    */
+  def normalizeScheduling(pod: Pod): Option[PodSchedulingPolicy] = {
+    val hasPersistentVolumes = pod.volumes.existsAn[PodPersistentVolume]
+    if (hasPersistentVolumes) {
+      val defaultUpgradeStrategy = state.UpgradeStrategy.forResidentTasks.toRaml
+      val defaultUnreachableStrategy = state.UnreachableStrategy.default(hasPersistentVolumes).toRaml
+      val scheduling = pod.scheduling.getOrElse(PodSchedulingPolicy())
+      val upgradeStrategy = scheduling.upgrade.getOrElse(PodUpgradeStrategy(
+        minimumHealthCapacity = defaultUpgradeStrategy.minimumHealthCapacity,
+        maximumOverCapacity = defaultUpgradeStrategy.maximumOverCapacity))
+      val unreachableStrategy = scheduling.unreachableStrategy.getOrElse(defaultUnreachableStrategy)
+      Some(scheduling.copy(
+        upgrade = Some(upgradeStrategy),
+        unreachableStrategy = Some(unreachableStrategy)))
+    } else pod.scheduling
+  }
+
   def apply(config: Config): Normalization[Pod] = Normalization { pod =>
     val networks = Networks(config, Some(pod.networks)).normalize.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
     NetworkNormalization.requireContainerNetworkNameResolution(networks)
     val containers = Containers(networks, pod.containers).normalize.containers
-    pod.copy(containers = containers, networks = networks)
+    val scheduling = normalizeScheduling(pod)
+    pod.copy(containers = containers, networks = networks, scheduling = scheduling)
   }
 }
