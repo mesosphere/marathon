@@ -65,9 +65,11 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 1. Add the path to the gzipped login credentials to your Marathon app definition
 
-    ```bash
-    "uris": [
-       "file:///etc/docker.tar.gz"
+    ```json
+    "fetch": [
+      {
+        "uri": "file:///etc/docker.tar.gz"
+      }
     ]
     ```
 
@@ -86,8 +88,10 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
           "network": "HOST"
         }
       },
-      "uris":  [
-          "file:///etc/docker.tar.gz"
+      "fetch": [
+        {
+          "uri": "file:///etc/docker.tar.gz"
+        }
       ]
     }
     ```
