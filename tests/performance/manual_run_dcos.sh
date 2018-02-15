@@ -11,6 +11,10 @@ if ! which dcos >/dev/null; then
   echo "ERROR: Please install the DC/OS CLI before using this tool"
   exit 1
 fi
+if ! which dcos-perf-test-driver >/dev/null; then
+  echo "ERROR: Please install the DC/OS Performance Test Driver before using this tool"
+  exit 1
+fi
 
 # Use DC/OS CLI to login if no authentication token was given
 if [ -z "$DCOS_AUTH_TOKEN" ]; then
