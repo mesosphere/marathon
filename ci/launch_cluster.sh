@@ -54,7 +54,7 @@ template_parameters:
 EOF
 
 # Append license if one is available.
-if [ "$VARIANT" -ne "open" ]; then
+if [ "$VARIANT" != "open" ]; then
     echo "    LicenseKey: $DCOS_LICENSE" >> config.yaml
 fi
 
