@@ -44,9 +44,38 @@ object DcosLogFormat extends (String => Option[LogFormat]) {
 
 }
 
+object MomFormat extends (String => Option[LogFormat]) {
+  // "[2018-02-13 21:02:01,644] INFO  Message"
+  // "        continuing line..."
+
+  val regex = s"\\[[0-9:, -]+\\]".r
+
+  val example = "[2018-02-13 21:02:01,644] INFO  Message"
+
+  override def apply(line: String): Option[LogFormat] =
+    regex.findFirstMatchIn(line).map { m =>
+      LogFormat(
+        codec = codec,
+        example = example,
+        unframe = unframe,
+        host = None)
+    }
+
+  val codec = s"""|multiline {
+                  |  pattern => "\\["
+                  |  negate => "true"
+                  |  what => "previous"
+                  |  max_lines => 1000
+                  |}""".stripMargin
+
+  val unframe = "" // nothing to do!
+
+
+}
+
 object DirectJournalFormat extends (String => Option[LogFormat]) {
   // "Jan 13 17:44:31 hostname.domain marathon[11956]: [2018-01-13 17:44:31,546] INFO  Message"
-  // "Jan 13 17:44:27 ip-10-0-6-18.us-west-2.compute.internal marathon[11956]:         continuing line",
+  // "Jan 13 17:44:27 hostname.domain marathon[11956]:         continuing line",
 
   val regexPrefix = "^[a-zA-Z]+ [0-9]+ [0-9:]+ ([^ ]+) [^:]+:".r
   val regex = s"${regexPrefix} \\[".r
@@ -93,5 +122,6 @@ object LogFormat {
   def tryMatch(line: String): Option[LogFormat] = {
     DcosLogFormat(line)
       .orElse(DirectJournalFormat(line))
+      .orElse(MomFormat(line))
   }
 }
