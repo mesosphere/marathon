@@ -790,3 +790,26 @@ async def find_event(event_type, event_stream):
 
 async def assert_event(event_type, event_stream, within=10):
     await asyncio.wait_for(find_event(event_type, event_stream), within)
+
+
+def kill_process_on_host(hostname, pattern):
+    """ Kill the process matching pattern at ip
+
+        :param hostname: the hostname or ip address of the host on which the process will be killed
+        :param pattern: a regular expression matching the name of the process to kill
+        :return: True if at least one process got killed or terminated on its own, and False otherwise
+    """
+
+    status, stdout = shakedown.run_command_on_agent(hostname, "ps aux | grep -v grep | grep '{}'".format(pattern))
+    pids = [p.strip().split()[1] for p in stdout.splitlines()]
+    killed_some = False
+
+    for pid in pids:
+        status, stdout = shakedown.run_command_on_agent(hostname, "sudo kill -9 {}".format(pid))
+        if status:
+            killed_some = True
+            print("Killed pid: {}".format(pid))
+        else:
+            print("Unable to killed pid: {}".format(pid))
+
+    return killed_some
