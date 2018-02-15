@@ -1,9 +1,6 @@
 #!/bin/bash
 # This script runs the scale tests on a DC/OS cluster specified by the user
 
-# Current directory
-BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
 # Require a cluster URL
 [ -z "$1" ] && echo -e "Usage: $0 <cluster> [<test file> ...]" && exit 1
 CLUSTER_URL=$1
@@ -19,8 +16,8 @@ fi
 if [ -z "$DCOS_AUTH_TOKEN" ]; then
 
   # If DC/OS CLI is already configured to this cluster skip the setup step
-  if [ "$CLUSTER_URL" != $(dcos config show core.dcos_url) ]; then
-    dcos cluster setup $CLUSTER_URL
+  if [ "$CLUSTER_URL" != "$(dcos config show core.dcos_url)" ]; then
+    dcos cluster setup "$CLUSTER_URL"
   fi
 
   DCOS_AUTH_TOKEN=$(dcos config show core.dcos_acs_token)
@@ -40,7 +37,7 @@ for TEST in $TESTS; do
   dcos-perf-test-driver \
     ./config/perf-driver/environments/target-cluster-custom.yml \
     ./config/perf-driver/environments/env-local.yml \
-    ./$TEST \
+    "./$TEST" \
     -M "version=${DCOS_VERSION}" \
     -M "marathon=${MARATHON_VERSION}" \
     -D "dcos_auth_token=${DCOS_AUTH_TOKEN}" \
