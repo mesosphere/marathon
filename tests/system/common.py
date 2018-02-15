@@ -797,7 +797,7 @@ def kill_process_on_host(hostname, pattern):
 
         :param hostname: the hostname or ip address of the host on which the process will be killed
         :param pattern: a regular expression matching the name of the process to kill
-        :return: True if at least one process got killed or terminated on its own, and False otherwise
+        :return: True if at least one process gets killed, or False otherwise
     """
 
     status, stdout = shakedown.run_command_on_agent(hostname, "ps aux | grep -v grep | grep '{}'".format(pattern))
@@ -810,6 +810,6 @@ def kill_process_on_host(hostname, pattern):
             killed_some = True
             print("Killed pid: {}".format(pid))
         else:
-            print("Unable to killed pid: {}".format(pid))
+            print("Unable to kill pid: {}".format(pid))
 
     return killed_some
