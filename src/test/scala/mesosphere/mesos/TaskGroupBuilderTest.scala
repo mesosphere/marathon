@@ -442,6 +442,10 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
                 volumeName = Some("volume2"),
                 mountPath = "/mnt/path2",
                 readOnly = true
+              ),
+              state.VolumeMount(
+                volumeName = Some("volume3"),
+                mountPath = "/mnt/path3"
               )
             )
           ),
@@ -453,6 +457,10 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
                 volumeName = Some("volume1"),
                 mountPath = "/mnt/path2",
                 readOnly = false
+              ),
+              state.VolumeMount(
+                volumeName = Some("volume3"),
+                mountPath = "/mnt/path3"
               )
             )
           )
@@ -464,6 +472,12 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
           ),
           state.EphemeralVolume(
             name = Some("volume2")
+          ),
+          state.PersistentVolume(
+            name = Some("volume3"),
+            persistent = PersistentVolumeInfo(
+              size = 512
+            )
           )
         )
       )
@@ -490,18 +504,20 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         .getTasksList.find(_.getName == "Foo1").get
         .getContainer.getVolumesList
 
-      assert(task1Volumes.size == 2)
+      assert(task1Volumes.size == 3)
       assert(task1Volumes.find(_.getContainerPath == "/mnt/path1").get.getHostPath == "/mnt/path1")
       assert(task1Volumes.find(_.getContainerPath == "/mnt/path1").get.getMode == mesos.Volume.Mode.RW)
       assert(task1Volumes.find(_.getContainerPath == "/mnt/path2").get.getMode == mesos.Volume.Mode.RO)
+      assert(task1Volumes.find(_.getContainerPath == "/mnt/path3").get.getMode == mesos.Volume.Mode.RW)
 
       val task2Volumes = taskGroupInfo
         .getTasksList.find(_.getName == "Foo2").get
         .getContainer.getVolumesList
 
-      assert(task2Volumes.size == 1)
+      assert(task2Volumes.size == 2)
       assert(task2Volumes.find(_.getContainerPath == "/mnt/path2").get.getHostPath == "/mnt/path1")
       assert(task2Volumes.find(_.getContainerPath == "/mnt/path2").get.getMode == mesos.Volume.Mode.RW)
+      assert(task1Volumes.find(_.getContainerPath == "/mnt/path3").get.getMode == mesos.Volume.Mode.RW)
     }
 
     "set container images from an image definition" in {
