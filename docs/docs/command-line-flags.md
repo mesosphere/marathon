@@ -77,7 +77,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     service ports to apps. If you assign your service port statically in your app definition, it does
     not have to be in this range.
 * `--mesos_role` (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
-    for the specified role in addition to resources with the role designation '*'. This parameter is only applied the first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, this will not have an effect on the role for which Marathon is registered.
+    for the specified role in addition to resources with the role designation '*'. This parameter is only applied the 
+    first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, 
+    this will not have an effect on the role for which Marathon is registered. Please note that Marathon currently 
+    supports only one Mesos role, support for multiple roles will be added in the future releases.
 * <span class="label label-default">v0.9.0</span> `--default_accepted_resource_roles` (Optional. Default: all roles):
     Default for the `"acceptedResourceRoles"`
     attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
