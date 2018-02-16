@@ -4,7 +4,6 @@ import common
 import pytest
 import retrying
 import shakedown
-import time
 
 from datetime import timedelta
 from dcos import packagemanager, marathon, cosmos
