@@ -50,7 +50,9 @@ for TEST_CONFIG in $TESTS_DIR/test-*.yml; do
 
   # Launch the performance test driver with the correct arguments
   eval dcos-perf-test-driver \
-    $TESTS_DIR/environments/dcluster.yml \
+    $TESTS_DIR/environments/target-dcluster.yml \
+    $TESTS_DIR/environments/env-ci.yml \
+    $TESTS_DIR/environments/opt-jmx.yml \
     $TEST_CONFIG \
     -M "version=${MARATHON_VERSION}" \
     -M "mesos=${MESOS_VERSION}" \

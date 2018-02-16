@@ -1,0 +1,16 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : CI Environment                     #
+# ----------------------------------------------------------- #
+# This fragment instructs the driver to report the results to #
+# a remote services such as S3 and DataDog                    #
+# ----------------------------------------------------------- #
+
+# Fragments to include
+# ===========================
+include:
+
+  # Create the following reports
+  - ../reporters/report-raw.yml
+  - ../reporters/report-csv.yml
+  - ../reporters/report-s3.yml
+  - ../reporters/report-datadog.yml

@@ -89,3 +89,28 @@ The "thin cluster" deployed consists of 6 Mesos agents (with overcommitted resou
 #### Environment variables
 
 * `PARTIAL_TESTS` _[Optional]_ : A comma-separated list with the names of the tests to run. If missing the full set of tests will run.
+
+## Running Manually
+
+You can run the same tests manually using the `manual_*.sh` scripts. These scripts do not submit the results to reporting services, nor require complete configuration.
+
+This section describes the usage and requirements of each script.
+
+### `manual_run_dcos.sh` - Run tests against a DC/OS cluster
+
+Runs the tests against a DC/OS cluster. The script accepts the cluster URL as the first argument and an optional list of tests to run.
+
+The script will use `dcos-cli` to first log-in on the cluster and obtain an authentication ID. Example:
+
+```
+./manual_run_dcos.sh http://my.cluster.url [path/to/test.yml ...]
+```
+
+#### Requirements
+
+* dcos-cli
+* python3
+* python3-pip
+* docker
+* docker-compose
+

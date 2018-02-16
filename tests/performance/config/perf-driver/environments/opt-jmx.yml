@@ -1,0 +1,18 @@
+# ----------------------------------------------------------- #
+# Configuration Fragment : JMX-Supported Environment          #
+# ----------------------------------------------------------- #
+# Include this fragment if you want to enable JMX-Related     #
+# observer and metric collection.                             #
+# ----------------------------------------------------------- #
+
+# Fragments to include
+# ===========================
+include:
+
+  # Enable the JMX observer
+  - ../observers/observer-jmx.yml
+
+  # Enable JMX Metrics
+  - ../measure/measure-jmx-threadCount.yml
+  - ../measure/measure-jmx-usedMemory.yml
+  - ../measure/measure-jmx-cpuUsage.yml
