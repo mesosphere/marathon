@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -x +e -o pipefail
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
@@ -51,7 +50,7 @@ function download-diagnostics-bundle {
 	dcos node diagnostics download "${BUNDLE_NAME}" --location=./diagnostics.zip
 }
 
-# Install dependencies
+# Install dependencies and expose new PATH value.
 source ./ci/si_install_deps.sh
 
 # Launch cluster and run tests if launch was successful.
@@ -75,10 +74,16 @@ case $CLUSTER_LAUNCH_CODE in
       if [ ${SI_CODE} -gt 0 ]; then
         download-diagnostics-bundle
       fi
-      dcos-launch delete
+      dcos-launch delete || true
       exit "$SI_CODE" # Propagate return code.
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
-  3) exit-as-unstable "Cluster did not start in time.";;
-  *) exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE";;
+  3)
+      dcos-launch delete || true
+      exit-as-unstable "Cluster did not start in time."
+      ;;
+  *)
+      dcos-launch delete || true
+      exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE"
+      ;;
 esac

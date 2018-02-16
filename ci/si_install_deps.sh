@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x -e -o pipefail
+set -x +e -o pipefail
 
 PLATFORM=$(uname)
 
