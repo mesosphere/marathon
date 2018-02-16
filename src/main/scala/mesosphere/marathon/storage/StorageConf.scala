@@ -44,6 +44,13 @@ trait StorageConf extends ZookeeperConf with BackupConf {
     prefix = "disable_"
   )
 
+  lazy val storageExecutionContextSize = opt[Int](
+    "storage_execution_context_size",
+    default = Some(Runtime.getRuntime().availableProcessors()),
+    hidden = true,
+    descr = "INTERNAL TUNING PARAMETER: Storage module's execution context thread pool size"
+  )
+
   def defaultNetworkName: ScallopOption[String]
 
   def availableFeatures: Set[String]

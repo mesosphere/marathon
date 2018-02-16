@@ -126,7 +126,11 @@ See the detailed docs on
   "instances": 2,
   "mem": 32.0,
   "ports": [0],
-  "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
+  "fetch": [
+    {
+      "uri": "http://downloads.mesosphere.com/misc/toggle.tgz"
+    }
+  ]
 }
 ```
 
@@ -151,7 +155,11 @@ See the detailed docs on
   "instances": 2,
   "mem": 32.0,
   "ports": [0],
-  "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
+  "fetch": [
+    {
+      "uri": "http://downloads.mesosphere.com/misc/toggle.tgz"
+    }
+  ]
 }
 ```
 
@@ -179,7 +187,11 @@ To enable this feature for marathon versions prior to `0.7.4`, start Marathon wi
   "instances": 2,
   "mem": 32.0,
   "ports": [0],
-  "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
+  "fetch": [
+    {
+      "uri": "http://downloads.mesosphere.com/misc/toggle.tgz"
+    }
+  ]
 }
 ```
 
@@ -236,7 +248,7 @@ that you quote the "*" correctly)
 ### Using constraints
 
 You can use constraints to restrict where to run the tasks for your apps. See
-[constraints]({ site.baseurl }}/docs/constraints.html) for details.
+[constraints]({{ site.baseurl }}/docs/constraints.html) for details.
 
 The advantage of using constraints to restrict where tasks run is that you only have to provide appropriate attributes on the Mesos agents.
 
@@ -262,5 +274,3 @@ Often, multiple instances of legacy applications cannot be run concurrently. The
     "maximumOverCapacity": 0
   }
 ```
-
-
