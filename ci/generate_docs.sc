@@ -69,14 +69,14 @@ def isReleaseTag(tag: String) = tag.matches("""v[1-9]+\.\d+\.\d+""")
   */
 def toSemanticVersion(tag: String): SemVer = {
   val verionOnly = tag.filterNot(c => c.isLetter || c == '-')
-  SemVer(verionOnly, "")
+  val weDontUseCommitSha = ""
+  SemVer(verionOnly, weDontUseCommitSha)
 }
 
 def notIgnoredBranch(branchVersion: String) = !ignoredReleaseBranchesVersions.contains(branchVersion)
 
-def getTheLastTagVersion(tags: Seq[SemVer]): String = {
-  val version = tags.last
-  s"${version.major}.${version.minor}"
+def getTheLastTagVersion(tags: Seq[SemVer]): SemVer = {
+  tags.last
 }
 
 /**
@@ -84,14 +84,7 @@ def getTheLastTagVersion(tags: Seq[SemVer]): String = {
   *
   * example: List[(String, String)] = List(("1.3", "1.3.14"), ("1.4", "1.4.11"), ("1.5", "1.5.6"))
   */
-val docsTargetVersions = listAllTagsInOrder
-  .filter(isReleaseTag)
-  .map(toSemanticVersion)
-  .groupBy(version => s"${version.major}.${version.minor}")
-  .filterKeys(notIgnoredBranch)
-  .mapValues(getTheLastTagVersion)
-  .toList.sortBy(_._1)
-  .takeRight(3)
+val docsTargetVersions: List[(String, SemVer)] = listAllTagsInOrder.filter(isReleaseTag).map(toSemanticVersion).groupBy(version => s"${version.major}.${version.minor}").filterKeys(notIgnoredBranch).mapValues(getTheLastTagVersion).toList.sortBy(_._1).takeRight(3)
 
 val (latestReleaseBranch, latestReleaseVersion) = docsTargetVersions.last
 
@@ -99,8 +92,8 @@ def generateDocsForVersion(docsPath: Path, version: String, outputPath: String =
   %('bundle, "exec", s"jekyll build --config _config.yml,_config.$version.yml -d $outputPath/$version/")(docsPath)
 }
 
-def branchForTag(version: String) = {
-  s"tags/v$version"
+def branchForTag(version: SemVer) = {
+  s"tags/${version.toTagString}"
 }
 
 // step 1: copy docs/docs to the respective dirs
@@ -111,7 +104,7 @@ def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path) = {
     %git('checkout, s"$tagName")
     val tagBuildDir = buildDir / releaseBranchVersion
     mkdir! tagBuildDir
-    println(s"Copying $tagVersion docs to: $tagBuildDir")
+    println(s"Copying ${tagVersion.toTagString} docs to: $tagBuildDir")
     cp.into(docsDir / 'docs, tagBuildDir)
     cp.into(docsDir / '_layouts / "docs.html", tagBuildDir)
     println(s"Docs folder for $releaseBranchVersion is copied to ${tagBuildDir / "docs"}")
@@ -123,7 +116,7 @@ def generateTopLevelDocs(buildDir: Path, docsDir: Path) = {
 
   %git('checkout, branchForTag(latestReleaseVersion))
 
-  println(s"Copying docs for $latestReleaseVersion into $buildDir")
+  println(s"Copying docs for ${latestReleaseVersion.toReleaseString} into $buildDir")
   cp.into(docsDir, buildDir)
 
   println("Cleaning previously generated docs")
@@ -140,7 +133,7 @@ def generateVersionedDocs(buildDir: Path) {
   docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
     println("Cleaning docs/docs")
     rm! rootDocsDir / 'docs
-    println(s"Copying docs for $tagVersion to the docs/docs folder")
+    println(s"Copying docs for ${tagVersion.toTagString} to the docs/docs folder")
     cp.into(buildDir / releaseBranchVersion / 'docs, rootDocsDir)
     cp.over(buildDir / releaseBranchVersion / "docs.html", rootDocsDir / '_layouts / "docs.html")
     println(s"Generation docs for $tagVersion")
