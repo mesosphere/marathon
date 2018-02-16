@@ -75,7 +75,7 @@ def toSemanticVersion(tag: String): SemVer = {
 
 def notIgnoredBranch(branchVersion: String) = !ignoredReleaseBranchesVersions.contains(branchVersion)
 
-def getTheLastTagVersion(tags: Seq[SemVer]): SemVer = {
+def getLatestPatch(tags: Seq[SemVer]): SemVer = {
   tags.last
 }
 
@@ -84,7 +84,7 @@ def getTheLastTagVersion(tags: Seq[SemVer]): SemVer = {
   *
   * example: List[(String, String)] = List(("1.3", "1.3.14"), ("1.4", "1.4.11"), ("1.5", "1.5.6"))
   */
-val docsTargetVersions: List[(String, SemVer)] = listAllTagsInOrder.filter(isReleaseTag).map(toSemanticVersion).groupBy(version => s"${version.major}.${version.minor}").filterKeys(notIgnoredBranch).mapValues(getTheLastTagVersion).toList.sortBy(_._1).takeRight(3)
+val docsTargetVersions: List[(String, SemVer)] = listAllTagsInOrder.filter(isReleaseTag).map(toSemanticVersion).groupBy(version => s"${version.major}.${version.minor}").filterKeys(notIgnoredBranch).mapValues(getLatestPatch).toList.sortBy(_._1).takeRight(3)
 
 val (latestReleaseBranch, latestReleaseVersion) = docsTargetVersions.last
 
@@ -98,16 +98,17 @@ def branchForTag(version: SemVer) = {
 
 // step 1: copy docs/docs to the respective dirs
 
-def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path) = {
-  docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
+def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path): Seq[(String, Path)] = {
+  docsTargetVersions map { case (releaseBranchVersion, tagVersion) =>
     val tagName = branchForTag(tagVersion)
     %git('checkout, s"$tagName")
     val tagBuildDir = buildDir / releaseBranchVersion
     mkdir! tagBuildDir
-    println(s"Copying ${tagVersion.toTagString} docs to: $tagBuildDir")
+    println(s"Copying ${tagVersion.toReleaseString} docs to: $tagBuildDir")
     cp.into(docsDir / 'docs, tagBuildDir)
     cp.into(docsDir / '_layouts / "docs.html", tagBuildDir)
     println(s"Docs folder for $releaseBranchVersion is copied to ${tagBuildDir / "docs"}")
+    releaseBranchVersion -> tagBuildDir
   }
 }
 
@@ -122,28 +123,28 @@ def generateTopLevelDocs(buildDir: Path, docsDir: Path) = {
   println("Cleaning previously generated docs")
   rm! topLevelGeneratedDocsDir / '_site
 
-  println(s"Generating root docs for $latestReleaseVersion")
+  println(s"Generating root docs for ${latestReleaseVersion.toReleaseString}")
   %("bundle", "install", "--path", s"vendor/bundle")(topLevelGeneratedDocsDir)
   %('bundle, "exec", s"jekyll build --config _config.yml -d _site")(topLevelGeneratedDocsDir)
 }
 
-def generateVersionedDocs(buildDir: Path) {
+def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]) {
   val rootDocsDir = buildDir / 'docs
-  println(s"Generating docs for versions ${docsTargetVersions.map(_._2).mkString(", ")}")
-  docsTargetVersions foreach { case (releaseBranchVersion, tagVersion) =>
+  println(s"Generating docs for versions ${docsTargetVersions.map(_._2.toReleaseString).mkString(", ")}")
+  versionedDocsDirs foreach { case (releaseBranchVersion, path) =>
     println("Cleaning docs/docs")
     rm! rootDocsDir / 'docs
-    println(s"Copying docs for ${tagVersion.toTagString} to the docs/docs folder")
-    cp.into(buildDir / releaseBranchVersion / 'docs, rootDocsDir)
-    cp.over(buildDir / releaseBranchVersion / "docs.html", rootDocsDir / '_layouts / "docs.html")
-    println(s"Generation docs for $tagVersion")
+    println(s"Copying docs for $releaseBranchVersion to the docs/docs folder")
+    cp.into(path / 'docs, rootDocsDir)
+    cp.over(path / "docs.html", rootDocsDir / '_layouts / "docs.html")
+    println(s"Generation docs for $releaseBranchVersion")
     write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml", s"baseurl : /marathon/$releaseBranchVersion")
     generateDocsForVersion(rootDocsDir, releaseBranchVersion)
   }
 }
 
 def buildDocs(buildDir: Path, docsDir: Path) = {
-  checkoutDocsToTempFolder(buildDir, docsDir)
+  val versionedDocsDirs = checkoutDocsToTempFolder(buildDir, docsDir)
   generateTopLevelDocs(buildDir, docsDir)
-  generateVersionedDocs(buildDir)
+  generateVersionedDocs(buildDir, versionedDocsDirs)
 }
