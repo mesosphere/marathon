@@ -40,6 +40,7 @@ def get_resource(resource):
         except Exception:
             raise DCOSException("Can't read from resource: {0}. Please check that it exists.".format(resource))
 
+
 class FaultDomain:
     """
     High-level representation of a fault domain
@@ -63,6 +64,7 @@ def get_cluster_local_domain():
     master = mesos.get_master()
     return FaultDomain(master.state().get('domain', {}))
 
+
 def get_cluster_slave_domains():
     """Returns a dictionary with the slave IDs in the cluster and their corresponding
        fault domain information
@@ -75,6 +77,7 @@ def get_cluster_slave_domains():
         slave_domains[slave['id']] = FaultDomain(slave._short_state.get('domain', None))
     return slave_domains
 
+
 def get_all_cluster_regions():
     """Returns a dictionary with all the regions and their zones in the cluster
     """
@@ -82,13 +85,14 @@ def get_all_cluster_regions():
 
     # Populate all the domain zones and regions found in the cluster
     for domain in get_cluster_slave_domains().values():
-        if not domain.region in domain_regions:
+        if domain.region not in domain_regions:
             domain_regions[domain.region] = []
-        if not domain.zone in domain_regions[domain.region]:
+        if domain.zone not in domain_regions[domain.region]:
             domain_regions[domain.region].append(domain.zone)
 
     # Return dictionary
     return domain_regions
+
 
 def get_biggest_cluster_region():
     """Returns a tuple with the name of the biggest region in the cluster and the zones in it
@@ -102,6 +106,7 @@ def get_biggest_cluster_region():
             biggest_region = region
 
     return (biggest_region, biggest_region_zones)
+
 
 def get_app_domains(app):
     """Returns a list of all te fault domains used by the tasks of the specified app
@@ -118,6 +123,7 @@ def get_app_domains(app):
 
     return domains
 
+
 def get_used_regions_and_zones(domains):
     """Returns tuple with the sets of the used regions and zones from the given list
        of FaultDomain object instances (ex. obtained by get_app_domains())"""
@@ -129,6 +135,7 @@ def get_used_regions_and_zones(domains):
         used_zones.add(domain.zone)
 
     return (used_regions, used_zones)
+
 
 def count_agents_in_faultdomains(regions=None, zones=None):
     """Return the number of agents that belong on the specified region and/or zone
@@ -143,9 +150,9 @@ def count_agents_in_faultdomains(regions=None, zones=None):
 
     # Increment counter for the agents that pass the checks
     for domain in get_cluster_slave_domains().values():
-        if not regions is None and not domain.region in regions:
+        if regions is not None and domain.region not in regions:
             continue
-        if not zones is None and not domain.zone in zones:
+        if zones is not None and domain.zone not in zones:
             continue
         counter += 1
 

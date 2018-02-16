@@ -1241,6 +1241,7 @@ def test_ipv6_healthcheck(docker_ipv6_network_fixture):
 
     client.remove_app(app['id'], True)
 
+
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_faultdomains_default():
@@ -1269,6 +1270,7 @@ def test_faultdomains_default():
 
     # Remove app
     client.remove_app(app['id'], True)
+
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
@@ -1299,6 +1301,7 @@ def test_faultdomains_region_only():
 
     # Remove app
     client.remove_app(app['id'], True)
+
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
@@ -1335,6 +1338,7 @@ def test_faultdomains_region_and_zone():
     # Remove app
     client.remove_app(app['id'], True)
 
+
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")
 def test_faultdomains_region_unique():
@@ -1369,6 +1373,7 @@ def test_faultdomains_region_unique():
 
     # Remove app
     client.remove_app(app['id'], True)
+
 
 @shakedown.dcos_1_11
 @pytest.mark.skipif("shakedown.ee_version() is None")

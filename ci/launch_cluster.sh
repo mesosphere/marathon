@@ -26,33 +26,57 @@ CONFIG_PATH="$DEPLOYMENT_NAME.yaml"
 INFO_PATH="$DEPLOYMENT_NAME.info.json"
 
 if [ "$VARIANT" == "open" ]; then
-  TEMPLATE="https://s3.amazonaws.com/downloads.dcos.io/dcos/${CHANNEL}/cloudformation/multi-master.cloudformation.json"
+  INSTALLER_URL="https://downloads.dcos.io/dcos/${CHANNEL}/dcos_generate_config.sh"
 else
-  TEMPLATE="https://s3.amazonaws.com/downloads.mesosphere.io/dcos-enterprise-aws-advanced/${CHANNEL}/${VARIANT}/cloudformation/ee.multi-master.cloudformation.json"
+  if [ -z "$DCOS_INSTALLER_TEMPLATE" ]; then
+      echo "Expecting DCOS_INSTALLER_TEMPLATE environment variable"
+      exit 1
+  fi
+  if [ -z "$DCOS_LICENSE" ]; then
+      echo "Expecting $DCOS_LICENSE environment variable"
+      exit 1
+  fi
+  # Replace {} in the template with the channel
+  INSTALLER_URL=$(echo ${DCOS_INSTALLER_TEMPLATE} | sed "s|{}|${CHANNEL}|g")
 fi
 
 echo "Using: ${TEMPLATE}"
-
 
 # Create config.yaml for dcos-launch.
 envsubst <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
-template_url: $TEMPLATE
 deployment_name: $DEPLOYMENT_NAME
-provider: aws
+platform: aws
+instance_type: m4.large
+os_name: cent-os-7-dcos-prereqs
 aws_region: us-west-2
+provider: onprem
+installer_url: $INSTALLER_URL
 key_helper: true
-template_parameters:
-    DefaultInstanceType: m4.large
-    AdminLocation: 0.0.0.0/0
-    PublicSlaveInstanceCount: 1
-    SlaveInstanceCount: 3
+num_masters: 3
+fault_domain_helper:
+  LocalRegion:
+    num_zones: 2
+    num_public_agents: 1
+    num_private_agents: 2
+    local: true
+  RemoteRegion:
+    num_zones: 2
+    num_private_agents: 2
+dcos_config:
+  cluster_name: Marathon $DEPLOYMENT_NAME
+  exhibitor_storage_backend: zookeeper
+  exhibitor_zk_path: /exhibitor
+  resolvers:
+    - 8.8.8.8
+    - 8.8.4.4
+  master_discovery: static
 EOF
 
 # Append license if one is available.
 if [ "$VARIANT" != "open" ]; then
-    echo "    LicenseKey: $DCOS_LICENSE" >> "$CONFIG_PATH"
+    echo -e "  security: ${VARIANT}\n  license_key_contents: ${DCOS_LICENSE}" >> "$CONFIG_PATH"
 fi
 
 # Create cluster.
