@@ -4,6 +4,10 @@ import java.time.Instant
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 
+import $file.utils
+import utils.SemVer
+
+
 /**
   * Docs generation process:
   *
@@ -63,20 +67,17 @@ def isReleaseTag(tag: String) = tag.matches("""v[1-9]+\.\d+\.\d+""")
   * 1.45.983 -> 1.45
   *
   */
-def releaseBranchVersion(tag: String) = tag.dropWhile(_.isLetter).takeWhile {
-  var reachedMinorVersion = false
-  elem => elem match {
-    case c if c.isDigit => true
-    case c if c == '.' && !reachedMinorVersion =>
-      reachedMinorVersion = true
-      true
-    case _ => false
-  }
+def toSemanticVersion(tag: String): SemVer = {
+  val verionOnly = tag.filterNot(c => c.isLetter || c == '-')
+  SemVer(verionOnly, "")
 }
 
 def notIgnoredBranch(branchVersion: String) = !ignoredReleaseBranchesVersions.contains(branchVersion)
 
-def getTheLastTagVersion(tags: Seq[String]) = tags.last.drop(1)
+def getTheLastTagVersion(tags: Seq[SemVer]): String = {
+  val version = tags.last
+  s"${version.major}.${version.minor}"
+}
 
 /**
   * getting 3 latest release versions and corresponding latest tags
@@ -85,7 +86,8 @@ def getTheLastTagVersion(tags: Seq[String]) = tags.last.drop(1)
   */
 val docsTargetVersions = listAllTagsInOrder
   .filter(isReleaseTag)
-  .groupBy(releaseBranchVersion)
+  .map(toSemanticVersion)
+  .groupBy(version => s"${version.major}.${version.minor}")
   .filterKeys(notIgnoredBranch)
   .mapValues(getTheLastTagVersion)
   .toList.sortBy(_._1)
