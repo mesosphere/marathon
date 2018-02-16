@@ -79,11 +79,11 @@ case $CLUSTER_LAUNCH_CODE in
       ;;
   2) exit-as-unstable "Cluster launch failed.";;
   3)
-      dcos-launch delete || true
+      dcos-launch delete
       exit-as-unstable "Cluster did not start in time."
       ;;
   *)
-      dcos-launch delete || true
+      dcos-launch delete
       exit-as-unstable "Unknown error in cluster launch: $CLUSTER_LAUNCH_CODE"
       ;;
 esac
