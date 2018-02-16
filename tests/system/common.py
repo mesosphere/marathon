@@ -16,7 +16,7 @@ from distutils.version import LooseVersion
 from json.decoder import JSONDecodeError
 from shakedown import marathon
 from urllib.parse import urljoin
-from utils import get_cluster_slave_domains, get_used_regions_and_zones, get_app_domains
+from utils import get_cluster_agent_domains, get_used_regions_and_zones, get_app_domains
 
 
 marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
@@ -771,7 +771,7 @@ def running_task_status(task_statuses):
         if task_status['state'] == "TASK_RUNNING":
             return task_status
 
-    assert False, "Did not find a TASK_RUNNING status in task statuses: %s" % (task_statuses,)
+    assert False, "Did not find a TASK_RUNNING status in task statuses: {}".format(task_statuses)
 
 
 def task_by_name(tasks, name):
@@ -781,11 +781,11 @@ def task_by_name(tasks, name):
         if task['name'] == name:
             return task
 
-    assert False, "Did not find task with name %s in this list of tasks: %s" % (name, tasks,)
+    assert False, "Did not find task with name {} in this list of tasks: {}".format(name, tasks)
 
 
 def assert_app_in_all_domains(app, regions=None, zones=None):
-    """Asserts that all tasks of the given app are within all of the given region and/or zone
+    """Asserts that all tasks of the given app are distributed in all of the given region and/or zone
     :param app_id: The app instance, as obtained by `marathon_client.get_app(...)`
     :param region: The regions to test (can be None, String, List or Tuple)
     :param zone: The zones to test (can be None, String, List or Tuple)
@@ -798,19 +798,19 @@ def assert_app_in_all_domains(app, regions=None, zones=None):
 
     # Sanitize agent domains and user input
 
-    slave_domains = get_cluster_slave_domains()
+    slave_domains = get_cluster_agent_domains()
 
-    assert len(slave_domains) > 0, "Did not find any agents in the DC/OS cluster" % (app['id'],)
+    assert len(slave_domains) > 0, "Did not find any agents in the DC/OS cluster"
 
     if regions is not None:
         slave_regions = set([x.region for x in slave_domains.values()])
         unknown_regions = set(regions) - slave_regions
-        assert len(unknown_regions) == 0, "Region(s) %s was not found in the cluster (expecting one of %s)" % (
+        assert len(unknown_regions) == 0, "Region(s) {} was not found in the cluster (expecting one of {})".format(
             ', '.join(unknown_regions), ', '.join(slave_regions))
     if zones is not None:
         slave_zones = set(map(lambda x: x.zone, slave_domains.values()))
         unknown_zones = set(zones) - slave_zones
-        assert len(unknown_zones) == 0, "Zone(s) %s was not found in the cluster (expecting one of %s)" % (
+        assert len(unknown_zones) == 0, "Zone(s) {} was not found in the cluster (expecting one of {})".format(
             ', '.join(unknown_zones), ', '.join(slave_zones))
 
     # Check if regions and/or zones overlap completely
@@ -819,13 +819,13 @@ def assert_app_in_all_domains(app, regions=None, zones=None):
 
     if regions is not None:
         assert used_regions == set(regions), \
-            "Application %s is not running on all the exepected regions ({%s} instead of {%s})" % (
+            "Application {} is not running on all the exepected regions ([{}] instead of [{}])".format(
                 app['id'], ', '.join(used_regions), ', '.join(regions)
             )
 
     if zones is not None:
         assert used_zones == set(zones), \
-            "Application %s is not running on all the exepected zones ({%s} instead of {%s})" % (
+            "Application {} is not running on all the exepected zones ([{}] instead of [{}])".format(
                 app['id'], ', '.join(used_zones), ', '.join(zones)
             )
 

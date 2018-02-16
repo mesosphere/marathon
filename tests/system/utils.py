@@ -65,7 +65,7 @@ def get_cluster_local_domain():
     return FaultDomain(master.state().get('domain', {}))
 
 
-def get_cluster_slave_domains():
+def get_cluster_agent_domains():
     """Returns a dictionary with the slave IDs in the cluster and their corresponding
        fault domain information
     """
@@ -84,7 +84,7 @@ def get_all_cluster_regions():
     domain_regions = {}
 
     # Populate all the domain zones and regions found in the cluster
-    for domain in get_cluster_slave_domains().values():
+    for domain in get_cluster_agent_domains().values():
         if domain.region not in domain_regions:
             domain_regions[domain.region] = []
         if domain.zone not in domain_regions[domain.region]:
@@ -112,7 +112,7 @@ def get_app_domains(app):
     """Returns a list of all te fault domains used by the tasks of the specified app
     """
     tasks = app.get('tasks', [])
-    slave_domains = get_cluster_slave_domains()
+    slave_domains = get_cluster_agent_domains()
 
     assert len(tasks) > 0, "App %s did not launch any tasks on mesos" % (app['id'],)
 
@@ -149,7 +149,7 @@ def count_agents_in_faultdomains(regions=None, zones=None):
         zones = [zones]
 
     # Increment counter for the agents that pass the checks
-    for domain in get_cluster_slave_domains().values():
+    for domain in get_cluster_agent_domains().values():
         if regions is not None and domain.region not in regions:
             continue
         if zones is not None and domain.zone not in zones:
