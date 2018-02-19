@@ -9,8 +9,9 @@
 # ===========================
 config:
 
-  # We are repeating everything 3 times
-  repeat: 3
+  # We repeat the tests 10 times to have enough statistics for the
+  # statistical functions to have a correct meaning.
+  repeat: 10
 
 # Global definitions
 # ==================
