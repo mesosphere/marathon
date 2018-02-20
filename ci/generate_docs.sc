@@ -73,7 +73,15 @@ def getLatestPatch(tags: Seq[SemVer]): SemVer = {
   *
   * example: List[(String, String)] = List(("1.3", "1.3.14"), ("1.4", "1.4.11"), ("1.5", "1.5.6"))
   */
-val docsTargetVersions: List[(String, SemVer)] = listAllTagsInOrder.filter(isReleaseTag).map(SemVer(_)).groupBy(version => s"${version.major}.${version.minor}").filterKeys(notIgnoredBranch).mapValues(getLatestPatch).toList.sortBy(_._1).takeRight(3)
+val docsTargetVersions: List[(String, SemVer)] = listAllTagsInOrder
+  .filter(isReleaseTag)
+  .map(SemVer(_))
+  .groupBy(version => s"${version.major}.${version.minor}")
+  .filterKeys(notIgnoredBranch)
+  .mapValues(getLatestPatch)
+  .toList
+  .sortBy(_._1)
+  .takeRight(3)
 
 val (latestReleaseBranch, latestReleaseVersion) = docsTargetVersions.last
 
