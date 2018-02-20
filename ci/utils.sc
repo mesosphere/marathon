@@ -138,8 +138,8 @@ def escapeCmdArg(cmd: String): String = {
   s"""$$'${subbed}'"""
 }
 
-case class SemVer(major: Int, minor: Int, build: Int, commit: Option[String]) {
-  override def toString(): String = s"$major.$minor.$build" + commit.map(c => s"-$c").getOrElse("")
+case class SemVer(major: Int, minor: Int, build: Int, commit: String) {
+  override def toString(): String = s"$major.$minor.$build-$commit"
   def toTagString(): String = s"v$major.$minor.$build"
 
   /**
@@ -149,11 +149,6 @@ case class SemVer(major: Int, minor: Int, build: Int, commit: Option[String]) {
 }
 
 object SemVer {
-
-  def apply(major: Int, minor: Int, build: Int, commit: String): SemVer = {
-    SemVer(major, minor, build, Some(commit))
-  }
-
   val empty = SemVer(0, 0, 0, "")
 
   // Matches e.g. 1.7.42
@@ -183,7 +178,7 @@ object SemVer {
       case versionCommitPattern(major, minor, build, commit) =>
         SemVer(major.toInt, minor.toInt, build.toInt, commit)
       case versionTagPattern(major, minor, build) =>
-        SemVer(major.toInt, minor.toInt, build.toInt, None)
+        SemVer(major.toInt, minor.toInt, build.toInt, "")
       case _ =>
         throw new IllegalArgumentException(s"Could not parse version $version.")
     }
