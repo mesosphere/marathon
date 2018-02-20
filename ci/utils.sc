@@ -166,6 +166,10 @@ object SemVer {
 
   // Matches e.g. 1.7.42-deadbeef
   val versionCommitPattern = """^(\d+)\.(\d+)\.(\d+)-(\w+)$""".r
+
+  // Matches e.g. v1.7.42
+  val versionTagPattern = """^v?(\d+)\.(\d+)\.(\d+)$""".r
+
   /**
    * Create SemVer from string which has the form if 1.7.42-deadbeef.
    */
@@ -173,7 +177,10 @@ object SemVer {
     version match {
       case versionCommitPattern(major, minor, build, commit) =>
         SemVer(major.toInt, minor.toInt, build.toInt, commit)
+      case versionTagPattern(major, minor, build) =>
+        SemVer(major.toInt, minor.toInt, build.toInt, "")
       case _ =>
         throw new IllegalArgumentException(s"Could not parse version $version.")
     }
+
 }

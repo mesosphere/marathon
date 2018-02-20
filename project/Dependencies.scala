@@ -55,6 +55,9 @@ object Dependencies {
     alpakkaS3 % "compile",
     commonsCompress % "compile", // used for tar flow
     commonsIO % "compile",
+    ammonite % "compile",
+    ammoniteOps % "compile",
+
 
     // test
     Test.diffson % "test",
@@ -108,6 +111,7 @@ object Dependency {
     val ScalaLogging = "3.7.2"
     val Raven = "8.0.3"
     val JacksonVersion = "2.8.9"
+    val AmmoniteVersion = "1.0.3"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -151,6 +155,8 @@ object Dependency {
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
+  val ammonite = "com.lihaoyi" % "ammonite" % V.AmmoniteVersion cross CrossVersion.full
+  val ammoniteOps = "com.lihaoyi" %% "ammonite-ops" % V.AmmoniteVersion
 
   object Curator {
     /**
