@@ -54,24 +54,13 @@ def makeTmpDir(): Path = {
   path
 }
 
-
+def buildJekyllInDocker(docsPath: Path): Unit = {
+  %("docker", "build", ".", "-t", "jekyll")(docsPath)
+}
 
 def listAllTagsInOrder: Vector[String] = %%('git, "tag", "-l", "--sort=version:refname").out.lines
 
 def isReleaseTag(tag: String) = tag.matches("""v[1-9]+\.\d+\.\d+""")
-
-/**
-  * get the major.minor version from a [v]major.minor.patch
-  *
-  * v1.4.11 -> 1.4
-  * 1.45.983 -> 1.45
-  *
-  */
-def toSemanticVersion(tag: String): SemVer = {
-  val verionOnly = tag.filterNot(c => c.isLetter || c == '-')
-  val weDontUseCommitSha = ""
-  SemVer(verionOnly, weDontUseCommitSha)
-}
 
 def notIgnoredBranch(branchVersion: String) = !ignoredReleaseBranchesVersions.contains(branchVersion)
 
@@ -84,12 +73,18 @@ def getLatestPatch(tags: Seq[SemVer]): SemVer = {
   *
   * example: List[(String, String)] = List(("1.3", "1.3.14"), ("1.4", "1.4.11"), ("1.5", "1.5.6"))
   */
-val docsTargetVersions: List[(String, SemVer)] = listAllTagsInOrder.filter(isReleaseTag).map(toSemanticVersion).groupBy(version => s"${version.major}.${version.minor}").filterKeys(notIgnoredBranch).mapValues(getLatestPatch).toList.sortBy(_._1).takeRight(3)
+val docsTargetVersions: List[(String, SemVer)] = listAllTagsInOrder.filter(isReleaseTag).map(SemVer(_)).groupBy(version => s"${version.major}.${version.minor}").filterKeys(notIgnoredBranch).mapValues(getLatestPatch).toList.sortBy(_._1).takeRight(3)
 
 val (latestReleaseBranch, latestReleaseVersion) = docsTargetVersions.last
 
-def generateDocsForVersion(docsPath: Path, version: String, outputPath: String = "_site"): Unit = {
-  %('bundle, "exec", s"jekyll build --config _config.yml,_config.$version.yml -d $outputPath/$version/")(docsPath)
+def generateDocsByDocker(docsPath: Path, maybeVersion: Option[String]): Unit = {
+  maybeVersion match {
+    case Some(version) => //generating versioned docs
+      %("docker", "run", "-e", s"MARATHON_DOCS_VERSION=$version", "--rm", "-it", "-v", s"$docsPath:/site-docs", "jekyll")(docsPath)
+
+    case None => //generating top-level docs
+      %("docker", "run", "--rm", "-it", "-v", s"$docsPath:/site-docs", "jekyll")(docsPath)
+  }
 }
 
 def branchForTag(version: SemVer) = {
@@ -112,6 +107,16 @@ def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path): Seq[(String, Path)]
   }
 }
 
+def prepareDockerImage(buildDir: Path, docsDir: Path): Unit = {
+  val imagePreparationWorkingDir = buildDir / 'docs
+  println(s"Preparing docker image in $imagePreparationWorkingDir")
+  cp.into(docsDir, buildDir)
+  buildJekyllInDocker(buildDir / 'docs)
+
+  println("Docker image preparation is done. Cleaning after preparation ...")
+  rm ! imagePreparationWorkingDir
+}
+
 def generateTopLevelDocs(buildDir: Path, docsDir: Path) = {
   val topLevelGeneratedDocsDir = buildDir / 'docs
 
@@ -124,8 +129,8 @@ def generateTopLevelDocs(buildDir: Path, docsDir: Path) = {
   rm! topLevelGeneratedDocsDir / '_site
 
   println(s"Generating root docs for ${latestReleaseVersion.toReleaseString}")
-  %("bundle", "install", "--path", s"vendor/bundle")(topLevelGeneratedDocsDir)
-  %('bundle, "exec", s"jekyll build --config _config.yml -d _site")(topLevelGeneratedDocsDir)
+  println(topLevelGeneratedDocsDir)
+  generateDocsByDocker(topLevelGeneratedDocsDir, None)
 }
 
 def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]) {
@@ -139,11 +144,12 @@ def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]
     cp.over(path / "docs.html", rootDocsDir / '_layouts / "docs.html")
     println(s"Generation docs for $releaseBranchVersion")
     write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml", s"baseurl : /marathon/$releaseBranchVersion")
-    generateDocsForVersion(rootDocsDir, releaseBranchVersion)
+    generateDocsByDocker(rootDocsDir, Some(releaseBranchVersion))
   }
 }
 
 def buildDocs(buildDir: Path, docsDir: Path) = {
+  prepareDockerImage(buildDir, docsDir)
   val versionedDocsDirs = checkoutDocsToTempFolder(buildDir, docsDir)
   generateTopLevelDocs(buildDir, docsDir)
   generateVersionedDocs(buildDir, versionedDocsDirs)

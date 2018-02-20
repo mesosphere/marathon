@@ -13,7 +13,6 @@ RUN apt-get update && \
 
 COPY entrypoint.sh /
 
-EXPOSE 4000
 VOLUME ["/site-docs"]
 
 ENTRYPOINT /entrypoint.sh
