@@ -261,7 +261,7 @@ def release(args: String*): Unit = {
   println(s"Releasing build ${config.version}...")
   releases.verify(config.version)
 
-  %('git, "checkout", config.version.commit)
+  %('git, "checkout", config.version.commit.getOrElse(""))
 
   buildDockerAndLinuxPackages()
   if (config.runTests)
