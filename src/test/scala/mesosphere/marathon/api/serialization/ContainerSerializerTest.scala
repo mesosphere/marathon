@@ -6,7 +6,7 @@ import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.Container
 
 import scala.collection.JavaConverters._
-import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.core.pod.{ HostNetwork, BridgeNetwork, ContainerNetwork }
 import org.scalatest.Inside
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -54,6 +54,18 @@ class ContainerSerializerTest extends UnitTest with Inside {
           case Seq(portMapping) =>
             portMapping.getHostPort shouldBe 1000
         }
+      }
+      "not serialize the network if it's host mode for the docker container" in {
+        val networks = List(HostNetwork)
+        val container = Container.Docker()
+
+        val result = ContainerSerializer.toMesos(networks, container, "mesos-bridge")
+
+        // We expect the protobuf field to be not set, so we know that it's not serialized.
+        result.getDocker.hasNetwork shouldBe false
+
+        // Make sure we get the correct default value back even though the network isn't serialized.
+        result.getDocker.getNetwork shouldBe (Mesos.ContainerInfo.DockerInfo.Network.HOST)
       }
     }
 

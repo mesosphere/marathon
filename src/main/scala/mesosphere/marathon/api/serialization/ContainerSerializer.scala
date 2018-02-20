@@ -238,6 +238,14 @@ object DockerSerializer {
       case HostNetwork => DockerInfo.Network.HOST // it's the default, but we include here for posterity
       case unsupported => throw SerializationFailedException(s"unsupported docker network type $unsupported")
     }.foreach(builder.setNetwork)
+
+    // The default network mode is OS specific for the mesos agent (`HOST` on Linux and `BRIDGE` on Windows), so
+    // we need to clear the network field and let the agent decide what mode to use. Since the default is `HOST` in
+    // in marathon, if we didn't clear this field, we would by default send `HOST`, which is unsupported on Windows.
+    if (DockerInfo.getDefaultInstance.getNetwork == builder.getNetwork) {
+      builder.clearNetwork
+    }
+
     builder.build
   }
 }
