@@ -31,6 +31,7 @@ object MesosFacade {
 
   case class ITResources(resources: Map[String, ITResourceValue]) {
     def isEmpty: Boolean = resources.isEmpty || resources.values.forall(_.isEmpty)
+    def nonEmpty: Boolean = !isEmpty
 
     override def toString: String = {
       "{" + resources.toSeq.sortBy(_._1).map {
@@ -85,5 +86,10 @@ class MesosFacade(url: String, waitTime: Duration = 30.seconds)(implicit val sys
   def terminate(frameworkId: String): HttpResponse = {
     val pipeline = sendReceive
     result(pipeline(Post(s"$url/terminate", s"frameworkId=$frameworkId")), waitTime)
+  }
+
+  def teardown(frameworkId: String): HttpResponse = {
+    val pipeline = sendReceive
+    result(pipeline(Post(s"$url/teardown", s"frameworkId=$frameworkId")), waitTime)
   }
 }

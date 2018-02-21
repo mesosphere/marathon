@@ -200,11 +200,12 @@ class AppDeployIntegrationTest
 
   test("create a simple app with a Marathon HTTP health check using port instead of portIndex") {
     Given("a new app")
+    val port = mesosCluster.randomAgentPort()
     val app = appProxy(testBasePath / s"http-app-${UUID.randomUUID()}", "v1", instances = 1, healthCheck = None).
       copy(
-        portDefinitions = PortDefinitions(31000),
+        portDefinitions = PortDefinitions(port),
         requirePorts = true,
-        healthChecks = Set(marathonHttpHealthCheck.copy(port = Some(31000)))
+        healthChecks = Set(marathonHttpHealthCheck.copy(port = Some(port)))
       )
     val check = appProxyCheck(app.id, "v1", true)
 

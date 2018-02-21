@@ -25,7 +25,7 @@ class LeadershipAbdicationIntegrationTest extends LeaderIntegrationTest {
   // we need the same amount of additional marathon instances, like we abdicate afterwards.
   override val numAdditionalMarathons = abdicationLoops
 
-  override val mesosNumSlaves = 1
+  override lazy val mesosNumSlaves = 1
 
   test("Abdicating a leader does not kill a running task which is currently involved in a deployment") {
     Given("a new app with an impossible constraint")
