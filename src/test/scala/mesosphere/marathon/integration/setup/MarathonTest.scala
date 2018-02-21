@@ -31,7 +31,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.time.{ Milliseconds, Minutes, Seconds, Span }
+import org.scalatest.time.{ Milliseconds, Span }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 import play.api.libs.json.Json
 
