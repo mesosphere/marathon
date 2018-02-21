@@ -93,6 +93,7 @@ case class LocalMarathon(
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
+    "zk_connection_timeout" -> 20.seconds.toMillis.toString,
     "zk_session_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
     "event_subscriber" -> "http_callback",
@@ -113,7 +114,7 @@ case class LocalMarathon(
       }
   }(collection.breakOut)
 
-  private var marathon = Option.empty[Process]
+  @volatile private var marathon = Option.empty[Process]
 
   if (autoStart) {
     start()
@@ -123,8 +124,14 @@ case class LocalMarathon(
   private lazy val processBuilder = {
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
-    val memSettings = s"-Xmx${Runtime.getRuntime.maxMemory()}"
-    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, mainClass) ++ args
+    val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2",
+      // lower the memory pressure by limiting threads.
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-min=2",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.factor=1",
+      "-Dakka.actor.default-dispatcher.fork-join-executor.parallelism-max=4",
+      "-Dscala.concurrent.context.minThreads=2",
+      "-Dscala.concurrent.context.maxThreads=32",
+      s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
@@ -140,13 +147,14 @@ case class LocalMarathon(
     create()
 
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
-    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 90.seconds) {
+    val future = Retry(s"Waiting for Marathon on $port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 4.minutes) {
       async {
-        val result = await(Http(system).singleRequest(Get(s"http://localhost:$port/v2/leader")))
+        val result = await(Http().singleRequest(Get(s"http://localhost:$port/v2/leader")))
+        result.discardEntityBytes() // forget about the body
         if (result.status.isSuccess()) { // linter:ignore //async/await
           Done
         } else {
-          throw new Exception("Marathon not ready yet.")
+          throw new Exception(s"Marathon on port=$port hasn't started yet. Giving up waiting..")
         }
       }
     }
@@ -382,7 +390,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
     events.clear()
     healthChecks(_.clear())
-
+    killAppProxies()
     logger.info("CLEAN UP finished !!!!!!!!!")
   }
 
@@ -580,7 +588,14 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
             if (!cancelled) {
               logger.info(s"SSEStream: Leader event stream was closed reason: ${result}")
               logger.info("Reconnecting")
-              scheduler.scheduleOnce(patienceConfig.interval) { iter() }
+              /* There is a small window between Jetty hanging up the event stream, and Jetty not accepting and
+               * responding to new requests. In the tests, under heavy load, retrying within 15 milliseconds is enough
+               * to hit this window.
+               *
+               * 10 times the interval would probably suffice. Timeout is way more time then we need. Half timeout seems
+               * like an okay compromise.
+               */
+              scheduler.scheduleOnce(patienceConfig.timeout / 2) { iter() }
             }
         }
     }
@@ -611,7 +626,7 @@ trait LocalMarathonTest
 
   this: MesosTest with ZookeeperServerTest =>
 
-  val marathonArgs = Map.empty[String, String]
+  def marathonArgs: Map[String, String] = Map.empty
 
   lazy val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
     zkUrl = s"zk://${zkServer.connectUri}/marathon",
@@ -633,7 +648,7 @@ trait LocalMarathonTest
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
-    marathonServer.start().futureValue(Timeout(90.seconds))
+    marathonServer.start().futureValue
     sseStream = Some(startEventSubscriber())
     waitForSSEConnect()
   }
@@ -646,19 +661,17 @@ trait LocalMarathonTest
 }
 
 /**
-  * Trait that has one Marathon instance, zk, and a Mesos via mesos-local ready to go.
-  *
-  * This should be used for simple tests that do not require multiple masters.
+  * trait that has marathon, zk, and a mesos ready to go
   */
-trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
+trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
+  /* disable failover timeout to assist with cleanup ops; terminated marathons are immediately removed from mesos's
+   * list of frameworks
+   *
+   * Until https://issues.apache.org/jira/browse/MESOS-8171 is resolved, we cannot set this value to 0.
+   */
 
-/**
-  * Trait that has one Marathon instance, zk, and a Mesos cluster ready to go.
-  *
-  * It allows to stop and start Mesos masters and agents. See [[mesosphere.marathon.integration.TaskUnreachableIntegrationTest]]
-  * for an example.
-  */
-trait EmbeddedMarathonMesosClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
+  override def marathonArgs: Map[String, String] = Map("failover_timeout" -> "1")
+}
 
 /**
   * Trait that has a Marathon cluster, zk, and Mesos via mesos-local ready to go.
