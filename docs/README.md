@@ -15,7 +15,7 @@ following the instructions.
 
 ### Instructions
 
-#### Native OS
+#### Using the Documentation Generation Script
 
 1. Install [Ammonite-REPL](http://ammonite.io/#Ammonite-REPL) if you don't have it.
 
