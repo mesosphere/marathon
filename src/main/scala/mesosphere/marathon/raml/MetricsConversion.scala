@@ -50,7 +50,7 @@ trait MetricsConversion {
     Metrics(
       // the start zoneId could be different than the current system zone.
       start = OffsetDateTime.ofInstant(Instant.ofEpochMilli(snapshot.from.millis), zoneId),
-      end = OffsetDateTime.ofInstant(Instant.ofEpochMilli(snapshot.from.millis), ZoneId.systemDefault()),
+      end = OffsetDateTime.ofInstant(Instant.ofEpochMilli(snapshot.to.millis), zoneId),
       counters = metrics.getOrElse("counter", Map.empty).collect { case (k, v: Counter) => k -> v },
       gauges = metrics.getOrElse("gauge", Map.empty).collect { case (k, v: Histogram) => k -> v },
       histograms = metrics.getOrElse("histogram", Map.empty).collect { case (k, v: Histogram) => k -> v },
