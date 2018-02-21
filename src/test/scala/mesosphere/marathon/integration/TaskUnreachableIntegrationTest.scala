@@ -12,7 +12,7 @@ import org.scalatest.Inside
 import scala.concurrent.duration._
 
 @SerialIntegrationTest
-class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest with Inside {
+class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest with Inside {
 
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 2

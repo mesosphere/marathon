@@ -21,7 +21,7 @@ import scala.concurrent.duration._
   */
 @SerialIntegrationTest
 class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest
-    with EmbeddedMarathonMesosClusterTest with Eventually {
+    with EmbeddedMarathonTest with Eventually {
 
   override implicit def patienceConfig = PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Second))
   override lazy val mesosNumMasters = 1
