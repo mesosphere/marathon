@@ -550,7 +550,7 @@ def test_pod_with_persistent_volume_recovers():
         killed = common.kill_process_on_host(host, pattern)
         assert killed, "no task got killed on {} for pattern {}".format(host, pattern)
 
-    kill_task(host, '[h]ttp.server')
+    kill_task(host, '[h]ttp\\.server')
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def wait_for_pod_recovery():

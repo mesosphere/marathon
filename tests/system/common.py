@@ -800,16 +800,12 @@ def kill_process_on_host(hostname, pattern):
         :return: True if at least one process gets killed, or False otherwise
     """
 
-    status, stdout = shakedown.run_command_on_agent(hostname, "ps aux | grep -v grep | grep '{}'".format(pattern))
-    pids = [p.strip().split()[1] for p in stdout.splitlines()]
-    killed_some = False
-
-    for pid in pids:
-        status, stdout = shakedown.run_command_on_agent(hostname, "sudo kill -9 {}".format(pid))
-        if status:
-            killed_some = True
-            print("Killed pid: {}".format(pid))
-        else:
-            print("Unable to kill pid: {}".format(pid))
-
-    return killed_some
+    cmd = "ps aux | grep -v grep | grep '{}' | awk '{{ print $2 }}' | tee >(xargs sudo kill -9)".format(pattern)
+    status, stdout = shakedown.run_command_on_agent(hostname, cmd)
+    pids = [p.strip() for p in stdout.splitlines()]
+    if pids:
+        print("Killed pids: {}".format(", ".join(pids)))
+        return True
+    else:
+        print("Killed no pids")
+        return False
