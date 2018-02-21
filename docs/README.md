@@ -15,51 +15,19 @@ following the instructions.
 
 ### Instructions
 
-#### Using Docker
-
-1. Build the docker image:
-
-        docker build . -t jekyll
-
-2. Run it (from this folder)
-
-        docker run --rm -it -v $(pwd):/site-docs -p 4000:4000 jekyll
-
-3. Visit the site at
-   [http://localhost:4000/marathon/](http://localhost:4000/marathon/)
-
 #### Native OS
 
-1. Install packages needed to generate the site
+1. Install [Ammonite-REPL](http://ammonite.io/#Ammonite-REPL) if you don't have it.
 
-    * On Linux:
+2. Install Docker
 
-            $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev npm
+3. Run the script:
 
-    * On Mac OS X:
+        $ cd ci
+        $ amm generate_docs.sc
 
-            $ brew install node
-
-2. Clone the Marathon repository
-
-3. Change into the "docs" directory where docs live
-
-        $ cd docs/
-
-4. Install Bundler
-
-        $ gem install bundler
-
-5. Install the bundle's dependencies
-
-        $ bundle install --path vendor/bundle
-
-6. Start the web server
-
-        $ bundle exec jekyll serve --watch
-
-7. Visit the site at
-   [http://localhost:4000/marathon/](http://localhost:4000/marathon/)
+4. Enjoy your docs at
+   [http://localhost:8080/](http://localhost:8080/)
 
 ## Deploying the site
 
@@ -73,15 +41,16 @@ following the instructions.
         $ cd /path/to/marathon-gh-pages
         $ git checkout gh-pages
 
-3. Check out the appropriate release branch, then copy the contents of the "docs" directory in master to the root of your
-   marathon-gh-pages directory.
+3. Run the docs generation script. After you do this, it will print the path with generated docs:
 
-        $ cd /path/to/marathon
-        $ git checkout releases/1.x
+        Success! Docs were generated at /tmp/marathon-docs-build-2018-02-21T14-46-49.260Z/docs/_site
+        
+4. Use the provided path to copy docs into gh-pages branch folder
+
         $ # to make sure we also remove deleted documentation, we need to delete all files first.
         $ # please note, rm -r ../marathon-gh-pages/* will not delete dot-files
         $ rm -r ../marathon-gh-pages/*
-        $ cp -r docs/** ../marathon-gh-pages
+        $ cp -r /tmp/marathon-docs-build-2018-02-21T14-46-49.260Z/docs/_site/** ../marathon-gh-pages
 
 4. Change to the marathon-gh-pages directory, commit, and push the changes
 

@@ -165,6 +165,7 @@ def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]
 def launchPreview(buildDir: Path): Unit = {
   import akka.actor.ActorSystem
   import akka.http.scaladsl.Http
+  import akka.http.scaladsl.server._
   import akka.http.scaladsl.model._
   import akka.http.scaladsl.server.Directives._
   import akka.stream.ActorMaterializer
@@ -180,20 +181,22 @@ def launchPreview(buildDir: Path): Unit = {
   val route =
     pathSingleSlash {
       get {
-        redirect("marathon", StatusCodes.PermanentRedirect)
+        redirect("marathon/", StatusCodes.PermanentRedirect)
       }
+    } ~ pathPrefix("marathon") {
+      pathSuffixTest(PathMatchers.Slash) {
+        mapUnmatchedPath(path => path / "index.html") {
+          getFromDirectory(siteDir)
+        }
+      } ~ getFromDirectory(siteDir)
     }
-    path("marathon") {
-      getFromDirectory(siteDir)
-    }
+
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
 
   println(s"Success! Docs were generated at $siteDir\nYou can browse them at http://localhost:8080/\nPress RETURN to stop...")
   StdIn.readLine() // let it run until user presses return
-  bindingFuture
-    .flatMap(_.unbind()) // trigger unbinding from the port
-    .onComplete(_ => system.terminate()) // and shutdown when done
+  bindingFuture.flatMap(_.unbind()).onComplete(_ => system.terminate()) // and shutdown when done
 }
 
 def buildDocs(buildDir: Path, docsDir: Path) = {
