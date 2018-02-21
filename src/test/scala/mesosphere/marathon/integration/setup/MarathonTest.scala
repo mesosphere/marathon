@@ -21,7 +21,7 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITConnected, ITEvent, ITSSEEvent, ITLeaderResult, MarathonFacade, MesosFacade }
+import mesosphere.marathon.integration.facades.{ ITConnected, ITEnrichedTask, ITEvent, ITLeaderResult, ITSSEEvent, MarathonFacade, MesosFacade }
 import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import mesosphere.marathon.test.ExitDisabledTest
@@ -31,7 +31,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.time.{ Milliseconds, Span }
+import org.scalatest.time.{ Milliseconds, Minutes, Seconds, Span }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 import play.api.libs.json.Json
 
@@ -349,43 +349,39 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     }
   }
 
-  def cleanUp(withSubscribers: Boolean = false): Unit = {
-    logger.info("Starting to CLEAN UP !!!!!!!!!!")
+  // We shouldn't eat exceptions in clenaUp() methods: it's a source of hard to find bugs if
+  // we just move on to the next test, that expects a "clean state". We should fail loud and
+  // proud here and find out why the clean-up fails.
+  def cleanUp(): Unit = {
+    logger.info(">>> Starting to CLEAN UP...")
+    events.clear()
 
-    try {
-      events.clear()
+    // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
+    logger.info("Clean Marathon State")
+    //do not fail here, since the require statements will ensure a correct setup and fail otherwise
+    Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
 
-      // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
-      logger.info("Clean Marathon State")
-      lazy val group = marathon.group(testBasePath).value
-      lazy val deployments = marathon.listDeploymentsForBaseGroup().value
-      if (deployments.nonEmpty || group.transitiveRunSpecs.nonEmpty || group.transitiveGroupsById.nonEmpty) {
-        //do not fail here, since the require statements will ensure a correct setup and fail otherwise
-        Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
+    val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(1, Minutes), interval = Span(1, Seconds))
+
+    WaitTestSupport.waitUntil("clean slate in Mesos") {
+      val occupiedAgents = mesos.state.value.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
+      occupiedAgents.foreach { agent =>
+        import mesosphere.marathon.integration.facades.MesosFormats._
+        val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
+        val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
+        logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
       }
+      occupiedAgents.isEmpty
+    }(cleanUpPatienceConfig)
 
-      WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
-        val occupiedAgents = mesos.state.value.agents.filter { agent => !agent.usedResources.isEmpty && agent.reservedResourcesByRole.nonEmpty }
-        occupiedAgents.foreach { agent =>
-          import mesosphere.marathon.integration.facades.MesosFormats._
-          val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
-          val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
-          logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
-        }
-        occupiedAgents.isEmpty
-      }
-
-      val apps = marathon.listAppsInBaseGroup
-      require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
-      val groups = marathon.listGroupsInBaseGroup
-      require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
-      events.clear()
-      healthChecks(_.clear())
-      killAppProxies()
-      if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
-    } catch {
-      case e: Throwable => logger.error("Clean up failed with", e)
-    }
+    val apps = marathon.listAppsInBaseGroup
+    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+    val pods = marathon.listPodsInBaseGroup
+    require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
+    val groups = marathon.listGroupsInBaseGroup
+    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
+    events.clear()
+    healthChecks(_.clear())
 
     logger.info("CLEAN UP finished !!!!!!!!!")
   }
