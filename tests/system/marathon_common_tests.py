@@ -223,7 +223,7 @@ def test_task_failure_recovers():
     old_task_id = tasks[0]['id']
     host = tasks[0]['host']
 
-    shakedown.kill_process_on_host(host, '[s]leep 1000')
+    common.kill_process_on_host(host, '[s]leep 1000')
     shakedown.deployment_wait()
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
@@ -623,7 +623,7 @@ def test_pinned_task_recovers_on_host():
     shakedown.deployment_wait()
     tasks = client.get_tasks(app_def["id"])
 
-    shakedown.kill_process_on_host(host, '[s]leep')
+    common.kill_process_on_host(host, '[s]leep')
     shakedown.deployment_wait()
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
@@ -768,8 +768,8 @@ def test_app_with_persistent_volume_recovers():
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def kill_task(host, pattern):
-        killed = common.kill_process_on_host(host, pattern)
-        assert killed, "no task got killed on {} for pattern {}".format(host, pattern)
+        pids = common.kill_process_on_host(host, pattern)
+        assert len(pids) != 0, "no task got killed on {} for pattern {}".format(host, pattern)
 
     kill_task(host, '[h]ttp\\.server')
 

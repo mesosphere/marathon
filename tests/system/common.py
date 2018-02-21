@@ -797,7 +797,7 @@ def kill_process_on_host(hostname, pattern):
 
         :param hostname: the hostname or ip address of the host on which the process will be killed
         :param pattern: a regular expression matching the name of the process to kill
-        :return: True if at least one process gets killed, or False otherwise
+        :return: IDs of processes that got either killed or terminated on their own
     """
 
     cmd = "ps aux | grep -v grep | grep '{}' | awk '{{ print $2 }}' | tee >(xargs sudo kill -9)".format(pattern)
@@ -805,7 +805,6 @@ def kill_process_on_host(hostname, pattern):
     pids = [p.strip() for p in stdout.splitlines()]
     if pids:
         print("Killed pids: {}".format(", ".join(pids)))
-        return True
     else:
         print("Killed no pids")
-        return False
+    return pids

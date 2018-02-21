@@ -119,7 +119,7 @@ def test_mom_when_mom_process_killed():
         tasks = client.get_tasks(app_id)
         original_task_id = tasks[0]['id']
 
-        shakedown.kill_process_on_host(common.ip_of_mom(), 'marathon-assembly')
+        common.kill_process_on_host(common.ip_of_mom(), 'marathon-assembly')
         shakedown.wait_for_task('marathon', 'marathon-user', 300)
         shakedown.wait_for_service_endpoint('marathon-user')
 
