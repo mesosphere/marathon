@@ -357,40 +357,41 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     }
   }
 
-  // We shouldn't eat exceptions in clenaUp() methods: it's a source of hard to find bugs if
-  // we just move on to the next test, that expects a "clean state". We should fail loud and
-  // proud here and find out why the clean-up fails.
-  def cleanUp(): Unit = {
-    logger.info(">>> Starting to CLEAN UP...")
-    events.clear()
+  def cleanUp(withSubscribers: Boolean = false): Unit = {
+    logger.info("Starting to CLEAN UP !!!!!!!!!!")
 
-    // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
-    logger.info("Clean Marathon State")
-    //do not fail here, since the require statements will ensure a correct setup and fail otherwise
-    Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
+    try {
+      events.clear()
 
-    val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(1, Minutes), interval = Span(1, Seconds))
+      // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
+      logger.info("Clean Marathon State")
+      lazy val group = marathon.group(testBasePath).value
+      lazy val deployments = marathon.listDeploymentsForBaseGroup().value
+      Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
 
-    WaitTestSupport.waitUntil("clean slate in Mesos") {
-      val occupiedAgents = mesos.state.value.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
-      occupiedAgents.foreach { agent =>
-        import mesosphere.marathon.integration.facades.MesosFormats._
-        val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
-        val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
-        logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
+      WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
+        val occupiedAgents = mesos.state.value.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
+        occupiedAgents.foreach { agent =>
+          import mesosphere.marathon.integration.facades.MesosFormats._
+          val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
+          val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
+          logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
+        }
+        occupiedAgents.isEmpty
       }
-      occupiedAgents.isEmpty
-    }(cleanUpPatienceConfig)
 
-    val apps = marathon.listAppsInBaseGroup
-    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
-    val pods = marathon.listPodsInBaseGroup
-    require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
-    val groups = marathon.listGroupsInBaseGroup
-    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
-    events.clear()
-    healthChecks(_.clear())
-    killAppProxies()
+      val apps = marathon.listAppsInBaseGroup
+      require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+      val groups = marathon.listGroupsInBaseGroup
+      require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
+      events.clear()
+      healthChecks(_.clear())
+      killAppProxies()
+      if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
+    } catch {
+      case e: Throwable => logger.error("Clean up failed with", e)
+    }
+
     logger.info("CLEAN UP finished !!!!!!!!!")
   }
 
@@ -528,6 +529,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
   }
 
   def waitForDeployment(change: RestResult[_], maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
+    require(change.success, s"Deployment request has not been successful. httpCode=${change.code} body=${change.entityString}")
     val deploymentId = change.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header"))
     waitForDeploymentId(deploymentId.value, maxWait)
   }
