@@ -8,6 +8,7 @@ import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ ApplicationKey, HealthCheckStatusChanged }
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
@@ -20,6 +21,7 @@ import scala.util.{ Failure, Success }
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
+    appHealthCheckActor: ActorRef,
     killService: KillService,
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
@@ -201,13 +203,10 @@ private[health] class HealthCheckActor(
 
     logger.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
     healthByInstanceId += (instanceId -> instanceHealth.newHealth)
+    appHealthCheckActor ! HealthCheckStatusChanged(ApplicationKey(app.id, app.version), healthCheck, newHealth)
 
     if (health.alive != newHealth.alive && result.publishEvent) {
       eventBus.publish(HealthStatusChanged(app.id, instanceId, result.version, alive = newHealth.alive))
-      // We moved to InstanceHealthChanged Events everywhere
-      // Since we perform marathon based health checks only for apps, (every task is an instance)
-      // every health result is translated to an instance health changed event
-      eventBus.publish(InstanceHealthChanged(instanceId, result.version, app.id, Some(newHealth.alive)))
     }
   }
 
@@ -242,6 +241,7 @@ private[health] class HealthCheckActor(
 object HealthCheckActor {
   def props(
     app: AppDefinition,
+    appHealthCheckActor: ActorRef,
     killService: KillService,
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
@@ -249,6 +249,7 @@ object HealthCheckActor {
 
     Props(new HealthCheckActor(
       app,
+      appHealthCheckActor,
       killService,
       healthCheck,
       instanceTracker,
