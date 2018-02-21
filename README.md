@@ -198,7 +198,7 @@ Or run it without zookeeper container:
 
     docker run marathon:{version} --master local --zk zk://localhost:2181/marathon
 
-On Mac you have to use a special address instead of `localhost`:
+When using Docker on Mac you have to use a [special address](https://docs.docker.com/docker-for-mac/networking/#there-is-no-docker0-bridge-on-macos) instead of `localhost`:
 
     docker run --network host --hostname $(hostname) mesosphere/marathon:v1.6.335 \
         --master zk://docker.for.mac.host.internal:2181/mesos \
