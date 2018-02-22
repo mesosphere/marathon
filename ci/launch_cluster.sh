@@ -57,16 +57,16 @@ template_parameters:
     AdminLocation: 0.0.0.0/0
     PublicSlaveInstanceCount: 1
     SlaveInstanceCount: 3
-    LicenseKey: $DCOS_LICENSE
-tags:
-    expiration: $EXPIRATION
-    owner: marathon
 EOF
 
 # Append license if one is available.
 if [ "$VARIANT" != "open" ]; then
     echo "    LicenseKey: $DCOS_LICENSE" >> config.yaml
 fi
+
+echo "tags:" >> config.yaml
+echo "    expiration: $EXPIRATION" >> config.yaml
+echo "    owner: marathon" >> config.yaml
 
 # Create cluster.
 if ! dcos-launch create; then
