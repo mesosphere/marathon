@@ -545,7 +545,12 @@ def test_pod_with_persistent_volume_recovers():
     task_id1 = tasks[0]['id']
     task_id2 = tasks[1]['id']
 
-    shakedown.kill_process_on_host(host, '[h]ttp.server')
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def kill_task(host, pattern):
+        pids = common.kill_process_on_host(host, pattern)
+        assert len(pids) != 0, "no task got killed on {} for pattern {}".format(host, pattern)
+
+    kill_task(host, '[h]ttp\\.server')
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def wait_for_pod_recovery():
