@@ -1,30 +1,52 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.AkkaIntegrationTest
+import akka.stream.scaladsl.{Sink, Source, Tcp}
+import mesosphere.{AkkaIntegrationTest, FutureTestSupport}
 import mesosphere.marathon.integration.setup._
-import org.scalatest.concurrent.TimeLimits
-import org.scalatest.time.{ Seconds, Span }
+import mesosphere.util.PortAllocator
+import org.scalatest.concurrent.{Eventually, TimeLimits, Futures}
+import org.scalatest.time.{Seconds, Span}
 
 @IntegrationTest
-class MarathonStartupIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with TimeLimits {
+class MarathonStartupIntegrationTest extends AkkaIntegrationTest
+  with MesosClusterTest
+  with ZookeeperServerTest
+  with Futures
+  with Eventually {
+
+  def withBoundPort(fn: Int => Unit): Unit = {
+    val port = PortAllocator.ephemeralPort()
+    val handler = Tcp().bind("127.0.0.1", port).to(Sink.foreach{ c =>
+      Source.empty.via(c.flow).runWith(Sink.ignore)
+    }).run.futureValue
+
+    try fn(port)
+    finally {
+      handler.unbind()
+    }
+  }
+
   "Marathon" should {
-    "fail during start, if the HTTP port is already bound" in {
-      Given(s"a Marathon process already running on port ${marathonServer.httpPort}")
+    "fail during start, if the HTTP port is already bound" in withBoundPort { port =>
+      Given(s"Some process already running on port ${port}")
 
       When("starting another Marathon process using an HTTP port that is already bound")
 
-      val args = Map(
-        "http_port" -> marathonServer.httpPort.toString,
-        "zk_timeout" -> "2000"
-      )
-      val conflictingMarathon = LocalMarathon(true, s"$suiteName-conflict", marathonServer.masterUrl, marathonServer.zkUrl, args)
+      val conflictingMarathon = LocalMarathon(true, s"$suiteName-conflict",
+        mesosMasterUrl,
+        s"zk://${zkServer.connectUri}/marathon-$suiteName",
+        Map(
+          "http_port" -> port.toString,
+          "http_address" -> "127.0.0.1",
+          "zk_timeout" -> "2000"))
 
       Then("The Marathon process should exit with code > 0")
       try {
-        failAfter(Span(40, Seconds)) {
-          conflictingMarathon.exitValue().get should be > 0
-        }
+        eventually {
+          conflictingMarathon.isRunning() should be(false)
+        } withClue ("The conflicting Marathon did not suicide.")
+        conflictingMarathon.exitValue().get should be > 0 withClue (s"Conflicting Marathon exited with ${conflictingMarathon.exitValue()} instead of an error code > 0.")
       } finally {
         // Destroy process if it did not exit in time.
         conflictingMarathon.stop()
