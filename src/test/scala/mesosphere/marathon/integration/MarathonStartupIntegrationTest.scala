@@ -5,14 +5,13 @@ import akka.stream.scaladsl.{Sink, Source, Tcp}
 import mesosphere.{AkkaIntegrationTest, FutureTestSupport}
 import mesosphere.marathon.integration.setup._
 import mesosphere.util.PortAllocator
-import org.scalatest.concurrent.{Eventually, TimeLimits, Futures}
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.concurrent.Eventually
 
 @IntegrationTest
 class MarathonStartupIntegrationTest extends AkkaIntegrationTest
   with MesosClusterTest
   with ZookeeperServerTest
-  with Futures
+  with FutureTestSupport
   with Eventually {
 
   def withBoundPort(fn: Int => Unit): Unit = {
