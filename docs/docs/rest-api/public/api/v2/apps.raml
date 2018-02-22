@@ -143,8 +143,9 @@
   patch:
     description:
       Change multiple existing applications by applying a patch.
-      Instances of these applications will be started or restarted according to `needsRestart` logic to meet the
-      requirements of the new app definitions.
+      Instances of these applications will be started or restarted according to the ususal logic to meet the
+      requirements of the new app definitions. Usually, restart is required if the application configuration was changed
+      (except for scaling changes).
       The order of dependencies will be applied correctly.
       Each upgradeStrategy defines the behaviour of the upgrade for the related app.
 
@@ -372,7 +373,8 @@
     patch:
       description:
         Replaces parameters of a running application. Instances of this application will be started or restarted
-        according to `needsRestart` logic to meet the requirements of the new definition.
+        according to the usual logic to meet the requirements of the new definition. Usually, restart is required
+        if the application configuration was changed (except for scaling changes).
         Any given application ID will be ignored.
 
         Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.
