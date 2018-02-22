@@ -36,7 +36,7 @@ def test_install_marathon():
     """
 
     # Install
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=DCOSException)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def install_marathon():
         shakedown.install_package_and_wait(PACKAGE_NAME)
 
@@ -44,7 +44,7 @@ def test_install_marathon():
     assert shakedown.package_installed(PACKAGE_NAME), 'Package failed to install'
 
     # 5000ms = 5 seconds, 5 seconds * 60 attempts = 300 seconds = WAIT_TIME_IN_SECS
-    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=60, retry_on_exception=DCOSException)
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
     def assert_service_registration(package, service):
         found = shakedown.get_service(package) is not None
         assert found and shakedown.service_healthy(service), f"Service {package} did not register with DCOS" # NOQA E999
