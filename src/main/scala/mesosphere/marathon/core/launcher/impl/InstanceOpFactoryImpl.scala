@@ -146,6 +146,7 @@ class InstanceOpFactoryImpl(
      */
 
     def maybeLaunchOnReservation: Option[OfferMatchResult] = if (needToLaunch) {
+      logger.info("Need to launch on reservation.")
       val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
 
       maybeVolumeMatch.map { volumeMatch =>
@@ -179,6 +180,7 @@ class InstanceOpFactoryImpl(
     } else None
 
     def maybeReserveAndCreateVolumes: Option[OfferMatchResult] = if (needToReserve) {
+      logger.info("Need to reserve.")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
         config.defaultAcceptedResourceRolesSet
       } else {
