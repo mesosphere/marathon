@@ -30,7 +30,7 @@ node('py36') {
             [$class: 'StringBinding', credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d', variable: 'DOCKER_HUB_USERNAME'],
             [$class: 'StringBinding', credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825', variable: 'DOCKER_HUB_PASSWORD']
           ]) {
-            sh """./ci/si_pipeline.sh $params.channel permissive 2days"""
+            sh """./ci/si_unreachable.sh $params.channel permissive 26hours"""
           }
         } finally {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'

@@ -778,14 +778,20 @@ def running_task_status(task_statuses):
     assert False, "Did not find a TASK_RUNNING status in task statuses: %s" % (task_statuses,)
 
 
-def unreachable_tasks(framework_name='marathon'):
+def unreachable_tasks(framework_name='marathon', app_id=None):
     """ Returns the unreachable tasks for a given framework.
     """
     client = mesos.DCOSClient()
     frameworks = client.get_master_state()['frameworks']
     for framework in frameworks:
         if framework["name"] == framework_name:
-            return framework['unreachable_tasks']
+            if app_id is None:
+                return framework['unreachable_tasks']
+            else:
+                for unreachable_task in framework['unreachable_tasks']:
+                    if unreachable_task['name'] == app_id:
+                        return unreachable_task
+
     return []
 
 def mesos_tasks(framework_name='marathon'):
@@ -797,15 +803,15 @@ def mesos_tasks(framework_name='marathon'):
     return []
 
 
-def unreachable_task_predicate(service):
-    return len(unreachable_tasks(service)) > 0
+def unreachable_task_predicate(service, app_id=None):
+    return len(unreachable_tasks(service, app_id)) > 0
 
 
 def elapse_time(start, end, precision=0):
     return round(end - start, precision)
 
 
-def wait_for_unreachable_task(service='marathon', timeout_sec=10*60, inverse=False):
+def wait_for_unreachable_task(service='marathon', app_id=None, timeout_sec=10*60, inverse=False):
 
     report_freq = 5 if timeout_sec < 600 else 15
     print("Starting wait for unreachable tasks")
@@ -816,9 +822,9 @@ def wait_for_unreachable_task(service='marathon', timeout_sec=10*60, inverse=Fal
             print("Waiting on {} at {}s".format(msg, elapsed))
 
         if inverse:
-            assert not unreachable_task_predicate(service)
+            assert not unreachable_task_predicate(service, app_id)
         else:
-            assert unreachable_task_predicate(service)
+            assert unreachable_task_predicate(service, app_id)
 
     __wait_for_unreachable_task()
 

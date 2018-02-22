@@ -42,4 +42,4 @@ unreachable:
 	      --pytest-option --verbose \
 	      --pytest-option --full-trace \
 	      --ssh-key-file "$(CLI_TEST_SSH_KEY)" \
-	      --dcos-url "$(DCOS_URL)" system/test_unreachable.py	
+	      --dcos-url "$(DCOS_URL)" system/test_unreachable.py::test_24hour

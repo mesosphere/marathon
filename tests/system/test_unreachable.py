@@ -1,5 +1,14 @@
 """ Test using root marathon.
     This test suite is used to test unreachable strategy configurations on live clusters.
+
+    The first 2 tests test_unreachable_within_inactive_time and test_multi_node_failure_unreachable
+    are used to provide reporting back.    Providing details on how long it takes for
+    a task to have a replacement task and how long it takes to remove an extra task for a apps
+
+    The 3rd test is an actual test to verify specific passing critia for the 24 hour test
+    more detail at https://jira.mesosphere.com/browse/MARATHON_EE-1822
+    This test requires a cluster with 3 private agents and the life of the cluster
+    to be greater that 25 hours.
 """
 
 import apps
@@ -40,8 +49,8 @@ def marathon_service_name():
 def setup_module(module):
     common.cluster_info()
 
-# def teardown_module(module):
-#     common.clean_up_marathon()
+def teardown_module(module):
+    common.clean_up_marathon()
 
 # This can not be run currently as `shakedown -q tests/system/test_unreachable.py`
 # They currently need a 20 min delay prior to running each one separately or you get
@@ -54,8 +63,7 @@ def setup_module(module):
   (60, 360),
   (60, 600),
   (600, 600),
-  (1200, 1200)
-  )])
+  (1200, 1200)])
 def test_unreachable_within_inactive_time(inactive_sec, expunge_sec):
     """ The goal of this test has changed over time.  It is now intended to provide
         a report of time for the different events of unreachable strat with different
@@ -124,10 +132,13 @@ def test_unreachable_within_inactive_time(inactive_sec, expunge_sec):
     print("Remaining task id: {}".format(task_remaining))
 
 
-def initial_unreachable_delay():
-    """ Sleep the first 75% of the time.
+def initial_unreachable_delay(inactive_time=0):
+    """ Sleep the first 95% of the time.
+        if 1 node, it is 95% of time (default is 5mins)  + time to react (inactive time)
+        if > 1 node, it could be as long as 20m * number of nodes before anything happens but
+        that can't be part of the initial wait
     """
-    return 0.75 * DCOS_AGENT_UNREACHABLE_TIME
+    return 0.95 * DCOS_AGENT_UNREACHABLE_TIME + inactive_time
 
 
 def elapse_time(start, end, precision=0):
@@ -231,3 +242,132 @@ def agent_list_host_last(all_agents, host):
     task_agent_last.append(host)
 
     return task_agent_last
+
+
+# TO RUN:  shakedown -q -m 87000 tests/system/test_unreachable.py::test_24hour
+def test_24hour():
+    """
+    Tests the inactive and expunge for 24 hours which is 86400 secs.
+    # TO RUN:  shakedown -q -m 87000 tests/system/test_unreachable.py::test_24hour
+
+    Test details:   Need 3 nodes (n1, n2, n3) which have an expiration of 25hours
+    1. Start a task1 (t1) node it lands on is n1
+    2. task2 to exclude n1 "constraints": [["hostname","UNLIKE","n1"] ], lands on n2
+    3. stop n1 and n2
+    4. sleep for 23 hrs
+    5. check t1 and t2 are present and reported by marathon
+    6. start n1 and wait for recovery
+    7. check t1 id == original t1 id
+    8. sleep 1 hr
+    9. wait for replacement t2 (time = 2nodes * 20 mins + reconc window (10m))
+    10. start n2
+    11. wait for t2 to have 1 ID (time = reconc window(10m))
+    """
+
+    # setup and clean up
+    common.clean_up_marathon()
+    client = marathon.create_client()
+
+    # cluster requirements
+    all_agents = shakedown.get_private_agents()
+    num_of_agents = len(all_agents)
+    assert num_of_agents >= 3, "Unable to run test with less than 3 agents"
+
+    # task 1 (recoverable)
+    app_def = apps.unreachable()
+    app_id1 = "recoverable"
+    app_def['id'] = app_id1
+
+    # 24 hours on task 1
+    inactive_sec = 86400
+    expunge_sec = 86400
+    # inactive_sec = 1260
+    # expunge_sec = 1260
+    app_def = common.unreachableStrategy(app_def, inactive=inactive_sec, expunge=expunge_sec)
+    print(app_def)
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+    tasks = client.get_tasks(app_id1)
+
+    # confirm task and get task_id and host details.
+    assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
+    original_task1_id = tasks[0]['id']
+    node1 = tasks[0]['host']
+
+    # task 2 (unreachable)
+    app_id2 = "unreachable"
+    app_def['id'] = app_id2
+    app_def['constraints'] = [["hostname","UNLIKE", node1]]  # don't land on the same node
+    print(app_def)
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+    tasks = client.get_tasks(app_id2)
+
+    # confirm task and get task_id and host details.
+    assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
+    original_task2_id = tasks[0]['id']
+    node2 = tasks[0]['host']
+
+    start = time.time()
+    # # losing an agent
+    shakedown.stop_agent(node1)
+    time.sleep(10)   # test is flaky if agent down is at the same time.
+    shakedown.stop_agent(node2)
+
+    # sleep for 95% of 1st node unreachable reported time
+    print("Sleeping for {} seconds".format(0.95 * DCOS_AGENT_UNREACHABLE_TIME))
+    node1_initial_wait_time = 0.95 * DCOS_AGENT_UNREACHABLE_TIME
+    time.sleep(node1_initial_wait_time)
+
+    common.wait_for_unreachable_task(app_id=app_id1)
+    node1_returned_time = time.time()
+    print("App: '{}' reported unreachable by Mesos at time: {} seconds".format(app_id1, elapse_time(start, node1_returned_time)))
+
+    node2_initial_wait_time = 0.95 * DCOS_NODE_RATE_LIMIT * 60
+    print("Sleeping for {} seconds".format(node2_initial_wait_time))
+    time.sleep(node2_initial_wait_time)
+    common.wait_for_unreachable_task(app_id=app_id2)
+    node2_returned_time = time.time()
+    print("App: {} reported unreachable by Mesos at time: {} seconds".format(app_id2, elapse_time(start, node2_returned_time)))
+
+    # # wait for 95% of total time (from here it is 95% of inactive)
+    node2_sleep_time = max((0.95 * inactive_sec) - node2_initial_wait_time,0)
+    print("Sleeping for {}".format(node2_sleep_time))
+    time.sleep(node2_sleep_time)
+
+    ### TEST 1  (recoverable) bring node back and make sure
+    shakedown.start_agent(node1)
+    # wait for there not to be an unreachable for this app_id
+    common.wait_for_unreachable_task(app_id=app_id1, inverse=True)
+    tasks = client.get_tasks(app_id1)
+
+    # make sure there is only 1, make sure the task_id is the same
+    assert len(tasks) == 1, "The number of tasks is {} after deployment, but only 1 was expected".format(len(tasks))
+    assert original_task1_id == tasks[0]['id']
+
+    ### TEST 2 (unreachable)
+    # wait for second app to launch a new task within the time window
+    # ** IMPORTANT**: the timeout is the test... it defines that a replacement
+    # task landed within the replacement window (which is from [marathon notified + inactive_sec] to [+10mins])
+    max_wait_task_time = inactive_sec - node2_sleep_time + (10 * 60)
+    print("max time to wait for unreachable replacement task is {} seconds".format(max_wait_task_time))
+    time.sleep(max_wait_task_time * 0.95)
+    common.wait_for_marathon_task(app_id=app_id2, task_id=original_task2_id, timeout_sec=max_wait_task_time * 0.1)
+    tasks = client.get_tasks(app_id2)
+    new_task2_id = tasks[0]['id']
+    assert len(tasks) == 1
+    assert new_task2_id != original_task2_id
+
+    ### TEST 3 (making the unreachable reachable)
+    shakedown.start_agent(node2)
+
+    # wait for there not to be an unreachable for this app_id
+    common.wait_for_unreachable_task(app_id=app_id2, inverse=True)
+    tasks = client.get_tasks(app_id2)
+
+    # make sure there is only 1, make sure the task_id is the same
+    # when expunge_sec is the same as inactive_sec this is flaky... the return could
+    # be 1 or 2.  When expunge is greater... then we need to wait for the kill to occur
+    if len(tasks) == 2:
+        #### TEST 4 (back to 1 task within 10m)
+        common.wait_for_unreachable_task_kill(app_id=app_id2, task_id=original_task2_id, timeout_sec=MARATHON_RECONCILATION_INTERNAL)
