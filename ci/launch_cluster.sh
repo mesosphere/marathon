@@ -29,8 +29,9 @@ VARIANT="$2"
 DEPLOYMENT_NAME="$3"
 EXPIRATION="2hours"
 # A third parameter is allowed which allows the setting of expiration for the cluster.
-if [ "$#" -eq 3 ]; then
-  EXPIRATION="$3"
+if [ "$#" -eq 4 ]; then
+  EXPIRATION="$4"
+  echo "Using $EXPIRATION for cluster expiration"
 fi
 
 if [ "$VARIANT" == "open" ]; then
