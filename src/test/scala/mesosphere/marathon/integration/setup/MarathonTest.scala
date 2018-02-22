@@ -67,7 +67,7 @@ case class LocalMarathon(
   system.registerOnTermination(close())
 
   lazy val uuid = UUID.randomUUID.toString
-  lazy val httpPort = PortAllocator.ephemeralPort()
+  lazy val httpPort = conf.get("http_port").map(_.toInt).getOrElse(PortAllocator.ephemeralPort())
   lazy val url = conf.get("https_port").fold(s"http://localhost:$httpPort")(httpsPort => s"https://localhost:$httpsPort")
   lazy val client = new MarathonFacade(url, PathId.empty)
 

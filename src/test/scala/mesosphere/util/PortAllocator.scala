@@ -13,11 +13,10 @@ object PortAllocator extends StrictLogging {
 
   // https://en.wikipedia.org/wiki/Ephemeral_port
   // The Internet Assigned Numbers Authority (IANA) suggests the range 49152 to 65535  for dynamic or private ports.
-  // Many Linux kernels use the port range 32768 to 61000.
 
   // We reserve 1000 ephemeral ports for Marathon/Zk/Mesos Master/Mesos Agent processes to listen on:
-  val EPHEMERAL_PORT_START = 32768
-  val EPHEMERAL_PORT_MAX = EPHEMERAL_PORT_START + 1000
+  val EPHEMERAL_PORT_START = 49152
+  val EPHEMERAL_PORT_MAX = EPHEMERAL_PORT_START + 5000
   // and use the rest of the range as ports resources for mesos agents to offer e.g. --resources="ports:[10000-110000]"
   // IMPORTANT: These two ranges should NOT overlap!
   val PORT_RANGE_START = EPHEMERAL_PORT_MAX + 1
