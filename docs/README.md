@@ -15,7 +15,7 @@ following the instructions.
 
 ### Instructions
 
-#### Using the Documentation Generation Script
+#### Using the script to generate documentation
 
 1. Install [Ammonite-REPL](http://ammonite.io/#Ammonite-REPL) if you don't have it.
 
