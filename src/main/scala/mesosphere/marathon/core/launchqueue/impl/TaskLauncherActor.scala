@@ -237,7 +237,7 @@ private class TaskLauncherActor(
     case change: InstanceChange =>
       change match {
         case update: InstanceUpdated =>
-          logger.debug(s"receiveInstanceUpdate: ${update.id} is ${update.condition}")
+          logger.info(s"receiveInstanceUpdate: ${update.id} is ${update.condition}")
           instanceMap += update.id -> update.instance
 
         case update: InstanceDeleted =>
@@ -269,6 +269,7 @@ private class TaskLauncherActor(
 
   private[this] def receiveAddCount: Receive = {
     case TaskLauncherActor.AddInstances(newRunSpec, addCount) =>
+      logger.info(s"Received add instances for ${newRunSpec.id}, version ${newRunSpec.version} with count $addCount.")
       val configChange = runSpec.isUpgrade(newRunSpec)
       if (configChange || runSpec.needsRestart(newRunSpec) || runSpec.isOnlyScaleChange(newRunSpec)) {
         runSpec = newRunSpec
