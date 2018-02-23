@@ -7,6 +7,10 @@ import ammonite.ops.ImplicitWd._
 import $file.utils
 import utils.SemVer
 
+import $ivy.{
+  `com.typesafe.akka::akka-http:10.0.11`,
+  `com.typesafe.akka::akka-stream:2.5.9`
+}
 
 /**
   * Docs generation process:
@@ -42,8 +46,8 @@ def main(tracked_by_git: Boolean = true) = {
     val docsSourceDir = pwd/up/"docs"
 
     buildDocs(docsBuildDir, docsSourceDir)
+    launchPreview(docsBuildDir)
     %('git, 'checkout, currentGitBranch)
-    println(s"Success! Docs were generated at ${docsBuildDir/'docs/'_site}")
   }
 }
 
@@ -154,6 +158,43 @@ def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]
     write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml", s"baseurl : /marathon/$releaseBranchVersion")
     generateDocsByDocker(rootDocsDir, Some(releaseBranchVersion))
   }
+}
+
+def launchPreview(buildDir: Path): Unit = {
+  import akka.actor.ActorSystem
+  import akka.http.scaladsl.Http
+  import akka.http.scaladsl.server._
+  import akka.http.scaladsl.model._
+  import akka.http.scaladsl.server.Directives._
+  import akka.stream.ActorMaterializer
+  import scala.io.StdIn
+
+  implicit val system = ActorSystem("docs-generation-script")
+  implicit val materializer = ActorMaterializer()
+  // needed for the future flatMap/onComplete in the end
+  implicit val executionContext = system.dispatcher
+
+  val siteDir = (buildDir/'docs/'_site).toString()
+
+  val route =
+    pathSingleSlash {
+      get {
+        redirect("marathon/", StatusCodes.PermanentRedirect)
+      }
+    } ~ pathPrefix("marathon") {
+      pathSuffixTest(PathMatchers.Slash) {
+        mapUnmatchedPath(path => path / "index.html") {
+          getFromDirectory(siteDir)
+        }
+      } ~ getFromDirectory(siteDir)
+    }
+
+
+  val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
+
+  println(s"Success! Docs were generated at $siteDir\nYou can browse them at http://localhost:8080/\nPress RETURN to stop...")
+  StdIn.readLine() // let it run until user presses return
+  bindingFuture.flatMap(_.unbind()).onComplete(_ => system.terminate()) // and shutdown when done
 }
 
 def buildDocs(buildDir: Path, docsDir: Path) = {
