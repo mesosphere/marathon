@@ -1,7 +1,7 @@
 import java.time.{LocalDate, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
-import com.amazonaws.auth.{AWSCredentialsProviderChain, EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
@@ -109,9 +109,7 @@ lazy val commonSettings = testSettings ++
     "Mesosphere Public Repo (S3)",
     s3("downloads.mesosphere.io/maven")
   )),
-  s3credentials := new AWSCredentialsProviderChain(
-    new EnvironmentVariableCredentialsProvider(),
-    InstanceProfileCredentialsProvider.getInstance()),
+  s3credentials := DefaultAWSCredentialsProviderChain.getInstance(),
   s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
 
   (scapegoatVersion in ThisBuild) := "1.3.0",
