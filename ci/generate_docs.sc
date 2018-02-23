@@ -12,8 +12,6 @@ import $ivy.{
   `com.typesafe.akka::akka-stream:2.5.9`
 }
 
-
-
 /**
   * Docs generation process:
   *
