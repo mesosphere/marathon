@@ -28,16 +28,17 @@ class ContinueOnErrorStepTest extends UnitTest {
     "A successful step should not produce logging output" in {
       val f = new Fixture
       Given("a nested step that is always successful")
-      f.processUpdate(f.nested).asInstanceOf[Future[Unit]] returns Future.successful(())
+      f.nested.process(any) returns Future.successful(Done)
+      val step = ContinueOnErrorStep(f.nested)
 
       When("executing the step")
       val logEvents = CaptureLogEvents.forBlock {
-        val resultFuture = f.processUpdate(ContinueOnErrorStep(f.nested)) // linter:ignore:UndesirableTypeInference
+        val resultFuture = step.process(TaskStatusUpdateTestHelper.running(f.dummyInstanceBuilder.getInstance()).wrapped)
         resultFuture.futureValue
       }
 
       Then("it should execute the nested step")
-      f.processUpdate(verify(f.nested, times(1)))
+      verify(f.nested, times(1)).process(any)
       And("not produce any logging output")
       logEvents.filter(_.getMessage.contains(s"[${f.dummyInstance.instanceId.idString}]")) should be(empty)
     }
@@ -46,16 +47,17 @@ class ContinueOnErrorStepTest extends UnitTest {
       val f = new Fixture
       Given("a nested step that always fails")
       f.nested.name returns "nested"
-      f.processUpdate(f.nested).asInstanceOf[Future[Unit]] returns Future.failed(new RuntimeException("error!"))
+      f.nested.process(any) returns Future.failed(new RuntimeException("error!"))
+      val step = ContinueOnErrorStep(f.nested)
 
       When("executing the step")
       val logEvents = CaptureLogEvents.forBlock {
-        val resultFuture = f.processUpdate(ContinueOnErrorStep(f.nested)) // linter:ignore:UndesirableTypeInference
+        val resultFuture = step.process(TaskStatusUpdateTestHelper.running(f.dummyInstanceBuilder.getInstance()).wrapped)
         resultFuture.futureValue
       }
 
       Then("it should execute the nested step")
-      f.processUpdate(verify(f.nested, times(1)))
+      verify(f.nested, times(1)).process(any)
       And("produce an error message in the log")
       logEvents.map(_.toString) should contain(
         s"[ERROR] while executing step nested for [${f.dummyInstance.instanceId.idString}], continue with other steps"
@@ -67,9 +69,5 @@ class ContinueOnErrorStepTest extends UnitTest {
     val dummyInstanceBuilder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val dummyInstance = dummyInstanceBuilder.getInstance()
     val nested = mock[InstanceChangeHandler]
-
-    def processUpdate(step: InstanceChangeHandler): Future[_] = {
-      step.process(TaskStatusUpdateTestHelper.running(dummyInstanceBuilder.getInstance()).wrapped)
-    }
   }
 }
