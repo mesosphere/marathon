@@ -200,8 +200,8 @@ Or run it without zookeeper container:
 
 When using Docker on Mac you have to use a [special address](https://docs.docker.com/docker-for-mac/networking/#there-is-no-docker0-bridge-on-macos) instead of `localhost`:
 
-    docker run --network host --hostname $(hostname) mesosphere/marathon:v1.6.335 \
-        --master zk://docker.for.mac.host.internal:2181/mesos \
+    docker run -p 8080:8080 --hostname $(hostname) -P mesosphere/marathon:v1.6.335 \
+        --master docker.for.mac.host.internal:505 \
         --zk zk://docker.for.mac.host.internal:2181/marathon
 
 If you want to inspect the contents of the Docker container:
