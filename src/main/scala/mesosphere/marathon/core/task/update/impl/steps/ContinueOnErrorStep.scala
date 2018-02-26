@@ -2,8 +2,8 @@ package mesosphere.marathon
 package core.task.update.impl.steps
 
 import akka.Done
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -11,8 +11,7 @@ import scala.util.control.NonFatal
 /**
   * Log errors in the wrapped step but do not fail because of them.
   */
-class ContinueOnErrorStep(wrapped: InstanceChangeHandler) extends InstanceChangeHandler {
-  private[this] val log = LoggerFactory.getLogger(getClass)
+class ContinueOnErrorStep(wrapped: InstanceChangeHandler) extends InstanceChangeHandler with StrictLogging {
 
   override def name: String = s"continueOnError(${wrapped.name})"
 
@@ -23,13 +22,13 @@ class ContinueOnErrorStep(wrapped: InstanceChangeHandler) extends InstanceChange
       case Some(processed) =>
         processed.recover {
           case NonFatal(e) =>
-            log.error(
+            logger.error(
               "while executing step {} for [{}], continue with other steps",
               wrapped.name, update.id.idString, e)
             Done
         }
       case None =>
-        log.error(
+        logger.error(
           "step {} for [{}] returned null, continue with other steps",
           Array[Object](wrapped.name, update.id.idString): _*)
         Future.successful(Done)

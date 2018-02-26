@@ -4,11 +4,9 @@ import common
 import pytest
 import retrying
 import shakedown
-import time
 
 from datetime import timedelta
-from dcos import packagemanager, marathon, cosmos
-from dcos.errors import DCOSException
+from dcos import packagemanager, cosmos
 
 
 PACKAGE_NAME = 'marathon'
