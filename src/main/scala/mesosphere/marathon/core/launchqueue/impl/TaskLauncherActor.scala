@@ -237,7 +237,7 @@ private class TaskLauncherActor(
     case change: InstanceChange =>
       change match {
         case update: InstanceUpdated =>
-          logger.info(s"receiveInstanceUpdate: ${update.id} is ${update.condition}")
+          logger.debug(s"receiveInstanceUpdate: ${update.id} is ${update.condition}")
           instanceMap += update.id -> update.instance
 
         case update: InstanceDeleted =>
@@ -269,7 +269,7 @@ private class TaskLauncherActor(
 
   private[this] def receiveAddCount: Receive = {
     case TaskLauncherActor.AddInstances(newRunSpec, addCount) =>
-      logger.info(s"Received add instances for ${newRunSpec.id}, version ${newRunSpec.version} with count $addCount.")
+      logger.debug(s"Received add instances for ${newRunSpec.id}, version ${newRunSpec.version} with count $addCount.")
       val configChange = runSpec.isUpgrade(newRunSpec)
       if (configChange || runSpec.needsRestart(newRunSpec) || runSpec.isOnlyScaleChange(newRunSpec)) {
         runSpec = newRunSpec
@@ -324,16 +324,16 @@ private class TaskLauncherActor(
       promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
-      logger.info(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
+      logger.debug(s"Matching offer ${offer.getId} and need to launch $instancesToLaunch tasks.")
       val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch, localRegion())
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
-          logger.info(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          logger.debug(s"Matched offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
           offerMatchStatisticsActor ! matched
           handleInstanceOp(matched.instanceOp, offer, promise)
         case notMatched: OfferMatchResult.NoMatch =>
-          logger.info(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
+          logger.debug(s"Did not match offer ${offer.getId} for run spec ${runSpec.id}, ${runSpec.version}.")
           offerMatchStatisticsActor ! notMatched
           promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
       }

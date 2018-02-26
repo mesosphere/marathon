@@ -176,6 +176,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
         )
       )
 
+      val launchedTasks = allTasks(PathId(app.id))
+      launchedTasks should have size 5
+
       When("we restart the app")
       val newVersion = restartSuccessfully(app) withClue ("The app did not restart.")
       val all = allTasks(PathId(app.id))
@@ -200,6 +203,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
           instances = 5
         )
       )
+
+      val launchedTasks = allTasks(PathId(app.id))
+      launchedTasks should have size 5
 
       When("we change the config")
       val newVersion = updateSuccessfully(PathId(app.id), AppUpdate(cmd = Some("sleep 1234"))).toString
