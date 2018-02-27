@@ -145,9 +145,9 @@
             "processed": 23
           },
           {
-            "reason": "InsufficientGpus",
+            "reason": "DeclinedScarceResources",
             "declined": 0,
-            "processed": 23
+            "processed": 11
           }
         ],
         "rejectSummaryLaunchAttempt": [
@@ -192,9 +192,9 @@
             "processed": 46
           },
           {
-            "reason": "InsufficientGpus",
+            "reason": "DeclinedScarceResources",
             "declined": 0,
-            "processed": 46
+            "processed": 31
           }
         ]
       },

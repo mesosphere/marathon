@@ -436,6 +436,11 @@ object MarathonTestHelper {
       .build()
   }
 
+  def addVolumesToOffer(offer: Offer.Builder, taskId: Task.Id, localVolumeIds: LocalVolumeId*): Offer.Builder = {
+    offer
+      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
+  }
+
   def appWithPersistentVolume(): AppDefinition = {
     MarathonTestHelper.makeBasicApp().copy(
       container = Some(mesosContainerWithPersistentVolume)

@@ -16,6 +16,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{ MarathonTestHelper, SettableClock }
+import mesosphere.mesos.NoOfferMatchReason.DeclinedScarceResources
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, ResourceProviderID, TextAttribute }
@@ -950,6 +951,234 @@ class ResourceMatcherTest extends UnitTest with Inside {
       resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     }
 
+    "match any offer on gpu-enabled agent with a default gpu scheduling behavior" in {
+      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val gpuApp = AppDefinition(
+        id = "/gpu".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 1),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val nonGpuResourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        config,
+        Seq.empty
+      )
+
+      nonGpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+
+      val gpuResourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        gpuApp,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        config,
+        Seq.empty
+      )
+
+      gpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "match any offer on gpu-enabled agent with a undefined gpu scheduling behavior" in {
+      val gpuConfig = AllConf.withTestConfig("--draining_seconds", "300", "--gpu_scheduling_behavior", "undefined")
+      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val gpuApp = AppDefinition(
+        id = "/gpu".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 1),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val nonGpuResourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty
+      )
+
+      nonGpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+
+      val gpuResourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        gpuApp,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty
+      )
+
+      gpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "match any offer on gpu-enabled agent with a unrestricted gpu scheduling behavior" in {
+      val gpuConfig = AllConf.withTestConfig(
+        "--draining_seconds", "300",
+        "--gpu_scheduling_behavior", "unrestricted",
+        "--enable_features", "gpu_resources")
+      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val gpuApp = AppDefinition(
+        id = "/gpu".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 1),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val nonGpuResourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty
+      )
+
+      nonGpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+
+      val gpuResourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        gpuApp,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty
+      )
+
+      gpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "not match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app" in {
+      val gpuConfig = AllConf.withTestConfig(
+        "--draining_seconds", "300",
+        "--gpu_scheduling_behavior", "restricted",
+        "--enable_features", "gpu_resources")
+      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty
+      )
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
+    }
+
+    "match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is required by app" in {
+      val gpuConfig = AllConf.withTestConfig(
+        "--draining_seconds", "300",
+        "--gpu_scheduling_behavior", "restricted",
+        "--enable_features", "gpu_resources")
+      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 2),
+        portDefinitions = PortDefinitions(0, 0)
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty
+      )
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app but there is a Persistent Volume" in {
+      val gpuConfig = AllConf.withTestConfig(
+        "--draining_seconds", "300",
+        "--gpu_scheduling_behavior", "restricted",
+        "--enable_features", "gpu_resources")
+
+      val app = MarathonTestHelper.appWithPersistentVolume()
+      val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(Seq(localVolumeId)).getInstance()
+
+      val taskId = instance.appTask.taskId
+
+      val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+
+      val offer = MarathonTestHelper.addVolumesToOffer(basicOffer, taskId, localVolumeId).build()
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty,
+        reservedInstances = Seq(instance)
+      )
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "not match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app and we want to reserve a new Persistent Volume" in {
+      val gpuConfig = AllConf.withTestConfig(
+        "--draining_seconds", "300",
+        "--gpu_scheduling_behavior", "restricted",
+        "--enable_features", "gpu_resources")
+
+      val app = MarathonTestHelper.appWithPersistentVolume()
+      val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskReserved(Seq(localVolumeId)).getInstance()
+
+      val taskId = instance.appTask.taskId
+
+      val basicOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+
+      val offer = MarathonTestHelper.addVolumesToOffer(basicOffer, taskId, localVolumeId).build()
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty,
+        reservedInstances = Seq.empty
+      )
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
+    }
   }
 
   val appId = PathId("/test")
