@@ -255,7 +255,7 @@ object ResourceMatcher extends StrictLogging {
         case GpuSchedulingBehavior.Undefined =>
           if (gpuResourcesAreWasted) {
             addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
-              s"will be launched on an agent with GPU resources."))
+              "will be launched on an agent with GPU resources."))
           }
           true
 
