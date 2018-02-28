@@ -302,9 +302,9 @@ private class TaskLauncherActor(
   }
 
   private[this] def replyWithQueuedInstanceCount(): Unit = {
-    val instancesLaunched = instanceMap.values.count(_.isLaunched)
+    val instancesLaunched = instanceMap.values.count(instance => instance.isLaunched || instance.isReserved)
     val instancesLaunchesInFlight = inFlightInstanceOperations.keys
-      .count(instanceId => instanceMap.get(instanceId).exists(_.isLaunched))
+      .count(instanceId => instanceMap.get(instanceId).exists(instance => instance.isLaunched || instance.isReserved))
     sender() ! QueuedInstanceInfo(
       runSpec,
       inProgress = instancesToLaunch > 0 || inFlightInstanceOperations.nonEmpty,
