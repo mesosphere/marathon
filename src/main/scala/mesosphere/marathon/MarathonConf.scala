@@ -335,6 +335,7 @@ trait MarathonConf
     name = "gpu_scheduling_behavior",
     descr = "Defines how offered GPU resources should be treated. Possible settings are `undefined`, `restricted` and " +
       "`unrestricted`",
+    noshort = true,
     default = Some(GpuSchedulingBehavior.Undefined),
     validate = validateGpuSchedulingBehavior
   )

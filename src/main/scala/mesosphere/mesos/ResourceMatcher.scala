@@ -265,6 +265,8 @@ object ResourceMatcher extends StrictLogging {
             noOfferMatchReasons += NoOfferMatchReason.DeclinedScarceResources
             false
           } else {
+            addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
+              "will be launched on an agent with GPU resources due to required persistent volume."))
             true
           }
 

@@ -407,30 +407,6 @@ class PodStatusConversionTest extends UnitTest {
           "persistent#volume#5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")))
     }
 
-    "persistent pod launched, received RUNNING status from Mesos, task endpoint health looks great" in {
-      implicit val clock = new SettableClock()
-
-      val localVolumeId = core.instance.LocalVolumeId(
-        PathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
-
-      val reservation = core.instance.Reservation(
-        volumeIds = Seq(localVolumeId),
-        state = core.instance.Reservation.State.New(timeout = None))
-
-      val pod = podWithPersistentVolume.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
-
-      clock += 1.seconds
-      val fixture = fakeInstance(
-        podWithPersistentVolume, core.condition.Condition.Running, core.condition.Condition.Running,
-        maybeReservation = Some(reservation)) // task status will say healthy
-
-      val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
-      status.localVolumes should be(Seq(
-        LocalVolumeId(
-          "/persistent", "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b",
-          "persistent#volume#5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")))
-    }
-
   }
 }
 

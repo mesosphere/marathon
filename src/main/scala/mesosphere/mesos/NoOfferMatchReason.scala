@@ -30,7 +30,8 @@ object NoOfferMatchReason {
     InsufficientMemory,
     InsufficientDisk,
     InsufficientGpus,
-    InsufficientPorts
+    InsufficientPorts,
+    DeclinedScarceResources
   )
 
   def fromResourceType(name: String): NoOfferMatchReason = name match {
