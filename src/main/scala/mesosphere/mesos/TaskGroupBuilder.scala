@@ -43,6 +43,8 @@ object TaskGroupBuilder extends StrictLogging {
     resourceMatch: ResourceMatcher.ResourceMatch,
     volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch]
   ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]]) = {
+    verifyResources(podDefinition, resourceMatch.resources)
+
     val allEndpoints = podDefinition.containers.flatMap(_.endpoints)
 
     val mesosNetworks = buildMesosNetworks(
@@ -50,6 +52,7 @@ object TaskGroupBuilder extends StrictLogging {
 
     val executorInfo = computeExecutorInfo(
       podDefinition,
+      resourceMatch.resources,
       resourceMatch.portsMatch,
       mesosNetworks,
       volumeMatchOption,
@@ -71,7 +74,7 @@ object TaskGroupBuilder extends StrictLogging {
           val portAssignments = computePortAssignments(podDefinition, endpoints)
 
           val task = computeTaskInfo(container, podDefinition, offer, instanceId, taskId,
-            resourceMatch.hostPorts, config, portAssignments)
+            resourceMatch.resources, resourceMatch.hostPorts, config, portAssignments)
             .setDiscovery(taskDiscovery(podDefinition, endpoints))
           task.build
       }.asJava
@@ -81,6 +84,25 @@ object TaskGroupBuilder extends StrictLogging {
     runSpecTaskProcessor.taskGroup(podDefinition, executorInfo, taskGroup)
 
     (executorInfo.build, taskGroup.build, resourceMatch.hostPorts)
+  }
+
+  // This method just double-checks that the matched resources are exactly
+  // what is needed and in right quantities.
+  private[this] def verifyResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): Unit = {
+    val cpus = pod.executorResources.cpus + pod.containers.map(_.resources.cpus).sum
+    val mem = pod.executorResources.mem + pod.containers.map(_.resources.mem).sum
+    val disk = pod.executorResources.disk + pod.containers.map(_.resources.disk).sum
+    val gpus = pod.executorResources.gpus + pod.containers.map(_.resources.gpus).sum
+
+    val matchedCpus = matchedResources.find(_.getName == "cpus").map(_.getScalar.getValue).getOrElse(0.0)
+    val matchedMem = matchedResources.find(_.getName == "mem").map(_.getScalar.getValue).getOrElse(0.0)
+    val matchedDisk = matchedResources.find(_.getName == "disk").map(_.getScalar.getValue).getOrElse(0.0)
+    val matchedGpus = matchedResources.find(_.getName == "gpus").map(_.getScalar.getValue).getOrElse(0.0)
+
+    assert(cpus == matchedCpus)
+    assert(mem == matchedMem)
+    assert(disk == matchedDisk)
+    assert(gpus == matchedGpus)
   }
 
   // The resource match provides us with a list of host ports.
@@ -149,6 +171,7 @@ object TaskGroupBuilder extends StrictLogging {
     offer: mesos.Offer,
     instanceId: Instance.Id,
     taskId: Task.Id,
+    matchedResources: Seq[mesos.Resource],
     hostPorts: Seq[Option[Int]],
     config: BuilderConfig,
     portAssignments: Seq[PortAssignment]): mesos.TaskInfo.Builder = {
@@ -160,10 +183,10 @@ object TaskGroupBuilder extends StrictLogging {
       .setTaskId(mesos.TaskID.newBuilder.setValue(taskId.idString))
       .setSlaveId(offer.getSlaveId)
 
-    builder.addResources(scalarResource("cpus", container.resources.cpus))
-    builder.addResources(scalarResource("mem", container.resources.mem))
-    builder.addResources(scalarResource("disk", container.resources.disk))
-    builder.addResources(scalarResource("gpus", container.resources.gpus.toDouble))
+    builder.addResources(scalarResource("cpus", podDefinition.executorResources.cpus, matchedResources))
+    builder.addResources(scalarResource("mem", podDefinition.executorResources.mem, matchedResources))
+    builder.addResources(scalarResource("disk", podDefinition.executorResources.disk, matchedResources))
+    builder.addResources(scalarResource("gpus", podDefinition.executorResources.gpus, matchedResources))
 
     if (container.labels.nonEmpty)
       builder.setLabels(mesos.Labels.newBuilder.addAllLabels(container.labels.map {
@@ -202,6 +225,7 @@ object TaskGroupBuilder extends StrictLogging {
 
   private[this] def computeExecutorInfo(
     podDefinition: PodDefinition,
+    matchedResources: Seq[mesos.Resource],
     portsMatch: PortsMatch,
     mesosNetworks: Seq[mesos.NetworkInfo],
     volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
@@ -214,10 +238,10 @@ object TaskGroupBuilder extends StrictLogging {
       .setExecutorId(executorID)
       .setFrameworkId(frameworkId)
 
-    executorInfo.addResources(scalarResource("cpus", podDefinition.executorResources.cpus))
-    executorInfo.addResources(scalarResource("mem", podDefinition.executorResources.mem))
-    executorInfo.addResources(scalarResource("disk", podDefinition.executorResources.disk))
-    executorInfo.addResources(scalarResource("gpus", podDefinition.executorResources.gpus.toDouble))
+    executorInfo.addResources(scalarResource("cpus", podDefinition.executorResources.cpus, matchedResources))
+    executorInfo.addResources(scalarResource("mem", podDefinition.executorResources.mem, matchedResources))
+    executorInfo.addResources(scalarResource("disk", podDefinition.executorResources.disk, matchedResources))
+    executorInfo.addResources(scalarResource("gpus", podDefinition.executorResources.gpus, matchedResources))
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
     if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
@@ -474,11 +498,15 @@ object TaskGroupBuilder extends StrictLogging {
       }
   }
 
-  private[this] def scalarResource(name: String, value: Double): mesos.Resource.Builder = {
-    mesos.Resource.newBuilder
-      .setName(name)
-      .setType(mesos.Value.Type.SCALAR)
-      .setScalar(mesos.Value.Scalar.newBuilder.setValue(value))
+  private[this] def scalarResource(name: String, value: Double,
+    matchedResources: Seq[mesos.Resource]): mesos.Resource.Builder = {
+    val resource = matchedResources.find(_.getName == "cpus").map(_.toBuilder).getOrElse {
+      mesos.Resource.newBuilder
+        .setName(name)
+        .setType(mesos.Value.Type.SCALAR)
+        .setScalar(mesos.Value.Scalar.newBuilder.setValue(value))
+    }
+    resource.setScalar(mesos.Value.Scalar.newBuilder.setValue(value))
   }
 
   private def taskDiscovery(pod: PodDefinition, endpoints: Seq[Endpoint]): mesos.DiscoveryInfo = {
