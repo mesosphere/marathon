@@ -183,10 +183,10 @@ object TaskGroupBuilder extends StrictLogging {
       .setTaskId(mesos.TaskID.newBuilder.setValue(taskId.idString))
       .setSlaveId(offer.getSlaveId)
 
-    builder.addResources(scalarResource("cpus", podDefinition.executorResources.cpus, matchedResources))
-    builder.addResources(scalarResource("mem", podDefinition.executorResources.mem, matchedResources))
-    builder.addResources(scalarResource("disk", podDefinition.executorResources.disk, matchedResources))
-    builder.addResources(scalarResource("gpus", podDefinition.executorResources.gpus, matchedResources))
+    scalarResource("cpus", container.resources.cpus, matchedResources).foreach(builder.addResources)
+    scalarResource("mem", container.resources.mem, matchedResources).foreach(builder.addResources)
+    scalarResource("disk", container.resources.disk, matchedResources).foreach(builder.addResources)
+    scalarResource("gpus", container.resources.gpus.toDouble, matchedResources).foreach(builder.addResources)
 
     if (container.labels.nonEmpty)
       builder.setLabels(mesos.Labels.newBuilder.addAllLabels(container.labels.map {
@@ -238,10 +238,10 @@ object TaskGroupBuilder extends StrictLogging {
       .setExecutorId(executorID)
       .setFrameworkId(frameworkId)
 
-    executorInfo.addResources(scalarResource("cpus", podDefinition.executorResources.cpus, matchedResources))
-    executorInfo.addResources(scalarResource("mem", podDefinition.executorResources.mem, matchedResources))
-    executorInfo.addResources(scalarResource("disk", podDefinition.executorResources.disk, matchedResources))
-    executorInfo.addResources(scalarResource("gpus", podDefinition.executorResources.gpus, matchedResources))
+    scalarResource("cpus", podDefinition.executorResources.cpus, matchedResources).foreach(executorInfo.addResources)
+    scalarResource("mem", podDefinition.executorResources.mem, matchedResources).foreach(executorInfo.addResources)
+    scalarResource("disk", podDefinition.executorResources.disk, matchedResources).foreach(executorInfo.addResources)
+    scalarResource("gpus", podDefinition.executorResources.gpus.toDouble, matchedResources).foreach(executorInfo.addResources)
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
     if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
@@ -499,14 +499,18 @@ object TaskGroupBuilder extends StrictLogging {
   }
 
   private[this] def scalarResource(name: String, value: Double,
-    matchedResources: Seq[mesos.Resource]): mesos.Resource.Builder = {
-    val resource = matchedResources.find(_.getName == "cpus").map(_.toBuilder).getOrElse {
-      mesos.Resource.newBuilder
-        .setName(name)
-        .setType(mesos.Value.Type.SCALAR)
-        .setScalar(mesos.Value.Scalar.newBuilder.setValue(value))
+    matchedResources: Seq[mesos.Resource]): Option[mesos.Resource.Builder] = {
+
+    if (value > 0.0) {
+      val resource = matchedResources.find(_.getName == name).map(_.toBuilder).getOrElse {
+        mesos.Resource.newBuilder
+          .setName(name)
+          .setType(mesos.Value.Type.SCALAR)
+      }
+      Some(resource.setScalar(mesos.Value.Scalar.newBuilder.setValue(value)))
+    } else {
+      None
     }
-    resource.setScalar(mesos.Value.Scalar.newBuilder.setValue(value))
   }
 
   private def taskDiscovery(pod: PodDefinition, endpoints: Seq[Endpoint]): mesos.DiscoveryInfo = {
