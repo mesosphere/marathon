@@ -88,6 +88,7 @@ object TaskGroupBuilder extends StrictLogging {
 
   // This method just double-checks that the matched resources are exactly
   // what is needed and in right quantities.
+  @SuppressWarnings(Array("ComparingFloatingPointTypes"))
   private[this] def verifyResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): Unit = {
     val cpus = pod.executorResources.cpus + pod.containers.map(_.resources.cpus).sum
     val mem = pod.executorResources.mem + pod.containers.map(_.resources.mem).sum
@@ -102,7 +103,7 @@ object TaskGroupBuilder extends StrictLogging {
     assert(cpus == matchedCpus)
     assert(mem == matchedMem)
     assert(disk == matchedDisk)
-    assert(gpus == matchedGpus)
+    assert(gpus.toDouble == matchedGpus)
   }
 
   // The resource match provides us with a list of host ports.
