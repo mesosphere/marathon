@@ -14,6 +14,7 @@ object NoOfferMatchReason {
   case object UnfulfilledConstraint extends NoOfferMatchReason
   case object AgentMaintenance extends NoOfferMatchReason
   case object NoCorrespondingReservationFound extends NoOfferMatchReason
+  case object DeclinedScarceResources extends NoOfferMatchReason
 
   /**
     * This sequence is used to funnel reasons for not matching an offer.
@@ -29,7 +30,8 @@ object NoOfferMatchReason {
     InsufficientMemory,
     InsufficientDisk,
     InsufficientGpus,
-    InsufficientPorts
+    InsufficientPorts,
+    DeclinedScarceResources
   )
 
   def fromResourceType(name: String): NoOfferMatchReason = name match {

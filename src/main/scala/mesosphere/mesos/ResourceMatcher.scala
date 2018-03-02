@@ -3,7 +3,7 @@ package mesosphere.mesos
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.Features
+import mesosphere.marathon.{ Features, GpuSchedulingBehavior }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.pod.PodDefinition
@@ -133,8 +133,15 @@ object ResourceMatcher extends StrictLogging {
     * resources, the disk resources for the local volumes are included since they must become part of
     * the reservation.
     */
-  def matchResources(offer: Offer, runSpec: RunSpec, knownInstances: => Seq[Instance],
-    selector: ResourceSelector, conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin], localRegion: Option[Region] = None)(implicit clock: Clock): ResourceMatchResponse = {
+  def matchResources(
+    offer: Offer,
+    runSpec: RunSpec,
+    knownInstances: => Seq[Instance],
+    selector: ResourceSelector,
+    conf: MatcherConf,
+    schedulerPlugins: Seq[SchedulerPlugin],
+    localRegion: Option[Region] = None,
+    reservedInstances: Seq[Instance] = Seq.empty)(implicit clock: Clock): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 
@@ -181,6 +188,11 @@ object ResourceMatcher extends StrictLogging {
     val noOfferMatchReasons = scalarMatchResults
       .filter(scalar => !scalar.matches)
       .map(scalar => NoOfferMatchReason.fromResourceType(scalar.resourceName)).toBuffer
+
+    var onMatchActions: Vector[() => Unit] = Vector.empty
+    def addOnMatch(action: () => Unit) = {
+      onMatchActions :+= action
+    }
 
     // Current mesos implementation will only send resources with one distinct role assigned.
     // If not a single resource (matching the resource selector) was found, a NoOfferMatchReason.UnmatchedRole
@@ -236,13 +248,42 @@ object ResourceMatcher extends StrictLogging {
       } else true
     }
 
+    val checkGpuSchedulingBehaviour: Boolean = {
+      val availableGPUs = groupedResources.getOrElse(Resource.GPUS, Nil).foldLeft(0.0)(_ + _.getScalar.getValue)
+      val gpuResourcesAreWasted = availableGPUs > 0 && runSpec.resources.gpus == 0
+      conf.gpuSchedulingBehavior() match {
+        case GpuSchedulingBehavior.Undefined =>
+          if (gpuResourcesAreWasted) {
+            addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
+              "will be launched on an agent with GPU resources."))
+          }
+          true
+
+        case GpuSchedulingBehavior.Restricted =>
+          val noPersistentVolumeToMatch = PersistentVolumeMatcher.matchVolumes(offer, reservedInstances).isEmpty
+          if (gpuResourcesAreWasted && noPersistentVolumeToMatch) {
+            noOfferMatchReasons += NoOfferMatchReason.DeclinedScarceResources
+            false
+          } else {
+            addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
+              "will be launched on an agent with GPU resources due to required persistent volume."))
+            true
+          }
+
+        case GpuSchedulingBehavior.Unrestricted =>
+          true
+      }
+    }
+
     val resourceMatchOpt = if (scalarMatchResults.forall(_.matches)
       && meetsFaultDomainRequirements
       && meetsAllConstraints
       && checkAvailability
-      && schedulerPlugins.forall(_.isMatch(offer, runSpec))) {
+      && schedulerPlugins.forall(_.isMatch(offer, runSpec))
+      && checkGpuSchedulingBehaviour) {
       portsMatchOpt match {
         case Some(portsMatch) =>
+          onMatchActions.foreach(action => action.apply())
           Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch))
         case None =>
           // Add ports to noOfferMatchReasons

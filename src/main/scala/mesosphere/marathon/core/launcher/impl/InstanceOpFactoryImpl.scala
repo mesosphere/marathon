@@ -166,7 +166,8 @@ class InstanceOpFactoryImpl(
             offer, runSpec, instancesToConsiderForConstraints,
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels), config,
             schedulerPlugins,
-            localRegion
+            localRegion,
+            request.reserved
           )
 
         resourceMatchResponse match {

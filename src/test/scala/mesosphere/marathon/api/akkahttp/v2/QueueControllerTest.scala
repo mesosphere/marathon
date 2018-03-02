@@ -120,6 +120,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "reason" : "InsufficientPorts",
             |        "declined" : 0,
             |        "processed" : 0
+            |      }, {
+            |        "reason" : "DeclinedScarceResources",
+            |        "declined" : 0,
+            |        "processed" : 0
             |      } ],
             |      "rejectSummaryLaunchAttempt" : [ {
             |        "reason" : "UnfulfilledRole",
@@ -155,6 +159,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "processed" : 0
             |      }, {
             |        "reason" : "InsufficientPorts",
+            |        "declined" : 0,
+            |        "processed" : 0
+            |      }, {
+            |        "reason" : "DeclinedScarceResources",
             |        "declined" : 0,
             |        "processed" : 0
             |      } ]
@@ -259,6 +267,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "reason" : "InsufficientPorts",
             |        "declined" : 0,
             |        "processed" : 0
+            |      }, {
+            |        "reason" : "DeclinedScarceResources",
+            |        "declined" : 0,
+            |        "processed" : 0
             |      } ],
             |      "rejectSummaryLaunchAttempt" : [ {
             |        "reason" : "UnfulfilledRole",
@@ -294,6 +306,10 @@ class QueueControllerTest extends UnitTest with ScalatestRouteTest with Inside w
             |        "processed" : 0
             |      }, {
             |        "reason" : "InsufficientPorts",
+            |        "declined" : 0,
+            |        "processed" : 0
+            |      }, {
+            |        "reason" : "DeclinedScarceResources",
             |        "declined" : 0,
             |        "processed" : 0
             |      } ]
