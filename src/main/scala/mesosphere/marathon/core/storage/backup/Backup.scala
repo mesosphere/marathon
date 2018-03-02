@@ -40,8 +40,10 @@ abstract class BackupRestoreAction extends StrictLogging {
     import mesosphere.marathon.core.async.ExecutionContexts.global
     try {
       val storageModule = StorageModule(conf, LifecycleState.WatchingJVM)
+      storageModule.persistenceStore.markOpen()
       val backup = storageModule.persistentStoreBackup
       Await.result(fn(backup), Duration.Inf)
+      storageModule.persistenceStore.markClosed()
       logger.info("Action complete.")
     } catch {
       case NonFatal(ex) =>
