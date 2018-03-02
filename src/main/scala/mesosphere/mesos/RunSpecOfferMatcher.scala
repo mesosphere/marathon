@@ -2,6 +2,7 @@ package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, RunSpec }
@@ -18,7 +19,12 @@ object RunSpecOfferMatcher extends StrictLogging {
     * @param knownInstances All instances associated with the given runSpec, needed to validate constraints
     * @param givenAcceptedResourceRoles The resource roles for which to look.
     */
-  def matchOffer(runSpec: RunSpec, offer: Offer, knownInstances: => Seq[Instance], givenAcceptedResourceRoles: Set[String]): ResourceMatchResponse = {
+  def matchOffer(
+    runSpec: RunSpec,
+    offer: Offer,
+    knownInstances: => Seq[Instance],
+    givenAcceptedResourceRoles: Set[String],
+    conf: MarathonConf): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles
@@ -30,7 +36,7 @@ object RunSpecOfferMatcher extends StrictLogging {
     }
 
     val resourceMatchResponse =
-      ResourceMatcher.matchResources(offer, runSpec, knownInstances, ResourceSelector.any(acceptedResourceRoles))
+      ResourceMatcher.matchResources(offer, runSpec, knownInstances, ResourceSelector.any(acceptedResourceRoles), conf)
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = runSpec match {

@@ -309,5 +309,34 @@ trait MarathonConf
     noshort = true,
     hidden = true,
     default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD))
+
+  lazy val drainingSeconds = opt[Long](
+    "draining_seconds",
+    descr = "(Default: 0 seconds) the seconds when marathon will start declining offers before a maintenance " +
+      "window start time. This is only evaluated if `maintenance_mode` is in the set of `enable_features`!",
+    default = Some(0)
+  )
+
+  private[this] def validateGpuSchedulingBehavior(setting: String): Boolean = {
+    val allowedSettings = Set(GpuSchedulingBehavior.Undefined, GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted)
+    require(
+      isFeatureSet(Features.GPU_RESOURCES) || setting == GpuSchedulingBehavior.Undefined,
+      "gpu_resources must be set in order to use gpu_scheduling_behavior"
+    )
+    require(
+      allowedSettings.contains(setting),
+      s"Setting $setting is invalid. Valid settings are ${allowedSettings.mkString(", ")}"
+    )
+    true
+  }
+
+  lazy val gpuSchedulingBehavior = opt[String](
+    name = "gpu_scheduling_behavior",
+    descr = "Defines how offered GPU resources should be treated. Possible settings are `undefined`, `restricted` and " +
+    "`unrestricted`",
+    noshort = true,
+    default = Some(GpuSchedulingBehavior.Undefined),
+    validate = validateGpuSchedulingBehavior
+  )
 }
 

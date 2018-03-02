@@ -42,14 +42,22 @@ class QueueResourceTest extends UnitTest {
     "return well formatted JSON" in new Fixture {
       //given
       val app = AppDefinition(id = "app".toRootPath, acceptedResourceRoles = Set("*"))
-      val noMatch = OfferMatchResult.NoMatch(app, MarathonTestHelper.makeBasicOffer().build(), Seq(NoOfferMatchReason.InsufficientCpus), clock.now())
+      val noMatch = OfferMatchResult.NoMatch(
+        app,
+        MarathonTestHelper.makeBasicOffer().build(),
+        Seq(NoOfferMatchReason.InsufficientCpus, NoOfferMatchReason.DeclinedScarceResources),
+        clock.now())
       queue.listWithStatistics returns Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
-          rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1),
-          rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3), processedOffersCount = 3, unusedOffersCount = 1,
-          lastMatch = None, lastNoMatch = None, lastNoMatches = Seq(noMatch)
+          rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1, NoOfferMatchReason.DeclinedScarceResources -> 2),
+          rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.DeclinedScarceResources -> 2),
+          processedOffersCount = 3,
+          unusedOffersCount = 1,
+          lastMatch = None,
+          lastNoMatch = None,
+          lastNoMatches = Seq(noMatch)
         )
       )
 
@@ -69,6 +77,7 @@ class QueueResourceTest extends UnitTest {
       (jsonApp1 \ "processedOffersSummary" \ "processedOffersCount").as[Int] should be(3)
       (jsonApp1 \ "processedOffersSummary" \ "unusedOffersCount").as[Int] should be(1)
       (jsonApp1 \ "processedOffersSummary" \ "rejectSummaryLaunchAttempt" \ 3 \ "declined").as[Int] should be(3)
+      (jsonApp1 \ "processedOffersSummary" \ "rejectSummaryLaunchAttempt" \ 8 \ "declined").as[Int] should be(2)
       val offer = (jsonApp1 \ "lastUnusedOffers").as[JsArray].value.head \ "offer"
       (offer \ "agentId").as[String] should be(noMatch.offer.getSlaveId.getValue)
       (offer \ "hostname").as[String] should be(noMatch.offer.getHostname)
