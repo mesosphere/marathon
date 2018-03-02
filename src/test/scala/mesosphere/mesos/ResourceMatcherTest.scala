@@ -23,10 +23,11 @@ import mesosphere.mesos.protos.{ Resource, ResourceProviderID, TextAttribute }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Attribute
 import org.scalatest.Inside
+import org.scalatest.prop.TableDrivenPropertyChecks
 
 import scala.collection.immutable.Seq
 
-class ResourceMatcherTest extends UnitTest with Inside {
+class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyChecks {
 
   implicit val clock = new SettableClock()
   val config = AllConf.withTestConfig("--draining_seconds", "300")
@@ -1180,58 +1181,44 @@ class ResourceMatcherTest extends UnitTest with Inside {
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
     }
 
-    "support application-specific override of gpu scheduling behavior from restricted -> unrestricted" in {
-      val gpuConfig = AllConf.withTestConfig(
-        "--draining_seconds", "300",
-        "--gpu_scheduling_behavior", "restricted",
-        "--enable_features", "gpu_resources")
-      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
-        .build()
-      val app = AppDefinition(
-        id = "/test".toRootPath,
-        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 0),
-        portDefinitions = PortDefinitions(0, 0),
-        labels = Map("GPU_SCHEDULING_BEHAVIOR" -> "unrestricted")
+    "correctly match offers in case of app specific override and no Persistent Volume involved" in {
+
+      val overrideCases = Table(
+        ("gpu_scheduling_behavior", "GPU_SCHEDULING_BEHAVIOR", "expected"),
+        ("unrestricted", Some("restricted"), "NoMatch"),
+        ("unrestricted", None, "Match"),
+        ("restricted", Some("unrestricted"), "Match"),
+        ("restricted", None, "NoMatch")
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(
-        offer,
-        app,
-        knownInstances = Seq.empty,
-        unreservedResourceSelector,
-        gpuConfig,
-        Seq.empty
-      )
+      forAll(overrideCases) { (gpuSchedulingBehavior, overrideLabel, expected) =>
+        val gpuConfig = AllConf.withTestConfig(
+          "--draining_seconds", "300",
+          "--gpu_scheduling_behavior", gpuSchedulingBehavior,
+          "--enable_features", "gpu_resources")
+        val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+          .build()
+        val app = AppDefinition(
+          id = "/test".toRootPath,
+          resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+          portDefinitions = PortDefinitions(0, 0),
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
-    }
+          labels = overrideLabel.map(label => Map("GPU_SCHEDULING_BEHAVIOR" -> label)).getOrElse(Map.empty)
+        )
 
-    "support application-specific override of gpu scheduling behavior from unrestricted -> restricted" in {
-      val gpuConfig = AllConf.withTestConfig(
-        "--draining_seconds", "300",
-        "--gpu_scheduling_behavior", "unrestricted",
-        "--enable_features", "gpu_resources")
-      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
-        .build()
-      val app = AppDefinition(
-        id = "/test".toRootPath,
-        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 0),
-        portDefinitions = PortDefinitions(0, 0),
-        labels = Map("GPU_SCHEDULING_BEHAVIOR" -> "restricted")
-      )
+        val resourceMatchResponse = ResourceMatcher.matchResources(
+          offer,
+          app,
+          knownInstances = Seq.empty,
+          unreservedResourceSelector,
+          gpuConfig,
+          Seq.empty
+        )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(
-        offer,
-        app,
-        knownInstances = Seq.empty,
-        unreservedResourceSelector,
-        gpuConfig,
-        Seq.empty
-      )
+        def getObjectName(fqcn: String) = fqcn.reverse.takeWhile(_ != '$').reverse
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
-      resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
-
+        getObjectName(resourceMatchResponse.getClass.getName) shouldEqual expected
+      }
     }
   }
 

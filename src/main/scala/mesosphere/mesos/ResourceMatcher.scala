@@ -250,7 +250,7 @@ object ResourceMatcher extends StrictLogging {
 
     val checkGpuSchedulingBehaviour: Boolean = {
       val applicationSpecificGpuBehavior = runSpec.labels.get("GPU_SCHEDULING_BEHAVIOR")
-        .filter(behavior => Set(GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted).contains(behavior))
+        .filter(behavior => validBehaviors.contains(behavior))
       val availableGPUs = groupedResources.getOrElse(Resource.GPUS, Nil).foldLeft(0.0)(_ + _.getScalar.getValue)
       val gpuResourcesAreWasted = availableGPUs > 0 && runSpec.resources.gpus == 0
       applicationSpecificGpuBehavior.getOrElse(conf.gpuSchedulingBehavior()) match {
@@ -576,4 +576,6 @@ object ResourceMatcher extends StrictLogging {
           s"Not all basic resources satisfied: $basicResourceString")
     }
   }
+
+  private val validBehaviors = Set(GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted)
 }
