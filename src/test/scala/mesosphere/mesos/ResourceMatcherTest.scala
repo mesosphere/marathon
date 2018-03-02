@@ -1179,6 +1179,60 @@ class ResourceMatcherTest extends UnitTest with Inside {
       resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
     }
+
+    "support application-specific override of gpu scheduling behavior from restricted -> unrestricted" in {
+      val gpuConfig = AllConf.withTestConfig(
+        "--draining_seconds", "300",
+        "--gpu_scheduling_behavior", "restricted",
+        "--enable_features", "gpu_resources")
+      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 0),
+        portDefinitions = PortDefinitions(0, 0),
+        labels = Map("GPU_SCHEDULING_BEHAVIOR" -> "unrestricted")
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty
+      )
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+    }
+
+    "support application-specific override of gpu scheduling behavior from unrestricted -> restricted" in {
+      val gpuConfig = AllConf.withTestConfig(
+        "--draining_seconds", "300",
+        "--gpu_scheduling_behavior", "unrestricted",
+        "--enable_features", "gpu_resources")
+      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+        .build()
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 0),
+        portDefinitions = PortDefinitions(0, 0),
+        labels = Map("GPU_SCHEDULING_BEHAVIOR" -> "restricted")
+      )
+
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        gpuConfig,
+        Seq.empty
+      )
+
+      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
+
+    }
   }
 
   val appId = PathId("/test")

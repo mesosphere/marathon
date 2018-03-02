@@ -249,9 +249,11 @@ object ResourceMatcher extends StrictLogging {
     }
 
     val checkGpuSchedulingBehaviour: Boolean = {
+      val applicationSpecificGpuBehavior = runSpec.labels.get("GPU_SCHEDULING_BEHAVIOR")
+        .filter(behavior => Set(GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted).contains(behavior))
       val availableGPUs = groupedResources.getOrElse(Resource.GPUS, Nil).foldLeft(0.0)(_ + _.getScalar.getValue)
       val gpuResourcesAreWasted = availableGPUs > 0 && runSpec.resources.gpus == 0
-      conf.gpuSchedulingBehavior() match {
+      applicationSpecificGpuBehavior.getOrElse(conf.gpuSchedulingBehavior()) match {
         case GpuSchedulingBehavior.Undefined =>
           if (gpuResourcesAreWasted) {
             addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
