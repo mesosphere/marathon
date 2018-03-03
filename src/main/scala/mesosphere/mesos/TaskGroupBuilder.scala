@@ -90,6 +90,11 @@ object TaskGroupBuilder extends StrictLogging {
   // what is needed and in right quantities.
   @SuppressWarnings(Array("ComparingFloatingPointTypes"))
   private[this] def verifyResources(pod: PodDefinition, matchedResources: Seq[mesos.Resource]): Unit = {
+    assert(matchedResources.count(_.getName == "cpus") <= 1)
+    assert(matchedResources.count(_.getName == "mem") <= 1)
+    assert(matchedResources.count(_.getName == "disk") <= 1)
+    assert(matchedResources.count(_.getName == "gpus") <= 1)
+
     val cpus = pod.executorResources.cpus + pod.containers.map(_.resources.cpus).sum
     val mem = pod.executorResources.mem + pod.containers.map(_.resources.mem).sum
     val disk = pod.executorResources.disk + pod.containers.map(_.resources.disk).sum
@@ -504,9 +509,7 @@ object TaskGroupBuilder extends StrictLogging {
 
     if (value > 0.0) {
       val resource = matchedResources.find(_.getName == name).map(_.toBuilder).getOrElse {
-        mesos.Resource.newBuilder
-          .setName(name)
-          .setType(mesos.Value.Type.SCALAR)
+        throw new IllegalStateException(s"Failed to find $name matched resource")
       }
       Some(resource.setScalar(mesos.Value.Scalar.newBuilder.setValue(value)))
     } else {

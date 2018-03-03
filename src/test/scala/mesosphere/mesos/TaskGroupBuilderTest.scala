@@ -132,6 +132,36 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       assert(taskGroupInfo.getTasksCount == 3)
     }
 
+    "use the given matched resources" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.2, mem = 64.0, disk = 10.0, role = "slave0").build
+
+      val podSpec = PodDefinition(
+        id = "/slave0/pod".toPath,
+        acceptedResourceRoles = Set("slave0"),
+        containers = Seq(
+          MesosContainer(
+            name = "Foo",
+            resources = raml.Resources(cpus = 0.1, mem = 32.0))))
+
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty,
+        defaultBuilderConfig.acceptedResourceRoles, config, Seq.empty)
+      val instanceId = Instance.Id.forRunSpec(podSpec.id)
+      val taskIds = podSpec.containers.map(c => Task.Id.forInstanceId(instanceId, Some(c)))
+      val (executorInfo, taskGroupInfo, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        instanceId,
+        taskIds,
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
+        None
+      )
+
+      assert(executorInfo.getResourcesList.forall(_.getRole == "slave0"))
+      assert(taskGroupInfo.getTasksList.count(_.getResourcesList.forall(_.getRole == "slave0")) == 1)
+    }
+
     "set container commands from a MesosContainer definition" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0).build
 
