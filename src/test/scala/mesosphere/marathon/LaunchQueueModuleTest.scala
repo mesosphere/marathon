@@ -18,7 +18,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
-import org.mockito.Matchers
+import org.mockito.{ ArgumentCaptor, Matchers }
 
 import scala.concurrent.duration._
 
@@ -170,8 +170,10 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
-      verify(instanceOpFactory).matchOfferRequest(request)
+      val argument = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+      verify(instanceOpFactory).matchOfferRequest(argument.capture())
+      argument.getValue.runSpec should be(app)
+
       matchedTasks.offerId should equal(offer.getId)
       matchedTasks.opsWithSource should equal(Seq.empty)
 
@@ -196,8 +198,10 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
-      val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
-      verify(instanceOpFactory).matchOfferRequest(request)
+      val argument = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+      verify(instanceOpFactory).matchOfferRequest(argument.capture())
+      argument.getValue.runSpec should be(app)
+
       matchedTasks.offerId should equal(offer.getId)
       launchedTaskInfos(matchedTasks) should equal(Seq(mesosTask))
 
@@ -241,7 +245,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val runspecId = PathId("/test")
+    val runspecId = app.id
     val instance = TestInstanceBuilder.newBuilder(runspecId).addTaskWithBuilder().taskRunning().build().getInstance()
     val task: Task = instance.appTask
 

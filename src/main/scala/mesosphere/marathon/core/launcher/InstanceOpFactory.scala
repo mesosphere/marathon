@@ -28,16 +28,23 @@ object InstanceOpFactory {
     * @param instanceMap        a map of running tasks or reservations for the given run spec,
     *                           needed to check constraints and handle resident tasks
     * @param additionalLaunches the number of additional launches that has been requested
+    * @param instanceId         the id of the instance which should be launched
     * @param localRegion        region where mesos master is running
     */
   case class Request(runSpec: RunSpec, offer: Mesos.Offer, instanceMap: Map[Instance.Id, Instance],
-      additionalLaunches: Int, localRegion: Option[Region] = None) {
+      additionalLaunches: Int, instanceId: Instance.Id, localRegion: Option[Region] = None) {
+
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
+
+    // For resident tasks
+    def isForResidentRunSpec: Boolean = runSpec.isResident
     lazy val reserved: Seq[Instance] = instances.filter(_.isReserved)
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
-    def isForResidentRunSpec: Boolean = runSpec.isResident
+
+    val needToLaunch: Boolean = additionalLaunches > 0 && hasWaitingReservations
+    val needToReserve: Boolean = numberOfWaitingReservations < additionalLaunches
   }
 
   /**
