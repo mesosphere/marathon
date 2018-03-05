@@ -1181,17 +1181,22 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
     }
 
-    "correctly match offers in case of app specific override and no Persistent Volume involved" in {
+  }
 
-      val overrideCases = Table(
-        ("gpu_scheduling_behavior", "GPU_SCHEDULING_BEHAVIOR", "expected"),
-        ("unrestricted", Some("restricted"), "NoMatch"),
-        ("unrestricted", None, "Match"),
-        ("restricted", Some("unrestricted"), "Match"),
-        ("restricted", None, "NoMatch")
-      )
+  "ResourceMatcher" should {
 
-      forAll(overrideCases) { (gpuSchedulingBehavior, overrideLabel, expected) =>
+    val overrideCases = Table(
+      ("gpu_scheduling_behavior", "GPU_SCHEDULING_BEHAVIOR", "expected"),
+      ("unrestricted", Some("restricted"), "NoMatch"),
+      ("unrestricted", None, "Match"),
+      ("restricted", Some("unrestricted"), "Match"),
+      ("restricted", None, "NoMatch")
+    )
+
+    forAll(overrideCases) { (gpuSchedulingBehavior, overrideLabel, expected) =>
+
+      s"return a $expected in case of ${overrideLabel.getOrElse("no")} override of $gpuSchedulingBehavior behavior and no Persistent Volume involved" in {
+
         val gpuConfig = AllConf.withTestConfig(
           "--draining_seconds", "300",
           "--gpu_scheduling_behavior", gpuSchedulingBehavior,
