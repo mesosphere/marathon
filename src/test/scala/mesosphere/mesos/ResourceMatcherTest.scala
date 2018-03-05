@@ -23,10 +23,11 @@ import mesosphere.mesos.protos.{ Resource, ResourceProviderID, TextAttribute }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Attribute
 import org.scalatest.Inside
+import org.scalatest.prop.TableDrivenPropertyChecks
 
 import scala.collection.immutable.Seq
 
-class ResourceMatcherTest extends UnitTest with Inside {
+class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyChecks {
 
   implicit val clock = new SettableClock()
   val config = AllConf.withTestConfig("--draining_seconds", "300")
@@ -1178,6 +1179,51 @@ class ResourceMatcherTest extends UnitTest with Inside {
 
       resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
+    }
+
+  }
+
+  "ResourceMatcher" should {
+
+    val overrideCases = Table(
+      ("gpu_scheduling_behavior", "GPU_SCHEDULING_BEHAVIOR", "expected"),
+      ("unrestricted", Some("restricted"), "NoMatch"),
+      ("unrestricted", None, "Match"),
+      ("restricted", Some("unrestricted"), "Match"),
+      ("restricted", None, "NoMatch")
+    )
+
+    forAll(overrideCases) { (gpuSchedulingBehavior, overrideLabel, expected) =>
+
+      s"return a $expected in case of ${overrideLabel.getOrElse("no")} override of $gpuSchedulingBehavior behavior and no Persistent Volume involved" in {
+
+        val gpuConfig = AllConf.withTestConfig(
+          "--draining_seconds", "300",
+          "--gpu_scheduling_behavior", gpuSchedulingBehavior,
+          "--enable_features", "gpu_resources")
+        val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+          .build()
+        val app = AppDefinition(
+          id = "/test".toRootPath,
+          resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+          portDefinitions = PortDefinitions(0, 0),
+
+          labels = overrideLabel.map(label => Map("GPU_SCHEDULING_BEHAVIOR" -> label)).getOrElse(Map.empty)
+        )
+
+        val resourceMatchResponse = ResourceMatcher.matchResources(
+          offer,
+          app,
+          knownInstances = Seq.empty,
+          unreservedResourceSelector,
+          gpuConfig,
+          Seq.empty
+        )
+
+        def getObjectName(fqcn: String) = fqcn.reverse.takeWhile(_ != '$').reverse
+
+        getObjectName(resourceMatchResponse.getClass.getName) shouldEqual expected
+      }
     }
   }
 

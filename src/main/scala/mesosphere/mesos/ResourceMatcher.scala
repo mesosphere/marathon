@@ -249,9 +249,11 @@ object ResourceMatcher extends StrictLogging {
     }
 
     val checkGpuSchedulingBehaviour: Boolean = {
+      val applicationSpecificGpuBehavior = runSpec.labels.get("GPU_SCHEDULING_BEHAVIOR")
+        .filter(behavior => validBehaviors.contains(behavior))
       val availableGPUs = groupedResources.getOrElse(Resource.GPUS, Nil).foldLeft(0.0)(_ + _.getScalar.getValue)
       val gpuResourcesAreWasted = availableGPUs > 0 && runSpec.resources.gpus == 0
-      conf.gpuSchedulingBehavior() match {
+      applicationSpecificGpuBehavior.getOrElse(conf.gpuSchedulingBehavior()) match {
         case GpuSchedulingBehavior.Undefined =>
           if (gpuResourcesAreWasted) {
             addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
@@ -265,7 +267,7 @@ object ResourceMatcher extends StrictLogging {
             noOfferMatchReasons += NoOfferMatchReason.DeclinedScarceResources
             false
           } else {
-            addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
+            addOnMatch(() => logger.info(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
               "will be launched on an agent with GPU resources due to required persistent volume."))
             true
           }
@@ -574,4 +576,6 @@ object ResourceMatcher extends StrictLogging {
           s"Not all basic resources satisfied: $basicResourceString")
     }
   }
+
+  private val validBehaviors = Set(GpuSchedulingBehavior.Restricted, GpuSchedulingBehavior.Unrestricted)
 }
