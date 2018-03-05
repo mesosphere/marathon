@@ -195,7 +195,7 @@ class InstanceOpFactoryImpl(
           ResourceSelector.reservable, config, schedulerPlugins, localRegion)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
-          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)
+          val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, request.instanceId, offer, matches.resourceMatch)
           Some(OfferMatchResult.Match(spec, request.offer, instanceOp, clock.now()))
         case matchesNot: ResourceMatchResponse.NoMatch =>
           Some(OfferMatchResult.NoMatch(spec, request.offer, matchesNot.reasons, clock.now()))
@@ -311,6 +311,7 @@ class InstanceOpFactoryImpl(
   private[this] def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
     runSpec: RunSpec,
+    instanceId: Instance.Id,
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
@@ -340,7 +341,7 @@ class InstanceOpFactoryImpl(
         // will be replaced with a new task once we launch on an existing reservation this way, the reservation will be
         // labeled with a taskId that does not relate to a task existing in Mesos (previously, Marathon reused taskIds so
         // there was always a 1:1 correlation from reservation to taskId)
-        val taskId = Task.Id.forRunSpec(runSpec.id)
+        val taskId = Task.Id.forInstanceId(instanceId, None)
         val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
         val task = Task(
           taskId = taskId,
@@ -370,7 +371,6 @@ class InstanceOpFactoryImpl(
         (reservationLabels, stateOp)
 
       case pod: PodDefinition =>
-        val instanceId = Instance.Id.forRunSpec(runSpec.id)
         val taskIds = pod.containers.map { container =>
           Task.Id.forInstanceId(instanceId, Some(container))
         }
