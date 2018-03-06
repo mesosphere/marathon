@@ -182,6 +182,7 @@ When using Debian packages, these environment variables should be defined in `/e
     Time (in seconds) when marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
     **Note:** In order to activate the `--draining_seconds` configuration, you must add `maintenance_mode` to the set of `--enable_features`.
 
+
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
@@ -250,6 +251,8 @@ configurable. A short duration might lead to resource starvation for other frame
 in your cluster. You should only need to reduce it if you use `--disable_revive_offers_for_new_apps`.
 
 * `--decline_offer_duration` (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.
+
+* <span class="label label-default">v1.6.x</span> `-- gpu_scheduling_behavior` (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are `undefined`, `restricted` and `unrestricted`. Read more about [Preferential GPU scheduling](preferential_gpu_scheduling.html).
 
 
 ### Marathon after 0.8.2 (including) and before 0.11.0
