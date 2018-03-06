@@ -5,10 +5,9 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{ AppHealthCheck, AppHealthCheckProtocol, AppUpdate, PortDefinition, ReadinessCheck }
 import mesosphere.marathon.state.PathId
-import org.scalatest.concurrent.Eventually
 
 @IntegrationTest
-class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
+class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   //clean up state before running the test case
   before(cleanUp())
