@@ -258,7 +258,7 @@ class PodsResource @Inject() (
     // don't need to authorize as taskKiller will do so.
     withValid(id.toRootPath) { id =>
       withValid(instanceId) { instanceId =>
-        val instances = result(taskKiller.kill(id, _.filter(_.instanceId == Instance.Id(instanceId))))
+        val instances = result(taskKiller.kill(id, _.filter(_.instanceId == Instance.Id.fromIdString(instanceId))))
         instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
       }
     }
@@ -279,7 +279,7 @@ class PodsResource @Inject() (
       // don't need to authorize as taskKiller will do so.
       withValid(id.toRootPath) { id =>
         withValid(Json.parse(body).as[Set[String]]) { instancesToKill =>
-          val instancesDesired = instancesToKill.map(Instance.Id(_))
+          val instancesDesired = instancesToKill.map(Instance.Id.fromIdString(_))
           def toKill(instances: Seq[Instance]): Seq[Instance] = {
             instances.filter(instance => instancesDesired.contains(instance.instanceId))
           }

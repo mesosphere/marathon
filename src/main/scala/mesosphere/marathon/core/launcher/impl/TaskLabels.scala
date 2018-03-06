@@ -34,7 +34,7 @@ object TaskLabels {
     ReservationLabels(Map(
       FRAMEWORK_ID_LABEL -> frameworkId.id,
       // This uses taskId.reservationId to match against the id that was originally used to create the reservation
-      TASK_ID_LABEL -> Task.Id.reservationId(taskId.idString)
+      TASK_ID_LABEL -> taskId.reservationId //Task.Id.reservationId(taskId.idString)
     ))
   }
 

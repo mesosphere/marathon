@@ -306,7 +306,7 @@ class PodsController(
         } ~
         path(PodsPathIdLike ~ "::instances" / PathMatchers.Segment) { (runSpecId: String, instanceId: String) =>
           assumeValid(validatePathId(runSpecId) and validateInstanceId(instanceId)) {
-            killInstance(Instance.Id(instanceId))
+            killInstance(Instance.Id.fromIdString(instanceId))
           }
         }
       } ~

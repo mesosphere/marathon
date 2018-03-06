@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package core.instance
 
-import java.util.Base64
+import java.util.{ Base64, UUID }
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableStrategy, UnreachableDisabled, UnreachableEnabled }
+import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy }
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Placed
@@ -229,10 +229,37 @@ object Instance {
     }
   }
 
-  case class Id(idString: String) extends Ordered[Id] {
-    lazy val runSpecId: PathId = Id.runSpecId(idString)
-    lazy val executorIdString: String = Id.executorIdString(idString)
+  sealed trait Prefix {
+    val value: String
+    override def toString: String = value
+  }
+  case object PrefixInstance extends Prefix {
+    override val value = "instance-"
+  }
+  case object PrefixMarathon extends Prefix {
+    override val value = "marathon-"
+  }
+  object Prefix {
+    def fromString(prefix: String) = {
+      if (prefix == PrefixInstance.value) PrefixInstance
+      else PrefixMarathon
+    }
+  }
 
+  case class Id(val runSpecId: PathId, val prefix: Prefix, uuid: UUID) extends Ordered[Id] {
+    lazy val safeRunSpecId = runSpecId.safePath
+    lazy val executorIdString: String = prefix + safeRunSpecId + "." + uuid
+
+    // Must match Id.InstanceIdRegex
+    // TODO: Unit test against regex
+    lazy val idString = safeRunSpecId + "." + prefix + uuid
+
+    /**
+      * String representation used for logging and debugging. Should *not* be used for Mesos task ids. Use `idString`
+      * instead.
+      *
+      * @return String representation of id.
+      */
     override def toString: String = s"instance [$idString]"
 
     override def compare(that: Instance.Id): Int =
@@ -248,21 +275,16 @@ object Instance {
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
-    def runSpecId(instanceId: String): PathId = {
-      instanceId match {
-        case InstanceIdRegex(runSpecId, prefix, uuid) => PathId.fromSafePath(runSpecId)
-        case _ => throw new MatchError("unable to extract runSpecId from instanceId " + instanceId)
+    def forRunSpec(id: PathId): Id = Instance.Id(id, PrefixInstance, uuidGenerator.generate())
+
+    def fromIdString(idString: String): Instance.Id = {
+      idString match {
+        case InstanceIdRegex(safeRunSpecId, prefix, uuid) =>
+          val runSpec = PathId.fromSafePath(safeRunSpecId)
+          Id(runSpec, Prefix.fromString(prefix), UUID.fromString(uuid))
+        case _ => throw new MatchError(s"instance id $idString no valid identifier")
       }
     }
-
-    private def executorIdString(instanceId: String): String = {
-      instanceId match {
-        case InstanceIdRegex(runSpecId, prefix, uuid) => prefix + runSpecId + "." + uuid
-        case _ => throw new MatchError("unable to extract executorId from instanceId " + instanceId)
-      }
-    }
-
-    def forRunSpec(id: PathId): Id = Instance.Id(id.safePath + ".instance-" + uuidGenerator.generate())
   }
 
   /**
@@ -335,7 +357,11 @@ object Instance {
   )(AgentInfo(_, _, _, _, _))
 
   implicit val agentFormat: Format[AgentInfo] = Format(agentReads, Json.writes[AgentInfo])
-  implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]
+  implicit val idFormat: Format[Instance.Id] = Format(
+    Reads.of[String](Reads.minLength[String](3)).map(Instance.Id.fromIdString(_)),
+    Writes[Instance.Id] { id => JsString(id.idString) }
+  )
+
   implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
   implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
@@ -373,7 +399,7 @@ object Instance {
 
   implicit lazy val tasksMapFormat: Format[Map[Task.Id, Task]] = Format(
     Reads.of[Map[String, Task]].map {
-      _.map { case (k, v) => Task.Id(k) -> v }
+      _.map { case (k, v) => Task.Id.fromIdString(k) -> v }
     },
     Writes[Map[Task.Id, Task]] { m =>
       val stringToTask = m.map {

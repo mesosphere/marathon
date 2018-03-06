@@ -65,7 +65,7 @@ trait ZkStoreSerialization {
       override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
         ZkId(category, id.idString, version)
       override val category: String = "instance"
-      override def fromStorageId(key: ZkId): Id = Instance.Id(key.id)
+      override def fromStorageId(key: ZkId): Id = Instance.Id.fromIdString(key.id)
       override val hasVersions: Boolean = false
       override def version(v: Instance): OffsetDateTime = OffsetDateTime.MIN
     }

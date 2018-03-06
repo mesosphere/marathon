@@ -134,8 +134,10 @@ class TasksController(
 
   private def tryParseTaskIds(taskIds: TasksToDelete): Either[Rejection, Map[Id, PathId]] = {
     val maybeInstanceIdToAppId: Try[Map[Id, PathId]] = Try(taskIds.ids.map { id =>
-      try { Task.Id(id).instanceId -> Task.Id.runSpecId(id) }
-      catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'. [${e.getMessage}]") }
+      try {
+        val taskId = Task.Id.fromIdString(id)
+        taskId.instanceId -> taskId.instanceId.runSpecId
+      } catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'. [${e.getMessage}]") }
     }(collection.breakOut))
 
     maybeInstanceIdToAppId match {

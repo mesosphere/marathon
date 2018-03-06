@@ -17,7 +17,7 @@ object PathMatchers {
   /**
     * Matches the remaining path and transforms it into task id
     */
-  final val RemainingTaskId = Remaining.map(s => Task.Id(s))
+  final val RemainingTaskId = Remaining.map(s => Task.Id.fromIdString(s))
 
   /**
     * Tries to match the remaining path as Timestamp
