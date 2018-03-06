@@ -3,6 +3,7 @@ package core.readiness.impl
 
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
@@ -108,8 +109,9 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
   }
 
   class Fixture {
+    val instanceId = Instance.Id.forRunSpec(PathId("/test"))
     lazy val check = ReadinessCheckSpec(
-      taskId = Task.Id.forRunSpec(PathId("/test")),
+      taskId = Task.Id.forInstanceId(instanceId, None),
       checkName = "testCheck",
       url = "http://sample.url:123",
       interval = 1.milliseconds, // we're testing!

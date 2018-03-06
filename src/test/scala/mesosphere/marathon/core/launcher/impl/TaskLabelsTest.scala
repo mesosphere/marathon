@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.launcher.impl
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream.Implicits._
@@ -46,7 +47,8 @@ class TaskLabelsTest extends UnitTest {
   }
   class Fixture {
     val appId = PathId("/test")
-    val taskId = Task.Id.forRunSpec(appId)
+    val instanceId = Instance.Id.forRunSpec(appId)
+    val taskId = Task.Id.forInstanceId(instanceId, None)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 

@@ -4,7 +4,7 @@ package raml
 import mesosphere.UnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
-import mesosphere.marathon.core.instance.{Goal, Reservation}
+import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{PathId, Timestamp}
@@ -534,7 +534,8 @@ object PodStatusConversionTest {
   } // fakeInstance
 
   def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
-    val taskId = core.task.Task.Id.forRunSpec(PathId.empty)
+    val instanceId = Instance.Id.forRunSpec(PathId.empty)
+    val taskId = core.task.Task.Id.forInstanceId(instanceId, None)
     core.task.Task(
       taskId = taskId,
       status = core.task.Task.Status(

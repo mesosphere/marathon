@@ -27,7 +27,7 @@ class InstanceOpFactoryHelperTest extends UnitTest {
       Given("A non-matching task and taskInfo")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId).getInstance()
       val task: Task = instance.appTask
-      val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(f.runSpecId)).build()
+      val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instance.instanceId, None)).build()
 
       When("We create a launch operation")
       val error = intercept[AssertionError] {

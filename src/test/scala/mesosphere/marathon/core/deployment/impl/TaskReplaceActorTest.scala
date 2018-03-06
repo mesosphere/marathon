@@ -659,8 +659,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       }
       assert(f.killService.numKilled == 0)
 
-      val newTaskId = Task.Id.forRunSpec(newApp.id)
-      val newInstanceId = newTaskId.instanceId
+      val newInstanceId = Instance.Id.forRunSpec(newApp.id)
+      val newTaskId = Task.Id.forInstanceId(newInstanceId, None)
 
       //unhealthy
       ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(false))

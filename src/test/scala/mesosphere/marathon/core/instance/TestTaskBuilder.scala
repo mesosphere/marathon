@@ -70,9 +70,8 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
   def taskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now,
     startedAt: Timestamp = now): TestTaskBuilder = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.runningTask(
-      Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)),
-      instance.runSpecVersion, stagedAt = stagedAt.millis, startedAt = startedAt.millis)))
+    this.copy(task = Some(TestTaskBuilder.Helper.runningTask(instance.instanceId, instance.runSpecVersion,
+      stagedAt = stagedAt.millis, startedAt = startedAt.millis, maybeMesosContainerByName(containerName))))
   }
 
   /**
@@ -168,9 +167,8 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
   def taskStaged(containerName: Option[String] = None, stagedAt: Timestamp = now,
     version: Option[Timestamp] = None): TestTaskBuilder = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.stagedTask(
-      Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)),
-      version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.millis)))
+    this.copy(task = Some(TestTaskBuilder.Helper.stagedTask(instance.instanceId, version.getOrElse(instance.runSpecVersion),
+      stagedAt = stagedAt.millis, maybeMesosContainerByName(containerName))))
   }
 
   def taskStarting(stagedAt: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder = {
@@ -231,7 +229,7 @@ object TestTaskBuilder extends StrictLogging {
           networkInfo = NetworkInfo(hostName = "host.some", hostPorts = Seq(1, 2, 3), ipAddresses = Nil)))
     }
 
-    def minimalTask(appId: PathId): Task = minimalTask(Task.Id.forRunSpec(appId))
+    def minimalTask(appId: PathId): Task = minimalTask(Instance.Id.forRunSpec(appId), None, Timestamp.now())
 
     def minimalTask(instanceId: Instance.Id, container: Option[MesosContainer], now: Timestamp): Task =
       minimalTask(Task.Id.forInstanceId(instanceId, container), now)
@@ -257,7 +255,8 @@ object TestTaskBuilder extends StrictLogging {
 
     def minimalLostTask(appId: PathId, taskCondition: Condition = Condition.Gone,
       since: Timestamp = Timestamp.now()): Task = {
-      val taskId = Task.Id.forRunSpec(appId)
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = Task.Id.forInstanceId(instanceId, None)
       val status = MesosTaskStatusTestHelper.lost(
         mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION, taskId, since)
       minimalTask(
@@ -278,7 +277,8 @@ object TestTaskBuilder extends StrictLogging {
 
     def minimalRunning(appId: PathId, taskCondition: Condition = Condition.Running,
       since: Timestamp = Timestamp.now()): Task = {
-      val taskId = Task.Id.forRunSpec(appId)
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = Task.Id.forInstanceId(instanceId, None)
       val status = MesosTaskStatusTestHelper.mesosStatus(
         state = mesos.Protos.TaskState.TASK_RUNNING, maybeHealthy = Option(true), taskId = taskId)
       minimalTask(
@@ -290,7 +290,8 @@ object TestTaskBuilder extends StrictLogging {
     }
 
     def residentReservedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
-      val taskId = maybeTaskId.getOrElse(Task.Id.forRunSpec(appId))
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId, None))
       Task(
         taskId = taskId,
         status = Task.Status(Timestamp.now(), condition = Condition.Reserved, networkInfo = NetworkInfoPlaceholder()),
@@ -299,7 +300,8 @@ object TestTaskBuilder extends StrictLogging {
 
     def residentLaunchedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
       val now = Timestamp.now()
-      val taskId = maybeTaskId.getOrElse(Task.Id.forRunSpec(appId))
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId, None))
       Task(
         taskId = taskId,
         runSpecVersion = now,
@@ -313,7 +315,8 @@ object TestTaskBuilder extends StrictLogging {
 
     def unreachableTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
       val now = Timestamp.now()
-      val taskId = maybeTaskId.getOrElse(Task.Id.forRunSpec(appId))
+      val instanceId = Instance.Id.forRunSpec(appId)
+      val taskId = maybeTaskId.getOrElse(Task.Id.forInstanceId(instanceId, None))
       Task(
         taskId = taskId,
         runSpecVersion = now,
@@ -344,10 +347,14 @@ object TestTaskBuilder extends StrictLogging {
           networkInfo = NetworkInfoPlaceholder()))
 
     def stagedTaskForApp(
-      appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
-      stagedTask(Task.Id.forRunSpec(appId), appVersion = appVersion, stagedAt = stagedAt)
+      appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task = {
+      val instanceId = Instance.Id.forRunSpec(appId)
+      stagedTask(instanceId, appVersion = appVersion, stagedAt = stagedAt)
+    }
 
-    def stagedTask(taskId: Task.Id, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
+    def stagedTask(instanceId: Instance.Id, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2, container: Option[MesosContainer] = None): Task = {
+      val taskId = Task.Id.forInstanceId(instanceId, container)
+
       Task(
         taskId = taskId,
         runSpecVersion = appVersion,
@@ -357,6 +364,7 @@ object TestTaskBuilder extends StrictLogging {
           mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_STAGING)),
           condition = Condition.Staging,
           networkInfo = NetworkInfoPlaceholder()))
+    }
 
     def statusForState(taskId: String, state: mesos.Protos.TaskState,
       maybeReason: Option[mesos.Protos.TaskStatus.Reason] = None): mesos.Protos.TaskStatus = {
@@ -375,19 +383,21 @@ object TestTaskBuilder extends StrictLogging {
       stagedAt: Long = 2,
       startedAt: Long = 3): Task =
       runningTask(
-        Task.Id.forRunSpec(appId),
+        Instance.Id.forRunSpec(appId),
         appVersion = appVersion,
         stagedAt = stagedAt,
         startedAt = startedAt
       )
 
     def runningTask(
-      taskId: Task.Id,
+      instanceId: Instance.Id,
       appVersion: Timestamp = Timestamp(1),
       stagedAt: Long = 2,
-      startedAt: Long = 3): Task = {
+      startedAt: Long = 3,
+      container: Option[MesosContainer] = None): Task = {
       import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 
+      val taskId = Task.Id.forInstanceId(instanceId, container)
       startingTask(taskId, appVersion, stagedAt)
         .withStatus((status: Task.Status) =>
           status.copy(
@@ -410,22 +420,20 @@ object TestTaskBuilder extends StrictLogging {
             mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_KILLED))))
     }
 
-    def healthyTask(appId: PathId): Task = healthyTask(Task.Id.forRunSpec(appId))
-
-    def healthyTask(taskId: Task.Id): Task = {
+    def healthyTask(instanceId: Instance.Id): Task = {
       import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 
-      runningTask(taskId).withStatus { status =>
+      runningTask(instanceId).withStatus { status =>
         status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(true).build()))
       }
     }
 
-    def unhealthyTask(appId: PathId): Task = unhealthyTask(Task.Id.forRunSpec(appId))
+    def unhealthyTask(appId: PathId): Task = unhealthyTask(Instance.Id.forRunSpec(appId))
 
-    def unhealthyTask(taskId: Task.Id): Task = {
+    def unhealthyTask(instanceId: Instance.Id): Task = {
       import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 
-      runningTask(taskId).withStatus { status =>
+      runningTask(instanceId).withStatus { status =>
         status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(false).build()))
       }
     }

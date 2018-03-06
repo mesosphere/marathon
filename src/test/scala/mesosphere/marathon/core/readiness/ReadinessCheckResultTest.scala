@@ -3,6 +3,7 @@ package core.readiness
 
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes}
 import mesosphere.UnitTest
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
@@ -72,8 +73,9 @@ class ReadinessCheckResultTest extends UnitTest {
     }
   }
   class Fixture {
+    val instanceId = Instance.Id.forRunSpec(PathId("/test"))
     val check = ReadinessCheckSpec(
-      taskId = Task.Id.forRunSpec(PathId("/test")),
+      taskId = Task.Id.forInstanceId(instanceId, None),
       checkName = "testCheck",
       url = "http://sample.url:123",
       interval = 3.seconds,

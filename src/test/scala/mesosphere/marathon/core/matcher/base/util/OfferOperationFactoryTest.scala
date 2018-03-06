@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.matcher.base.util
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.instance.{LocalVolume, LocalVolumeId}
+import mesosphere.marathon.core.instance.{Instance, LocalVolume, LocalVolumeId}
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
@@ -138,7 +138,8 @@ class OfferOperationFactoryTest extends UnitTest {
   }
   class Fixture {
     val runSpecId = PathId("/my-app")
-    val taskId = Task.Id.forRunSpec(runSpecId)
+    val instanceId = Instance.Id.forRunSpec(runSpecId)
+    val taskId = Task.Id.forInstanceId(instanceId, None)
     val frameworkId = MarathonTestHelper.frameworkId
     val reservationLabels = TaskLabels.labelsForTask(frameworkId, taskId)
     val principal = Some("principal")
