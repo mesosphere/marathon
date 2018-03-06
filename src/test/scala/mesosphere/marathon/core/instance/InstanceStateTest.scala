@@ -148,9 +148,8 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
     def tasks(statuses: Condition*): Map[Task.Id, Task] = tasks(statuses.to[Seq])
 
     def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] = {
-      val instanceId = Instance.Id.forRunSpec(id)
-
       statuses.map { status =>
+        val instanceId = Instance.Id.forRunSpec(id)
         val taskId = Task.Id.forInstanceId(instanceId, None)
         val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(status, taskId, Timestamp.now)
         val task = TestTaskBuilder.Helper.minimalTask(taskId, Timestamp.now(), mesosStatus, status)
