@@ -59,7 +59,7 @@ class TaskBuilder(
         builder.setCommand(command.build)
 
       case PathExecutor(path) =>
-        val executorId = Task.Id.calculateLegacyExecutorId(taskId.idString)
+        val executorId = taskId.calculateLegacyExecutorId()
         val executorPath = s"'$path'" // TODO: Really escape this.
         val cmd = runSpec.cmd.getOrElse(runSpec.args.mkString(" "))
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"

@@ -14,33 +14,6 @@ case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
 object Reservation {
 
   /**
-    * Reservation.Id represents a reservation ID which is used in a task reservation labels.
-    */
-  case class Id(runSpecId: String, separator: String, prefix: Option[String], uuid: String) {
-    override def toString: String = prefix match {
-      case Some(prefixStr) => runSpecId + separator + prefixStr + uuid
-      case None => runSpecId + separator + uuid
-    }
-
-    def instanceId: Instance.Id = prefix match {
-      case Some(prefixStr) => Instance.Id(runSpecId + separator + prefixStr + uuid)
-      case None => Instance.Id(runSpecId + separator + "marathon-" + uuid)
-    }
-  }
-
-  object Id {
-    private val ReservationIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)$""".r
-    private val ReservationIdRegex = """^(.+)([\._])([^_\.]+)$""".r
-
-    def apply(reservationId: String): Reservation.Id = reservationId match {
-      case ReservationIdWithInstanceIdRegex(runSpecId, prefix, uuid) =>
-        Reservation.Id(runSpecId, ".", Some(prefix), uuid)
-      case ReservationIdRegex(runSpecId, separator, uuid) =>
-        Reservation.Id(runSpecId, separator, None, uuid)
-    }
-  }
-
-  /**
     * A timeout that eventually leads to a state transition
     *
     * @param initiated When this timeout was setup

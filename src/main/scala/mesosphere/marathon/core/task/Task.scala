@@ -173,13 +173,46 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 object Task {
   private val log = LoggerFactory.getLogger(getClass)
 
+  /**
+    * The identifier for a task. It always includes the instance id. A task id can have different additional properties:
+    *   - Ephemeral tasks have the same as the instance they belong to.
+    *   - Tasks belonging to a pod, ie a Mesos task group, share the same instance id but have each a different container
+    *     name. This is the container name specified in the containers section of the run spec.
+    *   - Resident tasks, ie a task with a volume, usually have an attempt count after their first launch. The do not
+    *     have an attempt count when they were reserved.
+    *
+    * @param instanceId Reference to the instance id which includes the run spec identifier and a unique id.
+    * @param containerName If the identified task belongs to a pod this is its container name.
+    * @param attempt If the identified task belongs to a resident instance this is the count for launch attempts so far.
+    */
   case class Id(val instanceId: Instance.Id, val containerName: Option[String], val attempt: Option[Long]) extends Ordered[Id] {
 
+    // TODO(karsten): Test whether we can kill legacy tasks with this id. I don't think we can.
+    // TODO(karsten): Make compatible with legacy task. These are all possible ids:
+    //  - Reservation 1          runSpecId + "." + "marathon-" + uuid
+    //  - Reservation 2          runSpecId + "_" + "marathon-" + uuid
+    //  - Reservation 3          runSpecId + "." + "instance-" + uuid
+    //  - Reservation 4          runSpecId + "_" + "instance-" + uuid
+    //  - Reservation 5 (Legacy) runSpecId + "_" + uuid
+    //  - Reservation 6 (Legacy) runSpecId + "." + uuid
+    //  - Reservation 7          runSpecId + "." + "marathon-" + uuid
+    //  - Reservation 8          runSpecId + "." + "instance-" + uuid
+    //  - Resident 1             runSpecId + "." + "marathon-" + uuid + container + "." + attempt
+    //  - Resident 2             runSpecId + "." + "instance-" + uuid + container + "." + attempt
+    //  - Resident 3 (Legacy)    runSpecId + "_" + uuid + "." + attempt
+    //  - Resident 4 (Legacy)    runSpecId + "." + uuid + "." + attempt
+    //  - Ephemeral 1 (Legacy)   runSpecId + "_" + uuid
+    //  - Ephemeral 2 (Legacy)   runSpecId + "." + uuid
+    //  - Ephemeral 3            runSpecId + "." + "instance-" + uuid + container
+    //  - Ephemeral 4            runSpecId + "." + "marathon-" + uuid + container
+    //
+    // A stringifed version of the id.
     lazy val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + attempt.getOrElse("")
 
-    lazy val reservationId = idString // Verify with Reservation.Id
-
+    // The Mesos task id representation of the task.
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
+
+    // Quick access to the underlying run spec identifier of the instance.
     lazy val runSpecId: PathId = instanceId.runSpecId
 
     /**
@@ -187,6 +220,10 @@ object Task {
       */
     override def toString: String = s"task [$idString]"
     override def compare(that: Id): Int = idString.compare(that.idString)
+
+    // pre-instance-era executorId="marathon-$taskId" and compatibility reasons we need this calculation.
+    // Should be removed as soon as no tasks without instance exists (tbd)
+    def calculateLegacyExecutorId(): String = s"marathon-$idString"
   }
 
   object Id {
@@ -200,11 +237,13 @@ object Task {
 
     // Regular expression for matching resident app taskIds
     private val ResidentTaskIdRegex = """^(.+)([\._])([^_\.]+)(\.)(\d+)$""".r
+    private val ReservationIdRegex = """^(.+)([\._])([^_\.]+)$""".r
     private val ResidentTaskIdAttemptSeparator = "."
 
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
+    private val ReservationIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
@@ -244,18 +283,21 @@ object Task {
       }
     }
 
-    def runSpecId(taskId: String): PathId = fromIdString(taskId).runSpecId
-
-    def instanceId(taskId: String): Instance.Id = fromIdString(taskId).instanceId
-
+    /**
+      * Construct a task id from a Mesos task id.
+      *
+      * @param mesosTaskId The task identifier in the Mesos world.
+      * @return Task id in Marathon world.
+      */
     def apply(mesosTaskId: MesosProtos.TaskID): Id = fromIdString(mesosTaskId.getValue)
 
     /**
-      * Create a taskId according to the old schema (no instance designator, no mesos container name).
+      * Create a taskId according to the old schema (no instance designator, no Mesos container name).
       * Use this when needing to create an ID for a normal App task or a task for initial reservation handling.
       *
       * Use @forResidentTask when you want to launch a task on an existing reservation.
       */
+    @deprecated("Task ids should be created from instance ids and not run spec ids")
     def forRunSpec(id: PathId): Id = {
       val instanceId = Instance.Id(id, Instance.PrefixInstance, uuidGenerator.generate())
       Task.Id(instanceId, None, None)
@@ -286,10 +328,6 @@ object Task {
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id.fromIdString(_)),
       Writes[Task.Id] { id => JsString(id.idString) }
     )
-
-    // pre-instance-era executorId="marathon-$taskId" and compatibility reasons we need this calculation.
-    // Should be removed as soon as no tasks without instance exists (tbd)
-    def calculateLegacyExecutorId(taskId: String): String = s"marathon-$taskId"
   }
 
   /**
