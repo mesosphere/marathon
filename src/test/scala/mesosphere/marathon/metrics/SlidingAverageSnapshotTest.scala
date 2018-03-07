@@ -171,6 +171,9 @@ object SlidingAverageSnapshotTest {
     import scala.concurrent.duration._
     Await.result(system.whenTerminated, 30 seconds)
 
+    // Shut down kamon when done
+    Kamon.shutdown()
+
     // Return the metrics collected
     metrics
   }
