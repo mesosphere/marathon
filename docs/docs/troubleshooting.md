@@ -13,7 +13,7 @@ framework hords all these resources. You can check the Mesos UI for available re
 
 If you do not find the solution yourself and you create a GitHub issue, please append the output of Mesos `/state` endpoint to the bug report so that we can inspect available cluster resources.
 
-### Requiring a specific host port
+## Requiring a specific host port
 
 Generally, it is not recommended to configure your apps to depend on a particular host port because it constraints
 scheduling. We know that it is sometimes only avoidable at great cost so Marathon allows you to specify a required
@@ -55,3 +55,8 @@ keytool -import -trustcacerts -file ./cacert.cer -alias yourca --keystore /my/pa
 ## Error reading authentication secret from file
 
 When using framework-authentication on the master, be sure to set a secret that has a minimum of eight characters. Secrets shorter than that length may not be accepted by Marathon.
+
+## Using firewalls
+
+If you have a firewall, you may want to disable dynamic assignment of the port which is used by marathon to talk to Mesos.
+It is possible via `LIBPROCESS_PORT` environment variable.
