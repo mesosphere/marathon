@@ -1,20 +1,21 @@
 package mesosphere.marathon
 package core.task
 
-import java.util.{ Base64, UUID }
+import java.util.{Base64, UUID}
+import javax.swing.JPopupMenu.Separator
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
-import mesosphere.marathon.core.instance.{ Instance, Reservation }
+import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
+import mesosphere.marathon.core.task.update.{TaskUpdateEffect, TaskUpdateOperation}
 import mesosphere.marathon.state._
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
+import org.apache.mesos.{Protos => MesosProtos}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
@@ -174,56 +175,127 @@ object Task {
   private val log = LoggerFactory.getLogger(getClass)
 
   /**
-    * The identifier for a task. It always includes the instance id. A task id can have different additional properties:
-    *   - Ephemeral tasks have the same as the instance they belong to.
-    *   - Tasks belonging to a pod, ie a Mesos task group, share the same instance id but have each a different container
-    *     name. This is the container name specified in the containers section of the run spec.
-    *   - Resident tasks, ie a task with a volume, usually have an attempt count after their first launch. The do not
-    *     have an attempt count when they were reserved.
-    *
-    * @param instanceId Reference to the instance id which includes the run spec identifier and a unique id.
-    * @param containerName If the identified task belongs to a pod this is its container name.
-    * @param attempt If the identified task belongs to a resident instance this is the count for launch attempts so far.
+    * Base for all task identifiers.
     */
-  case class Id(val instanceId: Instance.Id, val containerName: Option[String], val attempt: Option[Long]) extends Ordered[Id] {
-
-    // TODO(karsten): Test whether we can kill legacy tasks with this id. I don't think we can.
-    // TODO(karsten): Make compatible with legacy task. These are all possible ids:
-    //  - Reservation 1          runSpecId + "." + "marathon-" + uuid
-    //  - Reservation 2          runSpecId + "_" + "marathon-" + uuid
-    //  - Reservation 3          runSpecId + "." + "instance-" + uuid
-    //  - Reservation 4          runSpecId + "_" + "instance-" + uuid
-    //  - Reservation 5 (Legacy) runSpecId + "_" + uuid
-    //  - Reservation 6 (Legacy) runSpecId + "." + uuid
-    //  - Reservation 7          runSpecId + "." + "marathon-" + uuid
-    //  - Reservation 8          runSpecId + "." + "instance-" + uuid
-    //  - Resident 1             runSpecId + "." + "marathon-" + uuid + container + "." + attempt
-    //  - Resident 2             runSpecId + "." + "instance-" + uuid + container + "." + attempt
-    //  - Resident 3 (Legacy)    runSpecId + "_" + uuid + "." + attempt
-    //  - Resident 4 (Legacy)    runSpecId + "." + uuid + "." + attempt
-    //  - Ephemeral 1 (Legacy)   runSpecId + "_" + uuid
-    //  - Ephemeral 2 (Legacy)   runSpecId + "." + uuid
-    //  - Ephemeral 3            runSpecId + "." + "instance-" + uuid + container
-    //  - Ephemeral 4            runSpecId + "." + "marathon-" + uuid + container
-    //
+  trait Id extends Ordered[Id] {
     // A stringifed version of the id.
-    lazy val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + attempt.getOrElse("")
+    val idString: String
+
+    // Quick access to the underlying run spec identifier of the task.
+    val runSpecId: PathId
 
     // The Mesos task id representation of the task.
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
 
-    // Quick access to the underlying run spec identifier of the instance.
-    lazy val runSpecId: PathId = instanceId.runSpecId
+    // pre-instance-era executorId="marathon-$taskId" and compatibility reasons we need this calculation.
+    // Should be removed as soon as no tasks without instance exists (tbd)
+    def calculateLegacyExecutorId(): String = s"marathon-$idString"
+
+    override def compare(that: Id): Int = idString.compare(that.idString)
 
     /**
       * @return String representation for debugging.
       */
     override def toString: String = s"task [$idString]"
-    override def compare(that: Id): Int = idString.compare(that.idString)
+  }
 
-    // pre-instance-era executorId="marathon-$taskId" and compatibility reasons we need this calculation.
-    // Should be removed as soon as no tasks without instance exists (tbd)
-    def calculateLegacyExecutorId(): String = s"marathon-$idString"
+  /**
+    * A task identifier for legacy tasks. This cannot represent a pod instance. These ids won't be created but old Mesos
+    * tasks might have such an instance thus we have to represent them.
+    *
+    * This id can also represent an old reservation for a persistent app, ie an app with resident tasks.
+    *
+    * The ids match [[Task.Id.LegacyTaskIdRegex]].
+    *
+    * Examples:
+    *  - "myGroup_myApp.1234"
+    *  - "myGroup_myApp_1234"
+    *
+    * @param runSpecId Identifies the run spec the task was started with.
+    * @param separator This can be "." or "_".
+    * @param uuid A unique identifier of the task.
+    */
+  case class LegacyId(val runSpecId: PathId, separator: String, uuid: String) extends Id {
+
+    // A stringifed version of the id.
+    override lazy val idString: String = runSpecId.safePath + separator + uuid
+  }
+
+  /**
+    * Identifier for a launched persistent app task, ie a resident task. These ids do not represent resident tasks for
+    * pods, ie tasks in a Mesos group.
+    *
+    * The ids match [[Task.Id.ResidentTaskIdRegex ]].
+    *
+    * Examples:
+    *  - "myGroup_myApp.1234awesome.42"
+    *  - "myGroup_myApp_1234awssome.2"
+    *
+    * @param runSpecId Identifies the run spec the task was started with.
+    * @param separator This can be "." or "_".
+    * @param uuid A unique identifier of the task.
+    * @param attempt Counts how often a task has been launched on a specific reservation.
+    */
+  case class LegacyResidentId(val runSpecId: PathId, separator: String, uuid: String, attempt: Long) extends Id {
+
+    // A stringifed version of the id.
+    override lazy val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
+  }
+
+  /**
+    * Identifier of an ephemeral app or pod task.
+    *
+    * The ids match [[Task.Id.TaskIdWithInstanceIdRegex]]. They do not include any attempts.
+    *
+    * Tasks belonging to a pod, ie a Mesos task group, share the same instance id but have each a different container
+    * name. This is the container name specified in the containers section of the run spec.
+    *
+    * Examples:
+    *  - "myGroup_myApp.marathon-1234.$anon"
+    *  - "myGroup_myApp.instance-1234.$anon"
+    *  - "myGroup_myApp.marathon-1234.rails"
+    *  - "myGroup_myApp.instance-1234.rails"
+    *
+    * @param instanceId Identifies the instance the task belongs to.
+    * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
+    */
+  case class EphermeralTaskId(val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
+
+    // A stringifed version of the id.
+    override lazy val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
+
+    // Quick access to the underlying run spec identifier of the task.
+    override lazy val runSpecId: PathId = instanceId.runSpecId
+  }
+
+  /**
+    * Identifier for a persistent app or pod task reservation, ie a reservation for a resident task. It has the same for
+    * as [[Task.EphermeralTaskId]].
+    */
+  type ReservationTaskId = EphermeralTaskId
+
+  /**
+    * Identifier for a resident app or pod task, ie a task that launched on a reservation.
+    *
+    * The ids match [[Task.Id.ResidentTaskIdWithInstanceIdRegex]] and include a launch attempt.
+    *
+    * Examples:
+    *  - "myGroup_myApp.marathon-1234.$anon.1"
+    *  - "myGroup_myApp.instance-1234.$anon.3"
+    *  - "myGroup_myApp.marathon-1234.rails.2"
+    *  - "myGroup_myApp.instance-1234.rails.42"
+    *
+    * @param instanceId Identifies the instance the task belongs to.
+    * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
+    * @param attempt Counts how often a task has been launched on a specific reservation.
+    */
+  case class ResidentTaskId(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
+
+    // A stringifed version of the id.
+    override lazy val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + attempt
+
+    // Quick access to the underlying run spec identifier of the task.
+    override lazy val runSpecId: PathId = instanceId.runSpecId
   }
 
   object Id {
@@ -233,17 +305,13 @@ object Task {
       val anonymousContainer = "$anon" // presence of `$` is important since it's illegal for a real container name!
     }
     // Regular expression for matching taskIds before instance-era
-    private val LegacyTaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
-
-    // Regular expression for matching resident app taskIds
+    private val LegacyTaskIdRegex   = """^(.+)([\._])([^_\.]+)$""".r
     private val ResidentTaskIdRegex = """^(.+)([\._])([^_\.]+)(\.)(\d+)$""".r
-    private val ReservationIdRegex = """^(.+)([\._])([^_\.]+)$""".r
-    private val ResidentTaskIdAttemptSeparator = "."
 
     // Regular expression for matching taskIds since instance-era
-    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
+    private val TaskIdWithInstanceIdRegex         = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val ResidentTaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
-    private val ReservationIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)$""".r
+    private val ReservationIdWithInstanceIdRegex  = """^(.+)\.(instance-|marathon-)([^_\.]+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
@@ -265,20 +333,20 @@ object Task {
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
-          Task.Id(instanceId, containerName, Some(attempt.toLong))
+          ResidentTaskId(instanceId, containerName, attempt.toLong)
         case TaskIdWithInstanceIdRegex(safeRunSpecId, prefix, uuid, container) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
-          Task.Id(instanceId, containerName, None)
+
+          // This could also be a ResidentTaskId
+          EphermeralTaskId(instanceId, containerName)
         case ResidentTaskIdRegex(safeRunSpecId, separator, uuid, _, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
-          val instanceId = Instance.Id(runSpec, Instance.PrefixInstance, UUID.fromString(uuid))
-          Task.Id(instanceId, None, Some(attempt.toLong))
-        case LegacyTaskIdRegex(safeRunSpecId, uuid) =>
+          LegacyResidentId(runSpec, separator, uuid, attempt.toLong)
+        case LegacyTaskIdRegex(safeRunSpecId, separator, uuid) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
-          val instanceId = Instance.Id(runSpec, Instance.PrefixInstance, UUID.fromString(uuid))
-          Task.Id(instanceId, None, None)
+          LegacyId(runSpec, separator, uuid)
         case _ => throw new MatchError(s"taskId $idString no valid identifier")
       }
     }
@@ -298,18 +366,16 @@ object Task {
       * Use @forResidentTask when you want to launch a task on an existing reservation.
       */
     @deprecated("Task ids should be created from instance ids and not run spec ids")
-    def forRunSpec(id: PathId): Id = {
-      val instanceId = Instance.Id(id, Instance.PrefixInstance, uuidGenerator.generate())
-      Task.Id(instanceId, None, None)
-    }
+    def forRunSpec(id: PathId): Id = LegacyId(id, ".", uuidGenerator.generate().toString)
 
     /**
       * Create a taskId for a pod instance's task. This will create a taskId designating the instance and each
-      * task container's name.
+      * task container's name. It may be used for reservations for persitent pods as well.
+      *
       * @param instanceId the ID of the instance that this task is contained in
       * @param container the name of the task as per the pod container config.
       */
-    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id = Id(instanceId, container.map(c => c.name), None)
+    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id = EphermeralTaskId(instanceId, container.map(_.name))
 
     /**
       * Create a taskId for a resident task launch. This will append or increment a launch attempt count that might
@@ -320,8 +386,20 @@ object Task {
       * @param taskId The ID of the previous task that was used to match offers.
       */
     def forResidentTask(taskId: Task.Id): Task.Id = {
-      val increasedAttempt: Long = taskId.attempt.getOrElse(0L) + 1L
-      taskId.copy(attempt = Some(increasedAttempt))
+      taskId match {
+        case EphermeralTaskId(instanceId, containerName) =>
+          ResidentTaskId(instanceId, containerName, 1L)
+        case ResidentTaskId(instanceId, containerName, attempt) =>
+          val newAttempt = attempt + 1L
+          ResidentTaskId(instanceId, containerName, newAttempt)
+        case LegacyResidentId(runSpecId, separator, uuid, attempt) =>
+          val newAttempt = attempt + 1L
+          // TODO(karsten): Should we rather upgrade to ResidentTaskId(instanceId, None, 1L)?
+          LegacyResidentId(runSpecId, separator, uuid, newAttempt)
+        case LegacyId(runSpecId, separator, uuid) =>
+          // TODO(karsten): Should we rather upgrade to ResidentTaskId(instanceId, None, 1L)?
+          LegacyResidentId(runSpecId, separator, uuid, 1L)
+      }
     }
 
     implicit val taskIdFormat = Format(
