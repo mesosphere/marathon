@@ -121,9 +121,8 @@ class SlidingAverageSnapshotTest extends UnitTest {
       // Time range from the metrics should be within the averaging window (10 ms tolerance)
       (metrics.to.millis - metrics.from.millis).toInt should be(490 +- 510)
 
-      // The values in the histogram should contain the last 5 measurements and nothing
-      // from the previous ones
-      metrics.metrics.values.head.counters.head._2.count.toInt should be (10)
+      // The counter takes in account the last 5 values in the window
+      metrics.metrics.values.head.counters.head._2.count.toInt should be (5)
     }
 
   }
