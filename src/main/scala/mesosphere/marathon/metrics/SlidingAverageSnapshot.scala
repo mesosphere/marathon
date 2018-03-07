@@ -47,7 +47,7 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) {
     // Warn for too low values
     if (fullFrames < 3) {
       logger.warning(s"SlidingAverageReporter applied over a very small window (${fullFrames} frames), consider" +
-        s" increasing averageWindow or decreasing `kamon.metric.tick-interval`!")
+        " increasing averageWindow or decreasing `kamon.metric.tick-interval`!")
     }
 
     // Create an array with that many free slots, as the full ticks that fit within the duration requested
