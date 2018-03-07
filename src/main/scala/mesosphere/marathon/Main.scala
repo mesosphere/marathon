@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import java.net.URI
+import java.time
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
@@ -116,7 +117,12 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     }
 
     val injector = Guice.createInjector(modules.asJava)
-    Metrics.start(injector.getInstance(classOf[ActorSystem]))
+    Metrics.start(
+      injector.getInstance(classOf[ActorSystem]),
+      time.Duration.ofSeconds(
+        cliConf.averagingWindow.get.getOrElse(60L)
+      )
+    )
     val services = Seq(
       injector.getInstance(classOf[MarathonHttpService]),
       injector.getInstance(classOf[MarathonSchedulerService]))

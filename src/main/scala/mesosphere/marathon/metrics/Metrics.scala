@@ -4,7 +4,8 @@ package metrics
 import akka.Done
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, Props }
 import akka.stream.scaladsl.Source
-import java.time.Clock
+import java.time.{ Clock, Duration }
+
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.Histogram.DynamicRange
@@ -174,16 +175,15 @@ object Metrics {
   def snapshot(): TickMetricSnapshot = metrics
 
   // Starts collecting snapshots.
-  def start(actorRefFactory: ActorRefFactory): Done = {
+  def start(actorRefFactory: ActorRefFactory, averagingWindow: Duration): Done = {
     class SubscriberActor() extends Actor {
-      val collectionContext: CollectionContext = Kamon.metrics.buildDefaultCollectionContext
+      val slidingAverageSnapshot: SlidingAverageSnapshot = new SlidingAverageSnapshot(averagingWindow)
+
       override def receive: Actor.Receive = {
-        case TickMetricSnapshot(_, to, tickMetrics) =>
-          val combined = MapMerge.Syntax(metrics.metrics).merge(tickMetrics, (l, r) => l.merge(r, collectionContext))
-          val combinedSnapshot = TickMetricSnapshot(metrics.from, to, combined)
-          metrics = combinedSnapshot
+        case snapshot: TickMetricSnapshot =>
+          metrics = slidingAverageSnapshot.updateWithTick(snapshot)
       }
     }
-    subscribe(actorRefFactory.actorOf(Props(classOf[SubscriberActor])))
+    subscribe(actorRefFactory.actorOf(Props(new SubscriberActor)))
   }
 }
