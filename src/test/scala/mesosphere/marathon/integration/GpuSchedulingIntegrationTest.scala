@@ -181,7 +181,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
     "reject offers for new apps with a persistent volume and no GPUs" in {
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
-      val applicationId = appId(Some("new-resident-task-no-matach"))
+      val applicationId = appId(Some("new-resident-task-no-match"))
       val app = residentApp(
         id = applicationId,
         containerPath = containerPath,
