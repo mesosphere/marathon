@@ -1,11 +1,13 @@
 package mesosphere.marathon.metrics
 
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorSystem, Props}
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
+import kamon.metric.instrument.Gauge.CurrentValueCollector
 import kamon.util.MilliTimestamp
 import mesosphere.UnitTest
 
@@ -47,7 +49,7 @@ class SlidingAverageSnapshotTest extends UnitTest {
       win.ringSize shouldBe 4
     }
 
-    "should correctly average histograms" in {
+    "should correctly merge histogram instruments within the averaging window" in {
       var mostRecentTick: MilliTimestamp = MilliTimestamp.now
       val metrics: TickMetricSnapshot = SlidingAverageSnapshotTest.runTestAndCollectMetrics(
         tickIntervalMs = 100,
@@ -88,7 +90,7 @@ class SlidingAverageSnapshotTest extends UnitTest {
       ))
     }
 
-    "should monotonically increase counters" in {
+    "should correctly merge counter instruments within the averaging window" in {
       var mostRecentTick: MilliTimestamp = MilliTimestamp.now
       val metrics: TickMetricSnapshot = SlidingAverageSnapshotTest.runTestAndCollectMetrics(
         tickIntervalMs = 100,
@@ -123,6 +125,94 @@ class SlidingAverageSnapshotTest extends UnitTest {
 
       // The counter takes in account the last 5 values in the window
       metrics.metrics.values.head.counters.head._2.count.toInt should be (5)
+    }
+
+    "should correctly merge min/max instruments within the averaging window" in {
+      var mostRecentTick: MilliTimestamp = MilliTimestamp.now
+      val metrics: TickMetricSnapshot = SlidingAverageSnapshotTest.runTestAndCollectMetrics(
+        tickIntervalMs = 100,
+        averagingWindowMs = 500,
+        new SlidingAverageSnapshotTestHandler {
+          import scala.concurrent.duration.{FiniteDuration, TimeUnit}
+          private var counter: kamon.metric.instrument.MinMaxCounter = _
+          private var index: Int = 0
+
+          // When Kamon is ready, get a histogram
+          override def init(): Unit = {
+            counter = Kamon.metrics.minMaxCounter(
+              "someCounter",
+              // For our tests we are using the same interval as our tick interval
+              // in order to advance the values on every tick.
+              FiniteDuration(100, TimeUnit.MILLISECONDS)
+            )
+          }
+
+          // Increment the counter by 10 times over the course of 1 second
+          override def tick(snapshot: TickMetricSnapshot): Boolean = {
+            mostRecentTick = MilliTimestamp.now
+            if (index > 10) false
+            else {
+              counter.increment()
+              index += 1
+              true
+            }
+          }
+        }
+      )
+
+      // The the `to` value should be close to our current time (100 ms tolerance)
+      (mostRecentTick.millis - metrics.to.millis).toInt should be < 100
+
+      // Time range from the metrics should be within the averaging window (10 ms tolerance)
+      (metrics.to.millis - metrics.from.millis).toInt should be(490 +- 510)
+
+      // The counter takes in account the last 5 values in the window
+      // (Note that we had 1 tick in the beginning, before the first `tick` method was called)
+      metrics.metrics.values.head.minMaxCounters.head._2.min.toInt should be (6)
+      metrics.metrics.values.head.minMaxCounters.head._2.max.toInt should be (11)
+    }
+
+    "should correctly merge gauge instruments within the averaging window" in {
+      var mostRecentTick: MilliTimestamp = MilliTimestamp.now
+      val metrics: TickMetricSnapshot = SlidingAverageSnapshotTest.runTestAndCollectMetrics(
+        tickIntervalMs = 100,
+        averagingWindowMs = 500,
+        new SlidingAverageSnapshotTestHandler {
+          private var index: Int = 0
+          private var gauge: kamon.metric.instrument.Gauge = _
+          private val gaugeValueCollector: CurrentValueCollector = new CurrentValueCollector {
+            override def currentValue: Long = index
+          }
+
+          // When Kamon is ready, get a histogram
+          override def init(): Unit = {
+            gauge = Kamon.metrics.gauge("someGauge")(gaugeValueCollector)
+          }
+
+          // Increment the counter by 10 times over the course of 1 second
+          override def tick(snapshot: TickMetricSnapshot): Boolean = {
+            mostRecentTick = MilliTimestamp.now
+            if (index > 10) false
+            else {
+              index += 1
+              true
+            }
+          }
+        }
+      )
+
+      // The the `to` value should be close to our current time (100 ms tolerance)
+      (mostRecentTick.millis - metrics.to.millis).toInt should be < 100
+
+      // Time range from the metrics should be within the averaging window (10 ms tolerance)
+      (metrics.to.millis - metrics.from.millis).toInt should be(490 +- 510)
+
+      // The counter takes in account the last 5 values in the window
+      // (Note that we had 1 tick in the beginning, before the first `tick` method was called)
+      metrics.metrics.values.head.gauges.head._2.recordsIterator
+        .toStream.map(v => (v.level, v.count)) should be(Seq(
+        (7, 1), (8, 1), (9, 1), (10, 1), (11, 1) // (The extra tick)
+      ))
     }
 
   }
