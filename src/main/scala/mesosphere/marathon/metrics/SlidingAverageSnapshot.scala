@@ -64,10 +64,6 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) {
     var rangeTo: MilliTimestamp = MilliTimestamp.now
     var combined: Option[Map[Entity, EntitySnapshot]] = None
 
-    // The averageIndex advances every time we insert something on the ring buffer.
-    // Therefore is pointing to the newest entry on the buffer.
-    // Going backwards we find the oldest values until we reach
-
     // Start processing all the values of the ring buffer in incrementing index
     // starting fro the oldest (the next value from the current index) to the
     // newest (the current index).
