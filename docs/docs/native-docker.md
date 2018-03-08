@@ -145,6 +145,28 @@ container types may be added later.
 For convenience, the mount point of the Mesos sandbox is available in the
 environment as `$MESOS_SANDBOX`.
 
+
+#### Disabling the docker log driver
+
+It might be useful to disable the docker log driver in order to not overflow the system disk. Mesos is storing the log 
+inside the sandbox, and it's unaffected by the docker log driver. One way to do it is to provide docker logging driver 
+parameters in the app definition:
+
+```json
+{
+  "type": "DOCKER",
+  "docker": {
+    "image": "foo",
+    "parameters": [
+      {
+        "key": "log-driver",
+        "value": "none"
+      }
+    ]
+  }
+}
+```
+
 ### Bridged Networking Mode
 
 _Note: Requires Mesos 0.20.1 and Marathon 0.7.1_
