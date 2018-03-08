@@ -3,7 +3,7 @@
 
 ## Overview of GPU Scheduling in Marathon
 
-Marathon supports launching GPU tasks when the command-line option `--features gpu_resources` is specified. Depending on the GPU availability, it may be desirable to configure Marathon to avoid placing non-GPU tasks on GPU nodes.
+Marathon supports launching GPU tasks when the command-line option `--enable_features gpu_resources` is specified. Depending on the GPU availability, it may be desirable to configure Marathon to avoid placing non-GPU tasks on GPU nodes.
 
 
 ## Parameters in Marathon / Mesos
@@ -12,12 +12,12 @@ In order to enable GPU support in your cluster, you should be cognizant configur
 
 Mesos Master:
 
-- `--filter_gpu_resources` - Only send offers for nodes containing GPUs to frameworks that opt-in to GPU resources (e.g. `marathon --features gpu_resources`).
+- `--filter_gpu_resources` - Only send offers for nodes containing GPUs to frameworks that opt-in to GPU resources (e.g. `marathon --enable_features gpu_resources`).
 - `--no-filter_gpu_resources` - Send offers for nodes containing GPUs to all frameworks, regardless of GPU opt-in status.
 
 Marathon:
 
-- `--features gpu_resources` - Tell Mesos that Marathon should be offered GPU resources. (See the [command-line docs](./command-line-flags.html)).
+- `--enable_features gpu_resources` - Tell Mesos that Marathon should be offered GPU resources. (See the [command-line docs](./command-line-flags.html)).
 - `--gpu_scheduling_behavior` - Defines how offered GPU resources should be treated. Possible settings:
     - `unrestricted` (Default) - non-GPU tasks are launched irrespective of offers containing GPUs.
     - `undefined` - The same as `unrestricted`, but logs a warning when a GPU resource containing offer is used for a non-GPU task.
@@ -47,13 +47,13 @@ With that in mind, the following list of scenarios and suggested GPU param confi
     - `marathon ...`
 - (2a) Scarce GPUs, Marathon will directly launch GPU tasks
     - `mesos-master --filter_gpu_resources ...`
-    - `marathon --features gpu_resources --gpu_scheduling_behavior restricted ...`
+    - `marathon --enable_features gpu_resources --gpu_scheduling_behavior restricted ...`
 - (2b) Scarce GPUs, Marathon will **not** launch GPU tasks
     - `mesos-master --filter_gpu_resources ...`
     - `marathon ...`
 - (3a) Abundant GPUs, Marathon will directly launch GPU tasks
     - `mesos-master --no-filter_gpu_resources ...`
-    - `marathon --features gpu_resources --gpu_scheduling_behavior unrestricted ...`
+    - `marathon --enable_features gpu_resources --gpu_scheduling_behavior unrestricted ...`
 - (3b) Abundant GPUs, Marathon will **not** launch GPU tasks
     - `mesos-master --no-filter_gpu_resources ...`
     - `marathon ...`
