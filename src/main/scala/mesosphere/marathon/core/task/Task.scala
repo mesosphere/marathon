@@ -221,7 +221,7 @@ object Task {
   case class LegacyId(val runSpecId: PathId, separator: String, uuid: UUID) extends Id {
 
     // A stringifed version of the id.
-    override lazy val idString: String = runSpecId.safePath + separator + uuid
+    override val idString: String = runSpecId.safePath + separator + uuid
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
   }
@@ -244,7 +244,7 @@ object Task {
   case class LegacyResidentId(val runSpecId: PathId, separator: String, uuid: UUID, attempt: Long) extends Id {
 
     // A stringifed version of the id.
-    override lazy val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
+    override val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
   }
@@ -270,7 +270,7 @@ object Task {
   case class EphermeralTaskId(val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
 
     // A stringifed version of the id.
-    override lazy val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
+    override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
 
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
@@ -294,7 +294,7 @@ object Task {
   case class ResidentTaskId(val instanceId: Instance.Id, val containerName: Option[String], attempt: Long) extends Id {
 
     // A stringifed version of the id.
-    override lazy val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + attempt
+    override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + attempt
 
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
