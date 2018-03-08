@@ -9,9 +9,6 @@ import mesosphere.marathon.state.PathId
 @IntegrationTest
 class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  //clean up state before running the test case
-  before(cleanUp())
-
   private val ramlHealthCheck = AppHealthCheck(
     protocol = AppHealthCheckProtocol.Http,
     gracePeriodSeconds = 20,
