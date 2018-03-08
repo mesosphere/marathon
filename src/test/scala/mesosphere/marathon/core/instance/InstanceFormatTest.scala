@@ -13,7 +13,7 @@ class InstanceFormatTest extends UnitTest {
   val template = Json.parse(
     """
       |{
-      |  "instanceId": { "idString": "app.instance-1337" },
+      |  "instanceId": { "idString": "app.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6" },
       |  "tasksMap": {},
       |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
       |  "agentInfo": { "host": "localhost", "attributes": [] },

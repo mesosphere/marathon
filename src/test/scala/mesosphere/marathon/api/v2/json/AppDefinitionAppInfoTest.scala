@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package api.v2.json
 
+import java.util.UUID
+
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.appinfo.{ AppInfo, TaskCounts }
@@ -24,8 +26,11 @@ class AppDefinitionAppInfoTest extends UnitTest {
     tasksUnhealthy = 1
   )
 
+  val uuid = UUID.fromString("b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6")
+  val taskId = Task.LegacyId(app.id, ".", uuid)
+
   val readinessCheckResults = Seq(
-    ReadinessCheckResult("foo", Task.Id.forRunSpec(app.id), false, Some(HttpResponse(503, "text/plain", "n/a")))
+    ReadinessCheckResult("foo", taskId, false, Some(HttpResponse(503, "text/plain", "n/a")))
   )
 
   val deployments = Seq(
@@ -66,7 +71,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
         "readinessCheckResults" -> Seq(Json.obj(
           "name" -> "foo",
-          "taskId" -> "foo",
+          "taskId" -> taskId.idString,
           "ready" -> false,
           "lastResponse" -> Json.obj(
             "status" -> 503,

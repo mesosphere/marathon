@@ -64,7 +64,7 @@ class InstanceIdTest extends UnitTest with Inside {
     "InstanceIds should be created by static string" in {
       val idString = "app.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6"
       val uuid = UUID.fromString("b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6")
-      val instanceId = Instance.Id("app".toPath, PrefixMarathon, uuid)
+      val instanceId = Instance.Id("/app".toPath, PrefixMarathon, uuid)
       instanceId.idString should be(idString)
       instanceId.runSpecId.safePath should be("app")
       val taskId = Task.Id.fromIdString(idString + ".app")
