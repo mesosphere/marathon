@@ -120,7 +120,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       And("our app gets a backoff delay")
       val patienceConfig: WaitTestSupport.PatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Millis))
       WaitTestSupport.waitUntil("queue item") {
-        val queue: List[ITQueueItem] = marathon.launchQueue().value.queue
+        val queue: List[ITQueueItem] = marathon.launchQueueForAppId(app.id.toPath).value
         queue should have size 1
         queue.map(_.delay.overdue) should contain(false)
         true
