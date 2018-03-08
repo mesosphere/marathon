@@ -1,4 +1,5 @@
-package mesosphere.marathon.metrics
+package mesosphere.marathon
+package metrics
 
 import java.time.Duration
 import java.util.concurrent.TimeUnit
