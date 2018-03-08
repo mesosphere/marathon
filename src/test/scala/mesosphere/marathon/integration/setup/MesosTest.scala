@@ -37,8 +37,9 @@ case class MesosCluster(
     quorumSize: Int = 1,
     autoStart: Boolean = false,
     config: MesosConfig = MesosConfig(),
-    waitForMesosTimeout: FiniteDuration = 5.minutes)(implicit
-  system: ActorSystem,
+    waitForMesosTimeout: FiniteDuration = 5.minutes,
+    agentsGpus: Option[Int] = None)(implicit
+    system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable {
@@ -57,7 +58,7 @@ case class MesosCluster(
     // to it's marathon, leading to multiple tasks (from different IT suits) trying to use the same port!
     // First-come-first-served task will bind successfully where the others will fail leading to a lot inconsistency and
     // flakiness in tests.
-    Agent(resources = new Resources(ports = PortAllocator.portsRange()), extraArgs = Seq(
+    Agent(resources = new Resources(ports = PortAllocator.portsRange(), gpus = agentsGpus), extraArgs = Seq(
       s"--attributes=node:$i" // uniquely identify each agent node, useful for constraint matching
     ))
   }
@@ -172,12 +173,13 @@ case class MesosCluster(
   }
 
   // format: OFF
-  case class Resources(cpus: Option[Int] = None, mem: Option[Int] = None, ports: (Int, Int)) {
+  case class Resources(cpus: Option[Int] = None, mem: Option[Int] = None, ports: (Int, Int), gpus: Option[Int] = None) {
     // Generates mesos-agent resource string e.g. "cpus:2;mem:124;ports:[10000-110000]"
     def resourceString(): String = {
       s"""
          |${cpus.fold("")(c => s"cpus:$c;")}
          |${mem.fold("")(m => s"mem:$m;")}
+         |${gpus.fold("")(g => s"gpus:$g;")}
          |${ports match {case (f, t) => s"ports:[$f-$t]"}}
        """.stripMargin.replaceAll("[\n\r]", "");
     }
@@ -325,6 +327,8 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
 
+  def agentsGpus: Option[Int] = None
+
   private val localMesosUrl = sys.env.get("USE_LOCAL_MESOS")
   lazy val mesosMasterUrl = s"zk://${zkServer.connectUri}/mesos"
   lazy val mesosNumMasters = 1
@@ -333,7 +337,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosConfig = MesosConfig()
   lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
   lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
-    autoStart = false, config = mesosConfig, mesosLeaderTimeout)
+    autoStart = false, config = mesosConfig, mesosLeaderTimeout, agentsGpus = agentsGpus)
   lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
 
   override def cleanMesos(): Unit = mesosCluster.clean()
