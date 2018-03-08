@@ -71,11 +71,6 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
     app
   }
 
-  def createSuccessfully(app: App): App = {
-    waitForDeployment(createAsynchronously(app))
-    app
-  }
-
   def createAsynchronously(app: App): RestResult[App] = {
     val result = marathon.createAppV2(app)
     result should be(Created)
@@ -109,7 +104,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
       waitForTasks(app.id.toPath, 1) //make sure, the app has really started
     }
 
-    "not match any offers an app without GPU requirements" in {
+    "not match any offers for an app without GPU requirements" in {
       Given("a new app")
       val applicationId = appId(Some("without-gpu-resources"))
       val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None, gpus = 0)
@@ -123,7 +118,6 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
 
       And("DeclinedScarceResources reject must happen")
       waitForAppOfferReject(applicationId, "DeclinedScarceResources")
-
     }
 
     "match an offer for an app without GPU requirements if it has an override label" in {
@@ -138,7 +132,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+      waitForTasks(app.id.toPath, 1)
     }
 
     "match an offer for already exising persistent volume" in {
