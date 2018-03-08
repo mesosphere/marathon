@@ -14,7 +14,7 @@ import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.{ MarathonHttpService, MarathonRestModule }
 import mesosphere.marathon.api.akkahttp.AkkaHttpModule
 import mesosphere.marathon.core.CoreGuiceModule
-import mesosphere.marathon.core.async.ExecutionContexts
+import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream.Implicits._
@@ -33,7 +33,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   SLF4JBridgeHandler.install()
   Thread.setDefaultUncaughtExceptionHandler((thread: Thread, throwable: Throwable) => {
     logger.error(s"Terminating due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
-    Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
+    Runtime.getRuntime.asyncExit()
   })
 
   private val EnvPrefix = "MARATHON_CMD_"
@@ -171,13 +171,13 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     *
     * # The Global Execution Context
     *
-    * ExecutionContexts.global is an ExecutionContext backed by a ForkJoinPool. It should be sufficient for most
+    * ExecutionContext.Implicits.global is an ExecutionContext backed by a ForkJoinPool. It should be sufficient for most
     * situations but requires some care. A ForkJoinPool manages a limited amount of threads (the maximum amount of
     * thread being referred to as parallelism level). The number of concurrently blocking computations can exceed the
     * parallelism level only if each blocking call is wrapped inside a blocking call (more on that below). Otherwise,
     * there is a risk that the thread pool in the global execution context is starved, and no computation can proceed.
     *
-    * By default the ExecutionContexts.global sets the parallelism level of its underlying fork-join pool to the amount
+    * By default the ExecutionContext.Implicits.global sets the parallelism level of its underlying fork-join pool to the amount
     * of available processors (Runtime.availableProcessors). This configuration can be overriden by setting one
     * (or more) of the following VM attributes:
     *

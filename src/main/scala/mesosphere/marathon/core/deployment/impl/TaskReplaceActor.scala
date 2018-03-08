@@ -6,7 +6,7 @@ import akka.actor._
 import akka.event.EventStream
 import akka.pattern._
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.async.ExecutionContexts.global
+import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id

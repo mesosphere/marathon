@@ -8,7 +8,6 @@ import javax.inject.Named
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import com.google.inject.{ Inject, Provider }
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, JvmExitsCrashStrategy, LifecycleState }
 import mesosphere.marathon.core.deployment.DeploymentModule

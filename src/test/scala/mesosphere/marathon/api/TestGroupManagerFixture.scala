@@ -5,14 +5,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Provider
 
 import akka.event.EventStream
-import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.Mockito
 
-import scala.concurrent.Future
-import mesosphere.marathon.core.async.ExecutionContexts
+import scala.concurrent.{ Future, ExecutionContext }
 import mesosphere.AkkaUnitTestLike
 
 class TestGroupManagerFixture(
@@ -44,7 +42,7 @@ class TestGroupManagerFixture(
   private[this] val groupManagerModule = new GroupManagerModule(
     config = config,
     scheduler = schedulerProvider,
-    groupRepo = groupRepository)(ExecutionContexts.global, eventBus, authenticator)
+    groupRepo = groupRepository)(ExecutionContext.Implicits.global, eventBus, authenticator)
 
   val groupManager = groupManagerModule.groupManager
 }

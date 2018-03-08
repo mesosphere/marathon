@@ -30,7 +30,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     driverHolder: MarathonSchedulerDriverHolder,
     killService: KillService,
     eventStream: EventStream) extends TaskStatusUpdateProcessor with StrictLogging {
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val publishTimer: Timer = Metrics.timer(ServiceMetric, getClass, "publishFuture")
 
