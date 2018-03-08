@@ -34,10 +34,6 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
   // Timeout for matching
   // Deal with randomness?
 
-  protected def makeOneCPUTask(taskId: Task.Id) = {
-    MarathonTestHelper.makeOneCPUTask(taskId).build()
-  }
-
   object F {
     import org.apache.mesos.{ Protos => Mesos }
     val runSpecId = PathId("/test")
@@ -139,7 +135,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "single offer is passed to matcher" in new Fixture {
       val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
 
-      val task = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      val task = MarathonTestHelper.makeOneCPUTask(Task.EphermeralTaskId(F.instanceId, None)).build()
       val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
       module.subOfferMatcherManager.setLaunchTokens(10)
       module.subOfferMatcherManager.addSubscription(matcher)
@@ -148,13 +144,13 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(matchedTasks.offerId == offer.getId)
-      assert(launchedTaskInfos(matchedTasks) == Seq(makeOneCPUTask(Task.Id(task.getTaskId.getValue + "-1"))))
+      assert(launchedTaskInfos(matchedTasks) == Seq(MarathonTestHelper.makeOneCPUTask(s"${task.getTaskId.getValue}-1").build()))
     }
 
     "deregistering only matcher works" in new Fixture {
       val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
 
-      val task = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
       val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
       module.subOfferMatcherManager.setLaunchTokens(10)
       module.subOfferMatcherManager.addSubscription(matcher)
@@ -171,17 +167,17 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       module.subOfferMatcherManager.setLaunchTokens(10)
 
-      val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-      val task2: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(launchedTaskInfos(matchedTasks).toSet == Set(
-        makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-1")),
-        makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-1")))
+        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-1").build(),
+        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-1").build())
       )
     }
 
@@ -191,7 +187,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
         module.subOfferMatcherManager.setLaunchTokens(launchTokens)
 
-        val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+        val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
         module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
 
         val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -206,20 +202,20 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       module.subOfferMatcherManager.setLaunchTokens(10)
 
-      val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      val task1: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-      val task2: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
+      val task2: TaskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None)).build()
       module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =
         module.globalOfferMatcher.matchOffer(offer)
       val matchedTasks: MatchedInstanceOps = matchedTasksFuture.futureValue(Timeout(3.seconds))
       assert(launchedTaskInfos(matchedTasks).toSet == Set(
-        makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-1")),
-        makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-2")),
-        makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-1")),
-        makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-2"))
-      ))
+        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-1").build(),
+        MarathonTestHelper.makeOneCPUTask(task1.getTaskId.getValue + "-2").build(),
+        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-1").build(),
+        MarathonTestHelper.makeOneCPUTask(task2.getTaskId.getValue + "-2").build())
+      )
     }
 
     "ports of an offer should be displayed in a short notation if they exceed a certain quantity" in new Fixture {

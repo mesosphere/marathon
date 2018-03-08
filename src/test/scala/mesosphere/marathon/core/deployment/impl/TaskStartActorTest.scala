@@ -65,7 +65,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, app.instances - 1) }
 
       for (i <- 0 until (app.instances - 1))
-        system.eventStream.publish(f.instanceChange(app, Instance.Id(s"task-$i"), Running))
+        system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
 
       promise.future.futureValue should be(())
 
@@ -86,7 +86,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, app.instances - 1) }
 
       for (i <- 0 until (app.instances - 1))
-        system.eventStream.publish(f.instanceChange(app, Instance.Id(s"task-$i"), Running))
+        system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
 
       promise.future.futureValue should be(())
 
@@ -125,7 +125,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       eventually { verify(f.launchQueue, atLeastOnce).addAsync(app, app.instances) }
 
       for (i <- 0 until app.instances)
-        system.eventStream.publish(f.healthChange(app, Instance.Id(s"task_$i"), healthy = true))
+        system.eventStream.publish(f.healthChange(app, Instance.Id.forRunSpec(app.id), healthy = true))
 
       promise.future.futureValue should be(())
 
@@ -195,7 +195,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       // let existing task die
       f.taskTracker.countLaunchedSpecInstances(app.id) returns Future.successful(0)
       f.launchQueue.getAsync(app.id) returns Future.successful(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
-      system.eventStream.publish(f.instanceChange(app, Instance.Id("task-4"), Condition.Error))
+      system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Condition.Error))
 
       // trigger a Sync and wait for another task to be added to the launch queue
       ref ! StartingBehavior.Sync
@@ -203,7 +203,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       // let 4 other tasks start successfully
       List(0, 1, 2, 3) foreach { i =>
-        system.eventStream.publish(f.instanceChange(app, Instance.Id(s"task-$i"), Running))
+        system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
       }
 
       // and make sure that the actor should finishes

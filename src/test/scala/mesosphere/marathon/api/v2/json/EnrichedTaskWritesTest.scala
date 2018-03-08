@@ -49,7 +49,7 @@ class EnrichedTaskWritesTest extends UnitTest {
     }
 
     val taskWithMultipleIPs = {
-      val taskStatus = mesosStatus(Task.Id("/foo/bar"))
+      val taskStatus = mesosStatus(Task.Id.forRunSpec(PathId("/foo/bar")))
       val networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Nil).update(taskStatus)
       val instance = TestInstanceBuilder.newBuilder(runSpecId = runSpecId, version = time)
         .withAgentInfo(agentInfo)

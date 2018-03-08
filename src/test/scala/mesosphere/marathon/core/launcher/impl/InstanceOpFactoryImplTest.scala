@@ -10,11 +10,13 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.{ EphermeralTaskId, ResidentTaskId }
 import mesosphere.marathon.raml.{ Endpoint, Resources }
 import mesosphere.marathon.state.PathId
 
 import scala.collection.immutable.Seq
 
+// TODO(karsten): Merge with the other InstanceOpFactoryImplTest or remove it.
 class InstanceOpFactoryImplTest extends UnitTest {
 
   import InstanceOpFactoryImplTest._
@@ -105,6 +107,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     val mappedPorts: Seq[Int] = instance.tasksMap.values.view.flatMap(_.status.networkInfo.hostPorts).toIndexedSeq
     mappedPorts should be(hostPortsAllocatedFromOffer.flatten)
 
+    // TODO(karsten): This is super similar to InstanceOpFactoryImpl.podTaskNetworkInfos.
     val expectedHostPortsPerCT: Map[String, Seq[Int]] = pod.containers.map { ct =>
       ct.name -> ct.endpoints.flatMap{ ep =>
         ep.hostPort match {
@@ -118,8 +121,10 @@ class InstanceOpFactoryImplTest extends UnitTest {
     }(collection.breakOut)
 
     val allocatedPortsPerTask: Map[String, Seq[Int]] = instance.tasksMap.map {
-      case (taskId, task) =>
-        val ctName = taskId.containerName.get
+      case (EphermeralTaskId(_, Some(ctName)), task) =>
+        val ports: Seq[Int] = task.status.networkInfo.hostPorts
+        ctName -> ports
+      case (ResidentTaskId(_, Some(ctName), _), task) =>
         val ports: Seq[Int] = task.status.networkInfo.hostPorts
         ctName -> ports
     }(collection.breakOut)

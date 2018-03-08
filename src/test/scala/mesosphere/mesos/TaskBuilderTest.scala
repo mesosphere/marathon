@@ -1,6 +1,7 @@
 package mesosphere.mesos
 
 import java.time.{ OffsetDateTime, ZoneOffset }
+import java.util.UUID
 
 import com.google.protobuf.TextFormat
 import mesosphere.UnitTest
@@ -30,7 +31,7 @@ class TaskBuilderTest extends UnitTest {
 
   implicit val clock = new SettableClock()
   val labels = Map("foo" -> "bar", "test" -> "test")
-  val runSpecId = PathId("/test")
+  val uuid = UUID.fromString("b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6")
 
   "TaskBuilder" should {
     "BuildIfMatches" in {
@@ -1242,8 +1243,8 @@ class TaskBuilderTest extends UnitTest {
         ))
       ), None, None, None)
       assert(task.isDefined, "expected task to match offer")
-      val (taskInfo, _) = task.get
-      val taskId = Task.Id(taskInfo.getTaskId())
+      val Some((taskInfo, _)) = task
+      val taskId = Task.Id.fromIdString(taskInfo.getTaskId().getValue)
 
       assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
       val param = taskInfo.getContainer.getDocker.getParametersList.get(0)
@@ -1418,7 +1419,7 @@ class TaskBuilderTest extends UnitTest {
         id = PathId("/app"),
         versionInfo = version
       )
-      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = Some(Task.Id("taskId")))
+      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = Some(Task.LegacyId(runSpec.id, ".", uuid)))
 
       assert(
         env == Map(
@@ -1486,7 +1487,7 @@ class TaskBuilderTest extends UnitTest {
         )
       )
 
-      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.Id("taskId")))
+      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.LegacyId(runSpec.id, ".", uuid)))
         .filterKeys(_.startsWith("MARATHON_APP_LABEL"))
 
       assert(
@@ -1500,17 +1501,18 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "AppContextEnvironment" in {
+      val runSpecId = PathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
-            id = "/test".toPath,
+            id = runSpecId,
             portDefinitions = PortDefinitions(8080, 8081),
             container = Some(Docker(
               image = "myregistry/myimage:version"
             )),
             versionInfo = VersionInfo.OnlyVersion(Timestamp.zero)
           ),
-          taskId = Some(Task.Id("task-123")),
+          taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
           envPrefix = None
@@ -1528,10 +1530,11 @@ class TaskBuilderTest extends UnitTest {
       // why?
       // see https://github.com/mesosphere/marathon/issues/905
 
+      val runSpecId = PathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
-            id = "/test".toPath,
+            id = runSpecId,
             portDefinitions = PortDefinitions(8080, 8081),
             env = EnvVarValue(Map(
               "PORT" -> "1",
@@ -1542,7 +1545,7 @@ class TaskBuilderTest extends UnitTest {
               "PORT_8081" -> "port8081"
             ))
           ),
-          taskId = Some(Task.Id("task-123")),
+          taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
           envPrefix = None
@@ -1559,13 +1562,14 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithOnlyPorts" in {
+      val runSpecId = PathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
             id = runSpecId,
             portDefinitions = PortDefinitions(8080, 8081)
           ),
-          taskId = Some(Task.Id("task-123")),
+          taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
           envPrefix = None
@@ -1578,13 +1582,14 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithCustomPrefix" in {
+      val runSpecId = PathId("/test")
       val command =
         TaskBuilder.commandInfo(
           AppDefinition(
             id = runSpecId,
             portDefinitions = PortDefinitions(8080, 8081)
           ),
-          Some(Task.Id("task-123")),
+          Some(Task.LegacyId(runSpecId, ".", uuid)),
           Some("host.mega.corp"),
           Helpers.hostPorts(1000, 1001),
           Some("CUSTOM_PREFIX_")
@@ -1609,13 +1614,14 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "OnlyWhitelistedUnprefixedVariablesWithCustomPrefix" in {
+      val runSpecId = PathId("/test")
       val command =
         TaskBuilder.commandInfo(
           AppDefinition(
             id = runSpecId,
             portDefinitions = PortDefinitions(8080, 8081)
           ),
-          Some(Task.Id("task-123")),
+          Some(Task.LegacyId(runSpecId, ".", uuid)),
           Some("host.mega.corp"),
           Helpers.hostPorts(1000, 1001),
           Some("P_")
@@ -1632,6 +1638,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithOnlyMappings" in {
+      val runSpecId = PathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
@@ -1644,7 +1651,7 @@ class TaskBuilderTest extends UnitTest {
               )
             ))
           ),
-          taskId = Some(Task.Id("task-123")),
+          taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
           envPrefix = None
@@ -1659,6 +1666,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithOnlyMappingsAndUserNetworking" in {
+      val runSpecId = PathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
@@ -1671,7 +1679,7 @@ class TaskBuilderTest extends UnitTest {
               )
             ))
           ),
-          taskId = Some(Task.Id("task-123")),
+          taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Seq(None, None),
           envPrefix = None
@@ -1690,9 +1698,8 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithBothPortsAndMappings" in {
-      a[IllegalArgumentException] shouldBe thrownBy {
-        TaskBuilder.commandInfo(
-          runSpec = AppDefinition(
+      val runSpecId = PathId("/test")
+      val appDef = AppDefinition(
             id = runSpecId,
             portDefinitions = PortDefinitions(22, 23),
             networks = Seq(BridgeNetwork()), container = Some(Docker(
@@ -1702,8 +1709,11 @@ class TaskBuilderTest extends UnitTest {
                 PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
               )
             ))
-          ),
-          taskId = Some(Task.Id("task-123")),
+          )
+      a[IllegalArgumentException] shouldBe thrownBy {
+        TaskBuilder.commandInfo(
+          runSpec = appDef,
+          taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
           envPrefix = None
@@ -1712,6 +1722,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "TaskWillCopyFetchIntoCommand" in {
+      val runSpecId = PathId("/test")
       val command = TaskBuilder.commandInfo(
         runSpec = AppDefinition(
           id = runSpecId,
@@ -1720,7 +1731,7 @@ class TaskBuilderTest extends UnitTest {
             FetchUri(uri = "http://www.example2.com", extract = true, cache = true, executable = true)
           )
         ),
-        taskId = Some(Task.Id("task-123")),
+        taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
         host = Some("host.mega.corp"),
         hostPorts = Helpers.hostPorts(1000, 1001),
         envPrefix = None

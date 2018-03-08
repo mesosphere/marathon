@@ -25,7 +25,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
   )
 
   val readinessCheckResults = Seq(
-    ReadinessCheckResult("foo", Task.Id("foo"), false, Some(HttpResponse(503, "text/plain", "n/a")))
+    ReadinessCheckResult("foo", Task.Id.forRunSpec(app.id), false, Some(HttpResponse(503, "text/plain", "n/a")))
   )
 
   val deployments = Seq(

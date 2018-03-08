@@ -5,6 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.PathId
 import play.api.libs.json.Json
 
 class ReadinessCheckResultFormatTest extends UnitTest {
@@ -27,7 +28,7 @@ class ReadinessCheckResultFormatTest extends UnitTest {
     val httpResponse = HttpResponse(200, "application/json", "{}")
     val readinessCheckResult = ReadinessCheckResult(
       "readinessCheck",
-      Task.Id("/foo/bar"),
+      Task.Id.forRunSpec(PathId("/foo/bar")),
       ready = true,
       Some(httpResponse))
 

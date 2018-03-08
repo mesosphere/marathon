@@ -107,7 +107,11 @@ case class PodDefinition(
   }
 
   def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
-  def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container(_))
+  def container(taskId: Task.Id): Option[MesosContainer] = taskId match {
+    case Task.EphermeralTaskId(_, Some(containerName)) => container(containerName)
+    case Task.ResidentTaskId(_, Some(containerName), _) => container(containerName)
+    case _ => None
+  }
   def volume(volumeName: String): Volume =
     volumes.find(_.name.contains(volumeName)).getOrElse(
       throw new IllegalArgumentException(s"volume named $volumeName is unknown to this pod"))
