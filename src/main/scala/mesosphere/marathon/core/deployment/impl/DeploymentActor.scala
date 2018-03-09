@@ -154,7 +154,7 @@ private class DeploymentActor(
 
     async {
       val instances = await(instanceTracker.specInstances(runnableSpec.id))
-      val runningInstances = instances.filter(_.state.condition.isActive)
+      val runningInstances = instances.filter(_.isActive)
       val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
         runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 

@@ -72,10 +72,13 @@ class TasksResource @Inject() (
           healthCheckManager.statuses(appId)
         })).foldLeft(Map[Id, Seq[Health]]())(_ ++ _)
 
+      def isInterestingInstance(instance: Instance) =
+        conditionSet.isEmpty || instance.someTasksAre { task => conditionSet.contains(task.status.condition) }
+
       val enrichedTasks: Iterable[Iterable[EnrichedTask]] = for {
         (appId, instance) <- instances
         app <- appIdsToApps(appId)
-        if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition)))
+        if isAuthorized(ViewRunSpec, app) && isInterestingInstance(instance)
         tasks = instance.tasksMap.values
       } yield {
         tasks.map { task =>

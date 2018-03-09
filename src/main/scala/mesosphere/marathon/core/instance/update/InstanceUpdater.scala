@@ -19,7 +19,7 @@ object InstanceUpdater extends StrictLogging {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
+      state = Instance.InstanceState(Some(updatedTask.status.condition), Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
   }
 
   private[marathon] def launchEphemeral(op: LaunchEphemeral, now: Timestamp): InstanceUpdateEffect = {
@@ -59,10 +59,9 @@ object InstanceUpdater extends StrictLogging {
           }
 
         // We might still become UnreachableInactive.
-        case TaskUpdateEffect.Noop if op.condition == Condition.Unreachable &&
-          instance.state.condition != Condition.UnreachableInactive =>
+        case TaskUpdateEffect.Noop if op.condition == Condition.Unreachable && !instance.isUnreachableInactive =>
           val updated: Instance = updatedInstance(instance, task, now)
-          if (updated.state.condition == Condition.UnreachableInactive) {
+          if (updated.isUnreachableInactive) {
             updated.unreachableStrategy match {
               case u: UnreachableEnabled =>
                 logger.info(

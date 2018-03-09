@@ -296,7 +296,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     }
 
     "reconcile loads the last known task health state" in new Fixture {
-      val healthCheck = MesosCommandHealthCheck(command = Command("true"))
+      val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
       val app: AppDefinition = AppDefinition(id = appId, healthChecks = Set(healthCheck))
 
       // Create a task
