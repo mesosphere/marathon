@@ -175,9 +175,11 @@ object Metrics {
   def snapshot(): TickMetricSnapshot = metrics
 
   // Starts collecting snapshots.
-  def start(actorRefFactory: ActorRefFactory, averagingWindow: Duration): Done = {
+  def start(actorRefFactory: ActorRefFactory, config: MetricsReporterConf): Done = {
     class SubscriberActor() extends Actor {
-      val slidingAverageSnapshot: SlidingAverageSnapshot = new SlidingAverageSnapshot(averagingWindow)
+      val slidingAverageSnapshot: SlidingAverageSnapshot = new SlidingAverageSnapshot(
+        Duration.ofSeconds(config.averagingWindow.get.getOrElse(60L))
+      )
 
       override def receive: Actor.Receive = {
         case snapshot: TickMetricSnapshot =>

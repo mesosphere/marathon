@@ -117,12 +117,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     }
 
     val injector = Guice.createInjector(modules.asJava)
-    Metrics.start(
-      injector.getInstance(classOf[ActorSystem]),
-      time.Duration.ofSeconds(
-        cliConf.averagingWindow.get.getOrElse(60L)
-      )
-    )
+    Metrics.start(injector.getInstance(classOf[ActorSystem]), cliConf)
     val services = Seq(
       injector.getInstance(classOf[MarathonHttpService]),
       injector.getInstance(classOf[MarathonSchedulerService]))
