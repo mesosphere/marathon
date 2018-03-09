@@ -2,23 +2,19 @@ package mesosphere.marathon
 package metrics
 
 import java.time.Duration
-import java.util.logging.Logger
 
-import akka.Done
-import akka.actor.{ Actor, ActorRefFactory, Props }
 import kamon.Kamon
-import kamon.metric.{ Entity, EntitySnapshot }
+import kamon.metric.{Entity, EntitySnapshot}
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.StrictLogging
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.CollectionContext
-import kamon.util.{ MapMerge, MilliTimestamp }
-import mesosphere.marathon.metrics.Metrics.subscribe
+import kamon.util.{MapMerge, MilliTimestamp}
 
 /**
   * Calculates sliding average entity snapshot
   */
-class SlidingAverageSnapshot(val averagingWindow: Duration) {
-  private val logger: Logger = Logger.getLogger(getClass.getName)
+class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLogging {
 
   val collectionContext: CollectionContext = Kamon.metrics.buildDefaultCollectionContext
 
@@ -46,7 +42,7 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) {
 
     // Warn for too low values
     if (fullFrames < 3) {
-      logger.warning(s"SlidingAverageReporter applied over a very small window (${fullFrames} frames), consider" +
+      logger.warn(s"SlidingAverageReporter applied over a very small window (${fullFrames} frames), consider" +
         " increasing averageWindow or decreasing `kamon.metric.tick-interval`!")
     }
 
