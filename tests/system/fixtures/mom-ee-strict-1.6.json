@@ -21,8 +21,7 @@
       },
       "privileged": false,
       "forcePullImage": false
-    },
-    "volumes": []
+    }
   },
   "env": {
     "JVM_OPTS": "-Xms256m -Xmx2g",
