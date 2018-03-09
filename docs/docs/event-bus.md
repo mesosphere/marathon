@@ -8,7 +8,7 @@ Marathon has an internal event bus that captures all API requests and scaling ev
 By subscribing to the event bus, you can be informed about every event instantly, without pulling.
 The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.
 
-For more information, see the `/v2/events` entry in the [Marathon REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html).
+For more information, see the `/v2/events` entry in the [Marathon REST API Reference](https://mesosphere.github.io/marathon/api-console/index.html).
 
 ## Subscription to Events via The Event Stream
 
