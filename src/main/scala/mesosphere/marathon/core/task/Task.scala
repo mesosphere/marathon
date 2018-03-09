@@ -2,12 +2,11 @@ package mesosphere.marathon
 package core.task
 
 import java.util.{ Base64, UUID }
-import javax.swing.JPopupMenu.Separator
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
-import mesosphere.marathon.core.instance.{ Instance, Reservation }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
