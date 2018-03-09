@@ -12,7 +12,6 @@ import kamon.Kamon
 import mesosphere.chaos.http.HttpModule
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.{ MarathonHttpService, MarathonRestModule }
-import mesosphere.marathon.api.akkahttp.AkkaHttpModule
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.toRichRuntime
@@ -87,10 +86,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   val actorSystem = ActorSystem("marathon")
 
   protected def modules: Seq[Module] = {
-    val httpModules = if (cliConf.featureAkkaHttpServiceBackend())
-      Seq(new AkkaHttpModule(cliConf))
-    else
-      Seq(new HttpModule(cliConf), new MarathonRestModule)
+    val httpModules = Seq(new HttpModule(cliConf), new MarathonRestModule)
 
     httpModules ++
       Seq(
