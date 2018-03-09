@@ -1,0 +1,6111 @@
+{
+  "apps": [
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "env": {
+        "foo": "bar"
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest1",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10003,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest10",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10012,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest100",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10102,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest11",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10013,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest12",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10014,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest13",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10015,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest14",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10016,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest15",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10017,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest16",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10018,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest17",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10019,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest18",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10020,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest19",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10021,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest2",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10004,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest20",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10022,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest21",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10023,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest22",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10024,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest23",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10025,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest24",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10026,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest25",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10027,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest26",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10028,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest27",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10029,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest28",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10030,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest29",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10031,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest3",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10005,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest30",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10032,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest31",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10033,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest32",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10034,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest33",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10035,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest34",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10036,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest35",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10037,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest36",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10038,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest37",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10039,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest38",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10040,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest39",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10041,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest4",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10006,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest40",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10042,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest41",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10043,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest42",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10044,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest43",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10045,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest44",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10046,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest45",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10047,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest46",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10048,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest47",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10049,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest48",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10050,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest49",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10051,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest5",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10007,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest50",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10052,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest51",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10053,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest52",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10054,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest53",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10055,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest54",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10056,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest55",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10057,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest56",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10058,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest57",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10059,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest58",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10060,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest59",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10061,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest6",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10008,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest60",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10062,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest61",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10063,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest62",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10064,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest63",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10065,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest64",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10066,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest65",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10067,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest66",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10068,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest67",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10069,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest68",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10070,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest69",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10071,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest7",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10009,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest70",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10072,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest71",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10073,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest72",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10074,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest73",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10075,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest74",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10076,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest75",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10077,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest76",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10078,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest77",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10079,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest78",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10080,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest79",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10081,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest8",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10010,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest80",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10082,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest81",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10083,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest82",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10084,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest83",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10085,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest84",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10086,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest85",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10087,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest86",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10088,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest87",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10089,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest88",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10090,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest89",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10091,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest9",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10011,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest90",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10092,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest91",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10093,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest92",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10094,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest93",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10095,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest94",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10096,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest95",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10097,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest96",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10098,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest97",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10099,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest98",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10100,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    },
+    {
+      "backoffFactor": 1.15,
+      "backoffSeconds": 1,
+      "constraints": [
+        [
+          "platform",
+          "CLUSTER",
+          "foo"
+        ],
+        [
+          "rack",
+          "CLUSTER",
+          "bax-bar"
+        ]
+      ],
+      "container": {
+        "docker": {
+          "forcePullImage": true,
+          "image": "foo.repo/foo/bar/baz/bax/bauf/python:3",
+          "parameters": [],
+          "privileged": false
+        },
+        "type": "DOCKER",
+        "volumes": []
+      },
+      "cpus": 0.1,
+      "disk": 0,
+      "executor": "",
+      "gpus": 0,
+      "id": "/cudcos/mactest99",
+      "instances": 0,
+      "killSelection": "YOUNGEST_FIRST",
+      "labels": {},
+      "maxLaunchDelaySeconds": 3600,
+      "mem": 10,
+      "networks": [
+        {
+          "mode": "host"
+        }
+      ],
+      "portDefinitions": [
+        {
+          "name": "default",
+          "port": 10101,
+          "protocol": "tcp"
+        }
+      ],
+      "requirePorts": false,
+      "unreachableStrategy": {
+        "expungeAfterSeconds": 0,
+        "inactiveAfterSeconds": 0
+      },
+      "upgradeStrategy": {
+        "maximumOverCapacity": 1,
+        "minimumHealthCapacity": 1
+      },
+      "versionInfo": {
+        "lastConfigChangeAt": "2018-01-11T06:25:26.501Z",
+        "lastScalingAt": "2018-01-11T06:25:26.501Z"
+      }
+    }
+  ],
+  "dependencies": [],
+  "groups": [],
+  "id": "/cudcos",
+  "pods": []
+}
