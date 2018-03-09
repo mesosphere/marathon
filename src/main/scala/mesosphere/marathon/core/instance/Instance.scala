@@ -15,6 +15,7 @@ import mesosphere.marathon.raml.Raml
 import org.apache._
 import org.apache.mesos.Protos.Attribute
 import play.api.libs.json._
+import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
 import scala.annotation.tailrec
@@ -357,10 +358,20 @@ object Instance {
   )(AgentInfo(_, _, _, _, _))
 
   implicit val agentFormat: Format[AgentInfo] = Format(agentReads, Json.writes[AgentInfo])
-  implicit val idFormat: Format[Instance.Id] = Format(
-    Reads.of[String](Reads.minLength[String](3)).map(Instance.Id.fromIdString(_)),
-    Writes[Instance.Id] { id => JsString(id.idString) }
-  )
+
+  // TODO(karsten): Someone with more patience for Play Json is happily invited to change the parsing.
+  implicit object InstanceIdFormat extends Format[Instance.Id] {
+    override def reads(json: JsValue): JsResult[Id] = {
+      (json \ "idString") match {
+        case JsDefined(JsString(id)) => JsSuccess(Instance.Id.fromIdString(id), JsPath \ "idString")
+        case _ => JsError(JsPath \ "idString", "Could not parse instance id.")
+      }
+    }
+
+    override def writes(id: Id): JsValue = {
+      Json.obj("idString" -> id.idString)
+    }
+  }
 
   implicit val instanceConditionFormat: Format[Condition] = Condition.conditionFormat
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]

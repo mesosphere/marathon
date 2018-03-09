@@ -37,7 +37,7 @@ class ReadinessCheckResultFormatTest extends UnitTest {
       s"""
         |{
         |  "name": "readinessCheck",
-        |  "taskId": ${taskId.idString},
+        |  "taskId": "${taskId.idString}",
         |  "ready": true,
         |  "lastResponse": {
         |    "contentType": "application/json",
