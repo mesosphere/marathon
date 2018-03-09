@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package integration
 
-import java.util.UUID
-
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
@@ -15,9 +13,7 @@ import scala.concurrent.duration._
 @IntegrationTest
 class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  before(cleanUp())
-
-  def appId(): PathId = testBasePath / s"app-${UUID.randomUUID}"
+  def appId(suffix: String): PathId = testBasePath / s"app-$suffix"
 
   "Filter events" should {
     "receive only app deployment event" in {
@@ -36,7 +32,7 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
         .runWith(Sink.head)
 
       When("the app is created")
-      val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
+      val app = appProxy(appId("with-one-deployment-event"), "v1", instances = 1, healthCheck = None)
       val result = marathon.createAppV2(app)
 
       And("we wait for deployment")
