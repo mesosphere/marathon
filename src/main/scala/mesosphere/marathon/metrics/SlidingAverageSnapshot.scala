@@ -40,8 +40,9 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
     val tickInterval: Long = config.getDuration("kamon.metric.tick-interval").toMillis
     val fullFrames: Int = (averagingWindow.toMillis.toFloat / tickInterval).ceil.toInt
 
-    // Warn for too low values
-    if (fullFrames < 3) {
+    // It does not make sense having a sliding average window with less than
+    // two frames. Let the user know just in case this happened by a misconfiguration.
+    if (fullFrames < 2) {
       logger.warn(s"SlidingAverageReporter applied over a very small window (${fullFrames} frames), consider" +
         " increasing averageWindow or decreasing `kamon.metric.tick-interval`!")
     }
@@ -64,7 +65,8 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
     // starting fro the oldest (the next value from the current index) to the
     // newest (the current index).
     val maxItems: Int = averageRing.length
-    for (i: Int <- 0 until maxItems) {
+    var i: Int = 0
+    while (i < maxItems) {
       val idx = (averageIndex + i) % maxItems
       val inst = averageRing(idx)
 
@@ -89,6 +91,9 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
           }
         }
       }
+
+      // Advance index of while loop
+      i += 1
     }
 
     // Compose the snapshot from the combined data
@@ -117,7 +122,7 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
   }
 
   /**
-    * Collect the current snapshot
+    * Return the computed snapshot
     * @return
     */
   def snapshot(): TickMetricSnapshot = currentSnapshot
