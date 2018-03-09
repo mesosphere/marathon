@@ -108,7 +108,7 @@ case class PodDefinition(
 
   def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
   def container(taskId: Task.Id): Option[MesosContainer] = taskId match {
-    case Task.EphermeralTaskId(_, Some(containerName)) => container(containerName)
+    case Task.EphemeralOrReservedTaskId(_, Some(containerName)) => container(containerName)
     case Task.ResidentTaskId(_, Some(containerName), _) => container(containerName)
     case _ => None
   }

@@ -298,7 +298,7 @@ class InstanceUpdaterTest extends UnitTest {
     val agentInfo = AgentInfo("localhost", None, None, None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None)
     val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
-    val taskId: Task.Id = Task.EphermeralTaskId(instanceId, None)
+    val taskId: Task.Id = Task.EphemeralOrReservedTaskId(instanceId, None)
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)
     val taskStatus = Task.Status(
       stagedAt = clock.now(),

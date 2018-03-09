@@ -457,7 +457,7 @@ object InstanceOpFactoryImpl {
       val taskHostPorts: Seq[Int] = taskId match {
         case Task.ResidentTaskId(_, Some(containerName), _) =>
           allocPortsByCTName.withFilter { case (name, port) => name == containerName }.map(_._2)
-        case Task.EphermeralTaskId(_, Some(containerName)) =>
+        case Task.EphemeralOrReservedTaskId(_, Some(containerName)) =>
           allocPortsByCTName.withFilter { case (name, port) => name == containerName }.map(_._2)
         case _ => Seq.empty[Int]
       }

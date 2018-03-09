@@ -43,7 +43,7 @@ class InstanceIdTest extends UnitTest with Inside {
       parsedTaskId.runSpecId should be(appId)
       parsedTaskId.instanceId should be(Instance.Id(appId, PrefixInstance, uuid))
       inside(parsedTaskId) {
-        case Task.EphermeralTaskId(_, containerName) =>
+        case Task.EphemeralOrReservedTaskId(_, containerName) =>
           containerName should be('nonEmpty)
           containerName should be(Some("someContainerName"))
       }
@@ -56,7 +56,7 @@ class InstanceIdTest extends UnitTest with Inside {
       parsedTaskId.runSpecId should be(appId)
       parsedTaskId.instanceId should be(Instance.Id(appId, PrefixInstance, uuid))
       inside(parsedTaskId) {
-        case Task.EphermeralTaskId(_, containerName) =>
+        case Task.EphemeralOrReservedTaskId(_, containerName) =>
           containerName should be('empty)
       }
     }

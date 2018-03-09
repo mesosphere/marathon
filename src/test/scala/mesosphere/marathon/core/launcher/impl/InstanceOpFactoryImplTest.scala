@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{ EphermeralTaskId, ResidentTaskId }
+import mesosphere.marathon.core.task.Task.{ EphemeralOrReservedTaskId, ResidentTaskId }
 import mesosphere.marathon.raml.{ Endpoint, Resources }
 import mesosphere.marathon.state.PathId
 
@@ -121,7 +121,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     }(collection.breakOut)
 
     val allocatedPortsPerTask: Map[String, Seq[Int]] = instance.tasksMap.map {
-      case (EphermeralTaskId(_, Some(ctName)), task) =>
+      case (EphemeralOrReservedTaskId(_, Some(ctName)), task) =>
         val ports: Seq[Int] = task.status.networkInfo.hostPorts
         ctName -> ports
       case (ResidentTaskId(_, Some(ctName), _), task) =>

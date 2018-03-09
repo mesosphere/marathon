@@ -135,7 +135,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "single offer is passed to matcher" in new Fixture {
       val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
 
-      val task = MarathonTestHelper.makeOneCPUTask(Task.EphermeralTaskId(F.instanceId, None)).build()
+      val task = MarathonTestHelper.makeOneCPUTask(Task.EphemeralOrReservedTaskId(F.instanceId, None)).build()
       val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
       module.subOfferMatcherManager.setLaunchTokens(10)
       module.subOfferMatcherManager.addSubscription(matcher)

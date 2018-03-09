@@ -263,8 +263,8 @@ class TaskTest extends UnitTest with Inside {
 
     "Task.Id as key in Map" in {
       val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
-      val taskId1 = Task.EphermeralTaskId(instanceId, Some("rails"))
-      val taskId2 = Task.EphermeralTaskId(instanceId, Some("mysql"))
+      val taskId1 = Task.EphemeralOrReservedTaskId(instanceId, Some("rails"))
+      val taskId2 = Task.EphemeralOrReservedTaskId(instanceId, Some("mysql"))
 
       val m = Map(taskId1 -> 1)
 

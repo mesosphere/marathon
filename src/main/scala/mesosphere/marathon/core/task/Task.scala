@@ -252,7 +252,6 @@ object Task {
   /**
     * Identifier of an ephemeral app or pod task.
     *
-    * TODO(karsten): Rename to EphemeralOrReservedTaskId
     * The ids match [[Task.Id.TaskIdWithInstanceIdRegex]]. They do not include any attempts.
     *
     * Tasks belonging to a pod, ie a Mesos task group, share the same instance id but have each a different container
@@ -267,7 +266,7 @@ object Task {
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
     */
-  case class EphermeralTaskId(val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
+  case class EphemeralOrReservedTaskId(val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
 
     // A stringifed version of the id.
     override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
@@ -342,7 +341,7 @@ object Task {
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
 
           // This could also be a ResidentTaskId
-          EphermeralTaskId(instanceId, containerName)
+          EphemeralOrReservedTaskId(instanceId, containerName)
         case ResidentTaskIdRegex(safeRunSpecId, separator, uuid, _, attempt) =>
           val runSpec = PathId.fromSafePath(safeRunSpecId)
           LegacyResidentId(runSpec, separator, UUID.fromString(uuid), attempt.toLong)
@@ -377,7 +376,7 @@ object Task {
       * @param instanceId the ID of the instance that this task is contained in
       * @param container the name of the task as per the pod container config.
       */
-    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id = EphermeralTaskId(instanceId, container.map(_.name))
+    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id = EphemeralOrReservedTaskId(instanceId, container.map(_.name))
 
     /**
       * Create a taskId for a resident task launch. This will append or increment a launch attempt count that might
@@ -389,7 +388,7 @@ object Task {
       */
     def forResidentTask(taskId: Task.Id): Task.Id = {
       taskId match {
-        case EphermeralTaskId(instanceId, containerName) =>
+        case EphemeralOrReservedTaskId(instanceId, containerName) =>
           ResidentTaskId(instanceId, containerName, 1L)
         case ResidentTaskId(instanceId, containerName, attempt) =>
           val newAttempt = attempt + 1L
