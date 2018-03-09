@@ -1,6 +1,6 @@
 {
   "id": "/marathon-user-ee",
-  "cmd": "cd $MESOS_SANDBOX && LIBPROCESS_PORT=$PORT1 && /marathon/bin/start --default_accepted_resource_roles \"*\" --enable_features \"vips,task_killing,external_volumes,secrets,gpu_resources\" --framework_name marathon-user-ee-strict-1-3 --hostname $LIBPROCESS_IP --http_port $PORT0 --master zk://master.mesos:2181/mesos --max_tasks_per_offer 1 --mesos_leader_ui_url /mesos --mesos_role marathon-user-ee  --zk zk://master.mesos:2181/universe/marathon-user-ee-1-3 --mesos_authentication --mesos_authentication_principal marathon_user_ee",
+  "cmd": "cd $MESOS_SANDBOX && LIBPROCESS_PORT=$PORT1 && /marathon/bin/start --default_accepted_resource_roles \"*\" --enable_features \"vips,task_killing,external_volumes,secrets,gpu_resources\" --framework_name marathon-user-ee-strict-1-6 --hostname $LIBPROCESS_IP --http_port $PORT0 --master zk://master.mesos:2181/mesos --max_instances_per_offer 1 --mesos_leader_ui_url /mesos --mesos_role marathon-user-ee  --zk zk://master.mesos:2181/universe/marathon-user-ee --mesos_authentication --mesos_authentication_principal marathon_user_ee",
   "cpus": 2,
   "mem": 2048,
   "disk": 0,
@@ -21,14 +21,7 @@
       },
       "privileged": false,
       "forcePullImage": false
-    },
-    "volumes": [
-      {
-        "containerPath": "/opt/mesosphere",
-        "hostPath": "/opt/mesosphere",
-        "mode": "RO"
-      }
-    ]
+    }
   },
   "env": {
     "JVM_OPTS": "-Xms256m -Xmx2g",
@@ -37,17 +30,18 @@
       "secret": "service-account"
     },
     "MESOS_AUTHENTICATEE": "com_mesosphere_dcos_ClassicRPCAuthenticatee",
-    "MESOS_MODULES": "file:///opt/mesosphere/etc/mesos-scheduler-modules/dcos_authenticatee_module.json",
+    "MESOS_MODULES": "{\"libraries\":[{\"file\":\"/opt/libmesos-bundle/lib/libdcos_security.so\",\"modules\":[{\"name\":\"com_mesosphere_dcos_ClassicRPCAuthenticatee\"}]}]}",
     "LIBPROCESS_SSL_ENABLED": "true",
     "LIBPROCESS_SSL_SUPPORT_DOWNGRADE": "false",
     "LIBPROCESS_SSL_REQUIRE_CERT": "false",
     "LIBPROCESS_SSL_VERIFY_CERT": "false",
-    "MESOS_NATIVE_JAVA_LIBRARY": "/opt/mesosphere/lib/libmesos.so",
-    "PLUGIN_ACS_URL": "https://master.mesos"
+    "PLUGIN_ACS_URL": "https://master.mesos",
+    "PLUGIN_AUTHN_MODE": "dcos/jwt",
+    "PLUGIN_FRAMEWORK_TYPE": "marathon"
   },
   "labels": {
     "DCOS_SERVICE_SCHEME": "http",
-    "DCOS_SERVICE_NAME": "marathon-user-ee-strict-1-3",
+    "DCOS_SERVICE_NAME": "marathon-user-ee-strict-1-6",
     "DCOS_SERVICE_PORT_INDEX": "0"
   },
   "healthChecks": [
