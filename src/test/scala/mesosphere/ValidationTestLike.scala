@@ -1,14 +1,16 @@
 package mesosphere
 
-import com.wix.accord.{ Failure, Result, Success, Validator }
+import com.wix.accord.Descriptions.{Generic, Path}
+import com.wix.accord._
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import org.scalatest._
-import org.scalatest.matchers.{ BePropertyMatchResult, BePropertyMatcher, MatchResult, Matcher }
-import play.api.libs.json.{ Json, JsError, Format }
-import mesosphere.marathon.api.akkahttp.EntityMarshallers
+import org.scalatest.matchers.{BePropertyMatchResult, BePropertyMatcher, MatchResult, Matcher}
+import play.api.libs.json.{Format, JsError, Json}
+
+import scala.collection.breakOut
 
 /**
   * Provides a set of scalatest matchers for use when testing validation.
@@ -19,6 +21,17 @@ import mesosphere.marathon.api.akkahttp.EntityMarshallers
 trait ValidationTestLike extends Validation {
   this: Assertions =>
 
+  private def jsErrorToFailure(error: JsError): Failure = Failure(
+    error.errors.flatMap {
+      case (path, validationErrors) =>
+        validationErrors.map { validationError =>
+          RuleViolation(
+            validationError.args.mkString(", "),
+            validationError.message,
+            path = Path(path.toString.split("/").filter(_ != "").map(Generic(_)): _*))
+        }
+    }(breakOut)
+  )
   /**
     * Validator which takes an object, serializes it to JSON, and then parses it back, allowing it to test validations
     * specified in our RAML layer
@@ -27,7 +40,7 @@ trait ValidationTestLike extends Validation {
     override def apply(obj: T) = {
       Json.fromJson[T](Json.toJson(obj)) match {
         case err: JsError =>
-          EntityMarshallers.jsErrorToFailure(err)
+          jsErrorToFailure(err)
         case obj => underlyingValidator.map { _(obj.get) } getOrElse Success
       }
     }
