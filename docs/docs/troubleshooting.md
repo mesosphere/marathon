@@ -4,7 +4,9 @@ title: Troubleshooting
 
 # Troubleshooting
 
-## An app stays in "Waiting" forever
+## App troubles
+
+### An app stays in "Waiting" forever
 
 This means that Marathon does not receive "Resource Offers" from Mesos that allow it to start tasks of
 this application. The simplest failure is that there are not sufficient resources available in the cluster or another
@@ -13,7 +15,7 @@ framework hords all these resources. You can check the Mesos UI for available re
 
 If you do not find the solution yourself and you create a GitHub issue, please append the output of Mesos `/state` endpoint to the bug report so that we can inspect available cluster resources.
 
-## Requiring a specific host port
+### Requiring a specific host port
 
 Generally, it is not recommended to configure your apps to depend on a particular host port because it constraints
 scheduling. We know that it is sometimes only avoidable at great cost so Marathon allows you to specify a required
@@ -29,7 +31,9 @@ ports from 1 to 65000 available to the mesos agent by using `--resources=ports:[
 tasks scheduled by Mesos use ports in the specified range! You can find the relevant configuration options for the Mesos
 agent [here](http://mesos.apache.org/documentation/attributes-resources/).
 
-## Using HTTPS with a local CA certificate
+## Marathon troubles
+
+### Using HTTPS with a local CA certificate
 
 You might get errors like the following in the Marathon log if you are running Marathon with only HTTPS enabled
 (`--ssl_keystore_password $MARATHON_JKS_PASSWORD --ssl_keystore_path /my/path/to/marathon.jks --https_port 8080 --disable_http`)
@@ -52,11 +56,10 @@ In this case, make sure that your local CA is included in your keystore by execu
 keytool -import -trustcacerts -file ./cacert.cer -alias yourca --keystore /my/path/to/marathon.jks
 ```
 
-## Error reading authentication secret from file
+### Error reading authentication secret from file
 
 When using framework-authentication on the master, be sure to set a secret that has a minimum of eight characters. Secrets shorter than that length may not be accepted by Marathon.
 
-## Using firewalls
+### Using firewalls
 
-If you have a firewall, you may want to disable dynamic assignment of the port which is used by marathon to talk to Mesos.
-It is possible via `LIBPROCESS_PORT` environment variable.
+If you have a firewall, you may want to disable dynamic assignment of the port which is used by marathon to talk to Mesos. Marathon uses mesos v0 API through a native scheduler driver. The driver itself uses a `libmesos` library which opens a connection to the mesos master. By default, `libmesos` will use any available port from the ephemeral range, but that can be changed by setting `LIBPROCESS_PORT` environment variable.
