@@ -102,7 +102,7 @@ object InstanceOp {
         } else None
 
       val maybeUnreserve: Option[MesosProtos.Offer.Operation] =
-        if (withDisk.nonEmpty || reservationsForDisks.nonEmpty) {
+        if (withoutDisk.nonEmpty || reservationsForDisks.nonEmpty) {
           val unreserveOp = MesosProtos.Offer.Operation.Unreserve.newBuilder()
             .addAllResources(withoutDisk)
             .addAllResources(reservationsForDisks)
