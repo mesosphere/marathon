@@ -28,11 +28,7 @@ object ReleaseTarget {
     val name = "s3-package"
   }
 
-  case object PluginInterface extends ReleaseTarget {
-    val name = "plugin-interface"
-  }
-
-  val all = Seq(DockerTag, DockerLatest, S3Package, LinuxPackages, JARArtifact, PluginInterface)
+  val all = Seq(DockerTag, DockerLatest, S3Package, LinuxPackages, JARArtifact)
 }
 
 implicit val SemVerRead: scopt.Read[SemVer] = scopt.Read.reads(SemVer(_))
