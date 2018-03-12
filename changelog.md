@@ -3,21 +3,21 @@
 Recommended Mesos version is 1.5.0.
 
 ### New versioning strategy
-As of 1.6 version, Marathon switched to the new versioning strategy. We still follow [SemVer](https://semver.org/) but we needed to have a unique version number for every master build. For that reason, first 1.6 public release is 1.6.322. It does not mean there were 321 releases prior to this one that we did not share with the community, the number actually is number of commits on the master branch since the last minor release (so 1.5). As for all future releases, the fix version will be increasing but don't expect the numbers to be consequential.
+As of 1.6 version, Marathon switched to the new versioning strategy. We mostly follow [SemVer](https://semver.org/) but we needed to have a unique version number for every master build. For that reason, first 1.6 public release is 1.6.322. It does not mean there were 321 releases prior to this one that we did not share with the community, the number actually is number of commits on the master branch since the last minor release (so 1.5). As for all future releases, the fix version will be increasing but don't expect the numbers to be consequential.
 
-### New features
+### New Behavior
 
 #### Performance improvements
-As a part of performance improvement initiative we did a 10X improvement on the performance of the `v2/groups` endpoint [#5973](https://github.com/mesosphere/marathon/pull/5973)
+We have improved the overall performance of serialization in our API by 10x, leading to a substantial reduction in load for requests to `/v2/apps`, and `/v2/groups`. [#5973](https://github.com/mesosphere/marathon/pull/5973)
 
 #### Maintenance mode support
-As of version 1.6, Marathon has simple built-in support for [Mesos Maintenance Primitives](http://mesos.apache.org/documentation/latest/maintenance/). For more informations please see our [docs](https://mesosphere.github.io/marathon/docs/maintenance-mode.html).
+Marathon has simple built-in support for [Mesos Maintenance Primitives](http://mesos.apache.org/documentation/latest/maintenance/). For more information please see our [docs](https://mesosphere.github.io/marathon/docs/maintenance-mode.html).
 
 #### Persistent volumes for pods
-Starting with this version it is possible to run stateful applications inside pods. For more informations and examples please see the [docs](https://mesosphere.github.io/marathon/docs/maintenance-mode.html).
+It is now possible to run stateful applications inside pods. For more information, please see [docs](https://mesosphere.github.io/marathon/docs/maintenance-mode.html).
 
 #### GPU preferential scheduling
-Marathon supports launching GPU tasks when the command-line option `--features gpu_resources` is specified. Depending on the GPU availability, it may be desirable to configure Marathon to avoid placing non-GPU tasks on GPU nodes. For more information see the [docs](https://mesosphere.github.io/marathon/docs/preferential-gpu-scheduling.html). or [MARATHON-8087](https://jira.mesosphere.com/browse/MARATHON-8087)
+When using GPU support in Marathon, depending on the GPU availability, it may be desirable to configure Marathon to avoid placing non-GPU tasks on GPU nodes. A configuration parameter has been introduced to make this possible. For more information, see the [docs](https://mesosphere.github.io/marathon/docs/preferential-gpu-scheduling.html). or [MARATHON-8087](https://jira.mesosphere.com/browse/MARATHON-8087)
 
 #### And many more...
 
@@ -26,7 +26,7 @@ Marathon supports launching GPU tasks when the command-line option `--features g
 * Support for IPv6 healthchecks [MARATHON-7807](https://jira.mesosphere.com/browse/MARATHON-7807)
 * IS constraint operator [#5587](https://github.com/mesosphere/marathon/pull/5587)
 
-### Bug fixes
+### Fixed issues
 
 *  `portMappings` are exposed as `$PORT_NAME` variable [#5888](https://github.com/mesosphere/marathon/pull/5888)
 
