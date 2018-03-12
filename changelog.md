@@ -1,4 +1,34 @@
-## Changes from 1.5.x to 1.6.0
+## Changes from 1.5.x to 1.6.322
+
+Recommended Mesos version is 1.5.0.
+
+### New versioning strategy
+As of 1.6 version, Marathon switched to the new versioning strategy. We mostly follow [SemVer](https://semver.org/) but we needed to have a unique version number for every master build. For that reason, first 1.6 public release is 1.6.322. It does not mean there were 321 releases prior to this one that we did not share with the community, the number actually is number of commits on the master branch since the last minor release (so 1.5). As for all future releases, the fix version will be increasing but don't expect the numbers to be consequential.
+
+### New Behavior
+
+#### Performance improvements
+We have improved the overall performance of serialization in our API by 10x, leading to a substantial reduction in load for requests to `/v2/apps`, and `/v2/groups`. [#5973](https://github.com/mesosphere/marathon/pull/5973)
+
+#### Maintenance mode support
+Marathon has simple built-in support for [Mesos Maintenance Primitives](http://mesos.apache.org/documentation/latest/maintenance/). For more information please see our [docs](https://mesosphere.github.io/marathon/docs/maintenance-mode.html).
+
+#### Persistent volumes for pods
+It is now possible to run stateful applications inside pods. For more information, please see [docs](https://mesosphere.github.io/marathon/docs/maintenance-mode.html).
+
+#### GPU preferential scheduling
+When using GPU support in Marathon, depending on the GPU availability, it may be desirable to configure Marathon to avoid placing non-GPU tasks on GPU nodes. A configuration parameter has been introduced to make this possible. For more information, see the [docs](https://mesosphere.github.io/marathon/docs/preferential-gpu-scheduling.html). or [MARATHON-8087](https://jira.mesosphere.com/browse/MARATHON-8087)
+
+#### And many more...
+
+* Enhance App API to reflect resources for executor [MARATHON-8063](https://jira.mesosphere.com/browse/MARATHON-8063)
+* Add deployment failure to the event (#6011)(https://github.com/mesosphere/marathon/pull/6011)
+* Support for IPv6 healthchecks [MARATHON-7807](https://jira.mesosphere.com/browse/MARATHON-7807)
+* IS constraint operator [#5587](https://github.com/mesosphere/marathon/pull/5587)
+
+### Fixed issues
+
+*  `portMappings` are exposed as `$PORT_NAME` variable [#5888](https://github.com/mesosphere/marathon/pull/5888)
 
 ### Breaking changes
 
