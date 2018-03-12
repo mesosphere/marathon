@@ -2,9 +2,8 @@ package mesosphere.marathon
 package core.base
 
 import akka.Done
-import mesosphere.marathon.core.async.ExecutionContexts
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait CrashStrategy {
   def crash(): Future[Done]
@@ -12,6 +11,6 @@ trait CrashStrategy {
 
 case object JvmExitsCrashStrategy extends CrashStrategy {
   override def crash(): Future[Done] = {
-    Runtime.getRuntime.asyncExit()(ExecutionContexts.global)
+    Runtime.getRuntime.asyncExit()(ExecutionContext.Implicits.global)
   }
 }

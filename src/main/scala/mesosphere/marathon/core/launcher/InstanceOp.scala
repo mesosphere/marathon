@@ -103,7 +103,7 @@ object InstanceOp {
       }
 
       val maybeUnreserve: Seq[MesosProtos.Offer.Operation] =
-        if (withDisk.nonEmpty || reservationsForDisks.nonEmpty) {
+        if (withoutDisk.nonEmpty || reservationsForDisks.nonEmpty) {
           // Mesos requires that there is an operation per each resource provider ID
           val resourcesToUnreserveGroupedByProviderId =
             (withoutDisk ++ reservationsForDisks).groupBy(ResourceProviderID.fromResourceProto).values

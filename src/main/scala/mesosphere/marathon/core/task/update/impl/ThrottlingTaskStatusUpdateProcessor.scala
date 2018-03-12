@@ -3,12 +3,11 @@ package core.task.update.impl
 
 import javax.inject.{ Inject, Named }
 
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.util.WorkQueue
 import org.apache.mesos.Protos.TaskStatus
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 object ThrottlingTaskStatusUpdateProcessor {
   /**
@@ -23,6 +22,6 @@ private[core] class ThrottlingTaskStatusUpdateProcessor @Inject() (
     @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag) wrapped: TaskStatusUpdateProcessor)
   extends TaskStatusUpdateProcessor {
   override def publish(status: TaskStatus): Future[Unit] = {
-    serializePublish(wrapped.publish(status))(ExecutionContexts.global)
+    serializePublish(wrapped.publish(status))(ExecutionContext.Implicits.global)
   }
 }

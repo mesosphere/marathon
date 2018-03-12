@@ -128,7 +128,7 @@ class SystemResource @Inject() (val config: MarathonConf, cfg: Config)(implicit
             logger.setLevel(level)
 
             // if a duration is given, we schedule a timer to reset to the current level
-            import mesosphere.marathon.core.async.ExecutionContexts.global
+            import scala.concurrent.ExecutionContext.Implicits.global
             change.durationSeconds.foreach(duration => actorSystem.scheduler.scheduleOnce(duration.seconds, new Runnable {
               override def run(): Unit = {
                 logger.info(s"Duration expired. Reset Logger ${logger.getName} back to $currentEffectiveLevel")

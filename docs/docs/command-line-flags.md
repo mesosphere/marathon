@@ -84,7 +84,10 @@ When using Debian packages, these environment variables should be defined in `/e
     service ports to apps. If you assign your service port statically in your app definition, it does
     not have to be in this range.
 * `--mesos_role` (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
-    for the specified role in addition to resources with the role designation '*'. This parameter is only applied the first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, this will not have an effect on the role for which Marathon is registered.
+    for the specified role in addition to resources with the role designation '*'. This parameter is only applied the 
+    first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, 
+    this will not have an effect on the role for which Marathon is registered. Please note that Marathon currently 
+    supports only one Mesos role, support for multiple roles will be added in the future releases.
 * <span class="label label-default">v0.9.0</span> `--default_accepted_resource_roles` (Optional. Default: all roles):
     Default for the `"acceptedResourceRoles"`
     attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
@@ -182,6 +185,7 @@ When using Debian packages, these environment variables should be defined in `/e
     Time (in seconds) when marathon will start declining offers before a [maintenance window](http://mesos.apache.org/documentation/latest/maintenance/) start time.
     **Note:** In order to activate the `--draining_seconds` configuration, you must add `maintenance_mode` to the set of `--enable_features`.
 
+
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
@@ -250,6 +254,8 @@ configurable. A short duration might lead to resource starvation for other frame
 in your cluster. You should only need to reduce it if you use `--disable_revive_offers_for_new_apps`.
 
 * `--decline_offer_duration` (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.
+
+* <span class="label label-default">v1.6.x</span> `-- gpu_scheduling_behavior` (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are `undefined`, `restricted` and `unrestricted`. Read more about [Preferential GPU scheduling](preferential_gpu_scheduling.html).
 
 
 ### Marathon after 0.8.2 (including) and before 0.11.0

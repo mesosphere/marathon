@@ -16,7 +16,7 @@ class ContinueOnErrorStep(wrapped: InstanceChangeHandler) extends InstanceChange
   override def name: String = s"continueOnError(${wrapped.name})"
 
   override def process(update: InstanceChange): Future[Done] = {
-    import mesosphere.marathon.core.async.ExecutionContexts.global
+    import scala.concurrent.ExecutionContext.Implicits.global
     val maybeProcessed: Option[Future[Done]] = Option(wrapped.process(update))
     maybeProcessed match {
       case Some(processed) =>

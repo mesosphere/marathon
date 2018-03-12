@@ -26,9 +26,9 @@ PRIVATE_KEY_FILE = 'private-key.pem'
 PUBLIC_KEY_FILE = 'public-key.pem'
 
 DEFAULT_MOM_IMAGES = {
+    'MOM_EE_1.6': 'v1.6.335_1.11.0',
     'MOM_EE_1.5': 'v1.5.5_1.10.2',
-    'MOM_EE_1.4': 'v1.4.11_1.9.9',
-    'MOM_EE_1.3': '1.3.13_1.1.5'
+    'MOM_EE_1.4': 'v1.4.11_1.9.9'
 }
 
 
@@ -41,15 +41,15 @@ def is_mom_ee_deployed():
 
 def remove_mom_ee():
     mom_ee_versions = [
+        ('1.6', 'strict'),
+        ('1.6', 'permissive'),
+        ('1.6', 'disabled'),
         ('1.5', 'strict'),
         ('1.5', 'permissive'),
         ('1.5', 'disabled'),
         ('1.4', 'strict'),
         ('1.4', 'permissive'),
-        ('1.4', 'disabled'),
-        ('1.3', 'strict'),
-        ('1.3', 'permissive'),
-        ('1.3', 'disabled')
+        ('1.4', 'disabled')
     ]
     for mom_ee in mom_ee_versions:
         endpoint = mom_ee_endpoint(mom_ee[0], mom_ee[1])
@@ -113,9 +113,9 @@ def assert_mom_ee(version, security_mode='permissive'):
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
 @pytest.mark.skipif("shakedown.ee_version() != 'strict'")
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.6', 'strict'),
     ('1.5', 'strict'),
-    ('1.4', 'strict'),
-    ('1.3', 'strict')
+    ('1.4', 'strict')
 ])
 def test_strict_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
@@ -126,12 +126,12 @@ def test_strict_mom_ee(version, security_mode):
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
 @pytest.mark.skipif("shakedown.ee_version() != 'permissive'")
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.6', 'permissive'),
+    ('1.6', 'disabled'),
     ('1.5', 'permissive'),
     ('1.5', 'disabled'),
     ('1.4', 'permissive'),
-    ('1.4', 'disabled'),
-    ('1.3', 'permissive'),
-    ('1.3', 'disabled')
+    ('1.4', 'disabled')
 ])
 def test_permissive_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)
@@ -142,9 +142,9 @@ def test_permissive_mom_ee(version, security_mode):
 @pytest.mark.skipif('shakedown.required_private_agents(2)')
 @pytest.mark.skipif("shakedown.ee_version() != 'disabled'")
 @pytest.mark.parametrize("version,security_mode", [
+    ('1.6', 'disabled'),
     ('1.5', 'disabled'),
-    ('1.4', 'disabled'),
-    ('1.3', 'disabled')
+    ('1.4', 'disabled')
 ])
 def test_disabled_mom_ee(version, security_mode):
     assert_mom_ee(version, security_mode)

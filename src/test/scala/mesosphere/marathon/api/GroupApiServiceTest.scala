@@ -12,7 +12,7 @@ import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.state.PathId._
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class GroupApiServiceTest extends UnitTest with GroupCreation {
   implicit val identity: Identity = new Identity {}
@@ -106,7 +106,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     electionService.isLeader returns true
 
     implicit val authenticator = authFixture.auth
-    implicit val ec = mesosphere.marathon.core.async.ExecutionContexts.global
+    implicit val ec = ExecutionContext.Implicits.global
 
     val groupApiService = new GroupApiService(groupManager)
   }

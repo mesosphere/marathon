@@ -249,7 +249,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     lazy val baseData = mock[AppInfoBaseData]
     def newBaseData(): AppInfoBaseData = baseData
 
-    import mesosphere.marathon.core.async.ExecutionContexts.global
+    import scala.concurrent.ExecutionContext.Implicits.global
     lazy val infoService = new DefaultInfoService(groupManager, newBaseData)
 
     def verifyNoMoreInteractions(): Unit = {

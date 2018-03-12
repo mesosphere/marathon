@@ -33,7 +33,7 @@ import scala.concurrent.Future
 private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker, groupRepository: GroupRepository)
   extends OfferMatcher with StrictLogging {
 
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
 

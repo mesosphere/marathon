@@ -208,11 +208,13 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 #### Step 2:  Add URI path to app definition
 
-1.  Add the path to the archive file login credentials to the `uris` parameter of your app definition.
+1.  Add the path to the archive file login credentials to the `fetch` parameter of your app definition.
 
-    ```bash
-    "uris": [
-       "file:///etc/docker.tar.gz"
+    ```json
+    "fetch": [
+      {
+        "uri": "file:///etc/docker.tar.gz"
+      }
     ]
     ```
 
@@ -231,8 +233,10 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
           "network": "HOST"
         }
       },
-      "uris":  [
-          "file:///etc/docker.tar.gz"
+      "fetch": [
+        {
+          "uri": "file:///etc/docker.tar.gz"
+        }
       ]
     }
     ```

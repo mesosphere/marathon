@@ -118,8 +118,8 @@ new features are definitely not backported.
 9. Compile your code prior to committing. We would like the result of our automatic code formatters to be included in
    the commit as to not produce a dirty work tree after fresh checkout and first compile.
 
-10. Run, at the very least, all unit tests (`sbt test`). Integration tests can also be run using the supplied
-    `./bin/run-tests.sh` script (requires docker).
+10. Run, at the very least, all unit tests (`sbt test`). Integration tests can also be run with
+    `sbt integration:test` (requires docker).
 
 
 ## Test Guidelines
