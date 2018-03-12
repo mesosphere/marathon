@@ -100,7 +100,7 @@ On CentOS, the packages can be installed using yum: `sudo yum install -y libeven
 The script can be run as follows:
 
         cd marathon
-        cd scripts
+        cd tools
         ./mvm.sh <VERSION> [SHELL]
 
 The following command will launch a bash shell configured for Mesos 1.2.0: `./mvm.sh 1.2.0 bash`
