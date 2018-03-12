@@ -19,7 +19,7 @@ class NotifyRateLimiterStepImpl @Inject() (
     groupManagerProvider: Provider[GroupManager]) extends InstanceChangeHandler {
 
   import NotifyRateLimiterStep._
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
   private[this] lazy val groupManager = groupManagerProvider.get()

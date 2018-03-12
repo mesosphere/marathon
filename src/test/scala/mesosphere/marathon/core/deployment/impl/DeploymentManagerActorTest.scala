@@ -11,7 +11,6 @@ import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
 import akka.testkit.{ ImplicitSender, TestActor, TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.deployment.impl.DeploymentActor.Cancel
 import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
@@ -190,7 +189,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     val config: MarathonConf = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
       verify()
     }
-    implicit val ctx: ExecutionContext = ExecutionContexts.global
+    implicit val ctx: ExecutionContext = ExecutionContext.Implicits.global
     val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(
       AlwaysElectedLeadershipModule.forRefFactory(system)
     )

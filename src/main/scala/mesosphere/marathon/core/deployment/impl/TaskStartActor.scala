@@ -14,7 +14,7 @@ import mesosphere.marathon.state.RunSpec
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ Future, Promise }
-import mesosphere.marathon.core.async.ExecutionContexts.global
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @SuppressWarnings(Array("all")) // async/await
 class TaskStartActor(

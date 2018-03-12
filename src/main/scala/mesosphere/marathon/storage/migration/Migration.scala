@@ -8,7 +8,7 @@ import akka.Done
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
-import mesosphere.marathon.core.async.ExecutionContexts.global
+import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.storage.StorageConfig

@@ -7,7 +7,7 @@ import akka.event.EventStream
 import akka.pattern.ask
 import akka.stream.Materializer
 import akka.util.Timeout
-import mesosphere.marathon.core.async.ExecutionContexts.global
+import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health._

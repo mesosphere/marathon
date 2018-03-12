@@ -31,7 +31,7 @@ class MarathonScheduler(
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
   @volatile private[this] var localFaultDomain: Option[FaultDomain] = Option.empty
 
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val zkTimeout = config.zkTimeoutDuration
 

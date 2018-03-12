@@ -1,10 +1,7 @@
 package mesosphere.util
 
 import java.util.concurrent.{ ExecutorService, Executors, ThreadFactory }
-
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import mesosphere.marathon.core.async.ContextPropagatingExecutionContextWrapper
-
 import scala.concurrent.ExecutionContext
 
 object ThreadPoolContext {
@@ -16,9 +13,7 @@ object ThreadPoolContext {
     * Use this context instead of the global execution context,
     * if you do blocking IO operations.
     */
-  implicit lazy val ioContext = ContextPropagatingExecutionContextWrapper(
-    ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(numberOfThreads))
-  )
+  implicit lazy val ioContext = NamedExecutionContext.fixedThreadPoolExecutionContext(numberOfThreads, namePrefix = "io-pool")
 }
 
 object NamedExecutionContext {

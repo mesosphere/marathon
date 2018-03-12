@@ -24,7 +24,7 @@ import scala.util.control.NonFatal
 private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorSystem, materializer: Materializer)
   extends ReadinessCheckExecutor {
 
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
   private[this] val log = LoggerFactory.getLogger(getClass)
   private implicit val scheduler = actorSystem.scheduler
 

@@ -9,7 +9,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
-import mesosphere.marathon.core.async.ExecutionContexts.global
+import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance

@@ -54,7 +54,7 @@ private[launcher] class OfferProcessorImpl(
     taskLauncher: TaskLauncher,
     stateOpProcessor: InstanceStateOpProcessor,
     offerStreamInput: SourceQueue[Offer]) extends OfferProcessor with StrictLogging {
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val incomingOffersMeter =
     Metrics.minMaxCounter(ServiceMetric, getClass, "incomingOffers")

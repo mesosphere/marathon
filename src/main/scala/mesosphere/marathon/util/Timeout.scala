@@ -1,11 +1,10 @@
 package mesosphere.marathon
 package util
 
-import java.time.{ Clock, Instant }
+import java.time.{ Clock }
 import java.util.concurrent.TimeUnit
 
 import akka.actor.Scheduler
-import mesosphere.marathon.core.async.RunContext
 import mesosphere.util.{ CallerThreadExecutionContext, DurationToHumanReadable }
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
@@ -53,8 +52,8 @@ object Timeout {
       val token = scheduler.scheduleOnce(finiteTimeout) {
         promise.tryFailure(new TimeoutException(s"$name timed out after ${timeout.toHumanReadable}"))
       }
-      val result = RunContext.withContext(Instant.now(clock))(f)
-      result.onComplete { res =>
+
+      f.onComplete { res =>
         promise.tryComplete(res)
         token.cancel()
       }(CallerThreadExecutionContext.callerThreadExecutionContext)

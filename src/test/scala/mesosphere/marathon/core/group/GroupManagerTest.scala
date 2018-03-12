@@ -6,7 +6,6 @@ import javax.inject.Provider
 import akka.Done
 import akka.event.EventStream
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.event.GroupChangeSuccess
 import mesosphere.marathon.core.group.impl.GroupManagerImpl
 import mesosphere.marathon.state.PathId._
@@ -14,7 +13,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class GroupManagerTest extends AkkaUnitTest with GroupCreation {
   class Fixture(
@@ -27,7 +26,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     val eventStream = mock[EventStream]
     val groupManager = new GroupManagerImpl(config, initialRoot, groupRepository, new Provider[DeploymentService] {
       override def get(): DeploymentService = deploymentService
-    })(eventStream, ExecutionContexts.global)
+    })(eventStream, ExecutionContext.Implicits.global)
   }
 
   "GroupManager" should {

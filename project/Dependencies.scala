@@ -187,8 +187,6 @@ object Dependency {
 
     // Note - While Kamon depends on Akka 2.4.x, version 0.6.7 is compatible with Akka 2.5.x
     val core = "io.kamon" %% "kamon-core" % Version % "compile"
-    val akka = "io.kamon" %% "kamon-akka-2.5" % Version % "compile"
-    val autoweave = "io.kamon" %% "kamon-autoweave" % "0.6.5" % "compile"
     val scala = "io.kamon" %% "kamon-scala" % Version % "compile"
     val systemMetrics = "io.kamon" %% "kamon-system-metrics" % Version % "compile"
 
@@ -199,7 +197,7 @@ object Dependency {
     }
 
     // there are some issues with the Akka modules that are really unclear
-    val all = Seq(core, /*akka,*/ autoweave, systemMetrics, /*akkaHttp,*/ scala,  Backends.statsd, Backends.datadog, Backends.jmx)
+    val all = Seq(core, systemMetrics, scala,  Backends.statsd, Backends.datadog, Backends.jmx)
   }
 
   object Test {

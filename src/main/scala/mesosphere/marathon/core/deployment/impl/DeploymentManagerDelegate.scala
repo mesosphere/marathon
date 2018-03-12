@@ -34,7 +34,7 @@ class DeploymentManagerDelegate(
     implicit val timeoutImplicit: Timeout = timeout
     val answerFuture = (deploymentManagerActor ? message).mapTo[Future[R]]
 
-    import mesosphere.marathon.core.async.ExecutionContexts.global
+    import scala.concurrent.ExecutionContext.Implicits.global
     answerFuture.recover {
       case NonFatal(e) => throw new RuntimeException(s"in $method", e)
     }

@@ -37,7 +37,7 @@ private[jobs] object OverdueTasksActor {
       stateOpProcessor: InstanceStateOpProcessor,
       killService: KillService,
       clock: Clock) extends StrictLogging {
-    import mesosphere.marathon.core.async.ExecutionContexts.global
+    import scala.concurrent.ExecutionContext.Implicits.global
 
     def check(): Future[Unit] = {
       val now = clock.now()
