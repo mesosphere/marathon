@@ -1,4 +1,4 @@
-## Changes from 1.5.x to 1.6.0
+## Changes from 1.5.x to 1.6.322
 
 Recommended Mesos version is 1.5.0.
 
@@ -8,7 +8,7 @@ As of 1.6 version, Marathon switched to the new versioning strategy. We still fo
 ### New features
 
 #### Performance improvements
-As a part of performance improvement initiative we did a 10X improvement on the performance of the v2/groups endpoint [#5973](https://github.com/mesosphere/marathon/pull/5973)
+As a part of performance improvement initiative we did a 10X improvement on the performance of the `v2/groups` endpoint [#5973](https://github.com/mesosphere/marathon/pull/5973)
 
 #### Maintenance mode support
 As of version 1.6, Marathon has simple built-in support for [Mesos Maintenance Primitives](http://mesos.apache.org/documentation/latest/maintenance/). For more informations please see our [docs](https://mesosphere.github.io/marathon/docs/maintenance-mode.html).
