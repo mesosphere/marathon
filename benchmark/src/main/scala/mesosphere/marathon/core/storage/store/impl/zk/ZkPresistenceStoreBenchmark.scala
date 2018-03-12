@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import akka.Done
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.{ ActorMaterializer, Materializer }
-import mesosphere.marathon.core.async.ExecutionContexts._
+import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.storage.{ CuratorZk, StorageConf }
 import mesosphere.marathon.storage.repository.StoredGroup

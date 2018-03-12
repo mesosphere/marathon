@@ -25,7 +25,7 @@ private[tracker] class InstanceTrackerDelegate(
     taskTrackerRef: ActorRef) extends InstanceTracker {
 
   override def instancesBySpecSync: InstanceTracker.InstancesBySpec = {
-    import mesosphere.marathon.core.async.ExecutionContexts.global
+    import scala.concurrent.ExecutionContext.Implicits.global
     Await.result(instancesBySpec(), taskTrackerQueryTimeout.duration)
   }
 
@@ -43,7 +43,7 @@ private[tracker] class InstanceTrackerDelegate(
   override def countLaunchedSpecInstancesSync(appId: PathId): Int =
     instancesBySpecSync.specInstances(appId).count(instance => instance.isLaunched || instance.isReserved)
   override def countLaunchedSpecInstances(appId: PathId): Future[Int] = {
-    import mesosphere.marathon.core.async.ExecutionContexts.global
+    import scala.concurrent.ExecutionContext.Implicits.global
     instancesBySpec().map(_.specInstances(appId).count(instance => instance.isLaunched || instance.isReserved))
   }
 

@@ -6,7 +6,6 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
@@ -14,7 +13,7 @@ import mesosphere.marathon.state.{ PathId, RunSpec }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ Await, Future, ExecutionContext }
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
@@ -58,12 +57,12 @@ private[launchqueue] class LaunchQueueDelegate(
     getAsync(runSpecId).map {
       case Some(i) => i.instancesLeftToLaunch
       case None => 0
-    }(ExecutionContexts.global)
+    }(ExecutionContext.Implicits.global)
 
   override def listRunSpecs: Seq[RunSpec] = list.map(_.runSpec)
 
   override def listRunSpecsAsync: Future[Seq[RunSpec]] =
-    listAsync.map(_.map(_.runSpec))(ExecutionContexts.global)
+    listAsync.map(_.map(_.runSpec))(ExecutionContext.Implicits.global)
 
   override def asyncPurge(runSpecId: PathId): Future[Done] =
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("asyncPurge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
@@ -88,7 +87,7 @@ private[launchqueue] class LaunchQueueDelegate(
 
     implicit val timeoutImplicit: Timeout = timeout
     val answerFuture = launchQueueActor ? message
-    import mesosphere.marathon.core.async.ExecutionContexts.global
+    import scala.concurrent.ExecutionContext.Implicits.global
     answerFuture.recover {
       case NonFatal(e) => throw new RuntimeException(s"in $method", e)
     }

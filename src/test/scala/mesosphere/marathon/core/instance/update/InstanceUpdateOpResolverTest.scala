@@ -24,7 +24,7 @@ import scala.concurrent.Future
   */
 class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   "InstanceUpdateOpResolver" should {
     "ForceExpunge for an unknown task" in new Fixture {

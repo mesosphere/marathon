@@ -23,7 +23,7 @@ private[tracker] class InstanceStateOpProcessorDelegate(
     instanceTrackerRef: ActorRef)
   extends InstanceStateOpProcessor {
 
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   private[impl] implicit val timeout: Timeout = conf.internalTaskUpdateRequestTimeout().milliseconds
 

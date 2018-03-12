@@ -3,7 +3,7 @@ package api
 
 import akka.Done
 import mesosphere.UnitTest
-import mesosphere.marathon.core.async.ExecutionContexts.global
+import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }

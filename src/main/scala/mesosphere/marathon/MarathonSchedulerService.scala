@@ -79,7 +79,7 @@ class MarathonSchedulerService @Inject() (
     @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef)(implicit mat: Materializer)
   extends AbstractExecutionThreadService with ElectionCandidate with DeploymentService {
 
-  import mesosphere.marathon.core.async.ExecutionContexts.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val zkTimeout = config.zkTimeoutDuration
 

@@ -2,11 +2,12 @@ package mesosphere.marathon
 package storage.repository
 
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId
+
+import scala.concurrent.ExecutionContext
 
 // small test to make sure pod serialization/deserialization in ZK is functioning.
 class PodRepositoryTest extends AkkaUnitTest {
@@ -30,7 +31,7 @@ class PodRepositoryTest extends AkkaUnitTest {
   }
 
   class Fixture {
-    implicit val ctx = ExecutionContexts.global
+    implicit val ctx = ExecutionContext.Implicits.global
 
     val store = new InMemoryPersistenceStore()
     store.markOpen()

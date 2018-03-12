@@ -11,7 +11,6 @@ import com.google.inject.name.Names
 import com.typesafe.config.Config
 import mesosphere.marathon.api.GroupApiService
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
@@ -211,7 +210,7 @@ class CoreGuiceModule(config: Config) extends AbstractModule {
 
   @Provides
   @Singleton
-  def provideExecutionContext: ExecutionContext = ExecutionContexts.global
+  def provideExecutionContext: ExecutionContext = ExecutionContext.Implicits.global
 
   @Provides @Singleton @Named(ModuleNames.HISTORY_ACTOR_PROPS)
   def historyActor(coreModule: CoreModule): Props = coreModule.historyModule.historyActorProps

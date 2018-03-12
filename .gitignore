@@ -25,3 +25,4 @@ tests/performance/results
 ci.log
 ci.tar.gz
 *.jfr
+.python-version
