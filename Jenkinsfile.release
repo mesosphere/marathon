@@ -44,7 +44,7 @@ ansiColor('xterm') {
 
               targets = ''
               if (params.dryRun == false)
-                targets = 'docker-tag linux-packages jar-artifact s3-package ' + (params.latest ? 'docker-latest' : '')
+                targets = 'docker-tag linux-packages jar-artifact s3-package plugin-interface ' + (params.latest ? 'docker-latest' : '')
 
               sh """sudo -E env ci/pipeline release --version $params.version --run-tests=$params.runTests $targets"""
             }
