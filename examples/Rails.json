@@ -4,8 +4,11 @@
   "mem": 100,
   "cpus": 1.0,
   "instances": 1,
-  "uris": [
-    "http://downloads.mesosphere.com/tutorials/RailsHello.tgz"
+  "fetch": [
+    {
+      "uri": "http://downloads.mesosphere.com/tutorials/RailsHello.tgz"
+    }
+
   ],
   "env": {
     "RAILS_ENV": "production"
