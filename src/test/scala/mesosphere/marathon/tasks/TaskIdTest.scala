@@ -86,28 +86,23 @@ class TaskIdTest extends UnitTest with Inside {
       originalId.instanceId shouldEqual newTaskId.instanceId
     }
 
-    /*
-
-    TODO(karsten): Add reservationId to Task.ResidentTaskId
-
     "TaskId.reservationId is the same as task id when task id is without attempt counter" in {
       val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
-      val reservationId = Task.Id.reservationId(originalId.idString)
+      val reservationId = originalId.reservationId
 
       reservationId shouldEqual originalId.idString
     }
 
     "TaskId.reservationId removes attempt from app task id" in {
       val originalId = Task.Id.forRunSpec(PathId("/app/test/23"))
-      val reservationIdFromOriginal = Task.Id.reservationId(originalId.idString)
 
       val residentTaskId = Task.Id.forResidentTask(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId
-      Task.Id.reservationId(residentTaskId.idString) shouldEqual reservationIdFromOriginal
+      residentTaskId.reservationId shouldEqual originalId.reservationId
 
       val anotherResidentTaskId = Task.Id.forResidentTask(residentTaskId)
       anotherResidentTaskId.instanceId shouldEqual originalId.instanceId
-      Task.Id.reservationId(anotherResidentTaskId.idString) shouldEqual reservationIdFromOriginal
+      anotherResidentTaskId.reservationId shouldEqual originalId.reservationId
     }
 
     "TaskId.reservationId removes attempt and container name from pod task id" in {
@@ -116,22 +111,28 @@ class TaskIdTest extends UnitTest with Inside {
       val residentTaskId = Task.Id.forResidentTask(originalId)
       residentTaskId.instanceId shouldEqual originalId.instanceId
 
-      val reservationId = Task.Id.reservationId(residentTaskId.idString)
       val anotherResidentTaskId = Task.Id.forResidentTask(residentTaskId)
       anotherResidentTaskId.instanceId shouldEqual originalId.instanceId
-      Task.Id.reservationId(anotherResidentTaskId.idString) shouldEqual reservationId
+
+      anotherResidentTaskId.reservationId shouldEqual residentTaskId.reservationId
     }
 
     "TaskId.reservationId works as expected for all types of task ids" in {
-      val appTaskId = "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
-      Task.Id.reservationId(appTaskId) shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
-      val appResidentTaskIdWithAttempt = "app.4455cb85-0c16-490d-b84e-481f8321ff0a.1"
-      Task.Id.reservationId(appResidentTaskIdWithAttempt) shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
-      val podTaskIdWithContainerName = "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct"
-      Task.Id.reservationId(podTaskIdWithContainerName) shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
-      val podTaskIdWithContainerNameAndAttempt = "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1"
-      Task.Id.reservationId(podTaskIdWithContainerNameAndAttempt) shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
+      val appTaskId = Task.Id.fromIdString("app.4455cb85-0c16-490d-b84e-481f8321ff0a")
+      appTaskId shouldBe a[Task.LegacyId]
+      appTaskId.reservationId shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
+
+      val appResidentTaskIdWithAttempt = Task.Id.fromIdString("app.4455cb85-0c16-490d-b84e-481f8321ff0a.1")
+      appResidentTaskIdWithAttempt shouldBe a[Task.LegacyResidentId]
+      appResidentTaskIdWithAttempt.reservationId shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
+
+      val podTaskIdWithContainerName = Task.Id.fromIdString("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct")
+      podTaskIdWithContainerName shouldBe a[Task.EphemeralOrReservedTaskId]
+      podTaskIdWithContainerName.reservationId shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
+
+      val podTaskIdWithContainerNameAndAttempt = Task.Id.fromIdString("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1")
+      podTaskIdWithContainerNameAndAttempt shouldBe a[Task.ResidentTaskId]
+      podTaskIdWithContainerNameAndAttempt.reservationId shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
     }
-    */
   }
 }

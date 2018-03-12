@@ -186,6 +186,8 @@ object Task {
     // Quick access to the underlying instance identifier of the task.
     val instanceId: Instance.Id
 
+    val reservationId: String
+
     // The Mesos task id representation of the task.
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
 
@@ -223,6 +225,8 @@ object Task {
     override val idString: String = runSpecId.safePath + separator + uuid
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
+
+    override val reservationId = idString
   }
 
   /**
@@ -246,6 +250,8 @@ object Task {
     override val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
+
+    override val reservationId = runSpecId.safePath + separator + uuid
   }
 
   /**
@@ -272,6 +278,8 @@ object Task {
 
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
+
+    override lazy val reservationId: String = instanceId.idString
   }
 
   /**
@@ -296,6 +304,8 @@ object Task {
 
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
+
+    override lazy val reservationId: String = instanceId.idString
   }
 
   object Id {
