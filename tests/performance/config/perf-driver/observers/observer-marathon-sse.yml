@@ -11,5 +11,5 @@
 observers:
 
   # The events observer is subscribing to the
-  - class: observer.MarathonPollerObserver
-    url: "{{marathon_url}}/v2/events"
+  - class: observer.MarathonEventsObserver
+    url: "{{marathon_url}}/v2/events?plan-format=light"
