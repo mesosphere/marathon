@@ -95,7 +95,7 @@ DC/OS users do not need to follow the configuration steps below.
     $ echo 'docker,mesos' > /etc/mesos-slave/containerizers
     ```
 
-1. Increase the executor timeout to account for the potential delay pulling a docker image to the agent node.
+1. Increase the executor timeout to account for the potential delay pulling a Docker image to the agent node.
 
     ```bash
     $ echo '10mins' > /etc/mesos-slave/executor_registration_timeout
@@ -144,6 +144,28 @@ container types may be added later.
 
 For convenience, the mount point of the Mesos sandbox is available in the
 environment as `$MESOS_SANDBOX`.
+
+
+#### Disabling the Docker log driver
+
+It might be useful to disable the Docker log driver in order to not overflow the system disk. Mesos is storing the logs 
+inside the sandbox, and it's unaffected by the Docker log driver. One way to do it is to provide Docker logging driver 
+parameters in the app definition:
+
+```json
+{
+  "type": "DOCKER",
+  "docker": {
+    "image": "foo",
+    "parameters": [
+      {
+        "key": "log-driver",
+        "value": "none"
+      }
+    ]
+  }
+}
+```
 
 ### Bridged Networking Mode
 
@@ -235,7 +257,7 @@ documentation for more details on how Docker handles networking.
 ### Using a Private Docker Registry
 
 See the [private registry]({{ site.baseurl }}/docs/native-docker-private-registry.html)
-documentation for more details on how to initiate a `docker pull` from a private docker registry
+documentation for more details on how to initiate a `docker pull` from a private Docker registry
 using Marathon.
 
 ### Advanced Usage
@@ -307,7 +329,7 @@ e.g.:
 
 #### Privileged Mode and Arbitrary Docker Options
 
-Starting with version 0.7.6, Marathon supports two new keys for docker
+Starting with version 0.7.6, Marathon supports two new keys for Docker
 containers: `privileged` and `parameters`.  The `privileged` flag allows users
 to run containers in privileged mode.  This flag is `false` by default.  The
 `parameters` object allows users to supply arbitrary command-line options

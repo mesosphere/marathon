@@ -29,7 +29,7 @@ import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import org.scalatest.time.{ Milliseconds, Span }
+import org.scalatest.time.{ Milliseconds, Minutes, Seconds, Span }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 import play.api.libs.json.{ JsObject, Json }
 
@@ -455,7 +455,9 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
     //do not fail here, since the require statements will ensure a correct setup and fail otherwise
     Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
 
-    WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
+    val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(1, Minutes), interval = Span(1, Seconds))
+
+    WaitTestSupport.waitUntil("clean slate in Mesos") {
       val occupiedAgents = mesos.state.value.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
       occupiedAgents.foreach { agent =>
         import mesosphere.marathon.integration.facades.MesosFormats._
@@ -464,7 +466,7 @@ trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutu
         logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
       }
       occupiedAgents.isEmpty
-    }
+    }(cleanUpPatienceConfig)
 
     val apps = marathon.listAppsInBaseGroup
     require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
@@ -822,9 +824,12 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
   * trait that has marathon, zk, and a mesos ready to go
   */
 trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
-  // disable failover timeout to assist with cleanup ops; terminated marathons are immediately removed from mesos's
-  // list of frameworks
-  override def marathonArgs: Map[String, String] = Map("failover_timeout" -> "0")
+  /* disable failover timeout to assist with cleanup ops; terminated marathons are immediately removed from mesos's
+   * list of frameworks
+   *
+   * Until https://issues.apache.org/jira/browse/MESOS-8171 is resolved, we cannot set this value to 0.
+   */
+  override def marathonArgs: Map[String, String] = Map("failover_timeout" -> "1")
 }
 
 /**
@@ -866,4 +871,3 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
     super.cleanUp()
   }
 }
-
