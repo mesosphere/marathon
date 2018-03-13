@@ -1,14 +1,14 @@
 package mesosphere
 
-import com.wix.accord.Descriptions.{Generic, Path}
+import com.wix.accord.Descriptions.{ Generic, Path }
 import com.wix.accord._
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import org.scalatest._
-import org.scalatest.matchers.{BePropertyMatchResult, BePropertyMatcher, MatchResult, Matcher}
-import play.api.libs.json.{Format, JsError, Json}
+import org.scalatest.matchers.{ BePropertyMatchResult, BePropertyMatcher, MatchResult, Matcher }
+import play.api.libs.json.{ Format, JsError, Json }
 
 import scala.collection.breakOut
 
