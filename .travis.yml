@@ -1,8 +1,15 @@
 sudo: required
 dist: trusty
+
+cache:
+  directories:
+    - $HOME/.m2/repository
+    - $HOME/.sbt
+    - $HOME/.ivy2
+
 language: scala
 scala:
   - 2.12.3
 script:
-  - travis_wait sbt ++$TRAVIS_SCALA_VERSION compile &> compile.log
-  - sbt ++$TRAVIS_SCALA_VERSION test > test.log
+  - travis_wait "sbt ++$TRAVIS_SCALA_VERSION compile test:compile &> compile.log"
+  - sbt -mem 4098 ++$TRAVIS_SCALA_VERSION test > test.log
