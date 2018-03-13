@@ -8,7 +8,7 @@ import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ ApplicationKey, HealthCheckStatusChanged }
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
@@ -87,6 +87,12 @@ private[health] class HealthCheckActor(
     // The Map built with filterKeys wraps the original map and contains a reference to activeInstanceIds.
     // Therefore we materialize it into a new map.
     healthByInstanceId = healthByInstanceId.filterKeys(activeInstanceIds).iterator.toMap
+
+    val hcToPurge = instances.withFilter(!_.isLaunched).map(instance => {
+      val instanceKey = InstanceKey(ApplicationKey(instance.runSpecId, instance.runSpecVersion), instance.instanceId)
+      (instanceKey, healthCheck)
+    })
+    appHealthCheckActor ! PurgeHealthCheckStatuses(hcToPurge)
   }
 
   def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit = healthCheck match {

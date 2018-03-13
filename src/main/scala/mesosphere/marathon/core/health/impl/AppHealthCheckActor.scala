@@ -20,7 +20,7 @@ class AppHealthCheckActor(eventBus: EventStream) extends Actor with StrictLoggin
   /**
     * Map of health check definitions of all applications
     */
-  private var healthChecks: Map[ApplicationKey, Set[HealthCheck]] = Map.empty
+  var healthChecks: Map[ApplicationKey, Set[HealthCheck]] = Map.empty
 
   /**
     *  Map of results of all health checks for all applications.
@@ -30,19 +30,19 @@ class AppHealthCheckActor(eventBus: EventStream) extends Actor with StrictLoggin
     *    healthy (if all results are known and healthy)
     *    not healthy (if all results are known and at least one is unhealthy)
     */
-  private var healthCheckStates: Map[InstanceKey, Map[HealthCheck, Option[Health]]] =
+  var healthCheckStates: Map[InstanceKey, Map[HealthCheck, Option[Health]]] =
     Map.empty
 
-
   private def computeGlobalHealth(instanceHealthResults: Map[HealthCheck, Option[Health]]): Option[Boolean] = {
-    val instanceHealthResultsSet = instanceHealthResults.values.toSet
-    val healthy = instanceHealthResultsSet.forall(x => x.fold(false)(_.alive))
-    val unhealthy = instanceHealthResultsSet.forall(_.nonEmpty) && !healthy
-    (healthy, unhealthy) match {
-      case (true, _) => Some(true)
-      case (_, true) => Some(false)
-      case _ => Option.empty[Boolean]
-    }
+    val isHealthAlive = (health: Option[Health]) => health.fold(false)(_.alive)
+    val isHealthUnknown = (health: Option[Health]) => health.isEmpty
+
+    if (instanceHealthResults.values.forall(isHealthAlive))
+      Some(true)
+    else if (instanceHealthResults.values.exists(isHealthUnknown))
+      Option.empty[Boolean]
+    else
+      Some(false)
   }
 
   private def notifyHealthChanged(applicationKey: ApplicationKey, instanceId: Instance.Id,
@@ -65,12 +65,26 @@ class AppHealthCheckActor(eventBus: EventStream) extends Actor with StrictLoggin
     case RemoveHealthCheck(appKey, healthCheck) =>
       logger.debug(s"Remove health check $healthCheck from instance appId:${appKey.appId} version:${appKey.version}")
 
-      healthChecks = healthChecks +
-        (appKey -> (healthChecks.getOrElse(appKey, Set.empty) - healthCheck))
+      val healthChecksAfterRemoval = healthChecks.getOrElse(appKey, Set.empty) - healthCheck
+      if (healthChecksAfterRemoval.isEmpty)
+        healthChecks = healthChecks - appKey
+      else
+        healthChecks = healthChecks + (appKey -> healthChecksAfterRemoval)
 
       healthCheckStates = healthCheckStates.map(kv => {
         val newHealthChecks = kv._2.filter(x => x._1 != healthCheck)
         (kv._1, newHealthChecks)
+      }).filter(kv => kv._2.nonEmpty)
+
+    case PurgeHealthCheckStatuses(toPurge) =>
+      toPurge.foreach(hc => {
+        val instanceKey = hc._1
+        val healthCheck = hc._2
+        val newInstanceHealthChecks = healthCheckStates.getOrElse(instanceKey, Map.empty) - healthCheck
+        if (newInstanceHealthChecks.isEmpty)
+          healthCheckStates = healthCheckStates - instanceKey
+        else
+          healthCheckStates = healthCheckStates + (instanceKey -> newInstanceHealthChecks)
       })
 
     case HealthCheckStatusChanged(appKey, healthCheck, health) =>
@@ -94,6 +108,8 @@ class AppHealthCheckActor(eventBus: EventStream) extends Actor with StrictLoggin
 
         healthCheckStates = healthCheckStates +
           (instanceKey -> newInstanceHealthResults)
+      } else {
+        logger.warn(s"Status of $healthCheck health check changed but it does not exist in inventory")
       }
   }
 }
@@ -106,7 +122,9 @@ object AppHealthCheckActor {
 
   case class AddHealthCheck(appKey: ApplicationKey, healthCheck: HealthCheck)
   case class RemoveHealthCheck(appKey: ApplicationKey, healthCheck: HealthCheck)
+
+  case class PurgeHealthCheckStatuses(hc: Seq[(InstanceKey, HealthCheck)])
   case class HealthCheckStatusChanged(
-    appKey: ApplicationKey,
-    healthCheck: HealthCheck, health: Health)
+      appKey: ApplicationKey,
+      healthCheck: HealthCheck, health: Health)
 }

@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package core.health.impl
 
-import akka.testkit.TestProbe
+import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.InstanceHealthChanged
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{AddHealthCheck, ApplicationKey, HealthCheckStatusChanged, RemoveHealthCheck}
-import mesosphere.marathon.core.health.{Health, MarathonHttpHealthCheck, PortReference}
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor._
+import mesosphere.marathon.core.health.{ Health, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
@@ -128,6 +128,94 @@ class AppHealthCheckActorTest extends AkkaUnitTest {
 
       actor ! RemoveHealthCheck(f.appKey, f.hcPort80)
       actor ! RemoveHealthCheck(f.appKey, f.hcPort443)
+    }
+
+    "health checks inventories is cleaned when health checks of a given version are removed" in {
+      val f = new Fixture
+      val actor = TestActorRef[AppHealthCheckActor](AppHealthCheckActor.props(system.eventStream))
+
+      assert(!actor.underlyingActor.healthChecks.contains(f.appKey))
+      actor ! AddHealthCheck(f.appKey, f.hcPort80)
+      assert(actor.underlyingActor.healthChecks.contains(f.appKey))
+      actor ! AddHealthCheck(f.appKey, f.hcPort443)
+      assert(actor.underlyingActor.healthChecks.contains(f.appKey))
+      actor ! RemoveHealthCheck(f.appKey, f.hcPort80)
+      assert(actor.underlyingActor.healthChecks.contains(f.appKey))
+      actor ! RemoveHealthCheck(f.appKey, f.hcPort443)
+      assert(!actor.underlyingActor.healthChecks.contains(f.appKey))
+    }
+
+    "health checks results are cleaned when health checks of a given version are removed" in {
+      val f = new Fixture
+      val actor = TestActorRef[AppHealthCheckActor](AppHealthCheckActor.props(system.eventStream))
+
+      val instanceKey = InstanceKey(f.appKey, f.instances.head)
+      assert(!actor.underlyingActor.healthCheckStates.contains(instanceKey))
+      actor ! AddHealthCheck(f.appKey, f.hcPort80)
+      actor ! AddHealthCheck(f.appKey, f.hcPort443)
+
+      actor ! HealthCheckStatusChanged(f.appKey, f.hcPort80,
+        Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
+      actor ! HealthCheckStatusChanged(f.appKey, f.hcPort443,
+        Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
+
+      assert(actor.underlyingActor.healthCheckStates.contains(instanceKey))
+      actor ! RemoveHealthCheck(f.appKey, f.hcPort80)
+      actor ! RemoveHealthCheck(f.appKey, f.hcPort443)
+      assert(!actor.underlyingActor.healthCheckStates.contains(instanceKey))
+    }
+
+    "health checks results are purged one by one" in {
+      val f = new Fixture
+      val actor = TestActorRef[AppHealthCheckActor](AppHealthCheckActor.props(system.eventStream))
+
+      val instanceKey = InstanceKey(f.appKey, f.instances.head)
+      assert(!actor.underlyingActor.healthCheckStates.contains(instanceKey))
+      actor ! AddHealthCheck(f.appKey, f.hcPort80)
+      actor ! AddHealthCheck(f.appKey, f.hcPort443)
+
+      actor ! HealthCheckStatusChanged(f.appKey, f.hcPort80,
+        Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
+      actor ! HealthCheckStatusChanged(f.appKey, f.hcPort443,
+        Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
+      assert(actor.underlyingActor.healthCheckStates(instanceKey).contains(f.hcPort80))
+      assert(actor.underlyingActor.healthCheckStates(instanceKey).contains(f.hcPort443))
+
+      actor ! PurgeHealthCheckStatuses(Seq(
+        (InstanceKey(f.appKey, f.instances.head), f.hcPort80)
+      ))
+      assert(!actor.underlyingActor.healthCheckStates(instanceKey).contains(f.hcPort80))
+      assert(actor.underlyingActor.healthCheckStates(instanceKey).contains(f.hcPort443))
+
+      actor ! PurgeHealthCheckStatuses(Seq(
+        (InstanceKey(f.appKey, f.instances.head), f.hcPort443)
+      ))
+
+      assert(!actor.underlyingActor.healthCheckStates.contains(instanceKey))
+    }
+
+    "health checks results are purged all at once" in {
+      val f = new Fixture
+      val actor = TestActorRef[AppHealthCheckActor](AppHealthCheckActor.props(system.eventStream))
+
+      val instanceKey = InstanceKey(f.appKey, f.instances.head)
+      assert(!actor.underlyingActor.healthCheckStates.contains(instanceKey))
+      actor ! AddHealthCheck(f.appKey, f.hcPort80)
+      actor ! AddHealthCheck(f.appKey, f.hcPort443)
+
+      actor ! HealthCheckStatusChanged(f.appKey, f.hcPort80,
+        Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
+      actor ! HealthCheckStatusChanged(f.appKey, f.hcPort443,
+        Health(f.instances.head, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0))))
+      assert(actor.underlyingActor.healthCheckStates(instanceKey).contains(f.hcPort80))
+      assert(actor.underlyingActor.healthCheckStates(instanceKey).contains(f.hcPort443))
+
+      actor ! PurgeHealthCheckStatuses(Seq(
+        (InstanceKey(f.appKey, f.instances.head), f.hcPort80),
+        (InstanceKey(f.appKey, f.instances.head), f.hcPort443)
+      ))
+
+      assert(!actor.underlyingActor.healthCheckStates.contains(instanceKey))
     }
   }
 }
