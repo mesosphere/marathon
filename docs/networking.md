@@ -124,7 +124,7 @@ Marathon ignores the value of `requirePorts` when interpreting a *port-mapping*.
 
 #### Summary
 
-* Review *port-definition*, *host-port*, and *service-port* in (Terminology)[#Terminology].
+* Review *port-definition*, *host-port*, and *service-port* in [#Terminology](Terminology).
 * Location in app definition: `{ "portDefinitions": [ <port-definition>... ], "requirePorts": <bool>, ... }`
 * Used in conjunction with `host` mode networking.
 * `requirePorts` applies to `portDefinitions`.
