@@ -2,18 +2,19 @@ package mesosphere.mesos.examples
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.mesos.client.MesosClient
 import mesosphere.mesos.conf.MesosClientConf
-import org.apache.mesos.v1.mesos.{Filters, FrameworkInfo}
+import org.apache.mesos.v1.mesos.{ Filters, FrameworkInfo }
 import org.apache.mesos.v1.scheduler.scheduler.Event
 
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 object UselessFramework extends App with StrictLogging {
 
-  /** Run Foo framework that:
+  /**
+    * Run Foo framework that:
     *  - successfully subscribes
     *  - declines all offers.
     *
@@ -39,17 +40,16 @@ object UselessFramework extends App with StrictLogging {
 
       if (event.`type`.get == Event.Type.SUBSCRIBED) {
         logger.info("Successfully subscribed to mesos")
-      }
-      else if (event.`type`.get == Event.Type.OFFERS) {
+      } else if (event.`type`.get == Event.Type.OFFERS) {
 
         val offerIds = event.offers.get.offers.map(_.id).toList
 
         Source(offerIds)
-          .via{client.log(s"Declining offer with id = ")}  // Decline all offers
+          .via{ client.log(s"Declining offer with id = ") } // Decline all offers
           .map(oId => client.decline(
-              offerIds = Seq(oId),
-              filters = Some(Filters(Some(5.0f)))
-            ))
+            offerIds = Seq(oId),
+            filters = Some(Filters(Some(5.0f)))
+          ))
           .runWith(client.mesosSink)
       }
 
