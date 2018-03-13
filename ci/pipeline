@@ -283,6 +283,8 @@ def release(args: String*): Unit = {
     case ReleaseTarget.JARArtifact =>
       // publishing to the nexus repository.  This artifact is used by metronome.
       %('sbt, "publish")
+    case ReleaseTarget.PluginInterface =>
+      %('sbt, "plugin-interface/publish")
   }
 
   githubClient.tag(config.version.commit, config.version.toTagString)
