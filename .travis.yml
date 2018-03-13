@@ -11,5 +11,5 @@ language: scala
 scala:
   - 2.12.3
 script:
-  - travis_wait sbt ++$TRAVIS_SCALA_VERSION compile test:compile
+  - sbt ++$TRAVIS_SCALA_VERSION compile test:compile &> compile.log
   - sbt ++$TRAVIS_SCALA_VERSION test > test.log
