@@ -1,18 +1,18 @@
 package mesosphere.marathon
 package integration
 
-import akka.stream.scaladsl.{Sink, Source, Tcp}
-import mesosphere.{AkkaIntegrationTest, FutureTestSupport}
+import akka.stream.scaladsl.{ Sink, Source, Tcp }
+import mesosphere.{ AkkaIntegrationTest, FutureTestSupport }
 import mesosphere.marathon.integration.setup._
 import mesosphere.util.PortAllocator
 import org.scalatest.concurrent.Eventually
 
 @IntegrationTest
 class MarathonStartupIntegrationTest extends AkkaIntegrationTest
-  with MesosClusterTest
-  with ZookeeperServerTest
-  with FutureTestSupport
-  with Eventually {
+    with MesosClusterTest
+    with ZookeeperServerTest
+    with FutureTestSupport
+    with Eventually {
 
   def withBoundPort(fn: Int => Unit): Unit = {
     val port = PortAllocator.ephemeralPort()
