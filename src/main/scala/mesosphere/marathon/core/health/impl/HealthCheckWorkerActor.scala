@@ -7,8 +7,10 @@ import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 
 import akka.actor.{ Actor, PoisonPill }
 import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.http.scaladsl.{ ConnectionContext, Http }
-import akka.stream.Materializer
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer }
+import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
@@ -27,6 +29,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
   private implicit val system = context.system
   private implicit val scheduler = system.scheduler
   import context.dispatcher // execution context for futures
+  private implicit val materializer = ActorMaterializer(ActorMaterializerSettings(system))
 
   def receive: Receive = {
     case HealthCheckJob(app, instance, check) =>
@@ -92,7 +95,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     val url = s"http://$host:$port$absolutePath"
     logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTP")
 
-    Timeout(check.timeout)(Http().singleRequest(
+    Timeout(check.timeout)(singleRequest(
       RequestBuilding.Get(url)
     )).map { response =>
       response.discardEntityBytes() //forget about the body
@@ -139,20 +142,8 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
     val url = s"https://$host:$port$absolutePath"
     logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTPS")
 
-    // This is only a health check, so we are going to allow _very_ bad SSL configuration.
-    val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-      s.loose.withAcceptAnyCertificate(true)
-        .withAllowLegacyHelloMessages(Some(true))
-        .withAllowUnsafeRenegotiation(Some(true))
-        .withAllowWeakCiphers(true)
-        .withAllowWeakProtocols(true)
-        .withDisableHostnameVerification(true)
-        .withDisableSNI(true)
-    })
-
-    Timeout(check.timeout)(Http().singleRequest(
-      RequestBuilding.Get(url),
-      connectionContext = ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig))
+    Timeout(check.timeout)(singleRequest(
+      RequestBuilding.Get(url)
     )).map { response =>
       response.discardEntityBytes() // forget about the body
       if (acceptableResponses.contains(response.status.intValue())) {
@@ -161,6 +152,32 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
         logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
         Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
       }
+    }
+  }
+
+  def singleRequest(httpRequest: HttpRequest)(implicit mat: Materializer): Future[HttpResponse] = {
+    if (httpRequest.uri.scheme.equalsIgnoreCase("https")) {
+      // This is only a health check, so we are going to allow _very_ bad SSL configuration.
+      val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+        s.loose.withAcceptAnyCertificate(true)
+          .withAllowLegacyHelloMessages(Some(true))
+          .withAllowUnsafeRenegotiation(Some(true))
+          .withAllowWeakCiphers(true)
+          .withAllowWeakProtocols(true)
+          .withDisableHostnameVerification(true)
+          .withDisableSNI(true)
+      })
+      val authority = httpRequest.uri.authority
+      val connectionFlow = Http().outgoingConnectionHttps(
+        authority.host.toString(),
+        authority.port,
+        ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig))
+      )
+      Source.single(httpRequest).via(connectionFlow).runWith(Sink.head)
+    } else {
+      val authority = httpRequest.uri.authority
+      val connectionFlow = Http().outgoingConnection(authority.host.toString(), authority.port)
+      Source.single(httpRequest).via(connectionFlow).runWith(Sink.head)
     }
   }
 }
