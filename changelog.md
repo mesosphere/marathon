@@ -16,9 +16,6 @@ Marathon has simple built-in support for [Mesos Maintenance Primitives](http://m
 #### Persistent volumes for pods
 It is now possible to run stateful applications inside pods. For more information, please see [docs](https://mesosphere.github.io/marathon/docs/maintenance-mode.html).
 
-#### GPU preferential scheduling
-When using GPU support in Marathon, depending on the GPU availability, it may be desirable to configure Marathon to avoid placing non-GPU tasks on GPU nodes. A configuration parameter has been introduced to make this possible. For more information, see the [docs](https://mesosphere.github.io/marathon/docs/preferential-gpu-scheduling.html). or [MARATHON-8087](https://jira.mesosphere.com/browse/MARATHON-8087)
-
 #### And many more...
 
 * Enhance App API to reflect resources for executor [MARATHON-8063](https://jira.mesosphere.com/browse/MARATHON-8063)
