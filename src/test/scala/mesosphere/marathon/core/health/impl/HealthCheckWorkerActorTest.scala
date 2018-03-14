@@ -11,7 +11,7 @@ import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition, UnreachableStrategy }
@@ -102,7 +102,9 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
           }
         }
 
-      val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
+      val binding = Http().bindAndHandle(route, "localhost", 0).futureValue
+
+      val port = binding.localAddress.getPort
 
       val hostName = "localhost"
       val appId = PathId("/test_id")
@@ -110,17 +112,20 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
         val t: Task = TestTaskBuilder.Helper.runningTaskForApp(appId)
-        val hostPorts = Seq(8080)
+        val hostPorts = Seq(port)
         t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
       }
-      val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
+      val since = task.status.startedAt.getOrElse(task.status.stagedAt)
+      val unreachableStrategy = UnreachableStrategy.default()
+      val tasksMap = Map(task.taskId -> task)
+      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+
+      val instance = Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
 
       val ref = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
-      ref ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(8080), path = Some("/health")))
+      ref ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))
 
-      val res = Await.result(promise.future, 10.seconds)
-
-      res shouldEqual "success"
+      promise.future.futureValue shouldEqual "success"
 
     }
   }
