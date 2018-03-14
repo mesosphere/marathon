@@ -84,13 +84,15 @@ object MesosFacade {
   case class ITFrameworks(frameworks: Seq[ITFramework])
 }
 
-class MesosFacade(url: String, implicit val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
+class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
   extends PlayJsonSupport with StrictLogging {
 
   import MesosFacade._
   import MesosFormats._
   import system.dispatcher
 
+  // `waitTime` is passed implicitly to the `request` and `requestFor` methods
+  implicit val requestTimeout = waitTime
   def state: RestResult[ITMesosState] = {
     logger.info(s"fetching state from $url")
     result(requestFor[ITMesosState](Get(s"$url/state.json")), waitTime)
