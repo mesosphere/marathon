@@ -136,7 +136,10 @@ def prepareDockerImage(buildDir: Path, docsDir: Path): Unit = {
 def generateTopLevelDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = {
   val topLevelGeneratedDocsDir = buildDir / 'docs
 
-  val (_, latestReleaseVersion) = docsTargetVersions(checkedRepoDir).last
+  val targetVersions = docsTargetVersions(checkedRepoDir)
+
+  val (_, latestReleaseVersion) = targetVersions.last
+
 
   %.git('checkout, latestReleaseVersion.gitCheckoutString)(checkedRepoDir)
 
@@ -148,6 +151,7 @@ def generateTopLevelDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = 
 
   println(s"Generating root docs for ${latestReleaseVersion.gitCheckoutString}")
   println(topLevelGeneratedDocsDir)
+  write.append(topLevelGeneratedDocsDir / "_config.yml", s"release_versions: [${targetVersions.map(_._1).mkString(", ")}]")
   generateDocsByDocker(topLevelGeneratedDocsDir, None)
 }
 
@@ -161,7 +165,11 @@ def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]
     cp.into(path / 'docs, rootDocsDir)
     cp.over(path / "docs.html", rootDocsDir / '_layouts / "docs.html")
     println(s"Generation docs for $releaseBranchVersion")
-    write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml", s"baseurl : /marathon/$releaseBranchVersion")
+    write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml",
+      s"""baseurl : /marathon/$releaseBranchVersion
+         |release_versions: [${versionedDocsDirs.map(_._1).mkString(", ")}]
+       """.stripMargin
+    )
     generateDocsByDocker(rootDocsDir, Some(releaseBranchVersion))
   }
 }
