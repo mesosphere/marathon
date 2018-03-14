@@ -48,13 +48,15 @@ private[tracker] class InstanceTrackerDelegate(
 
   // TODO(jdef) support pods when counting launched instances
   override def countLaunchedSpecInstancesSync(appId: PathId): Int =
-    instancesBySpecSync.specInstances(appId).count(_.isLaunched)
+    instancesBySpecSync.specInstances(appId).count(instance => instance.isLaunched || instance.isReserved)
   override def countLaunchedSpecInstancesSync(appId: PathId, filter: Instance => Boolean): Int =
-    instancesBySpecSync.specInstances(appId).count { t => t.isLaunched && filter(t) }
+    instancesBySpecSync.specInstances(appId).count { instance =>
+      (instance.isLaunched || instance.isReserved) && filter(instance)
+    }
 
   override def countLaunchedSpecInstances(appId: PathId): Future[Int] = {
     import ExecutionContext.Implicits.global
-    instancesBySpec().map(_.specInstances(appId).count(_.isLaunched))
+    instancesBySpec().map(_.specInstances(appId).count(instance => instance.isLaunched || instance.isReserved))
   }
 
   override def countSpecInstancesSync(appId: PathId, filter: Instance => Boolean): Int =
@@ -72,7 +74,7 @@ private[tracker] class InstanceTrackerDelegate(
   override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
     instancesBySpec().map(_.specInstances(appId))
   override def specInstancesLaunchedSync(appId: PathId): Seq[Instance] =
-    specInstancesSync(appId).filter(_.isLaunched)
+    specInstancesSync(appId).filter(instance => instance.isLaunched || instance.isReserved)
 
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =
     (taskTrackerRef ? InstanceTrackerActor.Get(taskId)).mapTo[Option[Instance]]
