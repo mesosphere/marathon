@@ -12,6 +12,14 @@ clean:
 %/mesos-version: target/mesos-version
 	cp target/mesos-version $@
 
+# 1.5.0-2.0.1 package has issues for Debian, and 1.5.0-2.0.2 isn't released for all distros. When we move past this,
+# remove these build steps
+debian-systemv/mesos-version: target/mesos-version
+	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
+
+debian-systemd/mesos-version: target/mesos-version
+	if [ $$(cat target/mesos-version) = "1.5.0-2.0.1" ]; then echo "1.5.0-2.0.2" > $@; else echo "Package version patch should not be needed; remove this step from the Makefile"; exit 1; fi
+
 target/mesos-version: ../../project/Dependencies.scala
 	mkdir -p target
 	cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"' > $@.tmp
@@ -39,11 +47,11 @@ target/centos-systemd.built: centos-systemd/Dockerfile centos-systemd/mesos-vers
 	cd centos-systemd && docker build . -t marathon-package-test:centos-systemd
 	touch $@
 
-target/ubuntu-upstart.built: ubuntu-upstart/Dockerfile ubuntu-upstart/mesos-version
-	cd ubuntu-upstart && docker build . -t marathon-package-test:ubuntu-upstart
-	touch $@
+# target/ubuntu-upstart.built: ubuntu-upstart/Dockerfile ubuntu-upstart/mesos-version
+# 	cd ubuntu-upstart && docker build . -t marathon-package-test:ubuntu-upstart
+# 	touch $@
 
 test: | all
 	amm test.sc all
 
-all: target/mesos.built target/debian-systemv.built target/debian-systemd.built target/centos-systemd.built target/centos-systemv.built target/ubuntu-upstart.built
+all: target/mesos.built target/debian-systemv.built target/debian-systemd.built target/centos-systemd.built target/centos-systemv.built # target/ubuntu-upstart.built

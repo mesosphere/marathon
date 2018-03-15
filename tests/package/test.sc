@@ -444,7 +444,7 @@ def main(args: String*): Unit = {
     new DebianSystemvTest,
     new CentosSystemdTest,
     new CentosSystemvTest,
-    new UbuntuUpstartTest,
+    // new UbuntuUpstartTest, Mesos 1.5.0-2.0.1 package does not work for Ubuntu Trusty, the last Upstart distro. So we cannot test it.
     new DockerImageTest
   )
   val predicate: (String => Boolean) = args match {
