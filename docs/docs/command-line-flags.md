@@ -329,6 +329,9 @@ The Web Site flags control the behavior of Marathon's web site, including the us
     Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
     Enabling this might noticeably degrade performance but it helps finding performance problems.
     These measurements can be disabled with --disable_metrics. Other metrics are not affected.
+* <span class="label label-default">v1.6.0</span> `--metrics_averaging_window` (Optional. Default: 30 seconds):
+    Configure the size of the sliding average window that is used to compute the values for the `/metrics` endpoint. Note that this value
+    should be at least double the value of the `kamon.metric.tick-interval` parameter, that is 1 second by default.
 * <span class="label label-default">v0.13.0</span> `--reporter_graphite` (Optional. Default: disabled):
     Report metrics to [Graphite](http://graphite.wikidot.com) (StatsD) as defined by the given URL.
     Example: `udp://localhost:2003?prefix=marathon-test&interval=10`
