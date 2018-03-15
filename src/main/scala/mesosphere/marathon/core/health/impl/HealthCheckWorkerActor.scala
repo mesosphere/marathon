@@ -22,6 +22,7 @@ import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with StrictLogging {
@@ -111,6 +112,10 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
           logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
           Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
         }
+      }.recover {
+        case NonFatal(e) =>
+          logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
+          Some(Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage))
       }
   }
 
@@ -156,7 +161,11 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with Stri
           logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
           Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
         }
-      }
+    }.recover {
+      case NonFatal(e) =>
+        logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
+        Some(Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage))
+    }
   }
 
   def singleRequest(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: Materializer): Future[HttpResponse] = {
