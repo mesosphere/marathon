@@ -4,12 +4,12 @@ package metrics
 import java.time.Duration
 
 import kamon.Kamon
-import kamon.metric.{Entity, EntitySnapshot}
+import kamon.metric.{ Entity, EntitySnapshot }
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.CollectionContext
-import kamon.util.{MapMerge, MilliTimestamp}
+import kamon.util.{ MapMerge, MilliTimestamp }
 
 /**
   * Calculates sliding average entity snapshot
@@ -49,7 +49,7 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
 
     // Create an array with that many free slots, as the full ticks that fit within the duration requested
     logger.info(s"Initialized sliding average reporter with ${fullFrames} frames")
-    Array.fill(fullFrames){null}
+    Array.fill(fullFrames){ null }
   }
 
   /**
@@ -61,29 +61,58 @@ class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLoggin
     var rangeTo: MilliTimestamp = MilliTimestamp.now
     var combined: Option[Map[Entity, EntitySnapshot]] = None
 
-    // Start processing all the values of the ring buffer in incrementing index
-    // starting fro the oldest (the next value from the current index) to the
-    // newest (the current index).
+    // To combine the metrics we need to iterate over the ring buffer, performing
+    // the following operations:
+    //
+    // - Find the oldest and the newest timestamp, that will be used as the snapshot
+    //   range for our combined metrics.
+    // - For every snapshot, merge every metric with the current
+    //
+    // Since we are putting items in the ring buffer in order, we can exploit the indices
+    // to quickly identify the oldest and the newest entry:
+    //
+    // - Since we post-increment when adding items on the ring buffer, the item with
+    //   index `averageIndex - 1` is the newest one.
+    // - Consequently, the item with index `averageIndex` is the oldest one.
+    //
+    // In the following loop we are starting from the oldest item and walk our way to the
+    // newest item. That's why we start with `idx = averageIndex` and we advance it
+    // as many times as the items in the ring buffer, effectively reaching to the
+    // newest item on `idx = averageIndex - 1`
+    //
+
     val maxItems: Int = averageRing.length
     var i: Int = 0
     while (i < maxItems) {
       val idx = (averageIndex + i) % maxItems
       val inst = averageRing(idx)
 
-      // Pass-through null entries
+      //
+      // The `null` items are items not yet initialized and we
+      // therefore consider them transparent.
+      //
       combined = inst match {
         case null => combined
         case _ => {
           combined match {
 
-            // Initialize all iteration values at first index
+            //
+            // The first record we find is the oldest one. So we are using it's
+            // timestamp as the `rangeFrom` and we initialize the `combined`
+            // snapshot with it's metrics.
+            //
+            // Just in case this is the last item we ever find, we are also
+            // populating `rangeTo` with the correct time bounds.
+            //
             case None => {
               rangeFrom = inst.from
               rangeTo = inst.to
               Some(inst.metrics)
             }
 
-            // Otherwise combine the current metrics and advance the upper range
+            //
+            // Otherwise combine the current metrics and advance `rangeTo`
+            //
             case Some(current) => {
               rangeTo = inst.to
               Some(MapMerge.Syntax(current).merge(inst.metrics, (l, r) => l.merge(r, collectionContext)))
